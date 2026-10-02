@@ -51,7 +51,7 @@ check-linux:
 	sh engine/tools/linux-tests.sh
 
 coverage:
-	$(ENGINE_ENV) uv run --directory engine --frozen --no-editable pytest -q --cov --cov-fail-under=80 --cov-report=term-missing:skip-covered --cov-report=html:../dist/coverage --cov-report=xml:../dist/coverage.xml
+	$(ENGINE_ENV) uv run --directory engine --frozen --no-editable pytest -q --cov --cov-fail-under=80 --cov-report=term-missing:skip-covered --cov-report=html:../dist/coverage
 
 desktop-build:
 	$(ENGINE_ENV) $(PYTHON) app/scripts/build_app.py --app '$(APP)' --runtime '$(RUNTIME)'

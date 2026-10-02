@@ -5,7 +5,7 @@ User-visible changes for each preview and release are recorded here. See [releas
 ## Unreleased
 
 - **Download for macOS.** Releases include a drag-to-install DMG (`make dmg`), and the README links to it with three install steps.
-- CI builds the app with Swift 6.4 and is green on both jobs; the README shows the CI and Codecov coverage badges.
+- CI builds the app with Swift 6.4 and is green on both jobs; the README shows the CI badge and a coverage badge published through Smokeshow, as FastAPI does.
 
 ## 0.1.0-alpha.3 — developer preview
 

@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/YZXBiz/copytrading/actions/workflows/ci.yml?query=branch%3Amain"><img src="https://github.com/YZXBiz/copytrading/actions/workflows/ci.yml/badge.svg?branch=main" alt="检查"></a>
-  <a href="https://codecov.io/gh/YZXBiz/copytrading"><img src="https://codecov.io/gh/YZXBiz/copytrading/graph/badge.svg" alt="引擎测试覆盖率"></a>
+  <a href="https://coverage-badge.samuelcolvin.workers.dev/redirect/YZXBiz/copytrading"><img src="https://coverage-badge.samuelcolvin.workers.dev/YZXBiz/copytrading.svg" alt="测试覆盖率"></a>
   <a href="https://github.com/YZXBiz/copytrading/releases"><img src="https://img.shields.io/github/v/release/YZXBiz/copytrading?include_prereleases&label=%E7%89%88%E6%9C%AC&color=blue" alt="最新版本"></a>
   <img src="https://img.shields.io/badge/macOS%2026%2B-Apple%20%E8%8A%AF%E7%89%87-black?logo=apple" alt="macOS 26 或更高版本，Apple 芯片">
   <a href="LICENSE"><img src="https://img.shields.io/badge/%E8%AE%B8%E5%8F%AF%E8%AF%81-MIT-green" alt="MIT 许可证"></a>
