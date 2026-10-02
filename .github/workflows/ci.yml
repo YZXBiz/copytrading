@@ -1,5 +1,11 @@
 name: checks
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Every Monday: a rare flaky test shows up in a run nobody pushed.
+    - cron: "0 7 * * 1"
 permissions:
   contents: read
 concurrency:
