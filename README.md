@@ -60,7 +60,7 @@ Works with a dozen hosted model services, local models through Ollama, or any Op
 
 You need an Apple silicon Mac running macOS 26 or later.
 
-**Download** the latest preview from [Releases](https://github.com/YZXBiz/copytrading/releases), unzip it, then right-click the app and choose **Open**. Preview builds are not yet notarized by Apple, so macOS warns the first time. [Releases](docs/releases.md) explains how to verify the download.
+**Download** the latest preview from [Releases](https://github.com/YZXBiz/copytrading/releases), unzip it, and move CopyTrading to Applications. Preview builds are not yet notarized by Apple, so macOS blocks the first launch: open **System Settings → Privacy & Security**, find the message about CopyTrading, and choose **Open Anyway**. [Releases](docs/releases.md) explains how to verify the download.
 
 **Or build from source** with [uv](https://docs.astral.sh/uv/) and the Xcode Command Line Tools:
 
