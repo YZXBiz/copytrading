@@ -87,9 +87,9 @@ make app
 ## 工作原理
 
 <p align="center">
-  <a href="docs/assets/copytrading-workflow-hq.png"><img src="docs/assets/copytrading-workflow.svg" alt="CopyTrading 工作流程：捕获 Discord 帖子、基于原文的模型解读、并行账户路由与风险检查、Alpaca 执行、券商对账与仓位批次记录，以及单独经过所有者批准的助手控制" width="100%"></a>
+  <a href="docs/assets/copytrading-workflow-hq.png"><img src="docs/assets/copytrading-workflow-hq.png" alt="CopyTrading 工作流程：捕获 Discord 帖子、基于原文的模型解读、并行账户路由与风险检查、Alpaca 执行、券商对账与仓位批次记录，以及单独经过所有者批准的助手控制" width="100%"></a>
   <br>
-  <sub><a href="docs/assets/copytrading-workflow-hq.png">高清 PNG</a> · <a href="docs/assets/copytrading-workflow.svg">矢量 SVG</a></sub>
+  <sub><a href="docs/assets/copytrading-workflow-hq.png">查看完整尺寸高清图</a></sub>
 </p>
 
 一个 SwiftUI 应用负责监管一个本地 Python 引擎。引擎掌管所有决策，把它们保存在 SQLite 中，并在崩溃或休眠之后与券商对账；应用关闭期间过期的信号，绝不会变成一笔迟到的订单。详情见 [architecture](docs/architecture.md)，设计缘由记录在 [ADR](docs/adr/) 中（均为英文）。
