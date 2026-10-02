@@ -3,27 +3,9 @@ import Darwin
 import Foundation
 
 @MainActor
-@main
 struct TradingSettingsSaveTests {
-    static func main() async throws {
-        if CommandLine.arguments.contains("--activity-contract-only") {
-            try checkActivitySourceReadingRepresentation()
-            try checkActivityDestinationInstructionOutcomes()
-            return
-        }
-        try checkActivitySourceReadingRepresentation()
-        try checkActivityDestinationInstructionOutcomes()
-        try await runAppWindowLifecycleTests()
-        try runConnectionsDraftTests()
-        try runGuidedSetupTests()
-        try runEquityChartScaleTests()
-        try runConnectionsAndSettingsPagesTests()
-        try runProviderChoiceTests()
-        try await runLotSaleFlowTests()
-        try await runAssistantModelTests()
-        try await runAssistantProposalTests()
-        try runAssistantHelpTests()
-        try runAssistantPanelTests()
+    /// The save and start flow through AppModel; ContractChecks runs it after the other checks.
+    static func runSettingsSaveFlow() async throws {
         print("CopyTradingContractTests: connections draft round-trips saved configuration and never keeps typed secrets")
         print(
             "CopyTradingContractTests: registered NSWindow.willClose callback closed and reopened model sessions; stale auth cleanup and retry remained scoped"

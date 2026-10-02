@@ -58,17 +58,10 @@ desktop-check: check lint-swift desktop-tests
 
 desktop-tests: desktop-build
 	arch -arm64 swift build --package-path app -Xswiftc -strict-concurrency=complete -Xswiftc -warnings-as-errors
-	arch -arm64 swift test --package-path app -Xswiftc -warnings-as-errors
-	env -u COPYTRADING_TEST_ONLY \
-		COPYTRADING_RUNTIME_ROOT='$(CURDIR)/dist/CopyTrading.app/Contents/Resources/Runtime' \
+	COPYTRADING_RUNTIME_ROOT='$(CURDIR)/dist/CopyTrading.app/Contents/Resources/Runtime' \
 		COPYTRADING_ENGINE_ROOT='$(CURDIR)/dist/CopyTrading.app/Contents/Resources/Engine' \
 		COPYTRADING_PYTHON_LIBRARY_PATH='$(CURDIR)/dist/CopyTrading.app/Contents/Resources/Runtime/cpython/python/lib/python3.14/site-packages' \
-		"$$(arch -arm64 swift build --package-path app --show-bin-path)/CopyTradingContractTests"
-	env -u COPYTRADING_TEST_ONLY \
-		COPYTRADING_RUNTIME_ROOT='$(CURDIR)/dist/CopyTrading.app/Contents/Resources/Runtime' \
-		COPYTRADING_ENGINE_ROOT='$(CURDIR)/dist/CopyTrading.app/Contents/Resources/Engine' \
-		COPYTRADING_PYTHON_LIBRARY_PATH='$(CURDIR)/dist/CopyTrading.app/Contents/Resources/Runtime/cpython/python/lib/python3.14/site-packages' \
-		"$$(arch -arm64 swift build --package-path app --show-bin-path)/DesktopCoreTests"
+		arch -arm64 swift test --package-path app --no-parallel -Xswiftc -warnings-as-errors
 	$(ENGINE_ENV) $(PYTHON) app/scripts/verify_bundle.py --app 'dist/CopyTrading.app'
 
 desktop-smoke:

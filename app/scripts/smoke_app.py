@@ -16,7 +16,6 @@ import uuid
 from contextlib import closing
 from pathlib import Path
 
-from swift_paths import swift_bin_path
 from verify_bundle import verify
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -266,9 +265,6 @@ def smoke(app: Path) -> None:
         cleanup_error = _stop_relocated_runtime(app_process, runtime, owned)
         if cleanup_error is not None:
             raise RuntimeError(cleanup_error)
-        harness = swift_bin_path() / "DesktopCoreTests"
-        if not harness.is_file():
-            raise RuntimeError("build the DesktopCoreTests Swift harness before desktop-smoke")
         harness_env = os.environ.copy()
         harness_env.update(
             {
@@ -277,10 +273,23 @@ def smoke(app: Path) -> None:
                 "COPYTRADING_PYTHON_LIBRARY_PATH": str(
                     resources / "Runtime/cpython/python/lib/python3.14/site-packages"
                 ),
-                "COPYTRADING_TEST_ONLY": "managed native runtime",
             }
         )
-        subprocess.run([str(harness)], env=harness_env, check=True, timeout=120)
+        subprocess.run(
+            [
+                "arch",
+                "-arm64",
+                "swift",
+                "test",
+                "--package-path",
+                str(ROOT / "app"),
+                "--filter",
+                "managedNativeRuntime",
+            ],
+            env=harness_env,
+            check=True,
+            timeout=600,
+        )
         print("relocated runtime completed a two-destination self-test and owned Stop")
     finally:
         _finish_smoke_workspace(

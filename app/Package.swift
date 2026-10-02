@@ -8,8 +8,6 @@ let package = Package(
     products: [
         .library(name: "DesktopCore", targets: ["DesktopCore"]),
         .executable(name: "CopyTrading", targets: ["CopyTrading"]),
-        .executable(name: "DesktopCoreTests", targets: ["DesktopCoreTests"]),
-        .executable(name: "CopyTradingContractTests", targets: ["CopyTradingContractTests"]),
     ],
     targets: [
         .target(
@@ -34,7 +32,7 @@ let package = Package(
             dependencies: ["DesktopCore", "AppLocalizationCore"],
             path: "Sources/CopyTrading"
         ),
-        .executableTarget(
+        .testTarget(
             name: "DesktopCoreTests",
             dependencies: ["DesktopCore"],
             path: "Tests/DesktopCoreTests"
@@ -45,7 +43,7 @@ let package = Package(
             path: "Tests/DesktopCoreXCTests",
             resources: [.process("Fixtures")]
         ),
-        .executableTarget(
+        .testTarget(
             name: "CopyTradingContractTests",
             dependencies: ["DesktopCore", "AppLocalizationCore"],
             path: "Tests/CopyTradingContractTests"
