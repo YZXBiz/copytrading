@@ -60,7 +60,7 @@ Works with a dozen hosted model services, local models through Ollama, or any Op
 
 You need an Apple silicon Mac running macOS 26 or later.
 
-**Download** the latest preview from [Releases](https://github.com/YZXBiz/copytrading/releases), unzip it, then right-click the app and choose **Open**. Preview builds are unsigned, so macOS warns the first time. [Releases](docs/releases.md) explains how to verify the download.
+**Download** the latest preview from [Releases](https://github.com/YZXBiz/copytrading/releases), unzip it, then right-click the app and choose **Open**. Preview builds are not yet notarized by Apple, so macOS warns the first time. [Releases](docs/releases.md) explains how to verify the download.
 
 **Or build from source** with [uv](https://docs.astral.sh/uv/) and the Xcode Command Line Tools:
 
@@ -125,7 +125,7 @@ The engine also runs without the app, on a Mac or a Linux server, so copying con
 
 ## Contributing
 
-Run `make doctor` to check your Mac, then `make check` for the engine's 1,100+ tests, Ruff, and Ty. [CONTRIBUTING.md](CONTRIBUTING.md) covers the native app checks and conventions. Ask questions in [Discussions](https://github.com/YZXBiz/copytrading/discussions), report bugs with the [issue forms](https://github.com/YZXBiz/copytrading/issues/new/choose), and report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+Run `make doctor` to check your Mac, then `make check` for the engine's 1,200+ tests, Ruff, and Ty. [CONTRIBUTING.md](CONTRIBUTING.md) covers the native app checks and conventions. Ask questions in [Discussions](https://github.com/YZXBiz/copytrading/discussions), report bugs with the [issue forms](https://github.com/YZXBiz/copytrading/issues/new/choose), and report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 
 ## License
 
