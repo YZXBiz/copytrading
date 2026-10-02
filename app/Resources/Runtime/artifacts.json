@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "artifacts": [
+    {
+      "name": "cpython",
+      "version": "3.14.7+20260924",
+      "platform": "darwin-arm64",
+      "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260924/cpython-3.14.7%2B20260924-aarch64-apple-darwin-install_only.tar.gz",
+      "filename": "cpython-3.14.7+20260924-aarch64-apple-darwin-install_only.tar.gz",
+      "sha256": "d3da099bb2bdd57e2f5ff8496cb9827f7d92eee332b09f8dc93706dabfc51a96",
+      "sha256_provenance": "publisher GitHub release asset digest, verified against downloaded bytes",
+      "archive_root": "python",
+      "binary_path": "cpython/python/bin/python3.14",
+      "license": "PSF-2.0",
+      "license_url": "https://docs.python.org/3/license.html",
+      "source_url": "https://github.com/astral-sh/python-build-standalone/releases/tag/20260924",
+      "source_revision": "20260924"
+    }
+  ]
+}

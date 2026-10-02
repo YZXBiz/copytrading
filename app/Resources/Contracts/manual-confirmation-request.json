@@ -1,0 +1,1 @@
+{"version":1,"request_id":"req-manual-confirmation","operation":"confirm_manual_orders","commands":[{"command_id":"command-native-paper","preview_id":"preview-native-paper","account_id":"paper","actor":"operator"},{"command_id":"command-native-archive","preview_id":"preview-native-archive","account_id":"archive","actor":"operator"}]}

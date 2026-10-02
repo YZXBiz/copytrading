@@ -1,0 +1,1 @@
+../../Sources/CopyTrading/DesignSystem/HelpArticle.swift

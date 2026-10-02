@@ -1,0 +1,1 @@
+{"version":1,"request_id":"req-history","ok":{"type":"equity_history","account_id":"paper","history":{"window":{"range":"day","day":"2026-09-26"},"base_value":"25000","points":[{"at":"2026-09-26T13:30:00Z","equity":"25000"},{"at":"2026-09-26T13:35:00Z","equity":"25080.5"},{"at":"2026-09-26T13:40:00Z","equity":"24990.25"},{"at":"2026-09-26T13:45:00Z","equity":"25412.8"}]}}}

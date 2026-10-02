@@ -1,0 +1,2104 @@
+import AppKit
+import DesktopCore
+import Foundation
+import Observation
+
+protocol TradingStarting: Sendable {
+    func tradingStatus() async throws -> TradingStatus
+
+    func validateTrading(
+        configuration: TradingConfiguration, secrets: TradingSecrets
+    ) async throws -> TradingValidation
+
+    func startTrading(
+        configuration: TradingConfiguration,
+        secrets: TradingSecrets,
+        validationToken: String,
+        activationID: String
+    ) async throws -> TradingStatus
+
+    func tradingActivation(activationID: String) async throws -> TradingActivationStatus
+
+    func evaluateHistoricalProfile(
+        _ evaluation: HistoricalProfileEvaluationRequest
+    ) async throws -> ProfileEvaluation
+
+    func reviewProfileExamples(
+        _ request: ProfileExampleReviewRequest
+    ) async throws -> ProfileExampleReview
+
+    func learnGuruPlaybook(
+        _ learning: GuruPlaybookLearningRequest
+    ) async throws -> LearnedGuruPlaybook
+}
+
+extension EngineActions: TradingStarting {}
+
+@MainActor
+@Observable
+final class AppModel {
+    enum RuntimeState: String, Sendable {
+        case stopped
+        case starting
+        case ready
+        case degraded
+        case failed
+    }
+
+    enum Screen: String, CaseIterable, Hashable, Identifiable {
+        case today
+        case activity
+        case people
+        case accounts
+        case connections
+        case gettingStarted
+        case diagnostics
+        case settings
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .today: "Today"
+            case .activity: "Activity"
+            case .people: "People"
+            case .accounts: "Accounts"
+            case .connections: "Connections"
+            case .gettingStarted: "Getting Started"
+            case .diagnostics: "Diagnostics"
+            case .settings: "Settings"
+            }
+        }
+
+        var symbol: String {
+            switch self {
+            case .today: "sun.max"
+            case .activity: "list.bullet.rectangle"
+            case .people: "person.2"
+            case .accounts: "building.columns"
+            case .connections: "cloud"
+            case .gettingStarted: "hand.wave"
+            case .diagnostics: "waveform.path.ecg"
+            case .settings: "gearshape"
+            }
+        }
+
+        /// Screens that edit the setup draft, where the unsaved-changes bar belongs.
+        var editsSetup: Bool {
+            switch self {
+            case .people, .accounts, .connections, .gettingStarted: true
+            case .today, .activity, .diagnostics, .settings: false
+            }
+        }
+    }
+
+    var selectedScreen: Screen = .today
+    /// The Settings page on show and the pages visited before it, newest last.
+    var settingsPage: SettingsPage = .general
+    var settingsTrail: [SettingsPage] = []
+    /// Where closing Settings returns to.
+    var screenBeforeSettings: Screen = .today
+    var runtimeState: RuntimeState = .stopped
+    var engineStatus: EngineStatus?
+    var tradingStatus: TradingStatus?
+    var savedTradingConfiguration: TradingConfiguration?
+    var hasTradingSecrets = false
+    var tradingValidation: TradingValidation?
+    var profileExampleReviews: [String: ProfileExampleReview] = [:]
+    var profileExamplesAcknowledged = false
+    var isValidatingTrading = false
+    var isActivatingTrading = false
+    var isTradingCommandPending = false
+    var isTradingUnlocked = false
+    var agentAccess: AgentAccessSetting = .off
+    var isAgentRelayListening = false
+    var isChangingAgentAccess = false
+    var agentProposals: [AgentProposal] = []
+    var agentAudit: [AgentAuditEntry] = []
+    var agentAccessMessage: String?
+    var isUnlockingTrading = false
+    var latestSelfTest: WorkflowView?
+    var selfTestEntries: [RecordedSelfTest] = []
+    var pendingCommandID: String? { selfTestEntries.first(where: \.isPending)?.id }
+    var isRunningSelfTest = false
+    var selfTestText = "Bought AAPL 1/6 at 200"
+    var message: String?
+    var accessMessage: String?
+    var runtimeStopMessage: String?
+    var diagnosticsSettings = DiagnosticsSettings()
+    var appliedDiagnosticsSettings: DiagnosticsSettings?
+    var diagnosticsSettingsWarning: String?
+    var diagnosticsEntries: [DiagnosticsJournalEntry] = []
+    var diagnosticsJournalBytes: Int64 = 0
+    var diagnosticsJournalMessage: String?
+    var isLoadingDiagnostics = false
+    var isRunningBackupRestore = false
+    var backupRestoreMessage: String?
+    var backupManifest: BackupManifestView?
+    var restorePreview: RestorePreviewView?
+    var pendingRestoreCandidate: PendingRestoreCandidateView?
+    var restorePreflightBlockers: [String] = []
+    var restoreCredentialStatus: String?
+    var restoreRecoveryMessage: String?
+    var isCheckingForUpdate = false
+    var isDownloadingUpdate = false
+    var isInstallingUpdate = false
+    var updateRecoveryRequired = false
+    var latestUpdate: UpdateRelease?
+    var stagedUpdate: StagedUpdate?
+    var updateMessage: String?
+
+    @ObservationIgnored private var runtimePaths: RuntimePaths?
+    @ObservationIgnored private var supervisor: ProcessSupervisor?
+    @ObservationIgnored private var startupOwnership: StartupOwnership?
+    @ObservationIgnored private var commandJournal: CommandJournal?
+    @ObservationIgnored private var engineActions: EngineActions?
+    @ObservationIgnored private let proposalOperations: (any AgentProposalOperations)?
+    @ObservationIgnored var agentRelay: AgentRelay?
+    /// The conversation with the assistant; it is forgotten on lock, quit, and engine stop.
+    let assistant = AssistantModel()
+    @ObservationIgnored var agentAccessStore: AgentAccessStore?
+    @ObservationIgnored private var diagnosticsSettingsStore: DiagnosticsSettingsStore
+    @ObservationIgnored private var diagnosticsJournal: DiagnosticsJournal
+
+    var operationalStoragePath: String {
+        runtimePaths?.applicationSupportDirectory.path ?? "App support is not open"
+    }
+
+    /// The running engine for agent approvals and the audit list; nil while no engine runs.
+    func agentEngineActions() -> EngineActions? {
+        engineActions
+    }
+
+    /// The engine's approval queue; a test hands in its own, otherwise the running engine's.
+    func agentProposalOperations() -> (any AgentProposalOperations)? {
+        proposalOperations ?? engineActions
+    }
+
+    /// Drops every proposal here and in the engine, whether or not agent access is on, because the
+    /// assistant makes proposals too.
+    func discardAgentProposals() async {
+        agentProposals = []
+        guard let operations = agentProposalOperations() else { return }
+        _ = try? await operations.discardProposals()
+    }
+
+    /// The saved setup and its keys for one question to the assistant; nil when nothing is saved or the Keychain declines.
+    func savedTradingSnapshot() -> (configuration: TradingConfiguration, secrets: TradingSecrets)? {
+        (try? tradingConfigurationStore?.load()) ?? nil
+    }
+
+    /// A fresh owner authentication for one sensitive action inside an unlocked session.
+    func confirmOwner(_ reason: String) async throws {
+        try await appUnlock.confirm(localizedReason: reason)
+    }
+
+    func accountActions() -> EngineActions? {
+        isTradingUnlocked && !isRunningBackupRestore && !isInstallingUpdate && pendingRestoreCandidate == nil
+            && restoreRecoveryMessage == nil ? engineActions : nil
+    }
+
+    var canActivateOperationalRestore: Bool {
+        guard !isRunningBackupRestore,
+            !isInstallingUpdate,
+            startupOwnership != nil,
+            engineActions != nil,
+            runtimePaths?.activeGenerationID != nil,
+            runtimeState == .ready || runtimeState == .degraded,
+            restoreRecoveryMessage == nil
+        else { return false }
+        if let pendingRestoreCandidate { return pendingRestoreCandidate.candidateValid }
+        return restorePreview?.matchesInstallation == true
+    }
+
+    var canRollbackOperationalRestore: Bool {
+        !isRunningBackupRestore
+            && !isInstallingUpdate
+            && startupOwnership != nil
+            && runtimePaths?.activeGenerationID != nil
+            && (pendingRestoreCandidate != nil || restoreRecoveryMessage != nil)
+            && (runtimeState == .ready || runtimeState == .degraded || runtimeState == .failed)
+    }
+
+    var canInstallStagedUpdate: Bool {
+        guard !isCheckingForUpdate,
+            !isDownloadingUpdate,
+            !isInstallingUpdate,
+            !isRunningBackupRestore,
+            !updateRecoveryRequired,
+            stagedUpdate != nil,
+            startupOwnership != nil,
+            supervisor != nil,
+            runtimePaths?.activeGenerationID != nil,
+            runtimeState == .ready || runtimeState == .degraded,
+            pendingRestoreCandidate == nil,
+            restoreRecoveryMessage == nil
+        else { return false }
+        return true
+    }
+
+    func createOperationalBackup(to destination: URL) async {
+        guard !isRunningBackupRestore, !isInstallingUpdate, let engineActions else {
+            backupRestoreMessage = L10n.string("Start the local engine before creating a backup.")
+            return
+        }
+        do {
+            guard try tradingConfigurationStore?.pendingActivation() == nil else {
+                backupRestoreMessage = L10n.string("Resolve the pending trading activation before backing up.")
+                return
+            }
+        } catch {
+            backupRestoreMessage = L10n.string("Trading configuration state could not be verified.")
+            return
+        }
+        isRunningBackupRestore = true
+        backupRestoreMessage = L10n.string("Draining operational writers and verifying the backup…")
+        defer { isRunningBackupRestore = false }
+        do {
+            backupManifest = try await engineActions.createBackup(destination: destination)
+            tradingStatus = try? await engineActions.tradingStatus()
+            backupRestoreMessage = L10n.string("Verified backup created at %@. Trading remains paused.", destination.path)
+        } catch is CancellationError {
+            backupRestoreMessage = L10n.string(
+                "Backup request was cancelled; the engine completed or cleaned up its staged snapshot safely.")
+        } catch {
+            backupRestoreMessage = Self.userMessage(for: error)
+        }
+    }
+
+    func previewOperationalRestore(from archive: URL) async {
+        guard !isRunningBackupRestore,
+            !isInstallingUpdate,
+            pendingRestoreCandidate == nil,
+            restoreRecoveryMessage == nil,
+            let engineActions
+        else {
+            backupRestoreMessage = L10n.string("Start the local engine before validating a restore archive.")
+            return
+        }
+        isRunningBackupRestore = true
+        backupRestoreMessage = L10n.string("Validating every archive member in isolated staging…")
+        defer { isRunningBackupRestore = false }
+        do {
+            let preview = try await engineActions.previewRestore(archive: archive)
+            restorePreview = preview
+            if preview.credentialReferences.isEmpty {
+                restoreCredentialStatus = L10n.string("No saved credential reference is included.")
+            } else if preview.matchesInstallation,
+                let tradingConfigurationStore,
+                try preview.credentialReferences.allSatisfy({
+                    try tradingConfigurationStore.hasCredentialRevision($0)
+                })
+            {
+                restoreCredentialStatus = L10n.string("Saved credential references exist in this installation.")
+            } else {
+                restoreCredentialStatus = L10n.string(
+                    "Credential references are unavailable here. Re-enter account credentials before activation.")
+            }
+            backupRestoreMessage =
+                L10n.string(
+                    "Validated in isolated staging. Activation stays blocked until broker orders, fills, holdings, and uncertain client IDs reconcile. The original store remains intact."
+                )
+        } catch {
+            restorePreview = nil
+            restoreCredentialStatus = nil
+            backupRestoreMessage = Self.userMessage(for: error)
+        }
+    }
+
+    func activateOperationalRestore() async {
+        guard canActivateOperationalRestore,
+            let owner = startupOwnership,
+            let currentActions = engineActions,
+            let currentPaths = runtimePaths
+        else {
+            backupRestoreMessage = L10n.string("Start the local engine and validate a same-installation restore before activation.")
+            return
+        }
+        let preview = restorePreview
+        if preview == nil && pendingRestoreCandidate == nil {
+            backupRestoreMessage = L10n.string("Validate a restore archive before activation.")
+            return
+        }
+        do {
+            guard try tradingConfigurationStore?.pendingActivation() == nil else {
+                backupRestoreMessage = L10n.string("Resolve the pending trading activation before restoring.")
+                return
+            }
+        } catch {
+            backupRestoreMessage = L10n.string("Trading configuration state could not be verified.")
+            return
+        }
+        guard preview == nil || currentPaths.activeGenerationID != nil else {
+            backupRestoreMessage = L10n.string("The active operational generation could not be verified.")
+            return
+        }
+        let stablePaths = RuntimePaths(
+            applicationSupportDirectory: currentPaths.ownerSupportDirectory,
+            runtimeRoot: currentPaths.runtimeRoot,
+            engineSourceRoot: currentPaths.engineSourceRoot
+        )
+        let coordinator = RestoreActivationCoordinator(ownership: owner, stablePaths: stablePaths)
+        let startRuntime: RestoreActivationCoordinator.RuntimeStarter = { [weak self] transition in
+            guard let self else { throw CancellationError() }
+            try await self.startRuntime(during: transition)
+            guard let actions = self.engineActions else {
+                throw RestoreActivationError.candidateStartFailed
+            }
+            return actions
+        }
+        let stopRuntime: RestoreActivationCoordinator.RuntimeStopper = { [weak self] transition in
+            guard let self else { throw CancellationError() }
+            try await self.stopRuntimeForMaintenance(during: transition)
+        }
+        isRunningBackupRestore = true
+        restorePreflightBlockers = []
+        restoreRecoveryMessage = nil
+        backupRestoreMessage = L10n.string("Preparing and revalidating an isolated restore candidate…")
+        engineGeneration.advance()
+        statusTask?.cancel()
+        statusTask = nil
+        eventTask?.cancel()
+        eventTask = nil
+        defer { isRunningBackupRestore = false }
+
+        do {
+            let result = try await coordinator.activate(
+                preview: preview,
+                knownPendingCandidateID: pendingRestoreCandidate?.candidateID,
+                expectedPreviousGeneration: preview == nil || pendingRestoreCandidate != nil
+                    ? nil
+                    : currentPaths.activeGenerationID,
+                engine: currentActions,
+                credentialStore: tradingConfigurationStore,
+                startRuntime: startRuntime,
+                stopRuntime: stopRuntime
+            )
+            restorePreflightBlockers = result.blockers
+            restorePreview = nil
+            pendingRestoreCandidate = nil
+            restoreCredentialStatus = nil
+            backupRestoreMessage = L10n.string(
+                "Restore activated in %@. Accounts remain disabled with manual recovery selected.", operationalStoragePath)
+        } catch let error as RestoreActivationError {
+            if case .preflightBlocked(let blockers) = error {
+                restorePreflightBlockers = blockers
+                backupRestoreMessage =
+                    L10n.string(
+                        "Read-only broker preflight blocked activation: %@. The previous generation was restored.",
+                        Humanize.joined(blockers))
+            } else if case .rollbackIncomplete = error {
+                restoreRecoveryMessage = error.localizedDescription
+                backupRestoreMessage = restoreRecoveryMessage
+                runtimeState = .failed
+            } else {
+                backupRestoreMessage = error.localizedDescription
+            }
+        } catch {
+            backupRestoreMessage = restoreRecoveryMessage ?? Self.userMessage(for: error)
+        }
+    }
+
+    func rollbackOperationalRestore() async {
+        guard !isRunningBackupRestore,
+            !isInstallingUpdate,
+            let owner = startupOwnership,
+            let paths = runtimePaths
+        else { return }
+        isRunningBackupRestore = true
+        backupRestoreMessage = L10n.string("Stopping restore recovery and returning to the previous generation…")
+        engineGeneration.advance()
+        statusTask?.cancel()
+        statusTask = nil
+        eventTask?.cancel()
+        eventTask = nil
+        defer { isRunningBackupRestore = false }
+        let stablePaths = RuntimePaths(
+            applicationSupportDirectory: paths.ownerSupportDirectory,
+            runtimeRoot: paths.runtimeRoot,
+            engineSourceRoot: paths.engineSourceRoot
+        )
+        let coordinator = RestoreActivationCoordinator(ownership: owner, stablePaths: stablePaths)
+        let startRuntime: RestoreActivationCoordinator.RuntimeStarter = { [weak self] transition in
+            guard let self else { throw CancellationError() }
+            try await self.startRuntime(during: transition)
+            guard let actions = self.engineActions else {
+                throw RestoreActivationError.candidateStartFailed
+            }
+            return actions
+        }
+        let stopRuntime: RestoreActivationCoordinator.RuntimeStopper = { [weak self] transition in
+            guard let self else { throw CancellationError() }
+            try await self.stopRuntimeForMaintenance(during: transition)
+        }
+        do {
+            try await coordinator.rollback(
+                knownPendingCandidateID: pendingRestoreCandidate?.candidateID,
+                engine: engineActions,
+                startRuntime: startRuntime,
+                stopRuntime: stopRuntime
+            )
+            restoreRecoveryMessage = nil
+            pendingRestoreCandidate = nil
+            backupRestoreMessage = L10n.string("Restore was rolled back. The previous generation is running.")
+        } catch {
+            restoreRecoveryMessage =
+                error is RestoreActivationError
+                ? error.localizedDescription
+                : RestoreActivationError.rollbackIncomplete.localizedDescription
+            backupRestoreMessage = restoreRecoveryMessage
+            runtimeState = .failed
+        }
+    }
+
+    private func stopRuntimeForMaintenance(during transition: MaintenanceTransition) async throws {
+        guard let owner = startupOwnership else { throw StartupOwnershipError.staleMaintenanceTransition }
+        await assistant.reset()
+        runtimeGeneration.advance()
+        engineGeneration.advance()
+        statusTask?.cancel()
+        statusTask = nil
+        eventTask?.cancel()
+        eventTask = nil
+        _ = try await owner.stopReplacementForMaintenance(during: transition)
+        supervisor = nil
+        stopAgentRelay()
+        engineActions = nil
+        engineStatus = nil
+        tradingStatus = nil
+        runtimeState = .starting
+    }
+
+    func beginUpdateMaintenance() async throws -> MaintenanceTransition {
+        guard let owner = startupOwnership,
+            supervisor != nil,
+            runtimeState == .ready || runtimeState == .degraded,
+            pendingRestoreCandidate == nil,
+            restoreRecoveryMessage == nil,
+            !isRunningBackupRestore
+        else {
+            throw UpdateInstallError.recoveryRequired
+        }
+        let transition = try await owner.beginMaintenanceTransition()
+        do {
+            try await stopRuntimeForMaintenance(during: transition)
+            return transition
+        } catch {
+            await owner.finishMaintenanceTransition(transition)
+            throw error
+        }
+    }
+
+    func restartRuntimeAfterUpdateRollback(during transition: MaintenanceTransition) async throws {
+        try await startRuntime(during: transition)
+        guard runtimeState == .ready || runtimeState == .degraded,
+            supervisor != nil
+        else {
+            throw UpdateInstallError.installationFailed
+        }
+    }
+
+    func finishUpdateMaintenance(_ transition: MaintenanceTransition) async {
+        await startupOwnership?.finishMaintenanceTransition(transition)
+    }
+
+    func checkForUpdate() async {
+        guard !isCheckingForUpdate, !isDownloadingUpdate, !isRunningBackupRestore, !isInstallingUpdate else { return }
+        isCheckingForUpdate = true
+        updateMessage = L10n.string("Checking the public GitHub release feed…")
+        defer { isCheckingForUpdate = false }
+        do {
+            let schemaVersion = try operationalSchemaVersionForUpdate()
+            let release = try await updateService.latestRelease(currentEngineSchema: schemaVersion)
+            if let stagedUpdate, stagedUpdate.release.version != release.version {
+                try updateService.discard(stagedUpdate, in: updateStagingDirectory)
+                self.stagedUpdate = nil
+            }
+            latestUpdate = release
+            updateMessage = L10n.string("Release notes loaded. No account or trading data was sent.")
+        } catch {
+            latestUpdate = nil
+            updateMessage = Self.userMessage(for: error)
+        }
+    }
+
+    func downloadAndVerifyUpdate() async {
+        guard !isCheckingForUpdate, !isDownloadingUpdate, !isRunningBackupRestore, !isInstallingUpdate else { return }
+        guard let latestUpdate else {
+            updateMessage = L10n.string("Check for a release before downloading an update.")
+            return
+        }
+        isDownloadingUpdate = true
+        updateMessage = L10n.string("Checking compatibility and publisher trust before staging…")
+        defer { isDownloadingUpdate = false }
+        do {
+            let schemaVersion = try operationalSchemaVersionForUpdate()
+            let staged = try await updateService.stage(
+                latestUpdate,
+                in: updateStagingDirectory,
+                currentEngineSchema: schemaVersion
+            )
+            if let previous = stagedUpdate, previous.artifactURL != staged.artifactURL {
+                do {
+                    try updateService.discard(previous, in: updateStagingDirectory)
+                } catch {
+                    try? updateService.discard(staged, in: updateStagingDirectory)
+                    throw error
+                }
+            }
+            stagedUpdate = staged
+            updateMessage = L10n.string("Verified update staged at %@. The engine has not been stopped.", staged.artifactURL.path)
+        } catch {
+            updateMessage = Self.userMessage(for: error)
+        }
+    }
+
+    func installStagedUpdate() async {
+        guard canInstallStagedUpdate, let stagedUpdate else {
+            updateMessage = "A verified update can be installed only while the current runtime is healthy and no restore is pending."
+            return
+        }
+        isInstallingUpdate = true
+        updateMessage = L10n.string("Revalidating the signed package and replacement location before stopping the engine…")
+        defer { isInstallingUpdate = false }
+        let lifecycle = AppUpdateRuntimeLifecycle(model: self)
+        let installer = MacOSUpdateBundleInstaller()
+        do {
+            try await UpdateInstallCoordinator(lifecycle: lifecycle, installer: installer)
+                .install(stagedUpdate)
+            updateRecoveryRequired = false
+            updateMessage = L10n.string("The replacement app was launched. This app is closing while the new runtime confirms its startup.")
+        } catch let error as UpdateInstallError {
+            if error == .recoveryRequired || error == .handoffTimedOut {
+                updateRecoveryRequired = true
+                runtimeState = .failed
+            }
+            updateMessage = error.localizedDescription
+        } catch {
+            updateMessage = Self.userMessage(for: error)
+        }
+    }
+
+    private var updateStagingDirectory: URL {
+        if let runtimePaths {
+            return runtimePaths.ownerSupportDirectory.appending(path: ".updates", directoryHint: .isDirectory)
+        }
+        let root =
+            ProcessInfo.processInfo.environment["COPYTRADING_STATE_ROOT"].map {
+                URL(filePath: $0, directoryHint: .isDirectory)
+            } ?? URL.applicationSupportDirectory.appending(path: "CopyTrading", directoryHint: .isDirectory)
+        return root.appending(path: ".updates", directoryHint: .isDirectory)
+    }
+
+    private func operationalSchemaVersionForUpdate() throws -> Int {
+        if let runtimePaths {
+            return try OperationalSchemaReader.applicationDatabaseVersion(at: runtimePaths.databaseURL)
+        }
+        let ownerPaths = try RuntimePaths.discover()
+        let lock = try ownerPaths.acquireInstallationLock()
+        defer { lock.release() }
+        let activePaths = try ownerPaths.resolveActiveGeneration(whileHolding: lock)
+        return try OperationalSchemaReader.applicationDatabaseVersion(at: activePaths.databaseURL)
+    }
+
+    func evaluateHistoricalProfile(
+        sourceID: String, routeID: String
+    ) async throws -> ProfileEvaluation {
+        guard isTradingUnlocked else { throw TradingSettingsError.privateAccessLocked }
+        guard let tradingConfigurationStore,
+            let evaluator: any TradingStarting = tradingStarter ?? engineActions
+        else {
+            throw TradingSettingsError.engineUnavailable
+        }
+        guard let saved = try tradingConfigurationStore.load(),
+            let route = saved.configuration.routes.first(where: { $0.id == routeID }),
+            let profile = saved.configuration.profiles.first(where: {
+                $0.guruID == route.guruID && $0.profileRevision == route.profileRevision
+            })
+        else {
+            throw TradingSettingsError.historicalEvaluationUnavailable
+        }
+        let request = HistoricalProfileEvaluationRequest(
+            sourceID: sourceID,
+            profile: profile,
+            provider: saved.configuration.provider,
+            providerAPIKey: saved.secrets.providerAPIKey,
+            destinations: route.connections
+        )
+        let result = try await evaluator.evaluateHistoricalProfile(request)
+        guard result.simulated, result.noOrder,
+            result.messageIdentity == sourceID,
+            result.guruID == profile.guruID,
+            result.profileRevision == profile.profileRevision,
+            result.provider == saved.configuration.provider.name.rawValue,
+            result.model == saved.configuration.provider.model
+        else {
+            throw TradingSettingsError.invalidEvaluationResult
+        }
+        return result
+    }
+    @ObservationIgnored private var tradingStarter: (any TradingStarting)?
+    @ObservationIgnored private var tradingConfigurationStore: TradingConfigurationStore?
+    /// The unsaved setup, edited from Connections, People, and Accounts. It lives here, not in a
+    /// screen, so switching screens keeps what was typed; locking or closing the window drops it,
+    /// secrets included.
+    var setupDraft = ConnectionsDraft()
+    /// The saved configuration `setupDraft` was last filled from, so refilling the draft never
+    /// overwrites pending edits with the saved copy.
+    var setupDraftSource: TradingConfiguration?
+    /// The account or guru being edited, shown as one sheet over whichever screen asked for it.
+    var setupEditor: ConnectionsEditingTarget?
+    /// A connection the guide asked to open; Connections opens its panel and clears it.
+    var requestedConnection: ConnectionKind?
+    /// A guru an assistant link asked to open; People opens their sheet and clears it.
+    var requestedGuruID: String?
+    /// The guru whose sheet is open on People, so the assistant knows who "this guru" is.
+    var openGuruID: String?
+    /// An account an assistant link asked to show; Accounts scrolls to it and clears it.
+    var requestedAccountID: String?
+    /// The draft as it stood when the current check began; Start Copying needs it unchanged.
+    var checkedSetupSignature: SetupDraftSignature?
+    var isShowingSetupCheck = false
+    /// When copying last started from a new setup. Today says so until the first post after it.
+    var copyingStartedAt: Date?
+    /// A Getting Started section asked for from the Help menu; the guide clears it.
+    var guideAnchor: GuideAnchor?
+    /// Bumped by Help ▸ Show Tips Again, so every tip gets a fresh identity and can show again.
+    var tipGeneration = UserDefaults.standard.integer(forKey: AppModel.tipGenerationKey)
+    @ObservationIgnored private var pendingTradingActivation: PendingTradingActivation?
+    /// The banner the last check left, so discarding that check takes its banner with it.
+    @ObservationIgnored private var checkOutcomeMessage: String?
+    @ObservationIgnored private var hasChosenFirstScreen = false
+
+    /// The exact configuration the current check covers; Start Copying saves this one.
+    var validatedConfiguration: TradingConfiguration? { pendingTradingActivation?.configuration }
+
+    @ObservationIgnored private var tradingValidationTask: Task<Void, Never>?
+    @ObservationIgnored private var startupIntent = AppStartupIntent()
+    @ObservationIgnored private let appUnlock: AppUnlock
+    @ObservationIgnored private let shutdownCoordinator = ShutdownCoordinator()
+    @ObservationIgnored private let updateService = UpdateService()
+    @ObservationIgnored private var windowSessionID: UUID?
+    @ObservationIgnored private var eventTask: Task<Void, Never>?
+    @ObservationIgnored private var statusTask: Task<Void, Never>?
+    @ObservationIgnored private var startupTask: Task<Void, Never>?
+    @ObservationIgnored private var runtimeGeneration = RuntimeGeneration()
+    @ObservationIgnored private var engineGeneration = RuntimeGeneration()
+    @ObservationIgnored private var isStoppingRuntime = false
+    @ObservationIgnored private var accessGeneration = 0
+    /// Only the real app launch passes a store; other models (tests) keep preferences in memory
+    /// and never read the owner's Keychain.
+    @ObservationIgnored private let launchPreferencesStore: LaunchPreferencesStore?
+    /// Whether this launch already tried starting copying on the owner's behalf.
+    @ObservationIgnored private var didStartCopyingOnLaunch = false
+    /// How long the launch start waits before each retry after a failed connection check.
+    @ObservationIgnored var launchStartRetryDelays: [Duration] = [.seconds(10), .seconds(30), .seconds(60)]
+    @ObservationIgnored private var launchStartRetry: Task<Void, Never>?
+    private(set) var launchPreferences: LaunchPreferences
+
+    private struct PendingTradingActivation: Sendable {
+        let configuration: TradingConfiguration
+        /// The engine's revision of `configuration`; the app never computes its own.
+        let revision: String
+        let secrets: TradingSecrets
+        let validationToken: String
+    }
+
+    /// The installation root: `COPYTRADING_STATE_ROOT` when set, else Application Support.
+    static var stateRoot: URL {
+        ProcessInfo.processInfo.environment["COPYTRADING_STATE_ROOT"].map {
+            URL(filePath: $0, directoryHint: .isDirectory)
+        } ?? URL.applicationSupportDirectory.appending(path: "CopyTrading", directoryHint: .isDirectory)
+    }
+
+    init(
+        tradingConfigurationStore: TradingConfigurationStore? = nil,
+        tradingStarter: (any TradingStarting)? = nil,
+        appUnlock: AppUnlock? = nil,
+        launchPreferencesStore: LaunchPreferencesStore? = nil,
+        agentProposalOperations: (any AgentProposalOperations)? = nil
+    ) {
+        proposalOperations = agentProposalOperations
+        let stateRoot = Self.stateRoot
+        let logsDirectory = stateRoot.appending(path: "logs", directoryHint: .isDirectory)
+        diagnosticsSettingsStore = DiagnosticsSettingsStore(url: logsDirectory.appending(path: "settings.json"))
+        diagnosticsJournal = DiagnosticsJournal(directory: logsDirectory)
+        self.tradingConfigurationStore = tradingConfigurationStore
+        self.tradingStarter = tradingStarter
+        let preferences = launchPreferencesStore?.load() ?? LaunchPreferences()
+        self.launchPreferencesStore = launchPreferencesStore
+        launchPreferences = preferences
+        self.appUnlock = appUnlock ?? AppUnlock(ownerCheckRequired: preferences.asksForOwner)
+        loadDiagnosticsSettings()
+        loadAgentAccess(stateRoot: stateRoot)
+        connectAssistant()
+    }
+
+    func startIfNeeded() {
+        guard startupIntent.allowsAutomaticStart else { return }
+        guard startupTask == nil, runtimeState == .stopped || runtimeState == .failed else { return }
+        startupTask = Task { [weak self] in
+            guard let self else { return }
+            let updateRecoveryHandled = await self.recoverPendingUpdateAtStartup()
+            if !updateRecoveryHandled {
+                await self.startRuntime()
+            }
+            self.startupTask = nil
+        }
+    }
+
+    func requestStart() {
+        startupIntent.startRequested()
+        guard !updateRecoveryRequired else {
+            updateMessage = L10n.string("Update recovery is pending. Quit and reopen the app to retry the recorded bundle handoff.")
+            return
+        }
+        startIfNeeded()
+    }
+
+    func startRuntime() async {
+        do {
+            try await launchRuntime(during: nil)
+        } catch {
+            // Ordinary startup reports its failure through runtimeState and message.
+        }
+    }
+
+    func startRuntime(during transition: MaintenanceTransition) async throws {
+        try await launchRuntime(during: transition)
+    }
+
+    private func startRuntimeForUpdateRecovery() async -> UpdateRuntimeStartOutcome {
+        do {
+            try await launchRuntime(during: nil, propagateStartupFailure: true)
+            return runtimeState == .ready || runtimeState == .degraded ? .ready : .failed
+        } catch let error as RuntimePathsError {
+            return error == .alreadyRunning ? .ownerLockBusy : .failed
+        } catch {
+            return .failed
+        }
+    }
+
+    private func recoverPendingUpdateAtStartup() async -> Bool {
+        let installer = MacOSUpdateBundleInstaller()
+        do {
+            let recovered = try await UpdateStartupRecoveryCoordinator(installer: installer)
+                .recoverPendingUpdate(
+                    startRuntime: { [weak self] in
+                        guard let self else { return .failed }
+                        return await self.startRuntimeForUpdateRecovery()
+                    },
+                    terminateCurrentApplication: { [weak self] in
+                        await self?.terminateAfterUpdateRecovery()
+                    }
+                )
+            if recovered, runtimeState == .ready || runtimeState == .degraded {
+                updateRecoveryRequired = false
+                updateMessage = L10n.string("The replacement application started successfully and recovery evidence was cleared.")
+            }
+            return recovered
+        } catch {
+            updateRecoveryRequired = true
+            runtimeState = .failed
+            updateMessage =
+                L10n.string(
+                    "Update recovery is still pending: %@ Quit and reopen after the installation lock is released.",
+                    Self.userMessage(for: error))
+            return true
+        }
+    }
+
+    private func terminateAfterUpdateRecovery() {
+        NSApplication.shared.terminate(nil)
+    }
+
+    private func launchRuntime(
+        during transition: MaintenanceTransition?,
+        propagateStartupFailure: Bool = false
+    ) async throws {
+        guard transition != nil || runtimeState == .stopped || runtimeState == .failed else { return }
+        let startingGeneration = runtimeGeneration.advance()
+        runtimeState = .starting
+        message = nil
+        runtimeStopMessage = nil
+
+        var unownedLock: InstallationLock?
+        var attempt: StartupOwnership?
+        do {
+            let ownerPaths = try RuntimePaths.discover()
+            let paths: RuntimePaths
+            let ownedAttempt: StartupOwnership
+            let startupAttemptToken: StartupAttemptToken?
+            let lock: InstallationLock?
+            if let transition {
+                guard let existingAttempt = startupOwnership else {
+                    throw StartupOwnershipError.staleMaintenanceTransition
+                }
+                ownedAttempt = existingAttempt
+                attempt = existingAttempt
+                lock = nil
+                startupAttemptToken = nil
+                paths = try await existingAttempt.resolveActiveGeneration(
+                    from: ownerPaths,
+                    during: transition
+                )
+            } else {
+                let acquiredLock = try ownerPaths.acquireInstallationLock()
+                unownedLock = acquiredLock
+                paths = try ownerPaths.resolveActiveGeneration(whileHolding: acquiredLock)
+                let newAttempt = StartupOwnership(lock: acquiredLock)
+                ownedAttempt = newAttempt
+                attempt = newAttempt
+                startupOwnership = newAttempt
+                unownedLock = nil
+                startupAttemptToken = try await newAttempt.beginStartupAttempt()
+                lock = acquiredLock
+            }
+            guard runtimeGeneration.accepts(startingGeneration), !Task.isCancelled else { throw CancellationError() }
+            let identity = try paths.installationIdentity()
+            diagnosticsSettingsStore = DiagnosticsSettingsStore(url: paths.logsDirectory.appending(path: "settings.json"))
+            diagnosticsJournal = DiagnosticsJournal(directory: paths.logsDirectory)
+            loadDiagnosticsSettings()
+            let selectedDiagnosticsSettings = diagnosticsSettings
+            appliedDiagnosticsSettings = selectedDiagnosticsSettings
+            let tradingKeychain = TradingKeychainStore(
+                service: try TradingKeychainStore.service(forInstallationID: identity)
+            )
+            let configurationStore = TradingConfigurationStore(
+                url: paths.applicationSupportDirectory.appending(path: "trading-configuration.json"),
+                secrets: tradingKeychain
+            )
+            tradingConfigurationStore = configurationStore
+            if try configurationStore.discardOlderVersion() {
+                message =
+                    L10n.string(
+                        "Your setup was saved by an older version of CopyTrading. Set it up again from Getting Started, including your keys."
+                    )
+            }
+            let savedTrading = try configurationStore.load()
+            savedTradingConfiguration = savedTrading?.configuration
+            hasTradingSecrets = savedTrading != nil
+            syncSetupDraftWithSaved()
+            // A first launch opens on the guide; an engine restart later never moves the owner.
+            if !hasChosenFirstScreen {
+                hasChosenFirstScreen = true
+                if savedTrading == nil && selectedScreen == .today {
+                    selectedScreen = .gettingStarted
+                }
+            }
+            let newJournal = CommandJournal(url: paths.applicationSupportDirectory.appending(path: "commands.json"))
+            selfTestEntries = try await newJournal.entries()
+            guard runtimeGeneration.accepts(startingGeneration), !Task.isCancelled else { throw CancellationError() }
+            commandJournal = newJournal
+            try paths.rejectOrphanedEngine()
+            let manifest = try RuntimeResourceCatalog.runtimeManifest()
+            let python = try manifest.executable(named: "cpython", under: paths.runtimeRoot)
+            let engineRoot = paths.engineSourceRoot.appending(path: "src", directoryHint: .isDirectory)
+            let pythonLibraryPath = ProcessInfo.processInfo.environment["COPYTRADING_PYTHON_LIBRARY_PATH"]
+
+            var engineEnvironment = [
+                "PATH": "/usr/bin:/bin",
+                "PYTHONPATH": engineRoot.path,
+                "PYTHONUNBUFFERED": "1",
+                "PYTHONDONTWRITEBYTECODE": "1",
+                "COPYTRADING_DESKTOP_DIAGNOSTICS_STATE_DIR": paths.logsDirectory.path,
+                "COPYTRADING_DESKTOP_OWNER_SUPPORT_DIR": paths.ownerSupportDirectory.path,
+            ].merging(selectedDiagnosticsSettings.engineEnvironment) { current, _ in current }
+            if let pythonLibraryPath {
+                engineEnvironment["PYTHONPATH"] = "\(engineRoot.path):\(pythonLibraryPath)"
+            }
+            let engine = ProcessLaunchSpecification(
+                child: .engine,
+                executableURL: python,
+                arguments: [
+                    "-u", "-m", "copytrading_engine",
+                    "--data-dir", paths.applicationSupportDirectory.path,
+                    "--instance-id", identity,
+                ],
+                environment: engineEnvironment,
+                workingDirectory: paths.applicationSupportDirectory,
+                readiness: .engineStatus(expectedInstanceID: identity),
+                stdoutIsIPC: true
+            )
+
+            let supervisorConfiguration = ProcessSupervisorConfiguration(
+                children: [engine],
+                maximumRestarts: 3,
+                restartDelay: .seconds(1),
+                outputBufferLimit: 8192,
+                startupTimeout: .seconds(45)
+            )
+            let newSupervisor: ProcessSupervisor
+            if let transition {
+                newSupervisor = try await ownedAttempt.makeSupervisor(
+                    configuration: supervisorConfiguration,
+                    during: transition
+                )
+            } else if let lock {
+                newSupervisor = ProcessSupervisor(
+                    configuration: supervisorConfiguration,
+                    installationLock: lock
+                )
+            } else {
+                throw StartupOwnershipError.terminalStopWon
+            }
+            let adoptedSupervisor: Bool
+            if let startupAttemptToken {
+                adoptedSupervisor = await ownedAttempt.adopt(newSupervisor, for: startupAttemptToken)
+            } else if let transition {
+                adoptedSupervisor = await ownedAttempt.adopt(newSupervisor, during: transition)
+            } else {
+                adoptedSupervisor = false
+            }
+            guard adoptedSupervisor, runtimeGeneration.accepts(startingGeneration), !Task.isCancelled else {
+                throw CancellationError()
+            }
+            supervisor = newSupervisor
+            let actions = EngineActions(supervisor: newSupervisor)
+            engineActions = actions
+            runtimePaths = paths
+            observe(newSupervisor)
+            try await newSupervisor.start()
+            guard runtimeGeneration.accepts(startingGeneration), !Task.isCancelled else {
+                throw CancellationError()
+            }
+            let readyStatus = try await actions.status()
+            guard runtimeGeneration.accepts(startingGeneration), !Task.isCancelled else { throw CancellationError() }
+            engineStatus = readyStatus
+            pendingRestoreCandidate = try await actions.restoreCandidateStatus()
+            restorePreflightBlockers = []
+            if let pendingRestoreCandidate {
+                restoreRecoveryMessage = nil
+                restoreCredentialStatus =
+                    pendingRestoreCandidate.candidateValid
+                    ? "A gated restore candidate is available for recovery."
+                    : L10n.string("The restore candidate failed durable validation and can only be rolled back.")
+                backupRestoreMessage = L10n.string(
+                    "Restore recovery is gated. Continue reconciliation or roll back to the previous generation.")
+            } else {
+                restoreRecoveryMessage = nil
+            }
+            tradingStatus = try await actions.tradingStatus()
+            await reconcilePendingTradingActivation(using: actions)
+            runtimeState = engineStatus?.telemetryState == .degraded ? .degraded : .ready
+            startAgentRelay(stateRoot: paths.ownerSupportDirectory, actions: actions)
+            await refreshPendingSelfTest()
+            guard runtimeGeneration.accepts(startingGeneration), !Task.isCancelled else { throw CancellationError() }
+            startStatusPolling()
+        } catch {
+            if let transition, let attempt {
+                do {
+                    _ = try await attempt.stopReplacementForMaintenance(during: transition)
+                } catch {
+                    message = L10n.string(
+                        "Restore recovery could not stop the replacement runtime. The durable gate and installation lock remain held.")
+                }
+            } else {
+                unownedLock?.release()
+                await attempt?.stop()
+            }
+            if transition != nil {
+                guard runtimeGeneration.accepts(startingGeneration) else { throw error }
+            } else {
+                guard runtimeGeneration.accepts(startingGeneration) else { return }
+            }
+            supervisor = nil
+            if transition == nil { startupOwnership = nil }
+            await assistant.reset()
+            stopAgentRelay()
+            engineActions = nil
+            tradingStatus = nil
+            runtimeState = .failed
+            if message == nil { message = Self.userMessage(for: error) }
+            FileHandle.standardError.write(Data("desktop startup failed: \(message ?? "unknown")\n".utf8))
+            #if DEBUG
+                FileHandle.standardError.write(Data("desktop startup error: \(String(reflecting: error))\n".utf8))
+            #endif
+            if transition != nil || propagateStartupFailure { throw error }
+        }
+    }
+
+    func stopRuntime() async {
+        startupIntent.stop()
+        isStoppingRuntime = true
+        await shutdownCoordinator.run { [weak self] in
+            await self?.performRuntimeShutdown()
+        }
+        isStoppingRuntime = false
+    }
+
+    /// Invalidates any status read that began before the machine woke. It does
+    /// not start a stopped runtime or override an explicit Stop/pause choice.
+    func runtimeDidWake() {
+        guard !isStoppingRuntime,
+            supervisor != nil,
+            runtimeState == .ready || runtimeState == .degraded
+        else { return }
+        engineGeneration.advance()
+        startStatusPolling()
+    }
+
+    private func performRuntimeShutdown() async {
+        await assistant.reset()
+        runtimeGeneration.advance()
+        engineGeneration.advance()
+        startupTask?.cancel()
+        startupTask = nil
+        statusTask?.cancel()
+        statusTask = nil
+        eventTask?.cancel()
+        eventTask = nil
+        let stopReport: ProcessSupervisorStopReport
+        if let startupOwnership {
+            stopReport = await startupOwnership.stop()
+        } else if let supervisor {
+            stopReport = await supervisor.stop()
+        } else {
+            stopReport = .noLiveEngine
+        }
+        runtimeStopMessage = Self.stopMessage(for: stopReport)
+        supervisor = nil
+        startupOwnership = nil
+        stopAgentRelay()
+        engineActions = nil
+        engineStatus = nil
+        tradingStatus = nil
+        runtimeState = .stopped
+        message = nil
+    }
+
+    static func stopMessage(for report: ProcessSupervisorStopReport) -> String {
+        let acknowledgement: String
+        switch report.engineDrainAcknowledgement {
+        case .acknowledged:
+            acknowledgement = L10n.string("The engine acknowledged its graceful drain.")
+        case .unconfirmed:
+            acknowledgement = L10n.string("The engine did not confirm its graceful drain; owned local processes were stopped.")
+        case .noLiveEngine:
+            acknowledgement = L10n.string("No live engine session was available to confirm a drain.")
+        }
+        let forcedChildren = report.forciblyStoppedChildren.map(\.rawValue)
+        var sentences = [acknowledgement]
+        if !forcedChildren.isEmpty {
+            sentences.append(L10n.string("Forced termination was required for: %@.", Humanize.joined(forcedChildren)))
+        }
+        sentences.append(L10n.string("Broker-accepted orders may remain open."))
+        return sentences.dropFirst().reduce(acknowledgement) { L10n.string("%@ %@", $0, $1) }
+    }
+
+    private func loadDiagnosticsSettings() {
+        do {
+            diagnosticsSettings = try diagnosticsSettingsStore.load() ?? DiagnosticsSettings()
+            diagnosticsSettingsWarning = nil
+        } catch {
+            diagnosticsSettings = DiagnosticsSettings()
+            diagnosticsSettingsWarning = L10n.string("Saved log settings could not be read, so the defaults apply.")
+        }
+    }
+
+    func saveDiagnosticsSettings(ageDays: Int, storageLimitBytes: Int64) {
+        do {
+            let settings = try DiagnosticsSettings(ageDays: ageDays, storageLimitBytes: storageLimitBytes)
+            try diagnosticsSettingsStore.save(settings)
+            diagnosticsSettings = settings
+            diagnosticsSettingsWarning = nil
+        } catch {
+            diagnosticsSettingsWarning = error.localizedDescription
+        }
+    }
+
+    /// Re-reads the journal from disk; it works whether or not the engine is running.
+    func reloadDiagnostics() async {
+        guard !isLoadingDiagnostics else { return }
+        isLoadingDiagnostics = true
+        defer { isLoadingDiagnostics = false }
+        let journal = diagnosticsJournal
+        do {
+            let (entries, bytes) = try await Task.detached(priority: .userInitiated) {
+                (try journal.entries(), journal.usageBytes())
+            }.value
+            diagnosticsEntries = entries
+            diagnosticsJournalBytes = bytes
+            diagnosticsJournalMessage = nil
+        } catch {
+            diagnosticsJournalMessage = error.localizedDescription
+        }
+    }
+
+    /// The journal itself, already redacted by the engine, for a support file the owner saves.
+    func diagnosticsExportText() throws -> String {
+        try diagnosticsJournal.exportText()
+    }
+
+    func runSelfTest() async {
+        guard engineActions != nil else {
+            message = L10n.string("Start the local engine before running a self-test.")
+            return
+        }
+        guard pendingCommandID == nil else {
+            message = L10n.string("Look up the pending command before starting another self-test.")
+            return
+        }
+        guard !isRunningSelfTest else { return }
+        isRunningSelfTest = true
+        defer { isRunningSelfTest = false }
+        let command = SelfTestCommand(
+            commandID: UUID().uuidString.lowercased(),
+            text: selfTestText,
+            destinationIDs: ["self-test-a", "self-test-b"]
+        )
+        do {
+            guard let commandJournal else { throw CommandJournalError.unavailable }
+            try await commandJournal.record(command)
+            selfTestEntries = try await commandJournal.entries()
+            try await submit(command)
+            await refreshStatus()
+            message = nil
+        } catch {
+            message = Self.userMessage(for: error)
+        }
+    }
+
+    func refreshStatus() async {
+        guard let engineActions else { return }
+        let currentRuntimeGeneration = runtimeGeneration.current
+        let currentEngineGeneration = engineGeneration.current
+        do {
+            let status = try await engineActions.status()
+            guard runtimeGeneration.accepts(currentRuntimeGeneration),
+                engineGeneration.accepts(currentEngineGeneration)
+            else { return }
+            engineStatus = status
+            tradingStatus = try await engineActions.tradingStatus()
+            guard runtimeGeneration.accepts(currentRuntimeGeneration),
+                engineGeneration.accepts(currentEngineGeneration)
+            else { return }
+            await reconcilePendingTradingActivation(using: engineActions)
+            guard runtimeGeneration.accepts(currentRuntimeGeneration),
+                engineGeneration.accepts(currentEngineGeneration)
+            else { return }
+            if status.state == .running {
+                runtimeState = status.telemetryState == .degraded ? .degraded : .ready
+            }
+            await refreshPendingSelfTest()
+            await refreshAgentActivity()
+        } catch {
+            guard runtimeGeneration.accepts(currentRuntimeGeneration),
+                engineGeneration.accepts(currentEngineGeneration)
+            else { return }
+            runtimeState = .degraded
+            message = Self.userMessage(for: error)
+        }
+    }
+
+    /// Reads the route's channel and has the configured model draft a playbook. Nothing is saved;
+    /// keys left blank in Setup fall back to the saved ones, exactly as Validate does.
+    func learnPlaybook(for route: TradingRouteDraft, in draft: ConnectionsDraft) async throws -> LearnedGuruPlaybook {
+        func fail(_ reason: String) -> TradingSettingsError { .invalidConfiguration(reason) }
+        guard isTradingUnlocked else { throw fail(L10n.string("Unlock CopyTrading before learning a playbook.")) }
+        guard let learner: any TradingStarting = tradingStarter ?? engineActions else {
+            throw fail(L10n.string("Start the local engine before learning a playbook."))
+        }
+        let channelID = draft.effectiveChannel(for: route)
+        guard !channelID.isEmpty else { throw fail(L10n.string("Add the guru's Discord channel ID first.")) }
+        guard !draft.modelName.trimmed.isEmpty else { throw fail(L10n.string("Choose a model under Interpreter first.")) }
+        let stored = try tradingConfigurationStore?.load()
+        let saved = stored?.secrets
+        let discordToken = draft.discordToken.isEmpty ? saved?.discordToken ?? "" : draft.discordToken
+        let providerAPIKey = Self.providerKey(
+            entered: draft.providerAPIKey, for: draft.provider, saved: stored)
+        if let problem = draft.providerConfiguration.baseURLProblem { throw fail(problem) }
+        let missing = [
+            discordToken.isEmpty ? "the Discord token" : nil,
+            providerAPIKey.isEmpty && draft.provider.requiresAPIKey ? "the model API key" : nil,
+        ].compactMap(\.self)
+        guard missing.isEmpty else {
+            throw TradingSettingsError.missingCredentials(ListFormatter.localizedString(byJoining: missing))
+        }
+        do {
+            return try await learner.learnGuruPlaybook(
+                GuruPlaybookLearningRequest(
+                    channelID: channelID,
+                    authorID: route.authorID.trimmed.nilIfEmpty,
+                    discordToken: discordToken,
+                    provider: draft.providerConfiguration,
+                    providerAPIKey: providerAPIKey
+                ))
+        } catch EngineContractError.remote(code: _, message: let message?) {
+            throw fail(message)
+        } catch is EngineContractError {
+            throw fail(L10n.string("The engine could not learn from this channel. Try again."))
+        }
+    }
+
+    func validateTradingSettings(
+        _ configuration: TradingConfiguration, enteredSecrets: TradingSecrets
+    ) async {
+        defer { checkOutcomeMessage = message }
+        guard !isRunningBackupRestore else {
+            message = L10n.string("Wait for the backup or restore to finish, then check the setup.")
+            return
+        }
+        guard isTradingUnlocked else {
+            message = L10n.string("Unlock CopyTrading first.")
+            return
+        }
+        guard let tradingConfigurationStore else {
+            message = L10n.string("CopyTrading is still starting. Check the setup again in a moment.")
+            return
+        }
+        guard tradingStatus?.state == .paused, !isTradingCommandPending else {
+            message = L10n.string("Pause copying before checking the setup.")
+            return
+        }
+        guard let validator: (any TradingStarting) = tradingStarter ?? engineActions else {
+            message = L10n.string("CopyTrading is still starting. Check the setup again in a moment.")
+            return
+        }
+        guard !isValidatingTrading, !isActivatingTrading else { return }
+        isValidatingTrading = true
+        tradingValidation = nil
+        profileExampleReviews = [:]
+        profileExamplesAcknowledged = false
+        pendingTradingActivation = nil
+        isShowingSetupCheck = false
+        defer { isValidatingTrading = false }
+        do {
+            try Self.validateTradingConfiguration(configuration)
+            let stored = try tradingConfigurationStore.load()
+            let previous = stored?.secrets
+            let existingBrokers = Dictionary(
+                uniqueKeysWithValues: (previous?.brokers ?? []).map { ($0.accountID, $0) }
+            )
+            let brokers = try configuration.accounts.map { account in
+                let entered = enteredSecrets.brokers.first { $0.accountID == account.id }
+                let previousBroker = existingBrokers[account.id]
+                let key =
+                    entered.flatMap { $0.key.isEmpty ? nil : $0.key }
+                    ?? previousBroker?.key ?? ""
+                let secret =
+                    entered.flatMap { $0.secret.isEmpty ? nil : $0.secret }
+                    ?? previousBroker?.secret ?? ""
+                guard !key.isEmpty, !secret.isEmpty else {
+                    throw TradingSettingsError.missingCredentials(L10n.string("the Alpaca API key and secret for “%@”", account.id))
+                }
+                return TradingBrokerCredentials(accountID: account.id, key: key, secret: secret)
+            }
+            let discordToken =
+                enteredSecrets.discordToken.isEmpty
+                ? previous?.discordToken ?? "" : enteredSecrets.discordToken
+            let providerAPIKey = Self.providerKey(
+                entered: enteredSecrets.providerAPIKey, for: configuration.provider.name, saved: stored)
+            let notificationToken =
+                enteredSecrets.notificationToken?.isEmpty == false
+                ? enteredSecrets.notificationToken : previous?.notificationToken
+            let missing = [
+                discordToken.isEmpty ? "the Discord token" : nil,
+                providerAPIKey.isEmpty && configuration.provider.name.requiresAPIKey ? "the model API key" : nil,
+                configuration.notification != nil && notificationToken?.isEmpty != false ? "the Telegram bot token" : nil,
+            ].compactMap(\.self)
+            guard missing.isEmpty else {
+                throw TradingSettingsError.missingCredentials(ListFormatter.localizedString(byJoining: missing))
+            }
+            let secrets = TradingSecrets(
+                discordToken: discordToken, providerAPIKey: providerAPIKey,
+                brokers: brokers, notificationToken: notificationToken
+            )
+            let profilesByRevision = Dictionary(
+                configuration.profiles.map { ($0.profileRevision, $0) },
+                uniquingKeysWith: { first, _ in first }
+            )
+            var reviews: [String: ProfileExampleReview] = [:]
+            for route in configuration.routes {
+                guard let profile = profilesByRevision[route.profileRevision] else {
+                    throw TradingSettingsError.invalidConfiguration(
+                        L10n.string(
+                            "The guru reading channel %@ has no saved details. Open them in People and check their fields.", route.channelID
+                        ))
+                }
+                guard !profile.examples.isEmpty else { continue }
+                let request = ProfileExampleReviewRequest(
+                    profile: profile,
+                    provider: configuration.provider,
+                    providerAPIKey: secrets.providerAPIKey,
+                    destinations: route.connections
+                )
+                let review = try await validator.reviewProfileExamples(request)
+                guard !Task.isCancelled else { throw CancellationError() }
+                try Self.validateProfileExampleReview(
+                    review, profile: profile, provider: configuration.provider,
+                    destinations: route.connections
+                )
+                reviews[route.id] = review
+            }
+            profileExampleReviews = reviews
+            guard !reviews.values.contains(where: { !$0.automaticActivationAllowed }) else {
+                message = L10n.string(
+                    "An example was read differently from what you expected. Fix the playbook or the example, then check again.")
+                isShowingSetupCheck = true
+                return
+            }
+            let validation = try await validator.validateTrading(
+                configuration: configuration, secrets: secrets
+            )
+            guard !Task.isCancelled else { throw CancellationError() }
+            tradingValidation = validation
+            guard validation.report.activatable, let activationToken = validation.activationToken else {
+                message = L10n.string("Some connections need attention. Nothing was saved.")
+                isShowingSetupCheck = true
+                return
+            }
+            pendingTradingActivation = PendingTradingActivation(
+                configuration: configuration,
+                revision: validation.report.configurationRevision,
+                secrets: secrets,
+                validationToken: activationToken
+            )
+            // The changes bar says the check passed; the readings still need a look when present.
+            message = nil
+            isShowingSetupCheck = !reviews.isEmpty
+        } catch {
+            if error is CancellationError {
+                tradingValidation = nil
+                message = L10n.string("Check cancelled. Nothing was saved.")
+            } else {
+                message = Self.userMessage(for: error)
+            }
+        }
+    }
+
+    func beginTradingValidation(
+        _ configuration: TradingConfiguration, enteredSecrets: TradingSecrets
+    ) {
+        tradingValidationTask?.cancel()
+        tradingValidationTask = Task { [weak self] in
+            await self?.validateTradingSettings(configuration, enteredSecrets: enteredSecrets)
+        }
+    }
+
+    func activateValidatedTradingSettings() async {
+        guard !isRunningBackupRestore else {
+            message = L10n.string("Wait for the backup or restore to finish, then start copying.")
+            return
+        }
+        guard isTradingUnlocked else {
+            message = L10n.string("Unlock CopyTrading first.")
+            return
+        }
+        guard let pending = pendingTradingActivation,
+            let tradingConfigurationStore,
+            let starter = tradingStarter ?? engineActions
+        else {
+            message = L10n.string("Check the setup before starting to copy.")
+            return
+        }
+        guard profileExampleReviews.values.allSatisfy(\.automaticActivationAllowed) else {
+            message = L10n.string("Fix the examples that were read differently, then check again.")
+            return
+        }
+        guard profileExampleReviews.isEmpty || profileExamplesAcknowledged else {
+            message = L10n.string("Look over how the examples were read before starting to copy.")
+            return
+        }
+        guard tradingStatus?.state == .paused, !isTradingCommandPending,
+            !isActivatingTrading
+        else {
+            message = L10n.string("Pause copying before starting a new setup.")
+            return
+        }
+        isActivatingTrading = true
+        isTradingCommandPending = true
+        defer {
+            isActivatingTrading = false
+            isTradingCommandPending = false
+        }
+        let activationID = UUID().uuidString.lowercased()
+        do {
+            try tradingConfigurationStore.stageValidatedActivation(
+                configuration: pending.configuration,
+                revision: pending.revision,
+                secrets: pending.secrets,
+                activationID: activationID,
+                when: .paused
+            )
+            do {
+                tradingStatus = try await starter.startTrading(
+                    configuration: pending.configuration,
+                    secrets: pending.secrets,
+                    validationToken: pending.validationToken,
+                    activationID: activationID
+                )
+            } catch {
+                // Start may have been accepted even when its response was lost.
+                // Only the durable engine activation query can settle that ambiguity.
+                message = L10n.string("CopyTrading didn't hear back after starting. It keeps checking whether the new setup took effect.")
+            }
+            await reconcilePendingTradingActivation(using: starter)
+        } catch {
+            message = Self.userMessage(for: error)
+        }
+    }
+
+    func confirmLiveProcessing() async {
+        if pendingTradingActivation != nil {
+            await activateValidatedTradingSettings()
+        } else {
+            await startTrading()
+        }
+    }
+
+    func reconcilePendingTradingActivation(using control: any TradingStarting) async {
+        guard !isRunningBackupRestore else { return }
+        guard let tradingConfigurationStore,
+            let pending = try? tradingConfigurationStore.pendingActivation(),
+            pending.activationID.isEmpty == false
+        else { return }
+        do {
+            let status = try await control.tradingActivation(activationID: pending.activationID)
+            if let current = try? await control.tradingStatus() {
+                tradingStatus = current
+            }
+            let activationCommitted =
+                status.activationID == pending.activationID
+                && status.candidateRevision == pending.candidateRevision
+                && status.committedRevision == pending.candidateRevision
+                && status.committedActivationID == pending.activationID
+            if activationCommitted && (status.phase == .ready || status.phase == .stopped) {
+                try tradingConfigurationStore.finalizeValidatedActivation(
+                    activationID: pending.activationID
+                )
+                let saved = try tradingConfigurationStore.load()
+                savedTradingConfiguration = saved?.configuration
+                hasTradingSecrets = saved != nil
+                pendingTradingActivation = nil
+                tradingValidation = nil
+                syncSetupDraftWithSaved()
+                didStartCopyingNewSetup()
+                return
+            }
+
+            let terminal =
+                status.phase == .failed || status.phase == .stopped
+                || status.phase == .interrupted || status.phase == .notFound
+            let stopped = status.runtimeState == .paused || status.runtimeState == .failed
+            if terminal && stopped && !activationCommitted {
+                try tradingConfigurationStore.rollbackValidatedActivation(
+                    activationID: pending.activationID
+                )
+                let saved = try tradingConfigurationStore.load()
+                savedTradingConfiguration = saved?.configuration
+                hasTradingSecrets = saved != nil
+                pendingTradingActivation = nil
+                tradingValidation = nil
+                syncSetupDraftWithSaved()
+                message = L10n.string("The new setup didn't start, so your previous setup is still in place.")
+                return
+            }
+            // An activation the engine is still committing is progress, even with accounts already
+            // running; only one that stopped advancing without committing is unresolved.
+            if status.phase != .starting, let current = tradingStatus, current.activeAccounts > 0 {
+                message =
+                    L10n.string(
+                        "CopyTrading can't confirm the new setup yet. Copying continues for %@; pause copying before changing the setup again.",
+                        Humanize.count(current.activeAccounts, "account"))
+            } else {
+                message = Self.pendingSetupMessage
+            }
+        } catch {
+            message = L10n.string("Configuration activation is pending; engine status is unavailable. Credentials are retained.")
+        }
+    }
+
+    func startTrading() async {
+        guard !isRunningBackupRestore else {
+            message = L10n.string("Wait for the backup or restore preview to finish before starting processing.")
+            return
+        }
+        guard isTradingUnlocked else {
+            message = L10n.string("Unlock trading controls before starting processing.")
+            return
+        }
+        let starter: (any TradingStarting)? = tradingStarter ?? engineActions
+        guard let starter, let tradingConfigurationStore,
+            savedTradingConfiguration != nil
+        else {
+            message = L10n.string("Start the local engine and save trading settings first.")
+            return
+        }
+        guard !isTradingCommandPending else { return }
+        isTradingCommandPending = true
+        defer { isTradingCommandPending = false }
+        do {
+            if try tradingConfigurationStore.pendingActivation() != nil {
+                await reconcilePendingTradingActivation(using: starter)
+                return
+            }
+            guard let saved = try tradingConfigurationStore.load() else {
+                throw TradingSettingsError.missingCredentials("the saved credentials in Connections")
+            }
+            let validation = try await starter.validateTrading(
+                configuration: saved.configuration, secrets: saved.secrets
+            )
+            tradingValidation = validation
+            guard validation.report.activatable, let token = validation.activationToken else {
+                message = Self.failedChecksMessage(validation.report)
+                return
+            }
+            let activationID = UUID().uuidString.lowercased()
+            try tradingConfigurationStore.stageSavedResume(
+                activationID: activationID, when: .paused
+            )
+            do {
+                tradingStatus = try await starter.startTrading(
+                    configuration: saved.configuration,
+                    secrets: saved.secrets,
+                    validationToken: token,
+                    activationID: activationID
+                )
+            } catch {
+                message = L10n.string("CopyTrading didn't hear back after starting. It keeps checking whether copying started.")
+            }
+            await reconcilePendingTradingActivation(using: starter)
+        } catch {
+            message = Self.userMessage(for: error)
+        }
+    }
+
+    func pauseTrading() async {
+        launchStartRetry?.cancel()
+        guard let engineActions else { return }
+        guard !isTradingCommandPending else { return }
+        isTradingCommandPending = true
+        defer { isTradingCommandPending = false }
+        do {
+            tradingStatus = try await engineActions.pauseTrading()
+            message = nil
+        } catch {
+            message = Self.userMessage(for: error)
+        }
+    }
+
+    func unlockTrading() async {
+        guard !isUnlockingTrading else { return }
+        guard let windowSessionID else {
+            accessMessage = L10n.string("Open the CopyTrading window to unlock private controls.")
+            return
+        }
+        let openingGeneration = accessGeneration
+        isUnlockingTrading = true
+        defer {
+            if accessGeneration == openingGeneration,
+                self.windowSessionID == windowSessionID
+            {
+                isUnlockingTrading = false
+            }
+        }
+        do {
+            try await appUnlock.openWindow(windowSessionID, localizedReason: "Access CopyTrading")
+            guard accessGeneration == openingGeneration,
+                self.windowSessionID == windowSessionID
+            else { return }
+            isTradingUnlocked = true
+            accessMessage = nil
+            message = nil
+        } catch {
+            guard accessGeneration == openingGeneration,
+                self.windowSessionID == windowSessionID
+            else { return }
+            isTradingUnlocked = false
+            accessMessage = Self.userMessage(for: error)
+        }
+    }
+
+    @discardableResult
+    func windowDidOpen(_ sessionID: UUID) -> Task<Void, Never>? {
+        guard windowSessionID != sessionID else { return nil }
+        windowSessionID = sessionID
+        accessGeneration += 1
+        let openingGeneration = accessGeneration
+        isTradingUnlocked = false
+        isUnlockingTrading = true
+        accessMessage = nil
+        return Task { [weak self] in
+            await self?.authenticateWindowSession(sessionID, generation: openingGeneration)
+        }
+    }
+
+    @discardableResult
+    func windowDidClose(_ sessionID: UUID) -> Task<Void, Never>? {
+        guard windowSessionID == sessionID else { return nil }
+        windowSessionID = nil
+        accessGeneration += 1
+        isTradingUnlocked = false
+        isUnlockingTrading = false
+        accessMessage = nil
+        assistant.isOpen = false
+        discardSetupWork()
+        return Task { [weak self] in
+            guard let self else { return }
+            await self.assistant.reset()
+            await self.discardAgentProposals()
+            await self.appUnlock.closeWindow(sessionID)
+        }
+    }
+
+    private func authenticateWindowSession(_ sessionID: UUID, generation: Int) async {
+        guard accessGeneration == generation, windowSessionID == sessionID else { return }
+        do {
+            try await appUnlock.openWindow(sessionID)
+            guard accessGeneration == generation, windowSessionID == sessionID else {
+                await appUnlock.closeWindow(sessionID)
+                return
+            }
+            isTradingUnlocked = true
+            accessMessage = nil
+            message = nil
+        } catch {
+            guard accessGeneration == generation, windowSessionID == sessionID else { return }
+            isTradingUnlocked = false
+            accessMessage = Self.userMessage(for: error)
+        }
+        if accessGeneration == generation, windowSessionID == sessionID {
+            isUnlockingTrading = false
+        }
+    }
+
+    /// Turning the owner check off is itself confirmed with Touch ID; turning it on is not.
+    func setAsksForOwner(_ asks: Bool) async {
+        guard asks != launchPreferences.asksForOwner else { return }
+        if !asks {
+            do {
+                try await appUnlock.confirm(localizedReason: "open CopyTrading without asking for Touch ID")
+            } catch {
+                message = Self.userMessage(for: error)
+                return
+            }
+        }
+        var chosen = launchPreferences
+        chosen.asksForOwner = asks
+        guard saveLaunchPreferences(chosen) else { return }
+        await appUnlock.setOwnerCheckRequired(asks)
+    }
+
+    func setStartsCopying(_ starts: Bool) {
+        guard starts != launchPreferences.startsCopying else { return }
+        var chosen = launchPreferences
+        chosen.startsCopying = starts
+        saveLaunchPreferences(chosen)
+    }
+
+    @discardableResult
+    private func saveLaunchPreferences(_ chosen: LaunchPreferences) -> Bool {
+        do {
+            try launchPreferencesStore?.save(chosen)
+            launchPreferences = chosen
+            return true
+        } catch {
+            message = L10n.string("That setting could not be saved in the Keychain.")
+            return false
+        }
+    }
+
+    /// Paper accounts only: live accounts always wait for the owner to start copying.
+    var canStartCopyingOnLaunch: Bool {
+        guard let configuration = savedTradingConfiguration else { return false }
+        return configuration.accounts.allSatisfy { $0.environment == .paper }
+    }
+
+    /// Starts copying once per launch when the owner asked for it, the setup is paper only,
+    /// and the engine reports copying paused. Start runs the same checks as the toolbar button.
+    func startCopyingOnLaunchIfWanted() async {
+        guard launchPreferences.startsCopying, !didStartCopyingOnLaunch, isTradingUnlocked,
+            canStartCopyingOnLaunch, tradingStatus?.state == .paused
+        else { return }
+        didStartCopyingOnLaunch = true
+        await startTrading()
+        retryLaunchStartWhileHeldBack()
+    }
+
+    /// A failed check right after launch is often the network still waking up, and a paused app
+    /// nobody is watching misses trades. The launch start tries again a few times; a start the
+    /// owner makes or a pause they choose ends the retries.
+    private func retryLaunchStartWhileHeldBack() {
+        guard isHeldBackAtLaunch else { return }
+        launchStartRetry = Task { [weak self] in
+            for delay in self?.launchStartRetryDelays ?? [] {
+                try? await Task.sleep(for: delay)
+                guard let self, !Task.isCancelled, self.isHeldBackAtLaunch else { return }
+                await self.startTrading()
+            }
+        }
+    }
+
+    private var isHeldBackAtLaunch: Bool {
+        launchPreferences.startsCopying && isTradingUnlocked && tradingStatus?.state == .paused
+            && tradingValidation?.report.activatable == false
+    }
+
+    static func failedChecksMessage(_ report: TradingCapabilityReport) -> String {
+        let failed = report.checks.filter { $0.state == .failed }.map(\.title)
+        guard !failed.isEmpty else { return L10n.string("A required connection check failed. Processing remains paused.") }
+        let names = ListFormatter.localizedString(byJoining: failed)
+        return L10n.string(
+            failed.count == 1
+                ? "%@ failed its connection check. Processing remains paused."
+                : "%@ failed their connection check. Processing remains paused.",
+            names
+        )
+    }
+
+    func lockAccess() async {
+        isTradingUnlocked = false
+        isUnlockingTrading = false
+        accessMessage = nil
+        assistant.isOpen = false
+        // The assistant stops first, so a turn still running cannot propose after the discard.
+        await assistant.reset()
+        await discardAgentProposals()
+        discardSetupWork()
+        await lockApp()
+    }
+
+    /// Drops the current check. A "validated" banner never outlives the check it describes.
+    func cancelTradingActivation(message newMessage: String? = nil) {
+        tradingValidationTask?.cancel()
+        tradingValidationTask = nil
+        pendingTradingActivation = nil
+        tradingValidation = nil
+        profileExampleReviews = [:]
+        profileExamplesAcknowledged = false
+        checkedSetupSignature = nil
+        isShowingSetupCheck = false
+        if let newMessage {
+            message = newMessage
+        } else if message != nil && message == checkOutcomeMessage {
+            message = nil
+        }
+        checkOutcomeMessage = nil
+    }
+
+    /// Locking or closing the window drops everything typed into the setup, secrets included;
+    /// what was saved comes straight back so the screens never show an empty setup by mistake.
+    private func discardSetupWork() {
+        discardSetupChanges()
+    }
+
+    var canAcknowledgeProfileExamples: Bool {
+        !profileExampleReviews.isEmpty
+            && profileExampleReviews.values.allSatisfy(\.automaticActivationAllowed)
+    }
+
+    func acknowledgeProfileExamples() {
+        guard canAcknowledgeProfileExamples else {
+            profileExamplesAcknowledged = false
+            return
+        }
+        profileExamplesAcknowledged = true
+    }
+
+    /// Checks the rules the engine also enforces, and names the first one a draft breaks.
+    /// The model key to use: what was typed, or the saved one when the provider is the one it was
+    /// saved for, so switching providers never sends one service's key to another.
+    static func providerKey(
+        entered: String, for provider: TradingProviderName,
+        saved: (configuration: TradingConfiguration, secrets: TradingSecrets)?
+    ) -> String {
+        guard entered.isEmpty else { return entered }
+        guard let saved, saved.configuration.provider.name == provider else { return "" }
+        return saved.secrets.providerAPIKey
+    }
+
+    private static func validateTradingConfiguration(
+        _ configuration: TradingConfiguration
+    ) throws {
+        func fail(_ reason: String) -> TradingSettingsError { .invalidConfiguration(reason) }
+        guard configuration.version == TradingConfiguration.currentVersion else {
+            throw fail(L10n.string("This setup was saved by an older version. Set it up again."))
+        }
+        guard !configuration.source.channelIDs.isEmpty else {
+            throw fail(L10n.string("Enter at least one Discord channel ID in Connections."))
+        }
+        guard !configuration.provider.model.isEmpty else { throw fail(L10n.string("Enter a model name under Interpreter in Connections.")) }
+        if let problem = configuration.provider.baseURLProblem {
+            throw fail(L10n.string("%@ Fix it under Interpreter in Connections.", problem))
+        }
+        guard !configuration.accounts.isEmpty else { throw fail(L10n.string("Add a broker account in Accounts.")) }
+        guard !configuration.routes.isEmpty, !configuration.profiles.isEmpty else {
+            throw fail(L10n.string("Add a guru to copy in People."))
+        }
+
+        let accountIDs = configuration.accounts.map(\.id)
+        for id in accountIDs where id.range(of: "^[A-Za-z0-9_-]{1,64}$", options: .regularExpression) == nil {
+            throw fail(L10n.string("The account name “%@” may only use letters, digits, “-” and “_”.", id))
+        }
+        guard Set(accountIDs).count == accountIDs.count else { throw fail(L10n.string("Each broker account needs a different name.")) }
+        guard Set(configuration.profiles.map(\.profileRevision)).count == configuration.profiles.count,
+            configuration.profiles.allSatisfy({ profile in
+                let draft = TradingProfileDraft(
+                    guruID: profile.guruID, displayName: profile.displayName,
+                    prefix: profile.prefix, playbook: profile.playbook, examples: profile.examples,
+                    exitBasis: profile.exitBasis
+                )
+                return (try? TradingProfileBuilder().build(draft)) == profile
+            })
+        else {
+            throw fail("A guru's details don't line up. Open the guru in People and check its fields.")
+        }
+
+        let profiles = Dictionary(
+            configuration.profiles.map { ($0.profileRevision, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        for route in configuration.routes {
+            let name = profiles[route.profileRevision]?.displayName ?? route.guruID
+            guard !route.channelID.isEmpty else { throw fail(L10n.string("“%@” needs a Discord channel.", name)) }
+            guard configuration.source.channelIDs.contains(route.channelID) else {
+                throw fail(L10n.string("“%@” uses channel %@, which is not listed under Discord in Connections.", name, route.channelID))
+            }
+            guard route.source == "discord", route.guruID == profiles[route.profileRevision]?.guruID else {
+                throw fail(L10n.string("“%@” doesn't match its saved details. Open the guru in People and check its fields.", name))
+            }
+            guard !route.connections.isEmpty else { throw fail(L10n.string("“%@” needs an account to copy into.", name)) }
+            guard Set(route.connections.map(\.accountID)).count == route.connections.count else {
+                throw fail(L10n.string("“%@” lists the same account twice.", name))
+            }
+            for connection in route.connections {
+                guard accountIDs.contains(connection.accountID) else {
+                    throw fail(L10n.string("“%@” copies into “%@”, which isn't one of your broker accounts.", name, connection.accountID))
+                }
+                guard let amount = Decimal(string: connection.amountUSD), amount > 0 else {
+                    throw fail(L10n.string("“%@” needs a dollar amount above zero for “%@”.", name, connection.accountID))
+                }
+                var value = amount
+                var cents = Decimal()
+                NSDecimalRound(&cents, &value, 2, .plain)
+                guard cents == amount else {
+                    throw fail(L10n.string("“%@”: amounts for “%@” must be whole cents.", name, connection.accountID))
+                }
+                if connection.mode == .fixed {
+                    guard connection.defaultFraction == nil else {
+                        throw fail(L10n.string("“%@”: a fixed amount can't also use a default fraction.", name))
+                    }
+                } else if let rawDefault = connection.defaultFraction {
+                    guard let fraction = Decimal(string: rawDefault), fraction > 0, fraction <= 1 else {
+                        throw fail(L10n.string("“%@”: the default fraction must be between 0 and 1.", name))
+                    }
+                }
+            }
+        }
+        let identityRules = configuration.routes.map { "\($0.source):\($0.channelID):\($0.authorID ?? "*")" }
+        guard Set(identityRules).count == identityRules.count else {
+            throw fail(L10n.string("Two gurus read the same channel and author. Give each guru a different author ID in People."))
+        }
+        let sharedChannels = Dictionary(grouping: configuration.routes, by: { "\($0.source):\($0.channelID)" })
+        guard sharedChannels.values.allSatisfy({ routes in routes.count == 1 || routes.allSatisfy { $0.authorID != nil } }) else {
+            throw fail(L10n.string("Routes that share a channel each need an author ID."))
+        }
+    }
+
+    /// Models write 1/6 as 0.16666666666666666; the engine treats that as the stated sixth.
+    private static let fractionTolerance = Decimal(sign: .plus, exponent: -9, significand: 1)
+
+    private static func validateProfileExampleReview(
+        _ review: ProfileExampleReview,
+        profile: TradingProfileRevision,
+        provider: TradingProviderConfiguration,
+        destinations: [TradingRouteConnection]
+    ) throws {
+        guard review.simulated, review.noOrder,
+            review.guruID == profile.guruID,
+            review.profileRevision == profile.profileRevision,
+            review.provider == provider.name.rawValue,
+            review.model == provider.model,
+            review.examples.count == profile.examples.count
+        else {
+            throw TradingSettingsError.invalidEvaluationResult
+        }
+        var allMatch = true
+        for (index, pair) in zip(profile.examples, review.examples).enumerated() {
+            let (expected, actual) = pair
+            guard actual.exampleIndex == index,
+                actual.expectedAction == expected.expectedAction,
+                actual.expectedSymbol == expected.expectedSymbol,
+                actual.expectedFraction == expected.expectedFraction,
+                actual.actual.simulated, actual.actual.noOrder,
+                actual.actual.guruID == profile.guruID,
+                actual.actual.profileRevision == profile.profileRevision,
+                actual.actual.provider == provider.name.rawValue,
+                actual.actual.model == provider.model
+            else {
+                throw TradingSettingsError.invalidEvaluationResult
+            }
+            let instruction =
+                actual.actual.instructions.count == 1
+                ? actual.actual.instructions[0] : nil
+            let expectedFraction = expected.expectedFraction.flatMap { Decimal(string: $0) }
+            let actualFraction = instruction?.fraction.flatMap { Decimal(string: $0) }
+            // Same rule as the engine: both absent, or equal within 1e-9.
+            let fractionMatches =
+                switch (expectedFraction, actualFraction) {
+                case (nil, nil): true
+                case let (expected?, actual?): abs(expected - actual) <= Self.fractionTolerance
+                default: false
+                }
+            let matches =
+                actual.actual.decision == "trade"
+                && instruction?.action == expected.expectedAction
+                && instruction?.symbol == expected.expectedSymbol
+                && fractionMatches
+            guard actual.matches == matches else {
+                throw TradingSettingsError.invalidEvaluationResult
+            }
+            let destinationIDs = Set(actual.actual.destinations.map(\.accountID))
+            let expectedDestinationIDs = Set(destinations.map(\.accountID))
+            guard destinationIDs == expectedDestinationIDs,
+                actual.actual.destinations.allSatisfy({ destination in
+                    destinations.contains { $0.accountID == destination.accountID }
+                })
+            else {
+                throw TradingSettingsError.invalidEvaluationResult
+            }
+            allMatch = allMatch && matches
+        }
+        guard review.automaticActivationAllowed == allMatch else {
+            throw TradingSettingsError.invalidEvaluationResult
+        }
+    }
+
+    func refreshPendingSelfTest() async {
+        guard let engineActions, let commandJournal else { return }
+        for entry in selfTestEntries where entry.isPending {
+            do {
+                let workflow = try await engineActions.workflow(id: entry.id)
+                try await commandJournal.record(workflow)
+                selfTestEntries = try await commandJournal.entries()
+                latestSelfTest = workflow
+            } catch EngineContractError.remote(code: .notFound, message: _) {
+                message = L10n.string("Command %@ has no engine workflow yet. Retry the saved self-test from System.", entry.id)
+            } catch {
+                message = L10n.string(
+                    "Command %@ has an uncertain response. Look it up or retry the same ID after the engine reconnects.", entry.id)
+            }
+        }
+    }
+
+    func retryPendingSelfTest() async {
+        guard let id = pendingCommandID,
+            let command = selfTestEntries.first(where: { $0.id == id })?.command,
+            let engineActions, let commandJournal
+        else { return }
+        guard !isRunningSelfTest else { return }
+        isRunningSelfTest = true
+        defer { isRunningSelfTest = false }
+        do {
+            let workflow: WorkflowView
+            do {
+                workflow = try await engineActions.workflow(id: id)
+            } catch EngineContractError.remote(code: .notFound, message: _) {
+                workflow = try await engineActions.submitSelfTest(command)
+            }
+            try await commandJournal.record(workflow)
+            selfTestEntries = try await commandJournal.entries()
+            latestSelfTest = selfTestEntries.first(where: { $0.id == id })?.workflow
+            message = nil
+        } catch {
+            message = Self.userMessage(for: error)
+        }
+    }
+
+    private func submit(_ command: SelfTestCommand) async throws {
+        guard let engineActions, let commandJournal else { throw CommandJournalError.unavailable }
+        let workflow = try await engineActions.submitSelfTest(command)
+        try await commandJournal.record(workflow)
+        selfTestEntries = try await commandJournal.entries()
+        latestSelfTest = workflow
+    }
+
+    func lockApp() async {
+        accessGeneration += 1
+        isTradingUnlocked = false
+        isUnlockingTrading = false
+        accessMessage = nil
+        await appUnlock.lock()
+        message = nil
+    }
+
+    private func observe(_ currentSupervisor: ProcessSupervisor) {
+        eventTask?.cancel()
+        let events = currentSupervisor.events
+        eventTask = Task { [weak self] in
+            for await event in events {
+                guard let self, !Task.isCancelled else { return }
+                guard self.supervisor === currentSupervisor else { return }
+                self.handle(event)
+            }
+        }
+    }
+
+    func handle(_ event: RuntimeEvent) {
+        switch event {
+        case .starting:
+            runtimeState = .starting
+        case .ready:
+            if engineActions != nil {
+                startStatusPolling()
+            }
+        case .stopped:
+            runtimeState = .stopped
+        case .childExited(let child, _, let restarting):
+            if child == .engine {
+                engineGeneration.advance()
+                statusTask?.cancel()
+                statusTask = nil
+                engineStatus = nil
+                tradingStatus = nil
+                // The engine forgot every conversation and proposal; the app must not show them.
+                agentProposals = []
+                Task { [weak self] in await self?.assistant.reset() }
+            }
+            runtimeState = .degraded
+            message = restarting ? L10n.string("The engine stopped and is restarting.") : L10n.string("The engine stopped unexpectedly.")
+        case .degraded(let code):
+            runtimeState = .degraded
+            switch code {
+            case "restart_limit_reached":
+                message = L10n.string("A local service reached its restart limit.")
+            default:
+                message = L10n.string("A local service is degraded.")
+            }
+        }
+    }
+
+    private func startStatusPolling() {
+        statusTask?.cancel()
+        statusTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
+                await self.refreshStatus()
+                do {
+                    try await Task.sleep(for: .seconds(2))
+                } catch {
+                    return
+                }
+            }
+        }
+    }
+
+    /// The in-flight update statuses that stay out of the Updates page until a result replaces them.
+    static var updateProgressMessages: [String] {
+        [
+            L10n.string("Checking the public GitHub release feed…"),
+            L10n.string("Checking compatibility and publisher trust before staging…"),
+        ]
+    }
+
+    static func userMessage(for error: any Error) -> String {
+        if case TradingSettingsError.missingCredentials(let what) = error {
+            return L10n.string("Enter %@ first.", what)
+        }
+        if let error = error as? LocalizedError, let description = error.errorDescription {
+            return L10n.string(description)
+        }
+        return L10n.string("CopyTrading could not complete that local operation.")
+    }
+}

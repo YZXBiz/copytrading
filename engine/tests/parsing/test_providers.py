@@ -1,0 +1,185 @@
+"""The provider registry builds, closes, and budgets decoders without leaking provider text."""
+
+import pytest
+from pydantic import SecretStr, ValidationError
+from pydantic_ai.exceptions import ModelHTTPError, UsageLimitExceeded
+
+from copytrading_engine.parsing.extraction import DecodedMessage, DecodeError
+from copytrading_engine.parsing.providers.pydantic_ai import PydanticAIDecoder
+from copytrading_engine.parsing.providers.registry import ProviderRegistry, builtin_registry
+from copytrading_engine.parsing.routes import Route
+from copytrading_engine.shared.model_providers import MODEL_PROVIDERS, ProviderConfig
+
+
+def config() -> ProviderConfig:
+    return ProviderConfig(api_key=SecretStr("test-only"), model="test-model", timeout=1)
+
+
+class CloseOnlyClient:
+    async def close(self) -> None:
+        pass
+
+
+async def test_unknown_provider_never_calls_a_factory():
+    calls = []
+
+    async def factory(provider_config):
+        calls.append(provider_config)
+        raise AssertionError("must not construct")
+
+    registry = ProviderRegistry({"deepseek": factory})
+
+    with pytest.raises(ValueError, match="Unknown LLM provider"):
+        await registry.create("typo", config())
+
+    assert calls == []
+
+
+async def test_fake_provider_can_register_decode_and_close_without_worker_changes():
+    calls = []
+
+    class FakeDecoder:
+        def __init__(self):
+            self.close_calls = 0
+
+        async def decode(self, text, route):
+            calls.append((text, route))
+            return DecodedMessage(decision="ignore", reason="fake", instructions=())
+
+        async def close(self):
+            self.close_calls += 1
+
+    decoder = FakeDecoder()
+
+    async def fake_factory(provider_config):
+        assert provider_config == config()
+        return decoder
+
+    supplied = {"fake": fake_factory}
+    registry = ProviderRegistry(supplied)
+    supplied["injected-later"] = fake_factory
+
+    assert registry.names() == ("fake",)
+    registered = await registry.create("fake", config())
+    route = Route()
+    decoded = await registered.decode("message", route)
+    await registered.close()
+
+    assert decoded.decision == "ignore"
+    assert calls == [("message", route)]
+    assert decoder.close_calls == 1
+
+
+def test_registry_names_are_sorted_from_its_copied_mapping():
+    async def factory(provider_config):
+        raise AssertionError("factory is not needed")
+
+    supplied = {"zeta": factory, "alpha": factory}
+    registry = ProviderRegistry(supplied)
+    supplied["late"] = factory
+
+    assert registry.names() == ("alpha", "zeta")
+
+
+def test_builtin_registry_offers_every_model_service():
+    assert builtin_registry().names() == tuple(sorted(MODEL_PROVIDERS))
+
+
+def test_provider_config_is_frozen_and_validates_inputs():
+    provider_config = config()
+
+    with pytest.raises(ValidationError):
+        provider_config.__setattr__("model", "other-model")
+
+    with pytest.raises(ValidationError):
+        ProviderConfig(api_key="key", model="", timeout=0)
+
+
+async def test_deepseek_factory_closes_client_when_agent_construction_fails(monkeypatch):
+    from copytrading_engine.parsing.providers import deepseek
+
+    class FakeClient:
+        def __init__(self):
+            self.closed = 0
+
+        async def close(self):
+            self.closed += 1
+
+    client = FakeClient()
+    monkeypatch.setattr(deepseek, "AsyncOpenAI", lambda **kwargs: client)
+
+    def fail_build(*args, **kwargs):
+        raise RuntimeError("agent construction failed")
+
+    monkeypatch.setattr(deepseek, "build_decoder", fail_build)
+
+    with pytest.raises(RuntimeError, match="agent construction failed"):
+        await deepseek.create_decoder(config())
+
+    assert client.closed == 1
+
+
+def test_prompt_bytes_match_the_pre_adapter_prompt():
+    import hashlib
+
+    from copytrading_engine.parsing.prompt import INSTRUCTIONS
+
+    assert (
+        hashlib.sha256(INSTRUCTIONS.encode()).hexdigest()
+        == "a5835055fa8a376c082c79e68d62e8bc1975ecd74faa8a63cac7b73dafe88469"
+    )
+
+
+async def test_budget_exhaustion_is_translated_without_provider_text():
+    class FailedAgent:
+        async def run(self, *args, **kwargs):
+            raise UsageLimitExceeded("PRIVATE_PROVIDER_DETAIL")
+
+    decoder = PydanticAIDecoder(FailedAgent(), FailedAgent(), CloseOnlyClient(), timeout=1)
+
+    with pytest.raises(DecodeError) as failure:
+        await decoder.decode("source", Route())
+
+    assert failure.value.reason == "model_output_budget_exceeded"
+    assert not failure.value.retryable
+    assert "PRIVATE_PROVIDER_DETAIL" not in str(failure.value)
+    assert failure.value.__cause__ is None
+
+
+async def test_provider_rejection_does_not_leak_http_body():
+    class FailedAgent:
+        async def run(self, *args, **kwargs):
+            raise ModelHTTPError(
+                status_code=401,
+                model_name="test-model",
+                body={"error": "PRIVATE_PROVIDER_DETAIL"},
+            )
+
+    decoder = PydanticAIDecoder(FailedAgent(), FailedAgent(), CloseOnlyClient(), timeout=1)
+
+    with pytest.raises(DecodeError) as failure:
+        await decoder.decode("source", Route())
+
+    assert failure.value.reason == "provider_rejected"
+    assert not failure.value.retryable
+    assert "PRIVATE_PROVIDER_DETAIL" not in str(failure.value)
+    assert failure.value.__cause__ is None
+
+
+async def test_learning_failures_are_translated_without_provider_text():
+    class FailedAgent:
+        async def run(self, *args, **kwargs):
+            raise ModelHTTPError(
+                status_code=503,
+                model_name="test-model",
+                body={"error": "PRIVATE_PROVIDER_DETAIL"},
+            )
+
+    decoder = PydanticAIDecoder(FailedAgent(), FailedAgent(), CloseOnlyClient(), timeout=1)
+
+    with pytest.raises(DecodeError) as failure:
+        await decoder.learn(("25加了abc",))
+
+    assert failure.value.reason == "provider_unavailable"
+    assert failure.value.retryable
+    assert "PRIVATE_PROVIDER_DETAIL" not in str(failure.value)

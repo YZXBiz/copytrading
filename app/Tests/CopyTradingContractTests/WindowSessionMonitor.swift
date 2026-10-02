@@ -1,0 +1,1 @@
+../../Sources/CopyTrading/WindowSessionMonitor.swift

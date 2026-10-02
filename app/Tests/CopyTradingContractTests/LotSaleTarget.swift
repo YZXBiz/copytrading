@@ -1,0 +1,1 @@
+../../Sources/CopyTrading/Features/Accounts/LotSaleTarget.swift

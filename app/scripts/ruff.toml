@@ -1,0 +1,6 @@
+# The build scripts are checked with the engine's rules (`make check`); their tests get the same
+# test-harness allowances the engine's tests do.
+extend = "../../engine/pyproject.toml"
+
+[lint.extend-per-file-ignores]
+"tests/**" = ["BLE001", "SLF001", "ANN", "PT"]

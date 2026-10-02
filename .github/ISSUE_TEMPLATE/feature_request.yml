@@ -1,0 +1,38 @@
+name: Feature request
+description: Suggest a focused improvement to CopyTrading.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For setup and usage questions, use [GitHub Discussions](https://github.com/YZXBiz/copytrading/discussions). Do not include credentials, private source messages, provider requests or responses, broker records, databases, or full operational logs.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Who is affected, and what task is difficult today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Describe the behavior you would like to see.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives or context
+      description: Optional examples or alternatives you have considered.
+    validations:
+      required: false
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: I confirmed this request contains no credentials, private account or source data, provider content, broker records, databases, or full logs.
+          required: true

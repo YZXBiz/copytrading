@@ -1,0 +1,224 @@
+import Foundation
+@testable import DesktopCore
+
+func runProtocolFixtureTests() throws {
+    try checkAccountValuationFixturesDecode()
+    try checkLotSaleFixtures()
+    let completed = try JSONDecoder().decode(
+        EngineResponse.self,
+        from: contractFixture("completed-self-test.json")
+    )
+    guard case .workflow(let workflow) = try completed.successValue() else {
+        throw VerificationFailure(description: "completed self-test returned a non-workflow result")
+    }
+    try verify(workflow.commandID == "sim-1", "completed workflow command ID changed")
+    try verify(workflow.outcomes.count == 2, "completed workflow lost a destination outcome")
+    try verify(
+        workflow.outcomes.allSatisfy { $0.result == .simulated },
+        "workflow outcomes must remain explicitly simulated"
+    )
+
+    let failed = try JSONDecoder().decode(
+        EngineResponse.self,
+        from: contractFixture("failed-self-test.json")
+    )
+    guard case .workflow(let failedWorkflow) = try failed.successValue() else {
+        throw VerificationFailure(description: "failed self-test returned a non-workflow result")
+    }
+    try verify(failedWorkflow.stage == .failed, "failed self-test was not decoded as failed")
+    try verify(failedWorkflow.outcomes.isEmpty, "failed self-test must not invent outcomes")
+
+    let statusResponse = try JSONDecoder().decode(
+        EngineResponse.self,
+        from: contractFixture("status-response.json")
+    )
+    guard case .status(let status) = try statusResponse.successValue() else {
+        throw VerificationFailure(description: "status fixture returned a non-status result")
+    }
+    try verify(status.instanceID == "installation-1", "status installation identity changed")
+    try verify(status.state == .running, "engine running state did not decode")
+    try verify(status.telemetryState == .degraded, "degraded telemetry state did not decode")
+    try verify(status.telemetryDropped == 2, "telemetry drop count did not decode")
+    try verify(
+        status.telemetryErrorCode == "queue_full",
+        "typed journal error did not decode")
+    try verify(
+        status.diagnosticCapture.sourceEventGaps == 1,
+        "diagnostic capture gaps did not decode")
+
+    let backup = try JSONDecoder().decode(
+        EngineResponse.self,
+        from: Data(
+            #"""
+            {"version":1,"request_id":"backup-1","ok":{"type":"backup","manifest":{"format":"copytrading-backup","format_version":1,"created_at":"2026-09-27T12:00:00+00:00","installation_id":"source-install","environment_ids":["paper:acct-a"],"members":[{"path":"application.db","size":64,"sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","schema_version":"sqlite:application:2;components="}]}}}
+            """#.utf8))
+    guard case .backup(let manifest) = try backup.successValue() else {
+        throw VerificationFailure(description: "backup response returned the wrong result type")
+    }
+    try verify(manifest.members.first?.path == "application.db", "backup manifest lost SQLite member")
+
+    let restore = try JSONDecoder().decode(
+        EngineResponse.self,
+        from: Data(
+            #"""
+            {"version":1,"request_id":"restore-1","ok":{"type":"restore_preview","preview":{"format_version":1,"created_at":"2026-09-27T12:00:00+00:00","installation_id":"source-install","matches_installation":false,"environment_ids":["paper:acct-a"],"account_ids":["acct-a"],"credential_references":["00000000-0000-4000-8000-000000000000"],"staging_id":"restore-abcd","members":[{"path":"application.db","size":64,"sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","schema_version":"sqlite:application:2;components="}]}}}
+            """#.utf8))
+    guard case .restorePreview(let preview) = try restore.successValue() else {
+        throw VerificationFailure(description: "restore response returned the wrong result type")
+    }
+    try verify(
+        !preview.matchesInstallation && preview.credentialReferences.count == 1,
+        "restore preview lost identity or credential-reference requirements")
+
+    let preflight = try JSONDecoder().decode(
+        EngineResponse.self,
+        from: Data(
+            #"""
+            {"version":1,"request_id":"restore-preflight-1","ok":{"type":"restore_preflight","candidate_id":"00000000-0000-4000-8000-000000000001","eligible":false,"checked_account_count":1,"blockers":["broker_state_mismatch"],"completion_token":null}}
+            """#.utf8))
+    guard case .restorePreflight(let preflightView) = try preflight.successValue() else {
+        throw VerificationFailure(description: "restore preflight response returned the wrong result type")
+    }
+    try verify(
+        preflightView.blockers == ["broker_state_mismatch"] && preflightView.completionToken == nil,
+        "restore preflight lost a blocker or exposed a completion token on failure")
+
+    let recovery = try JSONDecoder().decode(
+        EngineResponse.self,
+        from: Data(
+            #"""
+            {"version":1,"request_id":"restore-status-1","ok":{"type":"restore_candidate_status","candidate":{"candidate_id":"00000000-0000-4000-8000-000000000001","previous_generation":"00000000-0000-4000-8000-000000000002","active_generation":"00000000-0000-4000-8000-000000000002","installation_id":"00000000-0000-4000-8000-000000000003","environment_ids":["paper:acct-a"],"account_ids":["acct-a"],"credential_references":["00000000-0000-4000-8000-000000000004"],"candidate_valid":true}}}
+            """#.utf8))
+    guard case .restoreCandidateStatus(let pending) = try recovery.successValue() else {
+        throw VerificationFailure(description: "restore status response returned the wrong result type")
+    }
+    try verify(
+        pending?.candidateID == "00000000-0000-4000-8000-000000000001"
+            && pending?.activeGeneration == pending?.previousGeneration,
+        "restore status lost its durable rollback evidence")
+
+    let activated = try JSONDecoder().decode(
+        EngineResponse.self,
+        from: Data(
+            #"""
+            {"version":1,"request_id":"restore-activated-1","ok":{"type":"restore_activated","candidate_id":"00000000-0000-4000-8000-000000000001"}}
+            """#.utf8))
+    guard case .restoreActivated(let activatedID) = try activated.successValue() else {
+        throw VerificationFailure(description: "restore completion response returned the wrong result type")
+    }
+    try verify(
+        activatedID == "00000000-0000-4000-8000-000000000001",
+        "restore completion response lost the candidate identity")
+
+    let unknownVersion = try JSONDecoder().decode(
+        EngineResponse.self,
+        from: contractFixture("unknown-version.json")
+    )
+    try verifyThrows(
+        { _ = try unknownVersion.successValue() },
+        matching: { $0 as? EngineContractError == .unsupportedVersion(2) },
+        "unknown protocol version must not become a success"
+    )
+
+    try verifyThrows(
+        {
+            _ = try JSONDecoder().decode(
+                EngineResponse.self,
+                from: contractFixture("malformed.json")
+            )
+        },
+        matching: { $0 is DecodingError },
+        "malformed shared fixture must fail JSON decoding"
+    )
+}
+
+/// The app sends exactly the lot sale requests the engine's fixtures describe, and reads its replies.
+private func checkLotSaleFixtures() throws {
+    let lotID = "copy-0123456789abcdef0123456789abcdef01234567"
+    try verifySameJSON(
+        EngineRequest(
+            requestID: "req-lot-sale-preview",
+            operation: .previewLotSale(
+                LotSalePreviewRequest(previewID: "lot-sale-preview-1", accountID: "paper", lotID: lotID, quantity: "2"))),
+        as: "lot-sale-preview-request.json")
+    try verifySameJSON(
+        EngineRequest(
+            requestID: "req-lot-sale",
+            operation: .confirmLotSale(
+                LotSaleConfirmation(commandID: "lot-sale-1", previewID: "lot-sale-preview-1", accountID: "paper", actor: "owner"))),
+        as: "lot-sale-confirm-request.json")
+
+    let previewResponse = try JSONDecoder().decode(EngineResponse.self, from: contractFixture("lot-sale-preview-response.json"))
+    guard case .lotSalePreview(let preview) = try previewResponse.successValue() else {
+        throw VerificationFailure(description: "a lot sale preview did not decode as one")
+    }
+    try verify(preview.plan?.lotID == lotID && preview.plan?.type == "market", "a lot sale plan lost its lot or order type")
+    try verify(preview.freshPrice == "26.10" && preview.reasons.isEmpty, "a lot sale preview lost its price or reasons")
+
+    let saleResponse = try JSONDecoder().decode(EngineResponse.self, from: contractFixture("lot-sale-response.json"))
+    guard case .lotSale(let sale) = try saleResponse.successValue() else {
+        throw VerificationFailure(description: "a lot sale result did not decode as one")
+    }
+    try verify(sale.status == "filled" && sale.filledQty == "2", "a lot sale result lost its fill")
+    try verify(sale.sale.lotID == lotID, "a lot sale result lost its lot")
+}
+
+private func verifySameJSON(_ request: EngineRequest, as fixture: String) throws {
+    let sent = try JSONSerialization.jsonObject(with: JSONEncoder().encode(request)) as? NSDictionary
+    let expected = try JSONSerialization.jsonObject(with: contractFixture(fixture)) as? NSDictionary
+    try verify(sent != nil && sent == expected, "the app's request differs from \(fixture): \(String(describing: sent))")
+}
+
+private func checkAccountValuationFixturesDecode() throws {
+    let accounts = try JSONDecoder().decode(
+        EngineResponse.self, from: contractFixture("account-overviews-response.json")
+    )
+    guard case .accounts(let page) = try accounts.successValue(), let balance = page.items.first?.balance else {
+        throw VerificationFailure(description: "account overview lost its balance")
+    }
+    try verify(balance.equity == "25412.80", "equity changed while decoding")
+    try verify(balance.dayChangeUSD == "412.80", "day change changed while decoding")
+    try verify(balance.observedAt == "2026-09-26T14:59:58Z", "balance time changed while decoding")
+    guard let lot = page.items.first?.positions.first?.lots.first else {
+        throw VerificationFailure(description: "account overview lost its position's lots")
+    }
+    try verify(lot.sourceID == "discord:demo:1", "a lot lost the post that bought it")
+    try verify(lot.remainingQty == "2" && lot.averagePrice == "25.10", "a lot's shares or price changed while decoding")
+
+    let activity = try JSONDecoder().decode(
+        EngineResponse.self, from: contractFixture("manual-source-activity-response.json")
+    )
+    guard case .sourceActivity(let sources) = try activity.successValue(),
+        let order = sources.items.flatMap(\.destinations).flatMap(\.orders).first
+    else {
+        throw VerificationFailure(description: "source activity lost its orders")
+    }
+    try verify(order.averageFillPrice == "12.30", "average fill price did not decode")
+    try verify(order.limitPrice == "12.34", "limit price did not decode")
+
+    let history = try JSONDecoder().decode(
+        EngineResponse.self, from: contractFixture("equity-history-response.json")
+    )
+    guard case .equityHistory(let accountID, let curve?) = try history.successValue() else {
+        throw VerificationFailure(description: "equity history did not decode")
+    }
+    try verify(
+        accountID == "paper" && curve.window == EquityHistoryWindow(range: .day, day: "2026-09-26"),
+        "equity history identity changed"
+    )
+    try verify(curve.points.count == 4 && curve.points.last?.equity == "25412.8", "equity points changed")
+
+    let request = try JSONEncoder().encode(
+        EngineRequest(
+            requestID: "req-history",
+            operation: .equityHistory(accountID: "paper", window: EquityHistoryWindow(range: .threeMonths))
+        )
+    )
+    let object = try JSONSerialization.jsonObject(with: request) as? [String: Any]
+    try verify(object?["operation"] as? String == "get_equity_history", "history operation name changed")
+    let window = object?["window"] as? [String: Any]
+    try verify(
+        window?["range"] as? String == "three_months" && window?["day"] == nil,
+        "history window did not encode"
+    )
+}

@@ -1,0 +1,1 @@
+{"version":1,"request_id":"req-complete","ok":{"type":"workflow","workflow":{"command_id":"sim-1","stage":"completed","outcomes":[{"account_id":"self-test-a","result":"simulated"},{"account_id":"self-test-b","result":"simulated"}],"trace_id":"30000000-0000-4000-8000-000000000003"}}}

@@ -1,0 +1,544 @@
+"""Profile revision and evaluation behavior stays independent of execution."""
+
+import asyncio
+import datetime as dt
+import hashlib
+import importlib
+import importlib.util
+from decimal import Decimal
+from pathlib import Path
+
+import pytest
+from pydantic import SecretStr, ValidationError
+
+from copytrading_engine.execution.domain.sizing import RouteConnection
+from copytrading_engine.parsing.extraction import DecodedMessage
+from copytrading_engine.shared.raw_message import RawMessage
+from copytrading_engine.shared.signals import Evidence
+
+
+def _profiles_module():
+    spec = importlib.util.find_spec("copytrading_engine.trading.domain.profiles")
+    assert spec is not None, "immutable profile/evaluation service is missing"
+    return importlib.import_module("copytrading_engine.trading.domain.profiles")
+
+
+def _draft(module, *, guru_id: str, prefix: str, symbol: str, exit_basis: str):
+    return module.ProfileDraft(
+        guru_id=guru_id,
+        display_name=guru_id.title(),
+        prefix=prefix,
+        playbook=f"Apple means {symbol}",
+        examples=(
+            module.ProfileExample(
+                message=f"{prefix} Bought Apple at 200 1/6",
+                expected_action="buy",
+                expected_symbol=symbol,
+                expected_fraction=Decimal("1") / Decimal("6"),
+            ),
+        ),
+        exit_basis=exit_basis,
+    )
+
+
+def _mapped(route, name: str) -> str:
+    """The ticker the route's playbook states for a company name, as a real model would read it."""
+    line = next(line for line in route.playbook.splitlines() if line.startswith(f"{name} means "))
+    return line.removeprefix(f"{name} means ")
+
+
+def _message(prefix: str, message_id: str) -> RawMessage:
+    import datetime as dt
+
+    return RawMessage(
+        schema_version=1,
+        event_type="raw_message",
+        source="discord",
+        channel_id="123",
+        id=message_id,
+        timestamp=dt.datetime(2026, 9, 26, tzinfo=dt.UTC),
+        text=f"{prefix} Bought Apple at 200 1/6",
+    )
+
+
+def test_profile_revisions_are_immutable_and_content_addressed():
+    module = _profiles_module()
+    builder = module.ProfileBuilder()
+    original = builder.build(
+        _draft(
+            module,
+            guru_id="zhao",
+            prefix="ALERT:",
+            symbol="AAPL",
+            exit_basis="original_position",
+        )
+    )
+    edited = builder.build(
+        _draft(
+            module,
+            guru_id="zhao",
+            prefix="ALERT:",
+            symbol="MSFT",
+            exit_basis="original_position",
+        )
+    )
+
+    assert original.guru_id == edited.guru_id == "zhao"
+    assert original.profile_revision != edited.profile_revision
+    assert original.playbook == "Apple means AAPL"
+    with pytest.raises((ValidationError, AttributeError, TypeError)):
+        original.display_name = "Changed in place"
+    with pytest.raises((ValidationError, AttributeError, TypeError)):
+        original.examples[0].expected_symbol = "TSLA"
+
+
+def test_profile_examples_compare_expected_and_actual_without_execution():
+    module = _profiles_module()
+    profile = module.ProfileBuilder().build(
+        _draft(
+            module,
+            guru_id="example-guru",
+            prefix="ALERT:",
+            symbol="AAPL",
+            exit_basis="original_position",
+        )
+    )
+
+    class Decoder:
+        calls = 0
+
+        async def decode(self, text, route):
+            self.calls += 1
+            return DecodedMessage(
+                decision="trade",
+                reason="explicit_entry",
+                instructions=(
+                    Evidence(
+                        action="buy",
+                        symbol=_mapped(route, "Apple"),
+                        price=Decimal("200"),
+                        fraction=Decimal("1") / Decimal("6"),
+                        action_evidence="Bought",
+                        symbol_evidence="Apple",
+                        price_evidence="200",
+                        fraction_evidence="1/6",
+                    ),
+                ),
+            )
+
+    decoder = Decoder()
+    service = module.ProfileExampleReviewService(decoder, provider="deepseek", model="test-model")
+    result = asyncio.run(
+        service.evaluate(
+            profile,
+            destinations=(
+                RouteConnection(account_id="paper-fixed", mode="fixed", amount_usd="500"),
+                RouteConnection(
+                    account_id="paper-proportional", mode="proportional", amount_usd="3000"
+                ),
+            ),
+        )
+    )
+
+    assert result.simulated is True
+    assert result.no_order is True
+    assert result.guru_id == profile.guru_id
+    assert result.profile_revision == profile.profile_revision
+    assert result.provider == "deepseek"
+    assert result.model == "test-model"
+    assert "charges may apply" in result.cost_notice
+    assert len(result.examples) == 1
+    assert result.examples[0].matches is True
+    assert result.examples[0].actual.instructions[0].symbol == "AAPL"
+    assert {
+        destination.account_id: destination.budget_usd
+        for destination in result.examples[0].actual.destinations
+    } == {"paper-fixed": Decimal("500.00"), "paper-proportional": Decimal("500.00")}
+    assert decoder.calls == 1
+    assert not hasattr(result, "orders")
+
+
+def test_profile_example_mismatch_requires_settings_correction_and_rerun():
+    module = _profiles_module()
+    draft = _draft(
+        module,
+        guru_id="mismatch-guru",
+        prefix="ALERT:",
+        symbol="AAPL",
+        exit_basis="original_position",
+    )
+    profile = module.ProfileBuilder().build(
+        draft.model_copy(
+            update={
+                "examples": (
+                    module.ProfileExample(
+                        message="ALERT: Bought Apple at 200 1/3",
+                        expected_action="buy",
+                        expected_symbol="AAPL",
+                        expected_fraction=Decimal("1") / Decimal("6"),
+                    ),
+                )
+            }
+        )
+    )
+
+    class Decoder:
+        async def decode(self, text, route):
+            return DecodedMessage(
+                decision="trade",
+                reason="explicit_entry",
+                instructions=(
+                    Evidence(
+                        action="buy",
+                        symbol=_mapped(route, "Apple"),
+                        price=Decimal("200"),
+                        fraction=Decimal("1") / Decimal("3"),
+                        action_evidence="Bought",
+                        symbol_evidence="Apple",
+                        price_evidence="200",
+                        fraction_evidence="1/3",
+                    ),
+                ),
+            )
+
+    review = asyncio.run(
+        module.ProfileExampleReviewService(
+            Decoder(), provider="deepseek", model="test-model"
+        ).evaluate(profile, destinations=())
+    )
+    assert review.examples[0].matches is False
+    assert review.examples[0].review_reasons == ("example_fraction_mismatch",)
+    assert review.automatic_activation_allowed is False
+
+
+def test_ungrounded_example_interpretation_returns_review_and_never_activates():
+    module = _profiles_module()
+    profile = module.ProfileBuilder().build(
+        _draft(
+            module,
+            guru_id="ungrounded-example-guru",
+            prefix="ALERT:",
+            symbol="AAPL",
+            exit_basis="original_position",
+        )
+    )
+
+    class Decoder:
+        async def decode(self, text, route):
+            return DecodedMessage(
+                decision="trade",
+                reason="explicit_entry",
+                instructions=(
+                    Evidence(
+                        action="buy",
+                        symbol="MSFT",
+                        price=Decimal("200"),
+                        fraction=Decimal("1") / Decimal("6"),
+                        action_evidence="Bought",
+                        symbol_evidence="Apple",
+                        price_evidence="200",
+                        fraction_evidence="1/6",
+                    ),
+                ),
+            )
+
+    review = asyncio.run(
+        module.ProfileExampleReviewService(
+            Decoder(), provider="deepseek", model="test-model"
+        ).evaluate(
+            profile,
+            destinations=(RouteConnection(account_id="paper", mode="fixed", amount_usd="500"),),
+        )
+    )
+    assert review.simulated is True
+    assert review.no_order is True
+    assert review.automatic_activation_allowed is False
+    comparison = review.examples[0]
+    assert comparison.matches is False
+    assert comparison.actual.decision == "review"
+    assert comparison.actual.review_reasons == ("symbol_not_in_playbook",)
+    assert comparison.actual.destinations[0].reason == "example_interpretation_failed"
+
+
+def test_matching_exit_example_preserves_position_sizing_review_without_blocking_profile():
+    module = _profiles_module()
+    profile = module.ProfileBuilder().build(
+        module.ProfileDraft(
+            guru_id="exit-example-guru",
+            display_name="Exit Example Guru",
+            prefix="TRADE:",
+            playbook="Apple means AAPL",
+            examples=(
+                module.ProfileExample(
+                    message="TRADE: Sold Apple half at 200 from 150",
+                    expected_action="reduce",
+                    expected_symbol="AAPL",
+                    expected_fraction=Decimal("0.5"),
+                ),
+            ),
+            exit_basis="remaining_position",
+        )
+    )
+
+    class Decoder:
+        async def decode(self, text, route):
+            return DecodedMessage(
+                decision="trade",
+                reason="explicit_exit",
+                instructions=(
+                    Evidence(
+                        action="reduce",
+                        symbol="AAPL",
+                        price=Decimal("200"),
+                        entry_price=Decimal("150"),
+                        fraction=Decimal("0.5"),
+                        action_evidence="Sold",
+                        symbol_evidence="Apple",
+                        price_evidence="200",
+                        entry_evidence="150",
+                        fraction_evidence="half",
+                    ),
+                ),
+            )
+
+    review = asyncio.run(
+        module.ProfileExampleReviewService(
+            Decoder(), provider="deepseek", model="test-model"
+        ).evaluate(
+            profile,
+            destinations=(RouteConnection(account_id="paper", mode="fixed", amount_usd="500"),),
+        )
+    )
+    comparison = review.examples[0]
+    assert comparison.matches is True
+    assert comparison.actual.destinations[0].reason == "position_required_for_exit_sizing"
+    assert "position_required_for_exit_sizing" in review.review_reasons
+    assert review.automatic_activation_allowed is True
+
+
+@pytest.mark.parametrize(
+    ("guru_id", "prefix", "symbol", "basis", "connections", "expected_budgets"),
+    [
+        (
+            "zhao",
+            "ALERT:",
+            "AAPL",
+            "original_position",
+            (
+                RouteConnection(account_id="paper-fixed", mode="fixed", amount_usd="500"),
+                RouteConnection(
+                    account_id="paper-proportional", mode="proportional", amount_usd="3000"
+                ),
+            ),
+            {"paper-fixed": Decimal("500.00"), "paper-proportional": Decimal("500.00")},
+        ),
+        (
+            "other-guru",
+            "SIGNAL:",
+            "MSFT",
+            "remaining_position",
+            (
+                RouteConnection(account_id="paper-small", mode="fixed", amount_usd="125"),
+                RouteConnection(account_id="paper-large", mode="proportional", amount_usd="1200"),
+            ),
+            {"paper-small": Decimal("125.00"), "paper-large": Decimal("200.00")},
+        ),
+    ],
+)
+def test_historical_evaluation_keeps_guru_revision_and_destination_sizing_independent(
+    guru_id, prefix, symbol, basis, connections, expected_budgets
+):
+    module = _profiles_module()
+    profile = module.ProfileBuilder().build(
+        _draft(
+            module,
+            guru_id=guru_id,
+            prefix=prefix,
+            symbol=symbol,
+            exit_basis=basis,
+        )
+    )
+
+    class Decoder:
+        async def decode(self, text, route):
+            mapped_symbol = _mapped(route, "Apple")
+            return DecodedMessage(
+                decision="trade",
+                reason="explicit_entry",
+                instructions=(
+                    Evidence(
+                        action="buy",
+                        symbol=mapped_symbol,
+                        price=Decimal("200"),
+                        fraction=Decimal("1") / Decimal("6"),
+                        action_evidence="Bought",
+                        symbol_evidence="Apple",
+                        price_evidence="200",
+                        fraction_evidence="1/6",
+                    ),
+                ),
+            )
+
+    service = module.ProfileEvaluationService(Decoder(), provider="deepseek", model="test-model")
+    result = asyncio.run(
+        service.evaluate(_message(prefix, f"m-{guru_id}"), profile, destinations=connections)
+    )
+
+    assert result.simulated is True
+    assert result.no_order is True
+    assert "provider charges may apply" in result.cost_notice
+    assert result.guru_id == guru_id
+    assert result.profile_revision == profile.profile_revision
+    assert result.exit_basis == basis
+    assert result.provider == "deepseek"
+    assert result.model == "test-model"
+    assert result.decision == "trade"
+    assert result.instructions[0].symbol == symbol
+    assert result.instructions[0].exit_basis is None
+    assert {item.account_id: item.budget_usd for item in result.destinations} == expected_budgets
+    assert not hasattr(result, "orders")
+
+
+def test_historical_source_lookup_returns_only_the_immutable_historical_capture(tmp_path: Path):
+    from copytrading_engine.sources.sqlite import SQLiteSourceStore
+    from copytrading_engine.trading.adapters.operator_queries import historical_source_message
+
+    async def capture():
+        store = await SQLiteSourceStore.open(tmp_path / "application.db")
+        await store.recovery_start(123, 1)
+        source_time = dt.datetime.now(dt.UTC) - dt.timedelta(minutes=10)
+        historic = RawMessage(
+            schema_version=1,
+            event_type="raw_message",
+            source="discord",
+            channel_id="123",
+            author_id="456",
+            id="1001",
+            timestamp=source_time,
+            text="ALERT: Bought Apple at 200 1/6",
+        )
+        await store.capture_recovery_page(123, [historic], [], 1001)
+        live = RawMessage(
+            schema_version=1,
+            event_type="raw_message",
+            source="discord",
+            channel_id="123",
+            author_id="456",
+            id="1002",
+            timestamp=dt.datetime.now(dt.UTC),
+            text="ALERT: Bought Apple at 200 1/6",
+        )
+        await store.add(live)
+        await store.close()
+        return historic, live
+
+    historic, live = asyncio.run(capture())
+    database = tmp_path / "application.db"
+    before = hashlib.sha256(database.read_bytes()).hexdigest()
+
+    assert historical_source_message(database, historic.identity) == historic
+    with pytest.raises(ValueError, match="historical_source_unavailable"):
+        historical_source_message(database, live.identity)
+
+    after = hashlib.sha256(database.read_bytes()).hexdigest()
+    assert after == before
+
+
+def test_runtime_historical_profile_action_does_not_open_execution_owners(tmp_path: Path):
+    from copytrading_engine.sources.sqlite import SQLiteSourceStore
+    from copytrading_engine.trading.domain.config import ProviderConfiguration
+    from copytrading_engine.trading.entrypoints.factories import TradingFactories
+    from copytrading_engine.trading.entrypoints.runtime import TradingRuntime
+
+    module = _profiles_module()
+    profile = module.ProfileBuilder().build(
+        _draft(
+            module,
+            guru_id="historic-guru",
+            prefix="ALERT:",
+            symbol="AAPL",
+            exit_basis="original_position",
+        )
+    )
+    source = _message("ALERT:", "1001").model_copy(
+        update={"timestamp": dt.datetime.now(dt.UTC) - dt.timedelta(minutes=10)}
+    )
+    calls = []
+
+    class Decoder:
+        async def decode(self, text, route):
+            return DecodedMessage(
+                decision="trade",
+                reason="historical_preview",
+                instructions=(
+                    Evidence(
+                        action="buy",
+                        symbol=_mapped(route, "Apple"),
+                        price=Decimal("200"),
+                        fraction=Decimal("1") / Decimal("6"),
+                        action_evidence="Bought",
+                        symbol_evidence="Apple",
+                        price_evidence="200",
+                        fraction_evidence="1/6",
+                    ),
+                ),
+            )
+
+        async def close(self):
+            calls.append("decoder_closed")
+
+    async def open_decoder(name, configuration):
+        calls.append(("decoder", name, configuration.model))
+        return Decoder()
+
+    async def unexpected_owner(*args, **kwargs):
+        raise AssertionError("Historical evaluation must not open a broker owner")
+
+    async def evaluate():
+        source_store = await SQLiteSourceStore.open(tmp_path / "application.db")
+        await source_store.recovery_start(123, 1)
+        await source_store.capture_recovery_page(123, [source], [], 1001)
+        await source_store.close()
+        before = hashlib.sha256((tmp_path / "application.db").read_bytes()).hexdigest()
+        runtime = TradingRuntime(
+            tmp_path,
+            factories=TradingFactories(owner=unexpected_owner, decoder=open_decoder),
+        )
+        result = await runtime.profiles.evaluate_historical_profile(
+            source.identity,
+            profile,
+            ProviderConfiguration(name="deepseek", model="test-model"),
+            SecretStr("provider-secret"),
+            [RouteConnection(account_id="paper", mode="fixed", amount_usd="300")],
+        )
+        after = hashlib.sha256((tmp_path / "application.db").read_bytes()).hexdigest()
+        return result, before, after, runtime
+
+    result, before, after, runtime = asyncio.run(evaluate())
+
+    assert result.simulated is True
+    assert result.no_order is True
+    assert result.message_identity == source.identity
+    assert result.profile_revision == profile.profile_revision
+    assert result.destinations[0].budget_usd == Decimal("300.00")
+    assert before == after
+    assert calls == [("decoder", "deepseek", "test-model"), "decoder_closed"]
+    assert not (tmp_path / "accounts").exists()
+    assert runtime.status().state == "paused"
+    assert not hasattr(result, "orders")
+
+
+def test_profile_schema_rejects_arbitrary_executable_convention_fields():
+    module = _profiles_module()
+    with pytest.raises(ValidationError):
+        module.ProfileDraft.model_validate(
+            {
+                "guru_id": "custom",
+                "display_name": "Custom",
+                "prefix": "ALERT:",
+                "playbook": "",
+                "examples": [],
+                "exit_basis": "original_position",
+                "python_code": "import os; os.system('anything')",
+            }
+        )

@@ -1,0 +1,1 @@
+{"version":1,"request_id":"req-resolution","operation":"resolve_ownership","account_id":"paper","resolution":{"resolution_id":"resolve-1","incident_id":"incident-1","account_id":"broker-123","symbol":"AAPL","actor":"operator","reason":"Reviewed broker inventory","broker_qty":"3","external_qty":"1","lot_remaining":{"lot-1":"2"}}}

@@ -1,0 +1,2570 @@
+{
+  "request": {
+    "$defs": {
+      "GetManualCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Account Id",
+            "type": "string"
+          },
+          "command_id": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Command Id",
+            "type": "string"
+          },
+          "operation": {
+            "const": "get_manual_command",
+            "default": "get_manual_command",
+            "title": "Operation",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request_id",
+          "account_id",
+          "command_id"
+        ],
+        "title": "GetManualCommand",
+        "type": "object"
+      },
+      "GetProposal": {
+        "additionalProperties": false,
+        "properties": {
+          "operation": {
+            "const": "get_proposal",
+            "default": "get_proposal",
+            "title": "Operation",
+            "type": "string"
+          },
+          "proposal_id": {
+            "pattern": "^p-[0-9a-f]{12}$",
+            "title": "Proposal Id",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request_id",
+          "proposal_id"
+        ],
+        "title": "GetProposal",
+        "type": "object"
+      },
+      "GetStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "operation": {
+            "const": "get_status",
+            "default": "get_status",
+            "title": "Operation",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request_id"
+        ],
+        "title": "GetStatus",
+        "type": "object"
+      },
+      "ListAccountEvents": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Account Id",
+            "type": "string"
+          },
+          "before_seq": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Before Seq"
+          },
+          "limit": {
+            "default": 50,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "operation": {
+            "const": "list_account_events",
+            "default": "list_account_events",
+            "title": "Operation",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request_id",
+          "account_id"
+        ],
+        "title": "ListAccountEvents",
+        "type": "object"
+      },
+      "ListAccounts": {
+        "additionalProperties": false,
+        "properties": {
+          "before_account_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Before Account Id"
+          },
+          "limit": {
+            "default": 50,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "operation": {
+            "const": "list_accounts",
+            "default": "list_accounts",
+            "title": "Operation",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request_id"
+        ],
+        "title": "ListAccounts",
+        "type": "object"
+      },
+      "ListActivity": {
+        "additionalProperties": false,
+        "properties": {
+          "before_seq": {
+            "anyOf": [
+              {
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Before Seq"
+          },
+          "limit": {
+            "default": 50,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "operation": {
+            "const": "list_activity",
+            "default": "list_activity",
+            "title": "Operation",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request_id"
+        ],
+        "title": "ListActivity",
+        "type": "object"
+      },
+      "ListManualCommands": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Account Id",
+            "type": "string"
+          },
+          "before_command_id": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Before Command Id"
+          },
+          "limit": {
+            "default": 50,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "operation": {
+            "const": "list_manual_commands",
+            "default": "list_manual_commands",
+            "title": "Operation",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "source_id": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Source Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id",
+          "account_id",
+          "source_id"
+        ],
+        "title": "ListManualCommands",
+        "type": "object"
+      },
+      "ListProposals": {
+        "additionalProperties": false,
+        "properties": {
+          "operation": {
+            "const": "list_proposals",
+            "default": "list_proposals",
+            "title": "Operation",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request_id"
+        ],
+        "title": "ListProposals",
+        "type": "object"
+      },
+      "PauseAccount": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Account Id",
+            "type": "string"
+          },
+          "operation": {
+            "const": "pause_account",
+            "default": "pause_account",
+            "title": "Operation",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request_id",
+          "account_id"
+        ],
+        "title": "PauseAccount",
+        "type": "object"
+      },
+      "PauseProcessing": {
+        "additionalProperties": false,
+        "properties": {
+          "operation": {
+            "const": "pause_processing",
+            "default": "pause_processing",
+            "title": "Operation",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request_id"
+        ],
+        "title": "PauseProcessing",
+        "type": "object"
+      },
+      "PreviewManualOrder": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Account Id",
+            "type": "string"
+          },
+          "correction_id": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Correction Id",
+            "type": "string"
+          },
+          "instruction_index": {
+            "minimum": 0,
+            "title": "Instruction Index",
+            "type": "integer"
+          },
+          "operation": {
+            "const": "preview_manual_order",
+            "default": "preview_manual_order",
+            "title": "Operation",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request_id",
+          "account_id",
+          "correction_id",
+          "instruction_index"
+        ],
+        "title": "PreviewManualOrder",
+        "type": "object"
+      },
+      "ProposeManualOrder": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Account Id",
+            "type": "string"
+          },
+          "operation": {
+            "const": "propose_manual_order",
+            "default": "propose_manual_order",
+            "title": "Operation",
+            "type": "string"
+          },
+          "preview_id": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Preview Id",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request_id",
+          "account_id",
+          "preview_id"
+        ],
+        "title": "ProposeManualOrder",
+        "type": "object"
+      },
+      "ProposeRecoveryPreference": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Account Id",
+            "type": "string"
+          },
+          "operation": {
+            "const": "propose_recovery_preference",
+            "default": "propose_recovery_preference",
+            "title": "Operation",
+            "type": "string"
+          },
+          "preference": {
+            "enum": [
+              "manual",
+              "automatic"
+            ],
+            "title": "Preference",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request_id",
+          "account_id",
+          "preference"
+        ],
+        "title": "ProposeRecoveryPreference",
+        "type": "object"
+      },
+      "ProposeResumeAccount": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Account Id",
+            "type": "string"
+          },
+          "operation": {
+            "const": "propose_resume_account",
+            "default": "propose_resume_account",
+            "title": "Operation",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request_id",
+          "account_id"
+        ],
+        "title": "ProposeResumeAccount",
+        "type": "object"
+      }
+    },
+    "discriminator": {
+      "mapping": {
+        "get_manual_command": "#/$defs/GetManualCommand",
+        "get_proposal": "#/$defs/GetProposal",
+        "get_status": "#/$defs/GetStatus",
+        "list_account_events": "#/$defs/ListAccountEvents",
+        "list_accounts": "#/$defs/ListAccounts",
+        "list_activity": "#/$defs/ListActivity",
+        "list_manual_commands": "#/$defs/ListManualCommands",
+        "list_proposals": "#/$defs/ListProposals",
+        "pause_account": "#/$defs/PauseAccount",
+        "pause_processing": "#/$defs/PauseProcessing",
+        "preview_manual_order": "#/$defs/PreviewManualOrder",
+        "propose_manual_order": "#/$defs/ProposeManualOrder",
+        "propose_recovery_preference": "#/$defs/ProposeRecoveryPreference",
+        "propose_resume_account": "#/$defs/ProposeResumeAccount"
+      },
+      "propertyName": "operation"
+    },
+    "oneOf": [
+      {
+        "$ref": "#/$defs/GetStatus"
+      },
+      {
+        "$ref": "#/$defs/ListAccounts"
+      },
+      {
+        "$ref": "#/$defs/ListActivity"
+      },
+      {
+        "$ref": "#/$defs/ListAccountEvents"
+      },
+      {
+        "$ref": "#/$defs/ListManualCommands"
+      },
+      {
+        "$ref": "#/$defs/GetManualCommand"
+      },
+      {
+        "$ref": "#/$defs/PreviewManualOrder"
+      },
+      {
+        "$ref": "#/$defs/ListProposals"
+      },
+      {
+        "$ref": "#/$defs/GetProposal"
+      },
+      {
+        "$ref": "#/$defs/PauseProcessing"
+      },
+      {
+        "$ref": "#/$defs/PauseAccount"
+      },
+      {
+        "$ref": "#/$defs/ProposeResumeAccount"
+      },
+      {
+        "$ref": "#/$defs/ProposeRecoveryPreference"
+      },
+      {
+        "$ref": "#/$defs/ProposeManualOrder"
+      }
+    ]
+  },
+  "response": {
+    "$defs": {
+      "AccountControlView": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "applied_at": {
+            "format": "date-time",
+            "title": "Applied At",
+            "type": "string"
+          },
+          "entry_permission": {
+            "title": "Entry Permission",
+            "type": "string"
+          },
+          "recovery_preference": {
+            "title": "Recovery Preference",
+            "type": "string"
+          },
+          "type": {
+            "const": "account_control",
+            "default": "account_control",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "entry_permission",
+          "recovery_preference",
+          "applied_at"
+        ],
+        "title": "AccountControlView",
+        "type": "object"
+      },
+      "AccountEventView": {
+        "additionalProperties": false,
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "message_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id"
+          },
+          "order_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Id"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "required": [
+          "sequence",
+          "at",
+          "kind",
+          "message_id",
+          "order_id",
+          "reason",
+          "status"
+        ],
+        "title": "AccountEventView",
+        "type": "object"
+      },
+      "AccountEventsPage": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/$defs/AccountEventView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_before_seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Before Seq"
+          },
+          "type": {
+            "const": "account_events",
+            "default": "account_events",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "items",
+          "next_before_seq"
+        ],
+        "title": "AccountEventsPage",
+        "type": "object"
+      },
+      "AccountStateView": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "activity_status": {
+            "title": "Activity Status",
+            "type": "string"
+          },
+          "entry_permission": {
+            "title": "Entry Permission",
+            "type": "string"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "readiness": {
+            "title": "Readiness",
+            "type": "string"
+          },
+          "recovery_preference": {
+            "title": "Recovery Preference",
+            "type": "string"
+          },
+          "risk_status": {
+            "title": "Risk Status",
+            "type": "string"
+          },
+          "run_state": {
+            "title": "Run State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "run_state",
+          "entry_permission",
+          "recovery_preference",
+          "readiness",
+          "risk_status",
+          "activity_status",
+          "error_code"
+        ],
+        "title": "AccountStateView",
+        "type": "object"
+      },
+      "AccountView": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "activity_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activity Reason"
+          },
+          "activity_status": {
+            "title": "Activity Status",
+            "type": "string"
+          },
+          "balance": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/BalanceView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "entry_permission": {
+            "title": "Entry Permission",
+            "type": "string"
+          },
+          "environment": {
+            "enum": [
+              "paper",
+              "live"
+            ],
+            "title": "Environment",
+            "type": "string"
+          },
+          "ownership_incidents": {
+            "title": "Ownership Incidents",
+            "type": "integer"
+          },
+          "pending_orders": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Orders"
+          },
+          "positions": {
+            "items": {
+              "$ref": "#/$defs/PositionView"
+            },
+            "title": "Positions",
+            "type": "array"
+          },
+          "readiness": {
+            "title": "Readiness",
+            "type": "string"
+          },
+          "recovery_preference": {
+            "title": "Recovery Preference",
+            "type": "string"
+          },
+          "risk_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Reason"
+          },
+          "risk_status": {
+            "title": "Risk Status",
+            "type": "string"
+          },
+          "total_exposure_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Exposure Usd"
+          }
+        },
+        "required": [
+          "account_id",
+          "environment",
+          "entry_permission",
+          "recovery_preference",
+          "readiness",
+          "risk_status",
+          "risk_reason",
+          "activity_status",
+          "activity_reason",
+          "total_exposure_usd",
+          "positions",
+          "ownership_incidents",
+          "pending_orders",
+          "balance"
+        ],
+        "title": "AccountView",
+        "type": "object"
+      },
+      "AccountsPage": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/AccountView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_before_account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Before Account Id"
+          },
+          "type": {
+            "const": "accounts",
+            "default": "accounts",
+            "title": "Type",
+            "type": "string"
+          },
+          "unavailable": {
+            "items": {
+              "$ref": "#/$defs/UnavailableAccountView"
+            },
+            "title": "Unavailable",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "next_before_account_id",
+          "unavailable"
+        ],
+        "title": "AccountsPage",
+        "type": "object"
+      },
+      "ActivityItem": {
+        "additionalProperties": false,
+        "properties": {
+          "captured_at": {
+            "format": "date-time",
+            "title": "Captured At",
+            "type": "string"
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision"
+          },
+          "delivery_status": {
+            "title": "Delivery Status",
+            "type": "string"
+          },
+          "destinations": {
+            "items": {
+              "$ref": "#/$defs/DestinationView"
+            },
+            "title": "Destinations",
+            "type": "array"
+          },
+          "guru_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guru Id"
+          },
+          "parse_status": {
+            "title": "Parse Status",
+            "type": "string"
+          },
+          "parser_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parser Reason"
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "source_at": {
+            "format": "date-time",
+            "title": "Source At",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "understood_as": {
+            "items": {
+              "$ref": "#/$defs/InstructionItem"
+            },
+            "title": "Understood As",
+            "type": "array"
+          },
+          "untrusted_source_text": {
+            "title": "Untrusted Source Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sequence",
+          "source_id",
+          "source_at",
+          "captured_at",
+          "parse_status",
+          "delivery_status",
+          "decision",
+          "parser_reason",
+          "guru_id",
+          "untrusted_source_text",
+          "understood_as",
+          "destinations"
+        ],
+        "title": "ActivityItem",
+        "type": "object"
+      },
+      "ActivityPage": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/ActivityItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_before_seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Before Seq"
+          },
+          "rejected": {
+            "items": {
+              "$ref": "#/$defs/RejectedActivityItem"
+            },
+            "title": "Rejected",
+            "type": "array"
+          },
+          "type": {
+            "const": "activity",
+            "default": "activity",
+            "title": "Type",
+            "type": "string"
+          },
+          "unavailable": {
+            "items": {
+              "$ref": "#/$defs/UnavailableAccountView"
+            },
+            "title": "Unavailable",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "rejected",
+          "next_before_seq",
+          "unavailable"
+        ],
+        "title": "ActivityPage",
+        "type": "object"
+      },
+      "BalanceView": {
+        "additionalProperties": false,
+        "properties": {
+          "buying_power": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Buying Power"
+          },
+          "cash": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Cash"
+          },
+          "day_change_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Day Change Usd"
+          },
+          "equity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Equity"
+          },
+          "observed_at": {
+            "format": "date-time",
+            "title": "Observed At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "equity",
+          "day_change_usd",
+          "cash",
+          "buying_power",
+          "observed_at"
+        ],
+        "title": "BalanceView",
+        "type": "object"
+      },
+      "CallerView": {
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path"
+          },
+          "pid": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pid"
+          }
+        },
+        "required": [
+          "pid",
+          "path"
+        ],
+        "title": "CallerView",
+        "type": "object"
+      },
+      "CheckView": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "status": {
+            "enum": [
+              "passed",
+              "warning",
+              "blocked"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "status",
+          "reason"
+        ],
+        "title": "CheckView",
+        "type": "object"
+      },
+      "DestinationView": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "environment": {
+            "title": "Environment",
+            "type": "string"
+          },
+          "instruction_outcomes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Instruction Outcomes",
+            "type": "array"
+          },
+          "orders": {
+            "items": {
+              "$ref": "#/$defs/OrderView"
+            },
+            "title": "Orders",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "environment",
+          "status",
+          "instruction_outcomes",
+          "orders"
+        ],
+        "title": "DestinationView",
+        "type": "object"
+      },
+      "ErrorBody": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "$ref": "#/$defs/ErrorCode"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorBody",
+        "type": "object"
+      },
+      "ErrorCode": {
+        "enum": [
+          "access_off",
+          "locked",
+          "forbidden",
+          "invalid_request",
+          "not_found",
+          "unavailable",
+          "busy",
+          "cooling_down",
+          "proposal_limit",
+          "conflict",
+          "expired",
+          "rejected"
+        ],
+        "type": "string"
+      },
+      "InstructionItem": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "enum": [
+              "buy",
+              "reduce",
+              "close"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "fraction": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fraction"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Price"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "symbol",
+          "price",
+          "fraction"
+        ],
+        "title": "InstructionItem",
+        "type": "object"
+      },
+      "InstructionView": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "enum": [
+              "buy",
+              "reduce",
+              "close"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "entry_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Price"
+          },
+          "fraction": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fraction"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Price"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "symbol",
+          "price",
+          "entry_price",
+          "fraction"
+        ],
+        "title": "InstructionView",
+        "type": "object"
+      },
+      "LotView": {
+        "additionalProperties": false,
+        "description": "One block of shares the copier bought, and the post that bought it.",
+        "properties": {
+          "average_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Average Price"
+          },
+          "bought_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bought At"
+          },
+          "guru_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guru Id"
+          },
+          "lot_id": {
+            "title": "Lot Id",
+            "type": "string"
+          },
+          "original_qty": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Original Qty"
+          },
+          "posted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Posted At"
+          },
+          "remaining_qty": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Remaining Qty"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "untrusted_source_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Untrusted Source Text"
+          }
+        },
+        "required": [
+          "lot_id",
+          "source_id",
+          "guru_id",
+          "posted_at",
+          "untrusted_source_text",
+          "bought_at",
+          "original_qty",
+          "remaining_qty",
+          "average_price"
+        ],
+        "title": "LotView",
+        "type": "object"
+      },
+      "ManualCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "$ref": "#/$defs/ManualCommandView"
+          },
+          "type": {
+            "const": "manual_command",
+            "default": "manual_command",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "title": "ManualCommand",
+        "type": "object"
+      },
+      "ManualCommandView": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "client_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
+          "command_id": {
+            "title": "Command Id",
+            "type": "string"
+          },
+          "confirmed_at": {
+            "format": "date-time",
+            "title": "Confirmed At",
+            "type": "string"
+          },
+          "correction_id": {
+            "title": "Correction Id",
+            "type": "string"
+          },
+          "instruction_index": {
+            "title": "Instruction Index",
+            "type": "integer"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_id",
+          "account_id",
+          "source_id",
+          "correction_id",
+          "instruction_index",
+          "actor",
+          "confirmed_at",
+          "status",
+          "reason",
+          "client_id"
+        ],
+        "title": "ManualCommandView",
+        "type": "object"
+      },
+      "ManualCommandsPage": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/$defs/ManualCommandView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_before_command_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Before Command Id"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "manual_commands",
+            "default": "manual_commands",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "source_id",
+          "items",
+          "next_before_command_id"
+        ],
+        "title": "ManualCommandsPage",
+        "type": "object"
+      },
+      "ManualOrderSubject": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "environment": {
+            "enum": [
+              "paper",
+              "live"
+            ],
+            "title": "Environment",
+            "type": "string"
+          },
+          "kind": {
+            "const": "confirm_manual_order",
+            "default": "confirm_manual_order",
+            "title": "Kind",
+            "type": "string"
+          },
+          "limit_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Price"
+          },
+          "order_type": {
+            "enum": [
+              "limit",
+              "market"
+            ],
+            "title": "Order Type",
+            "type": "string"
+          },
+          "preview_id": {
+            "title": "Preview Id",
+            "type": "string"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "side": {
+            "enum": [
+              "buy",
+              "sell"
+            ],
+            "title": "Side",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "preview_id",
+          "environment",
+          "symbol",
+          "side",
+          "order_type",
+          "quantity",
+          "limit_price"
+        ],
+        "title": "ManualOrderSubject",
+        "type": "object"
+      },
+      "ManualPreview": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/$defs/CheckView"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "environment": {
+            "enum": [
+              "paper",
+              "live"
+            ],
+            "title": "Environment",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "fresh_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fresh Price"
+          },
+          "instruction": {
+            "$ref": "#/$defs/InstructionView"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/OrderPlanView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "preview_id": {
+            "title": "Preview Id",
+            "type": "string"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "source_age_seconds": {
+            "title": "Source Age Seconds",
+            "type": "integer"
+          },
+          "type": {
+            "const": "manual_preview",
+            "default": "manual_preview",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "preview_id",
+          "account_id",
+          "environment",
+          "source_age_seconds",
+          "created_at",
+          "expires_at",
+          "instruction",
+          "fresh_price",
+          "plan",
+          "checks",
+          "reasons"
+        ],
+        "title": "ManualPreview",
+        "type": "object"
+      },
+      "OrderPlanView": {
+        "additionalProperties": false,
+        "properties": {
+          "limit_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Price"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "session": {
+            "title": "Session",
+            "type": "string"
+          },
+          "side": {
+            "enum": [
+              "buy",
+              "sell"
+            ],
+            "title": "Side",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "limit",
+              "market"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "side",
+          "type",
+          "quantity",
+          "limit_price",
+          "session"
+        ],
+        "title": "OrderPlanView",
+        "type": "object"
+      },
+      "OrderView": {
+        "additionalProperties": false,
+        "properties": {
+          "average_fill_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Fill Price"
+          },
+          "client_id": {
+            "title": "Client Id",
+            "type": "string"
+          },
+          "filled_quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Filled Quantity"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "side": {
+            "title": "Side",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "client_id",
+          "symbol",
+          "side",
+          "status",
+          "quantity",
+          "filled_quantity",
+          "average_fill_price"
+        ],
+        "title": "OrderView",
+        "type": "object"
+      },
+      "PositionView": {
+        "additionalProperties": false,
+        "properties": {
+          "external_qty": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "External Qty"
+          },
+          "lots": {
+            "items": {
+              "$ref": "#/$defs/LotView"
+            },
+            "title": "Lots",
+            "type": "array"
+          },
+          "owned_qty": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Owned Qty"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "owned_qty",
+          "external_qty",
+          "lots"
+        ],
+        "title": "PositionView",
+        "type": "object"
+      },
+      "ProcessingPaused": {
+        "additionalProperties": false,
+        "properties": {
+          "processing": {
+            "$ref": "#/$defs/ProcessingView"
+          },
+          "type": {
+            "const": "processing",
+            "default": "processing",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "processing"
+        ],
+        "title": "ProcessingPaused",
+        "type": "object"
+      },
+      "ProcessingView": {
+        "additionalProperties": false,
+        "properties": {
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "model_ready": {
+            "title": "Model Ready",
+            "type": "boolean"
+          },
+          "pending_signals": {
+            "title": "Pending Signals",
+            "type": "integer"
+          },
+          "pending_source": {
+            "title": "Pending Source",
+            "type": "integer"
+          },
+          "processed_signals": {
+            "title": "Processed Signals",
+            "type": "integer"
+          },
+          "source_connected": {
+            "title": "Source Connected",
+            "type": "boolean"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "source_connected",
+          "model_ready",
+          "pending_source",
+          "pending_signals",
+          "processed_signals",
+          "error_code"
+        ],
+        "title": "ProcessingView",
+        "type": "object"
+      },
+      "ProposalOutcome": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "command_id": {
+            "title": "Command Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "succeeded",
+              "failed",
+              "outcome_unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "code",
+          "command_id"
+        ],
+        "title": "ProposalOutcome",
+        "type": "object"
+      },
+      "ProposalSubject": {
+        "discriminator": {
+          "mapping": {
+            "confirm_manual_order": "#/$defs/ManualOrderSubject",
+            "resume_account": "#/$defs/ResumeAccountSubject",
+            "set_recovery": "#/$defs/RecoverySubject"
+          },
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/ResumeAccountSubject"
+          },
+          {
+            "$ref": "#/$defs/RecoverySubject"
+          },
+          {
+            "$ref": "#/$defs/ManualOrderSubject"
+          }
+        ]
+      },
+      "ProposalView": {
+        "additionalProperties": false,
+        "properties": {
+          "command_id": {
+            "title": "Command Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Digest",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ProposalOutcome"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "proposal_id": {
+            "title": "Proposal Id",
+            "type": "string"
+          },
+          "requested_by": {
+            "$ref": "#/$defs/CallerView"
+          },
+          "state": {
+            "enum": [
+              "pending",
+              "running",
+              "succeeded",
+              "failed",
+              "outcome_unknown",
+              "rejected",
+              "expired",
+              "discarded"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "subject": {
+            "$ref": "#/$defs/ProposalSubject"
+          },
+          "type": {
+            "const": "proposal",
+            "default": "proposal",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "proposal_id",
+          "state",
+          "subject",
+          "digest",
+          "command_id",
+          "created_at",
+          "expires_at",
+          "requested_by",
+          "outcome"
+        ],
+        "title": "ProposalView",
+        "type": "object"
+      },
+      "ProposalsPage": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/$defs/ProposalView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "type": {
+            "const": "proposals",
+            "default": "proposals",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ProposalsPage",
+        "type": "object"
+      },
+      "RecoverySubject": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "set_recovery",
+            "default": "set_recovery",
+            "title": "Kind",
+            "type": "string"
+          },
+          "preference": {
+            "enum": [
+              "manual",
+              "automatic"
+            ],
+            "title": "Preference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "preference"
+        ],
+        "title": "RecoverySubject",
+        "type": "object"
+      },
+      "RejectedActivityItem": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "rejected_at": {
+            "format": "date-time",
+            "title": "Rejected At",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "rejected_at",
+          "reason"
+        ],
+        "title": "RejectedActivityItem",
+        "type": "object"
+      },
+      "Result": {
+        "discriminator": {
+          "mapping": {
+            "account_control": "#/$defs/AccountControlView",
+            "account_events": "#/$defs/AccountEventsPage",
+            "accounts": "#/$defs/AccountsPage",
+            "activity": "#/$defs/ActivityPage",
+            "manual_command": "#/$defs/ManualCommand",
+            "manual_commands": "#/$defs/ManualCommandsPage",
+            "manual_preview": "#/$defs/ManualPreview",
+            "processing": "#/$defs/ProcessingPaused",
+            "proposal": "#/$defs/ProposalView",
+            "proposals": "#/$defs/ProposalsPage",
+            "status": "#/$defs/StatusView"
+          },
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/StatusView"
+          },
+          {
+            "$ref": "#/$defs/AccountsPage"
+          },
+          {
+            "$ref": "#/$defs/ActivityPage"
+          },
+          {
+            "$ref": "#/$defs/AccountEventsPage"
+          },
+          {
+            "$ref": "#/$defs/ManualCommandsPage"
+          },
+          {
+            "$ref": "#/$defs/ManualCommand"
+          },
+          {
+            "$ref": "#/$defs/ManualPreview"
+          },
+          {
+            "$ref": "#/$defs/ProposalView"
+          },
+          {
+            "$ref": "#/$defs/ProposalsPage"
+          },
+          {
+            "$ref": "#/$defs/ProcessingPaused"
+          },
+          {
+            "$ref": "#/$defs/AccountControlView"
+          }
+        ]
+      },
+      "ResumeAccountSubject": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "resume_account",
+            "default": "resume_account",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id"
+        ],
+        "title": "ResumeAccountSubject",
+        "type": "object"
+      },
+      "StatusView": {
+        "additionalProperties": false,
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/$defs/AccountStateView"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "engine_state": {
+            "title": "Engine State",
+            "type": "string"
+          },
+          "processing": {
+            "$ref": "#/$defs/ProcessingView"
+          },
+          "type": {
+            "const": "status",
+            "default": "status",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "engine_state",
+          "processing",
+          "accounts"
+        ],
+        "title": "StatusView",
+        "type": "object"
+      },
+      "UnavailableAccountView": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "reason"
+        ],
+        "title": "UnavailableAccountView",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "error": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/ErrorBody"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "ok": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/Result"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "request_id": {
+        "title": "Request Id",
+        "type": "string"
+      },
+      "schema_version": {
+        "const": 1,
+        "default": 1,
+        "title": "Schema Version",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "request_id"
+    ],
+    "title": "Response",
+    "type": "object"
+  },
+  "schema_version": 1
+}

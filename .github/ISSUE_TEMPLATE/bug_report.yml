@@ -1,0 +1,57 @@
+name: Bug report
+description: Report a reproducible problem with the app or its documentation.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include credentials, private source messages, provider requests or responses, broker records, databases, or full operational logs. For a vulnerability, use the private contact path in [SECURITY.md](https://github.com/YZXBiz/copytrading/blob/main/SECURITY.md).
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Include the release tag or app version shown in About.
+      placeholder: 0.1.0-alpha.1
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: macOS version and Mac type
+      description: Include the macOS version and whether this is Apple Silicon.
+      placeholder: macOS 26, Apple Silicon
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the smallest steps that reproduce the problem. Use synthetic examples.
+      placeholder: "1. ...\n2. ...\n3. ..."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened? If a short excerpt helps, remove private data and secrets first.
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy and report type
+      options:
+        - label: I removed credentials and private account, source, provider, broker, and log data from this report and its attachments.
+          required: true
+        - label: This is not a security vulnerability; I will report vulnerabilities privately using SECURITY.md.
+          required: true

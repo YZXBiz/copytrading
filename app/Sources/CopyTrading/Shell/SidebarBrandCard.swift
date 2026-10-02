@@ -1,0 +1,39 @@
+import AppKit
+import DesktopCore
+import SwiftUI
+
+/// The app's icon and name at the top of the sidebar, like a workspace name.
+struct SidebarBrandCard: View {
+    let model: AppModel
+
+    @MainActor private var detail: String {
+        guard let configuration = model.savedTradingConfiguration else { return L10n.string("Not set up yet") }
+        let live = configuration.accounts.contains { $0.environment == .live }
+        return L10n.string("%@ · %@", L10n.string(live ? "Live" : "Paper"), Humanize.count(configuration.accounts.count, "account"))
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(nsImage: NSApp.applicationIconImage)
+                .resizable()
+                .interpolation(.high)
+                .frame(width: 32, height: 32)
+                .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(L10n.string("CopyTrading"))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
+                Text(detail)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Palette.tertiaryInk)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 19)
+        .padding(.top, 4)
+        .padding(.bottom, 10)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(L10n.string("CopyTrading, %@", detail))
+    }
+}

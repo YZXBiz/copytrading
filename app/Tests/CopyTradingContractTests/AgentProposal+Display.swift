@@ -1,0 +1,1 @@
+../../Sources/CopyTrading/Features/Agents/AgentProposal+Display.swift

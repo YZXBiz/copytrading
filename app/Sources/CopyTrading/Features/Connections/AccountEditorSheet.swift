@@ -1,0 +1,159 @@
+import DesktopCore
+import SwiftUI
+
+/// One broker account: its name, paper or live, its Alpaca keys, and the limits every order
+/// into it must stay inside.
+struct AccountEditorSheet: View {
+    @Binding var account: TradingAccountDraft
+    /// Accounts whose broker keys are already in the Keychain; a blank field keeps those.
+    let savedAccountIDs: Set<String>
+    let remove: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    private var hasSavedCredentials: Bool { savedAccountIDs.contains(account.name.trimmed) }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField(L10n.string("Name"), text: $account.name, prompt: Text(L10n.string("e.g. %@", "primary")))
+                        .accessibilityLabel(L10n.string("Account name"))
+                    Picker(L10n.string("Environment"), selection: $account.environment) {
+                        ForEach(TradingEnvironment.allCases, id: \.self) { environment in
+                            Text(environmentTitle(environment)).tag(environment)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    if account.environment == .live {
+                        Callout(L10n.string("Live accounts place real orders with real money."), tone: .caution)
+                    }
+                } header: {
+                    SetupSectionHeader(title: "Account", detail: "Letters, digits, “-” and “_”. Paper trades pretend money.")
+                }
+
+                Section {
+                    SecureField(
+                        L10n.string("API key"), text: $account.key,
+                        prompt: Text(L10n.string(hasSavedCredentials ? "Leave blank to keep the saved key" : "Required"))
+                    )
+                    .accessibilityLabel(L10n.string("Alpaca API key"))
+                    SecureField(
+                        L10n.string("API secret"), text: $account.secret,
+                        prompt: Text(L10n.string(hasSavedCredentials ? "Leave blank to keep the saved secret" : "Required"))
+                    )
+                    .accessibilityLabel(L10n.string("Alpaca API secret"))
+                } header: {
+                    SetupSectionHeader(
+                        title: "Alpaca keys", detail: "Kept in your Mac's Keychain, never in the setup file.",
+                        help: [SetupHelp.alpacaKeys])
+                }
+
+                Section(L10n.string("Position limits (USD)")) {
+                    textLimit(
+                        "Maximum per order", hint: "The most one copied buy can spend. A bigger call is cut down to this.",
+                        text: $account.policy.maxOrderUSD)
+                    textLimit(
+                        "Maximum per symbol", hint: "The most this account holds in any one stock. A buy that would go over is skipped.",
+                        text: $account.policy.maxSymbolUSD)
+                    textLimit(
+                        "Maximum total exposure", hint: "The most this account holds across all copied stocks together.",
+                        text: $account.policy.maxTotalUSD)
+                    textLimit(
+                        "Daily loss cap",
+                        hint: "Once the account is down this much since yesterday's close, buys stop for the day. Sells still run.",
+                        text: $account.policy.dailyLossCapUSD)
+                    textLimit(
+                        "Maximum above signal price (%)",
+                        hint: "How far above the guru's price a buy may fill. 0 means never pay more than they did.",
+                        text: $account.policy.maxAboveSignalPct)
+                }
+
+                Section(L10n.string("Timing")) {
+                    numberLimit(
+                        "Entries per day", hint: "The most copied buys in one trading day. Sells don't count.",
+                        value: $account.policy.maxEntriesPerDay)
+                    numberLimit(
+                        "Maximum signal age (seconds)",
+                        hint: "A post older than this when it arrives waits for your review instead of trading.",
+                        value: $account.policy.maxSignalAgeSeconds)
+                    numberLimit(
+                        "Order timeout (seconds)", hint: "A limit order that hasn't filled by then is canceled.",
+                        value: $account.policy.orderTimeoutSeconds)
+                    numberLimit(
+                        "Broker poll interval (seconds)", hint: "How often CopyTrading checks the broker for fills and balances.",
+                        value: $account.policy.pollSeconds)
+                }
+
+                Section {
+                    behavior(
+                        "Trade in extended hours", hint: "Also copy calls before 9:30 and after 16:00 New York time, with limit orders.",
+                        isOn: $account.policy.extendedHours)
+                    behavior(
+                        "Trade overnight", hint: "Also copy calls between 20:00 and 4:00. Needs extended hours on.",
+                        isOn: $account.policy.overnight)
+                    behavior(
+                        "Copy exits", hint: "Sell when the guru sells. Off means you sell copied shares yourself.",
+                        isOn: $account.policy.copyExits)
+                } header: {
+                    Text(L10n.string("Behavior"))
+                } footer: {
+                    Text(L10n.string("Shares you already hold are never sold by CopyTrading."))
+                }
+
+                Section {
+                    Button(L10n.string("Remove Account"), role: .destructive, action: removeAccount)
+                        .buttonStyle(.borderless)
+                } footer: {
+                    Text(L10n.string("Removing takes effect when the setup is checked and copying starts."))
+                }
+            }
+            .formStyle(.grouped)
+            .navigationTitle(account.name.trimmed.isEmpty ? L10n.string("New Account") : account.name)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L10n.string("Done"), action: dismiss.callAsFunction)
+                }
+            }
+        }
+        .frame(minWidth: 520, idealWidth: 560, minHeight: 620, idealHeight: 700)
+    }
+
+    private func textLimit(_ title: String, hint: String, text: Binding<String>) -> some View {
+        PolicyField(title: L10n.string(title), hint: L10n.string(hint)) {
+            TextField(L10n.string(title), text: text)
+        }
+    }
+
+    private func numberLimit(_ title: String, hint: String, value: Binding<Int>) -> some View {
+        PolicyField(title: L10n.string(title), hint: L10n.string(hint)) {
+            TextField(L10n.string(title), value: value, format: .number)
+        }
+    }
+
+    private func numberLimit(_ title: String, hint: String, value: Binding<Double>) -> some View {
+        PolicyField(title: L10n.string(title), hint: L10n.string(hint)) {
+            TextField(L10n.string(title), value: value, format: .number)
+        }
+    }
+
+    private func behavior(_ title: String, hint: String, isOn: Binding<Bool>) -> some View {
+        Toggle(isOn: isOn) {
+            Text(L10n.string(title))
+            Text(L10n.string(hint))
+        }
+        .toggleStyle(.switch)
+        .controlSize(.small)
+    }
+
+    private func removeAccount() {
+        dismiss()
+        remove()
+    }
+
+    @MainActor private func environmentTitle(_ environment: TradingEnvironment) -> String {
+        switch environment {
+        case .paper: L10n.string("Paper")
+        case .live: L10n.string("Live")
+        }
+    }
+}

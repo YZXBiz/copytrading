@@ -1,0 +1,1 @@
+../../Sources/CopyTrading/Features/GettingStarted/SetupProgress.swift

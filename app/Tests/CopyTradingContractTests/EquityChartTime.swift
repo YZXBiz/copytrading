@@ -1,0 +1,1 @@
+../../Sources/CopyTrading/Features/Today/EquityChart/EquityChartTime.swift

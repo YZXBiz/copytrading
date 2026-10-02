@@ -1,0 +1,23 @@
+{
+  "version": "1.0.4",
+  "login": {
+    "method": "POST",
+    "path": "/auth/login",
+    "request_fields": ["name", "password"],
+    "success_status": 200,
+    "response_fields": ["message", "status"],
+    "cookie": {
+      "name": "auth_tokens",
+      "http_only": true,
+      "secure": false,
+      "path": "/",
+      "same_site": "Lax"
+    }
+  },
+  "private_data_request": {
+    "method": "GET",
+    "path": "/api/default/streams?type=logs",
+    "unauthenticated_status": 401,
+    "authenticated_status": 200
+  }
+}

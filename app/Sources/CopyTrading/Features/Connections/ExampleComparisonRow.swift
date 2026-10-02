@@ -1,0 +1,62 @@
+import DesktopCore
+import SwiftUI
+
+struct ExampleComparisonRow: View {
+    let example: ProfileExampleComparison
+
+    @MainActor private var actualText: String {
+        if let instruction = example.actual.instructions.first {
+            return L10n.string(
+                "%@ %@ · fraction %@",
+                L10n.string(Humanize.code(instruction.action.rawValue)),
+                instruction.symbol,
+                instruction.fraction ?? L10n.string("none")
+            )
+        }
+        return L10n.string(
+            "%@ · %@", L10n.string(Humanize.code(example.actual.decision)),
+            L10n.string(Humanize.code(example.actual.reason))
+        )
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(L10n.string("Example %lld", Int64(example.exampleIndex + 1)))
+                    .font(.callout.bold())
+                Spacer()
+                StatusBadge(example.matches ? "Matches" : "Mismatch", tone: example.matches ? .positive : .caution)
+            }
+            Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 2) {
+                GridRow {
+                    Text(L10n.string("Expected")).foregroundStyle(.secondary)
+                    Text(
+                        L10n.string(
+                            "%@ %@ · fraction %@",
+                            L10n.string(Humanize.code(example.expectedAction.rawValue)), example.expectedSymbol,
+                            example.expectedFraction ?? L10n.string("none")
+                        )
+                    )
+                }
+                GridRow {
+                    Text(L10n.string("Model")).foregroundStyle(.secondary)
+                    Text(actualText)
+                }
+                ForEach(example.actual.destinations, id: \.accountID) { destination in
+                    GridRow {
+                        Text(destination.accountID).foregroundStyle(.secondary)
+                        Text(destination.budgetUSD.map(Humanize.usd) ?? L10n.string(Humanize.code(destination.reason)))
+                    }
+                }
+            }
+            .font(.callout)
+            ForEach(example.reviewReasons, id: \.self) { reason in
+                Text(L10n.string(Humanize.code(reason)))
+                    .font(.callout)
+                    .foregroundStyle(.orange)
+            }
+        }
+        .padding(8)
+        .background(.background.secondary, in: .rect(cornerRadius: DesignTokens.calloutCornerRadius))
+    }
+}

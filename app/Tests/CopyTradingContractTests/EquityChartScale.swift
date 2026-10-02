@@ -1,0 +1,1 @@
+../../Sources/CopyTrading/Features/Today/EquityChart/EquityChartScale.swift

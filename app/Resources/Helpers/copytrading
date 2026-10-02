@@ -1,0 +1,8 @@
+#!/bin/sh
+# copytrading: check and steer the running CopyTrading app; `copytrading mcp` serves agents.
+# It runs the app's bundled engine client, which talks only to the app's private socket.
+set -eu
+contents=$(/usr/bin/dirname "$(/usr/bin/dirname "$(/usr/bin/readlink -f "$0")")")
+resources="$contents/Resources"
+PYTHONPATH="$resources/Engine/src" PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1 \
+    exec "$resources/Runtime/cpython/python/bin/python3.14" -m copytrading_engine.control "$@"
