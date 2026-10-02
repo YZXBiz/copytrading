@@ -298,6 +298,23 @@ class _FailingCloseOwner(Owner):
         raise OSError("lock release failed")
 
 
+async def test_shutdown_waits_for_an_owner_that_just_finished_opening_late(tmp_path, caplog):
+    """An owner that opened late hands itself off to be closed a moment later; shutdown waits.
+
+    With nothing else left to wait for, shutdown used to return in that moment, and the close,
+    with its error, ran after shutdown had returned.
+    """
+    runtime = TradingRuntime(tmp_path)
+    (tmp_path / "second").mkdir()
+    opening: asyncio.Future[Owner] = asyncio.get_running_loop().create_future()
+    runtime._watch_late_owner(opening)
+    opening.set_result(_FailingCloseOwner(tmp_path / "second", {}, {}))
+
+    await runtime.shutdown()
+
+    assert "late_account_owner_close_failed type=OSError" in caplog.text
+
+
 @pytest.mark.parametrize("late_owner_type", [_SlowClosingOwner, _FailingCloseOwner])
 async def test_shutdown_waits_for_late_account_owner_close(tmp_path, caplog, late_owner_type):
     release = asyncio.Event()

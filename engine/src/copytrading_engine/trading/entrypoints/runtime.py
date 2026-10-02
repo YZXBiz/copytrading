@@ -123,6 +123,7 @@ class TradingRuntime:
         self._source_failed = False
         self._task: asyncio.Task[None] | None = None
         self._accounts: dict[str, AccountSupervisor] = {}
+        self._late_owner_opens: set[asyncio.Future[AccountOwner]] = set()
         self._late_owner_closes: set[asyncio.Task[None]] = set()
         self._failure_code: str | None = None
         evidence = SQLiteOperatorEvidence()
@@ -300,11 +301,24 @@ class TradingRuntime:
         task = self._task
         if task is not None:
             await task
-        if self._late_owner_closes:
-            await asyncio.gather(*self._late_owner_closes, return_exceptions=True)
+        # An owner that finished opening hands itself to _close_late_owner a moment later, so
+        # wait until every late open has been handed off and every close it started is done.
+        # gather does not yield when everything is already done, and the hand-off runs as a
+        # callback, so give the loop a turn before checking again.
+        while self._late_owner_opens or self._late_owner_closes:
+            await asyncio.gather(
+                *self._late_owner_opens, *self._late_owner_closes, return_exceptions=True
+            )
+            await asyncio.sleep(0)
+
+    def _watch_late_owner(self, opening: asyncio.Future[AccountOwner]) -> None:
+        """Close an owner that is still opening after Start gave up on it, once it opens."""
+        self._late_owner_opens.add(opening)
+        opening.add_done_callback(self._close_late_owner)
 
     def _close_late_owner(self, opened: asyncio.Future[AccountOwner]) -> None:
         """Close an owner that finished opening after Start gave up on it."""
+        self._late_owner_opens.discard(opened)
         if opened.cancelled() or opened.exception() is not None:
             return
         closing = asyncio.create_task(opened.result().close())
@@ -417,7 +431,7 @@ class TradingRuntime:
                 else:
                     log.error("trading_account_open_timed_out id=%s", account.id)
 
-                    task.add_done_callback(self._close_late_owner)
+                    self._watch_late_owner(task)
                 self._accounts[account.id] = AccountSupervisor(
                     account.id,
                     owner,
