@@ -60,7 +60,7 @@ CopyTrading 是一款原生 macOS 应用。它读取交易者在 Discord 上发�
 
 需要一台运行 macOS 26 或更高版本的 Apple 芯片 Mac。
 
-**下载：** 到 [Releases](https://github.com/YZXBiz/copytrading/releases) 获取最新的预览版，解压后右键点击应用并选择 **打开**。预览版尚未经过 Apple 公证，所以首次启动时 macOS 会给出警告。如何校验下载文件见 [releases](docs/releases.md)。
+**下载：** 到 [Releases](https://github.com/YZXBiz/copytrading/releases) 获取最新的预览版，解压后把 CopyTrading 移到“应用程序”文件夹。预览版尚未经过 Apple 公证，所以 macOS 会阻止第一次打开：打开 **系统设置 → 隐私与安全性**，找到关于 CopyTrading 的提示，选择 **仍要打开**。如何校验下载文件见 [releases](docs/releases.md)。
 
 **或者从源码构建：** 需要 [uv](https://docs.astral.sh/uv/) 和 Xcode 命令行工具。
 
