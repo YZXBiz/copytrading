@@ -2,13 +2,26 @@
 
 User-visible changes for each preview and release are recorded here. See [release instructions](docs/releases.md) for downloadable artifact details and [validation](docs/validation.md) for current evidence and remaining gates.
 
-## Unreleased
+## 0.1.0-alpha.3 — developer preview
+
+The engine runs on its own as a server, agent approvals are checked end to end in the real window, and the repository is reorganized for contributors.
 
 ### Run the engine without the app
 
 - **`copytrading-server`** runs the trading engine on its own, on macOS or Linux, from a commented `copytrading.toml` (`copytrading-server init`) and keys in environment variables. `check` signs in to Discord, the model, and every account and reads each guru's examples without saving or trading anything; `run` starts copying and stops cleanly on Ctrl-C or SIGTERM. It composes the same engine as the app, so every limit, recovery rule, and record is the same.
 - The owner controls a running server with `status`, `entries enable|disable ACCOUNT`, `pause`, `resume`, `proposals`, `approve` (which shows what it does and asks you to type yes), and `reject`. The `copytrading` CLI and MCP server find a running server on their own, at the access set in the file.
 - A Docker image (`engine/Dockerfile`) runs the server as a non-root user with its state in a volume. `make check-linux` runs the engine's tests on Linux.
+
+### The app
+
+- Connections closes with **Setup Tips** (设置小贴士), the how-to cards for finding a channel ID, a token, a key, or a Telegram chat.
+
+### For contributors
+
+- The repository's public history starts at 0.1.0-alpha.2. Clone it again if yours was made before October 2, 2026.
+- `engine/` is the only Python project: the root `pyproject.toml` and `uv.lock` are gone, and Ruff, Ty, and pytest are configured in `engine/pyproject.toml`. `make dev` syncs `engine/.venv`; `make check-editor` is removed.
+- Journey J31 checks agent approval in the real window against Alpaca paper: a request runs only after Approve, exactly once, and a rejected one changes nothing.
+- Pull requests are squash-merged, each titled with one plain sentence under 72 characters.
 
 ## 0.1.0-alpha.2 — developer preview
 

@@ -1,8 +1,8 @@
 # Developer preview releases
 
 The macOS developer preview targets Apple Silicon and macOS 26 or later. The
-first release tag is `v0.1.0-alpha.1`. Preview builds are unsigned and are not
-notarized. Install them manually for evaluation; the app updater does not trust
+first release in this repository is `v0.1.0-alpha.2`. Preview builds are not
+signed with a Developer ID and are not notarized. Install them manually for evaluation; the app updater does not trust
 these preview packages. macOS may warn or block an unsigned download.
 
 ## Build a preview
@@ -10,7 +10,7 @@ these preview packages. macOS may warn or block an unsigned download.
 Use a clean checkout of the exact source commit and a prepared ARM64 runtime:
 
 ```sh
-UV_PYTHON=/path/to/arm64/python3.14 make release RELEASE_VERSION=0.1.0-alpha.1
+UV_PYTHON=/path/to/arm64/python3.14 make release RELEASE_VERSION=0.1.0-alpha.3
 ```
 
 The command checks that the version is a prerelease, its core version matches
