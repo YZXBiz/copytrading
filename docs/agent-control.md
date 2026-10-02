@@ -11,7 +11,7 @@ The owner turns agent access on in Settings → Agent Access; approvals appear a
    `claude mcp add copytrading -- "/Applications/CopyTrading.app/Contents/Helpers/copytrading" mcp`
 3. Or run the command directly: `"/Applications/CopyTrading.app/Contents/Helpers/copytrading" status`.
 
-The command looks in `~/Library/Application Support/CopyTrading` unless `COPYTRADING_STATE_ROOT` points elsewhere.
+The command looks in `~/Library/Application Support/CopyTrading` unless `COPYTRADING_STATE_ROOT` points elsewhere. When the app's socket is absent it uses a running [server](server.md)'s instead; there, access comes from `[agents] access` in `copytrading.toml` and approvals from `copytrading-server approve`.
 
 ## What it looks like
 

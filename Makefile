@@ -9,11 +9,12 @@ RUNTIME ?= dist/desktop-runtime/prepared
 RELEASE_RUNTIME ?= $(RUNTIME)
 RELEASE_OUTPUT ?= dist/releases/v$(RELEASE_VERSION)
 RELEASE_TAG ?= v$(RELEASE_VERSION)
-.PHONY: help doctor app dev check coverage check-mutations desktop-build desktop-check desktop-smoke ui-journeys release
+.PHONY: help doctor app dev check check-linux coverage check-mutations desktop-build desktop-check desktop-smoke ui-journeys release
 
 help:
 	@echo 'make doctor          Check this Mac can build and run CopyTrading'
 	@echo 'make app             Build the app from source and open it'
+	@echo 'make check-linux     Run the engine tests on Linux in Docker'
 	@echo 'make coverage        Run the engine tests with line and branch coverage (HTML in dist/coverage)'
 	@echo 'make dev             Install the engine environment for your editor'
 	@echo 'make check           Run engine and app-script checks'
@@ -44,6 +45,9 @@ check:
 	$(ENGINE_ENV) uv run --directory engine --frozen --no-editable ruff format --check . tools ../app/scripts
 	$(ENGINE_ENV) uv run --directory engine --frozen --no-editable ty check src tools ../app/scripts
 	$(ENGINE_ENV) uv run --directory engine --frozen --no-editable pytest -q -c pyproject.toml ../app/scripts/tests
+
+check-linux:
+	sh engine/tools/linux-tests.sh
 
 coverage:
 	$(ENGINE_ENV) uv run --directory engine --frozen --no-editable pytest -q --cov --cov-fail-under=80 --cov-report=term-missing:skip-covered --cov-report=html:../dist/coverage

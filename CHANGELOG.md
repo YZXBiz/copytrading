@@ -2,6 +2,14 @@
 
 User-visible changes for each preview and release are recorded here. See [release instructions](docs/releases.md) for downloadable artifact details and [validation](docs/validation.md) for current evidence and remaining gates.
 
+## Unreleased
+
+### Run the engine without the app
+
+- **`copytrading-server`** runs the trading engine on its own, on macOS or Linux, from a commented `copytrading.toml` (`copytrading-server init`) and keys in environment variables. `check` signs in to Discord, the model, and every account and reads each guru's examples without saving or trading anything; `run` starts copying and stops cleanly on Ctrl-C or SIGTERM. It composes the same engine as the app, so every limit, recovery rule, and record is the same.
+- The owner controls a running server with `status`, `entries enable|disable ACCOUNT`, `pause`, `resume`, `proposals`, `approve` (which shows what it does and asks you to type yes), and `reject`. The `copytrading` CLI and MCP server find a running server on their own, at the access set in the file.
+- A Docker image (`engine/Dockerfile`) runs the server as a non-root user with its state in a volume. `make check-linux` runs the engine's tests on Linux.
+
 ## 0.1.0-alpha.2 — developer preview
 
 A redesigned app around the trader's questions, an in-app assistant, the whole app in English or 简体中文, a guided first run, positions that trace back to the posts that bought them, any model service to read posts, and diagnostics without a separate log server.

@@ -108,6 +108,8 @@ Waiting for approval in CopyTrading: proposal p-4e1a9c, expires 16:42.
 
 命令、权限等级和威胁模型见 [agent control](docs/agent-control.md)（英文）。
 
+引擎也可以不依赖应用，独立运行在 Mac 或 Linux 服务器上，这样即使 Mac 休眠，跟单也不会中断。`copytrading-server` 从 `copytrading.toml` 文件读取设置，从环境变量读取密钥，并附带 Docker 镜像。详见 [Run the engine without the app](docs/server.md)（英文）。
+
 ## 文档
 
 目前文档为英文。
@@ -116,7 +118,7 @@ Waiting for approval in CopyTrading: proposal p-4e1a9c, expires 16:42.
 | --- | --- |
 | [PRD](docs/PRD.md) | CopyTrading 面向谁，必须做到什么 |
 | [Architecture](docs/architecture.md) · [Engine structure](docs/engine-structure.md) · [ADRs](docs/adr/) | 各部分如何配合，以及为什么 |
-| [Agent control](docs/agent-control.md) | `copytrading` 命令行和 MCP 服务器 |
+| [Agent control](docs/agent-control.md) · [Server](docs/server.md) | `copytrading` 命令行和 MCP 服务器，以及不依赖应用运行引擎 |
 | [Acceptance](docs/acceptance.md) · [Validation](docs/validation.md) | “可用”的定义，以及目前的证据 |
 | [Operations](docs/operations.md) · [Releases](docs/releases.md) | 开发命令和预览版安装包 |
 | [Changelog](CHANGELOG.md) | 每个版本的更新内容 |

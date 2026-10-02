@@ -1,0 +1,72 @@
+# CopyTrading server setup. Keys never go in this file; set them in the environment:
+#
+#   COPYTRADING_DISCORD_TOKEN                 your Discord token
+#   COPYTRADING_MODEL_API_KEY                 the model service's API key (not needed for Ollama)
+#   COPYTRADING_ALPACA_PAPER_MAIN_KEY         one key and secret per account below; the name is
+#   COPYTRADING_ALPACA_PAPER_MAIN_SECRET      the account id in capitals, "-" becomes "_"
+#   COPYTRADING_TELEGRAM_TOKEN                only if [telegram] is set
+#
+# Check everything with `copytrading-server check`, then start with `copytrading-server run`.
+
+[discord]
+# The channels your traders post in (right-click the channel in Discord, Copy Channel ID).
+channels = ["123456789012345678"]
+# Only read posts from these people; leave empty to read everyone in those channels.
+authors = []
+
+[model]
+# anthropic, openai, google, deepseek, openrouter, groq, xai, mistral, together, fireworks,
+# cerebras, moonshotai, ollama, or openai_compatible
+provider = "deepseek"
+name = "deepseek-flash"
+# Only for ollama or openai_compatible:
+# address = "http://localhost:11434/v1"
+
+[[accounts]]
+id = "paper-main"
+environment = "paper"   # "paper" trades pretend money at real prices; "live" is real money
+
+  # Every limit is optional; these are the defaults.
+  [accounts.limits]
+  max_order_usd = 100          # the most one copied buy can spend
+  max_symbol_usd = 600         # the most held in any one stock
+  max_total_usd = 2500         # the most held across all copied stocks
+  daily_loss_cap_usd = 250     # buys stop for the day after losing this much
+  max_entries_per_day = 30     # copied buys per trading day; sells don't count
+  max_signal_age_seconds = 120 # an older post waits for review instead of trading
+  max_above_signal_pct = 0     # how far above the trader's price a buy may fill
+  extended_hours = true        # also copy before 9:30 and after 16:00 New York time
+  copy_exits = true            # sell when the trader sells
+
+[[gurus]]
+id = "zhao"
+name = "Zhao"
+channel = "123456789012345678"
+# author = "987654321098765432"   # needed when several traders share one channel
+prefix = "ALERT:"                 # only posts starting with this are read
+exits = "original_position"       # "sell 1/2" means half of the original buy, or use
+                                  # "remaining_position" for half of what is left
+playbook = """
+Buys look like "ALERT: Bought NVDA 1/6 at 121.38": the fraction is the share of a full position.
+"""
+# playbook_file = "zhao-playbook.md"
+
+  # Examples are read by the model during `check`; a different reading stops the start.
+  [[gurus.examples]]
+  message = "ALERT: Bought NVDA 1/6 at 121.38"
+  action = "buy"           # buy, reduce, or close
+  symbol = "NVDA"
+
+  [[gurus.copy_into]]
+  account = "paper-main"
+  sizing = "fixed"         # "fixed" dollars per entry, or "proportional" to a full position
+  amount_usd = 100
+  # default_fraction = 0.25   # proportional only: used when a post gives no fraction
+
+# [telegram]
+# chat_id = "123456789"
+
+[agents]
+# What the `copytrading` command and MCP server may do: "off", "read_pause" (read and pause),
+# or "propose" (also ask you to approve resuming an account or an order).
+access = "read_pause"

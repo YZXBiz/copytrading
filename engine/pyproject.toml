@@ -16,6 +16,10 @@ dependencies = [
     "aiohttp>=3.14,<4",
 ]
 
+[project.scripts]
+copytrading = "copytrading_engine.control.cli:main"
+copytrading-server = "copytrading_engine.headless.cli:main"
+
 [project.urls]
 Repository = "https://github.com/YZXBiz/copytrading"
 Issues = "https://github.com/YZXBiz/copytrading/issues"
