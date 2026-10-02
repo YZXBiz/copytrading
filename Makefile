@@ -9,7 +9,7 @@ RUNTIME ?= dist/desktop-runtime/prepared
 RELEASE_RUNTIME ?= $(RUNTIME)
 RELEASE_OUTPUT ?= dist/releases/v$(RELEASE_VERSION)
 RELEASE_TAG ?= v$(RELEASE_VERSION)
-.PHONY: help doctor app dev check check-linux check-mutations desktop-build desktop-check desktop-smoke ui-journeys release dmg
+.PHONY: help doctor app dev check check-linux check-mutations desktop-build desktop-check desktop-tests desktop-smoke ui-journeys release dmg
 
 help:
 	@echo 'make doctor          Check this Mac can build and run CopyTrading'
@@ -18,7 +18,8 @@ help:
 	@echo 'make dev             Install the engine environment for your editor'
 	@echo 'make check           Engine tests with coverage (80% gate), Ruff, Ty, app-script tests'
 	@echo 'make desktop-build   Build the local app bundle'
-	@echo 'make desktop-check   Build and verify the local app and Swift package'
+	@echo 'make desktop-check   Engine checks, Swift lint, and make desktop-tests'
+	@echo 'make desktop-tests   Build the app and run every Swift suite against it'
 	@echo 'make desktop-smoke   Smoke-test the built app'
 	@echo 'make lint-swift      Check Swift formatting (make format-swift fixes it)'
 	@echo 'make ui-journeys     Drive the real app window through docs/acceptance.md'
@@ -53,7 +54,9 @@ check-linux:
 desktop-build:
 	$(ENGINE_ENV) $(PYTHON) app/scripts/build_app.py --app '$(APP)' --runtime '$(RUNTIME)'
 
-desktop-check: check lint-swift desktop-build
+desktop-check: check lint-swift desktop-tests
+
+desktop-tests: desktop-build
 	arch -arm64 swift build --package-path app -Xswiftc -strict-concurrency=complete -Xswiftc -warnings-as-errors
 	arch -arm64 swift test --package-path app -Xswiftc -warnings-as-errors
 	env -u COPYTRADING_TEST_ONLY \
