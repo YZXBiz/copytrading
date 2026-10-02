@@ -209,7 +209,9 @@ async def app_socket(
     forward: Callable[[str, ControlContext], Any],
 ) -> AsyncIterator[Relay]:
     """Serve the control socket from a short owner-only directory, as the app will."""
-    directory = Path(tempfile.mkdtemp(prefix="spc-", dir="/private/tmp"))
+    # Socket paths are short on macOS; /private/tmp is the real /tmp there, and Linux has /tmp.
+    short = "/private/tmp" if Path("/private/tmp").is_dir() else "/tmp"
+    directory = Path(tempfile.mkdtemp(prefix="spc-", dir=short))
     os.chmod(directory, 0o700)
     relay = Relay(directory / "cli.sock")
 

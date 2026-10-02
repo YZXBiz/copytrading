@@ -108,13 +108,15 @@ Waiting for approval in CopyTrading: proposal p-4e1a9c, expires 16:42.
 
 See [agent control](docs/agent-control.md) for the commands, permission tiers, and threat model.
 
+The engine also runs without the app, on a Mac or a Linux server, so copying continues while your Mac sleeps. `copytrading-server` reads a `copytrading.toml` file and keys from environment variables, and a Docker image is included. See [Run the engine without the app](docs/server.md).
+
 ## Documentation
 
 | | |
 | --- | --- |
 | [PRD](docs/PRD.md) | Who CopyTrading is for and what it must do |
 | [Architecture](docs/architecture.md) · [Engine structure](docs/engine-structure.md) · [ADRs](docs/adr/) | How the pieces fit, and why |
-| [Agent control](docs/agent-control.md) | The `copytrading` CLI and MCP server |
+| [Agent control](docs/agent-control.md) · [Server](docs/server.md) | The `copytrading` CLI and MCP server, and running the engine without the app |
 | [Acceptance](docs/acceptance.md) · [Validation](docs/validation.md) | What "working" means, and the evidence so far |
 | [Operations](docs/operations.md) · [Releases](docs/releases.md) | Developer commands and preview builds |
 | [Changelog](CHANGELOG.md) | What changed in each release |

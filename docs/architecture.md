@@ -25,6 +25,8 @@ flowchart LR
     M --> E
 ```
 
+The same engine also runs without the app. `copytrading-server` (`engine/src/copytrading_engine/headless`) builds it with the bootstrap's own `compose_engine`, sends the requests the app would send (validate, start, account controls, approvals) through the same request server one at a time, and serves the agent contract and an owner socket from an owner-only folder. See [server](server.md).
+
 ## Ownership and delivery
 
 - `sources/` validates Discord messages, keeps rejected and historical captures for audit, and commits each recovery page with its cursor. Historical captures never enter the live parser queue. Captured live mode is fixed before processing, so delay cannot reclassify it. Optional author filtering audits nonmatching messages.

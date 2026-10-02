@@ -5,6 +5,8 @@ import asyncio
 import os
 import sys
 import uuid
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import cast
 
@@ -113,8 +115,28 @@ def main() -> int:
 
 
 async def _run(data_dir: Path, instance_id: str) -> None:
-    diagnostics_directory = diagnostics_state_root()
-    owner_support_directory = owner_support_root()
+    async with compose_engine(
+        data_dir,
+        instance_id,
+        diagnostics_directory=diagnostics_state_root(),
+        owner_support_directory=owner_support_root(),
+    ) as server:
+        await _serve_stdio(server)
+
+
+@asynccontextmanager
+async def compose_engine(
+    data_dir: Path,
+    instance_id: str,
+    *,
+    diagnostics_directory: Path,
+    owner_support_directory: Path,
+) -> AsyncIterator[PipeServer]:
+    """The whole engine behind one request server, shut down cleanly on exit.
+
+    The app drives it over an inherited pipe; the headless server drives the same requests
+    from its sockets.
+    """
     restore_gate = restore_manual_disabled_path(owner_support_directory)
     telemetry = LocalTelemetry(TelemetryConfig.from_environment(diagnostics_directory))
     trading_telemetry = TradingTelemetry(sink=telemetry)
@@ -185,7 +207,7 @@ async def _run(data_dir: Path, instance_id: str) -> None:
                 assistant=assistant,
             )
             try:
-                await _serve_stdio(server)
+                yield server
             finally:
                 await trading.shutdown()
                 if control_audit is not None:

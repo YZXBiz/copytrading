@@ -21,6 +21,7 @@ PACKAGES = frozenset(
         "control",
         "diagnostics",
         "execution",
+        "headless",
         "host",
         "parsing",
         "shared",
@@ -72,6 +73,9 @@ ALLOWED: dict[str, frozenset[str]] = {
     "backup": frozenset({"shared", "sources", "parsing", "host", "control", "trading/adapters"})
     | {"execution/domain", "execution/application", "execution/adapters"},
     "host": frozenset({"shared", "backup", "control", "assistant"}) | EXECUTION_POLICY | TRADING,
+    # The headless server composes the engine like the app's bootstrap and drives its requests.
+    "headless": frozenset({"shared", "bootstrap", "control", "host"})
+    | {"trading/domain", "execution/domain"},
 }
 
 # Flat packages keep their I/O in named modules; the rest of each package is policy

@@ -1,9 +1,10 @@
-"""Find the app's control socket and exchange one request line with it."""
+"""Find the app's or the headless server's control socket and exchange one request line."""
 
 import asyncio
 import contextlib
 import os
 import stat
+import sys
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Final
@@ -18,7 +19,7 @@ MAX_RESPONSE_BYTES: Final = 8 * 1024 * 1024
 
 
 class AppUnavailable(Exception):
-    """CopyTrading is not running, or agent access is off."""
+    """Neither the app nor the server is running, or agent access is off."""
 
 
 class UnsafeSocket(Exception):
@@ -29,12 +30,33 @@ class ProtocolMismatch(Exception):
     """The app answered with something outside the contract."""
 
 
-def state_root(environ: Mapping[str, str] = os.environ) -> Path:
-    """Match the app: an explicit state root, or its Application Support folder."""
+def app_state_root() -> Path:
+    """Where the Mac app keeps its state."""
+    return Path.home() / "Library" / "Application Support" / "CopyTrading"
+
+
+def server_state_root(
+    environ: Mapping[str, str] = os.environ, platform: str = sys.platform
+) -> Path:
+    """Where the headless server keeps its state by default; never the app's folder."""
+    if platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "CopyTrading Server"
+    base = environ.get("XDG_STATE_HOME") or str(Path.home() / ".local" / "state")
+    return Path(base) / "copytrading-server"
+
+
+def state_root(environ: Mapping[str, str] = os.environ, platform: str = sys.platform) -> Path:
+    """An explicit state root; else the app's when its socket exists; else the server's."""
     value = environ.get("COPYTRADING_STATE_ROOT")
     if value:
         return Path(value)
-    return Path.home() / "Library" / "Application Support" / "CopyTrading"
+    candidates = [server_state_root(environ, platform)]
+    if platform == "darwin":
+        candidates.insert(0, app_state_root())
+    for root in candidates:
+        if os.path.lexists(root / "control" / "cli.sock"):
+            return root
+    return candidates[0]
 
 
 def socket_path(environ: Mapping[str, str] = os.environ) -> Path:
