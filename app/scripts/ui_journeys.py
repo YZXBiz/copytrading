@@ -359,11 +359,15 @@ class AppDriver:
         ).stdout.split()
         if len(pids) != 1:
             raise JourneyFailure(f"expected one {APP_NAME} process, found {len(pids)}")
+        # Launch Services knows the front app at once; System Events can lag behind it.
+        deadline = time.monotonic() + 3
+        while _front_pid() != int(pids[0]):
+            if time.monotonic() > deadline:
+                raise JourneyFailure(f"refused to type {into!r}: {APP_NAME} is not frontmost")
+            time.sleep(0.1)
         script = f"""
 tell application "System Events"
-    set target to first process whose unix id is {int(pids[0])}
-    if not (frontmost of target) then error "{APP_NAME} is not frontmost"
-    tell target to keystroke "{quoted}"
+    tell (first process whose unix id is {int(pids[0])}) to keystroke "{quoted}"
 end tell
 """
         typed = subprocess.run(
@@ -439,6 +443,19 @@ end tell
         present = [text for text in texts if snapshot.has(text)]
         if present:
             raise JourneyFailure(f"unexpectedly on screen: {', '.join(present)}")
+
+
+def _front_pid() -> int | None:
+    """The process Launch Services treats as the front app, which receives keystrokes."""
+    front = subprocess.run(["lsappinfo", "front"], capture_output=True, text=True, check=False)
+    info = subprocess.run(
+        ["lsappinfo", "info", "-only", "pid", front.stdout.strip()],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    _, _, value = info.stdout.strip().partition("=")
+    return int(value) if value.isdigit() else None
 
 
 def build_debug_bundle() -> None:
