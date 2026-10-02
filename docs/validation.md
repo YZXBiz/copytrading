@@ -1,10 +1,20 @@
 # Validation and remaining gates
 
-This page records local verification on September 25 – October 1, 2026. It does not certify a production release. Earlier server-stack logs remain in Git history.
+This page records local verification on September 25 – October 2, 2026. It does not certify a production release. The earlier server stack's logs are not part of this repository's public history.
 
 ## Coverage — October 2
 
-The engine suite (1,177 tests, 11 opt-in live checks skipped) measures **83% line and branch coverage** with `make coverage` (`pytest --cov`). By package: assistant 94%, parsing 92%, execution 88%, control 88%, host 85%, trading 84%, backup 81%, sources 81%. The weakest modules are the ones that need a real Discord session (`sources/session.py`, 45%) and the process entry points. The `make coverage` gate fails under 80%. Coverage shows what the tests execute; it does not show that the assertions are strong. `make check-mutations` probes the execution policy for that.
+The engine suite (1,216 tests, 11 opt-in live checks skipped) measures **82.7% line and branch coverage** with `make coverage` (`pytest --cov`). By package, lines and branches together: assistant 93%, parsing 89%, shared 88%, execution 84%, control 84%, diagnostics 83%, trading 83%, host 81%, headless 79%, sources 78%, backup 76%. The weakest code needs a real Discord session (`sources/session.py`) or is a process entry point. The `make coverage` gate fails under 80%. Coverage shows what the tests execute; it does not show that the assertions are strong. `make check-mutations` probes the execution policy for that.
+
+## 0.1.0-alpha.3 — October 2
+
+Verified on the release branch, in a clean worktree with its own freshly built bundle:
+
+- `make check`: **1,216 engine tests** (11 opt-in skips) and 83 build-script tests, with Ruff, `ruff format --check`, and Ty clean. `make coverage` passed at 82.7%.
+- The strict Swift build (`-strict-concurrency=complete`, warnings as errors), `make lint-swift`, **30 DesktopCore checks**, the **47-check contract suite**, and `verify_bundle.py` passed.
+- **All 25 UI journeys passed** against the real window with the Discord, DeepSeek, and Alpaca paper test credentials, including J27 (Check Setup against the live services) and J31 (an agent's request runs only after Approve, once; a rejected one changes nothing; the run deleted the Keychain items it saved). In the first full run, J7, J8, J28, J25, J30, J26, J27, and J15 failed because the window lost focus and was minimized while the owner was using the Mac; all eight passed when re-run on the same build. #4 later changed only J30's checks in `ui_journeys.py` (no app or engine source). J30 passed in the real window on the tree before #4. With #4, its new checks were confirmed by hand through background accessibility against the same app sources, but a full Peekaboo run of the #4 version could not complete: twice, its typing step stopped because another app was frontmost.
+- The headless server (#2) also passed its engine suite on Linux in Docker (`make check-linux`).
+- **Open: one intermittent engine test failure.** In ten full runs of the suite on this tree, one run under coverage reported `1 failed, 1215 passed`; the test was not captured, it passed when re-run alone, and the next eight full runs passed. It is unidentified, not fixed.
 
 ## 0.1.0-alpha.2 — October 1
 

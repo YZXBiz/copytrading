@@ -13,7 +13,7 @@ body:
     attributes:
       label: App version
       description: Include the release tag or app version shown in About.
-      placeholder: 0.1.0-alpha.1
+      placeholder: 0.1.0-alpha.3
     validations:
       required: true
   - type: input

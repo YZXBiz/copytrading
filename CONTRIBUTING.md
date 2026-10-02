@@ -26,6 +26,8 @@ The app speaks English and 简体中文. When you add or change user-visible tex
 
 Keep policy in `engine/src/copytrading_engine` domain and application modules; adapters own source, model, broker, SQLite, and notification effects. Preserve short SQLite transactions and durable delivery confirmation. Never call a model or broker from inside a database transaction. Test failure, restart, and cancellation paths when changing persistence or delivery.
 
+Pull requests are squash-merged, so the PR title becomes the commit subject. Write it as one plain sentence under 72 characters that says what changed for the user or the code, for example "Accounts: a paused account says why it is paused". Put the why and the checks you ran in the description.
+
 Use synthetic messages and mocked external clients in tests. Never commit credentials, private source messages, provider requests or responses, broker data, databases, or raw operational logs. Report bugs and propose features with the [issue forms](https://github.com/YZXBiz/copytrading/issues/new/choose). Send vulnerabilities privately using the instructions in [SECURITY.md](SECURITY.md).
 
 An unsigned local build and passing checks do not establish release readiness. See [release instructions](docs/releases.md) for preview artifacts and [validation](docs/validation.md) for remaining product and distribution gates.
