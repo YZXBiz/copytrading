@@ -18,7 +18,7 @@ let package = Package(
             exclude: [
                 "Sources/CopyTrading", "Sources/AppLocalizationCore", "Tests", ".build", "Resources/Contracts", "Resources/Helpers",
                 "Resources/Info.plist",
-                "Resources/AppIcon.icns", "scripts",
+                "Resources/AppIcon.icns", "Resources/DMG", "scripts",
             ],
             sources: ["Sources/DesktopCore"],
             resources: [.copy("Resources/Runtime")],

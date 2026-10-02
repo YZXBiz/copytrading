@@ -9,10 +9,15 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/YZXBiz/copytrading/releases/latest"><img src="https://img.shields.io/github/v/release/YZXBiz/copytrading?include_prereleases&label=release&color=blue" alt="Latest release"></a>
+  <a href="https://github.com/YZXBiz/copytrading/actions/workflows/ci.yml?query=branch%3Amain"><img src="https://github.com/YZXBiz/copytrading/actions/workflows/ci.yml/badge.svg?branch=main" alt="Checks"></a>
+  <a href="https://codecov.io/gh/YZXBiz/copytrading"><img src="https://codecov.io/gh/YZXBiz/copytrading/graph/badge.svg" alt="Engine test coverage"></a>
+  <a href="https://github.com/YZXBiz/copytrading/releases"><img src="https://img.shields.io/github/v/release/YZXBiz/copytrading?include_prereleases&label=release&color=blue" alt="Latest release"></a>
   <img src="https://img.shields.io/badge/macOS%2026%2B-Apple%20silicon-black?logo=apple" alt="macOS 26 or later on Apple silicon">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license"></a>
-  <img src="https://img.shields.io/badge/status-developer%20preview-orange" alt="Developer preview">
+</p>
+
+<p align="center">
+  <a href="https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.3/CopyTrading-0.1.0-alpha.3.dmg"><img src="https://img.shields.io/badge/Download_for_macOS-0.1.0--alpha.3-1d1d1f?style=for-the-badge&logo=apple&logoColor=white" alt="Download CopyTrading for macOS" height="36"></a>
 </p>
 
 <p align="center">
@@ -60,7 +65,11 @@ Works with a dozen hosted model services, local models through Ollama, or any Op
 
 You need an Apple silicon Mac running macOS 26 or later.
 
-**Download** the latest preview from [Releases](https://github.com/YZXBiz/copytrading/releases), unzip it, and move CopyTrading to Applications. Preview builds are not yet notarized by Apple, so macOS blocks the first launch: open **System Settings → Privacy & Security**, find the message about CopyTrading, and choose **Open Anyway**. [Releases](docs/releases.md) explains how to verify the download.
+1. **[Download CopyTrading for macOS](https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.3/CopyTrading-0.1.0-alpha.3.dmg)** (55 MB).
+2. Open the DMG and drag **CopyTrading** into **Applications**.
+3. Open CopyTrading. Preview builds are not yet notarized by Apple, so the first time macOS blocks it: go to **System Settings → Privacy & Security** and choose **Open Anyway**. You only do this once.
+
+Every release lists SHA-256 checksums, and [releases](docs/releases.md) explains how to verify a download.
 
 **Or build from source** with [uv](https://docs.astral.sh/uv/) and the Xcode Command Line Tools:
 

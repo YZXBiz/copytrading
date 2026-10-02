@@ -39,16 +39,7 @@ struct AccountComparisonPlot: View {
             ForEach(series) { account in
                 ForEach(EquityLineRun.runs(account.change.points, on: scale)) { run in
                     ForEach(run.points, id: \.at) { point in
-                        LineMark(
-                            x: .value("Time", scale.x(point.at)),
-                            y: .value("Change", point.value),
-                            series: .value("Account", "\(account.id)-\(run.id)")
-                        )
-                        .foregroundStyle(account.color.opacity(run.isExtended ? 0.45 : 1))
-                        .interpolationMethod(.monotone)
-                        .lineStyle(StrokeStyle(lineWidth: contrast == .increased ? 2.75 : 2.25, lineCap: .round, lineJoin: .round))
-                        .accessibilityLabel(L10n.string("%@, %@", account.name, EquityChartTime.point(point.at, in: range)))
-                        .accessibilityValue(axis.percent(point.value))
+                        line(through: point, of: account, in: run, on: scale, axis: axis)
                     }
                 }
                 if let last = account.change.points.last {
@@ -115,6 +106,26 @@ struct AccountComparisonPlot: View {
         let start = scale.x(first)
         let end = scale.x(max(last, first.addingTimeInterval(3_600)))
         return start...max(end, start + 0.05)
+    }
+
+    /// One point of an account's line, kept out of `body` so the chart builder type-checks quickly.
+    @ChartContentBuilder
+    private func line(
+        through point: EquityCurvePoint, of account: AccountSeries, in run: EquityLineRun, on scale: EquityChartScale,
+        axis: EquityValueAxis
+    ) -> some ChartContent {
+        let width: CGFloat = contrast == .increased ? 2.75 : 2.25
+        let label = L10n.string("%@, %@", account.name, EquityChartTime.point(point.at, in: range))
+        LineMark(
+            x: .value("Time", scale.x(point.at)),
+            y: .value("Change", point.value),
+            series: .value("Account", "\(account.id)-\(run.id)")
+        )
+        .foregroundStyle(account.color.opacity(run.isExtended ? 0.45 : 1))
+        .interpolationMethod(.monotone)
+        .lineStyle(StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))
+        .accessibilityLabel(label)
+        .accessibilityValue(axis.percent(point.value))
     }
 
     @ChartContentBuilder

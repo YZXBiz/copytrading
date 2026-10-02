@@ -2,6 +2,11 @@
 
 User-visible changes for each preview and release are recorded here. See [release instructions](docs/releases.md) for downloadable artifact details and [validation](docs/validation.md) for current evidence and remaining gates.
 
+## Unreleased
+
+- **Download for macOS.** Releases include a drag-to-install DMG (`make dmg`), and the README links to it with three install steps.
+- CI builds the app with Swift 6.4 and is green on both jobs; the README shows the CI and Codecov coverage badges.
+
 ## 0.1.0-alpha.3 — developer preview
 
 The engine runs on its own as a server, agent approvals are checked end to end in the real window, and the repository is reorganized for contributors.

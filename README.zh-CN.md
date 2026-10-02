@@ -9,10 +9,15 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/YZXBiz/copytrading/releases/latest"><img src="https://img.shields.io/github/v/release/YZXBiz/copytrading?include_prereleases&label=%E7%89%88%E6%9C%AC&color=blue" alt="最新版本"></a>
+  <a href="https://github.com/YZXBiz/copytrading/actions/workflows/ci.yml?query=branch%3Amain"><img src="https://github.com/YZXBiz/copytrading/actions/workflows/ci.yml/badge.svg?branch=main" alt="检查"></a>
+  <a href="https://codecov.io/gh/YZXBiz/copytrading"><img src="https://codecov.io/gh/YZXBiz/copytrading/graph/badge.svg" alt="引擎测试覆盖率"></a>
+  <a href="https://github.com/YZXBiz/copytrading/releases"><img src="https://img.shields.io/github/v/release/YZXBiz/copytrading?include_prereleases&label=%E7%89%88%E6%9C%AC&color=blue" alt="最新版本"></a>
   <img src="https://img.shields.io/badge/macOS%2026%2B-Apple%20%E8%8A%AF%E7%89%87-black?logo=apple" alt="macOS 26 或更高版本，Apple 芯片">
   <a href="LICENSE"><img src="https://img.shields.io/badge/%E8%AE%B8%E5%8F%AF%E8%AF%81-MIT-green" alt="MIT 许可证"></a>
-  <img src="https://img.shields.io/badge/%E7%8A%B6%E6%80%81-%E5%BC%80%E5%8F%91%E8%80%85%E9%A2%84%E8%A7%88%E7%89%88-orange" alt="开发者预览版">
+</p>
+
+<p align="center">
+  <a href="https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.3/CopyTrading-0.1.0-alpha.3.dmg"><img src="https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD_macOS_%E7%89%88-0.1.0--alpha.3-1d1d1f?style=for-the-badge&logo=apple&logoColor=white" alt="下载 macOS 版 CopyTrading" height="36"></a>
 </p>
 
 <p align="center">
@@ -60,7 +65,11 @@ CopyTrading 是一款原生 macOS 应用。它读取交易者在 Discord 上发�
 
 需要一台运行 macOS 26 或更高版本的 Apple 芯片 Mac。
 
-**下载：** 到 [Releases](https://github.com/YZXBiz/copytrading/releases) 获取最新的预览版，解压后把 CopyTrading 移到“应用程序”文件夹。预览版尚未经过 Apple 公证，所以 macOS 会阻止第一次打开：打开 **系统设置 → 隐私与安全性**，找到关于 CopyTrading 的提示，选择 **仍要打开**。如何校验下载文件见 [releases](docs/releases.md)。
+1. **[下载 macOS 版 CopyTrading](https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.3/CopyTrading-0.1.0-alpha.3.dmg)**（55 MB）。
+2. 打开 DMG，把 **CopyTrading** 拖进 **应用程序**。
+3. 打开 CopyTrading。预览版尚未经过 Apple 公证，所以第一次打开时 macOS 会阻止它：前往 **系统设置 → 隐私与安全性**，选择 **仍要打开**。只需操作这一次。
+
+每个版本都附有 SHA-256 校验和，如何校验下载文件见 [releases](docs/releases.md)。
 
 **或者从源码构建：** 需要 [uv](https://docs.astral.sh/uv/) 和 Xcode 命令行工具。
 
