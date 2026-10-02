@@ -293,6 +293,14 @@ func runAgentControlEngineTests() async throws {
         }
 
         let status = try await cli(["status", "--json"])
+        if status.status != 0 {
+            // Tell a client-side failure from a relay or engine one: ask the relay directly.
+            let socketURL = AgentRelay.socketURL(stateRoot: root)
+            let exists = FileManager.default.fileExists(atPath: socketURL.path)
+            let direct = await Task.detached { (try? exchange(#"{"hello":1}"#, at: socketURL)) ?? "no answer" }.value
+            FileHandle.standardError.write(
+                Data("relay socket \(socketURL.path) exists=\(exists); direct answer: \(direct)\n".utf8))
+        }
         try verify(
             status.status == 0 && status.output.contains(#""engine_state":"running""#),
             "the CLI must read engine status through the app relay: exit \(status.status), \(status.output) \(status.errorOutput)")
