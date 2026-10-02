@@ -9,17 +9,42 @@ jobs:
   engine:
     runs-on: macos-26
     timeout-minutes: 20
+    permissions:
+      # Writes only the coverage badge, and only for pushes to main.
+      contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           version: "0.11.21"
       - run: make check
+      - run: make coverage
       - run: uv build --directory engine
+      - name: Publish the coverage badge
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          uv run --directory engine --frozen --no-editable coverage json -q -o ../dist/coverage.json
+          percent=$(python3 -c "import json; print(round(json.load(open('dist/coverage.json'))['totals']['percent_covered']))")
+          if [ "$percent" -ge 90 ]; then color=brightgreen; elif [ "$percent" -ge 80 ]; then color=green; else color=orange; fi
+          mkdir -p dist/badges && cd dist/badges
+          printf '{"schemaVersion": 1, "label": "coverage", "message": "%s%%", "color": "%s"}\n' "$percent" "$color" > coverage.json
+          git init -q -b badges
+          git add coverage.json
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Coverage ${percent}%"
+          git push -q -f "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git" badges
   desktop-swift:
     runs-on: macos-26
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      # The image's default Xcode 26.6 (Swift 6.3.3) crashes compiling the app; use the newest installed.
+      - uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
+        with:
+          xcode-version: latest
+      - run: swift --version
       - run: arch -arm64 swift build --package-path app -Xswiftc -strict-concurrency=complete -Xswiftc -warnings-as-errors
       - run: arch -arm64 swift test --package-path app -Xswiftc -warnings-as-errors
