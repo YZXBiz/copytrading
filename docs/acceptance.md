@@ -5,7 +5,7 @@ Each journey is automated in `app/scripts/ui_journeys.py` and runs against a deb
 isolated state root, so it never reads or writes your real configuration, Keychain items, or ledger.
 
 Journeys marked **needs …** run only when the matching credentials are supplied through the
-environment (`COPYTRADING_TEST_ALPACA_KEY`, `COPYTRADING_TEST_ALPACA_SECRET`, and for J27 also
+environment (`COPYTRADING_TEST_ALPACA_KEY`, `COPYTRADING_TEST_ALPACA_SECRET`, and for J27 and J31 also
 `COPYTRADING_TEST_DEEPSEEK_KEY`, `COPYTRADING_TEST_DISCORD_TOKEN`, `COPYTRADING_TEST_DISCORD_CHANNEL`); without them the journey is
 reported as skipped, never as passed. The runner never echoes typed values in its errors.
 
@@ -39,6 +39,7 @@ reported as skipped, never as passed. The runner never echoes typed values in it
 | J30 | Assistant | With the Connections interpreter set to Other (OpenAI-compatible) at a local scripted model's address (typed, not saved), ⌘J opens the Assistant panel with four suggestions and the composer ready. Asking "Is copying running?" shows the step "Checked whether copying is running" and then the answer "Copying is paused, so nothing is being copied right now.", streamed from the scripted model. The model is called twice: once to ask for the status check, once with its result. Esc from the composer closes the panel. Locking afterwards clears the typed model. |
 | J26 | Help menu | Help ▸ Keyboard Shortcuts opens the guide at its shortcuts and Help ▸ Getting Started opens it at the top. |
 | J27 | First check — **needs Discord, DeepSeek, and Alpaca paper test credentials** | From nothing saved, filling Connections (channel and token in the Discord panel, DeepSeek chosen from Choose Your Interpreter with its model and key), a paper account with keys, and a named guru reads "4 of 5" in the guide; Check Setup passes against the real services and enables Start Copying. Nothing is saved, so no key reaches the Keychain. |
+| J31 | Agent approval — **needs Discord, DeepSeek, and Alpaca paper test credentials** | With Read, pause, and ask for approval chosen in Settings → Agent Access, the J27 setup passes Check Setup and Start Copying saves and starts it. `copytrading accounts recovery primary automatic` exits 10 and the sheet "An agent is asking for approval" names the change; the account's recovery stays manual until Approve, after which `proposals wait` exits 0 and recovery is automatic. A resume request the owner rejects makes `proposals wait` exit 7 and leaves entries off. Runs last, never resumes entries, and the runner deletes the Keychain items the setup saved. |
 | J15 | Lock | The toolbar Lock returns to the locked screen and clears private data from view. |
 | J16 | Menu bar | The menu bar extra shows today's change when unlocked, the copying state, and can open the main window. |
 | J16b | Clean quit | Quitting the app stops the engine; nothing started by the app outlives it. |

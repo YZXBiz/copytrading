@@ -884,35 +884,40 @@ def j25_getting_started(app: AppDriver) -> None:
     _relock(app)
 
 
-def j27_first_check(app: AppDriver) -> None:
-    """From nothing saved, the real services pass Check Setup and Start Copying becomes ready.
+def _paper_setup() -> dict[str, str]:
+    """A real paper setup from the opt-in test environment; journeys that need one skip without."""
+    variables = {
+        "channel": "COPYTRADING_TEST_DISCORD_CHANNEL",
+        "discord_token": "COPYTRADING_TEST_DISCORD_TOKEN",
+        "model_key": "COPYTRADING_TEST_DEEPSEEK_KEY",
+        "alpaca_key": "COPYTRADING_TEST_ALPACA_KEY",
+        "alpaca_secret": "COPYTRADING_TEST_ALPACA_SECRET",
+    }
+    setup = {name: os.environ.get(variable, "") for name, variable in variables.items()}
+    missing = [variables[name] for name, value in setup.items() if not value]
+    if missing:
+        raise JourneySkipped(f"set {', '.join(missing)}")
+    setup["model"] = os.environ.get("COPYTRADING_TEST_DEEPSEEK_MODEL", "deepseek-flash")
+    return setup
 
-    Uses the paper-only test credentials and stops before Start Copying, so nothing is saved and
-    no key reaches the Keychain. Saving and starting are covered by the contract suite.
-    """
-    token = os.environ.get("COPYTRADING_TEST_DISCORD_TOKEN", "")
-    model_key = os.environ.get("COPYTRADING_TEST_DEEPSEEK_KEY", "")
-    key = os.environ.get("COPYTRADING_TEST_ALPACA_KEY", "")
-    secret = os.environ.get("COPYTRADING_TEST_ALPACA_SECRET", "")
-    channel = os.environ.get("COPYTRADING_TEST_DISCORD_CHANNEL", "")
-    model = os.environ.get("COPYTRADING_TEST_DEEPSEEK_MODEL", "deepseek-flash")
-    if not all((token, model_key, key, secret, channel)):
-        raise JourneySkipped("needs the Discord, DeepSeek, and Alpaca paper test credentials")
+
+def _check_paper_setup(app: AppDriver, setup: dict[str, str], *, name: str) -> Snapshot:
+    """Fill Connections, a paper account, and a guru from nothing, and pass Check Setup."""
     app.open_screen("connections")
     app.open_connection("discord")
-    app.type(channel, into="Channel IDs")
-    app.type(token, into="Discord token")
+    app.type(setup["channel"], into="Channel IDs")
+    app.type(setup["discord_token"], into="Discord token")
     app.click("connections.done")
     app.click("connections.interpreter")
     app.click("connections.choose.deepseek")
-    app.type(model, into="Model")
-    app.type(model_key, into="API key")
+    app.type(setup["model"], into="Model")
+    app.type(setup["model_key"], into="API key")
     app.click("connections.done")
     app.open_screen("accounts")
     app.click("accounts.addAccount")
     app.wait_for("Alpaca keys", timeout=15)
-    app.type(key, into="Alpaca API key")
-    app.type(secret, into="Alpaca API secret")
+    app.type(setup["alpaca_key"], into="Alpaca API key")
+    app.type(setup["alpaca_secret"], into="Alpaca API secret")
     app.click("Done")
     app.open_screen("people")
     app.click("people.addGuru")
@@ -921,11 +926,117 @@ def j27_first_check(app: AppDriver) -> None:
     guide = app.open_screen("gettingStarted")
     app.expect(guide, "4 of 5")
     app.click("setup.check")
-    checked = app.wait_for("Everything checks out", timeout=180, name="first-check-passed")
+    checked = app.wait_for("Everything checks out", timeout=180, name=name)
     start = checked.find("setup.startCopying")
     if start is None or not start.enabled:
         raise JourneyFailure("a passing check did not enable Start Copying")
+    return checked
+
+
+def j27_first_check(app: AppDriver) -> None:
+    """From nothing saved, the real services pass Check Setup and Start Copying becomes ready.
+
+    Uses the paper-only test credentials and stops before Start Copying, so nothing is saved and
+    no key reaches the Keychain. Saving and starting are covered by J31 and the contract suite.
+    """
+    _check_paper_setup(app, _paper_setup(), name="first-check-passed")
     _relock(app)
+
+
+def _agent_result(app: AppDriver, expected_exit: int, *arguments: str) -> dict[str, Any]:
+    """Run the command with `--json`, insist on its exit code, and return the result."""
+    completed = _agent_command(app, *arguments, "--json")
+    if completed.returncode != expected_exit:
+        raise JourneyFailure(
+            f"`copytrading {' '.join(arguments)}` exited {completed.returncode}, "
+            f"expected {expected_exit}: {completed.stderr.strip()[:200]}"
+        )
+    return json.loads(completed.stdout)["ok"]
+
+
+def _wait_for_account(app: AppDriver, account_id: str, *, timeout: float) -> dict[str, Any]:
+    """The account as the running engine reports it, once processing has started it."""
+    deadline = time.monotonic() + timeout
+    while True:
+        status = _agent_result(app, 0, "status")
+        account = next((a for a in status["accounts"] if a["account_id"] == account_id), None)
+        if status["processing"]["state"] == "running" and account is not None:
+            return account
+        if time.monotonic() > deadline:
+            app.see("timeout-processing")
+            raise JourneyFailure(
+                f"processing did not start {account_id}: {status['processing']['state']}, "
+                f"error {status['processing']['error_code']}"
+            )
+        time.sleep(3)
+
+
+def j31_agent_approval(app: AppDriver) -> None:
+    """An agent's request runs only after the owner approves it in the window, and only once.
+
+    Saves and starts a real paper setup, so it runs last. New accounts start with entries off and
+    the journey never resumes them, so nothing can be bought; `main` deletes the saved keys.
+    """
+    if app.state_root is None:
+        raise JourneySkipped("needs the run's state root")
+    setup = _paper_setup()
+    app.open_settings("agents")
+    app.click("Read, pause, and ask for approval")
+    app.wait_for("Listening", timeout=30, name="agent-approval-access")
+    _check_paper_setup(app, setup, name="approval-setup-checked")
+    app.click("setup.startCopying")
+    before = _wait_for_account(app, "primary", timeout=180)
+    if before["recovery_preference"] != "manual":
+        raise JourneyFailure(f"a new account starts with recovery {before['recovery_preference']}")
+
+    # Approving: the change waits for the owner, then runs exactly once.
+    asked = _agent_result(app, 10, "accounts", "recovery", "primary", "automatic")
+    sheet = app.wait_for("Set recovery in primary", timeout=30, name="approval-sheet")
+    app.expect(sheet, "An agent is asking for approval", "Reject", "Approve…")
+    if _wait_for_account(app, "primary", timeout=5)["recovery_preference"] != "manual":
+        raise JourneyFailure("the recovery change ran before the owner approved it")
+    app.click("Approve…")
+    approved = _agent_result(app, 0, "proposals", "wait", asked["proposal_id"], "--timeout", "60")
+    if approved["state"] != "succeeded":
+        raise JourneyFailure(f"the approved request ended {approved['state']}")
+    if _wait_for_account(app, "primary", timeout=5)["recovery_preference"] != "automatic":
+        raise JourneyFailure("the approved recovery change did not reach the account")
+    app.see("approval-done")
+
+    # Rejecting: the agent learns the outcome and the account never changes.
+    resume = _agent_result(app, 10, "accounts", "resume", "primary")
+    app.wait_for("Resume new entries in primary", timeout=30, name="resume-sheet")
+    app.click("Reject")
+    rejected = _agent_result(app, 7, "proposals", "wait", resume["proposal_id"], "--timeout", "60")
+    if rejected["state"] != "rejected":
+        raise JourneyFailure(f"the rejected request ended {rejected['state']}")
+    after = _wait_for_account(app, "primary", timeout=5)
+    if after["entry_permission"] != before["entry_permission"]:
+        raise JourneyFailure("a rejected resume still changed the account's entries")
+    _agent_result(app, 0, "pause")
+
+
+def _forget_test_keychain(state_root: Path) -> int:
+    """Delete the Keychain items a journey's setup saved for this throwaway installation.
+
+    Returns how many items are left, so a run never silently leaves test keys behind.
+    """
+    identity = next(state_root.rglob("installation-id"), None)
+    if identity is None:
+        return 0
+    service = f"dev.copytrading.app.trading.{identity.read_text().strip().lower()}"
+    for _ in range(64):
+        deleted = subprocess.run(
+            ["security", "delete-generic-password", "-s", service],
+            capture_output=True,
+            check=False,
+        )
+        if deleted.returncode != 0:
+            break
+    found = subprocess.run(
+        ["security", "find-generic-password", "-s", service], capture_output=True, check=False
+    )
+    return 1 if found.returncode == 0 else 0
 
 
 def j28_connections_panel(app: AppDriver) -> None:
@@ -1069,6 +1180,8 @@ JOURNEYS: list[tuple[str, Callable[[AppDriver], None]]] = [
     ("J27 first check", j27_first_check),
     ("J15 lock", j15_lock),
     ("J17 crash recovery", j17_crash_recovery),
+    # Last: starting copying saves a setup that the journeys above expect to be empty.
+    ("J31 agent approval", j31_agent_approval),
 ]
 
 
@@ -1109,6 +1222,11 @@ def main() -> int:
             )
         )
         print(f"{runner.results[-1].status.upper():8} J16 clean quit {runner.results[-1].detail}")
+        if _forget_test_keychain(state_root):
+            runner.results.append(
+                Result("Keychain cleanup", "failed", "test keys remain in the login Keychain")
+            )
+            print(f"FAILED   Keychain cleanup {runner.results[-1].detail}")
         if args.keep_state:
             print(f"state kept at {state_root}")
         else:
