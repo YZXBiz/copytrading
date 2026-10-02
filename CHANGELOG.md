@@ -5,6 +5,7 @@ User-visible changes for each preview and release are recorded here. See [releas
 ## Unreleased
 
 - **Download for macOS.** Releases include a drag-to-install DMG (`make dmg`), and the README links to it with three install steps.
+- Stopping the engine between two accounts' turns on the same post no longer leaves work that nothing awaits; a rare race that surfaced as an intermittent test failure.
 - CI builds the app with Swift 6.4 and is green on both jobs; the README shows the CI badge and a coverage badge published through Smokeshow, as FastAPI does.
 
 ## 0.1.0-alpha.3 — developer preview
