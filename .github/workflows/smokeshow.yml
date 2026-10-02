@@ -9,6 +9,8 @@ permissions: {}
 
 jobs:
   smokeshow:
+    # A cancelled or failed run has no coverage artifact to publish.
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     permissions:
       statuses: write
