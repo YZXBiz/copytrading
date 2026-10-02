@@ -57,7 +57,7 @@ def build(archive: Path, output: Path) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--version", required=True, help="prerelease SemVer: 0.1.0-alpha.3")
+    parser.add_argument("--version", required=True, help="prerelease SemVer: 0.1.0-alpha.1")
     parser.add_argument("--release-dir", type=Path, required=True, help="`make release` output")
     args = parser.parse_args()
     archive, output = release_paths(args.release_dir, args.version)
