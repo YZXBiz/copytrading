@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/YZXBiz/copytrading/actions/workflows/ci.yml?query=branch%3Amain"><img src="https://github.com/YZXBiz/copytrading/actions/workflows/ci.yml/badge.svg?branch=main" alt="Checks"></a>
-  <a href="https://codecov.io/gh/YZXBiz/copytrading"><img src="https://codecov.io/gh/YZXBiz/copytrading/graph/badge.svg" alt="Engine test coverage"></a>
+  <a href="https://coverage-badge.samuelcolvin.workers.dev/redirect/YZXBiz/copytrading"><img src="https://coverage-badge.samuelcolvin.workers.dev/YZXBiz/copytrading.svg" alt="Coverage"></a>
   <a href="https://github.com/YZXBiz/copytrading/releases"><img src="https://img.shields.io/github/v/release/YZXBiz/copytrading?include_prereleases&label=release&color=blue" alt="Latest release"></a>
   <img src="https://img.shields.io/badge/macOS%2026%2B-Apple%20silicon-black?logo=apple" alt="macOS 26 or later on Apple silicon">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license"></a>
