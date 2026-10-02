@@ -96,9 +96,9 @@ Every field that needs a key or an ID has a **Where do I find this?** link. When
 ## How it works
 
 <p align="center">
-  <a href="docs/assets/copytrading-workflow-hq.png"><img src="docs/assets/copytrading-workflow-hq.png" alt="CopyTrading workflow: Discord capture, grounded model interpretation, parallel account routing and risk checks, Alpaca execution, broker reconciliation and lot history, with separate owner-approved assistant controls" width="100%"></a>
+  <a href="docs/assets/copytrading-workflow.png"><img src="docs/assets/copytrading-workflow.png" alt="CopyTrading workflow: Discord capture, grounded model interpretation, parallel account routing and risk checks, Alpaca execution, broker reconciliation and lot history, with separate owner-approved assistant controls" width="100%"></a>
   <br>
-  <sub><a href="docs/assets/copytrading-workflow-hq.png">View the full-resolution diagram</a></sub>
+  <sub><a href="docs/assets/copytrading-workflow.png">View the full-resolution diagram</a></sub>
 </p>
 
 A SwiftUI app supervises one local Python engine. The engine owns every decision, keeps it in SQLite, and reconciles with the broker after a crash or sleep, so a signal that expires while the app is closed never becomes a late order. [Architecture](docs/architecture.md) has the details and the [ADRs](docs/adr/) record why.

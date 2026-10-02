@@ -8,6 +8,7 @@ Requirements and the first build are in the [README](README.md#install). `make d
 
 ```sh
 make dev
+uvx pre-commit install   # Ruff and file hygiene before each commit
 make check
 ```
 
@@ -18,7 +19,7 @@ make desktop-check
 make desktop-smoke
 ```
 
-`make check` runs the engine suite, Ruff, Ty, and the app packaging-script tests; `make coverage` adds line and branch coverage and fails under 80%. `make desktop-check` also builds and verifies the app bundle and runs the Swift and native contract checks. CI runs engine and Swift checks; it does not deploy or use real credentials.
+`make check` runs the engine suite, Ruff, Ty, and the app packaging-script tests; `make coverage` adds line and branch coverage and fails under 80%. `make desktop-check` also builds and verifies the app bundle and runs the Swift and native contract checks. CI runs pre-commit, the engine checks, and every Swift suite on each change, and publishes releases from tags ([releases](docs/releases.md)); it never uses real credentials.
 
 ## Changes and reports
 
