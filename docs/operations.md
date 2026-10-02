@@ -7,9 +7,8 @@ This page covers the app repository's developer workflow. It does not describe a
 | `make doctor` | Check that this Mac can build and run the app, and print the fix for anything missing. |
 | `make app` | Run `doctor`, prepare the pinned runtime, build the app, and open it. |
 | `make dev` | Install the engine's virtual environment (`engine/.venv`) for your editor. |
-| `make check` | Run the engine and app-script tests, Ruff, and Ty. |
+| `make check` | Run the engine tests with line and branch coverage (fails under 80%, HTML in `dist/coverage/`), the app-script tests, Ruff, and Ty. |
 | `make check-linux` | Run the engine tests on Linux in Docker, with the repository mounted read-only. |
-| `make coverage` | Run the engine tests with line and branch coverage. It fails under 80% and writes an HTML report to `dist/coverage/`. |
 | `make check-mutations` | Run selected execution-policy mutation probes on disposable copies. |
 | `make desktop-build` | Assemble the local macOS app from the prepared runtime, signed with your Apple Development identity when the login keychain has one (ad hoc otherwise). |
 | `make desktop-check` | Run code checks, Swift formatting, the build, and bundle verification. |

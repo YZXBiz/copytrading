@@ -19,7 +19,7 @@ make desktop-check
 make desktop-smoke
 ```
 
-`make check` runs the engine suite, Ruff, Ty, and the app packaging-script tests; `make coverage` adds line and branch coverage and fails under 80%. `make desktop-check` also builds and verifies the app bundle and runs the Swift and native contract checks. CI runs pre-commit, the engine checks, and every Swift suite on each change, and publishes releases from tags ([releases](docs/releases.md)); it never uses real credentials.
+`make check` runs the engine suite with line and branch coverage (it fails under 80% and writes `dist/coverage/`), Ruff, Ty, and the app packaging-script tests. `make desktop-check` also builds and verifies the app bundle and runs the Swift and native contract checks. CI runs pre-commit, the engine checks, every Swift suite, and zizmor on each change, and publishes releases from tags ([releases](docs/releases.md)); it never uses real credentials.
 
 ## Changes and reports
 
