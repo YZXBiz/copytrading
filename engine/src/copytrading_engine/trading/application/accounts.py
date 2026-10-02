@@ -345,20 +345,26 @@ class SignalFanout:
                     workflow = WorkflowAttempt(first.workflow_id, first.trace_id, None, 0)
                     with bind_workflow_attempt(workflow):
                         with self.observe_workflow(workflow):
-                            receipts = []
+                            reserved = []
                             for terms in route:
                                 if self.stop.is_set():
                                     return confirmed
                                 identity = await self.parser.reserve_destination_attempt(
                                     delivery.key, terms.connection.account_id
                                 )
-                                receipts.append(
-                                    self._receive(delivery.key, delivery.signal, terms, identity)
-                                )
+                                reserved.append((terms, identity))
                             # Each account serializes its own work, so different accounts take
                             # the same post side by side. Every account runs to the end, even if
                             # another fails: cancelling one mid-order could orphan a submission.
-                            outcomes = await asyncio.gather(*receipts, return_exceptions=True)
+                            # The work is built only here, so a stop above never strands a
+                            # coroutine that nothing will await.
+                            outcomes = await asyncio.gather(
+                                *(
+                                    self._receive(delivery.key, delivery.signal, terms, identity)
+                                    for terms, identity in reserved
+                                ),
+                                return_exceptions=True,
+                            )
                             for outcome in outcomes:
                                 if isinstance(outcome, AccountUnavailable):
                                     waiting = True
