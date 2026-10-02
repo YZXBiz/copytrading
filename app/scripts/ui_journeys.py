@@ -1090,17 +1090,18 @@ def j30_assistant(app: AppDriver) -> None:
         app.type("scripted", into="Model")
         app.click("connections.done")
 
+        # Checks name what the owner sees rather than the panel's containers, so they hold
+        # under any accessibility reader, including ones that flatten groups.
         app.press("cmd+j")
-        empty = app.wait_for("assistant.panel", timeout=15, name="assistant-empty")
+        empty = app.wait_for("assistant.composer", timeout=15, name="assistant-empty")
         app.expect(empty, *(f"assistant.suggestion.{i}" for i in range(4)))
         app.expect_absent(empty, "assistant.openConnections")
 
         app.type_focused("Is copying running?", into="Question for the assistant")
         app.press("Return")
-        step = app.wait_for("assistant.step", timeout=60, name="assistant-step")
-        app.expect(step, "Checked whether copying is running")
+        app.wait_for("Checked whether copying is running", timeout=60, name="assistant-step")
         answered = app.wait_for("Copying is paused", timeout=60, name="assistant-answer")
-        app.expect(answered, "assistant.message.0", "assistant.message.1")
+        app.expect(answered, "Is copying running?", "Checked whether copying is running")
         if len(stub.requests) != 2:
             raise JourneyFailure(f"the model was asked {len(stub.requests)} times, not twice")
 
@@ -1108,8 +1109,8 @@ def j30_assistant(app: AppDriver) -> None:
         app.press("escape")
         time.sleep(0.8)
         closed = app.see("assistant-closed")
-        app.expect_absent(closed, "assistant.panel")
-        app.expect(closed, "toolbar.assistant")
+        app.expect_absent(closed, "assistant.composer", "Copying is paused")
+        app.expect(closed, "Ask the Assistant")
     _relock(app)
 
 
