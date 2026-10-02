@@ -60,7 +60,7 @@ CopyTrading 是一款原生 macOS 应用。它读取交易者在 Discord 上发�
 
 需要一台运行 macOS 26 或更高版本的 Apple 芯片 Mac。
 
-**下载：** 到 [Releases](https://github.com/YZXBiz/copytrading/releases) 获取最新的预览版，解压后右键点击应用并选择 **打开**。预览版未签名，所以首次启动时 macOS 会给出警告。如何校验下载文件见 [releases](docs/releases.md)。
+**下载：** 到 [Releases](https://github.com/YZXBiz/copytrading/releases) 获取最新的预览版，解压后右键点击应用并选择 **打开**。预览版尚未经过 Apple 公证，所以首次启动时 macOS 会给出警告。如何校验下载文件见 [releases](docs/releases.md)。
 
 **或者从源码构建：** 需要 [uv](https://docs.astral.sh/uv/) 和 Xcode 命令行工具。
 
@@ -127,7 +127,7 @@ Waiting for approval in CopyTrading: proposal p-4e1a9c, expires 16:42.
 
 ## 参与贡献
 
-先运行 `make doctor` 检查你的 Mac，再用 `make check` 运行引擎的 1,100 多个测试、Ruff 和 Ty。原生应用的检查和约定见 [CONTRIBUTING.md](CONTRIBUTING.md)。使用问题请到 [Discussions](https://github.com/YZXBiz/copytrading/discussions) 提问，缺陷请用 [issue 表单](https://github.com/YZXBiz/copytrading/issues/new/choose) 报告，安全漏洞请按 [SECURITY.md](SECURITY.md) 私下报告。
+先运行 `make doctor` 检查你的 Mac，再用 `make check` 运行引擎的 1,200 多个测试、Ruff 和 Ty。原生应用的检查和约定见 [CONTRIBUTING.md](CONTRIBUTING.md)。使用问题请到 [Discussions](https://github.com/YZXBiz/copytrading/discussions) 提问，缺陷请用 [issue 表单](https://github.com/YZXBiz/copytrading/issues/new/choose) 报告，安全漏洞请按 [SECURITY.md](SECURITY.md) 私下报告。
 
 ## 许可证
 
