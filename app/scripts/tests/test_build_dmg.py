@@ -25,6 +25,6 @@ def test_the_settings_and_their_artwork_ship_with_the_repository():
 
 
 def test_the_image_is_named_after_the_release_it_wraps(tmp_path):
-    archive, output = build_dmg.release_paths(tmp_path, "0.1.0-alpha.3")
-    assert archive.name == "CopyTrading-v0.1.0-alpha.3-macos-arm64.zip"
-    assert output.name == "CopyTrading-0.1.0-alpha.3.dmg"
+    archive, output = build_dmg.release_paths(tmp_path, "0.1.0-alpha.1")
+    assert archive.name == "CopyTrading-v0.1.0-alpha.1-macos-arm64.zip"
+    assert output.name == "CopyTrading-0.1.0-alpha.1.dmg"

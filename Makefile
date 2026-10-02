@@ -24,7 +24,7 @@ help:
 	@echo 'make lint-swift      Check Swift formatting (make format-swift fixes it)'
 	@echo 'make ui-journeys     Drive the real app window through docs/acceptance.md'
 	@echo 'make release RELEASE_VERSION=0.1.0-alpha.1  Build verified preview assets'
-	@echo 'make dmg RELEASE_VERSION=0.1.0-alpha.3  Wrap a built release in the drag-to-install DMG'
+	@echo 'make dmg RELEASE_VERSION=0.1.0-alpha.1      Wrap a built release in the drag-to-install DMG'
 	@echo 'make check-mutations Probe selected execution policy mutations'
 
 doctor:
@@ -87,7 +87,7 @@ release:
 		$(if $(RELEASE_COMMIT),--commit "$(RELEASE_COMMIT)",)
 
 dmg:
-	@if [ -z "$(RELEASE_VERSION)" ]; then echo 'set RELEASE_VERSION, for example 0.1.0-alpha.3' >&2; exit 2; fi
+	@if [ -z "$(RELEASE_VERSION)" ]; then echo 'set RELEASE_VERSION, for example 0.1.0-alpha.1' >&2; exit 2; fi
 	$(PYTHON) app/scripts/build_dmg.py --version "$(RELEASE_VERSION)" --release-dir "$(RELEASE_OUTPUT)"
 
 check-mutations:
