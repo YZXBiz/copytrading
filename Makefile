@@ -9,7 +9,7 @@ RUNTIME ?= dist/desktop-runtime/prepared
 RELEASE_RUNTIME ?= $(RUNTIME)
 RELEASE_OUTPUT ?= dist/releases/v$(RELEASE_VERSION)
 RELEASE_TAG ?= v$(RELEASE_VERSION)
-.PHONY: help doctor app dev check check-linux coverage check-mutations desktop-build desktop-check desktop-smoke ui-journeys release
+.PHONY: help doctor app dev check check-linux coverage check-mutations desktop-build desktop-check desktop-smoke ui-journeys release dmg
 
 help:
 	@echo 'make doctor          Check this Mac can build and run CopyTrading'
@@ -24,6 +24,7 @@ help:
 	@echo 'make lint-swift      Check Swift formatting (make format-swift fixes it)'
 	@echo 'make ui-journeys     Drive the real app window through docs/acceptance.md'
 	@echo 'make release RELEASE_VERSION=0.1.0-alpha.1  Build verified preview assets'
+	@echo 'make dmg RELEASE_VERSION=0.1.0-alpha.3  Wrap a built release in the drag-to-install DMG'
 	@echo 'make check-mutations Probe selected execution policy mutations'
 
 doctor:
@@ -50,7 +51,7 @@ check-linux:
 	sh engine/tools/linux-tests.sh
 
 coverage:
-	$(ENGINE_ENV) uv run --directory engine --frozen --no-editable pytest -q --cov --cov-fail-under=80 --cov-report=term-missing:skip-covered --cov-report=html:../dist/coverage
+	$(ENGINE_ENV) uv run --directory engine --frozen --no-editable pytest -q --cov --cov-fail-under=80 --cov-report=term-missing:skip-covered --cov-report=html:../dist/coverage --cov-report=xml:../dist/coverage.xml
 
 desktop-build:
 	$(ENGINE_ENV) $(PYTHON) app/scripts/build_app.py --app '$(APP)' --runtime '$(RUNTIME)'
@@ -84,6 +85,10 @@ release:
 		--runtime "$(RELEASE_RUNTIME)" \
 		--output "$(RELEASE_OUTPUT)" \
 		$(if $(RELEASE_COMMIT),--commit "$(RELEASE_COMMIT)",)
+
+dmg:
+	@if [ -z "$(RELEASE_VERSION)" ]; then echo 'set RELEASE_VERSION, for example 0.1.0-alpha.3' >&2; exit 2; fi
+	$(PYTHON) app/scripts/build_dmg.py --version "$(RELEASE_VERSION)" --release-dir "$(RELEASE_OUTPUT)"
 
 check-mutations:
 	$(ENGINE_ENV) uv sync --directory engine --frozen --no-editable

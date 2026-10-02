@@ -19,11 +19,24 @@ verifies the app, adds commit provenance, packages it with macOS `ditto`,
 extracts and verifies the ZIP, and creates the source and dependency records.
 It does not create a Git tag or publish a release.
 
+Then wrap the verified app in the disk image people download:
+
+```sh
+make dmg RELEASE_VERSION=0.1.0-alpha.3
+```
+
+`make dmg` extracts the app from the release ZIP, checks its signature, lays out the
+drag-to-install window from `app/Resources/DMG/` with a pinned `dmgbuild`, verifies
+the image, and writes its SHA-256 next to it. Update the README's download link to
+the new image when you publish.
+
 ## Release assets
 
 Each draft release contains:
 
-- `CopyTrading-v<version>-macos-arm64.zip`: unsigned app bundle.
+- `CopyTrading-<version>.dmg` and its `.sha256`: the drag-to-install disk image
+  most people download, holding the same app as the ZIP.
+- `CopyTrading-v<version>-macos-arm64.zip`: the app bundle, not notarized.
 - `copytrading-source-v<version>.tar.gz`: source archive for the exact
   commit recorded in `release-manifest.json`.
 - `sbom.cyclonedx.json`: CycloneDX dependency inventory for the app bundle.

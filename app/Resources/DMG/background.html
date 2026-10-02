@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 660px; height: 420px; overflow: hidden; }
+  body {
+    font-family: -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif;
+    color: #1d1d1f;
+    background-color: #eef3f1;
+    background-image:
+      linear-gradient(rgba(60, 110, 95, 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(60, 110, 95, 0.07) 1px, transparent 1px),
+      radial-gradient(ellipse at 50% 0%, #f7faf9 0%, #eef3f1 70%);
+    background-size: 22px 22px, 22px 22px, 100% 100%;
+    position: relative;
+  }
+  .title {
+    position: absolute; top: 34px; left: 0; right: 0; text-align: center;
+    font-family: "New York", "Iowan Old Style", Georgia, serif;
+    font-size: 30px; font-weight: 600; letter-spacing: -0.2px;
+  }
+  .title em { font-weight: 400; color: #3b5f55; }
+  .arrow {
+    position: absolute; top: 172px; left: 268px; width: 124px; height: 36px;
+  }
+  .note {
+    position: absolute; bottom: 22px; left: 40px; right: 40px; text-align: center;
+    font-size: 12px; line-height: 17px; color: #5b6b66;
+  }
+  .note b { color: #2f3f3a; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="title">CopyTrading <em>drag to install</em></div>
+  <svg class="arrow" viewBox="0 0 124 36" fill="none">
+    <path d="M6 18 H106" stroke="#3b7d69" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 9"/>
+    <path d="M100 8 L114 18 L100 28" stroke="#3b7d69" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <div class="note">
+    Developer preview. The first time you open it, macOS asks you to confirm:<br>
+    <b>System Settings → Privacy &amp; Security → Open Anyway</b>
+  </div>
+</body>
+</html>
