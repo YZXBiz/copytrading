@@ -31,7 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       # The image's Xcode 26.6 ships Swift 6.3.3, which crashes compiling the app; 6.4 builds it.
-      - uses: swift-actions/setup-swift@7ca6abe6b3b0e8b5421b88be48feee39cbf52c6a # v2.4.0
+      - uses: swift-actions/setup-swift@7e293214cba9e9225c93ce3267f17f6efdb656a8 # main 2025-11-30 (swiftly); v2.4.0 predates Swift 6.4
         with:
           swift-version: "6.4.0"
       - run: swift --version
