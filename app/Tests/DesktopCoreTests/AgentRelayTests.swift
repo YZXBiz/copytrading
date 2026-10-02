@@ -189,6 +189,7 @@ extension Thread {
 private struct CLIResult {
     let status: Int32
     let output: String
+    let errorOutput: String
 }
 
 /// Run the real `copytrading` client, as an agent would, against the relay's state root.
@@ -198,6 +199,7 @@ private func runCLI(
     try await Task.detached {
         let process = Process()
         let output = Pipe()
+        let errors = Pipe()
         process.executableURL = python
         process.arguments = ["-m", "copytrading_engine.control"] + arguments
         process.environment = [
@@ -208,11 +210,14 @@ private func runCLI(
             "COPYTRADING_STATE_ROOT": stateRoot.path,
         ]
         process.standardOutput = output
-        process.standardError = FileHandle.nullDevice
+        process.standardError = errors
         try process.run()
         let data = output.fileHandleForReading.readDataToEndOfFile()
+        let errorData = errors.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
-        return CLIResult(status: process.terminationStatus, output: String(decoding: data, as: UTF8.self))
+        return CLIResult(
+            status: process.terminationStatus, output: String(decoding: data, as: UTF8.self),
+            errorOutput: String(decoding: errorData, as: UTF8.self))
     }.value
 }
 
@@ -290,7 +295,7 @@ func runAgentControlEngineTests() async throws {
         let status = try await cli(["status", "--json"])
         try verify(
             status.status == 0 && status.output.contains(#""engine_state":"running""#),
-            "the CLI must read engine status through the app relay: \(status.output)")
+            "the CLI must read engine status through the app relay: exit \(status.status), \(status.output) \(status.errorOutput)")
 
         let resume = try await cli(["accounts", "resume", "nobody"])
         try verify(resume.status == 6, "the engine must refuse to propose for an unknown account")
