@@ -1,7 +1,9 @@
 name: Smokeshow
 
 on:
-  workflow_run:
+  # Safe here: this workflow never checks out or runs pull-request code; it only uploads the
+  # coverage HTML artifact and posts a commit status (FastAPI's Smokeshow workflow does the same).
+  workflow_run: # zizmor: ignore[dangerous-triggers]
     workflows: [checks]
     types: [completed]
 

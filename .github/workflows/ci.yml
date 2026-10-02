@@ -1,6 +1,7 @@
 name: checks
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
   schedule:
@@ -26,11 +27,12 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           version: "0.11.21"
       - run: make check
-      - run: make coverage
       - name: Store coverage HTML
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -43,6 +45,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
       # The image's Xcode 26.6 ships Swift 6.3.3, which crashes compiling the app; 6.4 builds it.
       - uses: swift-actions/setup-swift@7e293214cba9e9225c93ce3267f17f6efdb656a8 # main 2025-11-30 (swiftly); v2.4.0 predates Swift 6.4
         with:
@@ -50,3 +54,15 @@ jobs:
       - run: swift --version
       - run: arch -arm64 swift build --package-path app -Xswiftc -strict-concurrency=complete -Xswiftc -warnings-as-errors
       - run: arch -arm64 swift test --package-path app -Xswiftc -warnings-as-errors
+  zizmor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.11.21"
+      # Audits the workflows for security problems, as FastAPI's CI does.
+      - run: uvx zizmor==1.30.1 --offline --min-severity=low .github/workflows
