@@ -1,9 +1,7 @@
 version: 2
 updates:
   - package-ecosystem: uv
-    directories:
-      - /
-      - /engine
+    directory: /engine
     schedule:
       interval: weekly
   - package-ecosystem: github-actions
