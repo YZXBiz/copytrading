@@ -18,9 +18,10 @@ GitHub Actions runs these on every push and pull request, and every Monday:
 - **App:** a strict Swift 6.4 build (complete concurrency checking, warnings as
   errors), the Swift tests, and `swift format` lint.
 
-Every release additionally runs the native contract suite against the built
-bundle, verifies the bundle, smoke-tests the released app, and checks each asset
-against its manifest and checksums before publishing (see [releases](releases.md)).
+Every release, and every pull request that changes how a release is built,
+additionally builds the release, verifies the bundle, smoke-tests the released app,
+and checks each asset against its manifest and checksums (see
+[releases](releases.md)).
 
 ## Checked against real services
 
