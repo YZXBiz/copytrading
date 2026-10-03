@@ -193,32 +193,46 @@ private struct CLIResult {
 }
 
 /// Run the real `copytrading` client, as an agent would, against the relay's state root.
+///
+/// The client blocks until it exits, so it waits on its own thread: the relay answers it from
+/// Swift's cooperative pool, which has only a few threads on a small machine.
 private func runCLI(
     _ arguments: [String], python: URL, pythonPath: String, stateRoot: URL
 ) async throws -> CLIResult {
-    try await Task.detached {
-        let process = Process()
-        let output = Pipe()
-        let errors = Pipe()
-        process.executableURL = python
-        process.arguments = ["-m", "copytrading_engine.control"] + arguments
-        process.environment = [
-            "PATH": "/usr/bin:/bin",
-            "HOME": FileManager.default.homeDirectoryForCurrentUser.path,
-            "PYTHONPATH": pythonPath,
-            "PYTHONDONTWRITEBYTECODE": "1",
-            "COPYTRADING_STATE_ROOT": stateRoot.path,
-        ]
-        process.standardOutput = output
-        process.standardError = errors
-        try process.run()
-        let data = output.fileHandleForReading.readDataToEndOfFile()
-        let errorData = errors.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
-        return CLIResult(
-            status: process.terminationStatus, output: String(decoding: data, as: UTF8.self),
-            errorOutput: String(decoding: errorData, as: UTF8.self))
-    }.value
+    try await withCheckedThrowingContinuation { continuation in
+        Thread.detachNewThread {
+            continuation.resume(
+                with: Result {
+                    try runCLIBlocking(arguments, python: python, pythonPath: pythonPath, stateRoot: stateRoot)
+                })
+        }
+    }
+}
+
+private func runCLIBlocking(
+    _ arguments: [String], python: URL, pythonPath: String, stateRoot: URL
+) throws -> CLIResult {
+    let process = Process()
+    let output = Pipe()
+    let errors = Pipe()
+    process.executableURL = python
+    process.arguments = ["-m", "copytrading_engine.control"] + arguments
+    process.environment = [
+        "PATH": "/usr/bin:/bin",
+        "HOME": FileManager.default.homeDirectoryForCurrentUser.path,
+        "PYTHONPATH": pythonPath,
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "COPYTRADING_STATE_ROOT": stateRoot.path,
+    ]
+    process.standardOutput = output
+    process.standardError = errors
+    try process.run()
+    let data = output.fileHandleForReading.readDataToEndOfFile()
+    let errorData = errors.fileHandleForReading.readDataToEndOfFile()
+    process.waitUntilExit()
+    return CLIResult(
+        status: process.terminationStatus, output: String(decoding: data, as: UTF8.self),
+        errorOutput: String(decoding: errorData, as: UTF8.self))
 }
 
 private final class LockSwitch: @unchecked Sendable {
