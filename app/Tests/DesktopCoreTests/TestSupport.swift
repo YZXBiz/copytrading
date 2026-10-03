@@ -1,25 +1,17 @@
 import Foundation
+import Testing
 
 struct VerificationFailure: Error, CustomStringConvertible {
     let description: String
 }
 
-func verify(_ condition: @autoclosure () -> Bool, _ message: String) throws {
-    guard condition() else { throw VerificationFailure(description: message) }
-}
-
 func verifyThrows(
     _ operation: () throws -> Void,
     matching predicate: (any Error) -> Bool,
-    _ message: String
+    _ message: Comment
 ) throws {
-    do {
-        try operation()
-    } catch {
-        guard predicate(error) else { throw VerificationFailure(description: message) }
-        return
-    }
-    throw VerificationFailure(description: message)
+    let error = try #require(throws: (any Error).self, message) { try operation() }
+    try #require(predicate(error), message)
 }
 
 func contractFixture(_ name: String, sourceFile: String = #filePath) throws -> Data {

@@ -1,10 +1,11 @@
 import DesktopCore
+import Testing
 
 func runAppStartupIntentTests() throws {
     var intent = AppStartupIntent()
-    try verify(intent.allowsAutomaticStart, "first window open should start the local runtime")
+    try #require(intent.allowsAutomaticStart, "first window open should start the local runtime")
     intent.stop()
-    try verify(!intent.allowsAutomaticStart, "reopening the window must preserve explicit Stop")
+    try #require(!intent.allowsAutomaticStart, "reopening the window must preserve explicit Stop")
     intent.startRequested()
-    try verify(intent.allowsAutomaticStart, "an explicit Start must clear the stopped intent")
+    try #require(intent.allowsAutomaticStart, "an explicit Start must clear the stopped intent")
 }

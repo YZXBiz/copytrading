@@ -1,5 +1,6 @@
 import DesktopCore
 import Foundation
+import Testing
 
 func runAgentAccessTests() async throws {
     try agentAccessIsRememberedPrivately()
@@ -15,12 +16,12 @@ private func agentAccessIsRememberedPrivately() throws {
     let store = AgentAccessStore(stateRoot: root)
 
     let initial = try store.load()
-    try verify(initial == .off, "agents must be off until the owner chooses otherwise")
+    try #require(initial == .off, "agents must be off until the owner chooses otherwise")
     try store.save(.propose)
     let saved = try store.load()
-    try verify(saved == .propose, "the owner's choice must survive a restart")
+    try #require(saved == .propose, "the owner's choice must survive a restart")
     let mode = try FileManager.default.attributesOfItem(atPath: store.url.path)[.posixPermissions] as? NSNumber
-    try verify(mode?.intValue == 0o600, "the access setting must be owner-only")
+    try #require(mode?.intValue == 0o600, "the access setting must be owner-only")
 
     try Data("{\"access\":\"everything\"}".utf8).write(to: store.url)
     try verifyThrows(
@@ -44,20 +45,20 @@ private func agentProposalsAndAuditDecodeFromTheEngine() throws {
     guard case .agentProposals(let proposals) = listed.success?.result else {
         throw VerificationFailure(description: "proposal list did not decode")
     }
-    try verify(
+    try #require(
         proposals.count == 2 && proposals.allSatisfy { $0.state == .pending },
         "both waiting proposals must decode")
-    try verify(
+    try #require(
         proposals[0].subject == .resumeAccount(accountID: "paper"),
         "a resume proposal must name its account")
     guard case .manualOrder(let order) = proposals[1].subject else {
         throw VerificationFailure(description: "the manual order proposal lost its order")
     }
-    try verify(
+    try #require(
         order.symbol == "ABC" && order.quantity == "12" && order.limitPrice == "25.00"
             && order.environment == .paper,
         "the owner must see exactly the previewed order")
-    try verify(
+    try #require(
         proposals[0].requestedBy.path == "/usr/bin/agent" && proposals[0].digest.count == 64,
         "the requester and digest must reach the approval sheet")
 
@@ -65,16 +66,16 @@ private func agentProposalsAndAuditDecodeFromTheEngine() throws {
     guard case .agentProposal(let proposal) = single.success?.result else {
         throw VerificationFailure(description: "a single proposal did not decode")
     }
-    try verify(proposal.id.hasPrefix("p-"), "a proposal must keep its identifier")
+    try #require(proposal.id.hasPrefix("p-"), "a proposal must keep its identifier")
 
     let audit = try decoder.decode(EngineResponse.self, from: contractFixture("agent-audit-response.json"))
     guard case .agentAudit(let entries) = audit.success?.result else {
         throw VerificationFailure(description: "the audit trail did not decode")
     }
-    try verify(
+    try #require(
         entries.contains { $0.operation == "propose_manual_order" && $0.outcome == "proposed" },
         "the audit trail must list agent proposals")
-    try verify(Set(entries.map(\.id)).count == entries.count, "audit rows need distinct identities")
+    try #require(Set(entries.map(\.id)).count == entries.count, "audit rows need distinct identities")
 }
 
 private func approvalNeedsAFreshOwnerConfirmation() async throws {

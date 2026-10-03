@@ -1,5 +1,6 @@
 import DesktopCore
 import Foundation
+import Testing
 
 func runRuntimeManifestTests() throws {
     let packageRoot = URL(fileURLWithPath: #filePath)
@@ -10,9 +11,9 @@ func runRuntimeManifestTests() throws {
     let manifest = try RuntimeManifest.load(from: manifestURL)
     let python = try manifest.artifact(named: "cpython")
 
-    try verify(manifest.artifacts.map(\.name) == ["cpython"], "the runtime must bundle Python and nothing else")
-    try verify(python.version.hasPrefix("3.14.7"), "Python runtime pin changed")
-    try verify(python.sha256.count == 64, "Python runtime digest is not a SHA-256")
+    try #require(manifest.artifacts.map(\.name) == ["cpython"], "the runtime must bundle Python and nothing else")
+    try #require(python.version.hasPrefix("3.14.7"), "Python runtime pin changed")
+    try #require(python.sha256.count == 64, "Python runtime digest is not a SHA-256")
 
     let temp = FileManager.default.temporaryDirectory
         .appending(path: "runtime-manifest-\(UUID().uuidString)", directoryHint: .isDirectory)
@@ -25,7 +26,7 @@ func runRuntimeManifestTests() throws {
         ofItemAtPath: executable.path
     )
     let resolved = try manifest.executable(named: "cpython", under: temp)
-    try verify(resolved == executable, "manifest binary path did not resolve under runtime root")
+    try #require(resolved == executable, "manifest binary path did not resolve under runtime root")
 
     try FileManager.default.removeItem(at: executable)
     try FileManager.default.createSymbolicLink(at: executable, withDestinationURL: URL(fileURLWithPath: "/bin/echo"))

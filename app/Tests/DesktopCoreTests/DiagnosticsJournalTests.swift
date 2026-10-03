@@ -1,5 +1,6 @@
 import DesktopCore
 import Foundation
+import Testing
 
 func runDiagnosticsJournalTests() throws {
     let root = FileManager.default.temporaryDirectory
@@ -15,14 +16,14 @@ func runDiagnosticsJournalTests() throws {
 private func settingsRoundTripAndRejectUnsupportedValues(_ root: URL) throws {
     let store = DiagnosticsSettingsStore(url: root.appending(path: "settings/settings.json"))
     let missing = try store.load()
-    try verify(missing == nil, "missing settings must read as nothing saved")
+    try #require(missing == nil, "missing settings must read as nothing saved")
     let chosen = try DiagnosticsSettings(ageDays: 30, storageLimitBytes: 512 * 1_024 * 1_024)
     try store.save(chosen)
     let loaded = try store.load()
-    try verify(loaded == chosen, "saved log settings did not read back")
+    try #require(loaded == chosen, "saved log settings did not read back")
     let mode = try FileManager.default.attributesOfItem(atPath: store.url.path)[.posixPermissions] as? NSNumber
-    try verify(mode?.intValue == 0o600, "the settings file is not private")
-    try verify(
+    try #require(mode?.intValue == 0o600, "the settings file is not private")
+    try #require(
         chosen.engineEnvironment == [
             "COPYTRADING_DESKTOP_DIAGNOSTICS_RETENTION_DAYS": "30",
             "COPYTRADING_DESKTOP_DIAGNOSTICS_MAX_BYTES": String(512 * 1_024 * 1_024),
@@ -68,26 +69,26 @@ private func journalReadsNewestFirstAcrossRotations(_ root: URL) throws {
 
     let journal = DiagnosticsJournal(directory: directory)
     let entries = try journal.entries()
-    try verify(
+    try #require(
         entries.map(\.name) == ["completed", "execution.risk_checks", "model.parse"],
         "journal entries must read newest first across rotations")
-    try verify(entries[0].kind == .stage && entries[0].outcome == "completed", "stage record was misread")
-    try verify(
+    try #require(entries[0].kind == .stage && entries[0].outcome == "completed", "stage record was misread")
+    try #require(
         entries[0].fields.contains { $0.name == "command_id" && $0.value == "sim-1" },
         "stage fields were not kept for the reader")
-    try verify(
+    try #require(
         !entries[0].fields.contains { $0.name == "payload" || $0.name == "created_at_ns" },
         "the payload and raw clock belong outside the field list")
     let expected = try Date.ISO8601FormatStyle(includingFractionalSeconds: true).parse("2026-09-30T10:00:02.500Z")
-    try verify(entries[0].at == expected, "journal time was misread")
-    try verify(Set(entries.map(\.id)).count == 3, "journal entries need distinct identities")
+    try #require(entries[0].at == expected, "journal time was misread")
+    try #require(Set(entries.map(\.id)).count == 3, "journal entries need distinct identities")
     let reread = try journal.entries()
-    try verify(reread.map(\.id) == entries.map(\.id), "entry identities must survive a reread")
+    try #require(reread.map(\.id) == entries.map(\.id), "entry identities must survive a reread")
     let limited = try journal.entries(limit: 2)
-    try verify(limited.count == 2, "the read limit was ignored")
-    try verify(journal.usageBytes() > 0, "journal size was not measured")
+    try #require(limited.count == 2, "the read limit was ignored")
+    try #require(journal.usageBytes() > 0, "journal size was not measured")
     let exported = try journal.exportText()
-    try verify(exported.hasPrefix(oldest), "the export must run oldest first")
+    try #require(exported.hasPrefix(oldest), "the export must run oldest first")
 }
 
 private func journalSkipsDamagedLinesAndReadsPayloads(_ root: URL) throws {
@@ -101,11 +102,11 @@ private func journalSkipsDamagedLinesAndReadsPayloads(_ root: URL) throws {
     try Data(text.utf8).write(to: directory.appending(path: "diagnostics.jsonl"))
 
     let entries = try DiagnosticsJournal(directory: directory).entries()
-    try verify(entries.count == 1, "damaged or unknown lines must be skipped, not fail the read")
-    try verify(entries[0].kind == .payload && entries[0].name == "model_response", "payload record was misread")
-    try verify(entries[0].traceID == "abc", "the trace identity was lost")
-    try verify(entries[0].payloadJSON?.contains("ignore [REDACTED]") == true, "the payload was not shown")
-    try verify(entries[0].searchText.contains("ignore [redacted]"), "search must cover the payload")
+    try #require(entries.count == 1, "damaged or unknown lines must be skipped, not fail the read")
+    try #require(entries[0].kind == .payload && entries[0].name == "model_response", "payload record was misread")
+    try #require(entries[0].traceID == "abc", "the trace identity was lost")
+    try #require(entries[0].payloadJSON?.contains("ignore [REDACTED]") == true, "the payload was not shown")
+    try #require(entries[0].searchText.contains("ignore [redacted]"), "search must cover the payload")
     let absent = try DiagnosticsJournal(directory: root.appending(path: "absent")).entries()
-    try verify(absent.isEmpty, "a journal that does not exist yet reads as empty")
+    try #require(absent.isEmpty, "a journal that does not exist yet reads as empty")
 }

@@ -1,5 +1,6 @@
 import DesktopCore
 import Foundation
+import Testing
 
 func runOperationalGenerationTests() throws {
     let root = FileManager.default.temporaryDirectory
@@ -13,16 +14,16 @@ func runOperationalGenerationTests() throws {
     let lock = try ownerPaths.acquireInstallationLock()
     let first = try ownerPaths.resolveActiveGeneration(whileHolding: lock)
     let firstID = try unwrap(first.activeGenerationID, "the first owner did not select a generation")
-    try verify(
+    try #require(
         first.applicationSupportDirectory.path == root.appending(path: "generations/\(firstID)").path,
         "operational data must live under its immutable generation directory")
-    try verify(
+    try #require(
         first.lockURL.path == root.appending(path: ".app.lock").path,
         "owner lock must remain outside swappable generations")
-    try verify(
+    try #require(
         first.installationIdentityURL.path == root.appending(path: "installation-id").path,
         "installation identity must remain stable outside swappable generations")
-    try verify(
+    try #require(
         first.logsDirectory.path == root.appending(path: "logs").path,
         "logs must remain outside swappable operational generations")
 
@@ -36,12 +37,12 @@ func runOperationalGenerationTests() throws {
         expectedCurrentGeneration: firstID,
         whileHolding: lock
     )
-    try verify(previous == firstID, "generation switch did not return the rollback target")
+    try #require(previous == firstID, "generation switch did not return the rollback target")
     let selected = try ownerPaths.resolveActiveGeneration(whileHolding: lock)
-    try verify(
+    try #require(
         selected.activeGenerationID == candidateID,
         "active generation pointer did not select the staged candidate")
-    try verify(
+    try #require(
         FileManager.default.fileExists(atPath: candidate.appending(path: "restore-gate").path),
         "generation switch removed the candidate state")
 
@@ -57,7 +58,7 @@ func runOperationalGenerationTests() throws {
         "concurrent generation changes must preserve the currently selected pointer"
     )
     let unchanged = try ownerPaths.resolveActiveGeneration(whileHolding: lock)
-    try verify(
+    try #require(
         unchanged.activeGenerationID == candidateID,
         "a rejected generation switch modified the active pointer")
 
@@ -94,7 +95,7 @@ func runOperationalGenerationTests() throws {
         "the stable owner lock must reject a symbolic-link replacement"
     )
     let externalLockContents = try Data(contentsOf: externalLockTarget)
-    try verify(
+    try #require(
         externalLockContents == Data("outside".utf8),
         "the stable owner lock must not open or mutate a symbolic-link target")
 }

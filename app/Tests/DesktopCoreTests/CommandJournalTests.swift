@@ -1,5 +1,6 @@
 import DesktopCore
 import Foundation
+import Testing
 
 func runCommandJournalTests() async throws {
     let root = FileManager.default.temporaryDirectory.appending(path: "command-journal-\(UUID().uuidString)")
@@ -11,11 +12,11 @@ func runCommandJournalTests() async throws {
     let journal = CommandJournal(url: url)
     try await journal.record(command)
     let restored = try await CommandJournal(url: url).entries()
-    try verify(restored.count == 1 && restored[0].command == command, "crash lost the command envelope before engine submission")
-    try verify(restored[0].workflow == nil, "unsent command was marked complete")
+    try #require(restored.count == 1 && restored[0].command == command, "crash lost the command envelope before engine submission")
+    try #require(restored[0].workflow == nil, "unsent command was marked complete")
     try await journal.record(command)
     let repeated = try await journal.entries()
-    try verify(repeated.count == 1, "retrying same command created a second activity entry")
+    try #require(repeated.count == 1, "retrying same command created a second activity entry")
 
     let workflowData = Data(
         """
@@ -24,7 +25,7 @@ func runCommandJournalTests() async throws {
     let workflow = try JSONDecoder().decode(WorkflowView.self, from: workflowData)
     try await journal.record(workflow)
     let afterCompletion = try await CommandJournal(url: url).entries()
-    try verify(
+    try #require(
         afterCompletion.count == 1 && afterCompletion[0].workflow == workflow, "completed workflow was not durably visible after relaunch")
     let stalePayload = Data(
         """
@@ -32,7 +33,7 @@ func runCommandJournalTests() async throws {
         """.utf8)
     try await journal.record(JSONDecoder().decode(WorkflowView.self, from: stalePayload))
     let afterStaleReply = try await journal.entries()
-    try verify(afterStaleReply[0].workflow == workflow, "a stale IPC reply downgraded completed Activity history")
+    try #require(afterStaleReply[0].workflow == workflow, "a stale IPC reply downgraded completed Activity history")
     let permissions = try FileManager.default.attributesOfItem(atPath: url.path)[.posixPermissions] as? NSNumber
-    try verify(permissions?.intValue == 0o600, "command journal was not private")
+    try #require(permissions?.intValue == 0o600, "command journal was not private")
 }

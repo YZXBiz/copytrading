@@ -1,6 +1,7 @@
 import Darwin
 @testable import DesktopCore
 import Foundation
+import Testing
 
 func runProcessSupervisorTests() async throws {
     let floodProgram = "import sys; sys.stderr.write('z' * 524288); sys.stderr.flush(); sys.exit(23)"
@@ -25,11 +26,11 @@ func runProcessSupervisorTests() async throws {
     guard case .childExited(let child, let status, let restarting) = exit else {
         throw VerificationFailure(description: "unexpected child exit event")
     }
-    try verify(child == .engine, "supervisor reported the wrong child")
-    try verify(status == 23, "supervisor lost the real child's exit status")
-    try verify(!restarting, "restart limit zero must suppress restart")
+    try #require(child == .engine, "supervisor reported the wrong child")
+    try #require(status == 23, "supervisor lost the real child's exit status")
+    try #require(!restarting, "restart limit zero must suppress restart")
     let stderr = await exitSupervisor.stderrTail(for: .engine)
-    try verify(stderr.count == 4096, "stderr capture expected a 4096-byte tail, got \(stderr.count)")
+    try #require(stderr.count == 4096, "stderr capture expected a 4096-byte tail, got \(stderr.count)")
     await exitSupervisor.stop()
 
     try await runStartupOwnershipStopRaceTest()
@@ -94,11 +95,11 @@ private func checkEngineDrainAcknowledgement(
     let stopRequestCount = await requester.callCount()
     let childIsRunning = await supervisor.isRunning(child: .engine)
     let childAcknowledgedTermination = FileManager.default.fileExists(atPath: stopped.path)
-    try verify(
+    try #require(
         report.engineDrainAcknowledgement == expected,
         "supervisor reported \(report.engineDrainAcknowledgement), expected \(expected)")
-    try verify(stopRequestCount == 1, "graceful engine Stop must be requested exactly once")
-    try verify(
+    try #require(stopRequestCount == 1, "graceful engine Stop must be requested exactly once")
+    try #require(
         !childIsRunning && childAcknowledgedTermination,
         "engine drain failure must still stop only the supervisor-owned engine child")
 }
@@ -120,16 +121,16 @@ private actor TestGracefulEngineStopRequester: GracefulEngineStopRequesting {
 }
 
 private func runRestartTransitionPolicyTests() throws {
-    try verify(
+    try #require(
         RestartTransitionPolicy.nextAttempt(attemptsUsed: 0, maximumRestarts: 2, explicitlyStopped: false) == 1,
         "first unexpected exit should schedule restart 1")
-    try verify(
+    try #require(
         RestartTransitionPolicy.nextAttempt(attemptsUsed: 1, maximumRestarts: 2, explicitlyStopped: false) == 2,
         "second failure should use the final restart slot")
-    try verify(
+    try #require(
         RestartTransitionPolicy.nextAttempt(attemptsUsed: 2, maximumRestarts: 2, explicitlyStopped: false) == nil,
         "restart budget must be bounded")
-    try verify(
+    try #require(
         RestartTransitionPolicy.nextAttempt(attemptsUsed: 0, maximumRestarts: 2, explicitlyStopped: true) == nil,
         "explicit Stop must suppress a pending transition")
 }
@@ -172,7 +173,7 @@ private func runSuccessfulRestartTest() async throws {
     let count = try? String(contentsOf: counter, encoding: .utf8)
     let running = await supervisor.isRunning(child: .engine)
     await supervisor.stop()
-    try verify(count == "2" && running, "a child did not successfully restart once within its budget")
+    try #require(count == "2" && running, "a child did not successfully restart once within its budget")
 }
 
 private func runScheduledRestartStopTest() async throws {
@@ -204,11 +205,11 @@ private func runScheduledRestartStopTest() async throws {
     guard case .childExited(_, _, let restarting) = event else {
         throw VerificationFailure(description: "missing child-exited transition")
     }
-    try verify(restarting, "the child exit should schedule a restart")
+    try #require(restarting, "the child exit should schedule a restart")
     await supervisor.stop()
     try await Task.sleep(for: .milliseconds(1_200))
     let count = try? String(contentsOf: counter, encoding: .utf8)
-    try verify(count == "1", "explicit Stop did not suppress a scheduled restart")
+    try #require(count == "1", "explicit Stop did not suppress a scheduled restart")
 }
 
 private func runStartupOwnershipStopRaceTest() async throws {
@@ -240,7 +241,7 @@ private func runStartupOwnershipStopRaceTest() async throws {
         gracefulStopRequester: stopRequester
     )
     let adoptedSupervisor = await attempt.adopt(supervisor, for: startupToken)
-    try verify(adoptedSupervisor, "startup owner refused the original supervisor")
+    try #require(adoptedSupervisor, "startup owner refused the original supervisor")
     try await supervisor.start()
     try await waitForFile(ready, description: "startup ownership terminal-stop race readiness")
 
@@ -265,7 +266,7 @@ private func runStartupOwnershipStopRaceTest() async throws {
 
     try await Task.sleep(for: .milliseconds(100))
     let maintenanceCompletedTooEarly = await maintenanceReturned.isComplete()
-    try verify(
+    try #require(
         !maintenanceCompletedTooEarly,
         "maintenance returned before terminal Stop finished draining and releasing its lock")
     do {
@@ -279,15 +280,15 @@ private func runStartupOwnershipStopRaceTest() async throws {
     await stopRequester.release()
     _ = await stopTask.value
     let maintenanceBegan = await maintenanceTask.value
-    try verify(!maintenanceBegan, "maintenance took ownership after terminal Stop won")
+    try #require(!maintenanceBegan, "maintenance took ownership after terminal Stop won")
     let maintenanceCompleted = await maintenanceReturned.isComplete()
-    try verify(maintenanceCompleted, "maintenance did not finish after terminal Stop")
+    try #require(maintenanceCompleted, "maintenance did not finish after terminal Stop")
     let staleSupervisor = ProcessSupervisor(
         configuration: ProcessSupervisorConfiguration(children: []),
         installationLock: lock
     )
     let adoptedAfterStop = await attempt.adopt(staleSupervisor, for: startupToken)
-    try verify(!adoptedAfterStop, "stopped attempt adopted a supervisor after ownership transfer")
+    try #require(!adoptedAfterStop, "stopped attempt adopted a supervisor after ownership transfer")
     let finalLock = try paths.acquireInstallationLock()
     finalLock.release()
 }
@@ -309,7 +310,7 @@ private func runStartupOwnershipMaintenancePauseTest() async throws {
         installationLock: lock
     )
     let adoptedOriginal = await ownership.adopt(original, for: staleStartupToken)
-    try verify(adoptedOriginal, "startup owner refused its original supervisor")
+    try #require(adoptedOriginal, "startup owner refused its original supervisor")
 
     let transition = try await ownership.beginMaintenanceTransition()
     let activeBeforeSwitch = try await ownership.resolveActiveGeneration(from: paths, during: transition)
@@ -330,11 +331,11 @@ private func runStartupOwnershipMaintenancePauseTest() async throws {
         expectedCurrentGeneration: previousGeneration,
         during: transition
     )
-    try verify(
+    try #require(
         returnedPrevious == previousGeneration,
         "maintenance generation switch lost the rollback target")
     let activeCandidate = try await ownership.resolveActiveGeneration(from: paths, during: transition)
-    try verify(
+    try #require(
         activeCandidate.activeGenerationID == candidateID,
         "maintenance generation switch did not select the staged candidate")
     let lockStayedHeld: Bool
@@ -345,14 +346,14 @@ private func runStartupOwnershipMaintenancePauseTest() async throws {
     } catch RuntimePathsError.alreadyRunning {
         lockStayedHeld = true
     }
-    try verify(lockStayedHeld, "maintenance pause released the stable installation lock")
+    try #require(lockStayedHeld, "maintenance pause released the stable installation lock")
 
     let staleSupervisor = ProcessSupervisor(
         configuration: ProcessSupervisorConfiguration(children: []),
         installationLock: lock
     )
     let adoptedStaleStartup = await ownership.adopt(staleSupervisor, for: staleStartupToken)
-    try verify(!adoptedStaleStartup, "pre-maintenance startup adopted into a later generation")
+    try #require(!adoptedStaleStartup, "pre-maintenance startup adopted into a later generation")
     let lockStayedHeldAfterStaleCleanup: Bool
     do {
         let competingLock = try paths.acquireInstallationLock()
@@ -361,16 +362,16 @@ private func runStartupOwnershipMaintenancePauseTest() async throws {
     } catch RuntimePathsError.alreadyRunning {
         lockStayedHeldAfterStaleCleanup = true
     }
-    try verify(lockStayedHeldAfterStaleCleanup, "stale supervisor cleanup released the maintenance-owned lock")
+    try #require(lockStayedHeldAfterStaleCleanup, "stale supervisor cleanup released the maintenance-owned lock")
 
     let replacement = try await ownership.makeSupervisor(
         configuration: ProcessSupervisorConfiguration(children: []),
         during: transition
     )
     let adoptedReplacement = await ownership.adopt(replacement, during: transition)
-    try verify(adoptedReplacement, "startup owner refused the replacement supervisor")
+    try #require(adoptedReplacement, "startup owner refused the replacement supervisor")
     let replacementStop = try await ownership.stopReplacementForMaintenance(during: transition)
-    try verify(
+    try #require(
         replacementStop.engineDrainAcknowledgement == .noLiveEngine,
         "an unstarted replacement reported a live engine drain")
     let replacementStopKeptLock: Bool
@@ -381,7 +382,7 @@ private func runStartupOwnershipMaintenancePauseTest() async throws {
     } catch RuntimePathsError.alreadyRunning {
         replacementStopKeptLock = true
     }
-    try verify(
+    try #require(
         replacementStopKeptLock,
         "stopping a replacement during restore released the retained installation lock")
 
@@ -405,7 +406,7 @@ private func runStartupOwnershipMaintenancePauseTest() async throws {
     _ = await competingQuit.value
     let releasedLock = try paths.acquireInstallationLock()
     releasedLock.release()
-    try verify(
+    try #require(
         lockRemainedHeldWhileQuitWaited,
         "competing Stop/Quit released the stable lock during restore maintenance")
 }
@@ -448,7 +449,7 @@ private func runStartupOwnershipMaintenanceFailureUnblocksStopTest() async throw
 
     await operationGate.release()
     let activationFailed = await activation.value
-    try verify(activationFailed, "maintenance returned an unexpected activation result")
+    try #require(activationFailed, "maintenance returned an unexpected activation result")
     try await Task.sleep(for: .milliseconds(100))
     let stopWasUnblocked = await stopCompleted.isComplete()
     if !stopWasUnblocked, let transition = await transitionBox.value() {
@@ -457,7 +458,7 @@ private func runStartupOwnershipMaintenanceFailureUnblocksStopTest() async throw
     }
     await stopJoinSignal.release()
     _ = await stopTask.value
-    try verify(stopWasUnblocked, "failed activation left a waiting Stop suspended")
+    try #require(stopWasUnblocked, "failed activation left a waiting Stop suspended")
 
     let reacquired = try paths.acquireInstallationLock()
     reacquired.release()
@@ -482,10 +483,10 @@ func runStartupOwnershipPreparationReservationTest() async throws {
                 return "prepared-candidate"
             },
             operation: { prepared, transition in
-                try verify(
+                try #require(
                     prepared == "prepared-candidate",
                     "maintenance did not carry the prepared candidate into the transition")
-                try verify(
+                try #require(
                     transition.stopReport.engineDrainAcknowledgement == .noLiveEngine,
                     "empty maintenance owner reported a live engine drain")
                 return "activated"
@@ -504,13 +505,13 @@ func runStartupOwnershipPreparationReservationTest() async throws {
     } catch RuntimePathsError.alreadyRunning {
         lockStayedHeldDuringPreparation = true
     }
-    try verify(
+    try #require(
         lockStayedHeldDuringPreparation,
         "Stop released the installation lock during restore candidate preparation")
 
     await preparationGate.release()
     let result = try await activation.value
-    try verify(result == "activated", "reserved maintenance did not finish after Stop joined")
+    try #require(result == "activated", "reserved maintenance did not finish after Stop joined")
     _ = await stopTask.value
     let releasedLock = try paths.acquireInstallationLock()
     releasedLock.release()
@@ -561,7 +562,7 @@ private func runStartupOwnershipConcurrentStopJoinsTest() async throws {
     }
     let startupToken = try await ownership.beginStartupAttempt()
     let acceptedSupervisor = await ownership.adopt(supervisor, for: startupToken)
-    try verify(acceptedSupervisor, "startup owner refused its runtime supervisor")
+    try #require(acceptedSupervisor, "startup owner refused its runtime supervisor")
 
     let startupCatchCleanup = Task { await ownership.stop() }
     await stopRequester.waitUntilRequested()
@@ -593,14 +594,14 @@ private func runStartupOwnershipConcurrentStopJoinsTest() async throws {
     let releasedLock = try paths.acquireInstallationLock()
     releasedLock.release()
 
-    try verify(lockStillHeld, "startup cleanup released its installation lock before the held supervisor stop completed")
-    try verify(
+    try #require(lockStillHeld, "startup cleanup released its installation lock before the held supervisor stop completed")
+    try #require(
         startupReport.engineDrainAcknowledgement == .unconfirmed,
         "startup catch lost the supervisor's unconfirmed drain report")
-    try verify(
+    try #require(
         stopOrQuitReport == startupReport,
         "concurrent Stop/Quit returned before startup cleanup and lost its actual stop report")
-    try verify(!remainingEngine, "startup cleanup left its owned engine running")
+    try #require(!remainingEngine, "startup cleanup left its owned engine running")
 }
 
 private actor HeldFailingGracefulEngineStopRequester: GracefulEngineStopRequesting {
@@ -769,7 +770,7 @@ func runEngineClientProcessTests() async throws {
             for try await commandID in group { received.append(commandID) }
             return received
         }
-        try verify(Set(results) == Set(["sim-a", "sim-b", "sim-c"]), "concurrent IPC responses were matched to the wrong request IDs")
+        try #require(Set(results) == Set(["sim-a", "sim-b", "sim-c"]), "concurrent IPC responses were matched to the wrong request IDs")
         await supervisor.stop()
     } catch {
         await supervisor.stop()
@@ -830,21 +831,21 @@ func runEngineActionsBackupRestoreTests() async throws {
     do {
         let destination = URL(filePath: "/tmp/native-backup.zip")
         let manifest = try await actions.createBackup(destination: destination)
-        try verify(
+        try #require(
             manifest.installationID == destination.path,
             "native backup action did not send the selected destination")
         let archive = URL(filePath: "/tmp/native-restore.zip")
         let preview = try await actions.previewRestore(archive: archive)
-        try verify(
+        try #require(
             preview.installationID == archive.path && !preview.matchesInstallation,
             "native restore action lost the selected archive or identity warning")
-        try verify(preview.stagingID == "restore-test", "native restore action lost isolated staging state")
+        try #require(preview.stagingID == "restore-test", "native restore action lost isolated staging state")
         let candidate = try await actions.prepareRestoreCandidate(stagingID: preview.stagingID)
-        try verify(
+        try #require(
             candidate == "00000000-0000-4000-8000-000000000001",
             "native restore candidate action lost the candidate identity")
         let pendingRestore = try await actions.restoreCandidateStatus()
-        try verify(
+        try #require(
             pendingRestore?.candidateID == candidate && pendingRestore?.candidateValid == true,
             "native restore recovery status lost durable candidate state")
         try await actions.abortRestoreCandidate(candidateID: candidate)
@@ -855,7 +856,7 @@ func runEngineActionsBackupRestoreTests() async throws {
                     accountID: "acct-a", environment: .paper, key: "test-key", secret: "test-secret"
                 )
             ])
-        try verify(
+        try #require(
             checked.eligible && checked.completionToken != nil && checked.blockers.isEmpty,
             "native restore preflight action lost eligibility or completion token")
         guard let completionToken = checked.completionToken else {
@@ -920,7 +921,7 @@ func runEngineActionsRestartTests() async throws {
         while (try? String(contentsOf: counter, encoding: .utf8)) != "2" && ContinuousClock().now < deadline {
             try await Task.sleep(for: .milliseconds(50))
         }
-        try verify((try? String(contentsOf: counter, encoding: .utf8)) == "2", "engine did not restart for action test")
+        try #require((try? String(contentsOf: counter, encoding: .utf8)) == "2", "engine did not restart for action test")
         var recoveredStatus: EngineStatus?
         while ContinuousClock().now < deadline {
             if let status = try? await actions.status(), status.accepted == 2 {
@@ -933,12 +934,12 @@ func runEngineActionsRestartTests() async throws {
             let stderr = await supervisor.stderrTail(for: .engine)
             throw VerificationFailure(description: "model status did not reconnect to engine generation 2: \(stderr)")
         }
-        try verify(status.accepted == 2, "model status used the first engine generation")
+        try #require(status.accepted == 2, "model status used the first engine generation")
         let workflow = try await actions.submitSelfTest(
             SelfTestCommand(
                 commandID: "after-restart", text: "Bought AAPL 1/6 at 200", destinationIDs: ["self-test-a"]
             ))
-        try verify(workflow.commandID == "after-restart", "model action used the first engine generation")
+        try #require(workflow.commandID == "after-restart", "model action used the first engine generation")
         await supervisor.stop()
     } catch {
         await supervisor.stop()
@@ -981,5 +982,5 @@ private func waitForFile(_ url: URL, description: String) async throws {
     while !FileManager.default.fileExists(atPath: url.path), ContinuousClock.now < deadline {
         try await Task.sleep(for: .milliseconds(10))
     }
-    try verify(FileManager.default.fileExists(atPath: url.path), "timed out waiting for \(description)")
+    try #require(FileManager.default.fileExists(atPath: url.path), "timed out waiting for \(description)")
 }
