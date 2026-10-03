@@ -13,6 +13,30 @@ concurrency:
   group: checks-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  # Skips the Swift build on pull requests that change no code, as FastAPI's Test workflow does.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      desktop: ${{ steps.filter.outputs.desktop }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            desktop:
+              - .github/workflows/ci.yml
+              - .swift-format
+              - .swift-version
+              - Makefile
+              - app/**
+              - engine/**
   pre-commit:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -43,6 +67,8 @@ jobs:
           include-hidden-files: true
       - run: uv build --directory engine
   desktop-swift:
+    needs: changes
+    if: needs.changes.outputs.desktop == 'true' || github.event_name != 'pull_request'
     runs-on: macos-26
     timeout-minutes: 40
     steps:
