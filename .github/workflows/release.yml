@@ -4,12 +4,28 @@ on:
   push:
     tags:
       - "v*"
+  # A dry run on pull requests that change how a release is built: everything except publishing.
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - .swift-version
+      - Makefile
+      - CHANGELOG.md
+      - app/Package.swift
+      - app/Resources/DMG/**
+      - app/scripts/build_app.py
+      - app/scripts/build_dmg.py
+      - app/scripts/prepare_runtime.py
+      - app/scripts/release.py
+      - app/scripts/release_notes.py
+      - app/scripts/smoke_app.py
+      - app/scripts/verify_bundle.py
 
 permissions: {}
 
 concurrency:
   group: release-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -22,11 +38,21 @@ jobs:
       tag: ${{ steps.metadata.outputs.tag }}
       commit: ${{ steps.metadata.outputs.commit }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # A dry run builds the newest CHANGELOG version, so its notes are checked too.
       - name: Read the version from the tag
         id: metadata
         run: |
           set -euo pipefail
-          tag="$GITHUB_REF_NAME"
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            tag="$GITHUB_REF_NAME"
+          else
+            tag="v$(sed -n 's/^## \([^ ]*\).*/\1/p' CHANGELOG.md | head -n 1)"
+          fi
           version="${tag#v}"
           if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)\.[1-9][0-9]*$ ]]; then
             echo "Tag $tag is not a developer-preview version such as v0.1.0-alpha.1." >&2
@@ -34,14 +60,10 @@ jobs:
           fi
           printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
           printf 'tag=%s\n' "$tag" >> "$GITHUB_OUTPUT"
-          printf 'commit=%s\n' "$GITHUB_SHA" >> "$GITHUB_OUTPUT"
-
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
+          printf 'commit=%s\n' "$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Require a tagged commit on main and an unused release
+        if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.metadata.outputs.tag }}
@@ -75,9 +97,6 @@ jobs:
       - name: Prepare the pinned runtime
         run: '"$UV_PYTHON" app/scripts/prepare_runtime.py --output dist/desktop-runtime/prepared'
 
-      - name: Run the engine, packaging, and Swift checks
-        run: make desktop-check
-
       - name: Build and verify the release assets
         env:
           RELEASE_VERSION: ${{ steps.metadata.outputs.version }}
@@ -104,44 +123,14 @@ jobs:
           ditto -x -k "dist/release-assets/CopyTrading-v${RELEASE_VERSION}-macos-arm64.zip" "$smoke_root"
           "$UV_PYTHON" app/scripts/smoke_app.py --app "$smoke_root/CopyTrading.app"
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: release-assets
-          path: dist/release-assets/*
-          if-no-files-found: error
-          compression-level: 0
-          retention-days: 1
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: release-notes
-          path: dist/release-notes.md
-          if-no-files-found: error
-          retention-days: 1
-
-  publish:
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: release-assets
-          path: dist/release-assets
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: release-notes
-          path: dist
-
       - name: Verify the asset set, checksums, and provenance
         env:
-          RELEASE_VERSION: ${{ needs.build.outputs.version }}
-          RELEASE_TAG: ${{ needs.build.outputs.tag }}
-          SOURCE_COMMIT: ${{ needs.build.outputs.commit }}
+          RELEASE_VERSION: ${{ steps.metadata.outputs.version }}
+          RELEASE_TAG: ${{ steps.metadata.outputs.tag }}
+          SOURCE_COMMIT: ${{ steps.metadata.outputs.commit }}
         run: |
           set -euo pipefail
-          python3 - <<'PY'
+          "$UV_PYTHON" - <<'PY'
           import json
           import os
           import pathlib
@@ -173,6 +162,46 @@ jobs:
           if {asset["name"] for asset in manifest["assets"]} != manifested:
               sys.exit("release manifest asset list does not match the release files")
           PY
+          cd dist/release-assets
+          shasum -a 256 -c SHA256SUMS
+          shasum -a 256 -c "CopyTrading-${RELEASE_VERSION}.dmg.sha256"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-assets
+          path: dist/release-assets/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-notes
+          path: dist/release-notes.md
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-assets
+          path: dist/release-assets
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-notes
+          path: dist
+
+      - name: Verify the downloaded checksums
+        env:
+          RELEASE_VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          set -euo pipefail
           cd dist/release-assets
           shasum -a 256 -c SHA256SUMS
           shasum -a 256 -c "CopyTrading-${RELEASE_VERSION}.dmg.sha256"

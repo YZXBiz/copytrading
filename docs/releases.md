@@ -19,12 +19,16 @@ notarized, so macOS asks for **Open Anyway** on first launch.
    ```
 
 The [Release workflow](../.github/workflows/release.yml) then requires the tag to
-point at a commit on `main` and the release not to exist yet. It runs the engine,
-packaging, Swift, and native contract checks (`make desktop-check`), builds and
-verifies the app and its records (`app/scripts/release.py`), wraps the app in the
-drag-to-install image (`make dmg`), smoke-tests the released app, checks every
-asset against the manifest and checksums, and publishes the prerelease with the
-changelog section as its notes.
+point at a commit on `main`, which already passed CI, and the release not to exist
+yet. It builds and verifies the app and its records (`app/scripts/release.py`),
+wraps the app in the drag-to-install image (`make dmg`), smoke-tests the released
+app, checks every asset against the manifest and checksums, and publishes the
+prerelease with the changelog section as its notes.
+
+Pull requests that change the release scripts, the workflow, the toolchain pin, or
+the changelog run the same workflow as a dry run: it builds the newest changelog
+version and stops before publishing, so a broken release fails on the pull request
+instead of on the tag.
 
 Versions are `MAJOR.MINOR.PATCH-alpha.N`, `beta.N`, or `rc.N`, and the core
 version must match the app bundle and engine metadata.
