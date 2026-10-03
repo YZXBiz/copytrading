@@ -60,8 +60,7 @@ jobs:
       - name: Install Python 3.14 for Apple silicon
         run: |
           uv python install 3.14 --managed-python
-          printf 'UV_PYTHON=%s
-' "$(uv python find cpython-3.14-macos-aarch64-none)" >> "$GITHUB_ENV"
+          printf 'UV_PYTHON=%s\n' "$(uv python find cpython-3.14-macos-aarch64-none)" >> "$GITHUB_ENV"
       - name: Prepare the pinned runtime
         run: '"$UV_PYTHON" app/scripts/prepare_runtime.py --output dist/desktop-runtime/prepared'
       # Builds the app, then runs the strict Swift build, every Swift suite (swift test) against
