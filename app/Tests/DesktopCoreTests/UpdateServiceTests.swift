@@ -3,6 +3,7 @@ import Darwin
 import Foundation
 
 @testable import DesktopCore
+import Testing
 
 private enum UpdateTestFailure: Error {
     case expectedFailure(String)
@@ -242,7 +243,7 @@ func runUpdateServiceTests() async throws {
         _ = try await UpdateService().latestRelease()
         throw UpdateTestFailure.expectedFailure("release lookup must fail closed without the installed schema")
     } catch let error as UpdateServiceError {
-        try verify(
+        try #require(
             error == .operationalSchemaUnavailable,
             "release lookup must not substitute a hardcoded compatibility schema")
     }
@@ -276,14 +277,14 @@ func runUpdateServiceTests() async throws {
         architecture: "arm64"
     )
     let release = try await service.latestRelease()
-    try verify(release.version == "2.4.0", "latest release version must come from the pinned GitHub project")
+    try #require(release.version == "2.4.0", "latest release version must come from the pinned GitHub project")
 
     await transport.setMissing(["latest"])
     do {
         _ = try await service.latestRelease()
         throw UpdateTestFailure.expectedFailure("a repository without releases must say so")
     } catch let error as UpdateServiceError {
-        try verify(
+        try #require(
             error == .noPublishedRelease,
             "a missing release must read as not published, not as an origin violation")
     }
@@ -292,16 +293,16 @@ func runUpdateServiceTests() async throws {
         _ = try await service.latestRelease()
         throw UpdateTestFailure.expectedFailure("a release without its manifest must be rejected")
     } catch let error as UpdateServiceError {
-        try verify(error == .invalidRelease, "a missing manifest makes the release incomplete")
+        try #require(error == .invalidRelease, "a missing manifest makes the release incomplete")
     }
     await transport.setMissing([])
-    try verify(release.notes == "Security and reliability updates.", "release notes must be available to the native System UI")
+    try #require(release.notes == "Security and reliability updates.", "release notes must be available to the native System UI")
     let requests = await transport.requestURLs()
-    try verify(requests.allSatisfy { $0.scheme == "https" }, "release lookup must use HTTPS")
-    try verify(
+    try #require(requests.allSatisfy { $0.scheme == "https" }, "release lookup must use HTTPS")
+    try #require(
         requests.allSatisfy { $0.host == "api.github.com" || $0.host == "github.com" },
         "release lookup must stay on approved GitHub origins")
-    try verify(requests.allSatisfy { $0.query == nil }, "release requests must not include account, activity, or credential parameters")
+    try #require(requests.allSatisfy { $0.query == nil }, "release requests must not include account, activity, or credential parameters")
 
     let temporaryRoot = FileManager.default.temporaryDirectory.appendingPathComponent(
         "update-tests-\(UUID().uuidString)", isDirectory: true)
@@ -309,19 +310,19 @@ func runUpdateServiceTests() async throws {
     defer { try? FileManager.default.removeItem(at: temporaryRoot) }
     let supersededStage = try await service.stage(release, in: temporaryRoot)
     let staged = try await service.stage(release, in: temporaryRoot)
-    try verify(
+    try #require(
         FileManager.default.fileExists(atPath: supersededStage.artifactURL.path)
             && FileManager.default.fileExists(atPath: staged.artifactURL.path),
         "each verified download must have an independent generated staging directory"
     )
     try service.discard(supersededStage, in: temporaryRoot)
-    try verify(
+    try #require(
         !FileManager.default.fileExists(atPath: supersededStage.artifactURL.path)
             && FileManager.default.fileExists(atPath: staged.artifactURL.path),
         "discarding a superseded package must remove only its own generated directory"
     )
-    try verify(FileManager.default.fileExists(atPath: staged.artifactURL.path), "verified update must be staged before any runtime stop")
-    try verify(staged.publisherVerified, "staged update must carry publisher verification evidence")
+    try #require(FileManager.default.fileExists(atPath: staged.artifactURL.path), "verified update must be staged before any runtime stop")
+    try #require(staged.publisherVerified, "staged update must carry publisher verification evidence")
 
     let pendingStage = try await service.stage(release, in: temporaryRoot)
     let pendingMarker = temporaryRoot.appending(path: "pending-update.json")
@@ -331,14 +332,14 @@ func runUpdateServiceTests() async throws {
         try service.discard(pendingStage, in: temporaryRoot)
         preservedPendingStage = false
     } catch {}
-    try verify(
+    try #require(
         preservedPendingStage
             && FileManager.default.fileExists(atPath: pendingStage.artifactURL.path),
         "staged evidence must remain while an update recovery marker is present"
     )
     try FileManager.default.removeItem(at: pendingMarker)
     try service.discard(pendingStage, in: temporaryRoot)
-    try verify(
+    try #require(
         !FileManager.default.fileExists(atPath: pendingStage.artifactURL.path),
         "a staged package may be removed after its update recovery marker is absent"
     )
@@ -363,7 +364,7 @@ func runUpdateServiceTests() async throws {
     let mismatchedFiles = try FileManager.default.contentsOfDirectory(
         atPath: mismatchedVersionDirectory.path
     )
-    try verify(mismatchedFiles.isEmpty, "a mislabeled package must leave no staged artifact")
+    try #require(mismatchedFiles.isEmpty, "a mislabeled package must leave no staged artifact")
 
     let rejectingService = UpdateService(
         transport: transport,
@@ -385,11 +386,11 @@ func runUpdateServiceTests() async throws {
         installer: successfulInstaller
     )
     try await successfulCoordinator.install(staged)
-    try verify(
+    try #require(
         successfulInstaller.launchedReplacement,
         "a successful package install must launch the replacement application executable"
     )
-    try verify(
+    try #require(
         successfulLifecycle.terminated && !successfulLifecycle.started,
         "successful replacement must terminate the old UI instead of restarting its engine"
     )
@@ -408,7 +409,7 @@ func runUpdateServiceTests() async throws {
     } catch {
         rejectedUnsafeCleanup = true
     }
-    try verify(
+    try #require(
         rejectedUnsafeCleanup && FileManager.default.fileExists(atPath: tamperedURL.path),
         "cleanup must reject a package path outside the exact generated staging layout"
     )
@@ -421,9 +422,9 @@ func runUpdateServiceTests() async throws {
         ).install(tampered)
         throw UpdateTestFailure.expectedFailure("a modified staged package must fail before installation")
     } catch let error as UpdateServiceError {
-        try verify(error == .artifactIntegrityFailed, "a staged package change must be rejected by its original manifest hash")
+        try #require(error == .artifactIntegrityFailed, "a staged package change must be rejected by its original manifest hash")
     }
-    try verify(
+    try #require(
         !tamperedLifecycle.stopped && !tamperedInstaller.installed && !tamperedInstaller.launchedReplacement,
         "tampering must be rejected before runtime stop, installation, or replacement launch"
     )
@@ -460,7 +461,7 @@ func runUpdateServiceTests() async throws {
         _ = try await noTrust.stage(release, in: temporaryRoot)
         throw UpdateTestFailure.expectedFailure("local install must fail without a configured Developer ID publisher identity")
     } catch let error as UpdateServiceError {
-        try verify(error == .publisherIdentityUnavailable, "missing trust must name the concrete publisher identity prerequisite")
+        try #require(error == .publisherIdentityUnavailable, "missing trust must name the concrete publisher identity prerequisite")
     }
 
     let cancellingTransport = UpdateFixtureTransport(releaseData: releaseData, manifestData: manifestData, artifactData: artifact)
@@ -481,7 +482,7 @@ func runUpdateServiceTests() async throws {
         throw UpdateTestFailure.expectedFailure("cancelled downloads must not become staged updates")
     } catch is CancellationError {}
     let cancelledFiles = try FileManager.default.contentsOfDirectory(atPath: cancelledDirectory.path)
-    try verify(cancelledFiles.isEmpty, "cancelled download must remove partial staging files")
+    try #require(cancelledFiles.isEmpty, "cancelled download must remove partial staging files")
 
     let lifecycle = UpdateFixtureLifecycle()
     let installer = UpdateFixtureInstaller()
@@ -491,12 +492,12 @@ func runUpdateServiceTests() async throws {
         try await coordinator.install(staged)
         throw UpdateTestFailure.expectedFailure("restart failure must fail the update transition")
     } catch let error as UpdateInstallError {
-        try verify(error == .rolledBack, "failed restart must expose successful rollback state")
+        try #require(error == .rolledBack, "failed restart must expose successful rollback state")
     }
-    try verify(
+    try #require(
         lifecycle.stopped && lifecycle.started && !lifecycle.terminated,
         "replacement launch failure restarts the old runtime without terminating the current UI")
-    try verify(
+    try #require(
         installer.installed == false && installer.rolledBack,
         "replacement launch failure must restore the known-good bundle")
 
@@ -519,12 +520,12 @@ private func runUpdateStartupRecoveryTests() async throws {
         startRuntime: { await delayedReady.next() },
         terminateCurrentApplication: { await terminated.terminate() }
     )
-    try verify(
+    try #require(
         recovered && recoveredInstaller.confirmedStartup && !recoveredInstaller.hasRecovery,
         "a replacement is confirmed only after its runtime reports ready and then clears durable recovery evidence"
     )
     let healthyLeftTerminated = await terminated.terminated
-    try verify(
+    try #require(
         !healthyLeftTerminated,
         "a healthy replacement remains open after lock handoff"
     )
@@ -544,9 +545,9 @@ private func runUpdateStartupRecoveryTests() async throws {
         )
         throw UpdateTestFailure.expectedFailure("a replacement must not be called healthy from launcher acceptance alone")
     } catch let error as UpdateInstallError {
-        try verify(error == .handoffTimedOut, "owner-lock handoff must use a bounded retry window")
+        try #require(error == .handoffTimedOut, "owner-lock handoff must use a bounded retry window")
     }
-    try verify(
+    try #require(
         timedOutInstaller.hasRecovery && !timedOutInstaller.confirmedStartup && !timedOutInstaller.rolledBack,
         "handoff timeout keeps the update marker and backup for the next launch"
     )
@@ -565,7 +566,7 @@ private func runUpdateStartupRecoveryTests() async throws {
         terminateCurrentApplication: { await failedTermination.terminate() }
     )
     let failedInstanceTerminated = await failedTermination.terminated
-    try verify(
+    try #require(
         failureWasRecovered && failedInstaller.relaunchedRestoredApplication && failedInstanceTerminated,
         "failed replacement startup relaunches the restored application before terminating the failed instance"
     )
@@ -601,7 +602,7 @@ private func runMacOSUpdateInstallerTests(staged: StagedUpdate, updateRoot: URL)
         try await tamperedInstaller.verify(tamperedStaged)
     }
     let tamperedProcessCalls = await tamperedProcessRunner.calls()
-    try verify(
+    try #require(
         tamperedProcessCalls.isEmpty,
         "tampered bytes must not reach any system install or launch process"
     )
@@ -635,9 +636,9 @@ private func runMacOSUpdateInstallerTests(staged: StagedUpdate, updateRoot: URL)
         )
     }
     let pendingAfterInstall = try await installer.hasPendingRecovery()
-    try verify(pendingAfterInstall, "a replaced app must retain rollback evidence until the new runtime is healthy")
+    try #require(pendingAfterInstall, "a replaced app must retain rollback evidence until the new runtime is healthy")
     let matchesPendingVersion = try await installer.currentApplicationMatchesPendingVersion()
-    try verify(
+    try #require(
         matchesPendingVersion,
         "the installed bundle version must match the release that was staged"
     )
@@ -645,16 +646,16 @@ private func runMacOSUpdateInstallerTests(staged: StagedUpdate, updateRoot: URL)
         atPath: applicationBundleURL.deletingLastPathComponent().path
     )
     let replacementSiblingName = siblingNames.first(where: { $0.contains("copytrading-update-replacement-") })
-    try verify(
+    try #require(
         FileManager.default.fileExists(atPath: applicationBundleURL.path),
         "atomic bundle exchange must keep the normal app launch path present")
-    try verify(
+    try #require(
         replacementSiblingName != nil,
         "the previous application must remain beside the selected bundle until startup health is confirmed")
     if let replacementSiblingName {
         let previousBundle = applicationBundleURL.deletingLastPathComponent()
             .appending(path: replacementSiblingName, directoryHint: .isDirectory)
-        try verify(
+        try #require(
             updateApplicationVersion(at: previousBundle) == "2.3.0",
             "the durable sibling path must hold the previous app until new runtime readiness"
         )
@@ -662,12 +663,12 @@ private func runMacOSUpdateInstallerTests(staged: StagedUpdate, updateRoot: URL)
     try await installer.launchReplacementApplication()
 
     let calls = await processRunner.calls()
-    try verify(
+    try #require(
         !calls.contains(where: { ["/usr/sbin/installer", "/bin/rm"].contains($0.0) }),
         "bundle replacement must not require a privileged system installer or delete-before-copy rollback"
     )
     let initialLaunchRequests = await launcher.requests()
-    try verify(
+    try #require(
         initialLaunchRequests.map(\.1) == [true],
         "replacement launch must create a fresh app instance that waits for the old installation lock"
     )
@@ -681,20 +682,20 @@ private func runMacOSUpdateInstallerTests(staged: StagedUpdate, updateRoot: URL)
         applicationLauncher: launcher
     )
     let pendingAfterRestart = try await restartedInstaller.hasPendingRecovery()
-    try verify(pendingAfterRestart, "pending update recovery must survive installer object/process replacement")
+    try #require(pendingAfterRestart, "pending update recovery must survive installer object/process replacement")
     try await restartedInstaller.relaunchRestoredApplication()
     let pendingAfterRollback = try await restartedInstaller.hasPendingRecovery()
-    try verify(!pendingAfterRollback, "successful rollback must clear its durable recovery marker")
-    try verify(
+    try #require(!pendingAfterRollback, "successful rollback must clear its durable recovery marker")
+    try #require(
         FileManager.default.fileExists(atPath: staged.artifactURL.path),
         "rollback must retain the staged package so the operator can retry"
     )
-    try verify(
+    try #require(
         updateApplicationVersion(at: applicationBundleURL) == "2.3.0",
         "startup recovery must restore the previous application bundle"
     )
     let launchRequestsAfterRollback = await launcher.requests()
-    try verify(
+    try #require(
         launchRequestsAfterRollback.map(\.1) == [true, false],
         "recovery must launch the restored bundle without another update lock handoff"
     )
@@ -721,14 +722,14 @@ private func runMacOSUpdateInstallerTests(staged: StagedUpdate, updateRoot: URL)
         ).install(staged)
         throw UpdateTestFailure.expectedFailure("an injected atomic exchange failure must roll back")
     } catch let error as UpdateInstallError {
-        try verify(error == .rolledBack, "the durable marker must recover an interrupted atomic replacement")
+        try #require(error == .rolledBack, "the durable marker must recover an interrupted atomic replacement")
     }
-    try verify(
+    try #require(
         updateApplicationVersion(at: interruptedBundleURL) == "2.3.0",
         "failed replacement must keep the old bundle launchable at its original path"
     )
     let interruptedMarkerRemains = try await interruptedInstaller.hasPendingRecovery()
-    try verify(
+    try #require(
         !interruptedMarkerRemains && interruptedLifecycle.started,
         "successful interrupted-install recovery clears its marker and restarts the existing runtime"
     )
@@ -753,14 +754,14 @@ private func runMacOSUpdateInstallerTests(staged: StagedUpdate, updateRoot: URL)
         ).install(staged)
         throw UpdateTestFailure.expectedFailure("a partial app copy must fail before bundle exchange")
     } catch let error as UpdateInstallError {
-        try verify(error == .rolledBack, "an old app plus incomplete staged sibling must recover safely")
+        try #require(error == .rolledBack, "an old app plus incomplete staged sibling must recover safely")
     }
-    try verify(
+    try #require(
         updateApplicationVersion(at: partialBundleURL) == "2.3.0",
         "a partial candidate copy must leave the old app available at its normal launch path"
     )
     let partialMarkerRemains = try await partialInstaller.hasPendingRecovery()
-    try verify(
+    try #require(
         !partialMarkerRemains,
         "recovering an incomplete candidate copy must clear the update marker"
     )
@@ -797,18 +798,18 @@ private func runMacOSUpdateInstallerTests(staged: StagedUpdate, updateRoot: URL)
         applicationLauncher: UpdateFixtureApplicationLauncher()
     )
     try await confirmedInstaller.install(confirmationStage)
-    try verify(
+    try #require(
         FileManager.default.fileExists(atPath: confirmationArtifactURL.path),
         "the staged package must remain available while the replacement is awaiting readiness"
     )
     try await confirmedInstaller.confirmSuccessfulStartup()
     let confirmedRecoveryRemains = try await confirmedInstaller.hasPendingRecovery()
-    try verify(
+    try #require(
         !confirmedRecoveryRemains
             && !FileManager.default.fileExists(atPath: confirmationArtifactURL.path),
         "successful startup confirmation must clear recovery evidence and its consumed package"
     )
-    try verify(
+    try #require(
         FileManager.default.fileExists(atPath: staged.artifactURL.path)
             && FileManager.default.fileExists(atPath: unrelatedFile.path),
         "consumed-package cleanup must preserve unrelated and retryable staged data"
@@ -839,11 +840,11 @@ private func verifyRealPackageExpansionUsesAbsentDestination() async throws {
             packageURL.path,
         ]
     )
-    try verify(build.status == 0, "pkgbuild must create the disposable package fixture")
+    try #require(build.status == 0, "pkgbuild must create the disposable package fixture")
 
     let workspace = try PackageExpansionWorkspace.create()
     defer { workspace.cleanup() }
-    try verify(
+    try #require(
         !FileManager.default.fileExists(atPath: workspace.expandedPackageURL.path),
         "pkgutil expansion must receive an absent destination path"
     )
@@ -855,7 +856,7 @@ private func verifyRealPackageExpansionUsesAbsentDestination() async throws {
         in: workspace.expandedPackageURL,
         expectedVersion: "2.4.0"
     )
-    try verify(
+    try #require(
         product.lastPathComponent == "CopyTrading.app",
         "the real pkgutil output must contain the uniquely identified app product"
     )
@@ -937,7 +938,7 @@ private func verifyUpdateError(
     do {
         try await operation()
     } catch let error as UpdateServiceError {
-        try verify(error == expected, message)
+        try #require(error == expected, Comment(rawValue: message))
         return
     }
     throw VerificationFailure(description: message)

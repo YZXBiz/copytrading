@@ -1,5 +1,6 @@
 import DesktopCore
 import Foundation
+import Testing
 
 func runRuntimePathsTests() throws {
     let root = FileManager.default.temporaryDirectory
@@ -16,18 +17,18 @@ func runRuntimePathsTests() throws {
         "COPYTRADING_RUNTIME_ROOT": paths.runtimeRoot.path,
         "COPYTRADING_ENGINE_ROOT": paths.engineSourceRoot.path,
     ])
-    try verify(
+    try #require(
         paths.databaseURL.lastPathComponent == "application.db",
         "native runtime paths must identify the operational SQLite database")
-    try verify(
+    try #require(
         discovered.applicationSupportDirectory == root.appending(path: "Probe", directoryHint: .isDirectory),
         "explicit local probe state should stay outside the user's installation directory"
     )
     let firstID = try paths.installationIdentity()
     let secondID = try paths.installationIdentity()
-    try verify(firstID == secondID, "installation identity changed across reads")
-    try verify(UUID(uuidString: firstID) != nil, "installation identity was not a UUID")
-    try verify(
+    try #require(firstID == secondID, "installation identity changed across reads")
+    try #require(UUID(uuidString: firstID) != nil, "installation identity was not a UUID")
+    try #require(
         FileManager.default.fileExists(atPath: paths.applicationSupportDirectory.path),
         "private application support directory was not created"
     )
@@ -51,7 +52,7 @@ func runRuntimePathsTests() throws {
         [.posixPermissions: NSNumber(value: 0o600)],
         ofItemAtPath: paths.installationIdentityURL.path)
     let restoredID = try paths.installationIdentity()
-    try verify(restoredID == firstID, "the unreadable ID was replaced")
+    try #require(restoredID == firstID, "the unreadable ID was replaced")
 
     let lock = try paths.acquireInstallationLock()
     try verifyThrows(
@@ -79,7 +80,7 @@ func runRuntimePathsTests() throws {
         foreign.waitUntilExit()
     }
     try paths.rejectOrphanedEngine()
-    try verify(foreign.isRunning, "another installation's engine must keep running")
+    try #require(foreign.isRunning, "another installation's engine must keep running")
 
     // A live engine may still be draining trading work: it blocks startup instead.
     let staleEngine = Process()
@@ -96,7 +97,7 @@ func runRuntimePathsTests() throws {
         matching: { $0 as? RuntimePathsError == .staleRuntimeChild },
         "a live engine in this installation must block startup"
     )
-    try verify(staleEngine.isRunning, "a live engine must never be killed")
+    try #require(staleEngine.isRunning, "a live engine must never be killed")
     staleEngine.terminate()
     staleEngine.waitUntilExit()
     try paths.rejectOrphanedEngine()

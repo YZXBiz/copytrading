@@ -1,5 +1,6 @@
 import DesktopCore
 import Foundation
+import Testing
 
 func runTradingConfigurationPersistenceTests() throws {
     try failedFileCommitKeepsPriorPair()
@@ -17,14 +18,14 @@ private func olderVersionIsDiscardedNotMigrated() throws {
     let secrets = MemorySecretRevisions()
     let store = TradingConfigurationStore(url: file, secrets: secrets)
     let discardedMissing = try store.discardOlderVersion()
-    try verify(!discardedMissing, "a missing setup file was reported as discarded")
+    try #require(!discardedMissing, "a missing setup file was reported as discarded")
     let current = try tradingConfiguration(model: "current")
     try store.save(
         configuration: current, revision: fakeEngineRevision(current), secrets: tradingCredentials(token: "current"), when: .paused)
     let discardedCurrent = try store.discardOlderVersion()
     let currentLoaded = try store.load()
-    try verify(!discardedCurrent, "a current setup was discarded")
-    try verify(currentLoaded != nil, "a current setup stopped loading")
+    try #require(!discardedCurrent, "a current setup was discarded")
+    try #require(currentLoaded != nil, "a current setup stopped loading")
 
     let saved = try JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any] ?? [:]
     var older = saved
@@ -36,15 +37,15 @@ private func olderVersionIsDiscardedNotMigrated() throws {
         throw VerificationFailure(description: "the saved setup had no secret revision")
     }
     let keptSecrets = try secrets.load(revision: secretRevision)
-    try verify(keptSecrets != nil, "the test lost its saved secrets")
+    try #require(keptSecrets != nil, "the test lost its saved secrets")
 
     let discardedOlder = try store.discardOlderVersion()
     let leftoverSecrets = try secrets.load(revision: secretRevision)
     let loadedAfter = try store.load()
-    try verify(discardedOlder, "an older-version setup was kept")
-    try verify(!FileManager.default.fileExists(atPath: file.path), "the older setup file was left behind")
-    try verify(leftoverSecrets == nil, "the older setup's Keychain item was left behind")
-    try verify(loadedAfter == nil, "the app did not start clean after discarding an older setup")
+    try #require(discardedOlder, "an older-version setup was kept")
+    try #require(!FileManager.default.fileExists(atPath: file.path), "the older setup file was left behind")
+    try #require(leftoverSecrets == nil, "the older setup's Keychain item was left behind")
+    try #require(loadedAfter == nil, "the app did not start clean after discarding an older setup")
 }
 
 private func unsupportedVersionRejectsBeforeWrites() throws {

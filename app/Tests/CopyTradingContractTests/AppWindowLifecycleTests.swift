@@ -1,6 +1,7 @@
 import AppKit
 import DesktopCore
 import Foundation
+import Testing
 
 @MainActor
 func runAppWindowLifecycleTests() async throws {
@@ -39,16 +40,16 @@ private func reopenedNativeWindowAuthenticatesItsOwnSession() async throws {
     monitor.attach(to: window)
     try await authenticator.waitForCalls(2)
 
-    try verifyWindow(openedSessions.count == 2, "the native window notification bridge must issue a fresh opening token")
-    try verifyWindow(openedSessions[0] != openedSessions[1], "reopening the same native window must get a new session token")
-    try verifyWindow(closedSessions == [openedSessions[0]], "willClose must call AppModel.windowDidClose for the closing token")
+    try #require(openedSessions.count == 2, "the native window notification bridge must issue a fresh opening token")
+    try #require(openedSessions[0] != openedSessions[1], "reopening the same native window must get a new session token")
+    try #require(closedSessions == [openedSessions[0]], "willClose must call AppModel.windowDidClose for the closing token")
 
     await authenticator.fail(at: 0, with: AppUnlockError.authenticationCancelled)
-    try verifyWindow(!model.isTradingUnlocked, "the closed window's cancelled prompt must not unlock anything")
+    try #require(!model.isTradingUnlocked, "the closed window's cancelled prompt must not unlock anything")
     await authenticator.complete(at: 0)
     try await waitUntil("reopened window authorization") { model.isTradingUnlocked }
     let authorized = await unlock.isUnlocked()
-    try verifyWindow(authorized, "the reopened window's owner session must be authorized")
+    try #require(authorized, "the reopened window's owner session must be authorized")
 }
 
 @MainActor
@@ -68,9 +69,9 @@ private func staleRetryFailureCannotChangeReopenedWindowUI() async throws {
 
     await authenticator.fail(at: 0, with: AppUnlockError.authenticationUnavailable)
     await staleRetry.value
-    try verifyWindow(model.isUnlockingTrading, "a stale retry must not clear the reopened window's in-flight state")
-    try verifyWindow(!model.isTradingUnlocked, "a stale retry must not change the reopened window authorization state")
-    try verifyWindow(model.accessMessage == nil, "a stale retry must not publish an error into the reopened window")
+    try #require(model.isUnlockingTrading, "a stale retry must not clear the reopened window's in-flight state")
+    try #require(!model.isTradingUnlocked, "a stale retry must not change the reopened window authorization state")
+    try #require(model.accessMessage == nil, "a stale retry must not publish an error into the reopened window")
 
     await authenticator.complete(at: 0)
     try await waitUntil("reopened window authorization after stale retry") { model.isTradingUnlocked }
@@ -83,9 +84,9 @@ private func verifyStopReportMessageExplainsUnconfirmedDrain() throws {
         forciblyStoppedChildren: [.engine]
     )
     let message = AppModel.stopMessage(for: report)
-    try verifyWindow(message.contains("did not confirm its graceful drain"), "Stop must identify an unconfirmed engine drain")
-    try verifyWindow(message.contains("Forced termination was required for: engine"), "Stop must disclose a forced owned-process stop")
-    try verifyWindow(message.contains("Broker-accepted orders may remain open"), "Stop must explain broker orders can remain outstanding")
+    try #require(message.contains("did not confirm its graceful drain"), "Stop must identify an unconfirmed engine drain")
+    try #require(message.contains("Forced termination was required for: engine"), "Stop must disclose a forced owned-process stop")
+    try #require(message.contains("Broker-accepted orders may remain open"), "Stop must explain broker orders can remain outstanding")
 }
 
 private actor WindowOwnerAuthenticator: AppOwnerAuthenticator {
@@ -138,10 +139,6 @@ private func waitUntil(
         await Task.yield()
     }
     throw WindowLifecycleTestFailure(description: "timed out waiting for \(description)")
-}
-
-private func verifyWindow(_ condition: Bool, _ message: String) throws {
-    guard condition else { throw WindowLifecycleTestFailure(description: message) }
 }
 
 private struct WindowLifecycleTestFailure: Error, LocalizedError {

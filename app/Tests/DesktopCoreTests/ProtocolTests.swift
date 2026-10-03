@@ -1,5 +1,6 @@
 import Foundation
 @testable import DesktopCore
+import Testing
 
 func runProtocolFixtureTests() throws {
     try checkAccountValuationFixturesDecode()
@@ -11,9 +12,9 @@ func runProtocolFixtureTests() throws {
     guard case .workflow(let workflow) = try completed.successValue() else {
         throw VerificationFailure(description: "completed self-test returned a non-workflow result")
     }
-    try verify(workflow.commandID == "sim-1", "completed workflow command ID changed")
-    try verify(workflow.outcomes.count == 2, "completed workflow lost a destination outcome")
-    try verify(
+    try #require(workflow.commandID == "sim-1", "completed workflow command ID changed")
+    try #require(workflow.outcomes.count == 2, "completed workflow lost a destination outcome")
+    try #require(
         workflow.outcomes.allSatisfy { $0.result == .simulated },
         "workflow outcomes must remain explicitly simulated"
     )
@@ -25,8 +26,8 @@ func runProtocolFixtureTests() throws {
     guard case .workflow(let failedWorkflow) = try failed.successValue() else {
         throw VerificationFailure(description: "failed self-test returned a non-workflow result")
     }
-    try verify(failedWorkflow.stage == .failed, "failed self-test was not decoded as failed")
-    try verify(failedWorkflow.outcomes.isEmpty, "failed self-test must not invent outcomes")
+    try #require(failedWorkflow.stage == .failed, "failed self-test was not decoded as failed")
+    try #require(failedWorkflow.outcomes.isEmpty, "failed self-test must not invent outcomes")
 
     let statusResponse = try JSONDecoder().decode(
         EngineResponse.self,
@@ -35,14 +36,14 @@ func runProtocolFixtureTests() throws {
     guard case .status(let status) = try statusResponse.successValue() else {
         throw VerificationFailure(description: "status fixture returned a non-status result")
     }
-    try verify(status.instanceID == "installation-1", "status installation identity changed")
-    try verify(status.state == .running, "engine running state did not decode")
-    try verify(status.telemetryState == .degraded, "degraded telemetry state did not decode")
-    try verify(status.telemetryDropped == 2, "telemetry drop count did not decode")
-    try verify(
+    try #require(status.instanceID == "installation-1", "status installation identity changed")
+    try #require(status.state == .running, "engine running state did not decode")
+    try #require(status.telemetryState == .degraded, "degraded telemetry state did not decode")
+    try #require(status.telemetryDropped == 2, "telemetry drop count did not decode")
+    try #require(
         status.telemetryErrorCode == "queue_full",
         "typed journal error did not decode")
-    try verify(
+    try #require(
         status.diagnosticCapture.sourceEventGaps == 1,
         "diagnostic capture gaps did not decode")
 
@@ -55,7 +56,7 @@ func runProtocolFixtureTests() throws {
     guard case .backup(let manifest) = try backup.successValue() else {
         throw VerificationFailure(description: "backup response returned the wrong result type")
     }
-    try verify(manifest.members.first?.path == "application.db", "backup manifest lost SQLite member")
+    try #require(manifest.members.first?.path == "application.db", "backup manifest lost SQLite member")
 
     let restore = try JSONDecoder().decode(
         EngineResponse.self,
@@ -66,7 +67,7 @@ func runProtocolFixtureTests() throws {
     guard case .restorePreview(let preview) = try restore.successValue() else {
         throw VerificationFailure(description: "restore response returned the wrong result type")
     }
-    try verify(
+    try #require(
         !preview.matchesInstallation && preview.credentialReferences.count == 1,
         "restore preview lost identity or credential-reference requirements")
 
@@ -79,7 +80,7 @@ func runProtocolFixtureTests() throws {
     guard case .restorePreflight(let preflightView) = try preflight.successValue() else {
         throw VerificationFailure(description: "restore preflight response returned the wrong result type")
     }
-    try verify(
+    try #require(
         preflightView.blockers == ["broker_state_mismatch"] && preflightView.completionToken == nil,
         "restore preflight lost a blocker or exposed a completion token on failure")
 
@@ -92,7 +93,7 @@ func runProtocolFixtureTests() throws {
     guard case .restoreCandidateStatus(let pending) = try recovery.successValue() else {
         throw VerificationFailure(description: "restore status response returned the wrong result type")
     }
-    try verify(
+    try #require(
         pending?.candidateID == "00000000-0000-4000-8000-000000000001"
             && pending?.activeGeneration == pending?.previousGeneration,
         "restore status lost its durable rollback evidence")
@@ -106,7 +107,7 @@ func runProtocolFixtureTests() throws {
     guard case .restoreActivated(let activatedID) = try activated.successValue() else {
         throw VerificationFailure(description: "restore completion response returned the wrong result type")
     }
-    try verify(
+    try #require(
         activatedID == "00000000-0000-4000-8000-000000000001",
         "restore completion response lost the candidate identity")
 
@@ -152,21 +153,21 @@ private func checkLotSaleFixtures() throws {
     guard case .lotSalePreview(let preview) = try previewResponse.successValue() else {
         throw VerificationFailure(description: "a lot sale preview did not decode as one")
     }
-    try verify(preview.plan?.lotID == lotID && preview.plan?.type == "market", "a lot sale plan lost its lot or order type")
-    try verify(preview.freshPrice == "26.10" && preview.reasons.isEmpty, "a lot sale preview lost its price or reasons")
+    try #require(preview.plan?.lotID == lotID && preview.plan?.type == "market", "a lot sale plan lost its lot or order type")
+    try #require(preview.freshPrice == "26.10" && preview.reasons.isEmpty, "a lot sale preview lost its price or reasons")
 
     let saleResponse = try JSONDecoder().decode(EngineResponse.self, from: contractFixture("lot-sale-response.json"))
     guard case .lotSale(let sale) = try saleResponse.successValue() else {
         throw VerificationFailure(description: "a lot sale result did not decode as one")
     }
-    try verify(sale.status == "filled" && sale.filledQty == "2", "a lot sale result lost its fill")
-    try verify(sale.sale.lotID == lotID, "a lot sale result lost its lot")
+    try #require(sale.status == "filled" && sale.filledQty == "2", "a lot sale result lost its fill")
+    try #require(sale.sale.lotID == lotID, "a lot sale result lost its lot")
 }
 
 private func verifySameJSON(_ request: EngineRequest, as fixture: String) throws {
     let sent = try JSONSerialization.jsonObject(with: JSONEncoder().encode(request)) as? NSDictionary
     let expected = try JSONSerialization.jsonObject(with: contractFixture(fixture)) as? NSDictionary
-    try verify(sent != nil && sent == expected, "the app's request differs from \(fixture): \(String(describing: sent))")
+    try #require(sent != nil && sent == expected, "the app's request differs from \(fixture): \(String(describing: sent))")
 }
 
 private func checkAccountValuationFixturesDecode() throws {
@@ -176,14 +177,14 @@ private func checkAccountValuationFixturesDecode() throws {
     guard case .accounts(let page) = try accounts.successValue(), let balance = page.items.first?.balance else {
         throw VerificationFailure(description: "account overview lost its balance")
     }
-    try verify(balance.equity == "25412.80", "equity changed while decoding")
-    try verify(balance.dayChangeUSD == "412.80", "day change changed while decoding")
-    try verify(balance.observedAt == "2026-09-26T14:59:58Z", "balance time changed while decoding")
+    try #require(balance.equity == "25412.80", "equity changed while decoding")
+    try #require(balance.dayChangeUSD == "412.80", "day change changed while decoding")
+    try #require(balance.observedAt == "2026-09-26T14:59:58Z", "balance time changed while decoding")
     guard let lot = page.items.first?.positions.first?.lots.first else {
         throw VerificationFailure(description: "account overview lost its position's lots")
     }
-    try verify(lot.sourceID == "discord:demo:1", "a lot lost the post that bought it")
-    try verify(lot.remainingQty == "2" && lot.averagePrice == "25.10", "a lot's shares or price changed while decoding")
+    try #require(lot.sourceID == "discord:demo:1", "a lot lost the post that bought it")
+    try #require(lot.remainingQty == "2" && lot.averagePrice == "25.10", "a lot's shares or price changed while decoding")
 
     let activity = try JSONDecoder().decode(
         EngineResponse.self, from: contractFixture("manual-source-activity-response.json")
@@ -193,8 +194,8 @@ private func checkAccountValuationFixturesDecode() throws {
     else {
         throw VerificationFailure(description: "source activity lost its orders")
     }
-    try verify(order.averageFillPrice == "12.30", "average fill price did not decode")
-    try verify(order.limitPrice == "12.34", "limit price did not decode")
+    try #require(order.averageFillPrice == "12.30", "average fill price did not decode")
+    try #require(order.limitPrice == "12.34", "limit price did not decode")
 
     let history = try JSONDecoder().decode(
         EngineResponse.self, from: contractFixture("equity-history-response.json")
@@ -202,11 +203,11 @@ private func checkAccountValuationFixturesDecode() throws {
     guard case .equityHistory(let accountID, let curve?) = try history.successValue() else {
         throw VerificationFailure(description: "equity history did not decode")
     }
-    try verify(
+    try #require(
         accountID == "paper" && curve.window == EquityHistoryWindow(range: .day, day: "2026-09-26"),
         "equity history identity changed"
     )
-    try verify(curve.points.count == 4 && curve.points.last?.equity == "25412.8", "equity points changed")
+    try #require(curve.points.count == 4 && curve.points.last?.equity == "25412.8", "equity points changed")
 
     let request = try JSONEncoder().encode(
         EngineRequest(
@@ -215,9 +216,9 @@ private func checkAccountValuationFixturesDecode() throws {
         )
     )
     let object = try JSONSerialization.jsonObject(with: request) as? [String: Any]
-    try verify(object?["operation"] as? String == "get_equity_history", "history operation name changed")
+    try #require(object?["operation"] as? String == "get_equity_history", "history operation name changed")
     let window = object?["window"] as? [String: Any]
-    try verify(
+    try #require(
         window?["range"] as? String == "three_months" && window?["day"] == nil,
         "history window did not encode"
     )

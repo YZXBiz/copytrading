@@ -1,5 +1,6 @@
 import DesktopCore
 import Foundation
+import Testing
 
 func runRestoreActivationCoordinatorTests() async throws {
     try await testRestoreActivationCompletesAfterLostReply()
@@ -35,26 +36,26 @@ private func testRestoreActivationCompletesAfterLostReply() async throws {
     )
 
     let selected = try fixture.stablePaths.resolveActiveGeneration(whileHolding: fixture.lock)
-    try verify(
+    try #require(
         outcome.candidateID == fixture.candidateID,
         "activation returned a different candidate after a lost completion reply")
-    try verify(
+    try #require(
         outcome.previousGeneration == fixture.previousGeneration,
         "activation lost the original generation after a lost completion reply")
-    try verify(
+    try #require(
         selected.activeGenerationID == fixture.candidateID,
         "activation did not retain the candidate generation after durable completion")
     let gatePresent = try fixture.stablePaths.restoreManualDisabledGateIsPresent()
-    try verify(
+    try #require(
         !gatePresent,
         "lost completion reply left a gate after durable completion")
     let pending = try await fixture.engine.restoreCandidateStatus()
-    try verify(
+    try #require(
         pending == nil,
         "writable candidate restart retained pending restore state")
     let starts = await events.starts
     let stops = await events.stops
-    try verify(
+    try #require(
         starts == 2 && stops == 1,
         "lost completion recovery did not stop and restart the candidate once")
     _ = await fixture.ownership.stop()
@@ -85,21 +86,21 @@ private func testRestoreActivationRollsBackBrokerBlocker() async throws {
         )
         throw VerificationFailure(description: "broker blocker unexpectedly activated restore")
     } catch RestoreActivationError.preflightBlocked(let blockers) {
-        try verify(
+        try #require(
             blockers == ["broker_state_mismatch"],
             "preflight blockers were changed before returning to the app")
     }
 
     let selected = try fixture.stablePaths.resolveActiveGeneration(whileHolding: fixture.lock)
-    try verify(
+    try #require(
         selected.activeGenerationID == fixture.previousGeneration,
         "preflight rejection did not restore the original active generation")
     let gatePresent = try fixture.stablePaths.restoreManualDisabledGateIsPresent()
-    try verify(
+    try #require(
         !gatePresent,
         "preflight rollback did not clear the durable gate")
     let pending = try await fixture.engine.restoreCandidateStatus()
-    try verify(
+    try #require(
         pending == nil,
         "preflight rollback left a pending candidate intent")
     _ = await fixture.ownership.stop()
@@ -128,14 +129,14 @@ private func testRestoreRecoveryUsesRecordedPreviousGeneration() async throws {
     )
 
     let selected = try fixture.stablePaths.resolveActiveGeneration(whileHolding: fixture.lock)
-    try verify(
+    try #require(
         outcome.previousGeneration == fixture.previousGeneration,
         "recovery replaced the intent's previous generation with the active candidate")
-    try verify(
+    try #require(
         selected.activeGenerationID == fixture.candidateID,
         "recovered candidate was not kept active after preflight completion")
     let gatePresent = try fixture.stablePaths.restoreManualDisabledGateIsPresent()
-    try verify(
+    try #require(
         !gatePresent,
         "recovered candidate remained gated after successful completion")
     _ = await fixture.ownership.stop()
@@ -162,13 +163,13 @@ private func testRestoreRollbackCanReopenGatedEngine() async throws {
     )
 
     let selected = try fixture.stablePaths.resolveActiveGeneration(whileHolding: fixture.lock)
-    try verify(
+    try #require(
         selected.activeGenerationID == fixture.previousGeneration,
         "recovery could not roll back when the gated engine had not started")
     let gatePresent = try fixture.stablePaths.restoreManualDisabledGateIsPresent()
-    try verify(!gatePresent, "recovery left the stable restore gate after rollback")
+    try #require(!gatePresent, "recovery left the stable restore gate after rollback")
     let pending = try await fixture.engine.restoreCandidateStatus()
-    try verify(pending == nil, "reopened gated engine did not clear its candidate after rollback")
+    try #require(pending == nil, "reopened gated engine did not clear its candidate after rollback")
     _ = await fixture.ownership.stop()
 }
 
@@ -196,18 +197,18 @@ private func testRestoreRollbackCompletesAfterLostAbortReply() async throws {
     let selected = try fixture.stablePaths.resolveActiveGeneration(whileHolding: fixture.lock)
     let gatePresent = try fixture.stablePaths.restoreManualDisabledGateIsPresent()
     let pending = try await fixture.engine.restoreCandidateStatus()
-    try verify(
+    try #require(
         selected.activeGenerationID == fixture.previousGeneration,
         "lost abort reply changed the recovered previous generation")
-    try verify(
+    try #require(
         !gatePresent,
         "lost abort reply left the durable restore gate set")
-    try verify(
+    try #require(
         pending == nil,
         "lost abort reply did not restart a writable previous generation")
     let starts = await events.starts
     let stops = await events.stops
-    try verify(
+    try #require(
         starts == 2 && stops == 2,
         "lost abort reply did not finish the selected previous-generation restart")
     _ = await fixture.ownership.stop()
@@ -237,11 +238,11 @@ private func testRestoreActivationRecoversLostPreparationReply() async throws {
         stopRuntime: fixture.stopper(events)
     )
 
-    try verify(
+    try #require(
         outcome.candidateID == fixture.candidateID,
         "durable candidate was not recovered after preparation response loss")
     let gatePresent = try fixture.stablePaths.restoreManualDisabledGateIsPresent()
-    try verify(!gatePresent, "recovered preparation did not finish the gated transition")
+    try #require(!gatePresent, "recovered preparation did not finish the gated transition")
     _ = await fixture.ownership.stop()
 }
 
@@ -271,16 +272,16 @@ private func testRestoreActivationAbortsWhenPointerSwitchFails() async throws {
         )
         throw VerificationFailure(description: "pointer switch failure unexpectedly activated restore")
     } catch let error as RuntimePathsError {
-        try verify(
+        try #require(
             error == .invalidGeneration,
             "pointer switch failure returned an unexpected error")
     }
     let selected = try fixture.stablePaths.resolveActiveGeneration(whileHolding: fixture.lock)
-    try verify(
+    try #require(
         selected.activeGenerationID == fixture.previousGeneration,
         "failed pointer switch changed the selected generation")
     let gatePresent = try fixture.stablePaths.restoreManualDisabledGateIsPresent()
-    try verify(!gatePresent, "failed pointer switch left a durable gate after safe abort")
+    try #require(!gatePresent, "failed pointer switch left a durable gate after safe abort")
     _ = await fixture.ownership.stop()
 }
 

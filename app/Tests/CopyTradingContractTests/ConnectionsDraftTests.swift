@@ -1,5 +1,6 @@
 import DesktopCore
 import Foundation
+import Testing
 
 @MainActor
 func runConnectionsDraftTests() throws {
@@ -27,7 +28,7 @@ private func statusWordsClassifyAsWholeWords() throws {
         (nil, .inactive),
     ]
     for (code, expected) in cases {
-        try verifyDraft(StatusTone(code: code) == expected, "\(code ?? "nil") classified as \(StatusTone(code: code))")
+        try #require(StatusTone(code: code) == expected, "\(code ?? "nil") classified as \(StatusTone(code: code))")
     }
 }
 
@@ -51,18 +52,18 @@ private func savedConfigurationRoundTripsThroughDraft() throws {
     seed.notificationsEnabled = true
     seed.notificationChatID = "-100"
     let (configuration, _) = try seed.submission()
-    try verifyDraft(configuration.source.channelIDs == ["111", "222"], "channel IDs were not split and trimmed")
-    try verifyDraft(
+    try #require(configuration.source.channelIDs == ["111", "222"], "channel IDs were not split and trimmed")
+    try #require(
         configuration.profiles.first?.playbook == "apple means AAPL\n英伟达 means NVDA",
         "the playbook lost its lines or kept surrounding blank space"
     )
-    try verifyDraft(configuration.routes.first?.connections.first?.defaultFraction == "0.25", "default fraction was dropped")
+    try #require(configuration.routes.first?.connections.first?.defaultFraction == "0.25", "default fraction was dropped")
 
     var reloaded = ConnectionsDraft()
     reloaded.load(configuration)
     let (roundTripped, _) = try reloaded.submission()
-    try verifyDraft(roundTripped == configuration, "loading a saved configuration and resubmitting changed it")
-    try verifyDraft(reloaded.hasLiveAccounts, "live account was not detected")
+    try #require(roundTripped == configuration, "loading a saved configuration and resubmitting changed it")
+    try #require(reloaded.hasLiveAccounts, "live account was not detected")
 }
 
 @MainActor
@@ -75,7 +76,7 @@ private func clearingSecretsRemovesEveryTypedCredential() throws {
     draft.accounts[0].key = "key"
     draft.accounts[0].secret = "secret"
     draft.clearSecrets()
-    try verifyDraft(
+    try #require(
         draft.discordToken.isEmpty && draft.providerAPIKey.isEmpty && draft.notificationToken.isEmpty
             && draft.accounts.allSatisfy { $0.key.isEmpty && $0.secret.isEmpty },
         "clearSecrets left a typed credential in memory"
@@ -87,33 +88,27 @@ private func routesAdoptTheSourceChannel() throws {
     var draft = ConnectionsDraft()
     let following = TradingRouteDraft()
     let pinned = TradingRouteDraft(channelID: "999")
-    try verifyDraft(draft.effectiveChannel(for: following).isEmpty, "a route had a channel before any was entered")
+    try #require(draft.effectiveChannel(for: following).isEmpty, "a route had a channel before any was entered")
     // Typing one character at a time must not freeze a partial ID into the route.
     for prefix in ["1", "11", "111 , 222"] {
         draft.channels = prefix
     }
-    try verifyDraft(draft.effectiveChannel(for: following) == "111", "a route did not follow the first source channel")
-    try verifyDraft(draft.effectiveChannel(for: pinned) == "999", "a route's own channel was overridden")
+    try #require(draft.effectiveChannel(for: following) == "111", "a route did not follow the first source channel")
+    try #require(draft.effectiveChannel(for: pinned) == "999", "a route's own channel was overridden")
 }
 
 @MainActor
 private func humanizedValuesAreReadable() throws {
-    try verifyDraft(Humanize.code("review_required") == "Review required", "snake_case code was not humanized")
-    try verifyDraft(Humanize.code(nil) == "—", "missing code was not shown as a dash")
-    try verifyDraft(Humanize.usd("not-a-number") == "—", "invalid decimal was shown as money")
-    try verifyDraft(Humanize.count(1, "account") == "1 account", "singular count was pluralized")
-    try verifyDraft(Humanize.count(2, "account") == "2 accounts", "plural count was not pluralized")
-    try verifyDraft(Humanize.timestamp("garbage") == "garbage", "unparseable timestamp was not shown raw")
-    try verifyDraft(Humanize.fraction("0.1666666666666666666666666667") == "1/6", "exact sixth did not read as 1/6")
-    try verifyDraft(Humanize.fraction("0.5") == "1/2", "half did not read as 1/2")
-    try verifyDraft(Humanize.fraction("1") == "1", "whole fraction did not read as 1")
-    try verifyDraft(Humanize.fraction("0.1666667") == "0.1667", "rounded decimal was mistaken for an exact fraction")
-    try verifyDraft(Humanize.date("2026-09-28T13:19:05Z") != nil, "ISO timestamp did not parse")
-    try verifyDraft(Humanize.date("2026-09-28T13:19:05.123Z") != nil, "fractional ISO timestamp did not parse")
-}
-
-private func verifyDraft(_ condition: @autoclosure () -> Bool, _ message: String) throws {
-    guard condition() else {
-        throw NSError(domain: "ConnectionsDraftTests", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
-    }
+    try #require(Humanize.code("review_required") == "Review required", "snake_case code was not humanized")
+    try #require(Humanize.code(nil) == "—", "missing code was not shown as a dash")
+    try #require(Humanize.usd("not-a-number") == "—", "invalid decimal was shown as money")
+    try #require(Humanize.count(1, "account") == "1 account", "singular count was pluralized")
+    try #require(Humanize.count(2, "account") == "2 accounts", "plural count was not pluralized")
+    try #require(Humanize.timestamp("garbage") == "garbage", "unparseable timestamp was not shown raw")
+    try #require(Humanize.fraction("0.1666666666666666666666666667") == "1/6", "exact sixth did not read as 1/6")
+    try #require(Humanize.fraction("0.5") == "1/2", "half did not read as 1/2")
+    try #require(Humanize.fraction("1") == "1", "whole fraction did not read as 1")
+    try #require(Humanize.fraction("0.1666667") == "0.1667", "rounded decimal was mistaken for an exact fraction")
+    try #require(Humanize.date("2026-09-28T13:19:05Z") != nil, "ISO timestamp did not parse")
+    try #require(Humanize.date("2026-09-28T13:19:05.123Z") != nil, "fractional ISO timestamp did not parse")
 }

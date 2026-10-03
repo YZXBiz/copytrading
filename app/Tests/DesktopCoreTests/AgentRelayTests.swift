@@ -1,6 +1,7 @@
 import Darwin
 import DesktopCore
 import Foundation
+import Testing
 
 private func shortStateRoot() throws -> URL {
     // Unix socket paths are limited to 104 bytes, so test roots keep short names.
@@ -71,36 +72,36 @@ func runAgentRelayTests() async throws {
 
     var folder = stat()
     var entry = stat()
-    try verify(
+    try #require(
         lstat(socketURL.deletingLastPathComponent().path, &folder) == 0
             && folder.st_mode & 0o777 == 0o700, "the agent folder must be owner-only")
-    try verify(
+    try #require(
         lstat(socketURL.path, &entry) == 0 && entry.st_mode & S_IFMT == S_IFSOCK
             && entry.st_mode & 0o777 == 0o600, "the agent socket must be owner-only")
 
     let answer = try await Task.detached { try exchange(#"{"hello":1}"#, at: socketURL) }.value
-    try verify(answer == #"{"echo":{"hello":1}}"#, "the relay must pass the engine's line back unchanged")
+    try #require(answer == #"{"echo":{"hello":1}}"#, "the relay must pass the engine's line back unchanged")
     let context = recorded.all.first
-    try verify(
+    try #require(
         context?.accessLevel == .readAndPause && context?.unlocked == false,
         "the relay must send the owner's access level and lock state")
-    try verify(
+    try #require(
         context?.callerPID == getpid() && context?.callerPath?.isEmpty == false,
         "the relay must identify the calling process for the audit trail")
 
     let unavailable = try await Task.detached { try exchange("fail", at: socketURL) }.value
     let unavailableCode = try errorCode(of: unavailable)
-    try verify(
+    try #require(
         unavailableCode == "unavailable",
         "an engine failure must become a contract error, not a dropped connection")
 
     let oversized = String(repeating: "x", count: AgentControlSocket.maximumLineBytes + 10)
     let refused = try await Task.detached { try exchange(oversized, at: socketURL) }.value
     let refusedCode = try errorCode(of: refused)
-    try verify(refusedCode == "invalid_request", "oversized lines must be refused")
+    try #require(refusedCode == "invalid_request", "oversized lines must be refused")
 
     relay.stop()
-    try verify(
+    try #require(
         !FileManager.default.fileExists(atPath: socketURL.path),
         "stopping must remove the socket so clients see the app as not running")
 
@@ -126,11 +127,11 @@ private func runAgentSocketLimitTests(root: URL) throws {
     let first = Thread.detachNewThreadWithResult { try? exchange("one", at: socketURL) }
     Thread.sleep(forTimeInterval: 0.3)
     let second = try exchange("two", at: socketURL)
-    try verify(
+    try #require(
         second == #"{"error":{"code":"busy"}}"#,
         "requests beyond the connection cap must be refused as busy")
     gate.open()
-    try verify(first.wait() == "done", "the admitted request must still be answered")
+    try #require(first.wait() == "done", "the admitted request must still be answered")
     busy.stop()
 
     FileManager.default.createFile(atPath: socketURL.path, contents: Data("not a socket".utf8))
@@ -307,27 +308,27 @@ func runAgentControlEngineTests() async throws {
         }
 
         let status = try await cli(["status", "--json"])
-        try verify(
+        try #require(
             status.status == 0 && status.output.contains(#""engine_state":"running""#),
             "the CLI must read engine status through the app relay: exit \(status.status), \(status.output) \(status.errorOutput)")
 
         let resume = try await cli(["accounts", "resume", "nobody"])
-        try verify(resume.status == 6, "the engine must refuse to propose for an unknown account")
+        try #require(resume.status == 6, "the engine must refuse to propose for an unknown account")
 
         lockSwitch.set(unlocked: false)
         let locked = try await cli(["accounts"])
-        try verify(locked.status == 4, "reads must wait for the owner to unlock the app")
+        try #require(locked.status == 4, "reads must wait for the owner to unlock the app")
         let paused = try await cli(["pause", "--json"])
-        try verify(
+        try #require(
             paused.status == 0 && paused.output.contains(#""type":"processing""#),
             "pausing must work even while the app is locked")
 
         let discarded = try await actions.discardProposals()
-        try verify(discarded == 0, "locking with nothing waiting must discard nothing")
+        try #require(discarded == 0, "locking with nothing waiting must discard nothing")
 
         relay.stop()
         let stopped = try await cli(["status"])
-        try verify(stopped.status == 3, "a stopped relay must read as not running")
+        try #require(stopped.status == 3, "a stopped relay must read as not running")
         await supervisor.stop()
     } catch {
         relay.stop()

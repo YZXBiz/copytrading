@@ -1,5 +1,6 @@
 import DesktopCore
 import Foundation
+import Testing
 
 @MainActor
 func runAssistantModelTests() async throws {
@@ -16,14 +17,6 @@ func runAssistantModelTests() async throws {
     try await resettingNeedsNoEngine()
     try interpreterResolutionPrefersTheSavedConfiguration()
     print("CopyTradingContractTests: the assistant streams answers by polling, stops, resets on lock, and asks for proposals")
-}
-
-private struct AssistantTestFailure: Error, CustomStringConvertible {
-    let description: String
-}
-
-private func verifyAssistant(_ condition: Bool, _ message: String) throws {
-    guard condition else { throw AssistantTestFailure(description: message) }
 }
 
 /// Plays a scripted answer: each `turn` call returns the next page, and the last page repeats.
@@ -112,24 +105,24 @@ private func anAnswerStreamsIntoTheTranscript() async throws {
     ])
     let assistant = model(fake)
     await assistant.ask("How is it going?", context: context)
-    try verifyAssistant(await waitUntil { !assistant.isAnswering }, "The answer never finished")
-    try verifyAssistant(assistant.messages.count == 2, "An answer is one owner message and one assistant message")
+    try #require(await waitUntil { !assistant.isAnswering }, "The answer never finished")
+    try #require(assistant.messages.count == 2, "An answer is one owner message and one assistant message")
     let owner = assistant.messages[0]
     let answer = assistant.messages[1]
-    try verifyAssistant(owner.author == .owner && owner.text == "How is it going?", "The owner message was not kept")
-    try verifyAssistant(answer.author == .assistant && answer.text == "Hello, world", "The text events were not joined: \(answer.text)")
-    try verifyAssistant(answer.steps == ["Looked at Today"], "The step was not kept")
-    try verifyAssistant(answer.links == [AssistantLink(kind: "guru", id: "alex", title: "Alex")], "The link was not kept")
-    try verifyAssistant(answer.errorText == nil, "A clean answer carried an error")
+    try #require(owner.author == .owner && owner.text == "How is it going?", "The owner message was not kept")
+    try #require(answer.author == .assistant && answer.text == "Hello, world", "The text events were not joined: \(answer.text)")
+    try #require(answer.steps == ["Looked at Today"], "The step was not kept")
+    try #require(answer.links == [AssistantLink(kind: "guru", id: "alex", title: "Alex")], "The link was not kept")
+    try #require(answer.errorText == nil, "A clean answer carried an error")
     let asks = await fake.asks
-    try verifyAssistant(asks.count == 1, "The question was not sent once")
+    try #require(asks.count == 1, "The question was not sent once")
     let parts = asks[0].split(separator: "|").map(String.init)
-    try verifyAssistant(
+    try #require(
         parts[0].range(of: "^c-[0-9a-f]{12}$", options: .regularExpression) != nil
             && parts[1...] == ["How is it going?", "today", "deepseek-flash", "key"],
         "The question did not carry the conversation, context, model, and key: \(asks[0])")
     let afters = await fake.afters
-    try verifyAssistant(
+    try #require(
         afters.first == 0 && afters.contains(1) && afters.contains(3), "Polling did not resume after the last event: \(afters)")
 }
 
@@ -147,8 +140,8 @@ private func wordsBeforeAStepAndWordsAfterItAreSeparateParagraphs() async throws
     ])
     let assistant = model(fake)
     await assistant.ask("What happened?", context: context)
-    try verifyAssistant(await waitUntil { !assistant.isAnswering }, "The answer never finished")
-    try verifyAssistant(
+    try #require(await waitUntil { !assistant.isAnswering }, "The answer never finished")
+    try #require(
         assistant.messages[1].text == "Let me check.\n\nZhao posted twice.",
         "A step did not start a new paragraph: \(assistant.messages[1].text)")
 }
@@ -157,9 +150,9 @@ private func wordsBeforeAStepAndWordsAfterItAreSeparateParagraphs() async throws
 private func focusIsRequestedOnlyWhenThePanelIsAlreadyOpen() throws {
     let assistant = AssistantModel()
     assistant.open()
-    try verifyAssistant(assistant.isOpen && assistant.focusRequest == 0, "Opening the panel needs no focus request")
+    try #require(assistant.isOpen && assistant.focusRequest == 0, "Opening the panel needs no focus request")
     assistant.open()
-    try verifyAssistant(assistant.focusRequest == 1, "A second open did not ask the composer for focus")
+    try #require(assistant.focusRequest == 1, "A second open did not ask the composer for focus")
 }
 
 @MainActor
@@ -169,11 +162,11 @@ private func pollingStopsOnceTheAnswerIsDone() async throws {
     ])
     let assistant = model(fake)
     await assistant.ask("Hi", context: context)
-    try verifyAssistant(await waitUntil { !assistant.isAnswering }, "The answer never finished")
+    try #require(await waitUntil { !assistant.isAnswering }, "The answer never finished")
     let settled = await fake.turnCalls
     try await Task.sleep(for: .milliseconds(600))
     let later = await fake.turnCalls
-    try verifyAssistant(settled == later, "Polling went on after the answer was done: \(settled) then \(later)")
+    try #require(settled == later, "Polling went on after the answer was done: \(settled) then \(later)")
 }
 
 @MainActor
@@ -181,23 +174,23 @@ private func resettingDropsTheConversationAndTellsTheEngine() async throws {
     let fake = FakeAssistant(pages: [page(done: false, [AssistantEvent(seq: 1, kind: .step, text: "Thinking")])])
     let assistant = model(fake)
     await assistant.ask("Anything", context: context)
-    try verifyAssistant(await waitUntil { assistant.messages.last?.steps == ["Thinking"] }, "The answer never started")
-    try verifyAssistant(assistant.isAnswering, "A running answer was not marked as answering")
+    try #require(await waitUntil { assistant.messages.last?.steps == ["Thinking"] }, "The answer never started")
+    try #require(assistant.isAnswering, "A running answer was not marked as answering")
     await assistant.reset()
-    try verifyAssistant(assistant.messages.isEmpty, "Reset kept the transcript")
-    try verifyAssistant(!assistant.isAnswering, "Reset left the assistant answering")
+    try #require(assistant.messages.isEmpty, "Reset kept the transcript")
+    try #require(!assistant.isAnswering, "Reset left the assistant answering")
     let resets = await fake.resets
-    try verifyAssistant(resets == 1, "Reset did not tell the engine")
+    try #require(resets == 1, "Reset did not tell the engine")
     let calls = await fake.turnCalls
     try await Task.sleep(for: .milliseconds(200))
     let later = await fake.turnCalls
-    try verifyAssistant(calls == later, "Polling survived a reset")
-    try verifyAssistant(assistant.messages.isEmpty, "A late page wrote into the cleared transcript")
+    try #require(calls == later, "Polling survived a reset")
+    try #require(assistant.messages.isEmpty, "A late page wrote into the cleared transcript")
     await assistant.ask("Again", context: context)
     let asks = await fake.asks
     let first = asks[0].split(separator: "|")[0]
     let second = asks[1].split(separator: "|")[0]
-    try verifyAssistant(first != second, "A reset did not start a new conversation")
+    try #require(first != second, "A reset did not start a new conversation")
     await assistant.reset()
 }
 
@@ -213,8 +206,8 @@ private func anErrorEventBecomesPlainText() async throws {
     ])
     let assistant = model(fake)
     await assistant.ask("Hi", context: context)
-    try verifyAssistant(await waitUntil { !assistant.isAnswering }, "The failed answer never finished")
-    try verifyAssistant(
+    try #require(await waitUntil { !assistant.isAnswering }, "The failed answer never finished")
+    try #require(
         assistant.messages.last?.errorText == "The model could not be reached.", "The error text did not reach the message")
 }
 
@@ -227,22 +220,22 @@ private func aProposalRefreshesTheApprovalsOnce() async throws {
     var refreshes = 0
     let assistant = model(fake) { refreshes += 1 }
     await assistant.ask("Pause the engine", context: context)
-    try verifyAssistant(await waitUntil { !assistant.isAnswering }, "The answer never finished")
+    try #require(await waitUntil { !assistant.isAnswering }, "The answer never finished")
     try await Task.sleep(for: .milliseconds(100))
-    try verifyAssistant(refreshes == 1, "A proposal refreshed the approvals \(refreshes) times, not once")
-    try verifyAssistant(assistant.messages.last?.proposalIDs == ["p-1"], "The proposal was not kept on the message")
+    try #require(refreshes == 1, "A proposal refreshed the approvals \(refreshes) times, not once")
+    try #require(assistant.messages.last?.proposalIDs == ["p-1"], "The proposal was not kept on the message")
 }
 
 @MainActor
 private func anAnswerNeedsAnUnlockedModel() async throws {
     let fake = FakeAssistant(pages: [page(done: true, [AssistantEvent(seq: 1, kind: .done)])])
     let assistant = model(fake, interpreter: nil)
-    try verifyAssistant(!assistant.hasModel, "A missing model was reported as present")
+    try #require(!assistant.hasModel, "A missing model was reported as present")
     await assistant.ask("Hi", context: context)
     let asks = await fake.asks
-    try verifyAssistant(asks.isEmpty, "A question was sent without a model")
-    try verifyAssistant(!assistant.isAnswering, "A refused question left the assistant answering")
-    try verifyAssistant(assistant.messages.last?.errorText != nil, "A refused question gave no reason")
+    try #require(asks.isEmpty, "A question was sent without a model")
+    try #require(!assistant.isAnswering, "A refused question left the assistant answering")
+    try #require(assistant.messages.last?.errorText != nil, "A refused question gave no reason")
 }
 
 @MainActor
@@ -252,19 +245,19 @@ private func interpreterResolutionPrefersTheSavedConfiguration() throws {
     draft.modelName = "gpt-draft"
     draft.providerAPIKey = "typed-key"
     let drafted = AppModel.assistantInterpreter(saved: nil, draft: draft)
-    try verifyAssistant(
+    try #require(
         drafted?.0.name == .openai && drafted?.0.model == "gpt-draft" && drafted?.1 == "typed-key",
         "A complete draft was not used")
     draft.providerAPIKey = ""
-    try verifyAssistant(AppModel.assistantInterpreter(saved: nil, draft: draft) == nil, "A draft without its key was used")
+    try #require(AppModel.assistantInterpreter(saved: nil, draft: draft) == nil, "A draft without its key was used")
     draft.provider = .openAICompatible
-    try verifyAssistant(
+    try #require(
         AppModel.assistantInterpreter(saved: nil, draft: draft) == nil, "A compatible draft without a base URL was used")
     draft.providerBaseURL = "http://localhost:11434/v1"
     let local = AppModel.assistantInterpreter(saved: nil, draft: draft)
-    try verifyAssistant(local?.0.name == .openAICompatible && local?.1 == "", "A keyless local draft was not used")
+    try #require(local?.0.name == .openAICompatible && local?.1 == "", "A keyless local draft was not used")
     draft.modelName = "  "
-    try verifyAssistant(AppModel.assistantInterpreter(saved: nil, draft: draft) == nil, "A draft without a model was used")
+    try #require(AppModel.assistantInterpreter(saved: nil, draft: draft) == nil, "A draft without a model was used")
 }
 
 @MainActor
@@ -277,10 +270,10 @@ private func resettingWhileTheEngineStartsATurnCancelsThatTurn() async throws {
     await assistant.reset()
     await asking.value
     let cancelled = await waitForCancel(fake)
-    try verifyAssistant(cancelled == ["t-1"], "A turn started during a reset was left running: \(cancelled)")
-    try verifyAssistant(assistant.messages.isEmpty && !assistant.isAnswering, "The late turn came back into the transcript")
+    try #require(cancelled == ["t-1"], "A turn started during a reset was left running: \(cancelled)")
+    try #require(assistant.messages.isEmpty && !assistant.isAnswering, "The late turn came back into the transcript")
     let calls = await fake.turnCalls
-    try verifyAssistant(calls == 0, "A turn cancelled before it was read was polled anyway")
+    try #require(calls == 0, "A turn cancelled before it was read was polled anyway")
 }
 
 private func waitForCancel(_ fake: FakeAssistant) async -> [String] {
@@ -307,12 +300,12 @@ private func aResetDuringAProposalRefreshEndsTheOldPage() async throws {
     }
     box.model = assistant
     await assistant.ask("First", context: context)
-    try verifyAssistant(await waitUntil { box.refreshed && !assistant.isAnswering }, "The second question never finished")
+    try #require(await waitUntil { box.refreshed && !assistant.isAnswering }, "The second question never finished")
     try await Task.sleep(for: .milliseconds(100))
-    try verifyAssistant(assistant.messages.count == 2, "The new conversation has the wrong messages: \(assistant.messages.count)")
-    try verifyAssistant(
+    try #require(assistant.messages.count == 2, "The new conversation has the wrong messages: \(assistant.messages.count)")
+    try #require(
         assistant.messages.last?.text == "", "An event from the old page landed in the new message: \(assistant.messages.last?.text ?? "")")
-    try verifyAssistant(assistant.messages.last?.proposalIDs == [], "A proposal from the old page landed in the new message")
+    try #require(assistant.messages.last?.proposalIDs == [], "A proposal from the old page landed in the new message")
 }
 
 @MainActor
@@ -323,12 +316,12 @@ private func resettingNeedsNoEngine() async throws {
     assistant.connect(
         operations: { box.reachable ? fake : nil }, interpreter: { (provider, "key") }, hasModel: { true }, refreshProposals: {})
     await assistant.ask("Anything", context: context)
-    try verifyAssistant(await waitUntil { assistant.messages.last?.steps == ["Thinking"] }, "The answer never started")
+    try #require(await waitUntil { assistant.messages.last?.steps == ["Thinking"] }, "The answer never started")
     box.reachable = false
     await assistant.reset()
-    try verifyAssistant(assistant.messages.isEmpty && !assistant.isAnswering, "A reset with no engine kept the transcript")
+    try #require(assistant.messages.isEmpty && !assistant.isAnswering, "A reset with no engine kept the transcript")
     let resets = await fake.resets
-    try verifyAssistant(resets == 0, "A reset reached an engine that was not there")
+    try #require(resets == 0, "A reset reached an engine that was not there")
 }
 
 @MainActor

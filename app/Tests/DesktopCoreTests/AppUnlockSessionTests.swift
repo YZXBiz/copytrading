@@ -1,6 +1,7 @@
 import DesktopCore
 import Foundation
 import Security
+import Testing
 
 actor ControlledOwnerAuthenticator: AppOwnerAuthenticator {
     private var continuations: [CheckedContinuation<Void, any Error>] = []
@@ -55,7 +56,7 @@ private func failedAndCancelledAuthenticationRemainLocked() async throws {
         // Expected: cancellation leaves protected content locked.
     }
     let lockedAfterCancellation = await unlock.isUnlocked()
-    try verify(!lockedAfterCancellation, "cancellation must leave the owner session locked")
+    try #require(!lockedAfterCancellation, "cancellation must leave the owner session locked")
 
     let failedOpening = Task { try await unlock.openWindow(window) }
     try await waitForAuthenticationCalls(2, from: authenticator)
@@ -67,14 +68,14 @@ private func failedAndCancelledAuthenticationRemainLocked() async throws {
         // Expected: authentication failure is mapped to a fail-closed app error.
     }
     let lockedAfterFailure = await unlock.isUnlocked()
-    try verify(!lockedAfterFailure, "failure must leave the owner session locked")
+    try #require(!lockedAfterFailure, "failure must leave the owner session locked")
 
     let retry = Task { try await unlock.openWindow(window) }
     try await waitForAuthenticationCalls(3, from: authenticator)
     await authenticator.complete()
     try await retry.value
     let unlockedAfterRetry = await unlock.isUnlocked()
-    try verify(unlockedAfterRetry, "a later successful attempt should be able to unlock the same window")
+    try #require(unlockedAfterRetry, "a later successful attempt should be able to unlock the same window")
 }
 
 private enum TestAuthenticationFailure: Error {
@@ -91,13 +92,13 @@ private func duplicateWindowAppearanceSharesOneOwnerAuthentication() async throw
     let navigationRerender = Task { try await unlock.openWindow(window) }
     await Task.yield()
     let calls = await authenticator.callCount()
-    try verify(calls == 1, "duplicate appearance or navigation must reuse the window's owner authentication")
+    try #require(calls == 1, "duplicate appearance or navigation must reuse the window's owner authentication")
 
     await authenticator.complete()
     try await firstAppearance.value
     try await navigationRerender.value
     let authorized = await unlock.isUnlocked()
-    try verify(authorized, "a successful owner authentication should authorize the current window session")
+    try #require(authorized, "a successful owner authentication should authorize the current window session")
 }
 
 private func staleAuthenticationCannotUnlockAReopenedWindow() async throws {
@@ -121,12 +122,12 @@ private func staleAuthenticationCannotUnlockAReopenedWindow() async throws {
         // Expected: the first window's generation was invalidated by close.
     }
     let authorizedAfterStaleCallback = await unlock.isUnlocked()
-    try verify(!authorizedAfterStaleCallback, "a stale callback must not authorize the reopened window")
+    try #require(!authorizedAfterStaleCallback, "a stale callback must not authorize the reopened window")
 
     await authenticator.complete()
     try await reopened.value
     let authorizedAfterCurrentCallback = await unlock.isUnlocked()
-    try verify(authorizedAfterCurrentCallback, "the current window's successful authentication should authorize it")
+    try #require(authorizedAfterCurrentCallback, "the current window's successful authentication should authorize it")
 }
 
 private func closingAnOldWindowDoesNotLockTheNewWindow() async throws {
@@ -148,7 +149,7 @@ private func closingAnOldWindowDoesNotLockTheNewWindow() async throws {
 
     await unlock.closeWindow(firstWindow)
     let remainsAuthorized = await unlock.isUnlocked()
-    try verify(remainsAuthorized, "a delayed close from an old window must not lock the current window")
+    try #require(remainsAuthorized, "a delayed close from an old window must not lock the current window")
 }
 
 func waitForAuthenticationCalls(
@@ -171,7 +172,7 @@ private func openingWithoutTheOwnerCheckStillConfirmsActions() async throws {
     try await unlock.openWindow(window)
     let unlocked = await unlock.isUnlocked()
     let prompts = await authenticator.callCount()
-    try verify(unlocked && prompts == 0, "an owner who turned the check off must open without a prompt")
+    try #require(unlocked && prompts == 0, "an owner who turned the check off must open without a prompt")
 
     let confirming = Task { try await unlock.confirm(localizedReason: "Turn off Touch ID") }
     try await waitForAuthenticationCalls(1, from: authenticator)
@@ -183,7 +184,7 @@ private func openingWithoutTheOwnerCheckStillConfirmsActions() async throws {
     let reopening = Task { try await unlock.openWindow(window) }
     try await waitForAuthenticationCalls(2, from: authenticator)
     let stillLocked = await unlock.isUnlocked()
-    try verify(!stillLocked, "turning the check back on must ask again after a lock")
+    try #require(!stillLocked, "turning the check back on must ask again after a lock")
     await authenticator.complete()
     try await reopening.value
 }
@@ -194,8 +195,8 @@ private func launchPreferencesDefaultToAskingAndRoundTrip() async throws {
         service: "com.copytrading.test.launch.\(UUID().uuidString)"
     )
     defer { store.delete() }
-    try verify(store.load() == LaunchPreferences(), "an absent preference must ask for the owner")
+    try #require(store.load() == LaunchPreferences(), "an absent preference must ask for the owner")
     let chosen = LaunchPreferences(asksForOwner: false, startsCopying: true)
     try store.save(chosen)
-    try verify(store.load() == chosen, "launch preferences did not round-trip through the Keychain")
+    try #require(store.load() == chosen, "launch preferences did not round-trip through the Keychain")
 }

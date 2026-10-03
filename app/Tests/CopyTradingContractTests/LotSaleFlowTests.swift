@@ -1,5 +1,6 @@
 import DesktopCore
 import Foundation
+import Testing
 
 @MainActor
 func runLotSaleFlowTests() async throws {
@@ -68,19 +69,19 @@ private func target(_ environment: TradingEnvironment) throws -> LotSaleTarget {
 private func paperSalesNeedNoTouchIDAndSendTheReviewedPreview() async throws {
     let sales = FakeLotSales()
     let flow = LotSaleFlow(target: try target(.paper))
-    try verifySale(flow.shares == 12, "A sale did not start with the whole lot")
+    try #require(flow.shares == 12, "A sale did not start with the whole lot")
     flow.shares = 5
     await flow.review(using: sales)
     guard case .reviewing(let preview) = flow.phase else { throw saleFailure("Review did not show a preview") }
     let previews = await sales.previews
-    try verifySale(previews.first?.quantity == "5" && previews.first?.lotID == "copy-lot", "Review asked for the wrong shares")
+    try #require(previews.first?.quantity == "5" && previews.first?.lotID == "copy-lot", "Review asked for the wrong shares")
     var asked = false
     await flow.confirm(using: sales) { asked = true }
-    try verifySale(!asked, "A paper sale asked for Touch ID")
+    try #require(!asked, "A paper sale asked for Touch ID")
     guard case .finished(let result) = flow.phase else { throw saleFailure("Confirming did not finish the sale") }
     let confirmations = await sales.confirmations
-    try verifySale(confirmations.first?.previewID == preview.request.previewID, "Sell sent a different preview")
-    try verifySale(result.status == "filled", "The sale result was lost")
+    try #require(confirmations.first?.previewID == preview.request.previewID, "Sell sent a different preview")
+    try #require(result.status == "filled", "The sale result was lost")
 }
 
 @MainActor
@@ -90,12 +91,12 @@ private func liveSalesAskForTouchIDAndSendNothingWithoutIt() async throws {
     await flow.review(using: sales)
     await flow.confirm(using: sales) { throw CancellationError() }
     let refused = await sales.confirmations
-    try verifySale(refused.isEmpty, "A live sale went out without Touch ID")
+    try #require(refused.isEmpty, "A live sale went out without Touch ID")
     guard case .reviewing = flow.phase, flow.problem != nil else { throw saleFailure("A refused Touch ID did not explain itself") }
     var asked = false
     await flow.confirm(using: sales) { asked = true }
     let sent = await sales.confirmations
-    try verifySale(asked && sent.count == 1, "A confirmed live sale did not go out once")
+    try #require(asked && sent.count == 1, "A confirmed live sale did not go out once")
 }
 
 @MainActor
@@ -108,20 +109,16 @@ private func aRetryAfterALostConnectionReusesTheSaleIdentity() async throws {
     guard case .reviewing = flow.phase else { throw saleFailure("A lost connection did not return to the review") }
     await flow.confirm(using: sales) {}
     let confirmations = await sales.confirmations
-    try verifySale(
+    try #require(
         confirmations.count == 2 && confirmations[0].commandID == confirmations[1].commandID,
         "A retry used a new sale identity, so the engine could place the sale twice")
     flow.startOver()
     await flow.review(using: sales)
     await flow.confirm(using: sales) {}
     let afterStartOver = await sales.confirmations
-    try verifySale(afterStartOver.last?.commandID != confirmations[0].commandID, "Starting over kept the old sale identity")
+    try #require(afterStartOver.last?.commandID != confirmations[0].commandID, "Starting over kept the old sale identity")
 }
 
 private func saleFailure(_ message: String) -> NSError {
     NSError(domain: "LotSaleFlowTests", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
-}
-
-private func verifySale(_ condition: @autoclosure () -> Bool, _ message: String) throws {
-    guard condition() else { throw saleFailure(message) }
 }

@@ -1,5 +1,6 @@
 import DesktopCore
 import Foundation
+import Testing
 
 private actor ShutdownBoundary {
     private var invocations = 0
@@ -40,10 +41,10 @@ func runShutdownCoordinatorTests() async throws {
     await quit.value
 
     let joinedInvocationCount = await boundary.invocationCount()
-    try verify(joinedInvocationCount == 1, "Quit must join an in-flight Stop drain instead of duplicating shutdown")
+    try #require(joinedInvocationCount == 1, "Quit must join an in-flight Stop drain instead of duplicating shutdown")
 
     let later = await coordinator.request { await boundary.shutdown() }
     await later.value
     let laterInvocationCount = await boundary.invocationCount()
-    try verify(laterInvocationCount == 2, "a later runtime lifecycle must be allowed to stop independently")
+    try #require(laterInvocationCount == 2, "a later runtime lifecycle must be allowed to stop independently")
 }
