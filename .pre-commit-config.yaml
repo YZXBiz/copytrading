@@ -10,6 +10,7 @@ repos:
       - id: check-yaml
       - id: check-merge-conflict
       - id: end-of-file-fixer
+        exclude: ^\.swift-version$ # swiftly writes it without a newline
       - id: trailing-whitespace
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.16.9 # keep in step with ruff in engine/uv.lock
