@@ -232,6 +232,7 @@ def smoke(app: Path) -> None:
         else:
             raise RuntimeError("relocated app did not start its engine and SQLite")
         print("relocated app launched with private state and its engine")
+        before = _runtime_processes(runtime)
         contender_log = temporary / "second-owner.stderr"
         with contender_log.open("w") as error_stream:
             contender = subprocess.Popen(
@@ -249,11 +250,11 @@ def smoke(app: Path) -> None:
                     time.sleep(0.1)
                 else:
                     raise RuntimeError("second app launch did not report the installation lock")
-                current_children = _runtime_processes(runtime)
-                if len(current_children) != 2:
+                after = _runtime_processes(runtime)
+                if after != before:
                     raise RuntimeError(
-                        "second app launch changed the runtime child count: "
-                        f"before={sorted(owned)}, after={sorted(current_children)}"
+                        "second app launch changed the runtime processes: "
+                        f"before={sorted(before)}, after={sorted(after)}"
                     )
                 print("second app launch rejected duplicate ownership")
             finally:
