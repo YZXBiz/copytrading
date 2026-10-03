@@ -195,9 +195,11 @@ def smoke(app: Path) -> None:
     try:
         relocated = temporary / "Application With Spaces" / app.name
         relocated.parent.mkdir()
-        shutil.copytree(app, relocated, symlinks=True)
-        if verify(relocated):
-            raise RuntimeError("relocated bundle failed validation")
+        # ditto keeps the extended attributes that hold signatures of non-Mach-O code;
+        # shutil.copytree drops them, which breaks the copy's code signature.
+        subprocess.run(["ditto", str(app), str(relocated)], check=True)
+        if problems := verify(relocated):
+            raise RuntimeError("relocated bundle failed validation: " + "; ".join(problems))
         resources = relocated / "Contents/Resources"
         runtime = resources / "Runtime"
         env = os.environ.copy()
