@@ -1,4 +1,3 @@
-import Foundation
 import Testing
 
 /// The DesktopCore checks, run one at a time in this order: several start real processes or
@@ -81,13 +80,7 @@ enum DesktopCoreCheck: String, CaseIterable, Sendable, CustomTestStringConvertib
     try await runManagedRuntimeTests()
 }
 
-/// Starts the real engine and drives the `copytrading` CLI through the app's relay. On GitHub's
-/// macOS runners the CLI cannot reach the relay (it reports the app as not running), though it
-/// passes on a Mac; it is skipped there until that is understood (https://github.com/YZXBiz/copytrading/issues/19).
-@Test(
-    .disabled(
-        if: ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] == "true",
-        "fails only on GitHub's runners: https://github.com/YZXBiz/copytrading/issues/19"))
-@MainActor func agentControlWithTheEngine() async throws {
+/// Starts the real engine and drives the `copytrading` CLI through the app's relay.
+@Test @MainActor func agentControlWithTheEngine() async throws {
     try await runAgentControlEngineTests()
 }
