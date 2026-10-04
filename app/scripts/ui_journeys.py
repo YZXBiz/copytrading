@@ -416,11 +416,12 @@ end tell
         return self.see(f"settings-{page}")
 
     def open_connection(self, kind: str) -> None:
-        """Opens a Connections panel; an empty interpreter asks which provider first. Waits for
-        the panel to finish growing out of its card, since a click mid-way can miss a field."""
-        self.click(f"connections.{kind}")
-        if kind == "interpreter" and self.see().has("connections.choose.anthropic"):
-            self.click("connections.choose.anthropic")
+        """Opens a Connections panel; with no interpreter yet, Anthropic's own row opens one. Waits
+        for the panel to finish growing out of its row, since a click mid-way can miss a field."""
+        if kind == "interpreter" and self.see().has("connections.provider.anthropic"):
+            self.click("connections.provider.anthropic")
+        else:
+            self.click(f"connections.{kind}")
         time.sleep(0.8)
 
     def wait_for(self, text: str, *, timeout: float = 60, name: str | None = None) -> Snapshot:
@@ -925,8 +926,7 @@ def _check_paper_setup(app: AppDriver, setup: dict[str, str], *, name: str) -> S
     app.type(setup["channel"], into="Channel IDs")
     app.type(setup["discord_token"], into="Discord token")
     app.click("connections.done")
-    app.click("connections.interpreter")
-    app.click("connections.choose.deepseek")
+    app.click("connections.provider.deepseek")
     app.type(setup["model"], into="Model")
     app.type(setup["model_key"], into="API key")
     app.click("connections.done")
@@ -1057,34 +1057,30 @@ def _forget_test_keychain(state_root: Path) -> int:
 
 
 def j28_connections_panel(app: AppDriver) -> None:
-    """⊕ offers every connection in one picker; the interpreters are grouped, and a local
-    model asks for an address and no key; an alerts offer closed untouched stays off."""
+    """Every service is a row with Connect; More services lists the rest in place; a local model
+    asks for an address and no key; an alerts panel closed untouched stays off."""
     page = app.open_screen("connections")
-    app.expect(page, "Discord token and channels", "More services", "Setup Tips")
-    app.click("connections.new")
-    picker = app.see("connections-picker")
     app.expect(
-        picker,
-        "Create New",
-        "connections.choose.discord",
-        "connections.choose.interpreter",
-        "Telegram Alerts",
+        page,
+        "Discord token and channels",
+        "connections.provider.anthropic",
+        "connections.provider.deepseek",
+        "connections.provider.ollama",
+        "More services",
+        "Setup Tips",
     )
-    app.click("connections.choose.interpreter")
-    interpreters = app.see("connections-interpreters")
+    app.click("connections.interpreter.more")
+    expanded = app.see("connections-more-services")
     app.expect(
-        interpreters,
-        "Popular",
-        "connections.choose.openai",
-        "connections.choose.deepseek",
-        "Your Own Model",
+        expanded, "connections.provider.openrouter", "connections.provider.groq", "Fewer services"
     )
-    app.click("connections.choose.ollama")
+    app.click("connections.provider.ollama")
+    time.sleep(0.8)
     local = app.see("connections-ollama")
     app.expect(local, "connections.provider", "Base URL", "API key")
     app.click("connections.close")
-    app.click("connections.new")
-    app.click("connections.choose.alerts")
+    app.click("connections.alerts")
+    time.sleep(0.8)
     app.expect(app.see("connections-alerts"), "Chat ID", "Bot token", "Where do I find this?")
     app.click("connections.close")
     closed = app.see("connections-alerts-closed")
@@ -1099,8 +1095,7 @@ def j30_assistant(app: AppDriver) -> None:
     """
     with ScriptedModelServer() as stub:
         app.open_screen("connections")
-        app.click("connections.interpreter")
-        app.click("connections.choose.openai_compatible")
+        app.click("connections.provider.openai_compatible")
         time.sleep(0.8)
         app.expect(app.see("assistant-model-editor"), "connections.provider", "Base URL", "Model")
         app.type(stub.base_url, into="Base URL")

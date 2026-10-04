@@ -11,6 +11,8 @@ struct ConnectionServiceRow: View {
     var tone: StatusTone?
     /// The action's word; nil shows a chevron.
     var action: String?
+    /// Which way the chevron points: a list behind the row, or one that opens and closes in place.
+    var chevron: Chevron = .forward
     let origin: ConnectionPanelOrigin
     let identifier: String
     let perform: () -> Void
@@ -44,7 +46,7 @@ struct ConnectionServiceRow: View {
                     Text(action)
                         .foregroundStyle(Palette.accent)
                 } else {
-                    Image(systemName: "chevron.right")
+                    Image(systemName: chevron.symbol)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Palette.tertiaryInk)
                 }
@@ -59,10 +61,23 @@ struct ConnectionServiceRow: View {
         .onHover { isHovered = $0 }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: isHovered)
         .anchorPreference(key: ConnectionOriginKey.self, value: .bounds) { [origin: $0] }
-        .accessibilityElement(children: .ignore)
+        // The label replaces the row's words; the element stays the button, so it can be pressed.
         .accessibilityLabel([title, detail].compactMap { $0 }.joined(separator: ", "))
         .accessibilityHint(action ?? "")
-        .accessibilityAddTraits(.isButton)
         .accessibilityIdentifier(identifier)
+    }
+}
+
+extension ConnectionServiceRow {
+    enum Chevron {
+        case forward, collapsed, expanded
+
+        var symbol: String {
+            switch self {
+            case .forward: "chevron.right"
+            case .collapsed: "chevron.down"
+            case .expanded: "chevron.up"
+            }
+        }
     }
 }
