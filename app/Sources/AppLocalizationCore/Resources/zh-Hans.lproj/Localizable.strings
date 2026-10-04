@@ -115,7 +115,6 @@
 "Add Instruction" = "添加指令";
 "Add it to Claude Code as an MCP server." = "将其作为 MCP 服务器添加到 Claude Code。";
 "Add Keys…" = "添加密钥…";
-"Add Telegram Alerts" = "添加 Telegram 提醒";
 "Add the channel they post in under Discord in Connections first." = "请先在“连接”的 Discord 部分添加他们发帖的频道。";
 "After" = "之后";
 "Agent Access" = "智能体访问";
@@ -233,7 +232,6 @@
 "Choose Accounts…" = "选择账户…";
 "Choose an interpreter" = "选择 AI 模型";
 "Choose Your" = "选择你的";
-"Choose Your Interpreter" = "选择你的 AI 模型";
 "Claude models" = "Claude 模型";
 "Clear" = "清除";
 "Clear a measurement on the chart" = "清除图表上的测量结果";
@@ -682,7 +680,6 @@
 "Opens the reviewed correction, preview, and confirmation workflow." = "打开已审核更正、预览和确认流程。";
 "Optional for local models" = "本地模型可不填";
 "Optional, comma-separated user IDs" = "可选，以逗号分隔的用户 ID";
-"Optional: a Telegram message for every order and problem" = "可选：每笔订单和问题都通过 Telegram 通知";
 "Order %@" = "订单状态：%@";
 "Order %@ · filled %@" = "订单 %@ · 已成交 %@";
 "Order for %@ %@ was cancelled" = "已取消%@股 %@ 的订单";
@@ -980,7 +977,6 @@
 "The account changed since you reviewed the sale" = "审核卖出后，账户状态已变化";
 "The account could not be reached" = "无法连接此账户";
 "The account is still recovering" = "此账户仍在恢复中";
-"The AI model that reads each post" = "负责解读每条帖子的 AI 模型";
 "The AI model that turns each post into an exact order." = "把每条帖子转换成明确订单的 AI 模型。";
 "The balance appears once copying is on and the broker has been read." = "开始跟单并读取券商账户后，余额才会显示。";
 "The biggest fall from a high to a later low in this window." = "此时间段内从高点到之后低点的最大跌幅。";
@@ -1100,7 +1096,6 @@
 "When CopyTrading Opens" = "打开 CopyTrading 时";
 "Where orders go. Start with an Alpaca paper account: it trades pretend money at real prices." = "订单会发送到此账户。建议先从 Alpaca 模拟账户开始：它用真实价格交易虚拟资金。";
 "Where they post" = "发帖频道";
-"Where your gurus post their calls" = "信号源发布交易信号的频道";
 "Why it needs review" = "需要审核的原因";
 "Why the interpretation is being corrected" = "更正解读的原因";
 "With **Developer Mode** on, right-click the guru's name on one of their posts." = "开启 **开发者模式** 后，右键点击信号源某条帖子中的名称。";
@@ -1116,15 +1111,12 @@
 "You're set up. This page stays here as your guide." = "设置已完成。本页会一直保留，供你参考。";
 "Your account trades" = "账户执行交易";
 "your accounts" = "你的账户";
-"Your Alerts" = "你的提醒";
 "Your daily entry limit was reached" = "已达到每日开仓上限";
 "Your daily loss limit was reached" = "已达到每日亏损上限";
 "Your Data" = "你的数据";
 "Your day in CopyTrading" = "CopyTrading 日常使用";
-"Your Discord Connection" = "你的 Discord 连接";
 "Your exposure limits were reached" = "已达到敞口限制";
 "your gurus" = "你的信号源";
-"Your Interpreter" = "你的 AI 模型";
 "Your interpreter bills you for what it reads. A key takes a minute to make." = "AI 模型会按读取量向你收费。创建 API 密钥只需一分钟。";
 "your model's name" = "你的模型名称";
 "Your Own Model" = "你自己的模型";
@@ -1246,7 +1238,6 @@
 "This post needs your review" = "这条帖子需要你审核";
 "Historical evaluation could not be completed." = "无法完成历史评估。";
 "All remaining owned shares" = "持有的全部剩余股份";
-"Add a Channel" = "添加频道";
 "Choose an Account to Copy Into" = "选择要跟单到的账户";
 "Copy into Another Account" = "跟单到另一个账户";
 "No check results" = "没有检查结果";
@@ -1416,3 +1407,14 @@
 "inside your limits" = "守在限额之内";
 "The traders" = "你选择跟随的";
 "you choose to copy" = "交易者";
+"Alerts" = "提醒";
+"Where your gurus post their calls. CopyTrading reads the channels as you." = "信号源发布交易信号的频道。CopyTrading 以你的身份读取这些频道。";
+"The AI model that reads each post. A service uses your own key and bills you for what it reads; a model on this Mac costs nothing." = "读取每条帖子的 AI 模型。在线服务使用你自己的密钥，并按读取量向你收费；在这台 Mac 上运行的模型不收费。";
+"Optional: a Telegram message for every order and problem." = "可选：每笔订单和问题都通过 Telegram 通知。";
+"Discord token and channels" = "Discord 令牌和频道";
+"Telegram bot" = "Telegram 机器人";
+"Use another service" = "改用其他服务";
+"More services" = "更多服务";
+"%@ API key" = "%@ API 密钥";
+"Connect" = "连接";
+"Edit" = "编辑";

@@ -608,7 +608,7 @@ def j4_every_screen(app: AppDriver) -> None:
         "activity": "Every post, and what came of it",
         "people": "The traders you choose to copy",
         "accounts": "Your accounts, inside your limits",
-        "connections": "Connect Discord",
+        "connections": "Discord token and channels",
         "gettingStarted": "About 10 minutes",
     }
     for screen, title in SCREENS.items():
@@ -1060,7 +1060,7 @@ def j28_connections_panel(app: AppDriver) -> None:
     """⊕ offers every connection in one picker; the interpreters are grouped, and a local
     model asks for an address and no key; an alerts offer closed untouched stays off."""
     page = app.open_screen("connections")
-    app.expect(page, "Your Discord Connection", "Choose Your Interpreter", "Setup Tips")
+    app.expect(page, "Discord token and channels", "More services", "Setup Tips")
     app.click("connections.new")
     picker = app.see("connections-picker")
     app.expect(
@@ -1088,7 +1088,7 @@ def j28_connections_panel(app: AppDriver) -> None:
     app.expect(app.see("connections-alerts"), "Chat ID", "Bot token", "Where do I find this?")
     app.click("connections.close")
     closed = app.see("connections-alerts-closed")
-    app.expect(closed, "Add Telegram Alerts", "connections.idea.channelID", "connections.hideIdeas")
+    app.expect(closed, "Telegram bot", "connections.idea.channelID", "connections.hideIdeas")
 
 
 def j30_assistant(app: AppDriver) -> None:

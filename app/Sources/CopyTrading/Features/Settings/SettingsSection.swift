@@ -5,6 +5,9 @@ import SwiftUI
 struct SettingsSection<Content: View>: View {
     var title: String?
     var subtitle: String?
+    /// How far the hairlines between rows start from the leading edge; rows with an icon start
+    /// them past it.
+    var dividerInset: CGFloat = 14
     @ViewBuilder let content: Content
     @Environment(\.colorSchemeContrast) private var contrast
     @Environment(\.displayScale) private var displayScale
@@ -36,7 +39,7 @@ struct SettingsSection<Content: View>: View {
                                 Rectangle()
                                     .fill(contrast == .increased ? Palette.secondaryInk : Palette.hairline)
                                     .frame(height: 1 / displayScale)
-                                    .padding(.leading, 14)
+                                    .padding(.leading, dividerInset)
                             }
                             row
                         }

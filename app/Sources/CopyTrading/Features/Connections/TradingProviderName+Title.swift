@@ -32,6 +32,14 @@ extension TradingProviderName {
     }
 
     /// One line on what reading posts with it means.
+    /// The service's logo in the app's brand icons; a custom server has none.
+    var brandIcon: String? {
+        switch self {
+        case .openAICompatible: nil
+        default: rawValue
+        }
+    }
+
     @MainActor var tagline: String {
         switch self {
         case .anthropic: L10n.string("Claude models")
