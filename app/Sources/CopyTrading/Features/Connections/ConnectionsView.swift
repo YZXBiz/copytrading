@@ -178,7 +178,9 @@ struct ConnectionsView: View {
     }
 
     private func chooseProvider(_ provider: TradingProviderName) {
+        let previous = model.setupDraft.provider
         model.setupDraft.provider = provider
+        model.setupDraft.suggestModel(after: previous)
         show(.editor(.interpreter))
     }
 
