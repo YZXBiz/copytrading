@@ -1392,3 +1392,6 @@
 "Switch the account switcher at the top left to your **Live** account." = "Switch the account switcher at the top left to your **Live** account.";
 "Anyone with these keys can trade your real money. Set small limits below. New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**." = "Anyone with these keys can trade your real money. Set small limits below. New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**.";
 "Open Alpaca" = "Open Alpaca";
+"start copying into live accounts" = "start copying into live accounts";
+"Copying didn't start. Confirm with Touch ID or your Mac password to copy into live accounts." = "Copying didn't start. Confirm with Touch ID or your Mac password to copy into live accounts.";
+"allow new entries in %@" = "allow new entries in %@";

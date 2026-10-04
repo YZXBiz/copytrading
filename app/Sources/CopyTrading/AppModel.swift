@@ -1412,6 +1412,7 @@ final class AppModel {
             isActivatingTrading = false
             isTradingCommandPending = false
         }
+        guard await confirmLiveStart(pending.configuration) else { return }
         let activationID = UUID().uuidString.lowercased()
         do {
             try tradingConfigurationStore.stageValidatedActivation(
@@ -1536,6 +1537,7 @@ final class AppModel {
             guard let saved = try tradingConfigurationStore.load() else {
                 throw TradingSettingsError.missingCredentials("the saved credentials in Connections")
             }
+            guard await confirmLiveStart(saved.configuration) else { return }
             let validation = try await starter.validateTrading(
                 configuration: saved.configuration, secrets: saved.secrets
             )

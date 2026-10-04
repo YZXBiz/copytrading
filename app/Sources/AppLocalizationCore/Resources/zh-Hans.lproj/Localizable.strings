@@ -1392,3 +1392,6 @@
 "Switch the account switcher at the top left to your **Live** account." = "把左上角的账户切换器切换到你的 **实盘账户**。";
 "Anyone with these keys can trade your real money. Set small limits below. New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**." = "任何拿到这些密钥的人都能用你的真实资金交易。请在下方设置较小的限额。新账户默认关闭开仓，在你于 **账户** 中选择 **启用开仓** 之前不会买入任何股票。";
 "Open Alpaca" = "打开 Alpaca";
+"start copying into live accounts" = "开始跟单到实盘账户";
+"Copying didn't start. Confirm with Touch ID or your Mac password to copy into live accounts." = "跟单未开始。请用 Touch ID 或 Mac 密码确认，才能跟单到实盘账户。";
+"allow new entries in %@" = "允许 %@ 开新仓";

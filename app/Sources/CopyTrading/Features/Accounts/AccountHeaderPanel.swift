@@ -162,9 +162,18 @@ struct AccountHeaderPanel: View {
         model.removeAccount(named: account.accountID)
     }
 
+    /// Turning entries on in a live account lets it buy with real money on its own, so it asks for
+    /// Touch ID first. Pausing never asks.
     private func toggleEntries() {
         let action: AccountControlAction = entriesOff ? .resume : .pause
         Task {
+            if action == .resume, account.environment == .live {
+                do {
+                    try await model.confirmOwner(L10n.string("allow new entries in %@", account.accountID))
+                } catch {
+                    return
+                }
+            }
             await feature.control(accountID: account.accountID, action: action, using: model.accountActions())
         }
     }

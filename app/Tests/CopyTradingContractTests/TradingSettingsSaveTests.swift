@@ -101,6 +101,7 @@ struct TradingSettingsSaveTests {
         try await checkInterruptedSameRevisionActivationRollsBackAfterReopen(configuration: configuration)
         try await checkReadySameRevisionActivationFinalizesAfterStoppedReopen(configuration: configuration)
         try await checkSavedLiveResumeUsesConfirmedActivationPath(configuration: configuration, secrets: credentials)
+        try await checkLiveStartNeedsTheOwnerAndPaperDoesNot(configuration: configuration, secrets: credentials)
         try await checkProfileExampleReviewActionPath()
         try await checkPlaybookLearningUsesSavedKeysAndExplainsFailures(configuration: configuration, secrets: credentials)
         try await checkRejectedValidationDoesNotPersist(configuration: configuration, secrets: credentials)
@@ -563,12 +564,15 @@ struct TradingSettingsSaveTests {
         try store.save(
             configuration: liveConfiguration, revision: fakeEngineRevision(liveConfiguration), secrets: credentials, when: .paused)
         let starter = RecordingTradingStarter()
-        let model = AppModel(tradingConfigurationStore: store, tradingStarter: starter)
+        let owner = OwnerAnswers(confirms: true)
+        let model = AppModel(tradingConfigurationStore: store, tradingStarter: starter, appUnlock: try await unlocked(by: owner))
         model.isTradingUnlocked = true
         model.tradingStatus = try status(.paused)
         model.savedTradingConfiguration = liveConfiguration
 
         await model.confirmLiveProcessing()
+        let confirmations = await owner.confirmations
+        try check(confirmations == 1, "Starting a live account did not ask for Touch ID")
 
         let validatedConfiguration = await starter.validatedConfiguration()
         try check(
@@ -584,6 +588,46 @@ struct TradingSettingsSaveTests {
             model.tradingStatus?.state == .running,
             "Confirmed live resume did not publish the engine status")
         print("CopyTradingContractTests: saved live resume used explicit confirmation and fresh probes")
+    }
+
+    /// Copying into a live account places real orders by itself, so a refused Touch ID stops the
+    /// start before anything is checked or sent; paper never asks.
+    private static func checkLiveStartNeedsTheOwnerAndPaperDoesNot(
+        configuration: TradingConfiguration, secrets credentials: TradingSecrets
+    ) async throws {
+        for environment in [TradingEnvironment.live, .paper] {
+            let directory = FileManager.default.temporaryDirectory.appending(
+                path: "app-model-live-start-owner-\(UUID().uuidString)", directoryHint: .isDirectory
+            )
+            defer { try? FileManager.default.removeItem(at: directory) }
+            var saved = configuration
+            saved.accounts[0].environment = environment
+            let store = TradingConfigurationStore(
+                url: directory.appending(path: "configuration.json"), secrets: TestSecretRevisions()
+            )
+            try store.save(configuration: saved, revision: fakeEngineRevision(saved), secrets: credentials, when: .paused)
+            let starter = RecordingTradingStarter()
+            let owner = OwnerAnswers(confirms: false)
+            let model = AppModel(tradingConfigurationStore: store, tradingStarter: starter, appUnlock: try await unlocked(by: owner))
+            model.isTradingUnlocked = true
+            model.tradingStatus = try status(.paused)
+            model.savedTradingConfiguration = saved
+
+            await model.startTrading()
+
+            let validated = await starter.validatedConfiguration()
+            let confirmations = await owner.confirmations
+            if environment == .live {
+                try check(confirmations == 1, "A live start did not ask for Touch ID")
+                try check(validated == nil, "A live start went ahead after Touch ID was refused")
+                try check(
+                    model.message?.contains("Touch ID") == true, "A refused live start did not say why: \(model.message ?? "nil")")
+            } else {
+                try check(confirmations == 0, "A paper start asked for Touch ID")
+                try check(validated == saved, "A paper start did not go ahead")
+            }
+        }
+        print("CopyTradingContractTests: a live start needs Touch ID and a refusal stops it; paper never asks")
     }
 
     private static func checkPlaybookLearningUsesSavedKeysAndExplainsFailures(
@@ -2734,4 +2778,28 @@ private final class ToggleConfigurationWriter: TradingConfigurationWriter, @unch
         if shouldFail { throw TradingConfigurationStoreError.unavailable }
         try AtomicTradingConfigurationWriter().write(data, to: url)
     }
+}
+
+/// Unlocks the window like the owner did at launch, then answers each later confirmation.
+private actor OwnerAnswers: AppOwnerAuthenticator {
+    private let confirms: Bool
+    private var calls = 0
+    init(confirms: Bool) { self.confirms = confirms }
+
+    /// Confirmations asked for after the window was unlocked.
+    var confirmations: Int { max(calls - 1, 0) }
+
+    func authenticate(localizedReason: String) async throws {
+        calls += 1
+        if calls > 1 && !confirms { throw AppUnlockError.authenticationCancelled }
+    }
+
+    func invalidate() async {}
+}
+
+@MainActor
+private func unlocked(by owner: OwnerAnswers) async throws -> AppUnlock {
+    let unlock = AppUnlock(authenticator: owner)
+    try await unlock.openWindow(UUID())
+    return unlock
 }
