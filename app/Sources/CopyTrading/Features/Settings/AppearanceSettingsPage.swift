@@ -24,7 +24,7 @@ struct AppearanceSettingsPage: View {
             ) {
                 SettingsActionRow(
                     title: "Open Accessibility Settings",
-                    detail: "Clouds hold still, glass turns solid, and edges get stronger."
+                    detail: "Animations hold still, glass turns solid, and edges get stronger."
                 ) {
                     openURL(URL(literal: "x-apple.systempreferences:com.apple.Accessibility-Settings.extension?Display"))
                 }

@@ -50,9 +50,12 @@ struct RouteEditorSheet: View {
                 Section {
                     TextField(L10n.string("Message prefix"), text: $route.prefix, prompt: Text(L10n.string("e.g. %@", "ALERT:")))
                         .accessibilityLabel(L10n.string("Message prefix"))
-                    Picker(L10n.string("Exit fractions apply to"), selection: $route.exitBasis) {
+                    Picker(selection: $route.exitBasis) {
                         Text(L10n.string("Original position")).tag(TradingExitBasis.originalPosition)
                         Text(L10n.string("Remaining position")).tag(TradingExitBasis.remainingPosition)
+                    } label: {
+                        Text(L10n.string("Exit fractions apply to"))
+                        Text(L10n.string(Self.exitBasisHint))
                     }
                 } header: {
                     SetupSectionHeader(title: "Reading their posts", detail: "Learn from Channel fills these in; edit anything.")
@@ -123,6 +126,11 @@ struct RouteEditorSheet: View {
     private func addExample() {
         route.examples.append(TradingProfileExampleDraft())
     }
+
+    private static let exitBasisHint = """
+        When the guru says “sell half”: Original position sells half of the shares first bought. \
+        Remaining position sells half of what's left.
+        """
 
     private func removeExample(_ id: UUID) {
         route.examples.removeAll { $0.id == id }
