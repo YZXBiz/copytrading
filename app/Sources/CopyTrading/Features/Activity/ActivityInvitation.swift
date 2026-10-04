@@ -6,8 +6,8 @@ struct ActivityInvitation: View {
 
     var body: some View {
         InvitationCard(
-            lead: "Every post",
-            emphasis: "lands here",
+            lead: "Every post,",
+            emphasis: "and what came of it",
             message:
                 "Every post from the channels you follow appears here, with what CopyTrading understood and what each account did about it."
         ) {

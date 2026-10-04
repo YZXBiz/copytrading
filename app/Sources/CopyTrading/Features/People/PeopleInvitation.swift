@@ -6,8 +6,8 @@ struct PeopleInvitation: View {
 
     var body: some View {
         InvitationCard(
-            lead: "Who will you",
-            emphasis: "copy?",
+            lead: "The traders",
+            emphasis: "you choose to copy",
             message:
                 "Add the trader you want to follow: the channel they post in, how to read their calls, and how much each account puts into one."
         ) {
