@@ -46,7 +46,6 @@ struct ConnectionsView: View {
                         veil
                             .transition(.opacity)
                         ConnectionPanelContent(page: panel.page, model: model, close: close)
-                            .overlay(alignment: .topTrailing) { closeButton }
                             .transition(
                                 ConnectionPanelTransition(
                                     origin: origins[panel.origin].map { layer[$0] }, layer: layer.size, reduceMotion: reduceMotion))
@@ -226,21 +225,6 @@ struct ConnectionsView: View {
             .contentShape(.rect)
             .onTapGesture(perform: close)
             .accessibilityHidden(true)
-    }
-
-    private var closeButton: some View {
-        Button(L10n.string("Close"), systemImage: "xmark", action: close)
-            .labelStyle(.iconOnly)
-            .buttonStyle(.borderless)
-            .font(.system(size: 12, weight: .semibold))
-            .foregroundStyle(Palette.tertiaryInk)
-            .frame(width: 26, height: 26)
-            .background(Palette.page.opacity(0.6), in: .circle)
-            .padding(14)
-            // While the assistant is open, Esc closes it first.
-            .keyboardShortcut(model.assistant.isOpen ? nil : .cancelAction)
-            .help(L10n.string("Close"))
-            .accessibilityIdentifier("connections.close")
     }
 
     /// Picks an interpreter service from its own row and opens its settings out of that row.

@@ -1,0 +1,1 @@
+../../Sources/CopyTrading/Features/Connections/MarketHoursText.swift

@@ -19,9 +19,10 @@ enum LimitExamples {
         CopyTrading stops buying until tomorrow. When the guru sells, it still sells.
         """
     static let maxAboveSignal = """
-        Set to **1**. The guru buys AAPL at **$200.00**. CopyTrading's buy is a limit order at **$202.00**, \
-        so it never pays more. At **0** the limit is **$200.00** exactly. Outside regular hours, a copied \
-        sell also won't go below **$198.00**.
+        Set to **1**. The guru buys AAPL at **$200.00**; CopyTrading's buy is a limit order at **$202.00**, \
+        so it never pays more (at **0**, exactly $200.00). If the guru later sells at **$210.00** before \
+        9:30 or after 16:00 New York time, when only limit orders are allowed, CopyTrading's sell won't go \
+        below **$207.90**.
         """
     static let entriesPerDay = """
         Set to **5**. After the fifth copied buy today, the next buy calls are skipped until the next \
@@ -33,11 +34,9 @@ enum LimitExamples {
         old to copy*. You can still copy it yourself from **Activity** with **Review and Correct**.
         """
     static let orderTimeout = """
-        Set to **60**. A limit buy at **$200.00** sits unfilled because the price moved to **$201**. After \
-        **60 seconds** CopyTrading cancels it, so it can't fill later at a moment you didn't expect.
-        """
-    static let pollInterval = """
-        Set to **5**. CopyTrading asks Alpaca every **5 seconds** whether orders filled and what the balance \
-        is. Lower is fresher; higher sends fewer requests.
+        Set to **60**. The guru buys NVDA at **$200.00**, so CopyTrading places a buy that only fills at \
+        **$200.00 or less**. The price jumps to **$201** and stays there, so nothing fills. After **60 \
+        seconds** CopyTrading cancels the order, so it can't quietly fill an hour later, when the call is \
+        old.
         """
 }

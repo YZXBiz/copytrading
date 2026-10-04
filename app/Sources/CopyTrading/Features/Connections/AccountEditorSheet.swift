@@ -94,18 +94,18 @@ struct AccountEditorSheet: View {
                         "Order timeout (seconds)", hint: "A limit order that hasn't filled by then is canceled.",
                         value: $account.policy.orderTimeoutSeconds,
                         example: LimitExamples.orderTimeout)
-                    numberLimit(
-                        "Broker poll interval (seconds)", hint: "How often CopyTrading checks the broker for fills and balances.",
-                        value: $account.policy.pollSeconds,
-                        example: LimitExamples.pollInterval)
                 }
 
                 Section {
                     behavior(
-                        "Trade in extended hours", hint: "Also copy calls before 9:30 and after 16:00 New York time, with limit orders.",
+                        "Trade in extended hours",
+                        hint: L10n.string("Also copy calls from 4:00 to 9:30 and 16:00 to 20:00 New York time, with limit orders.")
+                            + MarketHoursText.yourTime([((4, 0), (9, 30)), ((16, 0), (20, 0))]),
                         isOn: $account.policy.extendedHours)
                     behavior(
-                        "Trade overnight", hint: "Also copy calls between 20:00 and 4:00. Needs extended hours on.",
+                        "Trade overnight",
+                        hint: L10n.string("Also copy calls from 20:00 to 4:00 New York time. Needs extended hours on.")
+                            + MarketHoursText.yourTime([((20, 0), (4, 0))]),
                         isOn: $account.policy.overnight)
                     behavior(
                         "Copy exits", hint: "Sell when the guru sells. Off means you sell copied shares yourself.",

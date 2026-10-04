@@ -85,6 +85,7 @@ enum SetupHelp {
     static let telegram = HelpArticle(
         id: "alerts.telegram",
         title: "Get Telegram alerts",
+        intro: "A bot you make messages you for every order and problem.",
         steps: [
             "In Telegram, message **@BotFather**, send **/newbot**, and follow its steps.",
             "Copy the token it gives you into **Bot token**.",
