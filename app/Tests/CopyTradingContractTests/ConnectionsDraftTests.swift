@@ -9,6 +9,7 @@ func runConnectionsDraftTests() throws {
     try routesAdoptTheSourceChannel()
     try humanizedValuesAreReadable()
     try statusWordsClassifyAsWholeWords()
+    try pickingAProviderSuggestsItsModelButKeepsATypedOne()
 }
 
 @MainActor
@@ -111,4 +112,26 @@ private func humanizedValuesAreReadable() throws {
     try #require(Humanize.fraction("0.1666667") == "0.1667", "rounded decimal was mistaken for an exact fraction")
     try #require(Humanize.date("2026-09-28T13:19:05Z") != nil, "ISO timestamp did not parse")
     try #require(Humanize.date("2026-09-28T13:19:05.123Z") != nil, "fractional ISO timestamp did not parse")
+}
+
+/// Only a provider pick fills the Model field, and a name the owner typed survives a switch.
+@MainActor
+private func pickingAProviderSuggestsItsModelButKeepsATypedOne() throws {
+    var draft = ConnectionsDraft()
+    try #require(draft.modelName.isEmpty, "A new draft started with a model, so its interpreter looked set up")
+    let first = draft.provider
+    draft.provider = .deepseek
+    draft.suggestModel(after: first)
+    try #require(draft.modelName == "deepseek-flash", "Picking DeepSeek did not suggest its model")
+    draft.provider = .anthropic
+    draft.suggestModel(after: .deepseek)
+    try #require(draft.modelName == SetupHelp.suggestedModel(for: .anthropic), "The suggestion did not follow a switch")
+    draft.modelName = "my-own-model"
+    draft.provider = .openai
+    draft.suggestModel(after: .anthropic)
+    try #require(draft.modelName == "my-own-model", "A switch replaced a name the owner typed")
+    draft.provider = .openAICompatible
+    draft.modelName = SetupHelp.suggestedModel(for: .openai)
+    draft.suggestModel(after: .openai)
+    try #require(draft.modelName.isEmpty, "A custom service was given a model it may not have")
 }

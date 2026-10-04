@@ -58,12 +58,7 @@ struct ConnectionEditor: View {
             }
             .padding(.horizontal, 4)
         }
-        .onAppear {
-            focused = firstField
-            if kind == .interpreter, model.setupDraft.modelName.trimmed.isEmpty {
-                model.setupDraft.modelName = SetupHelp.prefilledModel(for: model.setupDraft.provider) ?? ""
-            }
-        }
+        .onAppear { focused = firstField }
         .animation(reduceMotion ? nil : .smooth(duration: 0.2), value: model.setupDraft.provider.acceptsBaseURL)
     }
 
@@ -88,12 +83,8 @@ struct ConnectionEditor: View {
             }
         case .interpreter:
             ConnectionProviderRow(provider: $model.setupDraft.provider)
-                .onChange(of: model.setupDraft.provider) { previous, provider in
-                    // A name the owner typed stays; the last provider's suggestion follows the switch.
-                    let current = model.setupDraft.modelName.trimmed
-                    if current.isEmpty || current == SetupHelp.prefilledModel(for: previous) {
-                        model.setupDraft.modelName = SetupHelp.prefilledModel(for: provider) ?? ""
-                    }
+                .onChange(of: model.setupDraft.provider) { previous, _ in
+                    model.setupDraft.suggestModel(after: previous)
                 }
             Divider().padding(.leading, 14)
             row("Model") {
