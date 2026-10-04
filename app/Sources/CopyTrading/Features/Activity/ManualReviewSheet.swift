@@ -109,6 +109,7 @@ struct ManualReviewSheet: View {
                                 .foregroundStyle(.secondary)
                             }
                         }
+                        .compactSwitch()
                         .disabled(correctionRequest != nil)
                     }
                 } header: {
