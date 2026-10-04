@@ -77,7 +77,6 @@
 "A bot messages you for every order and every problem, wherever you are." = "A bot messages you for every order and every problem, wherever you are.";
 "A guru posts" = "A guru posts";
 "A live Alpaca account. Its orders use real money." = "A live Alpaca account. Its orders use real money.";
-"A message on your phone for every order and problem" = "A message on your phone for every order and problem";
 "A model on this Mac, with no key and no bill" = "A model on this Mac, with no key and no bill";
 "A paper account trades pretend money at real prices, so you can watch CopyTrading work before any real order. Live keys come from your live account the same way." = "A paper account trades pretend money at real prices, so you can watch CopyTrading work before any real order. Live keys come from your live account the same way.";
 "A paper Alpaca account: pretend money at real prices." = "A paper Alpaca account: pretend money at real prices.";
@@ -120,7 +119,6 @@
 "Agent Access" = "Agent Access";
 "agent request" = "agent request";
 "agent requests" = "agent requests";
-"AI Interpreter" = "AI Interpreter";
 "Alerts on Your Phone" = "Alerts on Your Phone";
 "All" = "All";
 "All %@" = "All %@";
@@ -231,7 +229,6 @@
 "Choose **Start Copying**. New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**." = "Choose **Start Copying**. New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**.";
 "Choose Accounts…" = "Choose Accounts…";
 "Choose an interpreter" = "Choose an interpreter";
-"Choose Your" = "Choose Your";
 "Claude models" = "Claude models";
 "Clear" = "Clear";
 "Clear a measurement on the chart" = "Clear a measurement on the chart";
@@ -595,7 +592,6 @@
 "New accounts start with **entries off**, so nothing is bought until you choose **Enable Entries** in Accounts. Shares you already hold are never sold by CopyTrading." = "New accounts start with **entries off**, so nothing is bought until you choose **Enable Entries** in Accounts. Shares you already hold are never sold by CopyTrading.";
 "New accounts start with entries off, so nothing is bought until you turn them on. Exits are still copied." = "New accounts start with entries off, so nothing is bought until you turn them on. Exits are still copied.";
 "New accounts start with entries off, so nothing is bought yet. Turn them on in Accounts when you're ready." = "New accounts start with entries off, so nothing is bought yet. Turn them on in Accounts when you're ready.";
-"New Connection" = "New Connection";
 "No" = "No";
 "No account has acted on this post yet." = "No account has acted on this post yet.";
 "No account status is loaded" = "No account status is loaded";
@@ -758,7 +754,6 @@
 "Read Calls From" = "Read Calls From";
 "Read new posts and copy them into your accounts." = "Read new posts and copy them into your accounts.";
 "Read Posts With" = "Read Posts With";
-"Read the channels your gurus post their calls in" = "Read the channels your gurus post their calls in";
 "Read the holdings already in the account" = "Read the holdings already in the account";
 "Read the log again" = "Read the log again";
 "Read the playbook and fix anything that's off. Under **Copies into**, choose how much each account puts into one of their calls." = "Read the playbook and fix anything that's off. Under **Copies into**, choose how much each account puts into one of their calls.";
@@ -969,7 +964,6 @@
 "Taking entries at the open" = "Taking entries at the open";
 "Technical details" = "Technical details";
 "Telegram" = "Telegram";
-"Telegram Alerts" = "Telegram Alerts";
 "Telegram's bot guide" = "Telegram's bot guide";
 "test destination" = "test destination";
 "test destinations" = "test destinations";
@@ -1418,3 +1412,5 @@
 "%@ API key" = "%@ API key";
 "Connect" = "Connect";
 "Edit" = "Edit";
+"Fewer services" = "Fewer services";
+"Switch" = "Switch";

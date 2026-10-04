@@ -1,15 +1,19 @@
 import DesktopCore
 import SwiftUI
 
-/// The outside services CopyTrading talks to: one section per service on the app's chart paper,
-/// each a list of rows with the service's logo and one action, and a frosted panel that grows out
-/// of the row you click. Gurus live in People and broker accounts in Accounts.
+/// The outside services CopyTrading talks to, on the same quiet panel as Settings: one section per
+/// service, each a list of rows with the service's logo and one action, and a frosted panel that
+/// grows out of the row you click. Gurus live in People and broker accounts in Accounts.
 struct ConnectionsView: View {
     @Bindable var model: AppModel
     @State private var panel: ConnectionPanelRoute?
+    /// Every interpreter service, listed in place under the popular ones.
+    @State private var showsAllServices = false
     @AppStorage("connections.ideasHidden") private var ideasHidden = false
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorSchemeContrast) private var contrast
+    @Environment(\.displayScale) private var displayScale
 
     private var motion: Animation? { reduceMotion ? nil : .smooth(duration: 0.42, extraBounce: 0.04) }
 
@@ -30,30 +34,32 @@ struct ConnectionsView: View {
             .padding(.horizontal, 30)
             .padding(.top, 14)
             .padding(.bottom, 44)
-            .frame(maxWidth: 1_080, alignment: .leading)
+            .frame(maxWidth: 880, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
         .scrollEdgeEffectHidden(true, for: .top)
-        .background { ChartPaperBackdrop(focus: UnitPoint(x: 0.75, y: 0.04)) }
+        .background(Palette.panel)
         .overlayPreferenceValue(ConnectionOriginKey.self) { origins in
             GeometryReader { layer in
                 ZStack {
                     if let panel {
                         veil
                             .transition(.opacity)
-                        ConnectionPanelContent(
-                            page: panel.page, model: model, choose: show, chooseProvider: chooseProvider, close: close
-                        )
-                        .overlay(alignment: .topTrailing) { closeButton }
-                        .transition(
-                            ConnectionPanelTransition(
-                                origin: origins[panel.origin].map { layer[$0] }, layer: layer.size, reduceMotion: reduceMotion))
+                        ConnectionPanelContent(page: panel.page, model: model, close: close)
+                            .overlay(alignment: .topTrailing) { closeButton }
+                            .transition(
+                                ConnectionPanelTransition(
+                                    origin: origins[panel.origin].map { layer[$0] }, layer: layer.size, reduceMotion: reduceMotion))
                     }
                 }
                 .frame(width: layer.size.width, height: layer.size.height)
             }
         }
         .clipShape(.rect(cornerRadius: DesignTokens.panelCornerRadius, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: DesignTokens.panelCornerRadius, style: .continuous)
+                .strokeBorder(contrast == .increased ? Palette.secondaryInk : Palette.hairline, lineWidth: 1 / displayScale)
+        }
         .padding([.trailing, .bottom], 8)
         .onChange(of: model.requestedConnection, initial: true) { _, kind in
             guard let kind else { return }
@@ -65,11 +71,6 @@ struct ConnectionsView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            SquareHeaderButton(title: L10n.string("New Connection"), symbol: "plus.circle.fill") {
-                open(.catalog, from: .newConnection)
-            }
-            .anchorPreference(key: ConnectionOriginKey.self, value: .bounds) { [.newConnection: $0] }
-            .accessibilityIdentifier("connections.new")
             Text(L10n.string("Connections"))
                 .font(DesignTokens.pageTitle)
                 .foregroundStyle(Palette.ink)
@@ -105,13 +106,25 @@ struct ConnectionsView: View {
                     if let summary {
                         serviceRow(kind, brand: model.setupDraft.provider.brandIcon, summary: summary, title: summary.title)
                         moreServicesRow(title: L10n.string("Use another service"), detail: nil)
+                        if showsAllServices {
+                            ForEach(otherServices, id: \.self) { provider in
+                                providerRow(provider, title: L10n.string(provider.title), detail: provider.tagline, action: "Switch")
+                            }
+                        }
                     } else {
                         ForEach(ProviderGroup.popular.providers, id: \.self) { provider in
                             providerRow(provider, title: L10n.string("%@ API key", L10n.string(provider.title)), detail: nil)
                         }
+                        if showsAllServices {
+                            ForEach(ProviderGroup.more.providers, id: \.self) { provider in
+                                providerRow(
+                                    provider, title: L10n.string("%@ API key", L10n.string(provider.title)), detail: provider.tagline)
+                            }
+                        }
                         moreServicesRow(
-                            title: L10n.string("More services"),
-                            detail: L10n.string("%@, and more", Humanize.joined(["OpenRouter", "Groq", "xAI", "Mistral"])))
+                            title: L10n.string(showsAllServices ? "Fewer services" : "More services"),
+                            detail: showsAllServices
+                                ? nil : L10n.string("%@, and more", Humanize.joined(["OpenRouter", "Groq", "xAI", "Mistral"])))
                     }
                 }
             }
@@ -141,27 +154,37 @@ struct ConnectionsView: View {
         ) { open(.editor(kind), from: .section(kind)) }
     }
 
-    private func providerRow(_ provider: TradingProviderName, title: String, detail: String?) -> some View {
+    private func providerRow(
+        _ provider: TradingProviderName, title: String, detail: String?, action: String = "Connect"
+    ) -> some View {
         ConnectionServiceRow(
             brand: provider.brandIcon,
             title: title,
             detail: detail,
-            action: L10n.string("Connect"),
+            action: L10n.string(action),
             origin: .provider(provider),
             identifier: "connections.provider.\(provider.rawValue)"
         ) { connect(provider) }
     }
 
-    /// Every interpreter service, in the panel's grouped list.
+    /// Shows or hides every other interpreter service in place, under the ones listed.
     private func moreServicesRow(title: String, detail: String?) -> some View {
         ConnectionServiceRow(
             brand: nil,
             symbol: "square.grid.2x2",
             title: title,
             detail: detail,
+            chevron: showsAllServices ? .expanded : .collapsed,
             origin: .section(.interpreter),
-            identifier: "connections.interpreter\(detail == nil ? ".switch" : "")"
-        ) { open(.interpreters, from: .section(.interpreter)) }
+            identifier: "connections.interpreter.more"
+        ) {
+            withAnimation(motion) { showsAllServices.toggle() }
+        }
+    }
+
+    /// Every interpreter service but the one in use, popular ones first.
+    private var otherServices: [TradingProviderName] {
+        ProviderGroup.allCases.flatMap(\.providers).filter { $0 != model.setupDraft.provider }
     }
 
     /// The page dims to a light veil under an open panel; clicking it closes the panel.
@@ -193,6 +216,7 @@ struct ConnectionsView: View {
         let previous = model.setupDraft.provider
         model.setupDraft.provider = provider
         model.setupDraft.suggestModel(after: previous)
+        showsAllServices = false
         open(.editor(.interpreter), from: .provider(provider))
     }
 
@@ -200,19 +224,6 @@ struct ConnectionsView: View {
         withAnimation(motion) {
             panel = ConnectionPanelRoute(page: page, origin: origin)
         }
-    }
-
-    private func show(_ page: ConnectionPanelPage) {
-        withAnimation(motion) {
-            panel?.page = page
-        }
-    }
-
-    private func chooseProvider(_ provider: TradingProviderName) {
-        let previous = model.setupDraft.provider
-        model.setupDraft.provider = provider
-        model.setupDraft.suggestModel(after: previous)
-        show(.editor(.interpreter))
     }
 
     /// Alerts are on once a chat or a bot token is in, so an offer closed untouched leaves them off.
@@ -233,4 +244,20 @@ struct ConnectionsView: View {
     private func toggleIdeas() {
         withAnimation(motion) { ideasHidden.toggle() }
     }
+}
+
+#Preview("Nothing set up") {
+    ConnectionsView(model: AppModel())
+        .frame(width: 900, height: 820)
+}
+
+#Preview("Set up") {
+    let model = AppModel()
+    model.setupDraft.channels = "1517754775674949742"
+    model.setupDraft.discordToken = "preview"
+    model.setupDraft.provider = .deepseek
+    model.setupDraft.modelName = "deepseek-flash"
+    model.setupDraft.providerAPIKey = "preview"
+    return ConnectionsView(model: model)
+        .frame(width: 900, height: 820)
 }

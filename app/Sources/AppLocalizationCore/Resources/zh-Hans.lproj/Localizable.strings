@@ -77,7 +77,6 @@
 "A bot messages you for every order and every problem, wherever you are." = "无论你身在何处，机器人都会为每笔订单和每个问题给你发消息。";
 "A guru posts" = "信号源发布帖子";
 "A live Alpaca account. Its orders use real money." = "Alpaca 实盘账户，订单会使用真实资金。";
-"A message on your phone for every order and problem" = "每笔订单和每个问题都会发送通知到你的手机。";
 "A model on this Mac, with no key and no bill" = "在这台 Mac 上运行模型，无需密钥或费用";
 "A paper account trades pretend money at real prices, so you can watch CopyTrading work before any real order. Live keys come from your live account the same way." = "模拟账户使用真实价格交易虚拟资金，让你在真实下单前观察 CopyTrading 的运行情况。实盘密钥也按相同方式从实盘账户获取。";
 "A paper Alpaca account: pretend money at real prices." = "Alpaca 模拟账户：以真实价格交易模拟资金。";
@@ -120,7 +119,6 @@
 "Agent Access" = "智能体访问";
 "agent request" = "个智能体请求";
 "agent requests" = "个智能体请求";
-"AI Interpreter" = "AI 解读器";
 "Alerts on Your Phone" = "在手机上接收提醒";
 "All" = "全部";
 "All %@" = "全部%@股";
@@ -231,7 +229,6 @@
 "Choose **Start Copying**. New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**." = "选择 **开始跟单**。新账户默认不开新仓，因此在 **账户** 中选择 **启用开仓** 前不会买入任何股票。";
 "Choose Accounts…" = "选择账户…";
 "Choose an interpreter" = "选择 AI 模型";
-"Choose Your" = "选择你的";
 "Claude models" = "Claude 模型";
 "Clear" = "清除";
 "Clear a measurement on the chart" = "清除图表上的测量结果";
@@ -595,7 +592,6 @@
 "New accounts start with **entries off**, so nothing is bought until you choose **Enable Entries** in Accounts. Shares you already hold are never sold by CopyTrading." = "新账户默认**不开新仓**，你在“账户”中选择**启用开仓**前不会买入任何股票。CopyTrading 永远不会卖出你原本持有的股票。";
 "New accounts start with entries off, so nothing is bought until you turn them on. Exits are still copied." = "新账户默认关闭开仓，因此在你启用前不会买入。平仓操作仍会跟随执行。";
 "New accounts start with entries off, so nothing is bought yet. Turn them on in Accounts when you're ready." = "新账户默认关闭开仓，因此暂不会买入。准备好后，可在“账户”中启用。";
-"New Connection" = "新连接";
 "No" = "否";
 "No account has acted on this post yet." = "尚无账户处理这条帖子。";
 "No account status is loaded" = "尚未加载账户状态";
@@ -758,7 +754,6 @@
 "Read Calls From" = "读取信号来源 ";
 "Read new posts and copy them into your accounts." = "读取新帖子并为你的账户跟单。";
 "Read Posts With" = "解读帖子所用模型 ";
-"Read the channels your gurus post their calls in" = "读取信号源发布信号的频道内容";
 "Read the holdings already in the account" = "已读取账户现有持仓";
 "Read the log again" = "重新读取日志";
 "Read the playbook and fix anything that's off. Under **Copies into**, choose how much each account puts into one of their calls." = "查看交易规则并修正不准确之处。在 **跟单到账户** 下，设置每个账户跟随其信号投入的金额。";
@@ -969,7 +964,6 @@
 "Taking entries at the open" = "开盘时允许开仓";
 "Technical details" = "技术详情";
 "Telegram" = "Telegram";
-"Telegram Alerts" = "Telegram 提醒";
 "Telegram's bot guide" = "Telegram 机器人指南";
 "test destination" = "个测试目标";
 "test destinations" = "个测试目标";
@@ -1418,3 +1412,5 @@
 "%@ API key" = "%@ API 密钥";
 "Connect" = "连接";
 "Edit" = "编辑";
+"Fewer services" = "收起";
+"Switch" = "切换";

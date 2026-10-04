@@ -1,7 +1,7 @@
 import AppKit
 
 @MainActor
-final class AppLifecycleDelegate: NSObject, NSApplicationDelegate {
+public final class AppLifecycleDelegate: NSObject, NSApplicationDelegate {
     weak var model: AppModel? {
         didSet { observeWakeIfNeeded() }
     }
@@ -27,11 +27,15 @@ final class AppLifecycleDelegate: NSObject, NSApplicationDelegate {
         self.wakeObserver = nil
     }
 
-    func applicationDidFinishLaunching(_ notification: Notification) {
+    override public init() {
+        super.init()
+    }
+
+    public func applicationDidFinishLaunching(_ notification: Notification) {
         AppAppearance.saved.apply()
     }
 
-    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+    public func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         stopObservingWake()
         guard let model else { return .terminateNow }
         guard !isTerminating else { return .terminateLater }

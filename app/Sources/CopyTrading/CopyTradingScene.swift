@@ -1,20 +1,22 @@
 import AppLocalizationCore
 import SwiftUI
 
-@main
+/// The app's window and menu bar extra. It lives in the library, with every screen, so the
+/// executable is only an entry point and Xcode can preview the screens.
 @MainActor
-struct CopyTradingApp: App {
-    @NSApplicationDelegateAdaptor(AppLifecycleDelegate.self) private var lifecycle
+public struct CopyTradingScene: Scene {
+    let lifecycle: AppLifecycleDelegate
     @State private var model = AppModel.makeForLaunch()
     @State private var languagePreference = AppLanguagePreference.shared
     /// Accounts and activity are shared by the window and the menu bar; both clear on lock.
     @State private var accountFeature = AccountFeatureModel()
 
-    init() {
+    public init(lifecycle: AppLifecycleDelegate) {
+        self.lifecycle = lifecycle
         TipsSetup.configure()
     }
 
-    var body: some Scene {
+    public var body: some Scene {
         Window("CopyTrading", id: "main") {
             PlatformRootView(model: model, accountFeature: accountFeature)
                 .environment(languagePreference)
