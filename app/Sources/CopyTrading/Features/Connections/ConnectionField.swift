@@ -21,7 +21,12 @@ struct ConnectionField<Field: View>: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .contentShape(.rect)
-        .onTapGesture(perform: focus)
+        // Behind the row, so a click on the field itself reaches the field; a click on the rest of
+        // the row still puts the cursor in it.
+        .background {
+            Color.clear
+                .contentShape(.rect)
+                .onTapGesture(perform: focus)
+        }
     }
 }
