@@ -61,7 +61,7 @@ Restore uses isolated operational generations, manifest/schema checks, a durable
 | Diagnostics | The engine's private log: captures, model requests and replies, trading outcomes, problems |
 | Settings (⌘,) | A page with its own sidebar: General, Appearance, Updates, Engine, Agent Access, Backups, Logs |
 
-Unsaved changes to Connections, People, and Accounts wait in one setup draft; a bar at the bottom of those screens checks it (Check Setup) and starts copying (Start Copying).
+The whole setup is edited in Connections, in five numbered steps (Discord, interpreter, broker accounts, gurus, alerts), and waits there in one draft; People and Accounts show only what is saved. One Start Copying at the foot of Connections checks the draft against every service, then saves it and starts copying.
 
 Toolbar on every screen: Paper or Live, a freshness indicator (press to refresh, ⌘R), Start / Pause Copying, Lock. ⌘1–⌘6 jump between screens.
 The menu bar extra shows today's change and pauses or starts copying.

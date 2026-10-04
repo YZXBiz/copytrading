@@ -76,7 +76,8 @@ struct RouteEditorSheet: View {
                 } footer: {
                     Text(
                         L10n.string(
-                            "Check Setup reads each example with the interpreter. A different reading stops the setup from starting."))
+                            "Start Copying first reads each example with the interpreter. A different reading stops copying from starting.")
+                    )
                 }
 
                 ForEach($route.connections) { $connection in
@@ -89,7 +90,7 @@ struct RouteEditorSheet: View {
                 }
                 Section {
                     if accountIDs.isEmpty {
-                        Text(L10n.string("Add a broker account in Accounts, then choose it here."))
+                        Text(L10n.string("Add a broker account in Connections, then choose it here."))
                             .foregroundStyle(.secondary)
                     } else {
                         Button(

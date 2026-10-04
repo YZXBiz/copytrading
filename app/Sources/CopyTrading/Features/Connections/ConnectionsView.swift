@@ -1,14 +1,18 @@
 import DesktopCore
 import SwiftUI
 
-/// The outside services CopyTrading talks to, on the same quiet panel as Settings: one section per
-/// service, each a list of rows with the service's logo and one action, and a frosted panel that
-/// grows out of the row you click. Gurus live in People and broker accounts in Accounts.
+/// The one place CopyTrading is set up, top to bottom: Discord, the interpreter, broker accounts,
+/// gurus, and alerts, each a numbered step that turns green when it is done, then one Start
+/// Copying. Services open a frosted panel that grows out of their row; accounts and gurus open
+/// their editor. People and Accounts only show what this page set up.
 struct ConnectionsView: View {
     @Bindable var model: AppModel
     @State private var panel: ConnectionPanelRoute?
     /// Every interpreter service, listed in place under the popular ones.
     @State private var showsAllServices = false
+    /// The interpreter as it was before a service's own row was picked, and as picking it left it,
+    /// so a sheet closed without typing anything leaves the interpreter as it was.
+    @State private var beforeConnect: (draft: ConnectionsDraft, picked: Int)?
     @AppStorage("connections.ideasHidden") private var ideasHidden = false
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -22,9 +26,27 @@ struct ConnectionsView: View {
             VStack(alignment: .leading, spacing: 0) {
                 header
                     .padding(.bottom, 30)
-                ForEach(ConnectionKind.allCases) { kind in
-                    section(kind)
+                step(1, .discord) { section(.discord) }
+                step(2, .interpreter) { section(.interpreter) }
+                SetupStepSection(
+                    number: 3, isDone: progress.isDone(.account), title: L10n.string("Broker accounts"),
+                    subtitle: L10n.string("Where orders go. Start with paper: pretend money at real prices.")
+                ) { BrokerAccountsRows(model: model) }
+                .padding(.bottom, 36)
+                SetupStepSection(
+                    number: 4, isDone: progress.isDone(.guru), title: L10n.string("Gurus"),
+                    subtitle: L10n.string("Who you copy, and how much each account puts into one of their calls.")
+                ) { GuruRows(model: model) }
+                .padding(.bottom, 36)
+                SetupStepSection(
+                    number: 5, isDone: model.setupDraft.notificationsEnabled, isOptional: true,
+                    title: ConnectionKind.alerts.title, subtitle: ConnectionKind.alerts.explanation
+                ) { section(.alerts) }
+                .padding(.bottom, 36)
+                if model.hasSetupToStart {
+                    ConnectionsStartCard(model: model)
                         .padding(.bottom, 36)
+                        .transition(.opacity)
                 }
                 if !ideasHidden {
                     ConnectionIdeasSection(provider: model.setupDraft.provider, hide: hideIdeas)
@@ -45,10 +67,12 @@ struct ConnectionsView: View {
                     if let panel {
                         veil
                             .transition(.opacity)
-                        ConnectionPanelContent(page: panel.page, model: model, close: close)
-                            .transition(
-                                ConnectionPanelTransition(
-                                    origin: origins[panel.origin].map { layer[$0] }, layer: layer.size, reduceMotion: reduceMotion))
+                        ConnectionPanelContent(
+                            page: panel.page, model: model, close: close, cancel: cancel, connecting: isEditingFromProviderRow
+                        )
+                        .transition(
+                            ConnectionPanelTransition(
+                                origin: origins[panel.origin].map { layer[$0] }, layer: layer.size, reduceMotion: reduceMotion))
                     }
                 }
                 .frame(width: layer.size.width, height: layer.size.height)
@@ -65,15 +89,24 @@ struct ConnectionsView: View {
             model.requestedConnection = nil
             open(.editor(kind), from: .section(kind))
         }
+        .animation(motion, value: model.hasSetupToStart)
         .navigationTitle(L10n.string("Connections"))
     }
 
+    private var progress: SetupProgress { model.setupProgress }
+
     private var header: some View {
-        HStack(spacing: 12) {
-            Text(L10n.string("Connections"))
-                .font(DesignTokens.pageTitle)
-                .foregroundStyle(Palette.ink)
-                .accessibilityAddTraits(.isHeader)
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L10n.string("Connections"))
+                    .font(DesignTokens.pageTitle)
+                    .foregroundStyle(Palette.ink)
+                    .accessibilityAddTraits(.isHeader)
+                Text(L10n.string("Set up CopyTrading here, top to bottom. Nothing is saved or traded until you start copying."))
+                    .font(.body)
+                    .foregroundStyle(Palette.secondaryInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Spacer(minLength: 12)
             Menu {
                 Button(L10n.string(ideasHidden ? "Show Ideas" : "Hide Ideas"), systemImage: "lightbulb", action: toggleIdeas)
@@ -90,11 +123,20 @@ struct ConnectionsView: View {
         }
     }
 
+    /// A service's step, numbered in setup order.
+    private func step(_ number: Int, _ kind: ConnectionKind, @ViewBuilder rows: () -> some View) -> some View {
+        SetupStepSection(
+            number: number, isDone: progress.isDone(kind == .discord ? .discord : .interpreter), title: kind.title,
+            subtitle: kind.explanation, content: rows
+        )
+        .padding(.bottom, 36)
+    }
+
     @ViewBuilder
     private func section(_ kind: ConnectionKind) -> some View {
         let summary = ConnectionSummary.of(kind, in: model)
         VStack(alignment: .leading, spacing: 10) {
-            SettingsSection(title: kind.title, subtitle: kind.explanation, dividerInset: 56) {
+            SettingsSection(dividerInset: 56) {
                 switch kind {
                 case .discord:
                     serviceRow(
@@ -223,15 +265,16 @@ struct ConnectionsView: View {
         Rectangle()
             .fill(colorScheme == .dark ? Color.black.opacity(0.32) : Color.white.opacity(0.38))
             .contentShape(.rect)
-            .onTapGesture(perform: close)
+            .onTapGesture(perform: cancel)
             .accessibilityHidden(true)
     }
 
     /// Picks an interpreter service from its own row and opens its settings out of that row.
     private func connect(_ provider: TradingProviderName) {
-        let previous = model.setupDraft.provider
+        let before = model.setupDraft
         model.setupDraft.provider = provider
-        model.setupDraft.suggestModel(after: previous)
+        model.setupDraft.suggestModel(after: before.provider)
+        beforeConnect = (before, interpreterFingerprint)
         showsAllServices = false
         open(.editor(.interpreter), from: .provider(provider))
     }
@@ -242,8 +285,31 @@ struct ConnectionsView: View {
         }
     }
 
+    /// Closing a service picked from its own row before typing anything puts back the one in use.
+    private func cancel() {
+        if let before = beforeConnect?.draft, interpreterFingerprint == beforeConnect?.picked {
+            model.setupDraft.provider = before.provider
+            model.setupDraft.modelName = before.modelName
+            model.setupDraft.providerBaseURL = before.providerBaseURL
+            model.setupDraft.providerAPIKey = before.providerAPIKey
+        }
+        close()
+    }
+
+    /// Everything the interpreter sheet edits, digested so a typed key is never held twice.
+    private var interpreterFingerprint: Int {
+        let draft = model.setupDraft
+        var hasher = Hasher()
+        hasher.combine(draft.provider)
+        hasher.combine(draft.modelName)
+        hasher.combine(draft.providerBaseURL)
+        hasher.combine(draft.providerAPIKey)
+        return hasher.finalize()
+    }
+
     /// Alerts are on once a chat or a bot token is in, so an offer closed untouched leaves them off.
     private func close() {
+        beforeConnect = nil
         withAnimation(motion) {
             if case .editor(.alerts) = panel?.page {
                 let draft = model.setupDraft

@@ -9,6 +9,8 @@ trademark of its owner and is used only to name that service; no endorsement is 
   the MIT License below.
 - The Discord and Telegram logos come from [Simple Icons](https://simpleicons.org) 16.34.0, under
   CC0 1.0, drawn in each brand's color.
+- The Alpaca logo is Alpaca's own site icon (`files.alpaca.markets/webassets/favicon.svg`), used
+  only to name the broker.
 
 Each SVG was rendered to a 192-pixel PNG for the app.
 

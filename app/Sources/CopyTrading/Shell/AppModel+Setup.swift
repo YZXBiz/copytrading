@@ -1,8 +1,8 @@
 import DesktopCore
 import Foundation
 
-/// Editing the setup from Connections, People, Accounts, and the guide: one draft, one check,
-/// one Start Copying.
+/// Editing the setup, all of it on Connections: one draft, and one Start Copying that checks it
+/// and starts.
 extension AppModel {
     static var pendingSetupMessage: String { L10n.string("Starting your new setup…") }
     static var changedAfterCheckMessage: String { L10n.string("The setup changed after it was checked. Check it again.") }
@@ -15,9 +15,10 @@ extension AppModel {
         return edited != saved
     }
 
-    /// The unsaved-changes bar shows while there is something to save, check, or start.
-    var showsSetupChangesBar: Bool {
-        hasUnsavedSetupChanges || isValidatingTrading || isActivatingTrading || tradingValidation != nil
+    /// Connections shows its start card while there is something to set up, check, or start.
+    var hasSetupToStart: Bool {
+        savedTradingConfiguration == nil
+            || hasUnsavedSetupChanges || isValidatingTrading || isActivatingTrading || tradingValidation != nil
             || !profileExampleReviews.isEmpty
     }
 
@@ -74,8 +75,8 @@ extension AppModel {
     }
 
     /// A new account; gurus that copy into nothing yet copy into it.
-    func addAccount() {
-        let account = TradingAccountDraft(name: setupDraft.nextAccountName)
+    func addAccount(_ environment: TradingEnvironment = .paper) {
+        let account = TradingAccountDraft(name: setupDraft.nextAccountName, environment: environment)
         setupDraft.accounts.append(account)
         for index in setupDraft.routes.indices where setupDraft.routes[index].connections.isEmpty {
             setupDraft.routes[index].connections = [TradingConnectionDraft(accountID: account.name)]
@@ -122,16 +123,28 @@ extension AppModel {
         setupDraft.routes.removeAll { $0.guruID.trimmed == guruID }
     }
 
-    /// Checks every connection and example for the draft as it stands. Typed keys stay in the
-    /// draft, so a failed check never makes the owner type them all again.
-    func checkSetup() {
+    /// The one Start Copying: a setup already checked starts; otherwise every connection and
+    /// example is checked first, then copying starts if nothing needs the owner. Typed keys stay
+    /// in the draft, so a failed check never makes the owner type them again.
+    func checkAndStartCopying() {
+        if canStartCopyingFromCheck {
+            Task { await activateValidatedTradingSettings() }
+            return
+        }
         do {
             let (configuration, secrets) = try setupDraft.submission()
             checkedSetupSignature = setupDraft.signature
-            beginTradingValidation(configuration, enteredSecrets: secrets)
+            beginTradingValidation(configuration, enteredSecrets: secrets, thenStart: true)
         } catch {
             message = Self.setupProblem(for: error)
         }
+    }
+
+    /// Start Copying can run: the four steps are filled in, copying is paused, and no check or
+    /// start is under way.
+    var canCheckAndStart: Bool {
+        setupProgress.isReadyToCheck && tradingStatus?.state == .paused && !isValidatingTrading
+            && !isActivatingTrading
     }
 
     /// Start Copying must save exactly what was checked, so any later edit discards the check.
@@ -176,7 +189,7 @@ extension AppModel {
         case let error as TradingSettingsError:
             Self.userMessage(for: error)
         default:
-            L10n.string("Check each guru's sizing and examples, then check the setup again.")
+            L10n.string("Check each guru's sizing and examples, then start copying again.")
         }
     }
 }

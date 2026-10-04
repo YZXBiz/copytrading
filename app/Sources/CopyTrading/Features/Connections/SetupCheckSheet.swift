@@ -21,7 +21,7 @@ struct SetupCheckSheet: View {
                     ContentUnavailableView(
                         L10n.string("No check results"),
                         systemImage: "checklist",
-                        description: Text(L10n.string("Check Setup tests every connection and example. The results appear here."))
+                        description: Text(L10n.string("Start Copying tests every connection and example first. The results appear here."))
                     )
                 }
             }

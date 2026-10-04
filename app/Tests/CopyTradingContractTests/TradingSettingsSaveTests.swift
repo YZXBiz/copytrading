@@ -1183,8 +1183,8 @@ struct TradingSettingsSaveTests {
         print("CopyTradingContractTests: cancelled validation cleared pending grant and left storage unchanged")
     }
 
-    /// Check Setup runs from the draft wherever it was edited: a failed check keeps the typed keys
-    /// and opens the results, a passing one allows Start Copying, and any later edit discards it.
+    /// Start Copying checks the draft first: a failed check keeps the typed keys, opens the
+    /// results, and saves nothing; a later edit discards it; a passing check saves and starts.
     private static func checkSetupCheckKeepsKeysAndFollowsEdits(
         configuration: TradingConfiguration, secrets: TradingSecrets
     ) async throws {
@@ -1209,7 +1209,7 @@ struct TradingSettingsSaveTests {
         try check(model.hasUnsavedSetupChanges, "A first setup with typed keys did not count as unsaved")
         try check(model.setupProgress.isReadyToCheck, "A complete draft did not read as ready to check")
 
-        model.checkSetup()
+        model.checkAndStartCopying()
         for _ in 0..<1_000 where model.isValidatingTrading || model.tradingValidation == nil {
             try await Task.sleep(for: .milliseconds(1))
         }
@@ -1220,19 +1220,23 @@ struct TradingSettingsSaveTests {
             "A failed check wiped the keys the owner typed")
         try check(!model.canStartCopyingFromCheck, "A failed check allowed Start Copying")
 
-        await starter.setValidationActivatable(true)
-        model.checkSetup()
-        for _ in 0..<1_000 where model.isValidatingTrading || model.tradingValidation?.report.activatable != true {
-            try await Task.sleep(for: .milliseconds(1))
-        }
-        try check(model.canStartCopyingFromCheck, "A passing check did not allow Start Copying")
+        let afterFailure = try store.load()
+        try check(afterFailure == nil, "A failed check saved the setup")
 
         model.setupDraft.providerAPIKey = "a-different-key"
         model.setupDraftDidChange()
         try check(model.tradingValidation == nil, "Changing a typed key after the check kept the check")
         try check(model.message == AppModel.changedAfterCheckMessage, "A discarded check did not explain itself")
-        try check(!model.canStartCopyingFromCheck, "An edited setup could still start from the old check")
-        print("CopyTradingContractTests: setup checks keep typed keys, open failures, and follow later edits")
+
+        await starter.setValidationActivatable(true)
+        model.checkAndStartCopying()
+        for _ in 0..<2_000 where model.savedTradingConfiguration == nil {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        try check(model.savedTradingConfiguration != nil, "A passing check did not save and start the setup")
+        let afterPass = try store.load()
+        try check(afterPass != nil, "A passing check did not write the setup")
+        print("CopyTradingContractTests: Start Copying checks first, keeps typed keys, and starts once the check passes")
     }
 
     /// A discarded check must not leave its "validated" banner behind, and locking must drop

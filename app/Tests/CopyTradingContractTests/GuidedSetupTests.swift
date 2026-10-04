@@ -124,7 +124,7 @@ private func unsavedChangesFollowTheSavedSetup() throws {
     let model = AppModel()
     try verifyGuide(!model.hasUnsavedSetupChanges, "An untouched first run counted as unsaved")
     model.setupDraft.channels = "123"
-    try verifyGuide(model.hasUnsavedSetupChanges && model.showsSetupChangesBar, "A first edit did not show the changes bar")
+    try verifyGuide(model.hasUnsavedSetupChanges && model.hasSetupToStart, "A first edit did not show the start card")
 
     let profile = try TradingProfileBuilder().build(
         TradingProfileDraft(guruID: "alex", displayName: "Alex", prefix: "ALERT:", exitBasis: .originalPosition))

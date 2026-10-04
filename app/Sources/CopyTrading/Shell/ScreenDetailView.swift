@@ -4,21 +4,8 @@ struct ScreenDetailView: View {
     @Bindable var model: AppModel
     let accountFeature: AccountFeatureModel
     let activityState: ActivityScreenState
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private var showsChangesBar: Bool {
-        model.selectedScreen.editsSetup && model.showsSetupChangesBar
-    }
-
     var body: some View {
         screen
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                if showsChangesBar {
-                    SetupChangesBar(model: model)
-                        .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
-                }
-            }
-            .animation(reduceMotion ? nil : .smooth(duration: 0.28), value: showsChangesBar)
             .sheet(item: $model.setupEditor) { target in
                 ConnectionsEditorSheet(target: target, model: model)
             }

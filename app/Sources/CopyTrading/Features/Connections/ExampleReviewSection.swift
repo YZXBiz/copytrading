@@ -22,7 +22,7 @@ struct ExampleReviewSection: View {
                         if !review.automaticActivationAllowed {
                             Callout(
                                 L10n.string(
-                                    "An example was read differently from what you expected. Fix the playbook or the example in People, then check again."
+                                    "An example was read differently from what you expected. Fix the playbook or the example in Connections, then start again."
                                 ),
                                 tone: .caution)
                         }

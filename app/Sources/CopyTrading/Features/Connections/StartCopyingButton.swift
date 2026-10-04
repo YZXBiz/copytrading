@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Saves the setup that passed its check and starts copying. Live accounts ask first, from the
-/// button that asked.
+/// The one Start Copying: checks the setup, then saves it and starts copying when nothing needs
+/// the owner. Live accounts ask first, from the button that asked.
 struct StartCopyingButton: View {
     let model: AppModel
     @State private var confirmLiveStart = false
@@ -9,7 +9,7 @@ struct StartCopyingButton: View {
     var body: some View {
         Button(L10n.string("Start Copying"), systemImage: "play.fill", action: requestStart)
             .buttonStyle(.borderedProminent)
-            .disabled(!model.canStartCopyingFromCheck)
+            .disabled(!model.canStartCopyingFromCheck && !model.canCheckAndStart)
             .accessibilityIdentifier("setup.startCopying")
             .confirmationDialog(
                 "Start copying into live accounts?",
@@ -32,6 +32,6 @@ struct StartCopyingButton: View {
     }
 
     private func start() {
-        Task { await model.activateValidatedTradingSettings() }
+        model.checkAndStartCopying()
     }
 }

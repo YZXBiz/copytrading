@@ -141,25 +141,15 @@ struct AccountHeaderPanel: View {
                 .disabled(!canControl)
                 .help(L10n.string("Stop new entry orders. Exits still follow the account policy."))
         }
-        Menu(L10n.string("Account Options"), systemImage: "ellipsis.circle") {
-            Button(L10n.string("Edit Account…"), systemImage: "pencil", action: edit)
-                .disabled(!isInSetup)
-            Divider()
-            Button(L10n.string("Remove from Setup"), systemImage: "minus.circle", role: .destructive, action: removeFromSetup)
-                .disabled(!isInSetup)
-        }
-        .labelStyle(.iconOnly)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .help(L10n.string("Edit this account's keys and limits, or remove it from the setup"))
+        Button(L10n.string("Edit in Connections"), systemImage: "slider.horizontal.3", action: edit)
+            .labelStyle(.iconOnly)
+            .disabled(!isInSetup)
+            .help(L10n.string("Edit this account's keys and limits in Connections"))
     }
 
     private func edit() {
+        model.selectedScreen = .connections
         model.editAccount(named: account.accountID)
-    }
-
-    private func removeFromSetup() {
-        model.removeAccount(named: account.accountID)
     }
 
     /// Turning entries on in a live account lets it buy with real money on its own, so it asks for

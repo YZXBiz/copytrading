@@ -91,11 +91,13 @@ make app
 
 The app opens on **Getting Started**, a checklist that ticks itself as you go. Nothing is saved or traded until you press **Start Copying**.
 
-1. In **Connections**, add the Discord channels to read and your Discord token.
-2. In **Connections**, choose the model that reads posts and enter its API key.
-3. In **Accounts**, add an Alpaca **paper** account.
-4. In **People**, press **Learn from Channel**, review the playbook it drafts, and set how much each account puts in.
-5. Press **Check Setup**, then **Start Copying**.
+Everything is set up in **Connections**, top to bottom:
+
+1. **Discord**: the channels to read and your Discord token.
+2. **Interpreter**: the model that reads posts, and its API key.
+3. **Broker accounts**: an Alpaca **paper** account.
+4. **Gurus**: press **Learn from Channel**, review the playbook it drafts, and set how much each account puts in.
+5. Press **Start Copying**. It checks every connection first, and starts only when they all pass.
 
 Every field that needs a key or an ID has a **Where do I find this?** link. When you are ready, turn on entries in **Accounts** and watch the first post arrive in **Activity**.
 

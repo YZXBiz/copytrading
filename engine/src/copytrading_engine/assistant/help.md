@@ -2,17 +2,17 @@
 
 CopyTrading is a Mac app that reads Discord gurus' stock calls and copies them into the owner's
 Alpaca accounts. This is the app's own setup help: Getting Started, then one short article for each
-"Where do I find this?" link in Connections, People, and Accounts.
+"Where do I find this?" link in Connections.
 
 ## Getting Started
 
-Setup has five steps. The Getting Started guide ticks each one off as it is filled in.
+Setup has five steps, all done in Connections, top to bottom. Each step's number turns into a green check once it is filled in, and the Getting Started guide ticks it off too.
 
 1. **Connect Discord.** Enter the channel IDs your gurus post in, and your Discord token. CopyTrading reads the channels as you, and keeps the token in the Mac's Keychain.
 2. **Choose an interpreter.** The interpreter is the AI model that turns each post into an exact order. Pick a service, make an API key, and enter a model name. A model on this Mac (Ollama) or any OpenAI-compatible server may need no key.
 3. **Add a broker account.** Orders go to an Alpaca account. Start with an Alpaca paper account: it trades pretend money at real prices.
 4. **Pick who to copy.** Add each guru, choose their channel, and learn how they write their calls with Learn from Channel. Choose how much each account puts into one of their calls.
-5. **Check and start copying.** Check Setup tests every connection and reads the examples while you watch. Nothing is saved or traded before this. New accounts start with entries off, so nothing is bought until you choose Enable Entries in Accounts.
+5. **Check and start copying.** Start Copying, at the foot of Connections, first tests every connection and reads the examples while you watch, and starts only when everything passes. Nothing is saved or traded before this. New accounts start with entries off, so nothing is bought until you choose Enable Entries in Accounts.
 
 ## Find a channel ID
 
@@ -187,12 +187,12 @@ CopyTrading posts each alert into a channel through a webhook: no bot, and no to
 
 ## Add a guru
 
-1. In **People**, choose **Add Guru** and give them a name.
+1. In **Connections**, under **Gurus**, choose **Add a guru** and give them a name.
 2. Pick the channel they post in, then choose **Learn from Channel**. CopyTrading reads their recent posts and drafts how they write buys, sells, and tickers.
 3. Read the playbook and fix anything that's off. Under **Copies into**, choose how much each account puts into one of their calls.
 
-## Check, then start
+## Start copying
 
-1. Choose **Check Setup**. CopyTrading signs in to Discord, your interpreter, and Alpaca, and reads each example the way it will read real posts.
-2. Look over the results. Fix anything marked, then check again.
-3. Choose **Start Copying**. New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**.
+1. Choose **Start Copying**. CopyTrading first signs in to Discord, your interpreter, and Alpaca, and reads each example the way it will read real posts.
+2. If anything is marked, choose **Review…**, fix it, then choose **Start Copying** again.
+3. New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**.
