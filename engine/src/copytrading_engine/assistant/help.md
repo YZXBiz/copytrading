@@ -159,6 +159,17 @@ A paper account trades pretend money at real prices, so you can watch CopyTradin
 3. On the home page, find **API Keys** and choose **Generate New Keys**.
 4. Copy the **Key** and the **Secret** into this account. The secret is shown only once.
 
+## Get Alpaca live keys
+
+Live keys place real orders with real money. Alpaca gives them only to an approved brokerage account.
+
+1. Sign in at **alpaca.markets**. Live trading needs an approved brokerage account with money in it.
+2. Switch the account switcher at the top left to your **Live** account.
+3. On the home page, find **API Keys** and choose **Generate New Keys**.
+4. Copy the **Key** and the **Secret** into this account. The secret is shown only once.
+
+Anyone with these keys can trade your real money. Set small limits. New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**.
+
 ## Get Telegram alerts
 
 1. In Telegram, message **@BotFather**, send **/newbot**, and follow its steps.
