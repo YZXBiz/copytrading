@@ -6,6 +6,8 @@ import SwiftUI
 struct ConnectionServiceRow: View {
     let brand: String?
     var symbol = "server.rack"
+    /// A guru's name, drawn as their monogram in place of a logo.
+    var monogram: String?
     let title: String
     var detail: String?
     var tone: StatusTone?
@@ -13,7 +15,8 @@ struct ConnectionServiceRow: View {
     var action: String?
     /// Which way the chevron points: a list behind the row, or one that opens and closes in place.
     var chevron: Chevron = .forward
-    let origin: ConnectionPanelOrigin
+    /// Where a panel opened from this row grows from; rows that open a sheet have none.
+    var origin: ConnectionPanelOrigin?
     let identifier: String
     let perform: () -> Void
     @State private var isHovered = false
@@ -22,7 +25,11 @@ struct ConnectionServiceRow: View {
     var body: some View {
         Button(action: perform) {
             HStack(spacing: 12) {
-                ServiceIcon(brand: brand, symbol: symbol)
+                if let monogram {
+                    GuruMonogram(name: monogram, size: 30)
+                } else {
+                    ServiceIcon(brand: brand, symbol: symbol)
+                }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .font(DesignTokens.bodyText)
@@ -60,7 +67,7 @@ struct ConnectionServiceRow: View {
         .buttonStyle(QuietPressButtonStyle())
         .onHover { isHovered = $0 }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: isHovered)
-        .anchorPreference(key: ConnectionOriginKey.self, value: .bounds) { [origin: $0] }
+        .anchorPreference(key: ConnectionOriginKey.self, value: .bounds) { anchor in origin.map { [$0: anchor] } ?? [:] }
         // The label replaces the row's words; the element stays the button, so it can be pressed.
         .accessibilityLabel([title, detail].compactMap { $0 }.joined(separator: ", "))
         .accessibilityHint(action ?? "")

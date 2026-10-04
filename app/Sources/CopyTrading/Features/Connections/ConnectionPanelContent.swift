@@ -6,6 +6,11 @@ struct ConnectionPanelContent: View {
     let page: ConnectionPanelPage
     @Bindable var model: AppModel
     let close: () -> Void
+    /// Close, Esc, or a click outside: closes without connecting.
+    var cancel: (() -> Void)?
+    /// Opened from a service's own Connect or Switch row: always a new connection, even when
+    /// picking the service filled in a suggested model.
+    var connecting = false
     /// Whether the service was set up when the sheet opened, so its title holds while you type.
     @State private var openedSetUp: Bool?
 
@@ -13,11 +18,11 @@ struct ConnectionPanelContent: View {
         switch page {
         case .editor(let kind):
             ConnectionPanel(
-                title: title(for: kind), brand: brand(for: kind), close: close, escapeCloses: !model.assistant.isOpen
+                title: title(for: kind), brand: brand(for: kind), close: cancel ?? close, escapeCloses: !model.assistant.isOpen
             ) {
-                ConnectionEditor(kind: kind, model: model, isNew: !(openedSetUp ?? isSetUp(kind)), done: close)
+                ConnectionEditor(kind: kind, model: model, isNew: !(openedSetUp ?? (!connecting && isSetUp(kind))), done: close)
             }
-            .onAppear { openedSetUp = openedSetUp ?? isSetUp(kind) }
+            .onAppear { openedSetUp = openedSetUp ?? (!connecting && isSetUp(kind)) }
         }
     }
 
@@ -29,7 +34,7 @@ struct ConnectionPanelContent: View {
             case .interpreter: L10n.string(model.setupDraft.provider.title)
             case .alerts: model.setupDraft.notificationService == .discord ? "Discord" : "Telegram"
             }
-        return (openedSetUp ?? isSetUp(kind)) ? name : L10n.string("Connect to %@", name)
+        return (openedSetUp ?? (!connecting && isSetUp(kind))) ? name : L10n.string("Connect to %@", name)
     }
 
     private func isSetUp(_ kind: ConnectionKind) -> Bool {

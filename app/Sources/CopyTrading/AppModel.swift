@@ -82,14 +82,6 @@ final class AppModel {
             case .settings: "gearshape"
             }
         }
-
-        /// Screens that edit the setup draft, where the unsaved-changes bar belongs.
-        var editsSetup: Bool {
-            switch self {
-            case .people, .accounts, .connections, .gettingStarted: true
-            case .today, .activity, .diagnostics, .settings: false
-            }
-        }
     }
 
     var selectedScreen: Screen = .today
@@ -1316,7 +1308,8 @@ final class AppModel {
                 guard let profile = profilesByRevision[route.profileRevision] else {
                     throw TradingSettingsError.invalidConfiguration(
                         L10n.string(
-                            "The guru reading channel %@ has no saved details. Open them in People and check their fields.", route.channelID
+                            "The guru reading channel %@ has no saved details. Open them in Connections and check their fields.",
+                            route.channelID
                         ))
                 }
                 guard !profile.examples.isEmpty else { continue }
@@ -1370,12 +1363,20 @@ final class AppModel {
         }
     }
 
+    /// Checks the setup; with `thenStart`, starts copying straight after when everything passed
+    /// and there is nothing to look over, and otherwise shows what needs the owner.
     func beginTradingValidation(
-        _ configuration: TradingConfiguration, enteredSecrets: TradingSecrets
+        _ configuration: TradingConfiguration, enteredSecrets: TradingSecrets, thenStart: Bool = false
     ) {
         tradingValidationTask?.cancel()
         tradingValidationTask = Task { [weak self] in
             await self?.validateTradingSettings(configuration, enteredSecrets: enteredSecrets)
+            guard thenStart, !Task.isCancelled, let self else { return }
+            if self.canStartCopyingFromCheck {
+                await self.activateValidatedTradingSettings()
+            } else if self.tradingValidation != nil || !self.profileExampleReviews.isEmpty {
+                self.isShowingSetupCheck = true
+            }
         }
     }
 
@@ -1827,9 +1828,9 @@ final class AppModel {
         if let problem = configuration.provider.baseURLProblem {
             throw fail(L10n.string("%@ Fix it under Interpreter in Connections.", problem))
         }
-        guard !configuration.accounts.isEmpty else { throw fail(L10n.string("Add a broker account in Accounts.")) }
+        guard !configuration.accounts.isEmpty else { throw fail(L10n.string("Add a broker account in Connections.")) }
         guard !configuration.routes.isEmpty, !configuration.profiles.isEmpty else {
-            throw fail(L10n.string("Add a guru to copy in People."))
+            throw fail(L10n.string("Add a guru to copy in Connections."))
         }
 
         let accountIDs = configuration.accounts.map(\.id)
@@ -1847,7 +1848,7 @@ final class AppModel {
                 return (try? TradingProfileBuilder().build(draft)) == profile
             })
         else {
-            throw fail("A guru's details don't line up. Open the guru in People and check its fields.")
+            throw fail("A guru's details don't line up. Open the guru in Connections and check its fields.")
         }
 
         let profiles = Dictionary(
@@ -1861,7 +1862,7 @@ final class AppModel {
                 throw fail(L10n.string("“%@” uses channel %@, which is not listed under Discord in Connections.", name, route.channelID))
             }
             guard route.source == "discord", route.guruID == profiles[route.profileRevision]?.guruID else {
-                throw fail(L10n.string("“%@” doesn't match its saved details. Open the guru in People and check its fields.", name))
+                throw fail(L10n.string("“%@” doesn't match its saved details. Open the guru in Connections and check its fields.", name))
             }
             guard !route.connections.isEmpty else { throw fail(L10n.string("“%@” needs an account to copy into.", name)) }
             guard Set(route.connections.map(\.accountID)).count == route.connections.count else {
@@ -1893,7 +1894,7 @@ final class AppModel {
         }
         let identityRules = configuration.routes.map { "\($0.source):\($0.channelID):\($0.authorID ?? "*")" }
         guard Set(identityRules).count == identityRules.count else {
-            throw fail(L10n.string("Two gurus read the same channel and author. Give each guru a different author ID in People."))
+            throw fail(L10n.string("Two gurus read the same channel and author. Give each guru a different author ID in Connections."))
         }
         let sharedChannels = Dictionary(grouping: configuration.routes, by: { "\($0.source):\($0.channelID)" })
         guard sharedChannels.values.allSatisfy({ routes in routes.count == 1 || routes.allSatisfy { $0.authorID != nil } }) else {

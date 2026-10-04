@@ -122,7 +122,7 @@ enum SetupHelp {
         id: "people.guru",
         title: "Add a guru",
         steps: [
-            "In **People**, choose **Add Guru** and give them a name.",
+            "In **Connections**, under **Gurus**, choose **Add a guru** and give them a name.",
             "Pick the channel they post in, then choose **Learn from Channel**. CopyTrading reads their recent posts and drafts how they write buys, sells, and tickers.",
             "Read the playbook and fix anything that's off. Under **Copies into**, choose how much each account puts into one of their calls.",
         ]
@@ -130,11 +130,11 @@ enum SetupHelp {
 
     static let start = HelpArticle(
         id: "setup.start",
-        title: "Check, then start",
+        title: "Start copying",
         steps: [
-            "Choose **Check Setup**. CopyTrading signs in to Discord, your interpreter, and Alpaca, and reads each example the way it will read real posts.",
-            "Look over the results. Fix anything marked, then check again.",
-            "Choose **Start Copying**. New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**.",
+            "Choose **Start Copying**. CopyTrading first signs in to Discord, your interpreter, and Alpaca, and reads each example the way it will read real posts.",
+            "If anything is marked, choose **Review…**, fix it, then choose **Start Copying** again.",
+            "New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**.",
         ]
     )
 

@@ -1,25 +1,16 @@
 import DesktopCore
 import SwiftUI
 
-/// Each broker account as one working page, plus any account added in the setup but not saved
-/// yet. Accounts are added and edited here; changes wait until the setup is checked and started.
+/// Each broker account as one working page, once Connections has set it up and the engine has
+/// read it. Accounts are added and edited in Connections.
 struct AccountsView: View {
     @Bindable var model: AppModel
     let feature: AccountFeatureModel
-    @State private var hoveredDraftID: UUID?
 
     private let contentMaxWidth: CGFloat = 1_040
 
-    /// Accounts in the setup that are not saved yet. A saved account the engine has not read yet
-    /// is not one of them; it appears once the engine reads it.
-    private var draftOnlyAccounts: [TradingAccountDraft] {
-        let known = Set(feature.accounts.map(\.accountID))
-            .union(model.savedTradingConfiguration?.accounts.map(\.id) ?? [])
-        return model.setupDraft.accounts.filter { !known.contains($0.name.trimmed) }
-    }
-
     private var isEmpty: Bool {
-        feature.accounts.isEmpty && draftOnlyAccounts.isEmpty && !feature.isRefreshing && feature.errors["read"] == nil
+        feature.accounts.isEmpty && !feature.isRefreshing && feature.errors["read"] == nil
     }
 
     var body: some View {
@@ -33,7 +24,8 @@ struct AccountsView: View {
                         PageHeader(
                             L10n.string("Accounts"),
                             actions: {
-                                RoundGlassButton(title: "Add Account", symbol: "plus.circle.fill", action: model.addAccount)
+                                RoundGlassButton(
+                                    title: "Edit in Connections", symbol: "slider.horizontal.3", action: openConnections)
                             })
                         if isEmpty {
                             AccountsInvitation(model: model)
@@ -70,21 +62,6 @@ struct AccountsView: View {
                     tone: .caution
                 )
             }
-            ForEach(draftOnlyAccounts) { account in
-                Button {
-                    model.setupEditor = .account(account.id)
-                } label: {
-                    DraftAccountCard(
-                        account: account,
-                        hasSavedKeys: model.savedKeyAccountIDs.contains(account.name.trimmed),
-                        isHovered: hoveredDraftID == account.id
-                    )
-                }
-                .buttonStyle(QuietPressButtonStyle())
-                .onHover { hoveredDraftID = $0 ? account.id : (hoveredDraftID == account.id ? nil : hoveredDraftID) }
-                .accessibilityHint(L10n.string("Edits this account"))
-                .accessibilityIdentifier("accounts.draft.\(account.name.trimmed)")
-            }
             ForEach(feature.accounts) { account in
                 AccountSection(
                     account: account,
@@ -100,6 +77,10 @@ struct AccountsView: View {
                     .frame(maxWidth: .infinity)
             }
         }
+    }
+
+    private func openConnections() {
+        model.selectedScreen = .connections
     }
 
     private func loadMore() {

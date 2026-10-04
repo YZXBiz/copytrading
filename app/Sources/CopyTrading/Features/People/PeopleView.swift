@@ -2,7 +2,7 @@ import DesktopCore
 import SwiftUI
 
 /// The gurus this setup copies, as cards: where they post, where their calls go, how they went.
-/// Gurus are added and edited here; changes wait in the setup until it is checked and started.
+/// Gurus are added and edited in Connections; a guru shows here once their setup is saved.
 struct PeopleView: View {
     @Bindable var model: AppModel
     let feature: AccountFeatureModel
@@ -12,13 +12,7 @@ struct PeopleView: View {
 
     private var directory: GuruDirectory { GuruDirectory(model.savedTradingConfiguration) }
 
-    /// Gurus in the setup that are not saved yet.
-    private var draftOnlyRoutes: [TradingRouteDraft] {
-        let saved = Set(directory.gurus.map(\.id))
-        return model.setupDraft.routes.filter { !saved.contains($0.guruID.trimmed) }
-    }
-
-    private var cardCount: Int { directory.gurus.count + draftOnlyRoutes.count }
+    private var cardCount: Int { directory.gurus.count }
 
     var body: some View {
         GeometryReader { geometry in
@@ -44,10 +38,11 @@ struct PeopleView: View {
                         L10n.string("People"),
                         subtitle: cardCount == 0 ? nil : Humanize.count(cardCount, "guru"),
                         actions: {
-                            RoundGlassButton(title: "Add Guru", symbol: "plus.circle.fill", action: model.addGuru)
+                            RoundGlassButton(
+                                title: "Edit in Connections", symbol: "slider.horizontal.3", action: openConnections)
                         })
                     if cardCount == 0 {
-                        PeopleInvitation(addGuru: model.addGuru)
+                        PeopleInvitation(openConnections: openConnections)
                             .padding(.top, 10)
                     } else {
                         LazyVGrid(
@@ -72,21 +67,6 @@ struct PeopleView: View {
                                 .buttonStyle(QuietPressButtonStyle())
                                 .onHover { hover(guru.id, $0) }
                                 .accessibilityHint(L10n.string("Shows %@'s calls and where they are copied", guru.name))
-                            }
-                            ForEach(draftOnlyRoutes) { route in
-                                Button {
-                                    model.setupEditor = .route(route.id)
-                                } label: {
-                                    DraftGuruCard(
-                                        route: route,
-                                        channel: model.setupDraft.effectiveChannel(for: route),
-                                        isHovered: hoveredCardID == route.guruID
-                                    )
-                                }
-                                .buttonStyle(QuietPressButtonStyle())
-                                .onHover { hover(route.guruID, $0) }
-                                .accessibilityHint(L10n.string("Edits this guru"))
-                                .accessibilityIdentifier("people.draftGuru")
                             }
                         }
                     }
@@ -146,6 +126,11 @@ struct PeopleView: View {
     private func editAfterDetail() {
         guard let guruID = guruToEdit else { return }
         guruToEdit = nil
+        model.selectedScreen = .connections
         model.editGuru(guruID)
+    }
+
+    private func openConnections() {
+        model.selectedScreen = .connections
     }
 }

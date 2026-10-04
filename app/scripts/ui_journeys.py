@@ -596,9 +596,7 @@ def j3_first_run_guidance(app: AppDriver) -> None:
     app.expect(guide, "Status: Not set up yet", "guide.step.0", "Find a channel ID", "0 of 5")
     app.click("guide.openDiscord")
     connections = app.see("connections-from-guide")
-    app.expect(
-        connections, "Discord", "Interpreter", "Alerts", "Channel IDs", "Where do I find this?"
-    )
+    app.expect(connections, "Discord", "Interpreter", "Alerts", "Channel IDs", "Step by step")
     today = app.open_screen("today")
     app.expect(today, "Your trading day, at a glance", "today.gettingStarted")
 
@@ -629,10 +627,11 @@ def j20_toolbar(app: AppDriver) -> None:
     app.expect(snapshot, "Not copying")
     app.click("toolbar.refresh")
     app.open_screen("people")
-    app.click("people.addGuru")
-    app.expect(app.see("guru-from-people"), "Where they post", "Remove Guru")
+    app.click("people.openConnections")
+    app.click("connections.gurus.add")
+    app.expect(app.see("guru-from-connections"), "Where they post", "Remove Guru")
     app.click("Remove Guru")
-    app.expect(app.see("guru-removed"), "The traders you choose to copy")
+    app.expect(app.see("guru-removed"), "connections.gurus.add", "Add a guru")
 
 
 def j21_settings_pages(app: AppDriver) -> None:
@@ -669,30 +668,36 @@ def j5_self_test(app: AppDriver) -> None:
 
 
 def j6_setup_editing(app: AppDriver) -> None:
-    """Accounts and gurus are added where they live and wait, unsaved, in the changes bar."""
-    app.open_screen("accounts")
-    app.click("accounts.addAccount")
+    """Accounts and gurus are added in Connections; People and Accounts wait for a saved setup."""
+    connections = app.open_screen("connections")
+    app.expect(connections, "Broker accounts", "Gurus", "0 of 4 steps done", "setup.startCopying")
+    app.click("connections.accounts.paper")
     sheet = app.see("account-sheet")
     app.expect(sheet, "Alpaca keys", "Position limits (USD)", "Remove Account")
     app.click("Done")
-    accounts = app.see("account-added")
-    app.expect(accounts, "accounts.draft.primary", "Not saved yet", "setup.status", "setup.check")
-    app.open_screen("people")
-    app.click("Add Guru")
+    app.expect(
+        app.see("account-added"),
+        "connections.account.primary",
+        "Needs keys",
+        "connections.accounts.add",
+    )
+    app.click("connections.gurus.add")
     guru = app.see("guru-sheet")
     app.expect(guru, "Where they post", "Copies into", "playbook.learn")
     app.click("Done")
-    people = app.see("guru-added")
-    app.expect(people, "people.draftGuru", "Unnamed guru")
+    app.expect(app.see("guru-added"), "connections.guru", "Unnamed guru")
+    # Unsaved accounts and gurus stay in Connections.
+    app.expect(
+        app.open_screen("people"), "The traders you choose to copy", "people.openConnections"
+    )
+    app.expect(app.open_screen("accounts"), "Your accounts, inside your limits")
     # Leave the setup as found, so later journeys start from nothing saved and nothing typed.
-    app.click("people.draftGuru")
+    app.open_screen("connections")
+    app.click("connections.guru")
     app.click("Remove Guru")
-    app.open_screen("accounts")
-    app.click("accounts.draft.primary")
+    app.click("connections.account.primary")
     app.click("Remove Account")
-    cleaned = app.see("setup-cleaned")
-    app.expect(cleaned, "Your accounts, inside your limits")
-    app.expect_absent(cleaned, "setup.status")
+    app.expect(app.see("setup-cleaned"), "connections.accounts.paper", "0 of 4 steps done")
 
 
 def _relock(app: AppDriver) -> None:
@@ -704,28 +709,25 @@ def _relock(app: AppDriver) -> None:
 
 
 def j7_validation_gate(app: AppDriver) -> None:
-    """An edit raises the changes bar; Check Setup runs only while paused, Start waits for it."""
+    """Start Copying waits for all four steps; each step ticks as it is filled in."""
     app.open_screen("connections")
     app.open_connection("discord")
     app.type("123456789012345678", into="Channel IDs")
-    snapshot = app.see("changes-bar")
-    check = snapshot.find("setup.check")
-    start = snapshot.find("setup.startCopying")
-    if check is None or start is None:
-        raise JourneyFailure("the changes bar did not offer Check Setup and Start Copying")
-    if start.enabled:
-        raise JourneyFailure("Start Copying was enabled before a passing check")
-    paused = check.enabled
     app.click("connections.done")
+    snapshot = app.see("start-waits")
+    start = snapshot.find("setup.startCopying")
+    if start is None:
+        raise JourneyFailure("Connections did not offer Start Copying")
+    if start.enabled:
+        raise JourneyFailure("Start Copying was enabled before every step was done")
+    app.expect(snapshot, "0 of 4 steps done", "Next: Connect Discord.")
     _relock(app)
-    if not paused:
-        raise JourneySkipped("Check Setup is disabled until copying is paused")
 
 
 def j23_learn_playbook(app: AppDriver) -> None:
     """The guru editor offers Learn from Channel and explains what it still needs."""
-    app.open_screen("people")
-    app.click("people.addGuru")
+    app.open_screen("connections")
+    app.click("connections.gurus.add")
     sheet = app.see("route-sheet-playbook")
     app.expect(sheet, "Playbook", "playbook.learn", "playbook.text")
     app.expect_absent(sheet, "Ticker aliases")
@@ -741,7 +743,7 @@ def j23_learn_playbook(app: AppDriver) -> None:
 
 
 def j8_credential_gate(app: AppDriver) -> None:
-    """Typed paper keys reach the draft; validation names exactly the credentials still missing.
+    """Typed paper keys reach the draft; Start Copying waits for the credentials still missing.
 
     The live Alpaca round trip itself is covered by engine/tests/trading/test_paper_broker_probe.py.
     """
@@ -756,28 +758,25 @@ def j8_credential_gate(app: AppDriver) -> None:
     app.open_connection("interpreter")
     app.type("claude-sonnet-5-5", into="Model")
     app.click("connections.done")
-    app.open_screen("accounts")
-    app.click("accounts.addAccount")
+    app.click("connections.accounts.paper")
     app.wait_for("Alpaca keys", timeout=15, name="paper-account-sheet")
     app.type(key, into="Alpaca API key")
     app.type(secret, into="Alpaca API secret")
     app.click("Done")
-    app.open_screen("people")
-    app.click("people.addGuru")
+    app.click("connections.gurus.add")
     app.type("Journey Guru", into="Name")
     guru = app.see("guru-adopted-channel")
     app.expect(guru, "First channel in Connections (123456789012345678)")
     app.click("Done")
-    app.click("setup.check")
-    banner = app.wait_for("Enter the", timeout=30, name="credential-gate")
-    message = next(e.text for e in banner.elements if "Enter the" in e.text)
-    # Broker keys are checked first, account by account, then the Discord and model credentials.
-    # Whatever is still missing, the paper account's typed keys must not be among it.
-    if "“primary”" in message:
-        raise JourneyFailure(f"the typed paper keys did not reach the draft: {message}")
-    names_rest = "Discord token" in message and "model API key" in message
-    if "Alpaca" not in message and not names_rest:
-        raise JourneyFailure(f"unexpected validation message: {message}")
+    gated = app.see("credential-gate")
+    # The typed keys count; the Discord token and the model key are still missing.
+    app.expect(
+        gated, "Not saved yet", "Needs a token", "Needs an API key", "Next: Connect Discord."
+    )
+    app.expect_absent(gated, "Needs keys")
+    start = gated.find("setup.startCopying")
+    if start is None or start.enabled:
+        raise JourneyFailure("Start Copying was enabled with credentials missing")
     _relock(app)
 
 
@@ -919,8 +918,8 @@ def _paper_setup() -> dict[str, str]:
     return setup
 
 
-def _check_paper_setup(app: AppDriver, setup: dict[str, str], *, name: str) -> Snapshot:
-    """Fill Connections, a paper account, and a guru from nothing, and pass Check Setup."""
+def _start_paper_setup(app: AppDriver, setup: dict[str, str]) -> None:
+    """Fill Connections from nothing, top to bottom, and choose Start Copying."""
     app.open_screen("connections")
     app.open_connection("discord")
     app.type(setup["channel"], into="Channel IDs")
@@ -930,34 +929,18 @@ def _check_paper_setup(app: AppDriver, setup: dict[str, str], *, name: str) -> S
     app.type(setup["model"], into="Model")
     app.type(setup["model_key"], into="API key")
     app.click("connections.done")
-    app.open_screen("accounts")
-    app.click("accounts.addAccount")
+    app.click("connections.accounts.paper")
     app.wait_for("Alpaca keys", timeout=15)
     app.type(setup["alpaca_key"], into="Alpaca API key")
     app.type(setup["alpaca_secret"], into="Alpaca API secret")
     app.click("Done")
-    app.open_screen("people")
-    app.click("people.addGuru")
+    app.click("connections.gurus.add")
     app.type("Journey Guru", into="Name")
     app.click("Done")
-    guide = app.open_screen("gettingStarted")
-    app.expect(guide, "4 of 5")
-    app.click("setup.check")
-    checked = app.wait_for("Everything checks out", timeout=180, name=name)
-    start = checked.find("setup.startCopying")
-    if start is None or not start.enabled:
-        raise JourneyFailure("a passing check did not enable Start Copying")
-    return checked
-
-
-def j27_first_check(app: AppDriver) -> None:
-    """From nothing saved, the real services pass Check Setup and Start Copying becomes ready.
-
-    Uses the paper-only test credentials and stops before Start Copying, so nothing is saved and
-    no key reaches the Keychain. Saving and starting are covered by J31 and the contract suite.
-    """
-    _check_paper_setup(app, _paper_setup(), name="first-check-passed")
-    _relock(app)
+    app.expect(app.see("setup-filled"), "Ready to start. Every connection is checked first.")
+    app.expect(app.open_screen("gettingStarted"), "4 of 5")
+    app.open_screen("connections")
+    app.click("setup.startCopying")
 
 
 def _agent_result(app: AppDriver, expected_exit: int, *arguments: str) -> dict[str, Any]:
@@ -1000,8 +983,7 @@ def j31_agent_approval(app: AppDriver) -> None:
     app.open_settings("agents")
     app.click("Read, pause, and ask for approval")
     app.wait_for("Listening", timeout=30, name="agent-approval-access")
-    _check_paper_setup(app, setup, name="approval-setup-checked")
-    app.click("setup.startCopying")
+    _start_paper_setup(app, setup)
     before = _wait_for_account(app, "primary", timeout=180)
     if before["recovery_preference"] != "manual":
         raise JourneyFailure(f"a new account starts with recovery {before['recovery_preference']}")
@@ -1192,7 +1174,6 @@ JOURNEYS: list[tuple[str, Callable[[AppDriver], None]]] = [
     ("J25 getting started", j25_getting_started),
     ("J30 assistant", j30_assistant),
     ("J26 help menu", j26_help_menu),
-    ("J27 first check", j27_first_check),
     ("J15 lock", j15_lock),
     ("J17 crash recovery", j17_crash_recovery),
     # Last: starting copying saves a setup that the journeys above expect to be empty.

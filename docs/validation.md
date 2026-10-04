@@ -35,8 +35,8 @@ one.
 - **Whole pipeline:** a real post goes through DeepSeek interpretation, routing,
   and risk into Alpaca paper, and the orders it placed are cancelled
   (`engine/tests/integration/test_paper_trade_end_to_end.py`).
-- **The real window:** journeys J27 and J31 in `make ui-journeys` pass Check Setup
-  against live Discord, DeepSeek, and Alpaca paper, then show that an agent's
+- **The real window:** journey J31 in `make ui-journeys` sets up and starts copying
+  against live Discord, DeepSeek, and Alpaca paper, then shows that an agent's
   request runs only after the owner approves it, once, and that a rejected one
   changes nothing ([acceptance](acceptance.md)).
 

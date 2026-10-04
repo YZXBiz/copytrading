@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// What the changes bar says about the setup right now, in the order a person would care.
+/// What the start card says about the setup right now, in the order a person would care.
 struct SetupChangesStatus: Equatable {
     let text: String
     let symbol: String
@@ -17,23 +17,23 @@ struct SetupChangesStatus: Equatable {
         } else if model.isActivatingTrading {
             self.init("Saving and starting…", working: true)
         } else if model.tradingStatus == nil && (model.runtimeState == .stopped || model.runtimeState == .failed) {
-            self.init("The engine is stopped. Start it to check the setup.", "stop.circle.fill", .inactive)
+            self.init("The engine is stopped. Start it, then start copying.", "stop.circle.fill", .inactive)
         } else if model.tradingStatus == nil {
             self.init("Starting CopyTrading…", working: true)
         } else if hasProblem {
             self.init(
-                "Some checks need attention. Review them, fix the setup, then check again.", "exclamationmark.triangle.fill",
+                "Some checks need attention. Review them, fix the setup, then start again.", "exclamationmark.triangle.fill",
                 .caution)
         } else if model.canStartCopyingFromCheck {
             self.init("Everything checks out. Start copying when you're ready.", "checkmark.circle.fill", .positive)
         } else if model.awaitsExampleReview {
             self.init("Everything checks out. Look over how the examples were read.", "text.magnifyingglass", .neutral)
         } else if model.tradingStatus?.state != .paused {
-            self.init("Pause copying to check and save these changes.", "pause.circle.fill", .inactive)
+            self.init("Pause copying to save these changes.", "pause.circle.fill", .inactive)
         } else if model.savedTradingConfiguration == nil {
-            self.init("Nothing is saved or traded until the setup checks out.", "info.circle.fill", .neutral)
+            self.init("Ready to start. Every connection is checked first.", "info.circle.fill", .neutral)
         } else {
-            self.init("You have setup changes that aren't saved yet.", "pencil.circle.fill", .neutral)
+            self.init("You have changes that aren't saved yet. Starting checks and saves them.", "pencil.circle.fill", .neutral)
         }
     }
 
