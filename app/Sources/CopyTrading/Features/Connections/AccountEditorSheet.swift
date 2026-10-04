@@ -141,8 +141,7 @@ struct AccountEditorSheet: View {
             Text(L10n.string(title))
             Text(L10n.string(hint))
         }
-        .toggleStyle(.switch)
-        .controlSize(.small)
+        .compactSwitch()
     }
 
     private func removeAccount() {

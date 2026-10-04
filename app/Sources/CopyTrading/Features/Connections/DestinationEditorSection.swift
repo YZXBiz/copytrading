@@ -40,6 +40,7 @@ struct DestinationEditorSection: View {
             )
             if connection.mode == .proportional {
                 Toggle(L10n.string("Use a default when the source gives no fraction"), isOn: $connection.useDefaultFraction)
+                    .compactSwitch()
                 if connection.useDefaultFraction {
                     TextField(
                         L10n.string("Default fraction"), text: $connection.defaultFraction,
