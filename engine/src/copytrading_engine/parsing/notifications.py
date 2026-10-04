@@ -31,6 +31,8 @@ def review_notification(
         "invalid_model_output": "Model output failed schema validation",
         "model_output_budget_exceeded": "Model output exceeded the response budget",
         "provider_rejected": "Model provider rejected the request",
+        "provider_key_rejected": "Model provider did not accept the API key",
+        "provider_model_not_found": "Model provider has no model with that name",
         "decode_attempts_exhausted": "Model requests failed after bounded retries",
         "stale_signal": "Signal exceeded the permitted processing age",
         "future_signal": "Source timestamp is ahead of the parser clock beyond the allowed skew",

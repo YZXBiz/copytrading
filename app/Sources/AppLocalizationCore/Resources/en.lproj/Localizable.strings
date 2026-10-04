@@ -1407,3 +1407,12 @@
 "Set to **$10,000**. Everything this account holds, including stocks you bought yourself and buys still waiting to fill, is worth **$9,500**. A new **$1,000** buy of any stock would go over, so it's **skipped**." = "Set to **$10,000**. Everything this account holds, including stocks you bought yourself and buys still waiting to fill, is worth **$9,500**. A new **$1,000** buy of any stock would go over, so it's **skipped**.";
 "Animations hold still, glass turns solid, and edges get stronger." = "Animations hold still, glass turns solid, and edges get stronger.";
 "When the guru says “sell half”: Original position sells half of the shares first bought. Remaining position sells half of what's left." = "When the guru says “sell half”: Original position sells half of the shares first bought. Remaining position sells half of what's left.";
+"Did you mean “%@”?" = "Did you mean “%@”?";
+"Use %@" = "Use %@";
+"%@ didn't accept the API key." = "%@ didn't accept the API key.";
+"%@ has no model called “%@”." = "%@ has no model called “%@”.";
+"The model answered, but couldn't read a test post. Try another model." = "The model answered, but couldn't read a test post. Try another model.";
+"Couldn't reach %@. Check the API key and your connection." = "Couldn't reach %@. Check the API key and your connection.";
+"The model service refused the request" = "The model service refused the request";
+"The model service didn't accept the API key" = "The model service didn't accept the API key";
+"The model service has no model by that name" = "The model service has no model by that name";

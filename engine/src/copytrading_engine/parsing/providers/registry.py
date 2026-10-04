@@ -13,6 +13,10 @@ from copytrading_engine.shared.payload_capture import PayloadCapture
 
 
 class ManagedDecoder(Decoder, Learner, Protocol):
+    async def model_names(self) -> tuple[str, ...]:
+        """The model names the provider lists for this key."""
+        ...
+
     async def close(self) -> None: ...
 
 

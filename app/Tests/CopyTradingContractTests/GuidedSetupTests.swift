@@ -81,6 +81,13 @@ private func helpArticlesAreCompleteAndLinked() throws {
     try verifyGuide(
         TradingProviderName.allCases.allSatisfy { SetupHelp.interpreterKey(for: $0).destination != nil },
         "An interpreter provider has no key article")
+    try verifyGuide(
+        SetupHelp.prefilledModel(for: .deepseek) == "deepseek-flash"
+            && SetupHelp.prefilledModel(for: .openAICompatible) == nil,
+        "The Model field did not start with the provider's recommended model")
+    try verifyGuide(
+        Reason.text("provider_model_not_found") == "The model service has no model by that name",
+        "A missing model reached Activity as an engine code")
 }
 
 @MainActor

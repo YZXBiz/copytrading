@@ -47,6 +47,13 @@ extension SetupHelp {
         L10n.string("e.g. %@", suggestedModel(for: provider))
     }
 
+    /// What the Model field starts with: the provider's recommended model, or nothing for a custom
+    /// service, whose models CopyTrading can't know.
+    @MainActor
+    static func prefilledModel(for provider: TradingProviderName) -> String? {
+        provider == .openAICompatible ? nil : suggestedModel(for: provider)
+    }
+
     @MainActor
     static func suggestedModel(for provider: TradingProviderName) -> String {
         switch provider {

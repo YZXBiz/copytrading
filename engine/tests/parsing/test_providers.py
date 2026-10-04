@@ -146,7 +146,7 @@ async def test_budget_exhaustion_is_translated_without_provider_text():
     assert failure.value.__cause__ is None
 
 
-async def test_provider_rejection_does_not_leak_http_body():
+async def test_rejected_key_does_not_leak_http_body():
     class FailedAgent:
         async def run(self, *args, **kwargs):
             raise ModelHTTPError(
@@ -160,10 +160,81 @@ async def test_provider_rejection_does_not_leak_http_body():
     with pytest.raises(DecodeError) as failure:
         await decoder.decode("source", Route())
 
-    assert failure.value.reason == "provider_rejected"
+    assert failure.value.reason == "provider_key_rejected"
     assert not failure.value.retryable
     assert "PRIVATE_PROVIDER_DETAIL" not in str(failure.value)
     assert failure.value.__cause__ is None
+
+
+@pytest.mark.parametrize(
+    ("status", "body", "reason"),
+    [
+        (401, {"error": "bad key"}, "provider_key_rejected"),
+        (403, None, "provider_key_rejected"),
+        # OpenAI, Anthropic, and Ollama answer an unknown model with 404 and quote its name.
+        (
+            404,
+            {
+                "error": {
+                    "code": "model_not_found",
+                    "message": "The model `test-model` does not exist",
+                }
+            },
+            "provider_model_not_found",
+        ),
+        (
+            404,
+            {"error": {"message": 'model "test-model" not found, try pulling it first'}},
+            "provider_model_not_found",
+        ),
+        # DeepSeek and Mistral answer it with 400.
+        (
+            400,
+            {
+                "error": {
+                    "message": "The supported API model names are a, b, but you passed test-model."
+                }
+            },
+            "provider_model_not_found",
+        ),
+        (400, {"message": "Invalid model: test-model"}, "provider_model_not_found"),
+        # A 404 that does not quote the model is a wrong address, not a wrong name.
+        (404, {"detail": "Not Found"}, "provider_rejected"),
+        (400, {"error": {"message": "max_tokens is too large"}}, "provider_rejected"),
+    ],
+)
+async def test_rejections_name_the_key_or_the_model(status, body, reason):
+    class FailedAgent:
+        async def run(self, *args, **kwargs):
+            raise ModelHTTPError(status_code=status, model_name="test-model", body=body)
+
+    decoder = PydanticAIDecoder(FailedAgent(), FailedAgent(), CloseOnlyClient(), timeout=1)
+
+    with pytest.raises(DecodeError) as failure:
+        await decoder.decode("source", Route())
+
+    assert failure.value.reason == reason
+
+
+async def test_model_names_strip_google_prefix_and_stop_at_the_limit():
+    class Listed:
+        def __init__(self, id):
+            self.id = id
+
+    class Models:
+        def list(self):
+            async def pages():
+                yield Listed("models/gemini-2.5-flash")
+                yield Listed("deepseek-flash")
+
+            return pages()
+
+    class ListingClient(CloseOnlyClient):
+        models = Models()
+
+    decoder = PydanticAIDecoder(None, None, ListingClient(), timeout=1)
+
+    assert await decoder.model_names() == ("gemini-2.5-flash", "deepseek-flash")
 
 
 async def test_learning_failures_are_translated_without_provider_text():

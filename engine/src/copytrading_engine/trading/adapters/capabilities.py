@@ -1,6 +1,7 @@
 """Read-only connection checks required before a saved trading revision is activated."""
 
 import asyncio
+import difflib
 import logging
 from collections.abc import Awaitable, Callable
 from typing import Literal, Protocol
@@ -10,7 +11,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict
 
 from copytrading_engine.execution.adapters.alpaca.broker import AlpacaBroker, AlpacaCredentials
-from copytrading_engine.parsing.providers.registry import builtin_registry
+from copytrading_engine.parsing.providers.registry import ManagedDecoder, builtin_registry
 from copytrading_engine.parsing.readiness import ModelReadiness, probe_model
 from copytrading_engine.shared.cleanup import close_logged
 from copytrading_engine.sources.source import require_history_channel
@@ -44,6 +45,8 @@ class CapabilityCheck(BaseModel):
     identity: str | None = None
     adapter: str
     reason_code: str | None = None
+    # A close name the provider lists, when the model asked for does not exist.
+    suggestion: str | None = None
 
 
 class TradingCapabilityReport(BaseModel):
@@ -77,6 +80,7 @@ def _failed(
     subject: str | None = None,
     environment: Literal["paper", "live"] | None = None,
     adapter: str = "connection_probe",
+    suggestion: str | None = None,
 ) -> CapabilityCheck:
     return CapabilityCheck(
         name=name,
@@ -86,7 +90,20 @@ def _failed(
         identity=None,
         adapter=adapter,
         reason_code=code,
+        suggestion=suggestion,
     )
+
+
+async def _closest_model(decoder: ManagedDecoder, asked: str) -> str | None:
+    """The listed model name nearest to a mistyped one, or nothing when the list is unavailable."""
+    try:
+        names = await asyncio.wait_for(decoder.model_names(), timeout=15)
+    except asyncio.CancelledError:
+        raise
+    except Exception:  # noqa: BLE001 - a missing list only means no suggestion
+        return None
+    matches = difflib.get_close_matches(asked, names, n=1, cutoff=0.6)
+    return matches[0] if matches else None
 
 
 class TradingCapabilityService:
@@ -285,6 +302,15 @@ class NativeCapabilityProbes:
             )
             health = ModelReadiness()
             await asyncio.wait_for(probe_model(decoder, health), timeout=25)
+            if health.error == "provider_key_rejected":
+                return _failed("model", "model_key_rejected", adapter=configuration.name)
+            if health.error == "provider_model_not_found":
+                return _failed(
+                    "model",
+                    "model_not_found",
+                    adapter=configuration.name,
+                    suggestion=await _closest_model(decoder, configuration.model),
+                )
             if not health.ready:
                 return _failed("model", "model_probe_rejected", adapter=configuration.name)
             return CapabilityCheck(

@@ -138,6 +138,8 @@ class ProfileReviewService:
 _LEARNING_FAILED = "The model could not draft a playbook. Try again."
 _LEARNING_FAILURES = {
     "provider_rejected": "The model provider rejected the request. Check the API key and model.",
+    "provider_key_rejected": "The model provider did not accept the API key. Check Connections.",
+    "provider_model_not_found": "The model provider has no model by that name. Check Connections.",
     "provider_unavailable": "The model provider is unavailable right now. Try again shortly.",
     "provider_timeout": "The model took too long to answer. Try again.",
 }
