@@ -13,6 +13,9 @@ struct RouteEditorSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                SheetTitle(
+                    kind: L10n.string("Guru"),
+                    name: route.displayName.trimmed.isEmpty ? L10n.string("New") : route.displayName.trimmed)
                 Section {
                     TextField(L10n.string("Name"), text: $route.displayName, prompt: Text(L10n.string("How you refer to this guru")))
                         .accessibilityLabel(L10n.string("Name"))
@@ -102,7 +105,6 @@ struct RouteEditorSheet: View {
                 }
             }
             .formStyle(.grouped)
-            .navigationTitle(route.displayName.trimmed.isEmpty ? L10n.string("New Guru") : route.displayName)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(L10n.string("Done"), action: dismiss.callAsFunction)

@@ -595,7 +595,6 @@
 "Needs review" = "待审核";
 "Needs Review" = "需要审核";
 "Needs your review" = "需要审核";
-"New Account" = "新账户";
 "New accounts start with **entries off**, so nothing is bought until you choose **Enable Entries** in Accounts. Shares you already hold are never sold by CopyTrading." = "新账户默认**不开新仓**，你在“账户”中选择**启用开仓**前不会买入任何股票。CopyTrading 永远不会卖出你原本持有的股票。";
 "New accounts start with entries off, so nothing is bought until you turn them on. Exits are still copied." = "新账户默认关闭开仓，因此在你启用前不会买入。平仓操作仍会跟随执行。";
 "New accounts start with entries off, so nothing is bought yet. Turn them on in Accounts when you're ready." = "新账户默认关闭开仓，因此暂不会买入。准备好后，可在“账户”中启用。";
@@ -1260,7 +1259,6 @@
 "Historical evaluation could not be completed." = "无法完成历史评估。";
 "All remaining owned shares" = "持有的全部剩余股份";
 "Add a Channel" = "添加频道";
-"New Guru" = "新信号源";
 "Choose an Account to Copy Into" = "选择要跟单到的账户";
 "Copy into Another Account" = "跟单到另一个账户";
 "No check results" = "没有检查结果";
@@ -1395,3 +1393,5 @@
 "start copying into live accounts" = "开始跟单到实盘账户";
 "Copying didn't start. Confirm with Touch ID or your Mac password to copy into live accounts." = "跟单未开始。请用 Touch ID 或 Mac 密码确认，才能跟单到实盘账户。";
 "allow new entries in %@" = "允许 %@ 开新仓";
+"Alpaca account" = "Alpaca 账户";
+"New" = "新建";
