@@ -30,7 +30,7 @@ environment = "paper"   # "paper" trades pretend money at real prices; "live" is
   [accounts.limits]
   max_order_usd = 100          # the most one copied buy can spend
   max_symbol_usd = 600         # the most held in any one stock
-  max_total_usd = 2500         # the most held across all copied stocks
+  max_total_usd = 2500         # the most held across all stocks in the account
   daily_loss_cap_usd = 250     # buys stop for the day after losing this much
   max_entries_per_day = 30     # copied buys per trading day; sells don't count
   max_signal_age_seconds = 120 # an older post is skipped instead of copied

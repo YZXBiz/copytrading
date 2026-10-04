@@ -57,11 +57,15 @@ struct AccountEditorSheet: View {
                         text: $account.policy.maxOrderUSD,
                         example: LimitExamples.maxOrder)
                     textLimit(
-                        "Maximum per symbol", hint: "The most this account holds in any one stock. A buy that would go over is skipped.",
+                        "Maximum per symbol",
+                        hint:
+                            "The most this account holds in any one stock, counting shares you bought yourself. A buy that would go over is skipped.",
                         text: $account.policy.maxSymbolUSD,
                         example: LimitExamples.maxSymbol)
                     textLimit(
-                        "Maximum total exposure", hint: "The most this account holds across all copied stocks together.",
+                        "Maximum total exposure",
+                        hint:
+                            "The most this account holds in all stocks together, counting ones you bought yourself. A buy that would go over is skipped.",
                         text: $account.policy.maxTotalUSD,
                         example: LimitExamples.maxTotal)
                     textLimit(

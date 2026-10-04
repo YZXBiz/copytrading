@@ -6,12 +6,13 @@ enum LimitExamples {
         instead.
         """
     static let maxSymbol = """
-        Set to **$3,000**. You already hold **$2,500** of NVDA from earlier calls. A new **$1,000** NVDA buy \
-        would bring it to $3,500, so that buy is **skipped**. It isn't shrunk to fit.
+        Set to **$3,000**. This account already holds **$2,500** of NVDA, copied or bought yourself. A new \
+        **$1,000** NVDA buy would bring it to $3,500, so that buy is **skipped**. It isn't shrunk to fit.
         """
     static let maxTotal = """
-        Set to **$10,000**. The stocks CopyTrading bought in this account are worth **$9,500** together. A \
-        new **$1,000** buy of any stock would go over, so it's **skipped**.
+        Set to **$10,000**. Everything this account holds, including stocks you bought yourself and buys \
+        still waiting to fill, is worth **$9,500**. A new **$1,000** buy of any stock would go over, so it's \
+        **skipped**.
         """
     static let dailyLossCap = """
         Set to **$500**. The account closed yesterday at **$20,000**. Once it drops to **$19,500** today, \
