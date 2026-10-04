@@ -24,9 +24,15 @@
   <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
+<p align="center">
+  <strong>Not financial advice.</strong> CopyTrading is software, not an adviser. Trading can lose money, and you are responsible for every order it places.
+</p>
+
 CopyTrading is a native macOS app that reads the stock calls traders post on Discord, turns each one into an exact order, checks it against your limits, and places it with your Alpaca account. Everything runs on your Mac.
 
 > [!WARNING]
+> **Not financial advice.** Nothing in this project, including the app, its assistant, and the traders it copies, is investment, financial, legal, or tax advice, and nobody here recommends any trade. Trading can lose some or all of your money. You alone choose whom to copy and what limits to set, and you are responsible for every order placed in your accounts. The software is provided as is, without warranty ([MIT license](LICENSE)).
+>
 > **Developer preview.** CopyTrading has not been qualified for live trading. Start with an Alpaca paper account, and see [validation](docs/validation.md) for what has and has not been proven.
 
 <p align="center">
