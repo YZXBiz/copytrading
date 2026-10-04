@@ -596,9 +596,7 @@ def j3_first_run_guidance(app: AppDriver) -> None:
     app.expect(guide, "Status: Not set up yet", "guide.step.0", "Find a channel ID", "0 of 5")
     app.click("guide.openDiscord")
     connections = app.see("connections-from-guide")
-    app.expect(
-        connections, "Discord", "Interpreter", "Alerts", "Channel IDs", "Step by step"
-    )
+    app.expect(connections, "Discord", "Interpreter", "Alerts", "Channel IDs", "Step by step")
     today = app.open_screen("today")
     app.expect(today, "Your trading day, at a glance", "today.gettingStarted")
 
