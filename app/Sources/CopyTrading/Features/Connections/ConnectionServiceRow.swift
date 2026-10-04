@@ -61,10 +61,9 @@ struct ConnectionServiceRow: View {
         .onHover { isHovered = $0 }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: isHovered)
         .anchorPreference(key: ConnectionOriginKey.self, value: .bounds) { [origin: $0] }
-        .accessibilityElement(children: .ignore)
+        // The label replaces the row's words; the element stays the button, so it can be pressed.
         .accessibilityLabel([title, detail].compactMap { $0 }.joined(separator: ", "))
         .accessibilityHint(action ?? "")
-        .accessibilityAddTraits(.isButton)
         .accessibilityIdentifier(identifier)
     }
 }
