@@ -103,7 +103,7 @@ struct ConnectionsView: View {
                 case .alerts:
                     serviceRow(kind, brand: "telegram", summary: summary, title: L10n.string("Telegram bot"))
                 case .interpreter:
-                    if let summary {
+                    if let summary, !isEditingFromProviderRow {
                         serviceRow(kind, brand: model.setupDraft.provider.brandIcon, summary: summary, title: summary.title)
                         moreServicesRow(title: L10n.string("Use another service"), detail: nil)
                         if showsAllServices {
@@ -128,7 +128,7 @@ struct ConnectionsView: View {
                     }
                 }
             }
-            if kind == .interpreter && summary == nil {
+            if kind == .interpreter && (summary == nil || isEditingFromProviderRow) {
                 SettingsSection(dividerInset: 56) {
                     ForEach(ProviderGroup.ownModel.providers, id: \.self) { provider in
                         providerRow(provider, title: L10n.string(provider.title), detail: provider.tagline)
@@ -180,6 +180,13 @@ struct ConnectionsView: View {
         ) {
             withAnimation(motion) { showsAllServices.toggle() }
         }
+    }
+
+    /// A panel opened from a service's own row keeps that row on the page until it closes: typing
+    /// the first character of a model would otherwise swap the list for the connected row, and the
+    /// panel would lose the row it grew from, and the keystrokes with it.
+    private var isEditingFromProviderRow: Bool {
+        if case .provider = panel?.origin { true } else { false }
     }
 
     /// Every interpreter service but the one in use, popular ones first.

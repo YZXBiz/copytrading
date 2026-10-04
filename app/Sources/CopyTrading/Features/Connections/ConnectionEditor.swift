@@ -58,7 +58,12 @@ struct ConnectionEditor: View {
             }
             .padding(.horizontal, 4)
         }
-        .onAppear { focused = firstField }
+        // Focus waits until the panel has grown out of its row: a field focused mid-animation is
+        // marked focused without ever getting the keyboard, and then a click on it changes nothing.
+        .task {
+            try? await Task.sleep(for: .milliseconds(reduceMotion ? 50 : 450))
+            focused = firstField
+        }
         .animation(reduceMotion ? nil : .smooth(duration: 0.2), value: model.setupDraft.provider.acceptsBaseURL)
     }
 
