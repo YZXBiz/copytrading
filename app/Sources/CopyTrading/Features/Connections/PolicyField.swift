@@ -5,6 +5,8 @@ import SwiftUI
 struct PolicyField<Field: View>: View {
     let title: String
     let hint: String
+    /// One worked example behind an "i" beside the name.
+    var example: String?
     @ViewBuilder let field: Field
 
     var body: some View {
@@ -14,7 +16,12 @@ struct PolicyField<Field: View>: View {
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: 110)
         } label: {
-            Text(title)
+            HStack(spacing: 4) {
+                Text(title)
+                if let example {
+                    ExampleMark(title: title, example: example)
+                }
+            }
             Text(hint)
         }
     }

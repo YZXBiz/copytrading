@@ -54,37 +54,50 @@ struct AccountEditorSheet: View {
                 Section(L10n.string("Position limits (USD)")) {
                     textLimit(
                         "Maximum per order", hint: "The most one copied buy can spend. A bigger call is cut down to this.",
-                        text: $account.policy.maxOrderUSD)
+                        text: $account.policy.maxOrderUSD,
+                        example: LimitExamples.maxOrder)
                     textLimit(
-                        "Maximum per symbol", hint: "The most this account holds in any one stock. A buy that would go over is skipped.",
-                        text: $account.policy.maxSymbolUSD)
+                        "Maximum per symbol",
+                        hint:
+                            "The most this account holds in any one stock, counting shares you bought yourself. A buy that would go over is skipped.",
+                        text: $account.policy.maxSymbolUSD,
+                        example: LimitExamples.maxSymbol)
                     textLimit(
-                        "Maximum total exposure", hint: "The most this account holds across all copied stocks together.",
-                        text: $account.policy.maxTotalUSD)
+                        "Maximum total exposure",
+                        hint:
+                            "The most this account holds in all stocks together, counting ones you bought yourself. A buy that would go over is skipped.",
+                        text: $account.policy.maxTotalUSD,
+                        example: LimitExamples.maxTotal)
                     textLimit(
                         "Daily loss cap",
                         hint: "Once the account is down this much since yesterday's close, buys stop for the day. Sells still run.",
-                        text: $account.policy.dailyLossCapUSD)
+                        text: $account.policy.dailyLossCapUSD,
+                        example: LimitExamples.dailyLossCap)
                     textLimit(
                         "Maximum above signal price (%)",
                         hint: "How far above the guru's price a buy may fill. 0 means never pay more than they did.",
-                        text: $account.policy.maxAboveSignalPct)
+                        text: $account.policy.maxAboveSignalPct,
+                        example: LimitExamples.maxAboveSignal)
                 }
 
                 Section(L10n.string("Timing")) {
                     numberLimit(
                         "Entries per day", hint: "The most copied buys in one trading day. Sells don't count.",
-                        value: $account.policy.maxEntriesPerDay)
+                        value: $account.policy.maxEntriesPerDay,
+                        example: LimitExamples.entriesPerDay)
                     numberLimit(
                         "Maximum signal age (seconds)",
-                        hint: "A post older than this when it arrives waits for your review instead of trading.",
-                        value: $account.policy.maxSignalAgeSeconds)
+                        hint: "A post older than this is skipped instead of copied. You can still copy it yourself from Activity.",
+                        value: $account.policy.maxSignalAgeSeconds,
+                        example: LimitExamples.maxSignalAge)
                     numberLimit(
                         "Order timeout (seconds)", hint: "A limit order that hasn't filled by then is canceled.",
-                        value: $account.policy.orderTimeoutSeconds)
+                        value: $account.policy.orderTimeoutSeconds,
+                        example: LimitExamples.orderTimeout)
                     numberLimit(
                         "Broker poll interval (seconds)", hint: "How often CopyTrading checks the broker for fills and balances.",
-                        value: $account.policy.pollSeconds)
+                        value: $account.policy.pollSeconds,
+                        example: LimitExamples.pollInterval)
                 }
 
                 Section {
@@ -120,20 +133,20 @@ struct AccountEditorSheet: View {
         .frame(minWidth: 520, idealWidth: 560, minHeight: 620, idealHeight: 700)
     }
 
-    private func textLimit(_ title: String, hint: String, text: Binding<String>) -> some View {
-        PolicyField(title: L10n.string(title), hint: L10n.string(hint)) {
+    private func textLimit(_ title: String, hint: String, text: Binding<String>, example: String) -> some View {
+        PolicyField(title: L10n.string(title), hint: L10n.string(hint), example: example) {
             TextField(L10n.string(title), text: text)
         }
     }
 
-    private func numberLimit(_ title: String, hint: String, value: Binding<Int>) -> some View {
-        PolicyField(title: L10n.string(title), hint: L10n.string(hint)) {
+    private func numberLimit(_ title: String, hint: String, value: Binding<Int>, example: String) -> some View {
+        PolicyField(title: L10n.string(title), hint: L10n.string(hint), example: example) {
             TextField(L10n.string(title), value: value, format: .number)
         }
     }
 
-    private func numberLimit(_ title: String, hint: String, value: Binding<Double>) -> some View {
-        PolicyField(title: L10n.string(title), hint: L10n.string(hint)) {
+    private func numberLimit(_ title: String, hint: String, value: Binding<Double>, example: String) -> some View {
+        PolicyField(title: L10n.string(title), hint: L10n.string(hint), example: example) {
             TextField(L10n.string(title), value: value, format: .number)
         }
     }
