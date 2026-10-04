@@ -414,6 +414,11 @@ def test_native_model_probe_names_a_rejected_key_and_suggests_a_listed_model(mon
     unrelated = check("llama-3.3-70b")
     assert (unrelated.reason_code, unrelated.suggestion) == ("model_not_found", None)
 
+    # A server that isn't there, or doesn't answer, is unreachable, not a model that misread.
+    for reason in ("provider_unavailable", "provider_timeout"):
+        monkeypatch.setattr(capabilities, "probe_model", failing(reason))
+        assert check("deepseek-flash").reason_code == "model_unreachable"
+
 
 def test_native_model_probe_still_fails_cleanly_when_the_model_list_is_unavailable(monkeypatch):
     class Decoder:

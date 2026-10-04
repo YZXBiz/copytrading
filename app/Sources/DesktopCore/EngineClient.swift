@@ -62,6 +62,14 @@ public actor EngineClient {
         return validation
     }
 
+    public func checkConnection(_ connection: TradingConnectionCheck) async throws -> TradingCapabilityCheck {
+        let result = try await request(.checkConnection(connection))
+        guard case .connectionCheck(let check) = result else {
+            throw EngineContractError.missingResult
+        }
+        return check
+    }
+
     public func startTrading(
         configuration: TradingConfiguration,
         secrets: TradingSecrets,

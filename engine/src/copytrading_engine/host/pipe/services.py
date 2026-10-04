@@ -37,8 +37,12 @@ from copytrading_engine.execution.presentation.operator_views import (
     AccountOverviewPage,
 )
 from copytrading_engine.trading.adapters.activation import TradingActivationStatus
-from copytrading_engine.trading.adapters.capabilities import TradingCapabilityReport
+from copytrading_engine.trading.adapters.capabilities import (
+    CapabilityCheck,
+    TradingCapabilityReport,
+)
 from copytrading_engine.trading.domain.config import (
+    ConnectionCheck,
     ProviderConfiguration,
     TradingConfiguration,
     TradingSecrets,
@@ -60,6 +64,8 @@ class TradingLifecycle(Protocol):
     async def validate(
         self, configuration: TradingConfiguration, secrets: TradingSecrets
     ) -> TradingCapabilityReport: ...
+
+    async def check_connection(self, connection: ConnectionCheck) -> CapabilityCheck: ...
 
     async def start(
         self, configuration: TradingConfiguration, secrets: TradingSecrets, activation_id: str

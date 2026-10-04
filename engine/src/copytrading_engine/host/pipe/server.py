@@ -37,6 +37,7 @@ from copytrading_engine.host.pipe.requests import (
     AssistantCancelRequest,
     AssistantResetRequest,
     AssistantTurnRequest,
+    CheckConnectionRequest,
     CompleteRestoreCandidateRequest,
     ConfirmManualOrdersRequest,
     ControlAccountRequest,
@@ -238,6 +239,7 @@ class PipeServer:
                 (
                     StartTradingRequest,
                     ValidateTradingRequest,
+                    CheckConnectionRequest,
                     ControlAccountRequest,
                     ResolveOwnershipRequest,
                 ),
@@ -260,6 +262,7 @@ class PipeServer:
                     GetTradingStatusRequest,
                     StartTradingRequest,
                     ValidateTradingRequest,
+                    CheckConnectionRequest,
                     PauseTradingRequest,
                     ControlAccountRequest,
                     ResolveOwnershipRequest,

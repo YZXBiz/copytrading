@@ -30,6 +30,11 @@ public struct EngineActions: Sendable {
         return try await client.validateTrading(configuration: configuration, secrets: secrets)
     }
 
+    public func checkConnection(_ connection: TradingConnectionCheck) async throws -> TradingCapabilityCheck {
+        let client = try await supervisor.engineClient()
+        return try await client.checkConnection(connection)
+    }
+
     public func startTrading(
         configuration: TradingConfiguration,
         secrets: TradingSecrets,

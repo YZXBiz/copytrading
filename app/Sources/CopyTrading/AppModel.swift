@@ -10,6 +10,8 @@ protocol TradingStarting: Sendable {
         configuration: TradingConfiguration, secrets: TradingSecrets
     ) async throws -> TradingValidation
 
+    func checkConnection(_ connection: TradingConnectionCheck) async throws -> TradingCapabilityCheck
+
     func startTrading(
         configuration: TradingConfiguration,
         secrets: TradingSecrets,
@@ -650,6 +652,8 @@ final class AppModel {
     var requestedAccountID: String?
     /// The draft as it stood when the current check began; Start Copying needs it unchanged.
     var checkedSetupSignature: SetupDraftSignature?
+    /// Each connection's latest check, kept only while what it checked stays as typed.
+    var connectionChecks: [ConnectionCheckSubject: ConnectionCheckResult] = [:]
     var isShowingSetupCheck = false
     /// When copying last started from a new setup. Today says so until the first post after it.
     var copyingStartedAt: Date?
@@ -1339,6 +1343,7 @@ final class AppModel {
             )
             guard !Task.isCancelled else { throw CancellationError() }
             tradingValidation = validation
+            recordConnectionChecks(validation.report.checks)
             guard validation.report.activatable, let activationToken = validation.activationToken else {
                 message = L10n.string("Some connections need attention. Nothing was saved.")
                 isShowingSetupCheck = true
@@ -1805,6 +1810,14 @@ final class AppModel {
     /// Checks the rules the engine also enforces, and names the first one a draft breaks.
     /// The model key to use: what was typed, or the saved one when the provider is the one it was
     /// saved for, so switching providers never sends one service's key to another.
+    /// What checks a single connection: the test double, or the running engine.
+    var connectionChecker: (any TradingStarting)? { tradingStarter ?? engineActions }
+
+    /// The saved setup and its Keychain keys, which fill any key the owner left blank.
+    func savedSetup() -> (configuration: TradingConfiguration, secrets: TradingSecrets)? {
+        try? tradingConfigurationStore?.load()
+    }
+
     static func providerKey(
         entered: String, for provider: TradingProviderName,
         saved: (configuration: TradingConfiguration, secrets: TradingSecrets)?

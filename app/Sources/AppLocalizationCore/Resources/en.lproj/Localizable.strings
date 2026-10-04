@@ -1440,3 +1440,17 @@
 "Choose **Start Copying**. CopyTrading first signs in to Discord, your interpreter, and Alpaca, and reads each example the way it will read real posts." = "Choose **Start Copying**. CopyTrading first signs in to Discord, your interpreter, and Alpaca, and reads each example the way it will read real posts.";
 "If anything is marked, choose **Review…**, fix it, then choose **Start Copying** again." = "If anything is marked, choose **Review…**, fix it, then choose **Start Copying** again.";
 "New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**." = "New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**.";
+"Alpaca didn't accept these keys. Check that they are for a paper or live account as chosen." = "Alpaca didn't accept these keys. Check that they are for a paper or live account as chosen.";
+"Alpaca says this account can't trade yet. Check it on Alpaca's site." = "Alpaca says this account can't trade yet. Check it on Alpaca's site.";
+"Couldn't check this connection. Try again in a moment." = "Couldn't check this connection. Try again in a moment.";
+"Couldn't connect" = "Couldn't connect";
+"Couldn't reach the alert service. Check the token and the chat." = "Couldn't reach the alert service. Check the token and the chat.";
+"Discord didn't accept the token, or can't find a channel. Check both." = "Discord didn't accept the token, or can't find a channel. Check both.";
+"Discord didn't accept the webhook URL. It may have been deleted." = "Discord didn't accept the webhook URL. It may have been deleted.";
+"Discord didn't answer in time. Check your connection and try again." = "Discord didn't answer in time. Check your connection and try again.";
+"Telegram didn't accept the bot token." = "Telegram didn't accept the bot token.";
+"That isn't a Discord webhook URL. Copy it again from the channel's settings." = "That isn't a Discord webhook URL. Copy it again from the channel's settings.";
+"The bot can't reach that chat. Send the bot a message first, then try again." = "The bot can't reach that chat. Send the bot a message first, then try again.";
+"Your Discord account can't read one of these channels. Check the channel IDs." = "Your Discord account can't read one of these channels. Check the channel IDs.";
+"Nothing answered at that address. Check the Base URL and that %@ is running." = "Nothing answered at that address. Check the Base URL and that %@ is running.";
+"%@ didn't answer. Check your connection and try again." = "%@ didn't answer. Check your connection and try again.";

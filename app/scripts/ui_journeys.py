@@ -435,6 +435,24 @@ end tell
                 raise JourneyFailure(f"{text!r} did not appear within {timeout:.0f}s")
             time.sleep(1.5)
 
+    def wait_gone(self, text: str, *, timeout: float = 60) -> Snapshot:
+        """Waits for something to leave the screen, such as a sheet that closes once its
+        connection checks out."""
+        deadline = time.monotonic() + timeout
+        while True:
+            snapshot = self.see()
+            if not snapshot.has(text):
+                return snapshot
+            if time.monotonic() > deadline:
+                self.see(f"timeout-gone-{text[:24].replace(' ', '-')}")
+                raise JourneyFailure(f"{text!r} was still on screen after {timeout:.0f}s")
+            time.sleep(1.5)
+
+    def connect(self) -> None:
+        """Connect checks the service first; the panel closes once it answers."""
+        self.click("connections.done")
+        self.wait_gone("connections.done", timeout=90)
+
     def expect(self, snapshot: Snapshot, *texts: str) -> None:
         missing = [text for text in texts if not snapshot.has(text)]
         if missing:
@@ -763,6 +781,7 @@ def j8_credential_gate(app: AppDriver) -> None:
     app.type(key, into="Alpaca API key")
     app.type(secret, into="Alpaca API secret")
     app.click("Done")
+    app.wait_gone("Alpaca keys", timeout=60)
     app.click("connections.gurus.add")
     app.type("Journey Guru", into="Name")
     guru = app.see("guru-adopted-channel")
@@ -892,7 +911,7 @@ def j25_getting_started(app: AppDriver) -> None:
     app.open_connection("discord")
     app.type("123456789012345678", into="Channel IDs")
     app.type("ui-journey-placeholder", into="Discord token")
-    app.click("connections.done")
+    app.click("connections.close")
     ticked = app.open_screen("gettingStarted")
     step = ticked.find("guide.step.0")
     if step is None or "Done" not in step.text:
@@ -924,16 +943,18 @@ def _start_paper_setup(app: AppDriver, setup: dict[str, str]) -> None:
     app.open_connection("discord")
     app.type(setup["channel"], into="Channel IDs")
     app.type(setup["discord_token"], into="Discord token")
-    app.click("connections.done")
+    app.connect()
     app.click("connections.provider.deepseek")
     app.type(setup["model"], into="Model")
     app.type(setup["model_key"], into="API key")
-    app.click("connections.done")
+    app.connect()
     app.click("connections.accounts.paper")
     app.wait_for("Alpaca keys", timeout=15)
     app.type(setup["alpaca_key"], into="Alpaca API key")
     app.type(setup["alpaca_secret"], into="Alpaca API secret")
     app.click("Done")
+    app.wait_gone("Alpaca keys", timeout=60)
+    app.expect(app.see("connections-checked"), "Connected")
     app.click("connections.gurus.add")
     app.type("Journey Guru", into="Name")
     app.click("Done")
@@ -1071,6 +1092,23 @@ def j28_connections_panel(app: AppDriver) -> None:
     app.expect(closed, "Telegram bot", "connections.idea.channelID", "connections.hideIdeas")
 
 
+def j32_connection_check(app: AppDriver) -> None:
+    """Connect checks the service there and then: a server that isn't there keeps the panel
+    open and says what to fix, and the row says it couldn't connect."""
+    app.open_screen("connections")
+    app.click("connections.provider.openai_compatible")
+    time.sleep(0.8)
+    # Port 9 is the discard port: nothing listens there, so the check fails without a network.
+    app.type("http://127.0.0.1:9/v1", into="Base URL")
+    app.type("journey-model", into="Model")
+    app.click("connections.done")
+    failed = app.wait_for("connections.problem", timeout=90, name="connection-check-failed")
+    app.expect(failed, "Nothing answered at that address", "connections.done")
+    app.click("connections.close")
+    app.expect(app.see("connection-check-row"), "Couldn't connect")
+    _relock(app)
+
+
 def j30_assistant(app: AppDriver) -> None:
     """The assistant answers from a local OpenAI-compatible model and closes on Esc.
 
@@ -1084,7 +1122,7 @@ def j30_assistant(app: AppDriver) -> None:
         app.expect(app.see("assistant-model-editor"), "Connect to", "Base URL", "Model")
         app.type(stub.base_url, into="Base URL")
         app.type("scripted", into="Model")
-        app.click("connections.done")
+        app.click("connections.close")
 
         # Checks name what the owner sees rather than the panel's containers, so they hold
         # under any accessibility reader, including ones that flatten groups.
@@ -1171,6 +1209,7 @@ JOURNEYS: list[tuple[str, Callable[[AppDriver], None]]] = [
     ("J18 agent access", j18_agent_access),
     ("J22 setup keeps typing", j22_setup_keeps_typing),
     ("J28 connections panel", j28_connections_panel),
+    ("J32 connection check", j32_connection_check),
     ("J25 getting started", j25_getting_started),
     ("J30 assistant", j30_assistant),
     ("J26 help menu", j26_help_menu),

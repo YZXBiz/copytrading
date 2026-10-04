@@ -18,9 +18,14 @@ from copytrading_engine.sources.source import require_history_channel
 from copytrading_engine.trading.adapters.notifications import discord_webhook
 from copytrading_engine.trading.domain.config import (
     AccountConfiguration,
+    BrokerCheck,
     BrokerCredentials,
+    ConnectionCheck,
+    ModelCheck,
+    NotificationCheck,
     NotificationConfiguration,
     ProviderConfiguration,
+    SourceCheck,
     SourceConfiguration,
     TradingConfiguration,
     TradingSecrets,
@@ -107,6 +112,23 @@ async def _closest_model(decoder: ManagedDecoder, asked: str) -> str | None:
     return matches[0] if matches else None
 
 
+async def _safely(
+    name: CapabilityName,
+    operation: Awaitable[CapabilityCheck],
+    *,
+    subject: str | None = None,
+    environment: Literal["paper", "live"] | None = None,
+) -> CapabilityCheck:
+    try:
+        return await operation
+    except asyncio.CancelledError:
+        raise
+    except Exception:  # noqa: BLE001 - any client failure becomes a failed capability check
+        return _failed(
+            name, f"{name}_capability_unavailable", subject=subject, environment=environment
+        )
+
+
 class TradingCapabilityService:
     """Run source, provider, broker, and notification checks without saving config."""
 
@@ -124,37 +146,18 @@ class TradingCapabilityService:
         if set(by_account) != account_ids:
             checks.append(_failed("configuration", "broker_credential_mapping_invalid"))
 
-        async def safely(
-            name: CapabilityName,
-            operation: Awaitable[CapabilityCheck],
-            *,
-            subject: str | None = None,
-            environment: Literal["paper", "live"] | None = None,
-        ) -> CapabilityCheck:
-            try:
-                return await operation
-            except asyncio.CancelledError:
-                raise
-            except Exception:  # noqa: BLE001 - any client failure becomes a failed capability check
-                return _failed(
-                    name,
-                    f"{name}_capability_unavailable",
-                    subject=subject,
-                    environment=environment,
-                )
-
         operations = [
-            safely(
+            _safely(
                 "source",
                 self._probes.source(configuration.source, secrets.discord_token.get_secret_value()),
             ),
-            safely(
+            _safely(
                 "model",
                 self._probes.model(
                     configuration.provider, secrets.provider_api_key.get_secret_value()
                 ),
             ),
-            safely(
+            _safely(
                 "notification",
                 self._probes.notification(
                     configuration.notification,
@@ -180,7 +183,7 @@ class TradingCapabilityService:
                 )
             else:
                 operations.append(
-                    safely(
+                    _safely(
                         "broker",
                         self._probes.broker(account, credentials),
                         subject=account.id,
@@ -210,6 +213,36 @@ class TradingCapabilityService:
                 "without sending a message."
             ),
         )
+
+    async def check(self, connection: ConnectionCheck) -> CapabilityCheck:
+        """One service, the moment the owner connects it: the same read-only check a full
+        validation runs for it, without saving anything or granting a start."""
+        match connection:
+            case SourceCheck():
+                return await _safely(
+                    "source",
+                    self._probes.source(connection.source, connection.token.get_secret_value()),
+                )
+            case ModelCheck():
+                return await _safely(
+                    "model",
+                    self._probes.model(connection.provider, connection.api_key.get_secret_value()),
+                )
+            case BrokerCheck():
+                account = connection.account
+                return await _safely(
+                    "broker",
+                    self._probes.broker(account, connection.credentials),
+                    subject=account.id,
+                    environment=account.environment,
+                )
+            case NotificationCheck():
+                return await _safely(
+                    "notification",
+                    self._probes.notification(
+                        connection.notification, connection.token.get_secret_value()
+                    ),
+                )
 
 
 class NativeCapabilityProbes:
@@ -312,6 +345,8 @@ class NativeCapabilityProbes:
                     adapter=configuration.name,
                     suggestion=await _closest_model(decoder, configuration.model),
                 )
+            if health.error in {"provider_unavailable", "provider_timeout"}:
+                return _failed("model", "model_unreachable", adapter=configuration.name)
             if not health.ready:
                 return _failed("model", "model_probe_rejected", adapter=configuration.name)
             return CapabilityCheck(

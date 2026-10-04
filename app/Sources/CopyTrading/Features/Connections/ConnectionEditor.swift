@@ -2,7 +2,8 @@ import DesktopCore
 import SwiftUI
 
 /// One service's settings inside the Connections panel. What is typed goes straight into the
-/// setup draft, as everywhere else in the setup, and waits there until the setup is checked.
+/// setup draft and waits there until copying starts. Connect checks the service there and then:
+/// the panel closes once it answers, and says what is wrong when it doesn't.
 struct ConnectionEditor: View {
     let kind: ConnectionKind
     @Bindable var model: AppModel
@@ -11,6 +12,15 @@ struct ConnectionEditor: View {
     let done: () -> Void
     /// The field the cursor is in, by its label.
     @FocusState private var focused: String?
+    @State private var isChecking = false
+
+    private var subject: ConnectionCheckSubject { ConnectionCheckSubject(kind) }
+
+    /// The latest check, while it failed and nothing it checked has been edited since.
+    private var failedCheck: TradingCapabilityCheck? {
+        guard let check = model.connectionCheckResult(subject)?.check, check.state == .failed else { return nil }
+        return check
+    }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// A saved alert secret is kept only for the service it was saved for.
@@ -48,15 +58,27 @@ struct ConnectionEditor: View {
             VStack(alignment: .leading, spacing: 14) {
                 fields
             }
+            if let failedCheck {
+                ConnectionCheckCallout(
+                    check: failedCheck, modelName: model.setupDraft.modelName,
+                    useModel: kind == .interpreter ? { model.setupDraft.modelName = $0 } : nil)
+            }
             VStack(spacing: 10) {
-                Button(action: done) {
-                    Text(L10n.string(isNew ? "Connect" : "Save"))
-                        .frame(maxWidth: .infinity)
+                Button(action: connect) {
+                    HStack(spacing: 8) {
+                        if isChecking {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                        Text(L10n.string(isChecking ? "Checking…" : isNew ? "Connect" : "Save"))
+                    }
+                    .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .buttonBorderShape(.capsule)
                 .controlSize(.large)
                 .keyboardShortcut(.defaultAction)
+                .disabled(isChecking)
                 .accessibilityIdentifier("connections.done")
                 if kind == .alerts, model.setupDraft.notificationsEnabled {
                     Button(L10n.string("Turn Off Alerts"), role: .destructive, action: turnOffAlerts)
@@ -72,6 +94,7 @@ struct ConnectionEditor: View {
             focused = firstField
         }
         .animation(reduceMotion ? nil : .smooth(duration: 0.2), value: model.setupDraft.provider.acceptsBaseURL)
+        .animation(reduceMotion ? nil : .smooth(duration: 0.2), value: failedCheck)
     }
 
     @ViewBuilder
@@ -139,6 +162,21 @@ struct ConnectionEditor: View {
         case .discord: "Channel IDs"
         case .interpreter: "Model"
         case .alerts: model.setupDraft.notificationService == .discord ? "Webhook URL" : "Chat ID"
+        }
+    }
+
+    /// Checks the service as typed. The panel closes when it answers, or when there is nothing the
+    /// engine can check yet; a failed check stays on screen until something is changed.
+    private func connect() {
+        if kind == .alerts {
+            let draft = model.setupDraft
+            model.setupDraft.notificationsEnabled = !draft.notificationChatID.trimmed.isEmpty || !draft.notificationToken.isEmpty
+        }
+        Task {
+            isChecking = true
+            let check = await model.checkConnection(subject)
+            isChecking = false
+            if check?.state != .failed { done() }
         }
     }
 

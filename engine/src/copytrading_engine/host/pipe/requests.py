@@ -19,7 +19,11 @@ from copytrading_engine.execution.domain.market import HistoryWindow
 from copytrading_engine.execution.domain.ownership import OwnershipResolutionRequest
 from copytrading_engine.execution.domain.sizing import RouteConnection
 from copytrading_engine.trading.domain.config import (
+    BrokerCheck,
+    ModelCheck,
+    NotificationCheck,
     ProviderConfiguration,
+    SourceCheck,
     TradingConfiguration,
     TradingSecrets,
 )
@@ -80,6 +84,15 @@ class ValidateTradingRequest(PipeRequest):
     operation: Literal["validate_trading"]
     configuration: TradingConfiguration
     secrets: TradingSecrets
+
+
+class CheckConnectionRequest(PipeRequest):
+    """One service checked as the owner connects it; saves nothing and grants no start."""
+
+    operation: Literal["check_connection"]
+    connection: Annotated[
+        SourceCheck | ModelCheck | BrokerCheck | NotificationCheck, Field(discriminator="kind")
+    ]
 
 
 class PauseTradingRequest(PipeRequest):
@@ -300,6 +313,7 @@ RequestType = Annotated[
     | GetTradingActivationRequest
     | StartTradingRequest
     | ValidateTradingRequest
+    | CheckConnectionRequest
     | PauseTradingRequest
     | CreateBackupRequest
     | PreviewRestoreRequest

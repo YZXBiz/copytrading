@@ -69,6 +69,7 @@ def _secret_payload(provider_key: str = "provider-key"):
 class _Trading:
     def __init__(self):
         self.starts = 0
+        self.connection_checks = []
         self.evaluations = []
         self.example_reviews = []
         self.learnings = []
@@ -91,6 +92,10 @@ class _Trading:
             release_gates=("public_discord_authorization_not_qualified",),
             cost_notice="test notice",
         )
+
+    async def check_connection(self, connection):
+        self.connection_checks.append(connection)
+        return CapabilityCheck(name=connection.kind, state="ready", adapter="fake")
 
     async def start(self, configuration, secrets, activation_id):
         self.starts += 1
@@ -443,3 +448,85 @@ async def test_learn_playbook_pipe_returns_a_draft_and_never_echoes_tokens(store
     rejected = (await server.handle_line(bad_channel)).decode()
     assert "private-discord-token" not in rejected
     assert len(trading.learnings) == 2
+
+
+async def test_one_connection_is_checked_without_touching_the_start_grant(store: Path):
+    trading = _Trading()
+    server = PipeServer(
+        SelfTestService(store, SelfTestParser()),
+        EngineQueries(store, store.installation.instance_id),
+        services(trading),
+    )
+    configuration = _configuration().model_dump(mode="json")
+    validation = json.loads(
+        await server.handle_line(
+            request_line(
+                "validate_trading",
+                "validate-draft",
+                configuration=configuration,
+                secrets=_secret_payload(),
+            )
+        )
+    )
+
+    checked = json.loads(
+        await server.handle_line(
+            request_line(
+                "check_connection",
+                "check-model",
+                connection={
+                    "kind": "model",
+                    "provider": {"name": "deepseek", "model": "test-model"},
+                    "api_key": "private-provider-key",
+                },
+            )
+        )
+    )
+
+    assert checked["ok"] == {
+        "type": "connection_check",
+        "check": {
+            "name": "model",
+            "state": "ready",
+            "subject": None,
+            "environment": None,
+            "identity": None,
+            "adapter": "fake",
+            "reason_code": None,
+            "suggestion": None,
+        },
+    }
+    assert "private-provider-key" not in json.dumps(checked)
+    assert [check.kind for check in trading.connection_checks] == ["model"]
+    started = json.loads(
+        await server.handle_line(
+            request_line(
+                "start_trading",
+                "start-after-check",
+                configuration=configuration,
+                secrets=_secret_payload(),
+                validation_token=validation["ok"]["activation_token"],
+                activation_id=str(uuid4()),
+            )
+        )
+    )
+    assert "ok" in started
+    assert trading.starts == 1
+
+
+async def test_a_connection_of_an_unknown_kind_is_refused(store: Path):
+    trading = _Trading()
+    server = PipeServer(
+        SelfTestService(store, SelfTestParser()),
+        EngineQueries(store, store.installation.instance_id),
+        services(trading),
+    )
+
+    refused = json.loads(
+        await server.handle_line(
+            request_line("check_connection", "check-x", connection={"kind": "fax", "token": "t"})
+        )
+    )
+
+    assert refused["error"]["code"] == "invalid_request"
+    assert trading.connection_checks == []

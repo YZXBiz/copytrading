@@ -53,7 +53,11 @@ from copytrading_engine.trading.application.accounts import (
 from copytrading_engine.trading.application.manual_intervention import ManualInterventionService
 from copytrading_engine.trading.application.operator_service import OperatorQueryService
 from copytrading_engine.trading.application.profile_review import ProfileReviewService
-from copytrading_engine.trading.domain.config import TradingConfiguration, TradingSecrets
+from copytrading_engine.trading.domain.config import (
+    ConnectionCheck,
+    TradingConfiguration,
+    TradingSecrets,
+)
 from copytrading_engine.trading.domain.status import AccountStatus, TradingStatus
 from copytrading_engine.trading.entrypoints.factories import (
     NotificationSender,
@@ -210,6 +214,11 @@ class TradingRuntime:
         )
         self._task = asyncio.create_task(self._run(configuration, secrets))
         return self._status
+
+    async def check_connection(self, connection: ConnectionCheck) -> CapabilityCheck:
+        """Check one service with the keys typed for it; nothing is saved or started."""
+        self._register_secrets(connection.secret_values())
+        return await self._capability_service.check(connection)
 
     async def validate(
         self, configuration: TradingConfiguration, secrets: TradingSecrets
