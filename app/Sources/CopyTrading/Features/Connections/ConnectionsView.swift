@@ -1,13 +1,12 @@
 import DesktopCore
 import SwiftUI
 
-/// The outside services CopyTrading talks to: one
-/// section per service on the app's chart paper, a tile once it is connected, and a frosted panel
-/// that grows out of the card you click. Gurus live in People and broker accounts in Accounts.
+/// The outside services CopyTrading talks to: one section per service on the app's chart paper,
+/// each a list of rows with the service's logo and one action, and a frosted panel that grows out
+/// of the row you click. Gurus live in People and broker accounts in Accounts.
 struct ConnectionsView: View {
     @Bindable var model: AppModel
     @State private var panel: ConnectionPanelRoute?
-    @State private var hovered: ConnectionPanelOrigin?
     @AppStorage("connections.ideasHidden") private var ideasHidden = false
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -18,10 +17,10 @@ struct ConnectionsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 header
-                    .padding(.bottom, 44)
+                    .padding(.bottom, 30)
                 ForEach(ConnectionKind.allCases) { kind in
                     section(kind)
-                        .padding(.bottom, 52)
+                        .padding(.bottom, 36)
                 }
                 if !ideasHidden {
                     ConnectionIdeasSection(provider: model.setupDraft.provider, hide: hideIdeas)
@@ -94,39 +93,75 @@ struct ConnectionsView: View {
     @ViewBuilder
     private func section(_ kind: ConnectionKind) -> some View {
         let summary = ConnectionSummary.of(kind, in: model)
-        VStack(alignment: .leading, spacing: 20) {
-            ConnectionsSectionHeader(
-                title: kind.sectionTitle,
-                subtitle: summary == nil ? nil : kind.purpose,
-                addTitle: kind == .discord && summary != nil ? "Add a Channel" : nil,
-                add: { open(.editor(kind), from: .section(kind)) }
-            )
-            Button {
-                open(kind)
-            } label: {
-                if let summary {
-                    ConnectionTile(summary: summary, isHovered: hovered == .section(kind))
-                        .transition(.scale(scale: 0.9).combined(with: .opacity))
-                } else {
-                    ConnectionAddCard(title: kind.addTitle, subtitle: kind.purpose, isHovered: hovered == .section(kind))
-                        .transition(.opacity)
+        VStack(alignment: .leading, spacing: 10) {
+            SettingsSection(title: kind.title, subtitle: kind.explanation, dividerInset: 56) {
+                switch kind {
+                case .discord:
+                    serviceRow(
+                        kind, brand: "discord", summary: summary, title: L10n.string("Discord token and channels"))
+                case .alerts:
+                    serviceRow(kind, brand: "telegram", summary: summary, title: L10n.string("Telegram bot"))
+                case .interpreter:
+                    if let summary {
+                        serviceRow(kind, brand: model.setupDraft.provider.brandIcon, summary: summary, title: summary.title)
+                        moreServicesRow(title: L10n.string("Use another service"), detail: nil)
+                    } else {
+                        ForEach(ProviderGroup.popular.providers, id: \.self) { provider in
+                            providerRow(provider, title: L10n.string("%@ API key", L10n.string(provider.title)), detail: nil)
+                        }
+                        moreServicesRow(
+                            title: L10n.string("More services"),
+                            detail: L10n.string("%@, and more", Humanize.joined(["OpenRouter", "Groq", "xAI", "Mistral"])))
+                    }
                 }
             }
-            .buttonStyle(QuietPressButtonStyle())
-            .onHover { inside in
-                if inside {
-                    hovered = .section(kind)
-                } else if hovered == .section(kind) {
-                    hovered = nil
+            if kind == .interpreter && summary == nil {
+                SettingsSection(dividerInset: 56) {
+                    ForEach(ProviderGroup.ownModel.providers, id: \.self) { provider in
+                        providerRow(provider, title: L10n.string(provider.title), detail: provider.tagline)
+                    }
                 }
             }
-            .anchorPreference(key: ConnectionOriginKey.self, value: .bounds) { [.section(kind): $0] }
-            // The label replaces the card's words; the element stays the button, so it can be pressed.
-            .accessibilityLabel(summary.map { L10n.string("%@, %@, %@", $0.title, $0.detail, $0.status.text) } ?? kind.addTitle)
-            .accessibilityHint(kind.purpose)
-            .accessibilityIdentifier("connections.\(kind.rawValue)")
-            .animation(motion, value: summary == nil)
         }
+        .animation(motion, value: summary == nil)
+    }
+
+    /// A service with its own editor: "Connect" before it is set up, its setting and status after.
+    private func serviceRow(
+        _ kind: ConnectionKind, brand: String?, summary: ConnectionSummary?, title: String
+    ) -> some View {
+        ConnectionServiceRow(
+            brand: brand,
+            title: summary?.title ?? title,
+            detail: summary.map { L10n.string("%@ · %@", $0.detail, $0.status.text) },
+            tone: summary?.status.tone,
+            action: L10n.string(summary == nil ? "Connect" : "Edit"),
+            origin: .section(kind),
+            identifier: "connections.\(kind.rawValue)"
+        ) { open(.editor(kind), from: .section(kind)) }
+    }
+
+    private func providerRow(_ provider: TradingProviderName, title: String, detail: String?) -> some View {
+        ConnectionServiceRow(
+            brand: provider.brandIcon,
+            title: title,
+            detail: detail,
+            action: L10n.string("Connect"),
+            origin: .provider(provider),
+            identifier: "connections.provider.\(provider.rawValue)"
+        ) { connect(provider) }
+    }
+
+    /// Every interpreter service, in the panel's grouped list.
+    private func moreServicesRow(title: String, detail: String?) -> some View {
+        ConnectionServiceRow(
+            brand: nil,
+            symbol: "square.grid.2x2",
+            title: title,
+            detail: detail,
+            origin: .section(.interpreter),
+            identifier: "connections.interpreter\(detail == nil ? ".switch" : "")"
+        ) { open(.interpreters, from: .section(.interpreter)) }
     }
 
     /// The page dims to a light veil under an open panel; clicking it closes the panel.
@@ -153,16 +188,12 @@ struct ConnectionsView: View {
             .accessibilityIdentifier("connections.close")
     }
 
-    /// An empty section asks first, as the picker does: which interpreter, or straight to
-    /// Discord's and Telegram's settings. A connected section opens its settings.
-    private func open(_ kind: ConnectionKind) {
-        let connected = ConnectionSummary.of(kind, in: model) != nil
-        switch kind {
-        case .interpreter where !connected:
-            open(.interpreters, from: .section(kind))
-        default:
-            open(.editor(kind), from: .section(kind))
-        }
+    /// Picks an interpreter service from its own row and opens its settings out of that row.
+    private func connect(_ provider: TradingProviderName) {
+        let previous = model.setupDraft.provider
+        model.setupDraft.provider = provider
+        model.setupDraft.suggestModel(after: previous)
+        open(.editor(.interpreter), from: .provider(provider))
     }
 
     private func open(_ page: ConnectionPanelPage, from origin: ConnectionPanelOrigin) {

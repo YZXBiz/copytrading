@@ -115,7 +115,6 @@
 "Add Instruction" = "Add Instruction";
 "Add it to Claude Code as an MCP server." = "Add it to Claude Code as an MCP server.";
 "Add Keys…" = "Add Keys…";
-"Add Telegram Alerts" = "Add Telegram Alerts";
 "Add the channel they post in under Discord in Connections first." = "Add the channel they post in under Discord in Connections first.";
 "After" = "After";
 "Agent Access" = "Agent Access";
@@ -233,7 +232,6 @@
 "Choose Accounts…" = "Choose Accounts…";
 "Choose an interpreter" = "Choose an interpreter";
 "Choose Your" = "Choose Your";
-"Choose Your Interpreter" = "Choose Your Interpreter";
 "Claude models" = "Claude models";
 "Clear" = "Clear";
 "Clear a measurement on the chart" = "Clear a measurement on the chart";
@@ -682,7 +680,6 @@
 "Opens the reviewed correction, preview, and confirmation workflow." = "Opens the reviewed correction, preview, and confirmation workflow.";
 "Optional for local models" = "Optional for local models";
 "Optional, comma-separated user IDs" = "Optional, comma-separated user IDs";
-"Optional: a Telegram message for every order and problem" = "Optional: a Telegram message for every order and problem";
 "Order %@" = "Order %@";
 "Order %@ · filled %@" = "Order %@ · filled %@";
 "Order for %@ %@ was cancelled" = "Order for %@ %@ was cancelled";
@@ -980,7 +977,6 @@
 "The account changed since you reviewed the sale" = "The account changed since you reviewed the sale";
 "The account could not be reached" = "The account could not be reached";
 "The account is still recovering" = "The account is still recovering";
-"The AI model that reads each post" = "The AI model that reads each post";
 "The AI model that turns each post into an exact order." = "The AI model that turns each post into an exact order.";
 "The balance appears once copying is on and the broker has been read." = "The balance appears once copying is on and the broker has been read.";
 "The biggest fall from a high to a later low in this window." = "The biggest fall from a high to a later low in this window.";
@@ -1100,7 +1096,6 @@
 "When CopyTrading Opens" = "When CopyTrading Opens";
 "Where orders go. Start with an Alpaca paper account: it trades pretend money at real prices." = "Where orders go. Start with an Alpaca paper account: it trades pretend money at real prices.";
 "Where they post" = "Where they post";
-"Where your gurus post their calls" = "Where your gurus post their calls";
 "Why it needs review" = "Why it needs review";
 "Why the interpretation is being corrected" = "Why the interpretation is being corrected";
 "With **Developer Mode** on, right-click the guru's name on one of their posts." = "With **Developer Mode** on, right-click the guru's name on one of their posts.";
@@ -1116,15 +1111,12 @@
 "You're set up. This page stays here as your guide." = "You're set up. This page stays here as your guide.";
 "Your account trades" = "Your account trades";
 "your accounts" = "your accounts";
-"Your Alerts" = "Your Alerts";
 "Your daily entry limit was reached" = "Your daily entry limit was reached";
 "Your daily loss limit was reached" = "Your daily loss limit was reached";
 "Your Data" = "Your Data";
 "Your day in CopyTrading" = "Your day in CopyTrading";
-"Your Discord Connection" = "Your Discord Connection";
 "Your exposure limits were reached" = "Your exposure limits were reached";
 "your gurus" = "your gurus";
-"Your Interpreter" = "Your Interpreter";
 "Your interpreter bills you for what it reads. A key takes a minute to make." = "Your interpreter bills you for what it reads. A key takes a minute to make.";
 "your model's name" = "your model's name";
 "Your Own Model" = "Your Own Model";
@@ -1246,7 +1238,6 @@
 "This post needs your review" = "This post needs your review";
 "Historical evaluation could not be completed." = "Historical evaluation could not be completed.";
 "All remaining owned shares" = "All remaining owned shares";
-"Add a Channel" = "Add a Channel";
 "Choose an Account to Copy Into" = "Choose an Account to Copy Into";
 "Copy into Another Account" = "Copy into Another Account";
 "No check results" = "No check results";
@@ -1416,3 +1407,14 @@
 "inside your limits" = "inside your limits";
 "The traders" = "The traders";
 "you choose to copy" = "you choose to copy";
+"Alerts" = "Alerts";
+"Where your gurus post their calls. CopyTrading reads the channels as you." = "Where your gurus post their calls. CopyTrading reads the channels as you.";
+"The AI model that reads each post. A service uses your own key and bills you for what it reads; a model on this Mac costs nothing." = "The AI model that reads each post. A service uses your own key and bills you for what it reads; a model on this Mac costs nothing.";
+"Optional: a Telegram message for every order and problem." = "Optional: a Telegram message for every order and problem.";
+"Discord token and channels" = "Discord token and channels";
+"Telegram bot" = "Telegram bot";
+"Use another service" = "Use another service";
+"More services" = "More services";
+"%@ API key" = "%@ API key";
+"Connect" = "Connect";
+"Edit" = "Edit";

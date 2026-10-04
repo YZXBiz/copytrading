@@ -6,29 +6,24 @@ enum ConnectionKind: String, CaseIterable, Identifiable, Hashable {
 
     var id: String { rawValue }
 
-    @MainActor var sectionTitle: String {
+    /// The section's name in Connections.
+    @MainActor var title: String {
         switch self {
-        case .discord: L10n.string("Your Discord Connection")
-        case .interpreter: L10n.string("Your Interpreter")
-        case .alerts: L10n.string("Your Alerts")
+        case .discord: L10n.string("Discord")
+        case .interpreter: L10n.string("Interpreter")
+        case .alerts: L10n.string("Alerts")
         }
     }
 
-    /// What the section is for: under its title once connected, under the offer before that.
-    @MainActor var purpose: String {
+    /// One plain sentence under the section's name: what the service does for you.
+    @MainActor var explanation: String {
         switch self {
-        case .discord: L10n.string("Where your gurus post their calls")
-        case .interpreter: L10n.string("The AI model that reads each post")
-        case .alerts: L10n.string("Optional: a Telegram message for every order and problem")
-        }
-    }
-
-    /// What an empty section offers.
-    @MainActor var addTitle: String {
-        switch self {
-        case .discord: L10n.string("Connect Discord")
-        case .interpreter: L10n.string("Choose Your Interpreter")
-        case .alerts: L10n.string("Add Telegram Alerts")
+        case .discord: L10n.string("Where your gurus post their calls. CopyTrading reads the channels as you.")
+        case .interpreter:
+            L10n.string(
+                "The AI model that reads each post. A service uses your own key and bills you for what it reads; a model on this Mac costs nothing."
+            )
+        case .alerts: L10n.string("Optional: a Telegram message for every order and problem.")
         }
     }
 }
