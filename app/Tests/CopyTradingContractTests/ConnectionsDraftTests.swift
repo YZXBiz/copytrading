@@ -10,6 +10,7 @@ func runConnectionsDraftTests() throws {
     try humanizedValuesAreReadable()
     try statusWordsClassifyAsWholeWords()
     try pickingAProviderSuggestsItsModelButKeepsATypedOne()
+    try marketHoursAlsoReadInTheOwnersTime()
 }
 
 @MainActor
@@ -134,4 +135,15 @@ private func pickingAProviderSuggestsItsModelButKeepsATypedOne() throws {
     draft.modelName = SetupHelp.suggestedModel(for: .openai)
     draft.suggestModel(after: .openai)
     try #require(draft.modelName.isEmpty, "A custom service was given a model it may not have")
+}
+
+/// Market hours say New York time, and the owner's own clock when their Mac is elsewhere.
+@MainActor
+private func marketHoursAlsoReadInTheOwnersTime() throws {
+    let october = try #require(ISO8601DateFormatter().date(from: "2026-10-04T12:00:00Z"))
+    let shanghai = try #require(TimeZone(identifier: "Asia/Shanghai"))
+    let newYork = try #require(TimeZone(identifier: "America/New_York"))
+    let overnight = MarketHoursText.yourTime([((20, 0), (4, 0))], now: october, zone: shanghai)
+    try #require(overnight == " Your time: 8:00–16:00.", "Overnight hours read \(overnight) in Shanghai")
+    try #require(MarketHoursText.yourTime([((20, 0), (4, 0))], now: october, zone: newYork).isEmpty)
 }

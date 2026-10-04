@@ -182,7 +182,6 @@
 "bought at" = "买入价";
 "Broker account %@" = "券商账户：%@";
 "Broker activity: %@" = "券商活动：%@";
-"Broker poll interval (seconds)" = "券商轮询间隔（秒）";
 "Budget per entry at each source fraction, before account risk limits and price checks." = "每种来源仓位比例对应的单笔预算，未计入账户风险限额和价格检查。";
 "Buy" = "买入";
 "buy" = "买入";
@@ -1124,9 +1123,6 @@
 "How far above the guru's price a buy may fill. 0 means never pay more than they did." = "买入成交价最多可以比信号源的价格高出多少。0表示绝不比信号源买得更贵。";
 "The most copied buys in one trading day. Sells don't count." = "一个交易日内最多跟单买入的次数，卖出不计入。";
 "A limit order that hasn't filled by then is canceled." = "限价单到时还没成交就会撤单。";
-"How often CopyTrading checks the broker for fills and balances." = "CopyTrading 多久向券商查询一次成交和余额。";
-"Also copy calls before 9:30 and after 16:00 New York time, with limit orders." = "纽约时间9:30前和16:00后也跟单，使用限价单。";
-"Also copy calls between 20:00 and 4:00. Needs extended hours on." = "20:00到次日4:00之间也跟单，需要先开启盘前盘后交易。";
 "Sell when the guru sells. Off means you sell copied shares yourself." = "信号源卖出时跟着卖出。关闭后，跟单买入的股票需要你自己卖出。";
 "Where do I find this?" = "这个去哪里找？";
 "Assistant" = "助手";
@@ -1373,11 +1369,8 @@
 "A post older than this is skipped instead of copied. You can still copy it yourself from Activity." = "超过这个时间的帖子会被跳过，不会跟单。你仍可以在活动中自己跟单。";
 "Set to **$1,000**. A guru's call would put **$2,500** into NVDA. CopyTrading buys **$1,000** of NVDA instead." = "设为 **$1,000**。某条信号原本要买入 **$2,500** 的 NVDA，CopyTrading 只会买入 **$1,000**。";
 "Set to **$500**. The account closed yesterday at **$20,000**. Once it drops to **$19,500** today, CopyTrading stops buying until tomorrow. When the guru sells, it still sells." = "设为 **$500**。账户昨天收盘时为 **$20,000**。今天一旦跌到 **$19,500**，CopyTrading 当天就不再买入，明天恢复。信号源卖出时，仍会照常卖出。";
-"Set to **1**. The guru buys AAPL at **$200.00**. CopyTrading's buy is a limit order at **$202.00**, so it never pays more. At **0** the limit is **$200.00** exactly. Outside regular hours, a copied sell also won't go below **$198.00**." = "设为 **1**。信号源以 **$200.00** 买入 AAPL。CopyTrading 会下 **$202.00** 的限价买单，绝不会付更高的价。设为 **0** 时，限价正好是 **$200.00**。在常规交易时段之外，跟单卖出也不会低于 **$198.00**。";
 "Set to **5**. After the fifth copied buy today, the next buy calls are skipped until the next trading day. Sells still go through." = "设为 **5**。今天第五笔跟单买入之后，后续的买入信号都会被跳过，直到下一个交易日。卖出照常执行。";
 "Set to **120**. A guru posts *Buy NVDA* at **9:31:00**. If CopyTrading gets that post, or is about to send its order, after **9:33:00** (your Mac was asleep, or Discord was slow), it skips it as *Too old to copy*. You can still copy it yourself from **Activity** with **Review and Correct**." = "设为 **120**。信号源在 **9:31:00** 发布*买入 NVDA*。如果 CopyTrading 在 **9:33:00** 之后才收到这条帖子，或之后才要发出订单（比如 Mac 休眠了，或 Discord 有延迟），就会以*超出跟单时限*跳过。你仍可以在**活动**中用**审核并更正**自己跟单。";
-"Set to **60**. A limit buy at **$200.00** sits unfilled because the price moved to **$201**. After **60 seconds** CopyTrading cancels it, so it can't fill later at a moment you didn't expect." = "设为 **60**。一笔 **$200.00** 的限价买单因为价格涨到 **$201** 一直没成交。**60 秒**后 CopyTrading 会撤单，免得它在你没预料到的时候才成交。";
-"Set to **5**. CopyTrading asks Alpaca every **5 seconds** whether orders filled and what the balance is. Lower is fresher; higher sends fewer requests." = "设为 **5**。CopyTrading 每 **5 秒**向 Alpaca 查询一次订单是否成交、余额多少。数值越小越及时，越大发出的请求越少。";
 "The most this account holds in any one stock, counting shares you bought yourself. A buy that would go over is skipped." = "这个账户在任一股票上的最高持仓，包括你自己买入的股份。会超出的买入将被跳过。";
 "The most this account holds in all stocks together, counting ones you bought yourself. A buy that would go over is skipped." = "这个账户所有股票合计的最高持仓，包括你自己买入的股票。会超出的买入将被跳过。";
 "Set to **$3,000**. This account already holds **$2,500** of NVDA, copied or bought yourself. A new **$1,000** NVDA buy would bring it to $3,500, so that buy is **skipped**. It isn't shrunk to fit." = "设为 **$3,000**。这个账户已持有 **$2,500** 的 NVDA（跟单买入或你自己买入的都算）。再买入 **$1,000** 会达到 $3,500，所以这笔买入会被**跳过**，而不是缩小金额凑数。";
@@ -1427,3 +1420,11 @@
 "Through a bot you make" = "通过你创建的机器人";
 "the Discord webhook URL" = "Discord Webhook URL";
 "Optional: a message in Telegram or a Discord channel for every order and problem." = "可选：每笔订单和问题都会在 Telegram 或 Discord 频道里通知你。";
+"Set to **1**. The guru buys AAPL at **$200.00**; CopyTrading's buy is a limit order at **$202.00**, so it never pays more (at **0**, exactly $200.00). If the guru later sells at **$210.00** before 9:30 or after 16:00 New York time, when only limit orders are allowed, CopyTrading's sell won't go below **$207.90**." = "设为 **1**。信号源以 **$200.00** 买入 AAPL，CopyTrading 会下 **$202.00** 的限价买单，绝不会付更高的价（设为 **0** 时正好是 $200.00）。如果信号源之后在纽约时间 9:30 之前或 16:00 之后（只允许限价单的时段）以 **$210.00** 卖出，CopyTrading 的卖出价不会低于 **$207.90**。";
+"Connect to %@" = "连接 %@";
+"Step by step" = "分步说明";
+"A bot you make messages you for every order and problem." = "你创建的机器人会为每笔订单和每个问题给你发消息。";
+"Set to **60**. The guru buys NVDA at **$200.00**, so CopyTrading places a buy that only fills at **$200.00 or less**. The price jumps to **$201** and stays there, so nothing fills. After **60 seconds** CopyTrading cancels the order, so it can't quietly fill an hour later, when the call is old." = "设为 **60**。信号源以 **$200.00** 买入 NVDA，CopyTrading 会下一笔只在 **$200.00 或更低** 成交的买单。价格涨到 **$201** 并停在那里，所以一直没成交。**60 秒**后 CopyTrading 会撤单，免得它在一小时后、信号已经过时的时候悄悄成交。";
+"Also copy calls from 4:00 to 9:30 and 16:00 to 20:00 New York time, with limit orders." = "纽约时间 4:00 至 9:30 和 16:00 至 20:00 也跟单，使用限价单。";
+"Also copy calls from 20:00 to 4:00 New York time. Needs extended hours on." = "纽约时间 20:00 至次日 4:00 也跟单。需先开启盘前盘后交易。";
+" Your time: %@." = " 你的时间：%@。";

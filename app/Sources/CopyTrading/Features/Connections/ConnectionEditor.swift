@@ -6,10 +6,11 @@ import SwiftUI
 struct ConnectionEditor: View {
     let kind: ConnectionKind
     @Bindable var model: AppModel
+    /// Connect for a service not set up when the sheet opened; Save for one being edited.
+    let isNew: Bool
     let done: () -> Void
     /// The field the cursor is in, by its label.
     @FocusState private var focused: String?
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// A saved alert secret is kept only for the service it was saved for.
@@ -32,37 +33,37 @@ struct ConnectionEditor: View {
         Text(model.setupDraft.provider == .ollama ? "http://localhost:11434/v1" : "https://…/v1")
     }
 
-    private var help: [HelpArticle] {
+    /// Where this service's key comes from, at the top of the sheet.
+    private var guide: HelpArticle {
         switch kind {
-        case .discord: SetupHelp.discord
-        case .interpreter: [SetupHelp.interpreterKey(for: model.setupDraft.provider)]
-        case .alerts: [SetupHelp.alerts(for: model.setupDraft.notificationService)]
+        case .discord: SetupHelp.discordToken
+        case .interpreter: SetupHelp.interpreterKey(for: model.setupDraft.provider)
+        case .alerts: SetupHelp.alerts(for: model.setupDraft.notificationService)
         }
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            VStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 18) {
+            ConnectionGuideCard(article: guide)
+            VStack(alignment: .leading, spacing: 14) {
                 fields
             }
-            .background(Palette.page.opacity(reduceTransparency ? 1 : 0.88), in: .rect(cornerRadius: 14))
-
-            HStack(spacing: 12) {
-                HelpPopoverButton(articles: help)
-                Spacer(minLength: 8)
+            VStack(spacing: 10) {
+                Button(action: done) {
+                    Text(L10n.string(isNew ? "Connect" : "Save"))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
+                .controlSize(.large)
+                .keyboardShortcut(.defaultAction)
+                .accessibilityIdentifier("connections.done")
                 if kind == .alerts, model.setupDraft.notificationsEnabled {
                     Button(L10n.string("Turn Off Alerts"), role: .destructive, action: turnOffAlerts)
                         .buttonStyle(.borderless)
                         .foregroundStyle(.red)
                 }
-                Button(L10n.string("Done"), action: done)
-                    .buttonStyle(.borderedProminent)
-                    .buttonBorderShape(.capsule)
-                    .controlSize(.large)
-                    .keyboardShortcut(.defaultAction)
-                    .accessibilityIdentifier("connections.done")
             }
-            .padding(.horizontal, 4)
         }
         // Focus waits until the panel has grown out of its row: a field focused mid-animation is
         // marked focused without ever getting the keyboard, and then a click on it changes nothing.
@@ -82,34 +83,25 @@ struct ConnectionEditor: View {
                     L10n.string("Channel IDs"), text: $model.setupDraft.channels,
                     prompt: Text(L10n.string("Comma-separated Discord channel IDs")))
             }
-            Divider().padding(.leading, 14)
             row("Allowed authors") {
                 TextField(
                     L10n.string("Allowed authors"), text: $model.setupDraft.authors,
                     prompt: Text(L10n.string("Optional, comma-separated user IDs")))
             }
-            Divider().padding(.leading, 14)
             row("Discord token") {
                 SecureField(L10n.string("Discord token"), text: $model.setupDraft.discordToken, prompt: secretPrompt)
             }
         case .interpreter:
-            ConnectionProviderRow(provider: $model.setupDraft.provider)
-                .onChange(of: model.setupDraft.provider) { previous, _ in
-                    model.setupDraft.suggestModel(after: previous)
-                }
-            Divider().padding(.leading, 14)
             row("Model") {
                 TextField(
                     L10n.string("Model"), text: $model.setupDraft.modelName,
                     prompt: Text(SetupHelp.modelExample(for: model.setupDraft.provider)))
             }
             if model.setupDraft.provider.acceptsBaseURL {
-                Divider().padding(.leading, 14)
                 row("Base URL") {
                     TextField(L10n.string("Base URL"), text: $model.setupDraft.providerBaseURL, prompt: baseURLPrompt)
                 }
             }
-            Divider().padding(.leading, 14)
             row("API key") {
                 SecureField(L10n.string("API key"), text: $model.setupDraft.providerAPIKey, prompt: modelKeyPrompt)
             }
@@ -125,7 +117,6 @@ struct ConnectionEditor: View {
                     L10n.string("Chat ID"), text: $model.setupDraft.notificationChatID, prompt: Text(L10n.string("From %@", "@userinfobot"))
                 )
             }
-            Divider().padding(.leading, 14)
             row("Bot token") {
                 SecureField(
                     L10n.string("Bot token"), text: $model.setupDraft.notificationToken, prompt: alertSecretPrompt(otherwise: "Required"))

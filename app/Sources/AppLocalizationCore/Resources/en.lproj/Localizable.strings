@@ -182,7 +182,6 @@
 "bought at" = "bought at";
 "Broker account %@" = "Broker account %@";
 "Broker activity: %@" = "Broker activity: %@";
-"Broker poll interval (seconds)" = "Broker poll interval (seconds)";
 "Budget per entry at each source fraction, before account risk limits and price checks." = "Budget per entry at each source fraction, before account risk limits and price checks.";
 "Buy" = "Buy";
 "buy" = "buy";
@@ -1124,9 +1123,6 @@
 "How far above the guru's price a buy may fill. 0 means never pay more than they did." = "How far above the guru's price a buy may fill. 0 means never pay more than they did.";
 "The most copied buys in one trading day. Sells don't count." = "The most copied buys in one trading day. Sells don't count.";
 "A limit order that hasn't filled by then is canceled." = "A limit order that hasn't filled by then is canceled.";
-"How often CopyTrading checks the broker for fills and balances." = "How often CopyTrading checks the broker for fills and balances.";
-"Also copy calls before 9:30 and after 16:00 New York time, with limit orders." = "Also copy calls before 9:30 and after 16:00 New York time, with limit orders.";
-"Also copy calls between 20:00 and 4:00. Needs extended hours on." = "Also copy calls between 20:00 and 4:00. Needs extended hours on.";
 "Sell when the guru sells. Off means you sell copied shares yourself." = "Sell when the guru sells. Off means you sell copied shares yourself.";
 "Where do I find this?" = "Where do I find this?";
 "Assistant" = "Assistant";
@@ -1373,11 +1369,8 @@
 "A post older than this is skipped instead of copied. You can still copy it yourself from Activity." = "A post older than this is skipped instead of copied. You can still copy it yourself from Activity.";
 "Set to **$1,000**. A guru's call would put **$2,500** into NVDA. CopyTrading buys **$1,000** of NVDA instead." = "Set to **$1,000**. A guru's call would put **$2,500** into NVDA. CopyTrading buys **$1,000** of NVDA instead.";
 "Set to **$500**. The account closed yesterday at **$20,000**. Once it drops to **$19,500** today, CopyTrading stops buying until tomorrow. When the guru sells, it still sells." = "Set to **$500**. The account closed yesterday at **$20,000**. Once it drops to **$19,500** today, CopyTrading stops buying until tomorrow. When the guru sells, it still sells.";
-"Set to **1**. The guru buys AAPL at **$200.00**. CopyTrading's buy is a limit order at **$202.00**, so it never pays more. At **0** the limit is **$200.00** exactly. Outside regular hours, a copied sell also won't go below **$198.00**." = "Set to **1**. The guru buys AAPL at **$200.00**. CopyTrading's buy is a limit order at **$202.00**, so it never pays more. At **0** the limit is **$200.00** exactly. Outside regular hours, a copied sell also won't go below **$198.00**.";
 "Set to **5**. After the fifth copied buy today, the next buy calls are skipped until the next trading day. Sells still go through." = "Set to **5**. After the fifth copied buy today, the next buy calls are skipped until the next trading day. Sells still go through.";
 "Set to **120**. A guru posts *Buy NVDA* at **9:31:00**. If CopyTrading gets that post, or is about to send its order, after **9:33:00** (your Mac was asleep, or Discord was slow), it skips it as *Too old to copy*. You can still copy it yourself from **Activity** with **Review and Correct**." = "Set to **120**. A guru posts *Buy NVDA* at **9:31:00**. If CopyTrading gets that post, or is about to send its order, after **9:33:00** (your Mac was asleep, or Discord was slow), it skips it as *Too old to copy*. You can still copy it yourself from **Activity** with **Review and Correct**.";
-"Set to **60**. A limit buy at **$200.00** sits unfilled because the price moved to **$201**. After **60 seconds** CopyTrading cancels it, so it can't fill later at a moment you didn't expect." = "Set to **60**. A limit buy at **$200.00** sits unfilled because the price moved to **$201**. After **60 seconds** CopyTrading cancels it, so it can't fill later at a moment you didn't expect.";
-"Set to **5**. CopyTrading asks Alpaca every **5 seconds** whether orders filled and what the balance is. Lower is fresher; higher sends fewer requests." = "Set to **5**. CopyTrading asks Alpaca every **5 seconds** whether orders filled and what the balance is. Lower is fresher; higher sends fewer requests.";
 "The most this account holds in any one stock, counting shares you bought yourself. A buy that would go over is skipped." = "The most this account holds in any one stock, counting shares you bought yourself. A buy that would go over is skipped.";
 "The most this account holds in all stocks together, counting ones you bought yourself. A buy that would go over is skipped." = "The most this account holds in all stocks together, counting ones you bought yourself. A buy that would go over is skipped.";
 "Set to **$3,000**. This account already holds **$2,500** of NVDA, copied or bought yourself. A new **$1,000** NVDA buy would bring it to $3,500, so that buy is **skipped**. It isn't shrunk to fit." = "Set to **$3,000**. This account already holds **$2,500** of NVDA, copied or bought yourself. A new **$1,000** NVDA buy would bring it to $3,500, so that buy is **skipped**. It isn't shrunk to fit.";
@@ -1427,3 +1420,11 @@
 "Through a bot you make" = "Through a bot you make";
 "the Discord webhook URL" = "the Discord webhook URL";
 "Optional: a message in Telegram or a Discord channel for every order and problem." = "Optional: a message in Telegram or a Discord channel for every order and problem.";
+"Set to **1**. The guru buys AAPL at **$200.00**; CopyTrading's buy is a limit order at **$202.00**, so it never pays more (at **0**, exactly $200.00). If the guru later sells at **$210.00** before 9:30 or after 16:00 New York time, when only limit orders are allowed, CopyTrading's sell won't go below **$207.90**." = "Set to **1**. The guru buys AAPL at **$200.00**; CopyTrading's buy is a limit order at **$202.00**, so it never pays more (at **0**, exactly $200.00). If the guru later sells at **$210.00** before 9:30 or after 16:00 New York time, when only limit orders are allowed, CopyTrading's sell won't go below **$207.90**.";
+"Connect to %@" = "Connect to %@";
+"Step by step" = "Step by step";
+"A bot you make messages you for every order and problem." = "A bot you make messages you for every order and problem.";
+"Set to **60**. The guru buys NVDA at **$200.00**, so CopyTrading places a buy that only fills at **$200.00 or less**. The price jumps to **$201** and stays there, so nothing fills. After **60 seconds** CopyTrading cancels the order, so it can't quietly fill an hour later, when the call is old." = "Set to **60**. The guru buys NVDA at **$200.00**, so CopyTrading places a buy that only fills at **$200.00 or less**. The price jumps to **$201** and stays there, so nothing fills. After **60 seconds** CopyTrading cancels the order, so it can't quietly fill an hour later, when the call is old.";
+"Also copy calls from 4:00 to 9:30 and 16:00 to 20:00 New York time, with limit orders." = "Also copy calls from 4:00 to 9:30 and 16:00 to 20:00 New York time, with limit orders.";
+"Also copy calls from 20:00 to 4:00 New York time. Needs extended hours on." = "Also copy calls from 20:00 to 4:00 New York time. Needs extended hours on.";
+" Your time: %@." = " Your time: %@.";

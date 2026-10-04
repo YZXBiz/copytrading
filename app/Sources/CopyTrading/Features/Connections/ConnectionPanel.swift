@@ -1,58 +1,60 @@
 import SwiftUI
 
-/// The frosted panel Connections opens over its page:
-/// a header on the app's chart paper, a serif title with an italic second line, and its content.
+/// The sheet Connections opens over its page: the service's logo and a plain title, a hairline,
+/// and its content on a quiet surface.
 struct ConnectionPanel<Content: View>: View {
-    let lead: String
-    let emphasis: String
+    let title: String
+    let brand: String?
+    var symbol = "server.rack"
+    let close: () -> Void
+    /// Esc closes the sheet, except while something above it, such as the assistant, takes Esc.
+    var escapeCloses = true
     @ViewBuilder let content: Content
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.colorSchemeContrast) private var contrast
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.displayScale) private var displayScale
 
     var body: some View {
-        VStack(spacing: 0) {
-            SerifTitle(lead: lead, emphasis: emphasis, alignment: .center)
-                .font(DesignTokens.panelSerif)
-                .foregroundStyle(Palette.secondaryInk)
-                .multilineTextAlignment(.center)
-                .padding(.top, 44)
-                .padding(.bottom, 30)
-                .padding(.horizontal, 28)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 10) {
+                ServiceIcon(brand: brand, symbol: symbol, size: 28)
+                Text(title)
+                    .font(.system(.title3, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
+                    .lineLimit(1)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 8)
+                Button(L10n.string("Close"), systemImage: "xmark", action: close)
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.borderless)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Palette.secondaryInk)
+                    .frame(width: 24, height: 24)
+                    .background(Palette.ink.opacity(0.07), in: .circle)
+                    .keyboardShortcut(escapeCloses ? .cancelAction : nil)
+                    .help(L10n.string("Close"))
+                    .accessibilityIdentifier("connections.close")
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 18)
+            .padding(.bottom, 14)
+
+            Rectangle()
+                .fill(Palette.hairline)
+                .frame(height: 1 / displayScale)
+                .padding(.horizontal, 20)
 
             content
-                .padding(.horizontal, 18)
-                .padding(.bottom, 20)
+                .padding(20)
         }
-        .frame(width: 440)
-        .background { backdrop }
-        .clipShape(.rect(cornerRadius: 26, style: .continuous))
+        .frame(width: 420)
+        .background(Palette.page, in: .rect(cornerRadius: 22, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .strokeBorder(
-                    contrast == .increased ? Palette.secondaryInk : .white.opacity(colorScheme == .dark ? 0.1 : 0.75),
+                    contrast == .increased ? Palette.secondaryInk : Palette.hairline.opacity(colorScheme == .dark ? 1 : 0.7),
                     lineWidth: 1)
         }
-    }
-
-    private var backdrop: some View {
-        ZStack(alignment: .top) {
-            if reduceTransparency || contrast == .increased {
-                Palette.page
-            } else {
-                Rectangle().fill(.regularMaterial)
-                ChartPaperBackdrop(focus: UnitPoint(x: 0.5, y: 0), gridSpacing: 22)
-                    .mask {
-                        LinearGradient(
-                            stops: [
-                                .init(color: .black, location: 0), .init(color: .black.opacity(0.35), location: 0.45),
-                                .init(color: .clear, location: 1),
-                            ],
-                            startPoint: .top, endPoint: .bottom)
-                    }
-                    .opacity(0.9)
-            }
-        }
-        .accessibilityHidden(true)
+        .shadow(color: .black.opacity(colorScheme == .dark ? 0.4 : 0.14), radius: 30, y: 12)
     }
 }
