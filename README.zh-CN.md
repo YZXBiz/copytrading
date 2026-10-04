@@ -24,9 +24,15 @@
   <a href="README.md">English</a> · <strong>简体中文</strong>
 </p>
 
+<p align="center">
+  <strong>不构成投资建议。</strong>CopyTrading 是软件，不是投资顾问。交易可能亏损，你需要对它下的每一笔订单负责。
+</p>
+
 CopyTrading 是一款原生 macOS 应用。它读取交易者在 Discord 上发布的股票信号，把每条信号转换成明确的订单，按你设定的限额检查，再通过你的 Alpaca 账户下单。一切都在你的 Mac 上运行。
 
 > [!WARNING]
+> **不构成投资建议。** 本项目中的任何内容，包括应用、助手以及你所跟随的交易者，都不是投资、财务、法律或税务建议，也没有人在此推荐任何交易。交易可能让你损失部分或全部资金。跟随谁、设置什么限额都由你自己决定，你需要对账户中下的每一笔订单负责。本软件按“现状”提供，不附带任何担保（[MIT 许可证](LICENSE)）。
+>
 > **开发者预览版。** CopyTrading 尚未通过实盘交易的资格验证。请先使用 Alpaca 模拟盘账户；已验证和尚未验证的内容见 [validation](docs/validation.md)。
 
 <p align="center">
