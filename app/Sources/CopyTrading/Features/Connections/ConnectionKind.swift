@@ -23,7 +23,7 @@ enum ConnectionKind: String, CaseIterable, Identifiable, Hashable {
             L10n.string(
                 "The AI model that reads each post. A service uses your own key and bills you for what it reads; a model on this Mac costs nothing."
             )
-        case .alerts: L10n.string("Optional: a Telegram message for every order and problem.")
+        case .alerts: L10n.string("Optional: a message in Telegram or a Discord channel for every order and problem.")
         }
     }
 }

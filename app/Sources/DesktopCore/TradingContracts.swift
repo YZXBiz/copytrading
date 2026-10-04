@@ -404,12 +404,32 @@ public struct TradingRouteConfiguration: Codable, Equatable, Identifiable, Senda
     }
 }
 
+/// Where alerts go.
+public enum TradingAlertService: String, Codable, CaseIterable, Sendable {
+    case telegram
+    case discord
+}
+
+/// Telegram names a chat; a Discord webhook already names its channel, and its URL is the secret.
 public struct TradingNotificationConfiguration: Codable, Equatable, Sendable {
-    public var chatID: String
+    public var service: TradingAlertService
+    public var chatID: String?
 
-    public init(chatID: String) { self.chatID = chatID }
+    public init(service: TradingAlertService = .telegram, chatID: String?) {
+        self.service = service
+        self.chatID = service == .telegram ? chatID : nil
+    }
 
-    enum CodingKeys: String, CodingKey { case chatID = "chat_id" }
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        service = try container.decodeIfPresent(TradingAlertService.self, forKey: .service) ?? .telegram
+        chatID = try container.decodeIfPresent(String.self, forKey: .chatID)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case service
+        case chatID = "chat_id"
+    }
 }
 
 /// Saved to application support. This type deliberately contains no credentials.

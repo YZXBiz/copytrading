@@ -121,10 +121,25 @@ class RouteConfiguration(BaseModel):
         return self
 
 
+type AlertService = Literal["telegram", "discord"]
+
+
 class NotificationConfiguration(BaseModel):
+    """Where alerts go. Telegram names a chat; a Discord webhook already names its channel, and its
+    URL is the secret, kept with the other keys."""
+
     model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
 
-    chat_id: str = Field(min_length=1, max_length=128)
+    service: AlertService = "telegram"
+    chat_id: str | None = Field(default=None, min_length=1, max_length=128)
+
+    @model_validator(mode="after")
+    def validate_destination(self) -> Self:
+        if self.service == "telegram" and self.chat_id is None:
+            raise ValueError("Telegram alerts need a chat ID")
+        if self.service == "discord" and self.chat_id is not None:
+            raise ValueError("Discord alerts take no chat ID")
+        return self
 
 
 class TradingConfiguration(BaseModel):

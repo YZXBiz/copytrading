@@ -1404,7 +1404,6 @@
 "Alerts" = "Alerts";
 "Where your gurus post their calls. CopyTrading reads the channels as you." = "Where your gurus post their calls. CopyTrading reads the channels as you.";
 "The AI model that reads each post. A service uses your own key and bills you for what it reads; a model on this Mac costs nothing." = "The AI model that reads each post. A service uses your own key and bills you for what it reads; a model on this Mac costs nothing.";
-"Optional: a Telegram message for every order and problem." = "Optional: a Telegram message for every order and problem.";
 "Discord token and channels" = "Discord token and channels";
 "Telegram bot" = "Telegram bot";
 "Use another service" = "Use another service";
@@ -1414,3 +1413,17 @@
 "Edit" = "Edit";
 "Fewer services" = "Fewer services";
 "Switch" = "Switch";
+"Webhook URL" = "Webhook URL";
+"https://discord.com/api/webhooks/…" = "https://discord.com/api/webhooks/…";
+"Get Discord alerts" = "Get Discord alerts";
+"CopyTrading posts each alert into a channel through a webhook: no bot, and no token of yours. Anyone with the webhook URL can post in that channel, so keep it like a password." = "CopyTrading posts each alert into a channel through a webhook: no bot, and no token of yours. Anyone with the webhook URL can post in that channel, so keep it like a password.";
+"In Discord, pick a channel only you can see, or make one in a server of your own." = "In Discord, pick a channel only you can see, or make one in a server of your own.";
+"Open the channel's settings, the gear beside its name, then **Integrations › Webhooks › New Webhook**." = "Open the channel's settings, the gear beside its name, then **Integrations › Webhooks › New Webhook**.";
+"Name it CopyTrading, choose **Copy Webhook URL**, and paste it into **Webhook URL**." = "Name it CopyTrading, choose **Copy Webhook URL**, and paste it into **Webhook URL**.";
+"Discord: intro to webhooks" = "Discord: intro to webhooks";
+"Channel webhook" = "Channel webhook";
+"Needs a webhook URL" = "Needs a webhook URL";
+"Through a channel webhook" = "Through a channel webhook";
+"Through a bot you make" = "Through a bot you make";
+"the Discord webhook URL" = "the Discord webhook URL";
+"Optional: a message in Telegram or a Discord channel for every order and problem." = "Optional: a message in Telegram or a Discord channel for every order and problem.";

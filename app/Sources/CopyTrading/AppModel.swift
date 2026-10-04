@@ -1289,13 +1289,16 @@ final class AppModel {
                 ? previous?.discordToken ?? "" : enteredSecrets.discordToken
             let providerAPIKey = Self.providerKey(
                 entered: enteredSecrets.providerAPIKey, for: configuration.provider.name, saved: stored)
+            // A saved bot token is no webhook URL: it is kept only while alerts stay on its service.
+            let sameAlertService = stored?.configuration.notification?.service == configuration.notification?.service
             let notificationToken =
                 enteredSecrets.notificationToken?.isEmpty == false
-                ? enteredSecrets.notificationToken : previous?.notificationToken
+                ? enteredSecrets.notificationToken : sameAlertService ? previous?.notificationToken : nil
             let missing = [
                 discordToken.isEmpty ? "the Discord token" : nil,
                 providerAPIKey.isEmpty && configuration.provider.name.requiresAPIKey ? "the model API key" : nil,
-                configuration.notification != nil && notificationToken?.isEmpty != false ? "the Telegram bot token" : nil,
+                configuration.notification != nil && notificationToken?.isEmpty != false
+                    ? (configuration.notification?.service == .discord ? "the Discord webhook URL" : "the Telegram bot token") : nil,
             ].compactMap(\.self)
             guard missing.isEmpty else {
                 throw TradingSettingsError.missingCredentials(ListFormatter.localizedString(byJoining: missing))

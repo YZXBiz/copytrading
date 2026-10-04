@@ -101,7 +101,14 @@ struct ConnectionsView: View {
                     serviceRow(
                         kind, brand: "discord", summary: summary, title: L10n.string("Discord token and channels"))
                 case .alerts:
-                    serviceRow(kind, brand: "telegram", summary: summary, title: L10n.string("Telegram bot"))
+                    if let summary {
+                        serviceRow(kind, brand: model.setupDraft.notificationService.brandIcon, summary: summary, title: summary.title)
+                    }
+                    ForEach(TradingAlertService.allCases, id: \.self) { service in
+                        if summary == nil || service != model.setupDraft.notificationService {
+                            alertRow(service, switching: summary != nil)
+                        }
+                    }
                 case .interpreter:
                     if let summary, !isEditingFromProviderRow {
                         serviceRow(kind, brand: model.setupDraft.provider.brandIcon, summary: summary, title: summary.title)
@@ -165,6 +172,24 @@ struct ConnectionsView: View {
             origin: .provider(provider),
             identifier: "connections.provider.\(provider.rawValue)"
         ) { connect(provider) }
+    }
+
+    /// Telegram or a Discord channel: Connect before alerts are on, Switch to the other after.
+    private func alertRow(_ service: TradingAlertService, switching: Bool) -> some View {
+        ConnectionServiceRow(
+            brand: service.brandIcon,
+            title: L10n.string(service == .discord ? "Discord channel" : "Telegram bot"),
+            detail: switching ? nil : L10n.string(service == .discord ? "Through a channel webhook" : "Through a bot you make"),
+            action: L10n.string(switching ? "Switch" : "Connect"),
+            origin: .alert(service),
+            identifier: !switching && service == .telegram ? "connections.alerts" : "connections.alerts.\(service.rawValue)"
+        ) {
+            if model.setupDraft.notificationService != service {
+                model.setupDraft.notificationService = service
+                model.setupDraft.notificationToken = ""
+            }
+            open(.editor(.alerts), from: .alert(service))
+        }
     }
 
     /// Shows or hides every other interpreter service in place, under the ones listed.

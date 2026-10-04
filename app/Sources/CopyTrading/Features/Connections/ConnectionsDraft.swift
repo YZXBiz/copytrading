@@ -14,7 +14,9 @@ struct ConnectionsDraft {
     var accounts: [TradingAccountDraft] = []
     var routes: [TradingRouteDraft] = []
     var notificationsEnabled = false
+    var notificationService = TradingAlertService.telegram
     var notificationChatID = ""
+    /// Telegram's bot token, or a Discord channel's webhook URL.
     var notificationToken = ""
 
     var hasLiveAccounts: Bool {
@@ -102,6 +104,7 @@ struct ConnectionsDraft {
             )
         }
         notificationsEnabled = saved.notification != nil
+        notificationService = saved.notification?.service ?? .telegram
         notificationChatID = saved.notification?.chatID ?? ""
     }
 
@@ -164,7 +167,7 @@ struct ConnectionsDraft {
             profiles: Array(profileByRevision.values).sorted { $0.profileRevision < $1.profileRevision },
             routes: convertedRoutes,
             notification: notificationsEnabled
-                ? TradingNotificationConfiguration(chatID: notificationChatID.trimmed)
+                ? TradingNotificationConfiguration(service: notificationService, chatID: notificationChatID.trimmed)
                 : nil
         )
         let secrets = TradingSecrets(

@@ -1404,7 +1404,6 @@
 "Alerts" = "提醒";
 "Where your gurus post their calls. CopyTrading reads the channels as you." = "信号源发布交易信号的频道。CopyTrading 以你的身份读取这些频道。";
 "The AI model that reads each post. A service uses your own key and bills you for what it reads; a model on this Mac costs nothing." = "读取每条帖子的 AI 模型。在线服务使用你自己的密钥，并按读取量向你收费；在这台 Mac 上运行的模型不收费。";
-"Optional: a Telegram message for every order and problem." = "可选：每笔订单和问题都通过 Telegram 通知。";
 "Discord token and channels" = "Discord 令牌和频道";
 "Telegram bot" = "Telegram 机器人";
 "Use another service" = "改用其他服务";
@@ -1414,3 +1413,17 @@
 "Edit" = "编辑";
 "Fewer services" = "收起";
 "Switch" = "切换";
+"Webhook URL" = "Webhook URL";
+"https://discord.com/api/webhooks/…" = "https://discord.com/api/webhooks/…";
+"Get Discord alerts" = "获取 Discord 提醒";
+"CopyTrading posts each alert into a channel through a webhook: no bot, and no token of yours. Anyone with the webhook URL can post in that channel, so keep it like a password." = "CopyTrading 通过 Webhook 把每条提醒发到一个频道：不需要机器人，也不需要你的令牌。任何拿到 Webhook URL 的人都能在该频道发消息，请像保管密码一样保管它。";
+"In Discord, pick a channel only you can see, or make one in a server of your own." = "在 Discord 中选一个只有你能看到的频道，或在你自己的服务器里新建一个。";
+"Open the channel's settings, the gear beside its name, then **Integrations › Webhooks › New Webhook**." = "打开频道设置（频道名旁的齿轮），然后选择 **整合 › Webhook › 新 Webhook**。";
+"Name it CopyTrading, choose **Copy Webhook URL**, and paste it into **Webhook URL**." = "将其命名为 CopyTrading，选择 **复制 Webhook URL**，然后粘贴到 **Webhook URL**。";
+"Discord: intro to webhooks" = "Discord：Webhook 简介";
+"Channel webhook" = "频道 Webhook";
+"Needs a webhook URL" = "需要 Webhook URL";
+"Through a channel webhook" = "通过频道 Webhook";
+"Through a bot you make" = "通过你创建的机器人";
+"the Discord webhook URL" = "Discord Webhook URL";
+"Optional: a message in Telegram or a Discord channel for every order and problem." = "可选：每笔订单和问题都会在 Telegram 或 Discord 频道里通知你。";

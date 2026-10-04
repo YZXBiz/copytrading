@@ -24,9 +24,10 @@ from copytrading_engine.shared.payload_capture import PayloadCapture
 from copytrading_engine.sources.application import ForwardBatch
 from copytrading_engine.sources.session import DiscordSession
 from copytrading_engine.sources.sqlite import SQLiteSourceStore
-from copytrading_engine.trading.adapters.notifications import TelegramNotifier
+from copytrading_engine.trading.adapters.notifications import alert_sender
 from copytrading_engine.trading.adapters.telemetry import TradingTelemetry
 from copytrading_engine.trading.application.accounts import AccountOwner
+from copytrading_engine.trading.domain.config import NotificationConfiguration
 
 
 class SourceSession(Protocol):
@@ -61,7 +62,7 @@ type SessionFactory = Callable[
 ]
 
 
-type NotifierFactory = Callable[[str, str], NotificationSender]
+type NotifierFactory = Callable[[NotificationConfiguration, str], NotificationSender]
 
 
 async def open_owner(
@@ -117,4 +118,4 @@ class TradingFactories:
     owner: OwnerFactory = open_owner
     decoder: NamedDecoderFactory = create_decoder
     session: SessionFactory = _create_session
-    notifier: NotifierFactory = TelegramNotifier
+    notifier: NotifierFactory = alert_sender

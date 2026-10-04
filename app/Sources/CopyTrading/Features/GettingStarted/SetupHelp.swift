@@ -94,6 +94,29 @@ enum SetupHelp {
         destination: .init(title: "Telegram's bot guide", url: URL(literal: "https://core.telegram.org/bots/tutorial"))
     )
 
+    static let discordAlerts = HelpArticle(
+        id: "alerts.discord",
+        title: "Get Discord alerts",
+        intro:
+            "CopyTrading posts each alert into a channel through a webhook: no bot, and no token of yours. Anyone with the webhook URL can post in that channel, so keep it like a password.",
+        steps: [
+            "In Discord, pick a channel only you can see, or make one in a server of your own.",
+            "Open the channel's settings, the gear beside its name, then **Integrations › Webhooks › New Webhook**.",
+            "Name it CopyTrading, choose **Copy Webhook URL**, and paste it into **Webhook URL**.",
+        ],
+        destination: .init(
+            title: "Discord: intro to webhooks",
+            url: URL(literal: "https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks"))
+    )
+
+    /// The alerts article for the chosen service.
+    static func alerts(for service: TradingAlertService) -> HelpArticle {
+        switch service {
+        case .telegram: telegram
+        case .discord: discordAlerts
+        }
+    }
+
     static let guru = HelpArticle(
         id: "people.guru",
         title: "Add a guru",
@@ -129,6 +152,6 @@ enum SetupHelp {
     static let discord = [channelID, discordToken, userID]
     @MainActor
     static var all: [HelpArticle] {
-        [channelID, userID, discordToken] + interpreters + [alpacaPaperKeys, alpacaLiveKeys, telegram, guru, start]
+        [channelID, userID, discordToken] + interpreters + [alpacaPaperKeys, alpacaLiveKeys, telegram, discordAlerts, guru, start]
     }
 }

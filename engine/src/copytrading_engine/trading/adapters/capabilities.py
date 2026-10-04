@@ -15,6 +15,7 @@ from copytrading_engine.parsing.providers.registry import ManagedDecoder, builti
 from copytrading_engine.parsing.readiness import ModelReadiness, probe_model
 from copytrading_engine.shared.cleanup import close_logged
 from copytrading_engine.sources.source import require_history_channel
+from copytrading_engine.trading.adapters.notifications import discord_webhook
 from copytrading_engine.trading.domain.config import (
     AccountConfiguration,
     BrokerCredentials,
@@ -386,6 +387,8 @@ class NativeCapabilityProbes:
             )
         if token is None or not token:
             return _failed("notification", "notification_credentials_missing")
+        if configuration.service == "discord":
+            return await self._discord_webhook(token)
         try:
             async with self._http_client_factory(timeout=8, follow_redirects=False) as client:
                 base = f"https://api.telegram.org/bot{token}"
@@ -421,3 +424,32 @@ class NativeCapabilityProbes:
             raise
         except Exception:  # noqa: BLE001 - any client failure becomes a failed capability check
             return _failed("notification", "notification_auth_or_chat_access_failed")
+
+    async def _discord_webhook(self, url: str) -> CapabilityCheck:
+        """Reads the webhook's name and channel, which Discord answers without posting anything."""
+        adapter = "discord_webhook_read_only"
+        try:
+            host, path = discord_webhook(url)
+        except ValueError:
+            return _failed("notification", "notification_webhook_invalid", adapter=adapter)
+        try:
+            async with self._http_client_factory(timeout=8, follow_redirects=False) as client:
+                async with asyncio.timeout(10):
+                    response = await client.get(f"https://{host}{path}")
+                    response.raise_for_status()
+                    body = response.json()
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # noqa: BLE001 - the URL is the secret, so no detail is kept
+            return _failed("notification", "notification_webhook_unreachable", adapter=adapter)
+        name = body.get("name") if isinstance(body, dict) else None
+        channel = body.get("channel_id") if isinstance(body, dict) else None
+        if not isinstance(name, str) or not isinstance(channel, str):
+            return _failed("notification", "notification_identity_invalid", adapter=adapter)
+        return CapabilityCheck(
+            name="notification",
+            state="ready",
+            identity=f"discord_webhook:{name};channel:{channel}",
+            adapter=adapter,
+            reason_code=None,
+        )

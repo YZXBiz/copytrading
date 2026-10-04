@@ -454,8 +454,7 @@ class TradingRuntime:
             )
             notifier = (
                 self._factories.notifier(
-                    secrets.notification_token.get_secret_value(),
-                    configuration.notification.chat_id,
+                    configuration.notification, secrets.notification_token.get_secret_value()
                 )
                 if configuration.notification is not None and secrets.notification_token is not None
                 else None
