@@ -485,6 +485,40 @@ def test_native_broker_probe_reads_account_positions_and_orders_only(monkeypatch
     assert [name for name, _ in calls] == ["init", "account", "positions", "open_orders", "close"]
 
 
+def test_native_discord_probe_reads_the_webhook_without_posting():
+    requests = []
+
+    def handle(request):
+        requests.append((request.method, request.url.host, request.url.path))
+        return httpx.Response(200, json={"name": "CopyTrading", "channel_id": "987"})
+
+    def client_factory(**kwargs):
+        return httpx.AsyncClient(transport=httpx.MockTransport(handle), **kwargs)
+
+    probes = NativeCapabilityProbes(http_client_factory=client_factory)
+    discord = NotificationConfiguration(service="discord")
+    url = "https://discord.com/api/webhooks/1/SECRET"
+
+    result = asyncio.run(probes.notification(discord, url))
+    assert (result.state, result.identity) == ("ready", "discord_webhook:CopyTrading;channel:987")
+    assert requests == [("GET", "discord.com", "/api/webhooks/1/SECRET")]
+
+    invalid = asyncio.run(probes.notification(discord, "https://example.com/hook"))
+    assert (invalid.state, invalid.reason_code) == ("failed", "notification_webhook_invalid")
+
+    def refuse(request):
+        return httpx.Response(401, json={"message": "Invalid Webhook Token"})
+
+    def refusing_factory(**kwargs):
+        return httpx.AsyncClient(transport=httpx.MockTransport(refuse), **kwargs)
+
+    refused = asyncio.run(
+        NativeCapabilityProbes(http_client_factory=refusing_factory).notification(discord, url)
+    )
+    assert (refused.state, refused.reason_code) == ("failed", "notification_webhook_unreachable")
+    assert "SECRET" not in refused.model_dump_json()
+
+
 def test_native_notification_probe_uses_only_get_me_and_get_chat():
     requests = []
 

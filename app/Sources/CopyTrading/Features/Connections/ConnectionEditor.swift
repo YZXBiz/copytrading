@@ -12,6 +12,12 @@ struct ConnectionEditor: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// A saved alert secret is kept only for the service it was saved for.
+    private func alertSecretPrompt(otherwise: String) -> Text {
+        let saved = model.savedTradingConfiguration?.notification?.service == model.setupDraft.notificationService
+        return Text(L10n.string(model.hasTradingSecrets && saved ? "Saved in Keychain — leave blank to keep" : otherwise))
+    }
+
     private var secretPrompt: Text {
         Text(L10n.string(model.hasTradingSecrets ? "Saved in Keychain — leave blank to keep" : "Required"))
     }
@@ -30,7 +36,7 @@ struct ConnectionEditor: View {
         switch kind {
         case .discord: SetupHelp.discord
         case .interpreter: [SetupHelp.interpreterKey(for: model.setupDraft.provider)]
-        case .alerts: [SetupHelp.telegram]
+        case .alerts: [SetupHelp.alerts(for: model.setupDraft.notificationService)]
         }
     }
 
@@ -107,6 +113,12 @@ struct ConnectionEditor: View {
             row("API key") {
                 SecureField(L10n.string("API key"), text: $model.setupDraft.providerAPIKey, prompt: modelKeyPrompt)
             }
+        case .alerts where model.setupDraft.notificationService == .discord:
+            row("Webhook URL") {
+                SecureField(
+                    L10n.string("Webhook URL"), text: $model.setupDraft.notificationToken,
+                    prompt: alertSecretPrompt(otherwise: "https://discord.com/api/webhooks/…"))
+            }
         case .alerts:
             row("Chat ID") {
                 TextField(
@@ -115,7 +127,8 @@ struct ConnectionEditor: View {
             }
             Divider().padding(.leading, 14)
             row("Bot token") {
-                SecureField(L10n.string("Bot token"), text: $model.setupDraft.notificationToken, prompt: secretPrompt)
+                SecureField(
+                    L10n.string("Bot token"), text: $model.setupDraft.notificationToken, prompt: alertSecretPrompt(otherwise: "Required"))
             }
         }
     }
@@ -134,7 +147,7 @@ struct ConnectionEditor: View {
         switch kind {
         case .discord: "Channel IDs"
         case .interpreter: "Model"
-        case .alerts: "Chat ID"
+        case .alerts: model.setupDraft.notificationService == .discord ? "Webhook URL" : "Chat ID"
         }
     }
 

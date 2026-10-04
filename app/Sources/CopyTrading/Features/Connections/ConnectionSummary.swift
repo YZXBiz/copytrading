@@ -32,12 +32,21 @@ struct ConnectionSummary: Equatable {
             )
         case .alerts:
             guard draft.notificationsEnabled else { return nil }
+            let savedSecret = savedKeys && model.savedTradingConfiguration?.notification?.service == draft.notificationService
+            if draft.notificationService == .discord {
+                return ConnectionSummary(
+                    title: "Discord",
+                    detail: L10n.string("Channel webhook"),
+                    status: ConnectionStatus.alerts(model)
+                        ?? draftStatus(hasKey: savedSecret || !draft.notificationToken.isEmpty, missing: "Needs a webhook URL")
+                )
+            }
             let chat = draft.notificationChatID.trimmed
             return ConnectionSummary(
                 title: "Telegram",
                 detail: chat.isEmpty ? L10n.string("No chat yet") : L10n.string("Chat %@", chat),
                 status: ConnectionStatus.alerts(model)
-                    ?? draftStatus(hasKey: savedKeys || !draft.notificationToken.isEmpty, missing: "Needs a bot token")
+                    ?? draftStatus(hasKey: savedSecret || !draft.notificationToken.isEmpty, missing: "Needs a bot token")
             )
         }
     }

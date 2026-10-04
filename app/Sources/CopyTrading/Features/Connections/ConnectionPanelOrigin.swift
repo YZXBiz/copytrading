@@ -6,4 +6,6 @@ enum ConnectionPanelOrigin: Hashable {
     case section(ConnectionKind)
     /// An interpreter service's own row, before any interpreter is set up.
     case provider(TradingProviderName)
+    /// An alert service's own row.
+    case alert(TradingAlertService)
 }

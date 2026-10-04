@@ -4,6 +4,7 @@ import Testing
 
 func runTradingContractTests() throws {
     try capabilityChecksCarryAModelSuggestion()
+    try alertsNameTheirService()
     let profile = try TradingProfileBuilder().build(
         TradingProfileDraft(
             guruID: "stable-guru", displayName: "Stable Guru", prefix: "ALERT:",
@@ -167,4 +168,13 @@ private func capabilityChecksCarryAModelSuggestion() throws {
     try #require(check.reasonCode == "model_not_found" && check.suggestion == "deepseek-flash")
     let older = Data(#"{"name":"model","state":"ready","adapter":"deepseek","reason_code":null}"#.utf8)
     try #require(try JSONDecoder().decode(TradingCapabilityCheck.self, from: older).suggestion == nil)
+}
+
+/// Discord alerts carry no chat ID; a saved setup from before Discord reads as Telegram.
+private func alertsNameTheirService() throws {
+    let discord = try JSONEncoder().encode(TradingNotificationConfiguration(service: .discord, chatID: "42"))
+    let fields = try JSONSerialization.jsonObject(with: discord) as? [String: Any]
+    try #require(fields?["service"] as? String == "discord" && fields?["chat_id"] == nil)
+    let telegram = try JSONDecoder().decode(TradingNotificationConfiguration.self, from: Data(#"{"chat_id":"42"}"#.utf8))
+    try #require(telegram.service == .telegram && telegram.chatID == "42")
 }

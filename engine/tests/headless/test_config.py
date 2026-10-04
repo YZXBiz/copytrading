@@ -154,6 +154,31 @@ def test_alerts_need_their_token(tmp_path):
         load_secrets(load_setup(path).configuration, KEYS)
 
 
+def test_discord_alerts_take_their_webhook_from_the_environment(tmp_path):
+    path = template_with(tmp_path, "# [discord_alerts]", "[discord_alerts]")
+    setup = load_setup(path)
+
+    assert setup.configuration.notification is not None
+    assert setup.configuration.notification.service == "discord"
+    with pytest.raises(ConfigError, match="COPYTRADING_DISCORD_WEBHOOK_URL"):
+        load_secrets(setup.configuration, KEYS)
+    url = "https://discord.com/api/webhooks/1/abc"
+    secrets = load_secrets(setup.configuration, {**KEYS, "COPYTRADING_DISCORD_WEBHOOK_URL": url})
+    assert secrets.notification_token is not None
+    assert secrets.notification_token.get_secret_value() == url
+
+
+def test_alerts_go_to_one_place(tmp_path):
+    path = template_with(
+        tmp_path,
+        '# [telegram]\n# chat_id = "123456789"\n# [discord_alerts]',
+        '[telegram]\nchat_id = "42"\n[discord_alerts]',
+    )
+
+    with pytest.raises(ConfigError, match="not both"):
+        load_setup(path)
+
+
 def test_account_key_names_are_plain_capitals():
     assert broker_key_names("live-small_2") == (
         "COPYTRADING_ALPACA_LIVE_SMALL_2_KEY",

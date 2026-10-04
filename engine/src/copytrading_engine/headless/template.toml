@@ -5,6 +5,7 @@
 #   COPYTRADING_ALPACA_PAPER_MAIN_KEY         one key and secret per account below; the name is
 #   COPYTRADING_ALPACA_PAPER_MAIN_SECRET      the account id in capitals, "-" becomes "_"
 #   COPYTRADING_TELEGRAM_TOKEN                only if [telegram] is set
+#   COPYTRADING_DISCORD_WEBHOOK_URL           only if [discord_alerts] is set
 #
 # Check everything with `copytrading-server check`, then start with `copytrading-server run`.
 
@@ -63,8 +64,10 @@ Buys look like "ALERT: Bought NVDA 1/6 at 121.38": the fraction is the share of 
   amount_usd = 100
   # default_fraction = 0.25   # proportional only: used when a post gives no fraction
 
+# Alerts for every order and problem: a Telegram chat, or a Discord channel (one, not both).
 # [telegram]
 # chat_id = "123456789"
+# [discord_alerts]           # the channel's webhook URL goes in COPYTRADING_DISCORD_WEBHOOK_URL
 
 [agents]
 # What the `copytrading` command and MCP server may do: "off", "read_pause" (read and pause),

@@ -39,6 +39,7 @@ type AgentAccess = Literal["off", "read_pause", "propose"]
 DISCORD_TOKEN = "COPYTRADING_DISCORD_TOKEN"
 MODEL_API_KEY = "COPYTRADING_MODEL_API_KEY"
 TELEGRAM_TOKEN = "COPYTRADING_TELEGRAM_TOKEN"
+DISCORD_WEBHOOK_URL = "COPYTRADING_DISCORD_WEBHOOK_URL"
 
 
 class ConfigError(Exception):
@@ -101,6 +102,10 @@ class _Telegram(_Strict):
     chat_id: str
 
 
+class _DiscordAlerts(_Strict):
+    """Alerts in a Discord channel; its webhook URL comes from the environment."""
+
+
 class _Agents(_Strict):
     access: AgentAccess = "read_pause"
 
@@ -111,6 +116,7 @@ class _File(_Strict):
     accounts: tuple[_Account, ...] = Field(min_length=1)
     gurus: tuple[_Guru, ...] = Field(min_length=1)
     telegram: _Telegram | None = None
+    discord_alerts: _DiscordAlerts | None = None
     agents: _Agents = Field(default_factory=_Agents)
 
 
@@ -171,6 +177,8 @@ def load_setup(path: Path) -> ServerSetup:
             )
         except ValidationError as exc:
             problems.extend(f"gurus[{index}] ({guru.id}): {line}" for line in _problems(exc))
+    if parsed.telegram is not None and parsed.discord_alerts is not None:
+        problems.append("Choose one place for alerts: [telegram] or [discord_alerts], not both.")
     if problems:
         raise ConfigError(problems)
     try:
@@ -207,9 +215,11 @@ def load_setup(path: Path) -> ServerSetup:
                 for guru, profile in zip(parsed.gurus, profiles, strict=True)
             ),
             notification=(
-                None
-                if parsed.telegram is None
-                else NotificationConfiguration(chat_id=parsed.telegram.chat_id)
+                NotificationConfiguration(chat_id=parsed.telegram.chat_id)
+                if parsed.telegram is not None
+                else NotificationConfiguration(service="discord")
+                if parsed.discord_alerts is not None
+                else None
             ),
         )
     except ValidationError as exc:
@@ -248,14 +258,19 @@ def load_secrets(
                 account_id=account.id, key=required(key_name), secret=required(secret_name)
             )
         )
-    telegram = None if configuration.notification is None else required(TELEGRAM_TOKEN)
+    alerts = configuration.notification
+    alert_secret = (
+        None
+        if alerts is None
+        else required(DISCORD_WEBHOOK_URL if alerts.service == "discord" else TELEGRAM_TOKEN)
+    )
     if missing:
         raise ConfigError([f"Set {name} in the environment." for name in missing])
     return TradingSecrets(
         discord_token=discord,
         provider_api_key=model_key,
         brokers=tuple(brokers),
-        notification_token=telegram,
+        notification_token=alert_secret,
     )
 
 

@@ -177,6 +177,14 @@ Anyone with these keys can trade your real money. Set small limits. New accounts
 3. Send your new bot any message, so it's allowed to message you back.
 4. Message **@userinfobot** to get your chat ID, and paste it into **Chat ID**.
 
+## Get Discord alerts
+
+CopyTrading posts each alert into a channel through a webhook: no bot, and no token of yours. Anyone with the webhook URL can post in that channel, so keep it like a password.
+
+1. In Discord, pick a channel only you can see, or make one in a server of your own.
+2. Open the channel's settings, the gear beside its name, then **Integrations › Webhooks › New Webhook**.
+3. Name it CopyTrading, choose **Copy Webhook URL**, and paste it into **Webhook URL**.
+
 ## Add a guru
 
 1. In **People**, choose **Add Guru** and give them a name.
