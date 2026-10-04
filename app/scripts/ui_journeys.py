@@ -599,15 +599,15 @@ def j3_first_run_guidance(app: AppDriver) -> None:
         connections, "Discord", "Interpreter", "Alerts", "Channel IDs", "Where do I find this?"
     )
     today = app.open_screen("today")
-    app.expect(today, "Your money shows up here", "today.gettingStarted")
+    app.expect(today, "Your trading day, at a glance", "today.gettingStarted")
 
 
 def j4_every_screen(app: AppDriver) -> None:
     empty_states = {
-        "today": "Your money shows up here",
-        "activity": "Every post lands here",
-        "people": "Who will you copy?",
-        "accounts": "Where your orders go",
+        "today": "Your trading day, at a glance",
+        "activity": "Every post, and what came of it",
+        "people": "The traders you choose to copy",
+        "accounts": "Your accounts, inside your limits",
         "connections": "Connect Discord",
         "gettingStarted": "About 10 minutes",
     }
@@ -631,7 +631,7 @@ def j20_toolbar(app: AppDriver) -> None:
     app.click("people.addGuru")
     app.expect(app.see("guru-from-people"), "Where they post", "Remove Guru")
     app.click("Remove Guru")
-    app.expect(app.see("guru-removed"), "Who will you copy?")
+    app.expect(app.see("guru-removed"), "The traders you choose to copy")
 
 
 def j21_settings_pages(app: AppDriver) -> None:
@@ -655,7 +655,7 @@ def j21_settings_pages(app: AppDriver) -> None:
     app.click("settings.back")
     app.expect(app.see("settings-back"), "Create Backup…")
     app.click("settings.close")
-    app.expect(app.see("settings-closed"), "navigation.today", "Your money shows up here")
+    app.expect(app.see("settings-closed"), "navigation.today", "Your trading day, at a glance")
 
 
 def j5_self_test(app: AppDriver) -> None:
@@ -690,7 +690,7 @@ def j6_setup_editing(app: AppDriver) -> None:
     app.click("accounts.draft.primary")
     app.click("Remove Account")
     cleaned = app.see("setup-cleaned")
-    app.expect(cleaned, "Where your orders go")
+    app.expect(cleaned, "Your accounts, inside your limits")
     app.expect_absent(cleaned, "setup.status")
 
 

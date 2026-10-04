@@ -9,8 +9,8 @@ struct TodaySetupPrompt: View {
 
     var body: some View {
         InvitationCard(
-            lead: "Your money",
-            emphasis: "shows up here",
+            lead: "Your trading day,",
+            emphasis: "at a glance",
             message:
                 "Once you finish Getting Started, Today shows how your accounts are doing, what your gurus posted, and how close each account is to its limits."
         ) {

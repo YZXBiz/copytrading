@@ -8,8 +8,8 @@ struct AccountsInvitation: View {
 
     var body: some View {
         InvitationCard(
-            lead: "Where your orders",
-            emphasis: "go",
+            lead: "Your accounts,",
+            emphasis: "inside your limits",
             message: isSetUp
                 ? "Accounts appear once the engine has read them."
                 : "Add the broker account orders go to. Start with an Alpaca paper account: it trades pretend money at real prices."
