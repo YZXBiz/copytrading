@@ -241,7 +241,6 @@
 "Close" = "Close";
 "Close owned position" = "Close owned position";
 "Close Settings" = "Close Settings";
-"Clouds hold still, glass turns solid, and edges get stronger." = "Clouds hold still, glass turns solid, and edges get stronger.";
 "Coding agents such as Claude Code reach CopyTrading through its copytrading command or MCP server, and only while the app runs. Posts from sources reach them as untrusted text." = "Coding agents such as Claude Code reach CopyTrading through its copytrading command or MCP server, and only while the app runs. Posts from sources reach them as untrusted text.";
 "Collapsed" = "Collapsed";
 "Combined equity" = "Combined equity";
@@ -1406,3 +1405,5 @@
 "The most this account holds in all stocks together, counting ones you bought yourself. A buy that would go over is skipped." = "The most this account holds in all stocks together, counting ones you bought yourself. A buy that would go over is skipped.";
 "Set to **$3,000**. This account already holds **$2,500** of NVDA, copied or bought yourself. A new **$1,000** NVDA buy would bring it to $3,500, so that buy is **skipped**. It isn't shrunk to fit." = "Set to **$3,000**. This account already holds **$2,500** of NVDA, copied or bought yourself. A new **$1,000** NVDA buy would bring it to $3,500, so that buy is **skipped**. It isn't shrunk to fit.";
 "Set to **$10,000**. Everything this account holds, including stocks you bought yourself and buys still waiting to fill, is worth **$9,500**. A new **$1,000** buy of any stock would go over, so it's **skipped**." = "Set to **$10,000**. Everything this account holds, including stocks you bought yourself and buys still waiting to fill, is worth **$9,500**. A new **$1,000** buy of any stock would go over, so it's **skipped**.";
+"Animations hold still, glass turns solid, and edges get stronger." = "Animations hold still, glass turns solid, and edges get stronger.";
+"When the guru says “sell half”: Original position sells half of the shares first bought. Remaining position sells half of what's left." = "When the guru says “sell half”: Original position sells half of the shares first bought. Remaining position sells half of what's left.";

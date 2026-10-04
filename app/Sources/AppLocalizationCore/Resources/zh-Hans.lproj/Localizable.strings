@@ -241,7 +241,6 @@
 "Close" = "关闭";
 "Close owned position" = "平掉自有持仓";
 "Close Settings" = "关闭设置";
-"Clouds hold still, glass turns solid, and edges get stronger." = "云朵会静止，玻璃效果会变为纯色，边缘对比会增强。";
 "Coding agents such as Claude Code reach CopyTrading through its copytrading command or MCP server, and only while the app runs. Posts from sources reach them as untrusted text." = "Claude Code 等编程智能体只能在应用运行时通过 CopyTrading 命令或 MCP 服务器访问 CopyTrading。来源帖子会作为不可信文本提供给智能体。";
 "Collapsed" = "已折叠";
 "Combined equity" = "总账户净值";
@@ -1406,3 +1405,5 @@
 "The most this account holds in all stocks together, counting ones you bought yourself. A buy that would go over is skipped." = "这个账户所有股票合计的最高持仓，包括你自己买入的股票。会超出的买入将被跳过。";
 "Set to **$3,000**. This account already holds **$2,500** of NVDA, copied or bought yourself. A new **$1,000** NVDA buy would bring it to $3,500, so that buy is **skipped**. It isn't shrunk to fit." = "设为 **$3,000**。这个账户已持有 **$2,500** 的 NVDA（跟单买入或你自己买入的都算）。再买入 **$1,000** 会达到 $3,500，所以这笔买入会被**跳过**，而不是缩小金额凑数。";
 "Set to **$10,000**. Everything this account holds, including stocks you bought yourself and buys still waiting to fill, is worth **$9,500**. A new **$1,000** buy of any stock would go over, so it's **skipped**." = "设为 **$10,000**。这个账户的全部持仓（包括你自己买入的股票和尚未成交的买单）合计 **$9,500**。任何股票再买入 **$1,000** 都会超出，所以会被**跳过**。";
+"Animations hold still, glass turns solid, and edges get stronger." = "动画会静止，玻璃效果会变为纯色，边缘对比会增强。";
+"When the guru says “sell half”: Original position sells half of the shares first bought. Remaining position sells half of what's left." = "信号源说“卖出一半”时：原始仓位按最初买入的股数卖出一半，剩余仓位按现在剩下的股数卖出一半。";

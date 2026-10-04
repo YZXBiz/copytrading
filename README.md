@@ -59,11 +59,11 @@ CopyTrading is a native macOS app that reads the stock calls traders post on Dis
 ## Features
 
 - **Posts become exact orders.** A model you choose reads each post, and every ticker, price, and fraction must appear in the post itself, so it cannot invent a number.
-- **Your limits, per account.** Daily loss, per-order, per-symbol, and total exposure limits are checked on every order. New accounts start with entries off.
+- **Your limits, per account.** Daily loss, per-order, per-symbol, and total exposure limits are checked before every copied buy. New accounts start with entries off.
 - **Many traders, many accounts.** Each trader-to-account link has its own sizing, and paper and live accounts sit side by side.
 - **Every position traces to its post.** Each copied buy is kept as a lot that names the post behind it, and you can sell any lot on its own.
 - **An assistant that cannot trade on its own.** ⌘J answers from your real posts and accounts. Anything that could place an order waits for your Touch ID.
-- **Private by design.** Keys stay in the macOS Keychain. The app talks only to Discord, your model provider, and your broker.
+- **Private by design.** Keys stay in the macOS Keychain. The app talks to Discord, your model provider, and your broker, plus Telegram if you turn on alerts and GitHub when you check for updates.
 
 Works with a dozen hosted model services, local models through Ollama, or any OpenAI-compatible address, in English or 简体中文.
 
