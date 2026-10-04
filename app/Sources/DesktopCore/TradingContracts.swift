@@ -622,13 +622,15 @@ public struct TradingCapabilityCheck: Codable, Equatable, Identifiable, Sendable
     public var identity: String?
     public var adapter: String
     public var reasonCode: String?
+    /// A close model name the provider lists, when the one asked for does not exist.
+    public var suggestion: String?
 
     public var id: String { "\(name.rawValue):\(subject ?? ""):\(adapter)" }
 
     public init(
         name: TradingCapabilityName, state: TradingCapabilityState, subject: String? = nil,
         environment: TradingEnvironment? = nil, identity: String? = nil,
-        adapter: String, reasonCode: String? = nil
+        adapter: String, reasonCode: String? = nil, suggestion: String? = nil
     ) {
         self.name = name
         self.state = state
@@ -637,6 +639,7 @@ public struct TradingCapabilityCheck: Codable, Equatable, Identifiable, Sendable
         self.identity = identity
         self.adapter = adapter
         self.reasonCode = reasonCode
+        self.suggestion = suggestion
     }
 
     enum CodingKeys: String, CodingKey {
@@ -647,6 +650,7 @@ public struct TradingCapabilityCheck: Codable, Equatable, Identifiable, Sendable
         case identity
         case adapter
         case reasonCode = "reason_code"
+        case suggestion
     }
 }
 

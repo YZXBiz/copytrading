@@ -3,6 +3,7 @@ import Foundation
 import Testing
 
 func runTradingContractTests() throws {
+    try capabilityChecksCarryAModelSuggestion()
     let profile = try TradingProfileBuilder().build(
         TradingProfileDraft(
             guruID: "stable-guru", displayName: "Stable Guru", prefix: "ALERT:",
@@ -153,4 +154,17 @@ func runTradingContractTests() throws {
     try #require(
         activation.committedActivationID == activationID,
         "activation status lost its activation-specific commit evidence")
+}
+
+/// A missing model comes back with the nearest name the provider lists; other checks carry none.
+private func capabilityChecksCarryAModelSuggestion() throws {
+    let json = Data(
+        """
+        {"name":"model","state":"failed","subject":null,"environment":null,"identity":null,\
+        "adapter":"deepseek","reason_code":"model_not_found","suggestion":"deepseek-flash"}
+        """.utf8)
+    let check = try JSONDecoder().decode(TradingCapabilityCheck.self, from: json)
+    try #require(check.reasonCode == "model_not_found" && check.suggestion == "deepseek-flash")
+    let older = Data(#"{"name":"model","state":"ready","adapter":"deepseek","reason_code":null}"#.utf8)
+    try #require(try JSONDecoder().decode(TradingCapabilityCheck.self, from: older).suggestion == nil)
 }

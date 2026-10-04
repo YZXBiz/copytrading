@@ -332,6 +332,53 @@ async def test_anthropic_provider_transport_captures_sdk_wire_request_and_respon
         sink.close(timeout_seconds=5)
 
 
+@pytest.mark.parametrize(
+    ("status", "body", "reason"),
+    [
+        # DeepSeek's answer to a model name it does not have, as its API sent it on 2026-10-04.
+        (
+            400,
+            {
+                "error": {
+                    "message": "The supported API model names are deepseek-flash, deepseek-v4-pro,"
+                    " but you passed dpeeseek-flash.",
+                    "type": "invalid_request_error",
+                    "param": None,
+                    "code": "invalid_request_error",
+                }
+            },
+            "provider_model_not_found",
+        ),
+        (
+            401,
+            {"error": {"message": "Authentication Fails", "type": "authentication_error"}},
+            "provider_key_rejected",
+        ),
+    ],
+)
+async def test_deepseek_answers_name_a_missing_model_or_a_rejected_key(status, body, reason):
+    """The real OpenAI client and PydanticAI carry the provider's answer to the classification."""
+
+    def handler(request):
+        return httpx.Response(status, json=body)
+
+    client = AsyncOpenAI(
+        api_key="test-only",
+        base_url="https://api.deepseek.com",
+        max_retries=0,
+        http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+    )
+    decoder = build_deepseek_decoder(
+        ProviderConfig(api_key="test-only", model="dpeeseek-flash", timeout=20), client
+    )
+    try:
+        with pytest.raises(DecodeError) as failure:
+            await decoder.decode("Commentary", Route())
+        assert failure.value.reason == reason
+    finally:
+        await decoder.close()
+
+
 async def test_provider_http_error_body_is_captured_without_masking_safe_decode_error(tmp_path):
     secret = "provider-error-secret-9f6b"
 
@@ -355,7 +402,7 @@ async def test_provider_http_error_body_is_captured_without_masking_safe_decode_
     try:
         with pytest.raises(DecodeError) as failure:
             await decoder.decode("Commentary", Route())
-        assert failure.value.reason == "provider_rejected"
+        assert failure.value.reason == "provider_key_rejected"
         assert "provider-error-secret-9f6b" not in str(failure.value)
         assert sink.flush(timeout_seconds=5)
         assert [event.capture_status for event in journal_events(tmp_path / "diagnostics")] == [

@@ -13,7 +13,9 @@ struct SetupCheckSheet: View {
                     ExampleReviewSection(model: model)
                 }
                 if let report = model.tradingValidation?.report {
-                    ValidationResultsSection(report: report)
+                    ValidationResultsSection(
+                        report: report, modelName: model.setupDraft.modelName,
+                        useModel: { model.setupDraft.modelName = $0 })
                 }
                 if model.profileExampleReviews.isEmpty && model.tradingValidation == nil {
                     ContentUnavailableView(

@@ -379,6 +379,67 @@ def test_native_model_probe_uses_configured_provider_and_safe_failure_reason(mon
     assert "private provider response body" not in rejected.model_dump_json()
 
 
+def test_native_model_probe_names_a_rejected_key_and_suggests_a_listed_model(monkeypatch):
+    class Decoder:
+        async def model_names(self):
+            return ("deepseek-flash", "deepseek-pro")
+
+        async def close(self):
+            pass
+
+    class Registry:
+        async def create(self, name, configuration):
+            return Decoder()
+
+    def failing(reason):
+        async def probe(decoder, health):
+            health.ready = False
+            health.error = reason
+
+        return probe
+
+    monkeypatch.setattr(capabilities, "builtin_registry", lambda: Registry())
+    probes = NativeCapabilityProbes()
+
+    def check(model):
+        return asyncio.run(probes.model(ProviderConfiguration(name="deepseek", model=model), "key"))
+
+    monkeypatch.setattr(capabilities, "probe_model", failing("provider_key_rejected"))
+    key = check("deepseek-flash")
+    assert (key.state, key.reason_code, key.suggestion) == ("failed", "model_key_rejected", None)
+
+    monkeypatch.setattr(capabilities, "probe_model", failing("provider_model_not_found"))
+    typo = check("dpeeseek-flash")
+    assert (typo.reason_code, typo.suggestion) == ("model_not_found", "deepseek-flash")
+    unrelated = check("llama-3.3-70b")
+    assert (unrelated.reason_code, unrelated.suggestion) == ("model_not_found", None)
+
+
+def test_native_model_probe_still_fails_cleanly_when_the_model_list_is_unavailable(monkeypatch):
+    class Decoder:
+        async def model_names(self):
+            raise RuntimeError("PRIVATE list failure")
+
+        async def close(self):
+            pass
+
+    class Registry:
+        async def create(self, name, configuration):
+            return Decoder()
+
+    async def missing(decoder, health):
+        health.ready = False
+        health.error = "provider_model_not_found"
+
+    monkeypatch.setattr(capabilities, "builtin_registry", lambda: Registry())
+    monkeypatch.setattr(capabilities, "probe_model", missing)
+    result = asyncio.run(
+        NativeCapabilityProbes().model(ProviderConfiguration(name="deepseek", model="x"), "key")
+    )
+    assert (result.reason_code, result.suggestion) == ("model_not_found", None)
+    assert "PRIVATE" not in result.model_dump_json()
+
+
 def test_native_broker_probe_reads_account_positions_and_orders_only(monkeypatch):
     calls = []
 
