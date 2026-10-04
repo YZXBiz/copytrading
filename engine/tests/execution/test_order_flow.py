@@ -28,6 +28,31 @@ def test_buy_reduce_close_preserves_owned_lot(system):
     assert all(Decimal(lot.remaining_qty) == 0 for lot in store.load().lots.values())
 
 
+def test_remaining_basis_reduce_sells_part_of_what_is_left(system):
+    """Selling half of what's left, after an earlier half, sells a quarter of the buy."""
+    engine, broker, _ = system
+    deliver(engine, event())
+    deliver(engine, event("2", "reduce", "27", "25"))
+    assert broker.holdings["ABC"] == 2
+    message = event("3", "reduce", "28", "25")
+    message["instructions"][0]["exit_basis"] = "remaining_position"
+    message["evidence"] = [evidence(i) for i in message["instructions"]]
+    deliver(engine, message)
+    assert broker.holdings["ABC"] == 1
+
+
+def test_original_basis_reduce_sells_part_of_the_buy(system):
+    """Selling half of the original buy, after an earlier half, sells the other half."""
+    engine, broker, _ = system
+    deliver(engine, event())
+    deliver(engine, event("2", "reduce", "27", "25"))
+    message = event("3", "reduce", "28", "25")
+    message["instructions"][0]["exit_basis"] = "original_position"
+    message["evidence"] = [evidence(i) for i in message["instructions"]]
+    deliver(engine, message)
+    assert broker.holdings["ABC"] == 0
+
+
 def test_repeated_id_and_reposted_instruction_do_not_duplicate(system):
     engine, broker, _ = system
     deliver(engine, event())

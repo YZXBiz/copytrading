@@ -387,7 +387,10 @@ class CopyEngine:
             qty = lot.remaining_qty if chosen_qty is None else min(lot.remaining_qty, chosen_qty)
             if s.action == "reduce":
                 assert s.fraction is not None
-                qty = min(qty, lot.original_qty * s.fraction)
+                # "Sell half" is half of the original buy, unless the guru counts from what is left.
+                remaining = s.exit_basis == "remaining_position"
+                basis = lot.remaining_qty if remaining else lot.original_qty
+                qty = min(qty, basis * s.fraction)
             qty = qty.quantize(STEP, rounding=ROUND_DOWN)
             # Outside regular hours brokers take only limit orders, so the exit sells no lower
             # than the entry tolerance allows; in regular hours it sells at market.
