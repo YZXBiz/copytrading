@@ -15,6 +15,9 @@ struct AccountEditorSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                SheetTitle(
+                    kind: L10n.string("Alpaca account"),
+                    name: account.name.trimmed.isEmpty ? L10n.string("New") : account.name.trimmed)
                 Section {
                     TextField(L10n.string("Name"), text: $account.name, prompt: Text(L10n.string("e.g. %@", "primary")))
                         .accessibilityLabel(L10n.string("Account name"))
@@ -108,7 +111,6 @@ struct AccountEditorSheet: View {
                 }
             }
             .formStyle(.grouped)
-            .navigationTitle(account.name.trimmed.isEmpty ? L10n.string("New Account") : account.name)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(L10n.string("Done"), action: dismiss.callAsFunction)

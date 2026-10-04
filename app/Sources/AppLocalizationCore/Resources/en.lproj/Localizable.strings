@@ -595,7 +595,6 @@
 "Needs review" = "Needs review";
 "Needs Review" = "Needs Review";
 "Needs your review" = "Needs your review";
-"New Account" = "New Account";
 "New accounts start with **entries off**, so nothing is bought until you choose **Enable Entries** in Accounts. Shares you already hold are never sold by CopyTrading." = "New accounts start with **entries off**, so nothing is bought until you choose **Enable Entries** in Accounts. Shares you already hold are never sold by CopyTrading.";
 "New accounts start with entries off, so nothing is bought until you turn them on. Exits are still copied." = "New accounts start with entries off, so nothing is bought until you turn them on. Exits are still copied.";
 "New accounts start with entries off, so nothing is bought yet. Turn them on in Accounts when you're ready." = "New accounts start with entries off, so nothing is bought yet. Turn them on in Accounts when you're ready.";
@@ -1260,7 +1259,6 @@
 "Historical evaluation could not be completed." = "Historical evaluation could not be completed.";
 "All remaining owned shares" = "All remaining owned shares";
 "Add a Channel" = "Add a Channel";
-"New Guru" = "New Guru";
 "Choose an Account to Copy Into" = "Choose an Account to Copy Into";
 "Copy into Another Account" = "Copy into Another Account";
 "No check results" = "No check results";
@@ -1395,3 +1393,5 @@
 "start copying into live accounts" = "start copying into live accounts";
 "Copying didn't start. Confirm with Touch ID or your Mac password to copy into live accounts." = "Copying didn't start. Confirm with Touch ID or your Mac password to copy into live accounts.";
 "allow new entries in %@" = "allow new entries in %@";
+"Alpaca account" = "Alpaca account";
+"New" = "New";
