@@ -1386,3 +1386,9 @@
 ", " = "，";
 "Forced termination was required for: %@." = "强制终止了这些进程：%@。";
 "Broker-accepted orders may remain open." = "券商已接受的订单可能仍然有效。";
+"Get Alpaca live keys" = "获取 Alpaca 实盘账户密钥";
+"Live keys place real orders with real money. Alpaca gives them only to an approved brokerage account." = "实盘密钥会用真实资金下真实订单。Alpaca 只向已获批准的证券账户提供实盘密钥。";
+"Sign in at **alpaca.markets**. Live trading needs an approved brokerage account with money in it." = "登录 **alpaca.markets**。实盘交易需要一个已获批准且有资金的证券账户。";
+"Switch the account switcher at the top left to your **Live** account." = "把左上角的账户切换器切换到你的 **实盘账户**。";
+"Anyone with these keys can trade your real money. Set small limits below. New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**." = "任何拿到这些密钥的人都能用你的真实资金交易。请在下方设置较小的限额。新账户默认关闭开仓，在你于 **账户** 中选择 **启用开仓** 之前不会买入任何股票。";
+"Open Alpaca" = "打开 Alpaca";

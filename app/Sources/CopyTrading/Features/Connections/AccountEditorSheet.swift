@@ -45,7 +45,7 @@ struct AccountEditorSheet: View {
                 } header: {
                     SetupSectionHeader(
                         title: "Alpaca keys", detail: "Kept in your Mac's Keychain, never in the setup file.",
-                        help: [SetupHelp.alpacaKeys])
+                        help: [SetupHelp.alpacaKeys(for: account.environment)])
                 }
 
                 Section(L10n.string("Position limits (USD)")) {

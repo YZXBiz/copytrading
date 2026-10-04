@@ -1386,3 +1386,9 @@
 ", " = ", ";
 "Forced termination was required for: %@." = "Forced termination was required for: %@.";
 "Broker-accepted orders may remain open." = "Broker-accepted orders may remain open.";
+"Get Alpaca live keys" = "Get Alpaca live keys";
+"Live keys place real orders with real money. Alpaca gives them only to an approved brokerage account." = "Live keys place real orders with real money. Alpaca gives them only to an approved brokerage account.";
+"Sign in at **alpaca.markets**. Live trading needs an approved brokerage account with money in it." = "Sign in at **alpaca.markets**. Live trading needs an approved brokerage account with money in it.";
+"Switch the account switcher at the top left to your **Live** account." = "Switch the account switcher at the top left to your **Live** account.";
+"Anyone with these keys can trade your real money. Set small limits below. New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**." = "Anyone with these keys can trade your real money. Set small limits below. New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**.";
+"Open Alpaca" = "Open Alpaca";

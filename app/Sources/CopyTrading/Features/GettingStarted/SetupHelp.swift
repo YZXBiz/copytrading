@@ -44,7 +44,7 @@ enum SetupHelp {
         destination: .init(title: "Open Discord in your browser", url: URL(literal: "https://discord.com/app"))
     )
 
-    static let alpacaKeys = HelpArticle(
+    static let alpacaPaperKeys = HelpArticle(
         id: "broker.alpaca",
         title: "Get Alpaca paper keys",
         intro:
@@ -58,6 +58,29 @@ enum SetupHelp {
         destination: .init(
             title: "Open your Alpaca paper account", url: URL(literal: "https://app.alpaca.markets/paper/dashboard/overview"))
     )
+
+    static let alpacaLiveKeys = HelpArticle(
+        id: "broker.alpaca.live",
+        title: "Get Alpaca live keys",
+        intro: "Live keys place real orders with real money. Alpaca gives them only to an approved brokerage account.",
+        steps: [
+            "Sign in at **alpaca.markets**. Live trading needs an approved brokerage account with money in it.",
+            "Switch the account switcher at the top left to your **Live** account.",
+            "On the home page, find **API Keys** and choose **Generate New Keys**.",
+            "Copy the **Key** and the **Secret** into this account. The secret is shown only once.",
+        ],
+        caution:
+            "Anyone with these keys can trade your real money. Set small limits below. New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**.",
+        destination: .init(title: "Open Alpaca", url: URL(literal: "https://app.alpaca.markets"))
+    )
+
+    /// The keys article for the account's environment: paper and live keys come from different accounts.
+    static func alpacaKeys(for environment: TradingEnvironment) -> HelpArticle {
+        switch environment {
+        case .paper: alpacaPaperKeys
+        case .live: alpacaLiveKeys
+        }
+    }
 
     static let telegram = HelpArticle(
         id: "alerts.telegram",
@@ -97,7 +120,7 @@ enum SetupHelp {
         switch step {
         case .discord: [channelID, discordToken]
         case .interpreter: [interpreterKey(for: provider)]
-        case .account: [alpacaKeys]
+        case .account: [alpacaPaperKeys]
         case .guru: [guru]
         case .start: [start]
         }
@@ -105,5 +128,7 @@ enum SetupHelp {
 
     static let discord = [channelID, discordToken, userID]
     @MainActor
-    static var all: [HelpArticle] { [channelID, userID, discordToken] + interpreters + [alpacaKeys, telegram, guru, start] }
+    static var all: [HelpArticle] {
+        [channelID, userID, discordToken] + interpreters + [alpacaPaperKeys, alpacaLiveKeys, telegram, guru, start]
+    }
 }
