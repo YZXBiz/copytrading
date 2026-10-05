@@ -50,7 +50,9 @@ same as his 1/6.
    * *At what price.* A buy is a limit at the guru's price plus X%. When the market is more than
      Y% away from the guru's price, above or below, the call waits for the owner. X and Y are set
      per account; Y defaults to 5%, at all hours. Without a usable quote, as in a thin overnight
-     market, the limit alone bounds the buy. A call with no price
+     market, the limit alone bounds the buy. A sell is a limit too, at the guru's price less Z%
+     (Z defaults to 1%, set per account), so it never fills far below what the guru got; one that
+     hasn't filled by the order timeout is cancelled and the shares stay. A call with no price
      waits for the owner, and so does a call at market, a batch until its guru's N is set, and a
      sell that names no buy for a guru whose sells refer to the buy price.
 5. **Limits only protect.** Maximum per order trims a buy and the trim is shown. A buy that would

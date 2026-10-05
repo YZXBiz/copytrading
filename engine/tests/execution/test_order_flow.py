@@ -86,6 +86,20 @@ def test_unknown_submission_is_never_retried(system):
     assert next(iter(store.load().orders.values())).status == "uncertain"
 
 
+def test_unfilled_exit_is_canceled_after_the_timeout_and_keeps_the_shares(system):
+    engine, broker, _ = system
+    deliver(engine, event())
+    broker.auto_fill = False
+    deliver(engine, event("exit", "close", "27", "25"))
+    sell = engine.ledger.orders()[-1]
+    assert sell.side == "sell"
+    engine.reconcile(NOW + dt.timedelta(seconds=61))
+    engine.reconcile(NOW + dt.timedelta(seconds=62))
+    assert broker.orders[sell.client_id]["status"] == "canceled"
+    assert engine.ledger.order(sell.client_id).status is OrderStatus.CANCELED
+    assert engine.ledger.owned("ABC") == 4, "a sell that never filled leaves the shares owned"
+
+
 def test_exit_cancels_a_preceding_cancelable_entry_then_sells_filled_shares(system):
     engine, broker, _ = system
     broker.auto_fill = False
@@ -545,20 +559,21 @@ def test_default_process_clock_advances_with_monotonic_time(system):
 
 
 @pytest.mark.parametrize(("action", "qty"), [("reduce", "2"), ("close", "4")])
-def test_market_exit_survives_timeout_restart_and_partial_fills(system, action, qty):
+def test_limit_exit_survives_restart_and_partial_fills(system, action, qty):
     engine, broker, store = system
     deliver(engine, event())
     broker.auto_fill = False
-    # The source price is metadata, not a limit or tick-size restriction.
+    # An exit sells no lower than 1% under the guru's price, rounded up to a cent.
     deliver(engine, event("exit", action, "27.123", "25"))
     order = engine.ledger.orders()[-1]
-    assert order.type == "market"
-    assert order.limit_price is None
+    assert order.type == "limit"
+    assert order.limit_price == Decimal("26.86")
+    assert order.entry_tolerance_pct == Decimal("1")
     assert order.source_price == Decimal("27.123")
     assert order.qty == Decimal(qty)
     broker.fill(order.client_id, "1")
     restarted = CopyEngine(MemoryRepository(store.snapshot_json), broker, engine.config)
-    later = NOW + dt.timedelta(seconds=90)
+    later = NOW + dt.timedelta(seconds=30)
     restarted.bind(later)
     restarted.reconcile(later)
     restarted.reconcile(later)

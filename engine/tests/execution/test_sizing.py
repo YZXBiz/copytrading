@@ -220,20 +220,20 @@ def test_entry_tolerance_keeps_budget_and_source_lot_reference(system):
     assert lot.entry_price == Decimal("25")
     assert Decimal(lot.average_price) == Decimal("25.25")
     original_qty = Decimal(lot.original_qty)
-    deliver(engine, event("2", "reduce", "27", "25"))
+    deliver(engine, event("2", "reduce", "24", "25"))
     assert next(iter(store.load().lots.values())).remaining_qty == original_qty / 2
     sell = list(broker.orders.values())[-1]
-    assert sell["type"] == "market"
-    assert "limit_price" not in sell
-    assert sell["extended_hours"] is False
-    assert sell["filled_avg_price"] == "24.50"
+    # An exit is a limit order too: the guru's price less the 1% allowance, rounded up to a cent.
+    assert sell["type"] == "limit"
+    assert Decimal(sell["limit_price"]) == Decimal("23.76")
+    assert sell["extended_hours"] is True
+    assert sell["filled_avg_price"] == "23.76"
     recorded = {order.side: order for order in store.load().orders.values()}
     assert recorded["buy"].filled_avg_price == Decimal("25.25")
-    assert recorded["sell"].filled_avg_price == Decimal("24.50")
-    deliver(engine, event("3", "close", "28", "25"))
+    assert recorded["sell"].filled_avg_price == Decimal("23.76")
+    deliver(engine, event("3", "close", "24", "25"))
     assert next(iter(store.load().lots.values())).remaining_qty == 0
-    assert list(broker.orders.values())[-1]["type"] == "market"
-    assert "limit_price" not in list(broker.orders.values())[-1]
+    assert list(broker.orders.values())[-1]["type"] == "limit"
 
 
 def test_compound_alert_with_tolerance_applies_each_entry_budget(system):

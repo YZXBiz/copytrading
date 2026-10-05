@@ -10,6 +10,7 @@ order it placed, and sells back whatever filled, so the paper account ends as it
 import asyncio
 import datetime as dt
 import os
+import time
 import uuid
 from decimal import ROUND_UP, Decimal
 
@@ -42,25 +43,25 @@ _ALPACA_HEADERS = {"APCA-API-KEY-ID": _ALPACA_KEY, "APCA-API-SECRET-KEY": _ALPAC
 
 
 class _ReplaySession:
-    """Stands in for the Discord session: captures the given messages instead of listening."""
+    """Stands in for the Discord session: captures each message once its gate opens."""
 
-    def __init__(self, source, messages: tuple[RawMessage, ...], gate: asyncio.Event) -> None:
+    def __init__(self, source, messages: tuple[tuple[asyncio.Event, RawMessage], ...]) -> None:
         self.source = source
         self.messages = messages
-        self.gate = gate
         self.ready = True
         self.capture_task: asyncio.Task[None] | None = None
 
     def start(self, token: str) -> None:
         async def capture() -> None:
-            await self.gate.wait()  # the guru posts only after entries are enabled
-            for message in self.messages:
+            for gate, message in self.messages:
+                await gate.wait()  # the guru posts only after entries are enabled
                 await self.source.add(message)
 
         self.capture_task = asyncio.create_task(capture())
 
     async def ensure_running(self) -> None:
-        if self.capture_task is not None:
+        # The engine's loop must keep running while the guru waits for a gate.
+        if self.capture_task is not None and self.capture_task.done():
             await self.capture_task
 
     async def forward_if_ready(self, forwarder) -> None:
@@ -68,7 +69,8 @@ class _ReplaySession:
 
     async def close(self) -> None:
         if self.capture_task is not None:
-            await self.capture_task
+            self.capture_task.cancel()
+            await asyncio.gather(self.capture_task, return_exceptions=True)
 
 
 async def _latest_ask(symbol: str) -> Decimal:
@@ -85,7 +87,8 @@ async def _latest_ask(symbol: str) -> Decimal:
 
 
 async def _unwind_orders(client_ids: set[str]) -> None:
-    """Cancel what is still open, then sell back any filled buy quantity at a marketable limit."""
+    """Cancel what is still open, then sell back what the test still holds."""
+    held: dict[str, Decimal] = {}
     async with httpx.AsyncClient(headers=_ALPACA_HEADERS, timeout=10) as client:
         for client_id in client_ids:
             found = await client.get(
@@ -102,15 +105,22 @@ async def _unwind_orders(client_ids: set[str]) -> None:
                     await client.get(f"https://paper-api.alpaca.markets/v2/orders/{order['id']}")
                 ).json()
             filled = Decimal(str(order.get("filled_qty") or "0"))
-            if order.get("side") != "buy" or filled <= 0:
+            sign = 1 if order.get("side") == "buy" else -1
+            held[order["symbol"]] = held.get(order["symbol"], Decimal(0)) + sign * filled
+            if sign > 0 and filled > 0:
+                held[f"{order['symbol']}@paid"] = Decimal(
+                    str(order.get("filled_avg_price") or order["limit_price"])
+                )
+        for symbol, quantity in held.items():
+            if "@" in symbol or quantity <= 0:
                 continue
             # Extended and overnight sessions accept only limit orders; 2% under the fill clears.
-            paid = Decimal(str(order.get("filled_avg_price") or order["limit_price"]))
+            paid = held[f"{symbol}@paid"]
             sold = await client.post(
                 "https://paper-api.alpaca.markets/v2/orders",
                 json={
-                    "symbol": order["symbol"],
-                    "qty": str(filled),
+                    "symbol": symbol,
+                    "qty": str(quantity),
                     "side": "sell",
                     "type": "limit",
                     "limit_price": str((paid * Decimal("0.98")).quantize(Decimal("0.01"))),
@@ -119,6 +129,16 @@ async def _unwind_orders(client_ids: set[str]) -> None:
                 },
             )
             assert sold.status_code == 200, f"could not sell back the test fill: {sold.status_code}"
+            # Leave nothing open, so the next test's account opens on a quiet broker.
+            for _ in range(30):
+                status = (
+                    await client.get(
+                        f"https://paper-api.alpaca.markets/v2/orders/{sold.json()['id']}"
+                    )
+                ).json()["status"]
+                if status not in {"new", "accepted", "partially_filled", "pending_new"}:
+                    break
+                await asyncio.sleep(1)
 
 
 def _configuration() -> TradingConfiguration:
@@ -130,6 +150,7 @@ def _configuration() -> TradingConfiguration:
             playbook="",
             examples=(),
             exit_basis="original_position",
+            sells_refer_to="whole_position",
         )
     )
     return TradingConfiguration.model_validate(
@@ -163,64 +184,96 @@ def _configuration() -> TradingConfiguration:
     )
 
 
-async def test_replayed_signal_places_a_paper_order(tmp_path):
-    price = await _latest_ask(_SYMBOL)
-    signal = RawMessage(
+def _post(text: str) -> RawMessage:
+    return RawMessage(
         schema_version=1,
         event_type="raw_message",
         source="discord",
         channel_id=_CHANNEL,
-        id=str(int(dt.datetime.now(dt.UTC).timestamp() * 1000)),
+        id=str(time.time_ns()),
         timestamp=dt.datetime.now(dt.UTC),
-        text=f"ALERT: Bought {_SYMBOL} at {price}",
+        text=text,
     )
-    secrets = TradingSecrets.model_validate(
-        {
-            "discord_token": "replay-session-needs-no-token",
-            "provider_api_key": _DEEPSEEK_KEY,
-            "brokers": [{"account_id": "paper-e2e", "key": _ALPACA_KEY, "secret": _ALPACA_SECRET}],
-        }
-    )
-    posted = asyncio.Event()
-    defaults = TradingFactories()
-    factories = TradingFactories(
-        owner=defaults.owner,
-        decoder=defaults.decoder,
-        session=lambda source, channels, authors, stop, report: _ReplaySession(
-            source, (signal,), posted
-        ),
-        notifier=defaults.notifier,
-    )
-    runtime = TradingRuntime(tmp_path, factories=factories)
-    placed: set[str] = set()
-    try:
-        await runtime.start(_configuration(), secrets)
+
+
+class _Run:
+    """One replayed conversation: the guru's posts go in, the orders sent to Alpaca come out."""
+
+    def __init__(self, tmp_path, posts: tuple[RawMessage, ...]) -> None:
+        self.gates = tuple(asyncio.Event() for _ in posts)
+        self.posts = posts
+        self.placed: set[str] = set()
+        secrets = TradingSecrets.model_validate(
+            {
+                "discord_token": "replay-session-needs-no-token",
+                "provider_api_key": _DEEPSEEK_KEY,
+                "brokers": [
+                    {"account_id": "paper-e2e", "key": _ALPACA_KEY, "secret": _ALPACA_SECRET}
+                ],
+            }
+        )
+        defaults = TradingFactories()
+        factories = TradingFactories(
+            owner=defaults.owner,
+            decoder=defaults.decoder,
+            session=lambda source, channels, authors, stop, report: _ReplaySession(
+                source, tuple(zip(self.gates, posts, strict=True))
+            ),
+            notifier=defaults.notifier,
+        )
+        self.runtime = TradingRuntime(tmp_path, factories=factories)
+        self.secrets = secrets
+
+    async def __aenter__(self) -> _Run:
+        await self.runtime.start(_configuration(), self.secrets)
         for _ in range(60):
-            if runtime.status().accounts:
+            if self.runtime.status().accounts:
                 break
             await asyncio.sleep(1)
         # New accounts start with entries disabled; enable them as the Accounts screen does.
-        await runtime.manual.control_account(
+        await self.runtime.manual.control_account(
             AccountControlCommand(
                 command_id=str(uuid.uuid4()), account_id="paper-e2e", action="resume"
             )
         )
-        posted.set()
-        activity = None
-        for _ in range(90):
-            page = await runtime.operator.source_activity(None, 25)
-            activity = next((item for item in page.items if item.text == signal.text), None)
+        return self
+
+    async def __aexit__(self, *exc) -> None:
+        await self.runtime.pause()
+        await self.runtime.shutdown()
+        await _unwind_orders(self.placed)
+
+    async def post(self, index: int, *, wait_for, seconds: int = 90):
+        """Let the guru post number `index`, then wait until `wait_for(activity, orders)` holds."""
+        self.gates[index].set()
+        activity, orders = None, []
+        for _ in range(seconds):
+            page = await self.runtime.operator.source_activity(None, 25)
+            activity = next(
+                (item for item in page.items if item.text == self.posts[index].text), None
+            )
             orders = [
                 order
                 for destination in (activity.destinations if activity else ())
                 for order in destination.orders
             ]
-            placed |= {order.client_id for order in orders}
-            if any(order.broker_id for order in orders):
+            self.placed |= {order.client_id for order in orders}
+            if wait_for(activity, orders):
                 break
             await asyncio.sleep(1)
+        return activity, orders
 
-        assert activity is not None, f"the replayed signal was never captured: {runtime.status()}"
+
+async def test_replayed_signal_places_a_paper_order(tmp_path):
+    price = await _latest_ask(_SYMBOL)
+    signal = _post(f"ALERT: Bought {_SYMBOL} at {price}")
+    async with _Run(tmp_path, (signal,)) as run:
+        activity, _ = await run.post(
+            0, wait_for=lambda _, orders: any(order.broker_id for order in orders)
+        )
+        assert activity is not None, (
+            f"the replayed signal was never captured: {run.runtime.status()}"
+        )
         assert activity.decision == "trade", (activity.decision, activity.parser_reason)
         assert activity.destinations, f"no destination received the signal: {activity}"
         destination = activity.destinations[0]
@@ -228,12 +281,32 @@ async def test_replayed_signal_places_a_paper_order(tmp_path):
         assert order is not None, (
             f"no order reached Alpaca: status={destination.status} "
             f"outcomes={destination.instruction_outcomes} orders={destination.orders} "
-            f"runtime={runtime.status()}"
+            f"runtime={run.runtime.status()}"
         )
         assert order.symbol == _SYMBOL
         assert order.side == "buy"
         assert order.quantity > 0
-    finally:
-        await runtime.pause()
-        await runtime.shutdown()
-        await _unwind_orders(placed)
+
+
+async def test_replayed_sell_reaches_alpaca_as_a_limit_order_under_the_guru_price(tmp_path):
+    price = await _latest_ask(_SYMBOL)
+    buy = _post(f"ALERT: Bought {_SYMBOL} at {price}")
+    sell = _post(f"ALERT: Sold all {_SYMBOL} at {price}")
+    async with _Run(tmp_path, (buy, sell)) as run:
+        _, bought = await run.post(
+            0, wait_for=lambda _, orders: any(order.filled_quantity > 0 for order in orders)
+        )
+        if not any(order.filled_quantity > 0 for order in bought):
+            pytest.skip("the paper buy did not fill in time, so there is nothing to sell")
+        activity, orders = await run.post(
+            1, wait_for=lambda _, orders: any(order.broker_id for order in orders)
+        )
+        assert activity is not None, "the sell post was never captured"
+        assert activity.decision == "trade", activity
+        order = next((order for order in orders if order.broker_id), None)
+        assert order is not None, f"no sell reached Alpaca: {activity.destinations}"
+        assert order.side == "sell"
+        # Every sell is a limit order: the guru's price less the 1% allowance, rounded up a cent.
+        assert order.limit_price == (price * Decimal("0.99")).quantize(
+            Decimal("0.01"), rounding=ROUND_UP
+        )

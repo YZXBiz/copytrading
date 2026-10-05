@@ -77,7 +77,7 @@ def confirmation(preview_id: str = "sale-preview-1", command_id: str = "sale-1")
     )
 
 
-def test_selling_a_whole_lot_sells_its_remaining_shares_at_market_and_closes_it(tmp_path):
+def test_selling_a_whole_lot_sells_its_remaining_shares_with_a_limit_and_closes_it(tmp_path):
     engine, broker, app, lot_id, lot = owned_lot(tmp_path)
     submitted_before = broker.calls
 
@@ -86,7 +86,7 @@ def test_selling_a_whole_lot_sells_its_remaining_shares_at_market_and_closes_it(
     assert preview.plan is not None
     assert preview.plan.lot_id == lot_id
     assert preview.plan.qty == lot.remaining_qty
-    assert preview.plan.type == "market"
+    assert preview.plan.type == "limit"
     assert broker.calls == submitted_before, "a preview never touches the broker"
 
     result = app.confirm(confirmation(), NOW + dt.timedelta(seconds=2))

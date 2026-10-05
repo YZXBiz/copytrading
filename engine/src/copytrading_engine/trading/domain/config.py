@@ -85,6 +85,7 @@ class AccountPolicy(BaseModel):
     overnight: StrictBool = False
     copy_exits: StrictBool = True
     max_above_signal_pct: Decimal = Field(default=Decimal("0"), ge=0, le=100)
+    max_below_signal_pct: Decimal = Field(default=Decimal("1"), ge=0, le=100)
     # How far the market may be from the guru's price before a buy waits for you.
     max_price_move_pct: Decimal = Field(default=Decimal("5"), gt=0, le=100)
 

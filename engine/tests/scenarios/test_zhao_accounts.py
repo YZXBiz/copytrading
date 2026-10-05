@@ -62,7 +62,7 @@ async def test_selling_part_of_a_lot_from_accounts_leaves_the_rest_for_zhao(tmp_
         broker.move("NVDA", "130")
         preview, result = await rig.sell_lot("paper", lot.lot_id, "1")
         assert preview.plan is not None
-        assert preview.plan.type == "market"
+        assert preview.plan.type == "limit"
         assert result.status == "filled"
         [lot] = await rig.lots("paper", "NVDA")
         assert lot.remaining_qty == 3

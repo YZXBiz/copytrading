@@ -36,6 +36,7 @@ environment = "paper"   # "paper" trades pretend money at real prices; "live" is
   max_entries_per_day = 30     # copied buys per trading day; sells don't count
   max_signal_age_seconds = 120 # an older post is skipped instead of copied
   max_above_signal_pct = 0     # how far above the trader's price a buy may fill
+  max_below_signal_pct = 1     # how far below the trader's price a sell may fill
   max_price_move_pct = 5       # if the price is now further than this from the trader's, the buy waits
   extended_hours = true        # also copy before 9:30 and after 16:00 New York time
   copy_exits = true            # sell when the trader sells

@@ -146,18 +146,17 @@ struct LotSaleSheet: View {
         let bid = preview.freshPrice.flatMap { Decimal(engine: $0) }
         let noun = L10n.string(quantity == 1 ? "share" : "shares")
         let shares = L10n.string("%@ %@ of %@", quantity.formatted(), noun, plan.symbol)
-        if plan.type == "limit", let limit = plan.limitPrice.flatMap({ Decimal(engine: $0) }) {
-            return L10n.string(
-                "Sells %@ with a limit order at %@, since the market is outside regular hours. It fills at that price or better, or not at all.",
-                shares, limit.formatted(.currency(code: "USD"))
-            )
-        }
-        guard let bid else { return L10n.string("Sells %@ at the market price.", shares) }
+        guard let limit = plan.limitPrice.flatMap({ Decimal(engine: $0) }) else { return shares }
+        let sentence = L10n.string(
+            "Sells %@ with a limit order at %@. It fills at that price or better, or not at all.",
+            shares, limit.formatted(.currency(code: "USD")))
+        guard let bid else { return sentence }
         let proceeds = (quantity * bid).formatted(.currency(code: "USD"))
-        return L10n.string(
-            "Sells %@ at the market price. At today’s bid of %@, that comes to about %@.",
-            shares, bid.formatted(.currency(code: "USD")), proceeds
-        )
+        return L10n.sentences([
+            sentence,
+            L10n.string(
+                "At today’s bid of %@, that comes to about %@.", bid.formatted(.currency(code: "USD")), proceeds),
+        ])
     }
 
     @ViewBuilder

@@ -25,6 +25,10 @@ enum LimitExamples {
         Set to **1**. The guru buys AAPL at **$200**. You pay **$202** at most. At **0**, you pay \
         **$200** at most.
         """
+    static let maxBelowSignal = """
+        Set to **1**. The guru sells AAPL at **$200**. You sell at **$198** or better. At **0**, you \
+        sell at **$200** or better.
+        """
     static let entriesPerDay = """
         Set to **5**. After 5 buys today, more buys are skipped until tomorrow. Sells still go \
         through.

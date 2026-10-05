@@ -192,7 +192,6 @@ class CopyEngine:
             current = self.ledger.order(order.client_id)
             if (
                 current.pending
-                and current.type == "limit"
                 and is_cancelable(current.status)
                 and (now - current.created_at).total_seconds() >= self.config.order_timeout_seconds
             ):
@@ -412,10 +411,8 @@ class CopyEngine:
                 basis = lot.remaining_qty if remaining else lot.original_qty
                 qty = min(qty, basis * s.fraction)
             qty = qty.quantize(STEP, rounding=ROUND_DOWN)
-            # Outside regular hours brokers take only limit orders, so the exit sells no lower
-            # than the entry tolerance allows; in regular hours it sells at market.
-            if session != Session.REGULAR:
-                limit_price = c.entry_pricing.exit_limit_price(s.price)
+            # An exit is a limit order too, no lower than the allowance under the guru's price.
+            limit_price = c.entry_pricing.exit_limit_price(s.price)
         if not asset.fractionable:
             qty = qty.quantize(Decimal(1), rounding=ROUND_DOWN)
         if qty <= 0:
@@ -446,12 +443,12 @@ class CopyEngine:
                 side="buy" if s.action == "buy" else "sell",
                 position_intent="buy_to_open" if s.action == "buy" else "sell_to_close",
                 qty=qty,
-                type="limit" if limit_price is not None else "market",
+                type="limit",
                 limit_price=limit_price,
                 source_price=s.price,
                 entry_tolerance_pct=c.entry_pricing.max_above_signal_pct
-                if limit_price is not None
-                else ZERO,
+                if s.action == "buy"
+                else c.entry_pricing.max_below_signal_pct,
                 lot_id=lot_id,
                 entry_price=entry_price,
                 session=session,

@@ -828,9 +828,6 @@
 "Sell %@ of %@ at %@" = "Sell %@ of %@ at %@";
 "Sell all %@ at %@" = "Sell all %@ at %@";
 "Selling" = "Selling";
-"Sells %@ at the market price." = "Sells %@ at the market price.";
-"Sells %@ at the market price. At today’s bid of %@, that comes to about %@." = "Sells %@ at the market price. At today’s bid of %@, that comes to about %@.";
-"Sells %@ with a limit order at %@, since the market is outside regular hours. It fills at that price or better, or not at all." = "Sells %@ with a limit order at %@, since the market is outside regular hours. It fills at that price or better, or not at all.";
 "Sell…" = "Sell…";
 "Send Alerts To" = "Send Alerts To";
 "Send your new bot any message, so it's allowed to message you back." = "Send your new bot any message, so it's allowed to message you back.";
@@ -1559,3 +1556,8 @@
 "Set to **120**. The guru posts at **9:31:00**. If it reaches CopyTrading after **9:33:00** (say your Mac was asleep), it isn't copied. You can still copy it yourself in **Activity**." = "Set to **120**. The guru posts at **9:31:00**. If it reaches CopyTrading after **9:33:00** (say your Mac was asleep), it isn't copied. You can still copy it yourself in **Activity**.";
 "Set to **60**. The guru buys at **$200**, so your order fills only at $200 or less. If the price stays at **$201**, the order is cancelled after **60 seconds**, so it can't fill hours later." = "Set to **60**. The guru buys at **$200**, so your order fills only at $200 or less. If the price stays at **$201**, the order is cancelled after **60 seconds**, so it can't fill hours later.";
 "The engine isn't running. Start it in Settings → Engine. If another CopyTrading is open, quit it first." = "The engine isn't running. Start it in Settings → Engine. If another CopyTrading is open, quit it first.";
+"Sells %@ with a limit order at %@. It fills at that price or better, or not at all." = "Sells %@ with a limit order at %@. It fills at that price or better, or not at all.";
+"At today’s bid of %@, that comes to about %@." = "At today’s bid of %@, that comes to about %@.";
+"Maximum below signal price (%)" = "Maximum below signal price (%)";
+"The lowest a sell can go below the guru's price. A sell that can't fill by then is cancelled." = "The lowest a sell can go below the guru's price. A sell that can't fill by then is cancelled.";
+"Set to **1**. The guru sells AAPL at **$200**. You sell at **$198** or better. At **0**, you sell at **$200** or better." = "Set to **1**. The guru sells AAPL at **$200**. You sell at **$198** or better. At **0**, you sell at **$200** or better.";

@@ -828,9 +828,6 @@
 "Sell %@ of %@ at %@" = "以 %@ 的比例卖出 %@，价格 %@";
 "Sell all %@ at %@" = "按全部仓位卖出 %@，价格 %@";
 "Selling" = "卖出中";
-"Sells %@ at the market price." = "按市价卖出%@股。";
-"Sells %@ at the market price. At today’s bid of %@, that comes to about %@." = "按市价卖出%@股。按今日买价 %@ 估算，金额约为 %@。";
-"Sells %@ with a limit order at %@, since the market is outside regular hours. It fills at that price or better, or not at all." = "因当前处于常规交易时段之外，将卖出%@股，限价为 %@。订单仅在该价格或更高价格成交，否则不会成交。";
 "Sell…" = "卖出…";
 "Send Alerts To" = "提醒发送至 ";
 "Send your new bot any message, so it's allowed to message you back." = "给新机器人发送任意消息，以便它之后可以回复你。";
@@ -1559,3 +1556,8 @@
 "Set to **120**. The guru posts at **9:31:00**. If it reaches CopyTrading after **9:33:00** (say your Mac was asleep), it isn't copied. You can still copy it yourself in **Activity**." = "设为 **120**。信号源 **9:31:00** 发帖。如果 **9:33:00** 之后才到 CopyTrading（比如 Mac 在睡眠），就不跟单。你仍可以在**“活动”**里自己跟单。";
 "Set to **60**. The guru buys at **$200**, so your order fills only at $200 or less. If the price stays at **$201**, the order is cancelled after **60 seconds**, so it can't fill hours later." = "设为 **60**。信号源以 **$200** 买入，你的订单只在 $200 或更低成交。如果价格一直是 **$201**，**60 秒**后订单取消，不会在几小时后才成交。";
 "The engine isn't running. Start it in Settings → Engine. If another CopyTrading is open, quit it first." = "引擎没有运行。请在“设置 → 引擎”里启动。如果还开着另一个 CopyTrading，请先退出它。";
+"Sells %@ with a limit order at %@. It fills at that price or better, or not at all." = "卖出%@，限价 %@。订单只在该价格或更高价格成交，否则不成交。";
+"At today’s bid of %@, that comes to about %@." = "按今日买价 %@ 估算，金额约为 %@。";
+"Maximum below signal price (%)" = "低于信号价格的最大幅度（%）";
+"The lowest a sell can go below the guru's price. A sell that can't fill by then is cancelled." = "卖出价最多可以比信号源的价格低这么多。到时还没成交的卖单会被取消。";
+"Set to **1**. The guru sells AAPL at **$200**. You sell at **$198** or better. At **0**, you sell at **$200** or better." = "设为 **1**。信号源以 **$200** 卖出 AAPL，你以 **$198** 或更高价卖出。设为 **0**，则以 **$200** 或更高价卖出。";

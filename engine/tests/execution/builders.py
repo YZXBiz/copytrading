@@ -142,7 +142,9 @@ def late_sell_with_consumed_source_lot():
 
     repository = MemoryRepository()
     broker = FakeBroker()
-    engine = CopyEngine(repository, broker, CopyConfig(sources=["discord:demo"]))
+    # The late sell is a limit order; a long timeout keeps the engine from cancelling it.
+    config = CopyConfig(sources=["discord:demo"], order_timeout_seconds=600)
+    engine = CopyEngine(repository, broker, config)
     engine.bind(NOW)
 
     first_at = NOW

@@ -339,7 +339,7 @@ struct ManualReviewSheet: View {
             return
                 L10n.string(
                     "%@: %@ %@ %@ at %@", request.accountID, preview?.plan?.side ?? "order",
-                    preview?.plan?.quantity ?? "", preview?.plan?.symbol ?? "", preview?.plan?.limitPrice ?? "market"
+                    preview?.plan?.quantity ?? "", preview?.plan?.symbol ?? "", preview?.plan?.limitPrice ?? "—"
                 )
         }.joined(separator: "\n")
     }
@@ -387,7 +387,7 @@ struct ManualReviewSheet: View {
                 .bold()
             if let preview = feature.previews[request.previewID] {
                 if let plan = preview.plan {
-                    Text(L10n.string("%@ %@ %@ · limit %@", plan.side.capitalized, plan.quantity, plan.symbol, plan.limitPrice ?? "market"))
+                    Text(L10n.string("%@ %@ %@ · limit %@", plan.side.capitalized, plan.quantity, plan.symbol, plan.limitPrice ?? "—"))
                     if let lotID = plan.lotID {
                         Text(L10n.string("Owned lot: %@", lotID))
                             .font(.caption)
