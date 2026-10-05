@@ -327,7 +327,7 @@
 "e.g. NVDA" = "例如 NVDA";
 "Each account's change" = "各账户净值变动";
 "Each broker account's balance, positions, and limits. **Enable Entries** lets an account buy; **Pause Entries** stops new buys while exits still follow your rules." = "每个券商账户的余额、持仓和限额。**启用开仓**允许账户买入；**暂停开仓**会停止新的买入，但退出操作仍按你的规则执行。";
-"Each guru's channel, how to read their calls, and how much each account puts in." = "为每个信号源选择频道和信号解读方式，并设置每个账户的投入金额。";
+"Each guru's channel, how to read their calls, and the account that copies them." = "每位信号源的频道、如何解读其信号，以及跟单的账户。";
 "Each selected account is checked independently for permission, recovery, risk, activity, and ownership." = "将分别检查每个所选账户的权限、恢复状态、风险、活动和持仓归属。";
 "Earlier buy" = "更早的买入";
 "Earlier message" = "较早的消息";
@@ -715,7 +715,7 @@
 "Read Posts With" = "解读帖子所用模型 ";
 "Read the holdings already in the account" = "已读取账户现有持仓";
 "Read the log again" = "重新读取日志";
-"Read the playbook and fix anything that's off. Under **Copies into**, choose how much each account puts into one of their calls." = "查看交易规则并修正不准确之处。在 **跟单到账户** 下，设置每个账户跟随其信号投入的金额。";
+"Read the playbook and fix anything that's off. Under **How they trade**, say what their sells refer to and whether they buy in batches; under **Copies into**, choose their account." = "查看交易规则并修正不准确之处。在 **交易习惯** 里设置卖出指的是什么、是否分批买入；在 **跟单到** 里选择账户。";
 "Read, pause, and ask for approval" = "读取、暂停并请求批准";
 "Reading activity…" = "正在读取活动…";
 "Reading needs the app unlocked. Pausing always works." = "读取需要先解锁应用。暂停操作始终可用。";
@@ -1390,10 +1390,10 @@
 "Start copying" = "开始跟单";
 "Step %@" = "第 %@ 步";
 "Step %@, done" = "第 %@ 步，已完成";
-"The traders you follow show here once you add them in Connections: the channel they post in, how to read their calls, and how much each account puts into one." = "在“连接”中添加信号源后，他们会显示在这里：发帖的频道、如何解读信号，以及每个账户每次投入多少。";
-"Their channel, how to read their calls, and how much each account puts in." = "他们的频道、如何解读信号，以及每个账户投入多少。";
+"The traders you follow show here once you add them in Connections: the channel they post in, how to read their calls, and the account that copies them." = "在“连接”里添加后，你跟随的交易者会显示在这里：他们发帖的频道、如何解读其信号，以及跟单的账户。";
+"Their channel, how to read their calls, and the account that copies them." = "他们的频道、如何解读其信号，以及跟单的账户。";
 "Where orders go. Start with paper: pretend money at real prices." = "订单下到这里。建议先用模拟盘：虚拟资金，真实价格。";
-"Who you copy, and how much each account puts into one of their calls." = "跟单谁，以及每个账户每次跟单投入多少。";
+"Who you copy, and the account each one copies into." = "跟单谁，以及每位信号源跟单到哪个账户。";
 "You have changes that aren't saved yet. Starting checks and saves them." = "你有尚未保存的更改。开始跟单时会先检查再保存。";
 "Your broker accounts show here once you set them up in Connections. Start with an Alpaca paper account: it trades pretend money at real prices." = "在“连接”中设置券商账户后，账户会显示在这里。建议先用 Alpaca 模拟盘账户：虚拟资金，真实价格。";
 "Your setup is saved. Change anything in Connections." = "设置已保存。如需修改，请前往“连接”。";

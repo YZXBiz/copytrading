@@ -24,7 +24,7 @@ struct GuruRows: View {
                 symbol: "plus",
                 title: L10n.string(model.setupDraft.routes.isEmpty ? "Add a guru" : "Add another guru"),
                 detail: model.setupDraft.routes.isEmpty
-                    ? L10n.string("Their channel, how to read their calls, and how much each account puts in.") : nil,
+                    ? L10n.string("Their channel, how to read their calls, and the account that copies them.") : nil,
                 action: model.setupDraft.routes.isEmpty ? L10n.string("Add") : nil,
                 identifier: "connections.gurus.add"
             ) { model.addGuru() }

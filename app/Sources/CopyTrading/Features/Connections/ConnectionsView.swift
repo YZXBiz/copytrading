@@ -35,7 +35,7 @@ struct ConnectionsView: View {
                 .padding(.bottom, 36)
                 SetupStepSection(
                     number: 4, isDone: progress.isDone(.guru), title: L10n.string("Gurus"),
-                    subtitle: L10n.string("Who you copy, and how much each account puts into one of their calls.")
+                    subtitle: L10n.string("Who you copy, and the account each one copies into.")
                 ) { GuruRows(model: model) }
                 .padding(.bottom, 36)
                 SetupStepSection(

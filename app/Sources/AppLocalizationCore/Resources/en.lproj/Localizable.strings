@@ -327,7 +327,7 @@
 "e.g. NVDA" = "e.g. NVDA";
 "Each account's change" = "Each account's change";
 "Each broker account's balance, positions, and limits. **Enable Entries** lets an account buy; **Pause Entries** stops new buys while exits still follow your rules." = "Each broker account's balance, positions, and limits. **Enable Entries** lets an account buy; **Pause Entries** stops new buys while exits still follow your rules.";
-"Each guru's channel, how to read their calls, and how much each account puts in." = "Each guru's channel, how to read their calls, and how much each account puts in.";
+"Each guru's channel, how to read their calls, and the account that copies them." = "Each guru's channel, how to read their calls, and the account that copies them.";
 "Each selected account is checked independently for permission, recovery, risk, activity, and ownership." = "Each selected account is checked independently for permission, recovery, risk, activity, and ownership.";
 "Earlier buy" = "Earlier buy";
 "Earlier message" = "Earlier message";
@@ -715,7 +715,7 @@
 "Read Posts With" = "Read Posts With";
 "Read the holdings already in the account" = "Read the holdings already in the account";
 "Read the log again" = "Read the log again";
-"Read the playbook and fix anything that's off. Under **Copies into**, choose how much each account puts into one of their calls." = "Read the playbook and fix anything that's off. Under **Copies into**, choose how much each account puts into one of their calls.";
+"Read the playbook and fix anything that's off. Under **How they trade**, say what their sells refer to and whether they buy in batches; under **Copies into**, choose their account." = "Read the playbook and fix anything that's off. Under **How they trade**, say what their sells refer to and whether they buy in batches; under **Copies into**, choose their account.";
 "Read, pause, and ask for approval" = "Read, pause, and ask for approval";
 "Reading activity…" = "Reading activity…";
 "Reading needs the app unlocked. Pausing always works." = "Reading needs the app unlocked. Pausing always works.";
@@ -1390,10 +1390,10 @@
 "Start copying" = "Start copying";
 "Step %@" = "Step %@";
 "Step %@, done" = "Step %@, done";
-"The traders you follow show here once you add them in Connections: the channel they post in, how to read their calls, and how much each account puts into one." = "The traders you follow show here once you add them in Connections: the channel they post in, how to read their calls, and how much each account puts into one.";
-"Their channel, how to read their calls, and how much each account puts in." = "Their channel, how to read their calls, and how much each account puts in.";
+"The traders you follow show here once you add them in Connections: the channel they post in, how to read their calls, and the account that copies them." = "The traders you follow show here once you add them in Connections: the channel they post in, how to read their calls, and the account that copies them.";
+"Their channel, how to read their calls, and the account that copies them." = "Their channel, how to read their calls, and the account that copies them.";
 "Where orders go. Start with paper: pretend money at real prices." = "Where orders go. Start with paper: pretend money at real prices.";
-"Who you copy, and how much each account puts into one of their calls." = "Who you copy, and how much each account puts into one of their calls.";
+"Who you copy, and the account each one copies into." = "Who you copy, and the account each one copies into.";
 "You have changes that aren't saved yet. Starting checks and saves them." = "You have changes that aren't saved yet. Starting checks and saves them.";
 "Your broker accounts show here once you set them up in Connections. Start with an Alpaca paper account: it trades pretend money at real prices." = "Your broker accounts show here once you set them up in Connections. Start with an Alpaca paper account: it trades pretend money at real prices.";
 "Your setup is saved. Change anything in Connections." = "Your setup is saved. Change anything in Connections.";
