@@ -488,6 +488,42 @@ public struct TradingBrokerCredentials: Codable, Equatable, Sendable {
     }
 }
 
+/// One service checked the moment the owner connects it, with the keys typed for it. The engine
+/// runs the same read-only check a full validation runs for it, and saves nothing.
+public enum TradingConnectionCheck: Encodable, Equatable, Sendable {
+    case source(TradingSourceConfiguration, token: String)
+    case model(TradingProviderConfiguration, apiKey: String)
+    case broker(TradingAccountConfiguration, credentials: TradingBrokerCredentials)
+    case notification(TradingNotificationConfiguration, token: String)
+
+    enum CodingKeys: String, CodingKey {
+        case kind, source, token, provider, account, credentials, notification
+        case apiKey = "api_key"
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .source(let source, let token):
+            try container.encode("source", forKey: .kind)
+            try container.encode(source, forKey: .source)
+            try container.encode(token, forKey: .token)
+        case .model(let provider, let apiKey):
+            try container.encode("model", forKey: .kind)
+            try container.encode(provider, forKey: .provider)
+            try container.encode(apiKey, forKey: .apiKey)
+        case .broker(let account, let credentials):
+            try container.encode("broker", forKey: .kind)
+            try container.encode(account, forKey: .account)
+            try container.encode(credentials, forKey: .credentials)
+        case .notification(let notification, let token):
+            try container.encode("notification", forKey: .kind)
+            try container.encode(notification, forKey: .notification)
+            try container.encode(token, forKey: .token)
+        }
+    }
+}
+
 /// Keychain only. Sent over the private child pipe after an explicit Start action.
 public struct TradingSecrets: Codable, Equatable, Sendable {
     public var discordToken: String

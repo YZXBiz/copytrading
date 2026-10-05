@@ -286,6 +286,7 @@ public enum EngineResult: Equatable, Sendable {
     case trading(TradingStatus)
     case tradingActivation(TradingActivationStatus)
     case tradingValidation(TradingValidation)
+    case connectionCheck(TradingCapabilityCheck)
     case accountControl(AccountControlResult)
     case ownershipResolution(OwnershipResolution)
     case accounts(AccountOverviewPage)
@@ -390,6 +391,7 @@ public struct EngineSuccess: Decodable, Equatable, Sendable {
         case activation
         case report
         case activationToken = "activation_token"
+        case check
         case control
         case resolution
         case accounts
@@ -440,6 +442,8 @@ public struct EngineSuccess: Decodable, Equatable, Sendable {
                     report: try container.decode(TradingCapabilityReport.self, forKey: .report),
                     activationToken: try container.decodeIfPresent(String.self, forKey: .activationToken)
                 ))
+        case "connection_check":
+            result = .connectionCheck(try container.decode(TradingCapabilityCheck.self, forKey: .check))
         case "account_control":
             result = .accountControl(try container.decode(AccountControlResult.self, forKey: .control))
         case "ownership_resolution":
@@ -549,6 +553,7 @@ enum EngineOperation: Sendable {
     case tradingStatus
     case tradingActivation(String)
     case validateTrading(TradingConfiguration, TradingSecrets)
+    case checkConnection(TradingConnectionCheck)
     case startTrading(
         TradingConfiguration, TradingSecrets, validationToken: String, activationID: String
     )
@@ -607,6 +612,7 @@ struct EngineRequest: Encodable, Sendable {
         case commandID = "command_id"
         case configuration
         case secrets
+        case connection
         case validationToken = "validation_token"
         case activationID = "activation_id"
         case beforeSeq = "before_seq"
@@ -667,6 +673,9 @@ struct EngineRequest: Encodable, Sendable {
             try container.encode("validate_trading", forKey: .operation)
             try container.encode(configuration, forKey: .configuration)
             try container.encode(secrets, forKey: .secrets)
+        case .checkConnection(let connection):
+            try container.encode("check_connection", forKey: .operation)
+            try container.encode(connection, forKey: .connection)
         case .startTrading(let configuration, let secrets, let validationToken, let activationID):
             try container.encode("start_trading", forKey: .operation)
             try container.encode(configuration, forKey: .configuration)

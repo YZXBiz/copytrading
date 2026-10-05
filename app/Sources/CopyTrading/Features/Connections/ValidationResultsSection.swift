@@ -50,28 +50,8 @@ struct ValidationResultsSection: View {
     }
 
     private func detail(for check: TradingCapabilityCheck) -> String? {
-        if check.name == .model, let explanation = modelProblem(check) { return explanation }
-        var parts: [String] = []
-        if let identity = check.identity { parts.append(L10n.string("Verified as %@", identity)) }
-        if let reason = check.reasonCode { parts.append(L10n.string(Humanize.code(reason))) }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
-    }
-
-    /// What went wrong with the interpreter, in words: the key, the model name, or the answer.
-    private func modelProblem(_ check: TradingCapabilityCheck) -> String? {
-        let service = TradingProviderName(rawValue: check.adapter)?.title ?? check.adapter
-        switch check.reasonCode {
-        case "model_key_rejected":
-            return L10n.string("%@ didn't accept the API key.", service)
-        case "model_not_found":
-            return L10n.string("%@ has no model called “%@”.", service, modelName.trimmingCharacters(in: .whitespaces))
-        case "model_probe_rejected":
-            return L10n.string("The model answered, but couldn't read a test post. Try another model.")
-        case "model_auth_or_probe_failed":
-            return L10n.string("Couldn't reach %@. Check the API key and your connection.", service)
-        default:
-            return nil
-        }
+        if check.state == .failed { return ConnectionProblem.text(for: check, modelName: modelName) }
+        return check.identity.map { L10n.string("Verified as %@", $0) }
     }
 
     @MainActor private func summary(for state: TradingCapabilityState) -> String {

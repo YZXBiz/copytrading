@@ -14,7 +14,12 @@ struct ConnectionsEditorSheet: View {
                 AccountEditorSheet(
                     account: $model.setupDraft.accounts[index],
                     savedAccountIDs: model.savedKeyAccountIDs,
-                    remove: { removeAccount(id) }
+                    remove: { removeAccount(id) },
+                    failedCheck: failedCheck(.account(model.setupDraft.accounts[index].name.trimmed)),
+                    check: { [model] in
+                        guard let account = model.setupDraft.accounts.first(where: { $0.id == id }) else { return nil }
+                        return await model.checkConnection(.account(account.name.trimmed))
+                    }
                 )
                 .onChange(of: model.setupDraft.accounts[index].name) { oldName, newName in
                     model.renameAccountReferences(from: oldName.trimmed, to: newName.trimmed)
@@ -31,6 +36,11 @@ struct ConnectionsEditorSheet: View {
                 )
             }
         }
+    }
+
+    private func failedCheck(_ subject: ConnectionCheckSubject) -> TradingCapabilityCheck? {
+        guard let check = model.connectionCheckResult(subject)?.check, check.state == .failed else { return nil }
+        return check
     }
 
     private func learn(_ route: TradingRouteDraft) async throws -> LearnedGuruPlaybook {

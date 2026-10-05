@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from uuid import uuid4
 
 from copytrading_engine.host.pipe.requests import (
+    CheckConnectionRequest,
     GetTradingActivationRequest,
     GetTradingStatusRequest,
     PauseTradingRequest,
@@ -43,6 +44,7 @@ class TradingLifecycleHandlers:
             GetTradingStatusRequest: self._on_get_trading_status,
             GetTradingActivationRequest: self._on_get_trading_activation,
             ValidateTradingRequest: self._on_validate_trading,
+            CheckConnectionRequest: self._on_check_connection,
             StartTradingRequest: self._on_start_trading,
             PauseTradingRequest: self._on_pause_trading,
         }
@@ -85,6 +87,17 @@ class TradingLifecycleHandlers:
                 "report": report.model_dump(mode="json"),
                 "activation_token": token,
             },
+        )
+
+    async def _on_check_connection(self, request: CheckConnectionRequest) -> bytes:
+        """A single service's check never touches the start grant a full validation holds."""
+        if self._trading is None:
+            return reply(request.version, request.request_id, error="unavailable")
+        check = await self._trading.lifecycle.check_connection(request.connection)
+        return reply(
+            request.version,
+            request.request_id,
+            ok={"type": "connection_check", "check": check.model_dump(mode="json")},
         )
 
     async def _on_start_trading(self, request: StartTradingRequest) -> bytes:

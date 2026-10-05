@@ -26,7 +26,8 @@ extension AppModel {
     var setupProgress: SetupProgress {
         SetupProgress(
             draft: setupDraft, hasSavedKeys: hasTradingSecrets, hasSavedProviderKey: hasSavedProviderKey,
-            savedKeyAccountIDs: savedKeyAccountIDs, isSetUp: savedTradingConfiguration != nil)
+            savedKeyAccountIDs: savedKeyAccountIDs, isSetUp: savedTradingConfiguration != nil,
+            failed: Set(connectionChecks.keys.filter { connectionCheckResult($0)?.check?.state == .failed }))
     }
 
     /// The saved model key belongs to the provider the draft names, so a blank key field keeps it.

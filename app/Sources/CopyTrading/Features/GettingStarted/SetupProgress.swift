@@ -8,22 +8,25 @@ struct SetupProgress: Equatable {
     ///   - hasSavedProviderKey: the saved model key is for the provider the draft names.
     ///   - savedKeyAccountIDs: accounts whose Alpaca keys are in the Keychain.
     ///   - isSetUp: a setup has been checked, saved, and started at least once.
+    ///   - failed: connections whose latest check failed, which keep their step from ticking.
     init(
         draft: ConnectionsDraft, hasSavedKeys: Bool, hasSavedProviderKey: Bool, savedKeyAccountIDs: Set<String>,
-        isSetUp: Bool
+        isSetUp: Bool, failed: Set<ConnectionCheckSubject> = []
     ) {
         var done: Set<SetupStep> = []
-        if !draft.sourceChannelIDs.isEmpty && (!draft.discordToken.isEmpty || hasSavedKeys) {
+        if !draft.sourceChannelIDs.isEmpty && (!draft.discordToken.isEmpty || hasSavedKeys) && !failed.contains(.discord) {
             done.insert(.discord)
         }
         let hasModelKey = !draft.provider.requiresAPIKey || !draft.providerAPIKey.isEmpty || hasSavedProviderKey
-        if !draft.modelName.trimmed.isEmpty && hasModelKey && draft.providerConfiguration.baseURLProblem == nil {
+        if !draft.modelName.trimmed.isEmpty && hasModelKey && draft.providerConfiguration.baseURLProblem == nil
+            && !failed.contains(.interpreter)
+        {
             done.insert(.interpreter)
         }
         let accountsWithKeys = Set(
             draft.accounts.filter { account in
                 let name = account.name.trimmed
-                return !name.isEmpty
+                return !name.isEmpty && !failed.contains(.account(name))
                     && ((!account.key.isEmpty && !account.secret.isEmpty) || savedKeyAccountIDs.contains(name))
             }.map { $0.name.trimmed })
         if !accountsWithKeys.isEmpty {

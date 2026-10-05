@@ -108,6 +108,8 @@ struct TradingSettingsSaveTests {
         try await checkValidationCancellationDoesNotPersist(configuration: configuration, secrets: credentials)
         try await checkDiscardedCheckAndLockedDraft(configuration: configuration, secrets: credentials)
         try await checkSetupCheckKeepsKeysAndFollowsEdits(configuration: configuration, secrets: credentials)
+        try await checkConnectionClientRequest(provider: configuration.provider)
+        try await checkOneConnectionUsesSavedKeysAndFollowsEdits(configuration: configuration, secrets: credentials)
         try await checkConfigurationWriteFailureDoesNotStart()
         try checkOperatorWireFixtures()
         try await checkAccountPageClientRequest()
@@ -1185,6 +1187,83 @@ struct TradingSettingsSaveTests {
 
     /// Start Copying checks the draft first: a failed check keeps the typed keys, opens the
     /// results, and saves nothing; a later edit discards it; a passing check saves and starts.
+    /// One service's check goes over the pipe as `check_connection`, carrying only that service
+    /// and its key, and comes back as a single capability check.
+    private static func checkConnectionClientRequest(provider: TradingProviderConfiguration) async throws {
+        let wire = Data(
+            """
+            {"version":1,"request_id":"check-request","ok":{"type":"connection_check",
+             "check":{"name":"model","state":"failed","subject":null,"environment":null,"identity":null,
+              "adapter":"deepseek","reason_code":"model_not_found","suggestion":"deepseek-flash"}}}
+            """.utf8)
+        let transport = AccountPageTransport(responseFixture: wire)
+        let result = try await EngineClient(transport: transport).checkConnection(
+            .model(provider, apiKey: "typed-model-key"))
+        guard
+            let sent = try JSONSerialization.jsonObject(with: await transport.sentRequest() ?? Data()) as? [String: Any],
+            let connection = sent["connection"] as? [String: Any]
+        else { throw ContractFailure("Connection check request was not JSON") }
+        try check(sent["operation"] as? String == "check_connection", "Wrong connection check IPC operation")
+        try check(connection["kind"] as? String == "model", "The check did not name its service")
+        try check(connection["api_key"] as? String == "typed-model-key", "The check did not carry the typed key")
+        try check(sent["secrets"] == nil && sent["configuration"] == nil, "A single check sent the whole setup")
+        try check(
+            result.state == .failed && result.reasonCode == "model_not_found" && result.suggestion == "deepseek-flash",
+            "The connection check result was not decoded")
+        print("CopyTradingContractTests: one connection is checked alone over the pipe")
+    }
+
+    /// Connect checks a service with the key typed for it, or the saved one when the field is
+    /// blank; the answer shows until something it checked is edited.
+    private static func checkOneConnectionUsesSavedKeysAndFollowsEdits(
+        configuration: TradingConfiguration, secrets: TradingSecrets
+    ) async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(
+            path: "app-model-connection-check-\(UUID().uuidString)", directoryHint: .isDirectory
+        )
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = TradingConfigurationStore(
+            url: directory.appending(path: "configuration.json"), secrets: TestSecretRevisions()
+        )
+        try store.save(
+            configuration: configuration, revision: fakeEngineRevision(configuration), secrets: secrets, when: .paused)
+        let starter = RecordingTradingStarter()
+        let model = AppModel(tradingConfigurationStore: store, tradingStarter: starter)
+        model.isTradingUnlocked = true
+        model.setupDraft.load(configuration)
+
+        let interpreter = await model.checkConnection(.interpreter)
+        guard case .model(_, let apiKey)? = await starter.checkedConnections().last else {
+            throw ContractFailure("Connect did not check the interpreter")
+        }
+        try check(apiKey == secrets.providerAPIKey, "A blank key field did not fall back to the saved key")
+        try check(interpreter?.state == .ready, "A passing check was not returned")
+        try check(
+            ConnectionStatus.interpreter(model)?.text == L10n.string("Connected"),
+            "A passing check did not show the interpreter as connected")
+
+        model.setupDraft.modelName += "-typo"
+        try check(model.connectionCheckResult(.interpreter) == nil, "Editing the model kept the old check")
+
+        await starter.setConnectionCheckFails(true)
+        model.setupDraft.discordToken = "typed-discord-token"
+        let discord = await model.checkConnection(.discord)
+        guard case .source(_, let token)? = await starter.checkedConnections().last else {
+            throw ContractFailure("Connect did not check Discord")
+        }
+        try check(token == "typed-discord-token", "A typed token was not the one checked")
+        try check(discord?.state == .failed, "A failing check was not returned")
+        try check(
+            ConnectionStatus.discord(model)?.text == L10n.string("Couldn't connect"),
+            "A failing check did not show on the Discord row")
+        try check(!model.setupProgress.isDone(.discord), "A failed check still ticked the Discord step")
+
+        model.isTradingUnlocked = false
+        let locked = await model.checkConnection(.discord)
+        try check(locked == nil, "A locked app checked a connection")
+        print("CopyTradingContractTests: Connect checks one service with typed or saved keys and follows edits")
+    }
+
     private static func checkSetupCheckKeepsKeysAndFollowsEdits(
         configuration: TradingConfiguration, secrets: TradingSecrets
     ) async throws {
@@ -2499,6 +2578,8 @@ private actor RecordingTradingStarter: TradingStarting {
     private var validationActivatable = true
     private var validationSuspended = false
     private var validations = 0
+    private var connectionChecks: [TradingConnectionCheck] = []
+    private var connectionCheckFails = false
     private var activation: TradingActivationStatus?
     private var latestTradingStatus: TradingStatus?
     private var validated: TradingConfiguration?
@@ -2543,6 +2624,21 @@ private actor RecordingTradingStarter: TradingStarting {
                 costNotice: "Test model validation cost notice"
             ),
             activationToken: validationActivatable ? "validation-grant" : nil
+        )
+    }
+
+    func checkConnection(_ connection: TradingConnectionCheck) async throws -> TradingCapabilityCheck {
+        connectionChecks.append(connection)
+        let name: TradingCapabilityName =
+            switch connection {
+            case .source: .source
+            case .model: .model
+            case .broker: .broker
+            case .notification: .notification
+            }
+        return TradingCapabilityCheck(
+            name: name, state: connectionCheckFails ? .failed : .ready, subject: nil, environment: nil,
+            identity: nil, adapter: "fake", reasonCode: connectionCheckFails ? "\(name.rawValue)_capability_unavailable" : nil
         )
     }
 
@@ -2744,6 +2840,8 @@ private actor RecordingTradingStarter: TradingStarting {
     func setStartFailure(_ value: Bool) { failStart = value }
     func setAcceptStartAndLoseResponse(_ value: Bool) { acceptStartAndLoseResponse = value }
     func setValidationActivatable(_ value: Bool) { validationActivatable = value }
+    func setConnectionCheckFails(_ value: Bool) { connectionCheckFails = value }
+    func checkedConnections() -> [TradingConnectionCheck] { connectionChecks }
     func setValidationSuspended(_ value: Bool) { validationSuspended = value }
     func setExampleReviewMatches(_ value: Bool) { exampleReviewMatches = value }
     func validationCallCount() -> Int { validations }

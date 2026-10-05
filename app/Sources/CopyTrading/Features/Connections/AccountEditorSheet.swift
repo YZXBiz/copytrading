@@ -8,7 +8,12 @@ struct AccountEditorSheet: View {
     /// Accounts whose broker keys are already in the Keychain; a blank field keeps those.
     let savedAccountIDs: Set<String>
     let remove: () -> Void
+    /// The account's latest check, when it failed and its keys are unchanged since.
+    var failedCheck: TradingCapabilityCheck?
+    /// Checks the account's keys with Alpaca; nil when there are none to check yet.
+    var check: () async -> TradingCapabilityCheck? = { nil }
     @Environment(\.dismiss) private var dismiss
+    @State private var isChecking = false
 
     private var hasSavedCredentials: Bool { savedAccountIDs.contains(account.name.trimmed) }
 
@@ -45,6 +50,9 @@ struct AccountEditorSheet: View {
                         prompt: Text(L10n.string(hasSavedCredentials ? "Leave blank to keep the saved secret" : "Required"))
                     )
                     .accessibilityLabel(L10n.string("Alpaca API secret"))
+                    if let failedCheck {
+                        ConnectionCheckCallout(check: failedCheck)
+                    }
                 } header: {
                     SetupSectionHeader(
                         title: "Alpaca keys", detail: "Kept in your Mac's Keychain, never in the setup file.",
@@ -126,7 +134,13 @@ struct AccountEditorSheet: View {
             .formStyle(.grouped)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.string("Done"), action: dismiss.callAsFunction)
+                    if isChecking {
+                        ProgressView()
+                            .controlSize(.small)
+                            .help(L10n.string("Checking…"))
+                    } else {
+                        Button(L10n.string("Done"), action: finish)
+                    }
                 }
             }
         }
@@ -157,6 +171,16 @@ struct AccountEditorSheet: View {
             Text(L10n.string(hint))
         }
         .compactSwitch()
+    }
+
+    /// Done checks the keys with Alpaca first, and keeps the sheet open when Alpaca says no.
+    private func finish() {
+        Task {
+            isChecking = true
+            let result = await check()
+            isChecking = false
+            if result?.state != .failed { dismiss() }
+        }
     }
 
     private func removeAccount() {

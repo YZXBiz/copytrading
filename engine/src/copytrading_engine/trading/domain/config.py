@@ -211,3 +211,64 @@ class TradingSecrets(BaseModel):
         if len(set(identifiers)) != len(identifiers):
             raise ValueError("broker credential identifiers must be unique")
         return self
+
+
+class SourceCheck(BaseModel):
+    """The Discord channels to read, with the token that reads them."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
+
+    kind: Literal["source"]
+    source: SourceConfiguration
+    token: SecretStr
+
+    def secret_values(self) -> tuple[str, ...]:
+        return (self.token.get_secret_value(),)
+
+
+class ModelCheck(BaseModel):
+    """The interpreter, with its key; a model on this Mac may have none."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
+
+    kind: Literal["model"]
+    provider: ProviderConfiguration
+    api_key: SecretStr
+
+    def secret_values(self) -> tuple[str, ...]:
+        return (self.api_key.get_secret_value(),)
+
+
+class BrokerCheck(BaseModel):
+    """One broker account, with its keys."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
+
+    kind: Literal["broker"]
+    account: AccountConfiguration
+    credentials: BrokerCredentials
+
+    @model_validator(mode="after")
+    def validate_account(self) -> Self:
+        if self.credentials.account_id != self.account.id:
+            raise ValueError("broker credentials must name the account they are for")
+        return self
+
+    def secret_values(self) -> tuple[str, ...]:
+        return (self.credentials.key.get_secret_value(), self.credentials.secret.get_secret_value())
+
+
+class NotificationCheck(BaseModel):
+    """Where alerts go, with the bot token or webhook URL that sends them."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
+
+    kind: Literal["notification"]
+    notification: NotificationConfiguration
+    token: SecretStr
+
+    def secret_values(self) -> tuple[str, ...]:
+        return (self.token.get_secret_value(),)
+
+
+type ConnectionCheck = SourceCheck | ModelCheck | BrokerCheck | NotificationCheck
