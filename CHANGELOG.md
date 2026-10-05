@@ -2,9 +2,19 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
-## Unreleased
+## 0.1.0-alpha.2 — developer preview
 
-Every guru's post is now read into one shape, and plain rules turn it into orders ([ADR-0007](docs/adr/0007-one-reading-contract.md)).
+Every guru's post is now read into one shape and plain rules turn it into orders ([ADR-0007](docs/adr/0007-one-reading-contract.md)), setup is one page that checks each connection as you add it, and an account can ask you to approve every order before it is sent ([ADR-0008](docs/adr/0008-optional-order-approval.md)).
+
+### Setup
+
+- **Connections is the one place to set up**, in five numbered steps: Discord, the interpreter, broker accounts, gurus, and alerts (optional). Each number turns into a green check when its step is done. People and Accounts show what is saved and point back to Connections.
+- **Connect checks the service there and then.** A row reads **Connected** once Discord, the model, Alpaca, or the alert channel answers. When one doesn't, its sheet stays open and says what to fix in plain words: a rejected key, a channel your account can't read, a server that isn't running.
+- **A mistyped model name is caught** ("DeepSeek has no model called “dpeeseek-flash”") with a one-click **Use deepseek-flash**. Picking a service suggests a model only when you choose it.
+- **One Start Copying** at the foot of Connections replaces Check Setup: it says how far the setup has come, checks everything, then saves and starts.
+- **A connect sheet for each service**, with its logo, what it is for, a link to where its key lives, and step-by-step help. Every service in Connections shows its logo.
+- **Account limits have an example behind each one**, and live accounts show where to get live keys. The broker poll interval is no longer a setting.
+- Market hours are shown in New York time and your own.
 
 ### How a post becomes an order
 
@@ -30,6 +40,27 @@ Every guru's post is now read into one shape, and plain rules turn it into order
 ### Gurus
 
 - **Try it on recent posts** reads a guru's last 15 posts with the settings you're editing and shows what each would have done, before you switch them on. Nothing is placed.
+
+### Alerts and safety
+
+- **Alerts can go to a Discord channel** through a webhook, as well as to Telegram. Mentions in alerts never ping anyone.
+- **Live accounts ask for Touch ID** before copying starts and before entries are turned on.
+- "Sell half of what's left" now sells half of what is left, not half of the original position.
+
+### Engine
+
+- **Fills arrive the moment they happen.** While Alpaca's order stream is live and nothing is waiting on a clock, each account checks the broker every 30 seconds instead of every 2. A new call is acted on at once.
+- **Buys at the guru's same price are one position.** Two buys of a stock at one price join one lot, so a later "sell half of that lot" sells half of both instead of being skipped.
+- **Prices written with a Chinese full stop are read.** A call like `386.2出一半381。3的gld` was held for review; it now trades.
+- **Quotes work, including overnight.** Every quote failed to decode, so orders recorded none and manual sales had no price; overnight they now come from Alpaca's overnight venue instead of the last close.
+- An unreachable model server is reported as unreachable, not as a model that misread a post.
+
+### Look and feel
+
+- Sheets carry serif titles, every switch is one compact size, and empty screens read as phrases.
+- The README says up front that CopyTrading is not financial advice.
+- Limits, reasons and messages are written in short plain sentences, in English and 简体中文, and the "You're copying" icon ripples a few times and rests instead of animating forever.
+
 
 ## 0.1.0-alpha.1 — developer preview
 

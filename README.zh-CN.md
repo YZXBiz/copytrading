@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.1/CopyTrading-0.1.0-alpha.1.dmg"><img src="https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD_macOS_%E7%89%88-0.1.0--alpha.1-1d1d1f?style=for-the-badge&logo=apple&logoColor=white" alt="下载 macOS 版 CopyTrading" height="36"></a>
+  <a href="https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.2/CopyTrading-0.1.0-alpha.2.dmg"><img src="https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD_macOS_%E7%89%88-0.1.0--alpha.2-1d1d1f?style=for-the-badge&logo=apple&logoColor=white" alt="下载 macOS 版 CopyTrading" height="36"></a>
 </p>
 
 <p align="center">
@@ -71,7 +71,7 @@ CopyTrading 是一款原生 macOS 应用。它读取交易者在 Discord 上发�
 
 需要一台运行 macOS 26 或更高版本的 Apple 芯片 Mac。
 
-1. **[下载 macOS 版 CopyTrading](https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.1/CopyTrading-0.1.0-alpha.1.dmg)**（55 MB）。
+1. **[下载 macOS 版 CopyTrading](https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.2/CopyTrading-0.1.0-alpha.2.dmg)**（55 MB）。
 2. 打开 DMG，把 **CopyTrading** 拖进 **应用程序**。
 3. 打开 CopyTrading。预览版尚未经过 Apple 公证，所以第一次打开时 macOS 会阻止它：前往 **系统设置 → 隐私与安全性**，选择 **仍要打开**。只需操作这一次。
 
