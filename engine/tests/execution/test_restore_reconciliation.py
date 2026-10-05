@@ -293,3 +293,73 @@ def test_restore_does_not_require_remote_history_for_closed_terminal_orders():
     snapshot = _snapshot().model_copy(update={"orders": {client_id: order}})
 
     assert reconcile_restore_snapshot(snapshot, _evidence()) is None
+
+
+def _joined_lot_case():
+    """One lot holding two buys at the guru's same price, each filled at its own average."""
+    from copytrading_engine.execution.domain.market import BrokerOrder
+    from copytrading_engine.execution.domain.orders import OwnedLot
+
+    created_at = dt.datetime.now(dt.UTC)
+    orders, broker_orders = {}, {}
+    for client_id, average in (("first-buy", Decimal("200")), ("second-buy", Decimal("202"))):
+        orders[client_id] = OrderRecord(
+            side="buy",
+            position_intent="buy_to_open",
+            type="limit",
+            limit_price=Decimal("203"),
+            symbol="AAPL",
+            qty=Decimal("1"),
+            source_price=Decimal("200"),
+            entry_tolerance_pct=Decimal("1.5"),
+            lot_id=None,
+            entry_price=Decimal("200"),
+            session=Session.REGULAR,
+            client_id=client_id,
+            message_id="source:1",
+            instruction_index=0,
+            source_key="source:1",
+            status=OrderStatus.FILLED,
+            filled_qty=Decimal("1"),
+            filled_avg_price=average,
+            broker_id=f"broker-{client_id}",
+            raw_broker_status="filled",
+            created_at=created_at,
+            day=created_at.date(),
+        )
+        broker_orders[client_id] = BrokerOrder(
+            id=f"broker-{client_id}",
+            client_order_id=client_id,
+            symbol="AAPL",
+            side="buy",
+            qty=Decimal("1"),
+            filled_qty=Decimal("1"),
+            filled_avg_price=average,
+            status="filled",
+            position_intent="buy_to_open",
+        )
+    lot = OwnedLot(
+        symbol="AAPL",
+        entry_price=Decimal("200"),
+        source_key="source:1",
+        original_qty=Decimal("2"),
+        remaining_qty=Decimal("2"),
+        average_price=Decimal("201"),
+        joined_entries=("second-buy",),
+    )
+    snapshot = _snapshot().model_copy(update={"orders": orders, "lots": {"first-buy": lot}})
+    return snapshot, broker_orders
+
+
+def test_restore_checks_every_buy_in_a_lot_that_holds_several():
+    snapshot, broker_orders = _joined_lot_case()
+
+    reconcile_restore_snapshot(
+        snapshot, _evidence(positions={"AAPL": Decimal("2")}, known_orders=broker_orders)
+    )
+
+    missing = {"first-buy": broker_orders["first-buy"]}
+    with pytest.raises(RestoreReconciliationError, match="missing fresh broker order evidence"):
+        reconcile_restore_snapshot(
+            snapshot, _evidence(positions={"AAPL": Decimal("2")}, known_orders=missing)
+        )

@@ -197,6 +197,22 @@ class TradingLedger:
         )
         return owned + reserved
 
+    def _entry_lot(self, lots: dict[str, OwnedLot], key: str, order: OrderRecord) -> str:
+        """The lot a buy's fills belong to: the one it opened or already joined, else an open
+        lot from the same guru at the same price, which the guru counts as one position, else
+        its own."""
+        for lot_key, lot in lots.items():
+            if key in lot.entries(lot_key):
+                return lot_key
+        for lot_key, lot in lots.items():
+            if lot.remaining_qty > 0 and (lot.source_key, lot.symbol, lot.entry_price) == (
+                order.source_key,
+                order.symbol,
+                order.entry_price,
+            ):
+                return lot_key
+        return key
+
     def matching_lots(
         self, source: str, symbol: str, entry_price: Decimal
     ) -> tuple[tuple[str, OwnedLot], ...]:
@@ -1102,16 +1118,29 @@ class TradingLedger:
                     raise RuntimeError("Buy order has no saved limit")
                 if average > order.limit_price:
                     raise RuntimeError("Broker buy fill exceeds the saved limit")
-                lot = lots.get(key)
+                lot_key = self._entry_lot(lots, key, order)
+                lot = lots.get(lot_key)
+                entries = (*lot.entries(lot_key), key) if lot is not None else (key,)
+                entries = tuple(dict.fromkeys(entries))
+                # The lot's cost is every buy's own fills at its own average price.
+                filled = {entry: self.order(entry) for entry in entries if entry != key}
+                cost = sum(
+                    (o.filled_qty * (o.filled_avg_price or ZERO) for o in filled.values()), ZERO
+                )
+                total = sum((o.filled_qty for o in filled.values()), ZERO) + update.filled_qty
                 updated_lot = OwnedLot(
                     symbol=order.symbol,
                     entry_price=order.entry_price,
                     source_key=order.source_key,
-                    original_qty=update.filled_qty,
+                    original_qty=total,
                     remaining_qty=(lot.remaining_qty if lot else ZERO) + delta,
-                    average_price=average,
+                    # A lot of one buy keeps that buy's exact average.
+                    average_price=(cost + update.filled_qty * average) / total
+                    if filled
+                    else average,
+                    joined_entries=entries[1:],
                 )
-                lots = lots | {key: updated_lot}
+                lots = lots | {lot_key: updated_lot}
             else:
                 if order.lot_id is None:
                     raise RuntimeError("Sell order has no owned lot")

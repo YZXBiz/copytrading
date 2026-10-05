@@ -478,6 +478,12 @@ class LedgerSnapshot(Value):
                 raise ValueError("Manual sale duplicates an already recorded order")
             broker_ids.add(sale.order.id)
             client_ids.add(sale.order.client_order_id)
+        entry_lots: dict[str, str] = {}
+        for lot_key, lot in self.lots.items():
+            for entry in lot.entries(lot_key):
+                if entry in entry_lots:
+                    raise ValueError("A buy order belongs to more than one lot")
+                entry_lots[entry] = lot_key
         for key, order in self.orders.items():
             message = self.messages.get(order.message_id)
             if key != order.client_id or message is None or order.source_key != message.source_key:
@@ -497,7 +503,7 @@ class LedgerSnapshot(Value):
                 )
             ):
                 raise ValueError("Buy order requires a preceding cash anchor")
-            if order.side == "buy" and order.filled_qty > 0 and key not in self.lots:
+            if order.side == "buy" and order.filled_qty > 0 and key not in entry_lots:
                 raise ValueError("Entry fills require an owned lot")
             if order.side == "sell":
                 lot = self.lots.get(order.lot_id or "")
@@ -508,12 +514,15 @@ class LedgerSnapshot(Value):
                 ):
                     raise ValueError("Sell order references an unknown or different lot")
         for key, lot in self.lots.items():
-            entry = self.orders.get(key)
-            if (
+            entries = [self.orders.get(entry) for entry in lot.entries(key)]
+            if any(
                 entry is None
                 or entry.side != "buy"
-                or (lot.symbol, lot.source_key, lot.entry_price, lot.original_qty)
-                != (entry.symbol, entry.source_key, entry.entry_price, entry.filled_qty)
+                or (lot.symbol, lot.source_key, lot.entry_price)
+                != (entry.symbol, entry.source_key, entry.entry_price)
+                for entry in entries
+            ) or lot.original_qty != sum(
+                (entry.filled_qty for entry in entries if entry is not None), Decimal(0)
             ):
                 raise ValueError("Snapshot lot does not match its entry fills")
             sold = sum(
