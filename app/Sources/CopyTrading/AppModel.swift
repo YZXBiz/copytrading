@@ -32,6 +32,8 @@ protocol TradingStarting: Sendable {
     func learnGuruPlaybook(
         _ learning: GuruPlaybookLearningRequest
     ) async throws -> LearnedGuruPlaybook
+
+    func replayGuruPosts(_ replay: GuruReplayRequest) async throws -> GuruReplay
 }
 
 extension EngineActions: TradingStarting {}
@@ -1189,14 +1191,14 @@ final class AppModel {
         }
     }
 
-    /// Reads the route's channel and has the configured model draft a playbook. Nothing is saved;
-    /// keys left blank in Setup fall back to the saved ones, exactly as Validate does.
-    func learnPlaybook(for route: TradingRouteDraft, in draft: ConnectionsDraft) async throws -> LearnedGuruPlaybook {
+    /// Where a guru posts and the keys to read it with: keys left blank in Setup fall back to the
+    /// saved ones, exactly as Validate does.
+    private func channelReading(
+        for route: TradingRouteDraft, in draft: ConnectionsDraft, locked: String, stopped: String
+    ) throws -> (engine: any TradingStarting, channelID: String, discordToken: String, providerAPIKey: String) {
         func fail(_ reason: String) -> TradingSettingsError { .invalidConfiguration(reason) }
-        guard isTradingUnlocked else { throw fail(L10n.string("Unlock CopyTrading before learning a playbook.")) }
-        guard let learner: any TradingStarting = tradingStarter ?? engineActions else {
-            throw fail(L10n.string("Start the local engine before learning a playbook."))
-        }
+        guard isTradingUnlocked else { throw fail(locked) }
+        guard let engine: any TradingStarting = tradingStarter ?? engineActions else { throw fail(stopped) }
         let channelID = draft.effectiveChannel(for: route)
         guard !channelID.isEmpty else { throw fail(L10n.string("Add the guru's Discord channel ID first.")) }
         guard !draft.modelName.trimmed.isEmpty else { throw fail(L10n.string("Choose a model under Interpreter first.")) }
@@ -1213,19 +1215,61 @@ final class AppModel {
         guard missing.isEmpty else {
             throw TradingSettingsError.missingCredentials(ListFormatter.localizedString(byJoining: missing))
         }
+        return (engine, channelID, discordToken, providerAPIKey)
+    }
+
+    /// Reads the route's channel and has the configured model draft a playbook. Nothing is saved.
+    func learnPlaybook(for route: TradingRouteDraft, in draft: ConnectionsDraft) async throws -> LearnedGuruPlaybook {
+        let reading = try channelReading(
+            for: route, in: draft, locked: L10n.string("Unlock CopyTrading before learning a playbook."),
+            stopped: L10n.string("Start the local engine before learning a playbook."))
         do {
-            return try await learner.learnGuruPlaybook(
+            return try await reading.engine.learnGuruPlaybook(
                 GuruPlaybookLearningRequest(
-                    channelID: channelID,
+                    channelID: reading.channelID,
                     authorID: route.authorID.trimmed.nilIfEmpty,
-                    discordToken: discordToken,
+                    discordToken: reading.discordToken,
                     provider: draft.providerConfiguration,
-                    providerAPIKey: providerAPIKey
+                    providerAPIKey: reading.providerAPIKey
                 ))
         } catch EngineContractError.remote(code: _, message: let message?) {
-            throw fail(message)
+            throw TradingSettingsError.invalidConfiguration(message)
         } catch is EngineContractError {
-            throw fail(L10n.string("The engine could not learn from this channel. Try again."))
+            throw TradingSettingsError.invalidConfiguration(L10n.string("The engine could not learn from this channel. Try again."))
+        }
+    }
+
+    /// Reads the guru's recent posts with this draft's playbook and rules and says what each would
+    /// have done (ADR-0007). Nothing is placed or saved.
+    func replayPosts(for route: TradingRouteDraft, in draft: ConnectionsDraft) async throws -> GuruReplay {
+        let reading = try channelReading(
+            for: route, in: draft, locked: L10n.string("Unlock CopyTrading before replaying posts."),
+            stopped: L10n.string("Start the local engine before replaying posts."))
+        let profile = try TradingProfileBuilder().build(
+            TradingProfileDraft(
+                guruID: route.guruID.trimmed,
+                displayName: route.displayName.trimmed.isEmpty ? route.guruID.trimmed : route.displayName.trimmed,
+                prefix: route.prefix.trimmed,
+                playbook: route.playbook.trimmedLines,
+                examples: [],
+                exitBasis: route.exitBasis,
+                batches: route.batches,
+                sellsReferTo: route.sellsReferTo
+            ))
+        do {
+            return try await reading.engine.replayGuruPosts(
+                GuruReplayRequest(
+                    channelID: reading.channelID,
+                    authorID: route.authorID.trimmed.nilIfEmpty,
+                    discordToken: reading.discordToken,
+                    provider: draft.providerConfiguration,
+                    providerAPIKey: reading.providerAPIKey,
+                    profile: profile
+                ))
+        } catch EngineContractError.remote(code: _, message: let message?) {
+            throw TradingSettingsError.invalidConfiguration(message)
+        } catch is EngineContractError {
+            throw TradingSettingsError.invalidConfiguration(L10n.string("The engine could not replay this channel. Try again."))
         }
     }
 

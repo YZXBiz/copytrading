@@ -11,6 +11,8 @@ struct RouteEditorSheet: View {
     let policies: [String: TradingAccountPolicy]
     let channelIDs: [String]
     let learn: (TradingRouteDraft) async throws -> LearnedGuruPlaybook
+    /// Reads recent posts with this draft before the guru is switched on.
+    let replay: (TradingRouteDraft) async throws -> GuruReplay
     let remove: () -> Void
     @Environment(\.dismiss) private var dismiss
 
@@ -85,6 +87,8 @@ struct RouteEditorSheet: View {
                 }
 
                 GuruRulesSection(route: $route)
+
+                GuruReplaySection(route: route, replay: replay)
 
                 DestinationEditorSection(
                     connection: $route.connection,

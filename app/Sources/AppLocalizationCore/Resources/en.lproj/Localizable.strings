@@ -1555,3 +1555,15 @@
 "batch %lld" = "batch %lld";
 "no size" = "no size";
 "Nothing is waiting for you" = "Nothing is waiting for you";
+"Unlock CopyTrading before replaying posts." = "Unlock CopyTrading before replaying posts.";
+"Start the local engine before replaying posts." = "Start the local engine before replaying posts.";
+"The engine could not replay this channel. Try again." = "The engine could not replay this channel. Try again.";
+"Reads up to 15 recent posts with your model, so it may charge for them. Nothing is placed." = "Reads up to 15 recent posts with your model, so it may charge for them. Nothing is placed.";
+"Would trade" = "Would trade";
+"Would wait for you" = "Would wait for you";
+"Couldn't read" = "Couldn't read";
+"%lld posts: %lld would trade, %lld would wait for you, %lld would not." = "%lld posts: %lld would trade, %lld would wait for you, %lld would not.";
+"Try it on recent posts" = "Try it on recent posts";
+"What each of their recent posts would have done with these settings." = "What each of their recent posts would have done with these settings.";
+"Replay Recent Posts" = "Replay Recent Posts";
+"Replay Again" = "Replay Again";

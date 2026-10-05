@@ -821,6 +821,57 @@ public struct GuruPlaybookLearningRequest: Equatable, Sendable {
     }
 }
 
+/// Read a guru's recent posts with a draft profile before switching them on (ADR-0007).
+public struct GuruReplayRequest: Equatable, Sendable {
+    public var channelID: String
+    public var authorID: String?
+    public var discordToken: String
+    public var provider: TradingProviderConfiguration
+    public var providerAPIKey: String
+    public var profile: TradingProfileRevision
+
+    public init(
+        channelID: String, authorID: String?, discordToken: String,
+        provider: TradingProviderConfiguration, providerAPIKey: String, profile: TradingProfileRevision
+    ) {
+        self.channelID = channelID
+        self.authorID = authorID
+        self.discordToken = discordToken
+        self.provider = provider
+        self.providerAPIKey = providerAPIKey
+        self.profile = profile
+    }
+}
+
+/// What one recent post would have done under a draft; nothing was placed.
+public struct ReplayedPost: Codable, Equatable, Sendable {
+    public let text: String
+    public let decision: String
+    public let reason: String
+    public let reading: PostReading?
+    public let instructions: [SourceInstruction]
+    public let suggested: [SourceInstruction]
+}
+
+public struct GuruReplay: Codable, Equatable, Sendable {
+    public let posts: [ReplayedPost]
+    public let provider: String
+    public let model: String
+    public let costNotice: String
+
+    public init(posts: [ReplayedPost], provider: String, model: String, costNotice: String) {
+        self.posts = posts
+        self.provider = provider
+        self.model = model
+        self.costNotice = costNotice
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case posts, provider, model
+        case costNotice = "cost_notice"
+    }
+}
+
 /// A draft for the owner to edit: only verbatim, valid example posts survive the engine's checks.
 public struct LearnedGuruPlaybook: Codable, Equatable, Sendable {
     public var postsRead: Int

@@ -1555,3 +1555,15 @@
 "batch %lld" = "第 %lld 批";
 "no size" = "没说仓位";
 "Nothing is waiting for you" = "没有等你决定的信号";
+"Unlock CopyTrading before replaying posts." = "请先解锁 CopyTrading，再重放帖子。";
+"Start the local engine before replaying posts." = "请先启动本地引擎，再重放帖子。";
+"The engine could not replay this channel. Try again." = "引擎无法重放这个频道，请重试。";
+"Reads up to 15 recent posts with your model, so it may charge for them. Nothing is placed." = "用你的模型读取最近最多 15 条帖子，可能会产生费用。不会下任何单。";
+"Would trade" = "会交易";
+"Would wait for you" = "会等你决定";
+"Couldn't read" = "无法解读";
+"%lld posts: %lld would trade, %lld would wait for you, %lld would not." = "%lld 条帖子：%lld 条会交易，%lld 条会等你决定，%lld 条不会交易。";
+"Try it on recent posts" = "用最近的帖子试一试";
+"What each of their recent posts would have done with these settings." = "按这些设置，最近每条帖子会怎样处理。";
+"Replay Recent Posts" = "重放最近的帖子";
+"Replay Again" = "再次重放";

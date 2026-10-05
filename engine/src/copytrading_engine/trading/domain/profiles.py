@@ -14,6 +14,8 @@ from copytrading_engine.parsing.application import transform
 from copytrading_engine.parsing.extraction import DecodeError, Decoder, same_fraction
 from copytrading_engine.parsing.routes import Route
 from copytrading_engine.shared.raw_message import RawMessage
+from copytrading_engine.shared.reading import PostReading
+from copytrading_engine.shared.signals import Instruction
 
 type ExitBasis = Literal["original_position", "remaining_position"]
 type SellsReferTo = Literal["buy_price", "whole_position"]
@@ -77,6 +79,30 @@ class ProfileDraft(BaseModel):
             if not example.message.strip():
                 raise ValueError("Profile examples cannot be blank")
         return self
+
+
+class ReplayedPost(BaseModel):
+    """What one recent post would have done under a guru's draft (ADR-0007); nothing was placed."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    text: str
+    decision: Literal["trade", "ignore", "review"]
+    reason: str
+    reading: PostReading | None
+    instructions: tuple[Instruction, ...]
+    suggested: tuple[Instruction, ...]
+
+
+class ProfileReplay(BaseModel):
+    """A guru's recent posts read with the draft playbook and rules, before switching them on."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    posts: tuple[ReplayedPost, ...]
+    provider: str
+    model: str
+    cost_notice: str = PROFILE_EVALUATION_COST_NOTICE
 
 
 class LearnedPlaybook(BaseModel):

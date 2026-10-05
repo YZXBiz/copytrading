@@ -2811,6 +2811,11 @@ private actor RecordingTradingStarter: TradingStarting {
         )
     }
 
+    func replayGuruPosts(_ replay: GuruReplayRequest) async throws -> GuruReplay {
+        operationEvents.append("replay")
+        return GuruReplay(posts: [], provider: replay.provider.name.rawValue, model: replay.provider.model, costNotice: "")
+    }
+
     func learnGuruPlaybook(_ learning: GuruPlaybookLearningRequest) async throws -> LearnedGuruPlaybook {
         lastLearningRequest = learning
         operationEvents.append("learn")

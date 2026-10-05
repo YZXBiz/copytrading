@@ -35,6 +35,7 @@ struct ConnectionsEditorSheet: View {
                         uniquingKeysWith: { first, _ in first }),
                     channelIDs: model.setupDraft.sourceChannelIDs,
                     learn: learn,
+                    replay: { try await model.replayPosts(for: $0, in: model.setupDraft) },
                     remove: { removeGuru(id) }
                 )
             }
