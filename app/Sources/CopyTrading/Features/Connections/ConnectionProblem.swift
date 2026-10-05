@@ -20,8 +20,10 @@ enum ConnectionProblem {
             return L10n.string("%@ has no model called “%@”.", service, modelName.trimmed)
         case "model_probe_rejected":
             return L10n.string("The model answered, but couldn't read a test post. Try another model.")
-        case "model_unreachable" where provider?.acceptsBaseURL == true:
+        case "model_unreachable" where provider == .ollama:
             return L10n.string("Nothing answered at that address. Check the Base URL and that %@ is running.", service)
+        case "model_unreachable" where provider?.acceptsBaseURL == true:
+            return L10n.string("Nothing answered at that address. Check the Base URL and that the server is running.")
         case "model_unreachable":
             return L10n.string("%@ didn't answer. Check your connection and try again.", service)
         case "model_auth_or_probe_failed":

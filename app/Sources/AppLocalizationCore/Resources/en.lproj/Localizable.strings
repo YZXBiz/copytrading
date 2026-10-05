@@ -1454,3 +1454,4 @@
 "Your Discord account can't read one of these channels. Check the channel IDs." = "Your Discord account can't read one of these channels. Check the channel IDs.";
 "Nothing answered at that address. Check the Base URL and that %@ is running." = "Nothing answered at that address. Check the Base URL and that %@ is running.";
 "%@ didn't answer. Check your connection and try again." = "%@ didn't answer. Check your connection and try again.";
+"Nothing answered at that address. Check the Base URL and that the server is running." = "Nothing answered at that address. Check the Base URL and that the server is running.";

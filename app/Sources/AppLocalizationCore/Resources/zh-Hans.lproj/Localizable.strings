@@ -1454,3 +1454,4 @@
 "Your Discord account can't read one of these channels. Check the channel IDs." = "你的 Discord 账户无法读取其中某个频道。请检查频道 ID。";
 "Nothing answered at that address. Check the Base URL and that %@ is running." = "该地址没有响应。请检查 Base URL，并确认 %@ 正在运行。";
 "%@ didn't answer. Check your connection and try again." = "%@ 没有响应。请检查网络后重试。";
+"Nothing answered at that address. Check the Base URL and that the server is running." = "该地址没有响应。请检查 Base URL，并确认服务器正在运行。";
