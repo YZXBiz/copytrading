@@ -37,7 +37,7 @@ struct GuideSafetySection: View {
             Divider()
             GuideSafetyRow(
                 text:
-                    "New accounts start with **entries off**, so nothing is bought until you choose **Enable Entries** in Accounts. Shares you already hold are never sold by CopyTrading."
+                    "New accounts start with **entries off**, so nothing is bought until you choose **Enable Entries** in Accounts. CopyTrading only sells shares it bought from a guru's call. Stocks you bought yourself are never sold, even when the guru sells the same stock."
             ) {
                 Pill(text: L10n.string("Entries off"), symbol: StatusTone.inactive.symbol, tint: StatusTone.inactive.color)
             }

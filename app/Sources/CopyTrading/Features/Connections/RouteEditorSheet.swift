@@ -5,6 +5,8 @@ import SwiftUI
 struct RouteEditorSheet: View {
     @Binding var route: TradingRouteDraft
     let accountIDs: [String]
+    /// Each account's limits, by account name, for sizing.
+    let policies: [String: TradingAccountPolicy]
     let channelIDs: [String]
     let learn: (TradingRouteDraft) async throws -> LearnedGuruPlaybook
     let remove: () -> Void
@@ -84,6 +86,7 @@ struct RouteEditorSheet: View {
                     DestinationEditorSection(
                         connection: $connection,
                         accountIDs: accountIDs,
+                        policy: policies[connection.accountID.trimmed],
                         canRemove: route.connections.count > 1,
                         remove: { removeConnection(connection.id) }
                     )

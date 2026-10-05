@@ -39,10 +39,9 @@ struct GuruRows: View {
     private func copies(_ route: TradingRouteDraft) -> String {
         let targets = route.connections.filter { !$0.accountID.trimmed.isEmpty }
         if targets.count == 1, let only = targets.first {
-            let amount =
-                only.mode == .fixed
-                ? L10n.string("%@ a call", dollars(only.amountUSD)) : L10n.string("sized to the call")
-            return L10n.string("Copies into %@ · %@", only.accountID.trimmed, amount)
+            let full = model.setupDraft.amount(for: only)
+            guard Decimal(string: full).map({ $0 > 0 }) == true else { return L10n.string("Copies into %@", only.accountID.trimmed) }
+            return L10n.string("Copies into %@ · full position %@", only.accountID.trimmed, dollars(full))
         }
         return L10n.string("Copies into %@", Humanize.joined(targets.map { $0.accountID.trimmed }))
     }

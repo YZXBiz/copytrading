@@ -97,8 +97,8 @@ struct ConnectionsDraft {
                 examples: profile?.examples.map(TradingProfileExampleDraft.init(example:)) ?? [],
                 connections: route.connections.map { connection in
                     TradingConnectionDraft(
-                        accountID: connection.accountID, mode: connection.mode,
-                        amountUSD: connection.amountUSD, defaultFraction: connection.defaultFraction
+                        accountID: connection.accountID, amountUSD: connection.amountUSD,
+                        defaultFraction: connection.defaultFraction
                     )
                 }
             )
@@ -150,10 +150,9 @@ struct ConnectionsDraft {
                     connections: route.connections.map { connection in
                         TradingRouteConnection(
                             accountID: connection.accountID.trimmed,
-                            mode: connection.mode,
-                            amountUSD: connection.amountUSD.trimmed,
-                            defaultFraction: connection.mode == .proportional && connection.useDefaultFraction
-                                ? connection.defaultFraction.trimmed : nil
+                            mode: .proportional,
+                            amountUSD: amount(for: connection),
+                            defaultFraction: connection.useDefaultFraction ? connection.defaultFraction.trimmed : nil
                         )
                     }
                 ))
@@ -179,6 +178,13 @@ struct ConnectionsDraft {
             notificationToken: notificationsEnabled ? notificationToken : nil
         )
         return (configuration, secrets)
+    }
+
+    /// The dollars a connection's calls are sized against: its own amount for the same amount
+    /// every call, and for a share of the per-stock maximum, that account's current maximum, so
+    /// the guru's full position and the account's limit can never disagree.
+    func amount(for connection: TradingConnectionDraft) -> String {
+        accounts.first { $0.name.trimmed == connection.accountID.trimmed }?.policy.maxSymbolUSD.trimmed ?? ""
     }
 
     /// Splits on ASCII and full-width commas, so text typed with a Chinese keyboard works too.

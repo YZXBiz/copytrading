@@ -143,7 +143,13 @@ private func marketHoursAlsoReadInTheOwnersTime() throws {
     let october = try #require(ISO8601DateFormatter().date(from: "2026-10-04T12:00:00Z"))
     let shanghai = try #require(TimeZone(identifier: "Asia/Shanghai"))
     let newYork = try #require(TimeZone(identifier: "America/New_York"))
-    let overnight = MarketHoursText.yourTime([((20, 0), (4, 0))], now: october, zone: shanghai)
-    try #require(overnight == " Your time: 8:00–16:00.", "Overnight hours read \(overnight) in Shanghai")
-    try #require(MarketHoursText.yourTime([((20, 0), (4, 0))], now: october, zone: newYork).isEmpty)
+    let losAngeles = try #require(TimeZone(identifier: "America/Los_Angeles"))
+    let extended = MarketHoursText.hours([((4, 0), (9, 30)), ((16, 0), (20, 0))], now: october, zone: losAngeles)
+    try #require(
+        extended == "4:00–9:30 and 16:00–20:00 New York time (1:00–6:30 and 13:00–17:00 PT)",
+        "Extended hours read \(extended) in Los Angeles")
+    let overnight = MarketHoursText.hours([((20, 0), (4, 0))], now: october, zone: shanghai)
+    try #require(overnight.hasPrefix("20:00–4:00 New York time (8:00–16:00 "), "Overnight hours read \(overnight) in Shanghai")
+    let home = MarketHoursText.hours([((20, 0), (4, 0))], now: october, zone: newYork)
+    try #require(home == "20:00–4:00 New York time", "Hours read \(home) on a Mac in New York")
 }

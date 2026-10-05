@@ -132,6 +132,29 @@ def test_buys_at_the_same_price_are_one_position_that_one_exit_sells(system):
     assert broker.holdings["ABC"] == 0
 
 
+def test_a_sell_reposted_later_the_same_day_is_not_sold_twice(system):
+    """A recap re-posting "sell half of the 25 lot" must not sell the other half too."""
+    engine, broker, _ = system
+    deliver(engine, event())
+    deliver(engine, event("2", "reduce", "27", "25"))
+    assert broker.holdings["ABC"] == 2
+    recap = NOW + dt.timedelta(hours=3)
+    deliver(engine, event("3", "reduce", "27", "25", timestamp=recap), recap)
+
+    assert broker.holdings["ABC"] == 2
+    assert engine.ledger.message("discord:demo:3").parts == (Skipped(reason="duplicate"),)
+
+
+def test_the_same_sell_on_a_later_trading_day_is_a_new_sell(system):
+    engine, broker, _ = system
+    deliver(engine, event())
+    deliver(engine, event("2", "reduce", "27", "25"))
+    next_day = NOW + dt.timedelta(days=1)
+    deliver(engine, event("3", "reduce", "27", "25", timestamp=next_day), next_day)
+
+    assert broker.holdings["ABC"] == 0
+
+
 def test_a_buy_after_the_position_was_sold_opens_its_own_lot(system):
     engine, broker, store = system
     deliver(engine, event())

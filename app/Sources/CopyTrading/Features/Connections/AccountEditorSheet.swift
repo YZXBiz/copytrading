@@ -83,7 +83,8 @@ struct AccountEditorSheet: View {
                         example: LimitExamples.dailyLossCap)
                     textLimit(
                         "Maximum above signal price (%)",
-                        hint: "How far above the guru's price a buy may fill. 0 means never pay more than they did.",
+                        hint:
+                            "How far above the guru's price a buy may fill. Outside regular hours, also how far below it a sell may go. 0 means exactly the guru's price.",
                         text: $account.policy.maxAboveSignalPct,
                         example: LimitExamples.maxAboveSignal)
                 }
@@ -107,13 +108,14 @@ struct AccountEditorSheet: View {
                 Section {
                     behavior(
                         "Trade in extended hours",
-                        hint: L10n.string("Also copy calls from 4:00 to 9:30 and 16:00 to 20:00 New York time, with limit orders.")
-                            + MarketHoursText.yourTime([((4, 0), (9, 30)), ((16, 0), (20, 0))]),
+                        hint: L10n.string(
+                            "Also copy calls %@, with limit orders.",
+                            MarketHoursText.hours([((4, 0), (9, 30)), ((16, 0), (20, 0))])),
                         isOn: $account.policy.extendedHours)
                     behavior(
                         "Trade overnight",
-                        hint: L10n.string("Also copy calls from 20:00 to 4:00 New York time. Needs extended hours on.")
-                            + MarketHoursText.yourTime([((20, 0), (4, 0))]),
+                        hint: L10n.string(
+                            "Also copy calls %@. Needs extended hours on.", MarketHoursText.hours([((20, 0), (4, 0))])),
                         isOn: $account.policy.overnight)
                     behavior(
                         "Copy exits", hint: "Sell when the guru sells. Off means you sell copied shares yourself.",
@@ -121,7 +123,10 @@ struct AccountEditorSheet: View {
                 } header: {
                     Text(L10n.string("Behavior"))
                 } footer: {
-                    Text(L10n.string("Shares you already hold are never sold by CopyTrading."))
+                    Text(
+                        L10n.string(
+                            "CopyTrading only sells shares it bought from a guru's call. Stocks you bought yourself are never sold, even when the guru sells the same stock."
+                        ))
                 }
 
                 Section {

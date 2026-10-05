@@ -85,10 +85,25 @@ from copytrading_engine.execution.domain.recovery import (
 )
 from copytrading_engine.execution.domain.sessions import trade_date
 from copytrading_engine.execution.domain.sizing import DestinationSignal
-from copytrading_engine.shared.signals import StockSignal
+from copytrading_engine.shared.signals import Instruction, StockSignal
 
 ZERO = Decimal(0)
 log = logging.getLogger(__name__)
+
+
+def _repeats(instruction: Instruction, at: dt.datetime, earlier: MessageRecord) -> bool:
+    """A guru re-posting a call is not a new call. A buy repeated within ten minutes is the same
+    buy; later it can be a real second buy at that price. A sell repeated the same trading day,
+    naming the same lot, price, and size, is always the same sell: done twice it would sell the
+    rest of the lot, as when a guru re-posts the day's calls in a recap."""
+    if instruction not in earlier.instructions:
+        return False
+    since = (at - earlier.timestamp).total_seconds()
+    if since < 0:
+        return False
+    if instruction.action == "buy":
+        return since <= 600
+    return trade_date(at) == trade_date(earlier.timestamp)
 
 
 class _SnapshotChanges(TypedDict, total=False):
@@ -763,11 +778,7 @@ class TradingLedger:
         parts = tuple(
             Skipped(reason="duplicate")
             if status == "queued"
-            and any(
-                0 <= (signal.timestamp - m.timestamp).total_seconds() <= 600
-                and instruction in m.instructions
-                for m in previous
-            )
+            and any(_repeats(instruction, signal.timestamp, m) for m in previous)
             else Pending()
             for instruction in signal.instructions
         )

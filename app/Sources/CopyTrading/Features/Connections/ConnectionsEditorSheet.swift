@@ -30,6 +30,9 @@ struct ConnectionsEditorSheet: View {
                 RouteEditorSheet(
                     route: $model.setupDraft.routes[index],
                     accountIDs: model.setupDraft.accountIDs,
+                    policies: Dictionary(
+                        model.setupDraft.accounts.map { ($0.name.trimmed, $0.policy) },
+                        uniquingKeysWith: { first, _ in first }),
                     channelIDs: model.setupDraft.sourceChannelIDs,
                     learn: learn,
                     remove: { removeGuru(id) }

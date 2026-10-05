@@ -113,7 +113,7 @@ struct GuruDetailView: View {
         case .fixed:
             return L10n.string("%@ per entry", amount)
         case .proportional:
-            return L10n.string("Up to %@, scaled to the post's size", amount)
+            return L10n.string("Full position %@: each call buys the guru's share of it", amount)
         }
     }
 }

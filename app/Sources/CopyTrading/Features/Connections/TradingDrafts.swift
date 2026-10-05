@@ -52,14 +52,16 @@ struct TradingConnectionDraft: Identifiable {
     var defaultFraction: String
     var useDefaultFraction: Bool
 
+    /// Every call buys the guru's share of a full position, which is the account's maximum per
+    /// stock; a call that names no size buys the default share, 1/6 unless the owner changes it.
     init(
-        accountID: String = "primary", mode: TradingSizingMode = .fixed,
-        amountUSD: String = "500", defaultFraction: String? = nil
+        accountID: String = "primary", mode: TradingSizingMode = .proportional,
+        amountUSD: String = "", defaultFraction: String? = "\(Decimal(1) / Decimal(6))"
     ) {
         self.accountID = accountID
         self.mode = mode
         self.amountUSD = amountUSD
-        self.defaultFraction = defaultFraction ?? "0.1666667"
+        self.defaultFraction = defaultFraction ?? "\(Decimal(1) / Decimal(6))"
         self.useDefaultFraction = defaultFraction != nil
     }
 }
