@@ -79,8 +79,11 @@ class BrokerOrder(Value):
         return self
 
 
+type QuoteFeed = Literal["iex", "overnight"]
+
+
 class Quote(Value):
-    feed: Literal["iex"]
+    feed: QuoteFeed
     bid: Quantity | None
     ask: Quantity | None
     timestamp: AwareDatetime | None
