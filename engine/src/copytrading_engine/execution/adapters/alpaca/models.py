@@ -20,6 +20,8 @@ from copytrading_engine.execution.domain.market import (
     EquityPoint,
     HistoryWindow,
     Position,
+    Quote,
+    QuoteFeed,
 )
 from copytrading_engine.execution.domain.values import Identifier, Money, Positive, Quantity, Side
 
@@ -114,6 +116,25 @@ class AlpacaPortfolioHistory(AlpacaValue):
         if len(self.timestamp) != len(self.equity):
             raise ValueError("Portfolio history series differ in length")
         return self
+
+
+class AlpacaQuote(AlpacaValue):
+    """A latest quote. Alpaca sends a side with no quote as 0, which means no price at all."""
+
+    bp: Quantity | None = None
+    ap: Quantity | None = None
+    t: dt.datetime | None = None
+
+    @field_validator("bp", "ap", mode="before")
+    @classmethod
+    def exact_side(cls, value: object) -> object:
+        return None if value in (0, "0", None) else _exact_decimal(value)
+
+
+def decode_quote(value: object, feed: QuoteFeed) -> Quote:
+    # A reply without a quote object fails validation like any other malformed response.
+    wire = AlpacaQuote.model_validate(value.get("quote") if isinstance(value, dict) else None)
+    return Quote(feed=feed, bid=wire.bp, ask=wire.ap, timestamp=wire.t)
 
 
 def decode_portfolio_history(value: object, window: HistoryWindow) -> EquityHistory:

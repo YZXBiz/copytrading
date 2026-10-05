@@ -17,6 +17,7 @@ from copytrading_engine.execution.adapters.alpaca.models import (
     decode_orders,
     decode_portfolio_history,
     decode_positions,
+    decode_quote,
 )
 from copytrading_engine.execution.application.ports import (
     BrokerError,
@@ -35,6 +36,7 @@ from copytrading_engine.execution.domain.market import (
     HistoryWindow,
     Position,
     Quote,
+    QuoteFeed,
 )
 from copytrading_engine.execution.domain.orders import OrderRequest
 from copytrading_engine.execution.domain.sessions import ET
@@ -156,6 +158,13 @@ def _order_timeline_events(
     return tuple(events)
 
 
+def quote_feed(now: dt.datetime) -> QuoteFeed:
+    """Alpaca's overnight venue quotes from 20:00 to 4:00 New York time; at those hours IEX still
+    shows the last close, so a price read from it would be hours old."""
+    hour = now.astimezone(ET).hour
+    return "overnight" if hour >= 20 or hour < 4 else "iex"
+
+
 @dataclass(frozen=True, slots=True)
 class AlpacaCredentials:
     key: SecretStr
@@ -173,6 +182,7 @@ class AlpacaBroker:
         environment: Environment,
         *,
         transport: httpx.BaseTransport | None = None,
+        clock: Callable[[], dt.datetime] = lambda: dt.datetime.now(dt.UTC),
     ) -> None:
         if environment not in {"paper", "live"}:
             raise ValueError("Choose Alpaca paper or live explicitly")
@@ -187,6 +197,7 @@ class AlpacaBroker:
             transport=transport,
         )
         self.environment = environment
+        self.now = clock
 
     def close(self) -> None:
         self.http.close()
@@ -392,23 +403,13 @@ class AlpacaBroker:
         return self.decode_normalized(decode_broker_order, result)
 
     def quote(self, symbol: str) -> Quote:
+        feed = quote_feed(self.now())
         result = self.request(
             "GET",
             f"https://data.alpaca.markets/v2/stocks/{symbol}/quotes/latest",
-            params={"feed": "iex"},
+            params={"feed": feed},
         )
-        if not isinstance(result, dict) or not isinstance(result.get("quote"), dict):
-            raise BrokerResponseError()
-        quote = result["quote"]
-        return self.decode(
-            Quote,
-            {
-                "feed": "iex",
-                "bid": quote.get("bp"),
-                "ask": quote.get("ap"),
-                "timestamp": quote.get("t"),
-            },
-        )
+        return self.decode_normalized(lambda value: decode_quote(value, feed), result)
 
     def submit(self, order: OrderRequest) -> BrokerOrder:
         # Never retry a POST: a timeout or malformed response can follow acceptance.
