@@ -270,8 +270,20 @@ class AppDriver:
         ]
         return Snapshot(id=str(data.get("snapshot_id", "")), elements=elements)
 
-    def click(self, text: str, *, role: str | None = None, real: bool = False) -> None:
-        """Press an element; `real` sends an actual mouse click, which also ends field editing."""
+    def click(
+        self,
+        text: str,
+        *,
+        role: str | None = None,
+        real: bool = False,
+        outcome_checked: bool = False,
+    ) -> None:
+        """Press an element; `real` sends an actual mouse click, which also ends field editing.
+
+        `outcome_checked` is for a press the journey proves by its result afterwards. While the app
+        is busy approving, Peekaboo can lose the reply to a click that landed; that is not a failure
+        when the caller then checks what the click was meant to do.
+        """
         for attempt in range(3):
             snapshot = self.see()
             element = snapshot.find(text, role=role)
@@ -301,8 +313,10 @@ class AppDriver:
                 # The window can re-layout between observing and clicking; observe again.
                 message = str(error).lower()
                 raced = "stale" in message or "identity validation" in message
+                if outcome_checked and ("indeterminate" in message or "no pressable" in message):
+                    break
                 if not raced or attempt == 2:
-                    raise
+                    raise JourneyFailure(f"clicking {text!r}: {error}") from error
                 time.sleep(0.5)
         time.sleep(0.6)
 
@@ -1032,7 +1046,7 @@ def j31_agent_approval(app: AppDriver) -> None:
     app.expect(sheet, "An agent is asking for approval", "Reject", "Approve…")
     if _wait_for_account(app, "primary", timeout=5)["recovery_preference"] != "manual":
         raise JourneyFailure("the recovery change ran before the owner approved it")
-    app.click("Approve…")
+    app.click("Approve…", outcome_checked=True)
     approved = _agent_result(app, 0, "proposals", "wait", asked["proposal_id"], "--timeout", "60")
     if approved["state"] != "succeeded":
         raise JourneyFailure(f"the approved request ended {approved['state']}")
@@ -1043,7 +1057,7 @@ def j31_agent_approval(app: AppDriver) -> None:
     # Rejecting: the agent learns the outcome and the account never changes.
     resume = _agent_result(app, 10, "accounts", "resume", "primary")
     app.wait_for("Resume new entries in primary", timeout=30, name="resume-sheet")
-    app.click("Reject")
+    app.click("Reject", outcome_checked=True)
     rejected = _agent_result(app, 7, "proposals", "wait", resume["proposal_id"], "--timeout", "60")
     if rejected["state"] != "rejected":
         raise JourneyFailure(f"the rejected request ended {rejected['state']}")
