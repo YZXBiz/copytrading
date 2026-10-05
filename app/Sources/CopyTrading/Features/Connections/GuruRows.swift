@@ -35,15 +35,17 @@ struct GuruRows: View {
         route.displayName.trimmed.isEmpty ? L10n.string("Unnamed guru") : route.displayName.trimmed
     }
 
-    /// Where the guru's calls go and how much each puts in: "Copies into primary · $100 a call".
+    /// Where the guru's calls go and the full position they are sized from:
+    /// "Copies into primary · full position $600".
     private func copies(_ route: TradingRouteDraft) -> String {
-        let targets = route.connections.filter { !$0.accountID.trimmed.isEmpty }
-        if targets.count == 1, let only = targets.first {
-            let full = model.setupDraft.amount(for: only)
-            guard Decimal(string: full).map({ $0 > 0 }) == true else { return L10n.string("Copies into %@", only.accountID.trimmed) }
-            return L10n.string("Copies into %@ · full position %@", only.accountID.trimmed, dollars(full))
+        guard let connection = route.connection, !connection.accountID.trimmed.isEmpty else {
+            return L10n.string("Needs an account to copy into")
         }
-        return L10n.string("Copies into %@", Humanize.joined(targets.map { $0.accountID.trimmed }))
+        let full = model.setupDraft.fullPosition(for: connection)
+        guard Decimal(string: full).map({ $0 > 0 }) == true else {
+            return L10n.string("Copies into %@", connection.accountID.trimmed)
+        }
+        return L10n.string("Copies into %@ · full position %@", connection.accountID.trimmed, dollars(full))
     }
 
     /// Whole dollars without cents, as a person would say an amount: "$100".

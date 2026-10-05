@@ -20,9 +20,7 @@ func runTradingContractTests() throws {
                 channelID: "123", authorID: "456", guruID: profile.guruID,
                 profileRevision: profile.profileRevision,
                 connections: [
-                    TradingRouteConnection(
-                        accountID: "paper-a", mode: .proportional, amountUSD: "3000"
-                    )
+                    TradingRouteConnection(accountID: "paper-a", fullPositionUSD: "3000")
                 ]
             )
         ]
@@ -38,9 +36,9 @@ func runTradingContractTests() throws {
         !String(decoding: encoded, as: UTF8.self).contains("token"),
         "saved trading configuration unexpectedly contains a credential field"
     )
-    try #require(configuration.version == 4, "profile configuration did not use v4")
+    try #require(configuration.version == 5, "profile configuration did not use v5")
     try #require(
-        profile.profileRevision == "2ad5f2576087ce4113f9155f0388a7e674ab3b0ba61205306930d09b4a0c16d8",
+        profile.profileRevision == "f8c321baa04fc5a0f906a52e139954d25f56c83befb64700a25056d4b8a8c984",
         "native content address differs from the engine profile builder")
     let exampleProfile = try TradingProfileBuilder().build(
         TradingProfileDraft(
@@ -54,7 +52,7 @@ func runTradingContractTests() throws {
             exitBasis: .originalPosition
         ))
     try #require(
-        exampleProfile.profileRevision == "a94fee3e9c775d8999074267cb93117f9792871d6720151552115dfaf944826a",
+        exampleProfile.profileRevision == "9b95a94709607f334674d5524806b3f99922555cf8ef73386c56e380ed7c4821",
         "native profile examples do not use the engine canonical revision format")
     // A learned playbook is multi-line Chinese with quotes, tabs, and slashes: every one of those
     // must hash exactly as the engine hashes it, or activation would stall on a revision mismatch.
@@ -65,7 +63,7 @@ func runTradingContractTests() throws {
             exitBasis: .remainingPosition
         ))
     try #require(
-        chineseProfile.profileRevision == "b152d3383bfbec8779c19048381efe85f78436e83a04a86d591190986cc8b21e",
+        chineseProfile.profileRevision == "0ee796fd1bfeef273b6bb55e1f6865d5a3566e7abb1affec0500af2ae3229ccf",
         "a multi-line Chinese playbook does not hash to the engine's revision")
     do {
         _ = try TradingProfileBuilder().build(
@@ -76,22 +74,15 @@ func runTradingContractTests() throws {
             ))
         throw VerificationFailure(description: "a playbook over the engine's limit was accepted")
     } catch TradingProfileBuilderError.invalidProfile {}
-    let connection = configuration.routes[0].connections[0]
+    let rulesProfile = try TradingProfileBuilder().build(
+        TradingProfileDraft(
+            guruID: "analyst", displayName: "分析师", prefix: "分析师：", exitBasis: .originalPosition,
+            batches: 3, sellsReferTo: .wholePosition
+        ))
     try #require(
-        connection.copiedBudgetUSD(sourceFraction: Decimal(1) / Decimal(6)) == Decimal(500),
-        "one-sixth proportional sizing must be exactly $500"
-    )
-    try #require(
-        connection.copiedBudgetUSD(sourceFraction: Decimal(1) / Decimal(3)) == Decimal(1000),
-        "one-third proportional sizing must be exactly $1000"
-    )
-    try #require(
-        connection.copiedBudgetUSD(sourceFraction: nil) == nil,
-        "missing proportional fraction must require review")
-    let fixed = TradingRouteConnection(accountID: "paper-a", mode: .fixed, amountUSD: "500")
-    try #require(
-        fixed.copiedBudgetUSD(sourceFraction: Decimal(1) / Decimal(6)) == Decimal(500),
-        "fixed sizing must ignore the source fraction")
+        rulesProfile.profileRevision == "68db085c762db50da0236f39ef4bbe5bb1d8602c876633d240f822d6db7ae24e",
+        "a guru's batches and sell rule do not hash to the engine's revision")
+    try sizingMatchesTheEngineOnEverySharedExample()
     let prepared = try TradingProfileBuilder().preparedProfiles()
     try #require(
         prepared.map(\.exitBasis) == [.originalPosition, .remainingPosition],
@@ -177,4 +168,49 @@ private func alertsNameTheirService() throws {
     try #require(fields?["service"] as? String == "discord" && fields?["chat_id"] == nil)
     let telegram = try JSONDecoder().decode(TradingNotificationConfiguration.self, from: Data(#"{"chat_id":"42"}"#.utf8))
     try #require(telegram.service == .telegram && telegram.chatID == "42")
+}
+
+private struct SizingExamples: Decodable {
+    struct Fraction: Decodable {
+        let numerator: Int
+        let denominator: Int
+    }
+
+    struct Example: Decodable {
+        let `case`: String
+        let fullPositionUSD: String
+        let fraction: Fraction?
+        let defaultFraction: String?
+        let budgetUSD: String?
+
+        enum CodingKeys: String, CodingKey {
+            case `case`
+            case fullPositionUSD = "full_position_usd"
+            case fraction
+            case defaultFraction = "default_fraction"
+            case budgetUSD = "budget_usd"
+        }
+    }
+
+    let examples: [Example]
+}
+
+/// The app's sizing examples come from its own copy of the engine's rule; the engine runs the same
+/// examples in `test_sizing_contract.py`.
+private func sizingMatchesTheEngineOnEverySharedExample() throws {
+    let examples = try JSONDecoder().decode(
+        SizingExamples.self, from: contractFixture("sizing-examples.json")
+    ).examples
+    try #require(!examples.isEmpty, "no shared sizing examples")
+    for example in examples {
+        let connection = TradingRouteConnection(
+            accountID: "paper", fullPositionUSD: example.fullPositionUSD,
+            defaultFraction: example.defaultFraction
+        )
+        let source = example.fraction.map { Decimal($0.numerator) / Decimal($0.denominator) }
+        let budget = connection.copiedBudgetUSD(sourceFraction: source)
+        try #require(
+            budget == example.budgetUSD.flatMap { Decimal(string: $0) },
+            "sizing differs from the engine: \(example.case) gave \(String(describing: budget))")
+    }
 }

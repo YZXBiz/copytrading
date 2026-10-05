@@ -44,25 +44,28 @@ struct TradingProfileExampleDraft: Identifiable {
     }
 }
 
+/// The one account a guru copies into (ADR-0007). Its maximum per stock is the guru's full
+/// position, so the draft holds only the account and the share a call with no size buys.
 struct TradingConnectionDraft: Identifiable {
     let id = UUID()
     var accountID: String
-    var mode: TradingSizingMode
-    var amountUSD: String
     var defaultFraction: String
     var useDefaultFraction: Bool
 
-    /// Every call buys the guru's share of a full position, which is the account's maximum per
-    /// stock; a call that names no size buys the default share, 1/6 unless the owner changes it.
-    init(
-        accountID: String = "primary", mode: TradingSizingMode = .proportional,
-        amountUSD: String = "", defaultFraction: String? = "\(Decimal(1) / Decimal(6))"
-    ) {
+    /// A call that names no size buys the full position unless the owner lowers the default share
+    /// or turns it off, which leaves such a call for the owner.
+    init(accountID: String = "primary", defaultFraction: String? = "1") {
         self.accountID = accountID
-        self.mode = mode
-        self.amountUSD = amountUSD
-        self.defaultFraction = defaultFraction ?? "\(Decimal(1) / Decimal(6))"
+        self.defaultFraction = defaultFraction ?? "1"
         self.useDefaultFraction = defaultFraction != nil
+    }
+
+    /// The saved connection: what the engine sizes from, and what the sizing example uses.
+    func terms(fullPositionUSD: String) -> TradingRouteConnection {
+        TradingRouteConnection(
+            accountID: accountID.trimmed, fullPositionUSD: fullPositionUSD,
+            defaultFraction: useDefaultFraction ? defaultFraction.trimmed : nil
+        )
     }
 }
 
@@ -76,8 +79,12 @@ struct TradingRouteDraft: Identifiable {
     /// The owner's guidance for reading this guru, usually edited from a learned draft.
     var playbook: String
     var exitBasis: TradingExitBasis
+    /// How many batches make the guru's full position; nil when the guru does not buy in batches.
+    var batches: Int?
+    var sellsReferTo: TradingSellsReferTo
     var examples: [TradingProfileExampleDraft]
-    var connections: [TradingConnectionDraft]
+    /// The one account this guru copies into, once the owner has chosen it.
+    var connection: TradingConnectionDraft?
 
     /// A new guru gets a stable ID of its own, so the owner only ever names them; renaming later
     /// keeps the ID and therefore the guru's history.
@@ -90,8 +97,9 @@ struct TradingRouteDraft: Identifiable {
         guruID: String = TradingRouteDraft.newGuruID(), displayName: String = "",
         prefix: String = "ALERT:", playbook: String = "",
         exitBasis: TradingExitBasis = .originalPosition,
+        batches: Int? = nil, sellsReferTo: TradingSellsReferTo = .buyPrice,
         examples: [TradingProfileExampleDraft] = [],
-        connections: [TradingConnectionDraft] = []
+        connection: TradingConnectionDraft? = nil
     ) {
         self.channelID = channelID
         self.authorID = authorID
@@ -100,7 +108,9 @@ struct TradingRouteDraft: Identifiable {
         self.prefix = prefix
         self.playbook = playbook
         self.exitBasis = exitBasis
+        self.batches = batches
+        self.sellsReferTo = sellsReferTo
         self.examples = examples
-        self.connections = connections
+        self.connection = connection
     }
 }

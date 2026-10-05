@@ -1856,7 +1856,7 @@ final class AppModel {
                 let draft = TradingProfileDraft(
                     guruID: profile.guruID, displayName: profile.displayName,
                     prefix: profile.prefix, playbook: profile.playbook, examples: profile.examples,
-                    exitBasis: profile.exitBasis
+                    exitBasis: profile.exitBasis, batches: profile.batches, sellsReferTo: profile.sellsReferTo
                 )
                 return (try? TradingProfileBuilder().build(draft)) == profile
             })
@@ -1868,6 +1868,7 @@ final class AppModel {
             configuration.profiles.map { ($0.profileRevision, $0) },
             uniquingKeysWith: { first, _ in first }
         )
+        var copiedInto: [String: String] = [:]
         for route in configuration.routes {
             let name = profiles[route.profileRevision]?.displayName ?? route.guruID
             guard !route.channelID.isEmpty else { throw fail(L10n.string("“%@” needs a Discord channel.", name)) }
@@ -1877,33 +1878,27 @@ final class AppModel {
             guard route.source == "discord", route.guruID == profiles[route.profileRevision]?.guruID else {
                 throw fail(L10n.string("“%@” doesn't match its saved details. Open the guru in Connections and check its fields.", name))
             }
-            guard !route.connections.isEmpty else { throw fail(L10n.string("“%@” needs an account to copy into.", name)) }
-            guard Set(route.connections.map(\.accountID)).count == route.connections.count else {
-                throw fail(L10n.string("“%@” lists the same account twice.", name))
+            // One guru copies into one account, sized from that account's maximum per stock.
+            guard let connection = route.connections.first else {
+                throw fail(L10n.string("“%@” needs an account to copy into.", name))
             }
-            for connection in route.connections {
-                guard accountIDs.contains(connection.accountID) else {
-                    throw fail(L10n.string("“%@” copies into “%@”, which isn't one of your broker accounts.", name, connection.accountID))
-                }
-                guard let amount = Decimal(string: connection.amountUSD), amount > 0 else {
-                    throw fail(L10n.string("“%@” needs a dollar amount above zero for “%@”.", name, connection.accountID))
-                }
-                var value = amount
-                var cents = Decimal()
-                NSDecimalRound(&cents, &value, 2, .plain)
-                guard cents == amount else {
-                    throw fail(L10n.string("“%@”: amounts for “%@” must be whole cents.", name, connection.accountID))
-                }
-                if connection.mode == .fixed {
-                    guard connection.defaultFraction == nil else {
-                        throw fail(L10n.string("“%@”: a fixed amount can't also use a default fraction.", name))
-                    }
-                } else if let rawDefault = connection.defaultFraction {
-                    guard let fraction = Decimal(string: rawDefault), fraction > 0, fraction <= 1 else {
-                        throw fail(L10n.string("“%@”: the default fraction must be between 0 and 1.", name))
-                    }
+            guard let account = configuration.accounts.first(where: { $0.id == connection.accountID }) else {
+                throw fail(L10n.string("“%@” copies into “%@”, which isn't one of your broker accounts.", name, connection.accountID))
+            }
+            guard let full = Decimal(string: account.policy.maxSymbolUSD), full > 0,
+                connection.fullPositionUSD == account.policy.maxSymbolUSD
+            else {
+                throw fail(L10n.string("Set a maximum per stock for “%@”: it is %@'s full position.", account.id, name))
+            }
+            if let rawDefault = connection.defaultFraction {
+                guard let fraction = Decimal(string: rawDefault), fraction > 0, fraction <= 1 else {
+                    throw fail(L10n.string("“%@”: the default share must be more than 0 and at most the whole position.", name))
                 }
             }
+            if let other = copiedInto[connection.accountID] {
+                throw fail(L10n.string("“%@” already copies “%@”. Each account copies one guru.", connection.accountID, other))
+            }
+            copiedInto[connection.accountID] = name
         }
         let identityRules = configuration.routes.map { "\($0.source):\($0.channelID):\($0.authorID ?? "*")" }
         guard Set(identityRules).count == identityRules.count else {

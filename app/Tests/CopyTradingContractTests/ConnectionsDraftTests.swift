@@ -48,7 +48,8 @@ private func savedConfigurationRoundTripsThroughDraft() throws {
         TradingRouteDraft(
             channelID: "111", authorID: "333", guruID: "guru", displayName: "Guru",
             prefix: "ALERT:", playbook: "  apple means AAPL\n英伟达 means NVDA\n",
-            connections: [TradingConnectionDraft(accountID: "primary", mode: .proportional, amountUSD: "3000", defaultFraction: "0.25")]
+            batches: 3, sellsReferTo: .wholePosition,
+            connection: TradingConnectionDraft(accountID: "primary", defaultFraction: "0.25")
         )
     ]
     seed.notificationsEnabled = true
@@ -60,6 +61,12 @@ private func savedConfigurationRoundTripsThroughDraft() throws {
         "the playbook lost its lines or kept surrounding blank space"
     )
     try #require(configuration.routes.first?.connections.first?.defaultFraction == "0.25", "default fraction was dropped")
+    try #require(
+        configuration.routes.first?.connections.map(\.fullPositionUSD) == [seed.accounts[0].policy.maxSymbolUSD],
+        "the guru's full position is not its account's maximum per stock")
+    try #require(
+        configuration.profiles.first.map { ($0.batches, $0.sellsReferTo) } ?? (nil, .buyPrice) == (3, .wholePosition),
+        "the guru's batches or sell rule was dropped")
 
     var reloaded = ConnectionsDraft()
     reloaded.load(configuration)

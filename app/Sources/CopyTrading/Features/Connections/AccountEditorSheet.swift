@@ -65,9 +65,9 @@ struct AccountEditorSheet: View {
                         text: $account.policy.maxOrderUSD,
                         example: LimitExamples.maxOrder)
                     textLimit(
-                        "Maximum per symbol",
+                        "Maximum per stock",
                         hint:
-                            "The most this account holds in any one stock, counting shares you bought yourself. A buy that would go over is skipped.",
+                            "The most this account holds in any one stock, counting shares you bought yourself. It is also the full position of the guru it copies. A buy that would go over is skipped.",
                         text: $account.policy.maxSymbolUSD,
                         example: LimitExamples.maxSymbol)
                     textLimit(
@@ -87,6 +87,17 @@ struct AccountEditorSheet: View {
                             "How far above the guru's price a buy may fill. Outside regular hours, also how far below it a sell may go. 0 means exactly the guru's price.",
                         text: $account.policy.maxAboveSignalPct,
                         example: LimitExamples.maxAboveSignal)
+                    textLimit(
+                        "Market move allowed (%)",
+                        hint:
+                            "From 9:30 to 16:00 New York time, a buy isn't copied on its own when the market is further than this from the guru's price, above or below.",
+                        text: $account.policy.maxPriceMovePct,
+                        example: LimitExamples.maxPriceMove)
+                    textLimit(
+                        "Market move allowed outside regular hours (%)",
+                        hint: "The same check before 9:30 and after 16:00 New York time, when quotes are thinner.",
+                        text: $account.policy.maxPriceMoveExtendedPct,
+                        example: LimitExamples.maxPriceMoveExtended)
                 }
 
                 Section(L10n.string("Timing")) {

@@ -48,7 +48,7 @@ enum Reason {
         "quote_stale": "The price quote was too old",
         "quote_above_limit": "The price moved above your limit",
         "total_exposure_cap": "Your total exposure limit was reached",
-        "symbol_exposure_cap": "Your per-symbol limit was reached",
+        "symbol_exposure_cap": "Your per-stock limit was reached",
         "symbol_and_total_exposure_cap": "Your exposure limits were reached",
         "daily_loss_cap": "Your daily loss limit was reached",
         "daily_entry_cap": "Your daily entry limit was reached",

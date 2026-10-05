@@ -105,6 +105,10 @@ public struct TradingAccountPolicy: Codable, Equatable, Sendable {
     public var overnight = false
     public var copyExits = true
     public var maxAboveSignalPct = "0"
+    /// How far the market may be from the guru's price, above or below, before a buy waits for
+    /// the owner: in regular hours, and outside them (ADR-0007).
+    public var maxPriceMovePct = "5"
+    public var maxPriceMoveExtendedPct = "10"
 
     public init() {}
 
@@ -121,55 +125,47 @@ public struct TradingAccountPolicy: Codable, Equatable, Sendable {
         case overnight
         case copyExits = "copy_exits"
         case maxAboveSignalPct = "max_above_signal_pct"
+        case maxPriceMovePct = "max_price_move_pct"
+        case maxPriceMoveExtendedPct = "max_price_move_extended_pct"
     }
 }
 
-public enum TradingSizingMode: String, Codable, CaseIterable, Sendable {
-    case fixed
-    case proportional
-}
-
+/// One guru copying into one account (ADR-0007). The guru's full position is the account's
+/// maximum per stock; a call buys its share of it.
 public struct TradingRouteConnection: Codable, Equatable, Identifiable, Sendable {
     public var accountID: String
-    public var mode: TradingSizingMode
-    public var amountUSD: String
+    public var fullPositionUSD: String
+    /// The share a call that names no size buys; nil leaves such a call for the owner.
     public var defaultFraction: String?
 
     public var id: String { accountID }
 
-    public init(
-        accountID: String, mode: TradingSizingMode, amountUSD: String,
-        defaultFraction: String? = nil
-    ) {
+    public init(accountID: String, fullPositionUSD: String, defaultFraction: String? = "1") {
         self.accountID = accountID
-        self.mode = mode
-        self.amountUSD = amountUSD
+        self.fullPositionUSD = fullPositionUSD
         self.defaultFraction = defaultFraction
     }
 
-    /// Each entry gets this budget once. The account risk policy caps it afterward.
+    /// What a call asks for before the account's limits: its share of the full position. The
+    /// engine's rule exactly (`requested_entry_budget`): the product's repeating digits settle at
+    /// ten places, then it rounds down to the cent, so a third of $3000 is $1000 and six sixths
+    /// never pass the full position. `sizing-examples.json` holds both sides to it.
     public func copiedBudgetUSD(sourceFraction: Decimal?) -> Decimal? {
-        guard let amount = Decimal(string: amountUSD), amount > 0 else { return nil }
-        let requested: Decimal
-        switch mode {
-        case .fixed:
-            requested = amount
-        case .proportional:
-            guard let fraction = sourceFraction ?? defaultFraction.flatMap({ Decimal(string: $0) }),
-                fraction > 0, fraction <= 1
-            else { return nil }
-            requested = amount * fraction
-        }
-        var value = requested
-        var rounded = Decimal()
-        NSDecimalRound(&rounded, &value, 2, .plain)
-        return rounded > 0 ? rounded : nil
+        guard let full = Decimal(string: fullPositionUSD), full > 0,
+            let fraction = sourceFraction ?? defaultFraction.flatMap({ Decimal(string: $0) }),
+            fraction > 0, fraction <= 1
+        else { return nil }
+        var product = full * fraction
+        var settled = Decimal()
+        NSDecimalRound(&settled, &product, 10, .plain)
+        var cents = Decimal()
+        NSDecimalRound(&cents, &settled, 2, .down)
+        return cents > 0 ? cents : nil
     }
 
     enum CodingKeys: String, CodingKey {
         case accountID = "account_id"
-        case mode
-        case amountUSD = "amount_usd"
+        case fullPositionUSD = "full_position_usd"
         case defaultFraction = "default_fraction"
     }
 }
@@ -213,6 +209,13 @@ public enum TradingExitBasis: String, Codable, CaseIterable, Sendable {
 public let tradingPlaybookMaxLength = 8_000
 
 /// An immutable, content-addressed profile for one guru: a prefix, a playbook, and checked examples.
+/// What a guru's sell refers to: the buy price it names, each buy its own lot, or the whole
+/// position, every buy of a stock one lot.
+public enum TradingSellsReferTo: String, Codable, CaseIterable, Sendable {
+    case buyPrice = "buy_price"
+    case wholePosition = "whole_position"
+}
+
 public struct TradingProfileRevision: Codable, Equatable, Identifiable, Sendable {
     public var guruID: String
     public var displayName: String
@@ -220,13 +223,17 @@ public struct TradingProfileRevision: Codable, Equatable, Identifiable, Sendable
     public var playbook: String
     public var examples: [TradingProfileExample]
     public var exitBasis: TradingExitBasis
+    /// How many batches make the guru's full position; nil leaves a batch call for the owner.
+    public var batches: Int?
+    public var sellsReferTo: TradingSellsReferTo
     public var profileRevision: String
 
     public var id: String { "\(guruID):\(profileRevision)" }
 
     public init(
         guruID: String, displayName: String, prefix: String, playbook: String,
-        examples: [TradingProfileExample] = [], exitBasis: TradingExitBasis, profileRevision: String
+        examples: [TradingProfileExample] = [], exitBasis: TradingExitBasis, batches: Int? = nil,
+        sellsReferTo: TradingSellsReferTo = .buyPrice, profileRevision: String
     ) {
         self.guruID = guruID
         self.displayName = displayName
@@ -234,6 +241,8 @@ public struct TradingProfileRevision: Codable, Equatable, Identifiable, Sendable
         self.playbook = playbook
         self.examples = examples
         self.exitBasis = exitBasis
+        self.batches = batches
+        self.sellsReferTo = sellsReferTo
         self.profileRevision = profileRevision
     }
 
@@ -244,6 +253,8 @@ public struct TradingProfileRevision: Codable, Equatable, Identifiable, Sendable
         case playbook
         case examples
         case exitBasis = "exit_basis"
+        case batches
+        case sellsReferTo = "sells_refer_to"
         case profileRevision = "profile_revision"
     }
 }
@@ -255,10 +266,13 @@ public struct TradingProfileDraft: Equatable, Sendable {
     public var playbook: String
     public var examples: [TradingProfileExample]
     public var exitBasis: TradingExitBasis
+    public var batches: Int?
+    public var sellsReferTo: TradingSellsReferTo
 
     public init(
         guruID: String, displayName: String, prefix: String, playbook: String = "",
-        examples: [TradingProfileExample] = [], exitBasis: TradingExitBasis
+        examples: [TradingProfileExample] = [], exitBasis: TradingExitBasis, batches: Int? = nil,
+        sellsReferTo: TradingSellsReferTo = .buyPrice
     ) {
         self.guruID = guruID
         self.displayName = displayName
@@ -266,6 +280,8 @@ public struct TradingProfileDraft: Equatable, Sendable {
         self.playbook = playbook
         self.examples = examples
         self.exitBasis = exitBasis
+        self.batches = batches
+        self.sellsReferTo = sellsReferTo
     }
 }
 
@@ -305,7 +321,8 @@ public struct TradingProfileBuilder: Sendable {
             !draft.prefix.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
             draft.prefix.count <= 128,
             draft.playbook.count <= tradingPlaybookMaxLength,
-            draft.examples.count <= 32
+            draft.examples.count <= 32,
+            draft.batches.map({ (1...20).contains($0) }) ?? true
         else { throw TradingProfileBuilderError.invalidProfile }
         for example in draft.examples {
             guard !example.message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
@@ -344,13 +361,15 @@ public struct TradingProfileBuilder: Sendable {
                 ] as [String: Any]
             },
             "exit_basis": draft.exitBasis.rawValue,
+            "batches": draft.batches as Any? ?? NSNull(),
+            "sells_refer_to": draft.sellsReferTo.rawValue,
         ]
         let data = try JSONSerialization.data(withJSONObject: base, options: [.sortedKeys, .withoutEscapingSlashes])
         let revision = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
         return TradingProfileRevision(
             guruID: draft.guruID, displayName: draft.displayName, prefix: draft.prefix,
             playbook: draft.playbook, examples: draft.examples, exitBasis: draft.exitBasis,
-            profileRevision: revision
+            batches: draft.batches, sellsReferTo: draft.sellsReferTo, profileRevision: revision
         )
     }
 }
@@ -435,7 +454,7 @@ public struct TradingNotificationConfiguration: Codable, Equatable, Sendable {
 /// Saved to application support. This type deliberately contains no credentials.
 public struct TradingConfiguration: Codable, Equatable, Sendable {
     /// Matches the engine's CONFIGURATION_VERSION; older saved files are rejected, never migrated.
-    public static let currentVersion = 4
+    public static let currentVersion = 5
     public var version = TradingConfiguration.currentVersion
     public var source: TradingSourceConfiguration
     public var provider: TradingProviderConfiguration

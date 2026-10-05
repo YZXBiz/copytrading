@@ -20,7 +20,7 @@ struct GuideSafetySection: View {
             Divider()
             GuideSafetyRow(
                 text:
-                    "Every account has its own **limits**: per order, per symbol, in total, and a daily loss cap. A call that would cross one is skipped, and Activity says why."
+                    "Every account has its own **limits**: per order, per stock, in total, and a daily loss cap. A call that would cross one is skipped, and Activity says why."
             ) {
                 LimitMeter(title: "Daily loss cap", used: 40, limit: 250)
             }

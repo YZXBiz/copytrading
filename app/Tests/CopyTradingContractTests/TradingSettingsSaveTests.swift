@@ -47,8 +47,7 @@ struct TradingSettingsSaveTests {
                     profileRevision: profile.profileRevision,
                     connections: [
                         TradingRouteConnection(
-                            accountID: "paper", mode: .proportional,
-                            amountUSD: "3000", defaultFraction: "0.5"
+                            accountID: "paper", fullPositionUSD: "600", defaultFraction: "0.5"
                         )
                     ]
                 )
@@ -286,7 +285,7 @@ struct TradingSettingsSaveTests {
             providerAPIKey: "private-provider-key",
             destinations: [
                 TradingRouteConnection(
-                    accountID: "paper", mode: .fixed, amountUSD: "100"
+                    accountID: "paper", fullPositionUSD: "600"
                 )
             ]
         )
@@ -321,7 +320,7 @@ struct TradingSettingsSaveTests {
             profile: profile,
             provider: TradingProviderConfiguration(name: .anthropic, model: "test-model"),
             providerAPIKey: "private-provider-key",
-            destinations: [TradingRouteConnection(accountID: "paper", mode: .fixed, amountUSD: "100")]
+            destinations: [TradingRouteConnection(accountID: "paper", fullPositionUSD: "600")]
         )
         let result = try await EngineClient(transport: transport).reviewProfileExamples(request)
         try check(
@@ -370,7 +369,7 @@ struct TradingSettingsSaveTests {
                 TradingRouteConfiguration(
                     channelID: "123", authorID: "456", guruID: originalProfile.guruID,
                     profileRevision: originalProfile.profileRevision,
-                    connections: [TradingRouteConnection(accountID: "paper", mode: .fixed, amountUSD: "100")]
+                    connections: [TradingRouteConnection(accountID: "paper", fullPositionUSD: "600")]
                 )
             ]
         )
@@ -428,7 +427,7 @@ struct TradingSettingsSaveTests {
                 TradingRouteConfiguration(
                     channelID: "123", authorID: "456", guruID: profile.guruID,
                     profileRevision: profile.profileRevision,
-                    connections: [TradingRouteConnection(accountID: "paper", mode: .fixed, amountUSD: "100")]
+                    connections: [TradingRouteConnection(accountID: "paper", fullPositionUSD: "600")]
                 )
             ]
         )
@@ -504,7 +503,7 @@ struct TradingSettingsSaveTests {
                     profileRevision: profile.profileRevision,
                     connections: [
                         TradingRouteConnection(
-                            accountID: "paper", mode: .fixed, amountUSD: "100"
+                            accountID: "paper", fullPositionUSD: "600"
                         )
                     ]
                 )
@@ -708,10 +707,8 @@ struct TradingSettingsSaveTests {
                 TradingRouteConfiguration(
                     channelID: "123", authorID: "456", guruID: profile.guruID,
                     profileRevision: profile.profileRevision,
-                    connections: [
-                        TradingRouteConnection(accountID: "paper-a", mode: .fixed, amountUSD: "500"),
-                        TradingRouteConnection(accountID: "paper-b", mode: .fixed, amountUSD: "125"),
-                    ]
+                    // One guru per account; paper-b follows no one.
+                    connections: [TradingRouteConnection(accountID: "paper-a", fullPositionUSD: "600")]
                 )
             ]
         )
@@ -1391,7 +1388,7 @@ struct TradingSettingsSaveTests {
                 TradingRouteConfiguration(
                     channelID: "123", authorID: "456", guruID: profile.guruID,
                     profileRevision: profile.profileRevision,
-                    connections: [TradingRouteConnection(accountID: "paper", mode: .fixed, amountUSD: "100")]
+                    connections: [TradingRouteConnection(accountID: "paper", fullPositionUSD: "600")]
                 )
             ]
         )

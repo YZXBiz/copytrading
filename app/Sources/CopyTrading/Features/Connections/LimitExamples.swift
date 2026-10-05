@@ -6,8 +6,18 @@ enum LimitExamples {
         instead.
         """
     static let maxSymbol = """
-        Set to **$3,000**. This account already holds **$2,500** of NVDA, copied or bought yourself. A new \
+        Set to **$3,000**. It is the guru's full position here, so a 1/6 call buys **$500**. This account \
+        already holds **$2,500** of NVDA, copied or bought yourself. A new \
         **$1,000** NVDA buy would bring it to $3,500, so that buy is **skipped**. It isn't shrunk to fit.
+        """
+    static let maxPriceMove = """
+        Set to **5**. The guru buys NVDA at **$200.00**. If NVDA trades above **$210** or below **$190** \
+        when the call arrives, CopyTrading doesn't buy on its own. Activity shows the call and why.
+        """
+    static let maxPriceMoveExtended = """
+        Set to **10**. Before 9:30 and after 16:00 New York time quotes are thinner, so the band is wider: \
+        a guru's **$200.00** buy is held back only above **$220** or below **$180**. With no fresh quote, \
+        the buy's limit price still bounds it.
         """
     static let maxTotal = """
         Set to **$10,000**. Everything this account holds, including stocks you bought yourself and buys \

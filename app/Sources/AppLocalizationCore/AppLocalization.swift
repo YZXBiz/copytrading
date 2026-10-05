@@ -48,6 +48,13 @@ public final class AppLanguagePreference {
 }
 
 public enum L10n {
+    /// Sentences as one paragraph: English puts a space between them; Chinese, whose full stop
+    /// already carries the gap, puts none.
+    @MainActor
+    public static func sentences(_ sentences: [String]) -> String {
+        sentences.joined(separator: AppLanguagePreference.shared.language == .simplifiedChinese ? "" : " ")
+    }
+
     @MainActor
     public static func string(_ englishSourceText: String, _ arguments: CVarArg...) -> String {
         let language = AppLanguagePreference.shared.language

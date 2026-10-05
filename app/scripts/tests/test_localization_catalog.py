@@ -40,3 +40,27 @@ def test_translations_keep_every_placeholder_of_their_key():
 def test_chinese_text_has_no_doubled_words():
     doubled = [key for key, value in load("zh-Hans").items() if "AI AI" in value]
     assert doubled == []
+
+
+SOURCES = Path(__file__).resolve().parents[2] / "Sources" / "CopyTrading"
+LITERAL = r'"((?:[^"\\]|\\.)*)"'
+# The calls that look their text up in the catalogs, with the text written in place.
+LOOKUPS = (
+    re.compile(r"L10n\.string\(\s*" + LITERAL),
+    re.compile(r"SetupSectionHeader\(\s*title:\s*" + LITERAL),
+    re.compile(r"SetupSectionHeader\([^)]*?detail:\s*" + LITERAL, re.S),
+)
+
+
+def test_every_text_the_app_asks_for_is_in_the_catalogs():
+    english = load("en")
+    missing = sorted(
+        {
+            f"{path.name}: {match.group(1)}"
+            for path in SOURCES.rglob("*.swift")
+            for lookup in LOOKUPS
+            for match in lookup.finditer(path.read_text())
+            if "\\(" not in match.group(1) and match.group(1) not in english
+        }
+    )
+    assert missing == []

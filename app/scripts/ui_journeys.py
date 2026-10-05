@@ -691,7 +691,14 @@ def j6_setup_editing(app: AppDriver) -> None:
     app.expect(connections, "Broker accounts", "Gurus", "0 of 4 steps done", "setup.startCopying")
     app.click("connections.accounts.paper")
     sheet = app.see("account-sheet")
-    app.expect(sheet, "Alpaca keys", "Position limits (USD)", "Remove Account")
+    app.expect(
+        sheet,
+        "Alpaca keys",
+        "Position limits (USD)",
+        "Maximum per stock",
+        "Market move allowed (%)",
+        "Remove Account",
+    )
     app.click("Done")
     app.expect(
         app.see("account-added"),
@@ -701,7 +708,17 @@ def j6_setup_editing(app: AppDriver) -> None:
     )
     app.click("connections.gurus.add")
     guru = app.see("guru-sheet")
-    app.expect(guru, "Where they post", "Copies into", "playbook.learn")
+    # One guru copies into one account, sized from that account's maximum per stock.
+    app.expect(
+        guru,
+        "Where they post",
+        "playbook.learn",
+        "How they trade",
+        "A sell refers to",
+        "Buys in batches",
+        "Copies into",
+        "guru.sizingSummary",
+    )
     app.click("Done")
     app.expect(app.see("guru-added"), "connections.guru", "Unnamed guru")
     # Unsaved accounts and gurus stay in Connections.
