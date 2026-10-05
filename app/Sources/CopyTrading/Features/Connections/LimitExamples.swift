@@ -1,3 +1,5 @@
+import Foundation
+
 /// One worked example per account limit, shown behind the "i" beside its name. Each matches
 /// what the engine does: per-order caps trim a buy, the holding caps skip it whole.
 enum LimitExamples {
@@ -33,10 +35,27 @@ enum LimitExamples {
         to send its order, after **9:33:00** (your Mac was asleep, or Discord was slow), it skips it as *Too \
         old to copy*. You can still copy it yourself from **Activity** with **Review and Correct**.
         """
-    static let orderTimeout = """
-        Set to **60**. The guru buys NVDA at **$200.00**, so CopyTrading places a buy that only fills at \
-        **$200.00 or less**. The price jumps to **$201** and stays there, so nothing fills. After **60 \
-        seconds** CopyTrading cancels the order, so it can't quietly fill an hour later, when the call is \
-        old.
-        """
+    /// The order timeout, priced with this account's own tolerance above the guru's price, so the
+    /// example never disagrees with the setting just above it.
+    @MainActor
+    static func orderTimeout(maxAboveSignalPct: String) -> String {
+        let percent = Decimal(string: maxAboveSignalPct.trimmingCharacters(in: .whitespaces)) ?? 0
+        var ceiling = Decimal(200) * (1 + max(percent, 0) / 100)
+        var limit = Decimal()
+        NSDecimalRound(&limit, &ceiling, 2, .down)
+        var above = limit + 3
+        var jump = Decimal()
+        NSDecimalRound(&jump, &above, 0, .up)
+        return L10n.string(
+            """
+            Set to **60**. The guru buys NVDA at **$200.00**. With **Maximum above signal price** at **%@%%**, \
+            CopyTrading's buy only fills at **%@ or less**. The price jumps to **%@** and stays there, so \
+            nothing fills. After **60 seconds** CopyTrading cancels the order, so it can't quietly fill an \
+            hour later, when the call is old.
+            """,
+            percent.formatted(),
+            limit.formatted(.currency(code: "USD").precision(.fractionLength(2))),
+            jump.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+        )
+    }
 }

@@ -11,6 +11,7 @@ func runConnectionsDraftTests() throws {
     try statusWordsClassifyAsWholeWords()
     try pickingAProviderSuggestsItsModelButKeepsATypedOne()
     try marketHoursAlsoReadInTheOwnersTime()
+    try orderTimeoutExampleUsesTheAccountsTolerance()
 }
 
 @MainActor
@@ -146,4 +147,16 @@ private func marketHoursAlsoReadInTheOwnersTime() throws {
     let overnight = MarketHoursText.yourTime([((20, 0), (4, 0))], now: october, zone: shanghai)
     try #require(overnight == " Your time: 8:00–16:00.", "Overnight hours read \(overnight) in Shanghai")
     try #require(MarketHoursText.yourTime([((20, 0), (4, 0))], now: october, zone: newYork).isEmpty)
+}
+
+/// The order-timeout example prices the buy with this account's own tolerance above the guru's
+/// price, so it never contradicts the setting above it.
+@MainActor
+private func orderTimeoutExampleUsesTheAccountsTolerance() throws {
+    let atOne = LimitExamples.orderTimeout(maxAboveSignalPct: "1")
+    try #require(atOne.contains("**1%**") && atOne.contains("**$202.00 or less**") && atOne.contains("**$205**"), "\(atOne)")
+    let atZero = LimitExamples.orderTimeout(maxAboveSignalPct: "0")
+    try #require(atZero.contains("**$200.00 or less**") && atZero.contains("**$203**"), "\(atZero)")
+    let unreadable = LimitExamples.orderTimeout(maxAboveSignalPct: "")
+    try #require(unreadable.contains("**$200.00 or less**"), "\(unreadable)")
 }
