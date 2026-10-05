@@ -73,6 +73,8 @@ class StockSignal(BaseModel):
     # How the reader read the post (ADR-0007); absent on signals read before it, or never sent
     # to the reader.
     reading: PostReading | None = None
+    # For a post that waits for the owner: what Copy places, as the reader read it (ADR-0007).
+    suggested: tuple[Instruction, ...] = Field(default=(), max_length=20)
     evidence: tuple[Evidence, ...] = Field(max_length=20)
     instructions: tuple[Instruction, ...] = Field(max_length=20)
 
@@ -82,6 +84,8 @@ class StockSignal(BaseModel):
             raise ValueError("Guru identity and profile revision must be recorded together")
         if (self.decision == "trade") != bool(self.instructions):
             raise ValueError("Only validated trade decisions contain instructions")
+        if self.suggested and self.decision != "review":
+            raise ValueError("Only a post that waits for the owner suggests calls to copy")
         if len(self.evidence) != len(self.instructions):
             raise ValueError("Every instruction requires evidence")
         for instruction, evidence in zip(self.instructions, self.evidence, strict=True):

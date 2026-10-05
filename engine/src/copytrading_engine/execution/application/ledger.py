@@ -393,8 +393,7 @@ class TradingLedger:
             correction.correction_id in self._snapshot.manual_corrections
             or self.account_id not in correction.selected_account_ids
             or message is None
-            or message.status != "review_required"
-            or message.decision != "review"
+            or not message.waits_for_owner
             or message.timestamp != correction.source_at
             or message.text != correction.source_text
             or StockSignal.model_validate(

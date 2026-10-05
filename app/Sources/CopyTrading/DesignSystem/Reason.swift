@@ -99,5 +99,6 @@ enum Reason {
         "batch_size_unknown": "The post named a batch, not a size",
         "sell_names_no_buy": "The sell didn't say which buy it comes from",
         "price_moved": "The market moved too far from the guru's price",
+        "waiting_expired": "Its trading day has ended, so it can no longer be copied",
     ]
 }

@@ -21,6 +21,7 @@ struct ManualReviewSheet: View {
 
     init(
         source: SourceActivity,
+        copying: WaitingCall? = nil,
         accounts: [AccountOverview],
         operations: (any ManualReviewOperations)?,
         feature: ManualReviewFeatureModel
@@ -31,7 +32,14 @@ struct ManualReviewSheet: View {
         self.feature = feature
         let available = Set(accounts.map(\.accountID))
         let needsReview = Set(source.destinations.filter { $0.status == "review_required" }.map(\.accountID))
-        _selectedAccountIDs = State(initialValue: available.intersection(needsReview))
+        _selectedAccountIDs = State(initialValue: available.intersection(copying.map { Set($0.accountIDs) } ?? needsReview))
+        // Copying fills in the calls the post waits on, for the owner to check before previewing.
+        if let copying {
+            if !copying.calls.isEmpty {
+                _instructions = State(initialValue: copying.calls.map(ManualInstructionDraft.init(call:)))
+            }
+            _reason = State(initialValue: L10n.string("Copied a call that was waiting for me"))
+        }
     }
 
     private var savedCorrection: ManualCorrectionRecord? {

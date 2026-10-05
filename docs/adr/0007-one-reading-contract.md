@@ -58,9 +58,13 @@ same as his 1/6.
    skipped, with the reason shown.
 6. **Five outcomes.** Every post ends as traded, traded smaller, waiting for you, skipped, or
    ignored. Activity shows the post, how it was read, and what the account did.
-7. **Waiting for you.** A call that waits shows Copy and Skip, raises an alert when alerts are on,
-   and expires at the close. Copying applies the same rules; a range buys at market inside it, or
-   rests at its top until the close.
+7. **Waiting for you.** A post waits when the reader leaves it for the owner, or when an account
+   holds a call back (the market moved). It shows Copy and Skip, raises an alert when alerts are
+   on, and can be copied until its trading day ends (20:00 New York time). Copy opens the calls the
+   engine suggests in the review sheet: a range as a limit at its top, a batch the guru has no N for
+   at the default share. The owner checks them, then each account previews the order under its
+   own limits before anything is placed. Only a post an account is waiting on can be copied, so a
+   copy never doubles an order already sent. Skip only takes the post off the owner's list.
 8. **What a sell refers to** is set per guru. *The buy price*: each buy is its own lot, and a sell
    names the lot it sells from, as 赵哥 does. *The whole position*: every buy of a stock joins one
    lot, so a sell that names no buy, as 分析师's 跑路了, sells all of it or the stated share. Either

@@ -7,9 +7,11 @@ from decimal import Decimal
 import pytest
 
 from copytrading_engine.execution.application.engine import CopyEngine
+from copytrading_engine.execution.domain.manual_commands import ManualCorrectionRecord
 from copytrading_engine.execution.domain.market import Quote
 from copytrading_engine.execution.domain.progress import Skipped
 from copytrading_engine.execution.domain.signals import CopyConfig
+from copytrading_engine.shared.signals import StockSignal
 
 from .builders import NOW, deliver, event
 from .fakes import FakeBroker, MemoryRepository
@@ -161,3 +163,64 @@ def test_a_trimmed_buy_keeps_what_the_call_asked_for():
     [order] = engine.ledger.orders()
     assert order.requested_usd == Decimal("300.00")
     assert order.qty * order.limit_price == Decimal(100)
+
+
+# --- A call held for the owner can be copied by hand, a traded one cannot ------------------------
+
+
+def _correction(engine: CopyEngine, message_id: str = "1") -> ManualCorrectionRecord:
+    message = engine.ledger.message(f"discord:demo:{message_id}")
+    signal = StockSignal.model_validate(
+        {name: getattr(message, name) for name in StockSignal.model_fields}
+    )
+    return ManualCorrectionRecord(
+        correction_id="copy-1",
+        source_id=message.key,
+        selected_account_ids=("paper-demo",),
+        revision=1,
+        actor="owner",
+        reason="Copied a waiting call",
+        instructions=signal.instructions,
+        source_revision=1,
+        source_at=signal.timestamp,
+        source_text=signal.text,
+        accepted_interpretation=signal,
+        recorded_at=NOW,
+    )
+
+
+def test_a_buy_held_because_the_market_moved_can_be_copied_by_hand():
+    engine = _engine(QuotingBroker("40"))
+    deliver(engine, event())
+    assert _outcome(engine) == Skipped(reason="price_moved")
+
+    recorded = engine.ledger.record_manual_correction(_correction(engine))
+
+    assert recorded.correction_id == "copy-1"
+
+
+def test_a_call_the_account_already_traded_cannot_be_copied_again():
+    engine = _engine(FakeBroker())
+    deliver(engine, event())
+    assert engine.ledger.orders()
+
+    with pytest.raises(ValueError, match="reviewed source evidence"):
+        engine.ledger.record_manual_correction(_correction(engine))
+
+
+def test_a_held_buy_alerts_that_it_waits_for_the_owner():
+    from copytrading_engine.execution.presentation.notifications import execution_notification
+
+    store = MemoryRepository()
+    engine = CopyEngine(store, QuotingBroker("40"), CopyConfig(sources=["discord:demo"]))
+    engine.bind(NOW)
+    deliver(engine, event())
+    held = next(
+        alert
+        for journal_event in store.events
+        if (alert := execution_notification(engine.ledger.snapshot(), journal_event)) is not None
+        and "waiting" in alert.payload.annotations["summary"]
+    )
+
+    assert held.payload.annotations["summary"] == "ABC — waiting for you"
+    assert "copy or skip" in held.payload.annotations["evidence"]

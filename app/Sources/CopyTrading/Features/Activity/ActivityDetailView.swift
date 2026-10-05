@@ -7,7 +7,10 @@ struct ActivityDetailView: View {
     let guruName: String?
     let canReview: Bool
     let canEvaluate: Bool
+    let skippedCalls: SkippedCalls
     let review: () -> Void
+    /// Copies the calls a post waits on, through the review sheet's preview and confirmation.
+    let copy: (WaitingCall) -> Void
     let evaluate: () -> Void
     @State private var readerPosition = ScrollPosition(edge: .top)
 
@@ -157,12 +160,42 @@ struct ActivityDetailView: View {
 
     @ViewBuilder
     private var actionButtons: some View {
-        if item.needsManualReview {
+        if let waiting = WaitingCall(item) {
+            waitingActions(waiting)
+        } else if item.needsManualReview {
             Button(L10n.string("Review and Correct…"), systemImage: "pencil.and.list.clipboard", action: review)
                 .buttonStyle(.borderedProminent)
                 .disabled(!canReview)
                 .accessibilityHint(L10n.string("Opens the reviewed correction, preview, and confirmation workflow."))
         }
+        evaluateButton
+    }
+
+    /// A call that waits for the owner (ADR-0007): copy it, or skip it, until its trading day ends.
+    @ViewBuilder
+    private func waitingActions(_ waiting: WaitingCall) -> some View {
+        if skippedCalls.contains(item.sourceID) {
+            Label(L10n.string("You skipped this call."), systemImage: "forward.end")
+                .foregroundStyle(.secondary)
+        } else if waiting.hasExpired(at: .now) {
+            Label(L10n.string("This call expired when its trading day ended."), systemImage: "clock.badge.xmark")
+                .foregroundStyle(.secondary)
+        } else {
+            Button(
+                L10n.string(waiting.calls.isEmpty ? "Enter Trade…" : "Copy…"), systemImage: "doc.on.doc",
+                action: { copy(waiting) }
+            )
+            .buttonStyle(.borderedProminent)
+            .disabled(!canReview)
+            .accessibilityIdentifier("activity.copy")
+            .accessibilityHint(L10n.string("Opens the call to check, then previews the order in each waiting account."))
+            Button(L10n.string("Skip"), systemImage: "forward") { skippedCalls.skip(item.sourceID) }
+                .accessibilityIdentifier("activity.skip")
+        }
+    }
+
+    @ViewBuilder
+    private var evaluateButton: some View {
         if item.isHistorical {
             Button(L10n.string("Evaluate with Saved Profile…"), systemImage: "wand.and.stars", action: evaluate)
                 .disabled(!canEvaluate)

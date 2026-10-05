@@ -933,3 +933,22 @@ async def test_paused_runtime_pipe_recovers_retained_command_without_owner_or_re
     assert runtime.status().state == "paused"
     assert runtime._accounts == {}
     assert broker.calls == 1
+
+
+@pytest.mark.parametrize(
+    ("later", "expired"),
+    [
+        pytest.param(dt.timedelta(hours=4), False, id="later-the-same-trading-day"),
+        pytest.param(dt.timedelta(days=1), True, id="the-next-trading-day"),
+    ],
+)
+def test_a_waiting_call_can_be_copied_only_through_its_own_trading_day(tmp_path, later, expired):
+    engine, broker, _, app, correction = setup_manual(tmp_path)
+    engine.bind(NOW + later)
+    broker.quote_time = NOW + later
+
+    preview = app.preview(preview_request(correction), NOW + later)
+
+    assert ("waiting_expired" in preview.reasons) is expired
+    source = next(check for check in preview.checks if check.name == "source")
+    assert source.status == ("blocked" if expired else "passed")

@@ -19,7 +19,8 @@ enum ActivityFilter: String, CaseIterable, Identifiable {
     func includes(_ item: SourceActivity) -> Bool {
         switch self {
         case .all: true
-        case .needsReview: item.decision == "review" || item.deliveryStatus.contains("review")
+        case .needsReview:
+            item.decision == "review" || item.deliveryStatus.contains("review") || WaitingCall(item) != nil
         case .trades: item.decision == "trade"
         }
     }

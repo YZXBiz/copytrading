@@ -25,7 +25,6 @@ from copytrading_engine.shared.queue_snapshot import QueueSnapshot
 from copytrading_engine.shared.raw_message import RawMessage
 from copytrading_engine.shared.signals import StockSignal
 from copytrading_engine.trading.presentation.operator_models import (
-    InstructionView,
     RejectedSourceActivity,
     SourceActivity,
     SourceActivityPage,
@@ -184,17 +183,8 @@ def source_page(
                 parser_reason=decision.reason if decision else None,
                 parser_profile=decision.parser_profile if decision else None,
                 interpreted_by=decision.model if decision else None,
-                instructions=tuple(
-                    InstructionView(
-                        action=instruction.action,
-                        symbol=instruction.symbol,
-                        price=instruction.price,
-                        fraction=instruction.fraction,
-                    )
-                    for instruction in decision.instructions
-                )
-                if decision
-                else (),
+                instructions=decision.instructions if decision else (),
+                suggested=decision.suggested if decision else (),
                 guru_id=decision.guru_id if decision else None,
                 profile_revision=decision.profile_revision if decision else None,
                 source_event=source_event,

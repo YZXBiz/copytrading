@@ -25,7 +25,7 @@ from copytrading_engine.execution.domain.market import Quote
 from copytrading_engine.execution.domain.order_lifecycle import OrderStatus
 from copytrading_engine.execution.domain.orders import OrderRecord
 from copytrading_engine.execution.domain.pricing import quote_problem
-from copytrading_engine.execution.domain.sessions import Session
+from copytrading_engine.execution.domain.sessions import Session, trade_date
 
 MANUAL_PREVIEW_TTL_SECONDS = 30
 log = logging.getLogger(__name__)
@@ -195,11 +195,14 @@ class ManualTradingApplication:
         message = self.engine.ledger.message(correction.source_id)
         source_age = max(0, int((now - correction.source_at).total_seconds()))
         config_sha = facts_digest(self.engine.config.model_dump(mode="json"))
-        checks: list[ManualCheck] = [
-            ManualCheck(name="source", status="passed"),
-            ManualCheck(name="account", status="passed"),
-        ]
         reasons: list[str] = []
+        # A call waits for the owner only through its own trading day (ADR-0007).
+        if trade_date(now) != trade_date(correction.source_at):
+            reasons.append("waiting_expired")
+            checks = [ManualCheck(name="source", status="blocked", reason="waiting_expired")]
+        else:
+            checks = [ManualCheck(name="source", status="passed")]
+        checks.append(ManualCheck(name="account", status="passed"))
 
         account = self.engine.broker.account()
         if account.id != self.broker_account_id or not account.active:

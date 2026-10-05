@@ -1498,3 +1498,14 @@
 "A 1/6 call buys **%@** and a 1/2 call **%@**." = "A 1/6 call buys **%@** and a 1/2 call **%@**.";
 "The per-order limit, **%@**, trims anything bigger, and Activity says when it does." = "The per-order limit, **%@**, trims anything bigger, and Activity says when it does.";
 "A call that names no size buys **%@**." = "A call that names no size buys **%@**.";
+"You skipped this call." = "You skipped this call.";
+"This call expired when its trading day ended." = "This call expired when its trading day ended.";
+"Opens the call to check, then previews the order in each waiting account." = "Opens the call to check, then previews the order in each waiting account.";
+"Skip" = "Skip";
+"Copy…" = "Copy…";
+"Enter Trade…" = "Enter Trade…";
+"Size" = "Size";
+"e.g. 1/6; empty buys the default share" = "e.g. 1/6; empty buys the default share";
+"Sells from" = "Sells from";
+"Copied a call that was waiting for me" = "Copied a call that was waiting for me";
+"Its trading day has ended, so it can no longer be copied" = "Its trading day has ended, so it can no longer be copied";

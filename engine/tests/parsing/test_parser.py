@@ -223,6 +223,54 @@ async def test_only_a_placeable_current_call_trades(post, reading, decision, rea
     assert result.reading == reading
 
 
+@pytest.mark.parametrize(
+    ("post", "reading", "copied"),
+    [
+        pytest.param(
+            "如果明天20以下买sco",
+            Conditional(summary="Buy if below 20", condition="如果明天20以下", calls=(SCO,)),
+            [("buy", "SCO", Decimal(20), None)],
+            id="a-conditional-as-read",
+        ),
+        pytest.param(
+            "sco 18-20买",
+            trade(
+                SCO.model_copy(
+                    update={"price": Range(low=18, high=20, low_words="18", high_words="20")}
+                )
+            ),
+            [("buy", "SCO", Decimal(20), None)],
+            id="a-range-at-its-top",
+        ),
+        pytest.param(
+            "sco 20买第二批",
+            trade(SCO.model_copy(update={"size": Batch(number=2, words="第二批")})),
+            [("buy", "SCO", Decimal(20), None)],
+            id="a-batch-without-n-at-the-default-share",
+        ),
+        pytest.param("买sco", trade(_no_price(SCO)), [], id="no-price-nothing-to-copy"),
+        pytest.param(
+            "sco 20跑路了",
+            trade(sell("SCO", "20", bought_at=None, said="跑路了")),
+            [],
+            id="a-sell-naming-no-buy-is-sold-from-accounts",
+        ),
+        pytest.param("sco ???", Unclear(summary="Cannot tell"), [], id="unclear"),
+    ],
+)
+async def test_a_waiting_post_suggests_what_copy_places(post, reading, copied):
+    result = await read(post, reading)
+
+    assert result.decision == "review"
+    assert [(i.action, i.symbol, i.price, i.fraction) for i in result.suggested] == copied
+
+
+async def test_a_trade_suggests_nothing_because_it_already_trades():
+    result = await read(TEXT, trade(buy("ABC", "25", fraction=SIXTH, fraction_said="6分之一")))
+
+    assert (result.decision, result.suggested) == ("trade", ())
+
+
 async def test_a_post_with_one_unplaceable_call_places_none_of_them():
     reading = trade(buy("ABC", "25"), sell("SCO", "20", bought_at=None, said="跑路了"))
 

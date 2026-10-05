@@ -1498,3 +1498,14 @@
 "A 1/6 call buys **%@** and a 1/2 call **%@**." = "1/6 的信号买入 **%@**，1/2 的信号买入 **%@**。";
 "The per-order limit, **%@**, trims anything bigger, and Activity says when it does." = "单笔上限 **%@** 会把更大的买入削减到这个金额，“活动”里会注明。";
 "A call that names no size buys **%@**." = "没说仓位的信号买入 **%@**。";
+"You skipped this call." = "你跳过了这条信号。";
+"This call expired when its trading day ended." = "这条信号已随当天交易日结束而过期。";
+"Opens the call to check, then previews the order in each waiting account." = "打开这条信号供你核对，然后在每个等待中的账户里预览订单。";
+"Skip" = "跳过";
+"Copy…" = "跟单…";
+"Enter Trade…" = "手动下单…";
+"Size" = "仓位";
+"e.g. 1/6; empty buys the default share" = "例如 1/6；不填则买入默认仓位";
+"Sells from" = "卖出来源";
+"Copied a call that was waiting for me" = "跟单了一条等我决定的信号";
+"Its trading day has ended, so it can no longer be copied" = "当天交易日已结束，不能再跟单";

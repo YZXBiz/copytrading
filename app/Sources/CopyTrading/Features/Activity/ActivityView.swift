@@ -7,6 +7,7 @@ struct ActivityView: View {
     @Bindable var screenState: ActivityScreenState
     @State private var reviewFeature = ManualReviewFeatureModel()
     @State private var selectedSheet: ActivitySheet?
+    @State private var skippedCalls = SkippedCalls()
 
     private var visibleActivity: [SourceActivity] {
         feature.activity.filter(screenState.filter.includes)
@@ -93,7 +94,9 @@ struct ActivityView: View {
                         guruName: directory.name(for: selectedItem.guruID),
                         canReview: !feature.accounts.isEmpty,
                         canEvaluate: model.savedTradingConfiguration?.routes.isEmpty == false,
-                        review: { selectedSheet = .manualReview(selectedItem) },
+                        skippedCalls: skippedCalls,
+                        review: { selectedSheet = .manualReview(selectedItem, copying: nil) },
+                        copy: { selectedSheet = .manualReview(selectedItem, copying: $0) },
                         evaluate: { selectedSheet = .historicalEvaluation(selectedItem) }
                     )
                 } else {
@@ -107,9 +110,10 @@ struct ActivityView: View {
     @ViewBuilder
     private func sheet(for selected: ActivitySheet) -> some View {
         switch selected {
-        case .manualReview(let source):
+        case .manualReview(let source, let copying):
             ManualReviewSheet(
                 source: source,
+                copying: copying,
                 accounts: feature.accounts,
                 operations: model.accountActions(),
                 feature: reviewFeature

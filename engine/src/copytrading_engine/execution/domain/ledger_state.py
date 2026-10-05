@@ -23,7 +23,12 @@ from copytrading_engine.execution.domain.ownership import (
     OwnershipIncident,
     OwnershipResolution,
 )
-from copytrading_engine.execution.domain.progress import InstructionProgress, OrderLinked, Pending
+from copytrading_engine.execution.domain.progress import (
+    InstructionProgress,
+    OrderLinked,
+    Pending,
+    Skipped,
+)
 from copytrading_engine.execution.domain.recovery import (
     LateOrderIncident,
     ManualSale,
@@ -58,6 +63,10 @@ class CashAnchor(Value):
     buying_power: Quantity
 
 
+# Skips that hold a call back for the owner rather than refuse it.
+HELD_FOR_OWNER = frozenset({"price_moved"})
+
+
 class MessageRecord(StockSignal):
     model_config = ConfigDict(frozen=True, extra="forbid", hide_input_in_errors=True)
     source_key: Identifier
@@ -82,6 +91,18 @@ class MessageRecord(StockSignal):
     @property
     def key(self) -> str:
         return f"{self.source_key}:{self.id}"
+
+    @property
+    def waits_for_owner(self) -> bool:
+        """The account will not act on this post by itself (ADR-0007): it waits for review, or it
+        finished and held a call back for the owner. Only such a post can be copied by hand, so a
+        copy never doubles an order the account already sent."""
+        return self.status == "review_required" or (
+            self.status == "done"
+            and any(
+                isinstance(part, Skipped) and part.reason in HELD_FOR_OWNER for part in self.parts
+            )
+        )
 
 
 class LedgerSnapshot(Value):
@@ -223,8 +244,7 @@ class LedgerSnapshot(Value):
                 key != correction.correction_id
                 or revision_key in correction_revisions
                 or message is None
-                or message.status != "review_required"
-                or message.decision != "review"
+                or not message.waits_for_owner
                 or accepted != correction.accepted_interpretation
                 or correction.source_text != message.text
                 or correction.source_at != message.timestamp

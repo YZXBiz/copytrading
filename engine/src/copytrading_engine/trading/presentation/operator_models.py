@@ -1,6 +1,5 @@
 """Bounded native read contracts backed by operational evidence."""
 
-from decimal import Decimal
 from typing import Literal
 
 from pydantic import AwareDatetime
@@ -10,6 +9,7 @@ from copytrading_engine.execution.presentation.operator_views import (
     AccountUnavailable,
     DestinationView,
 )
+from copytrading_engine.shared.signals import Instruction
 
 
 class SourceEmbedField(Value):
@@ -67,15 +67,6 @@ class RejectedSourceActivity(Value):
     source_event: SourceEventEvidence
 
 
-class InstructionView(Value):
-    """One trade the interpreter read from a post, before any account sizing."""
-
-    action: Literal["buy", "reduce", "close"]
-    symbol: str
-    price: Decimal
-    fraction: Decimal | None
-
-
 class SourceActivity(Value):
     sequence: int
     source_id: str
@@ -91,7 +82,10 @@ class SourceActivity(Value):
     parser_reason: str | None
     parser_profile: str | None
     interpreted_by: str | None
-    instructions: tuple[InstructionView, ...]
+    # The calls the post trades, as the engine places them, before any account sizing.
+    instructions: tuple[Instruction, ...]
+    # For a post that waits for the owner: what Copy places (ADR-0007).
+    suggested: tuple[Instruction, ...] = ()
     guru_id: str | None = None
     profile_revision: str | None = None
     source_event: SourceEventEvidence

@@ -267,6 +267,7 @@ private func activityWithSourceText(
         "parse_status": "complete",
         "delivery_status": "delivered",
         "instructions": [],
+        "suggested": [],
         "source_event": [
             "event_type": "discord_message",
             "content": eventContent ?? text,

@@ -380,12 +380,24 @@ public struct RejectedSourceActivity: Codable, Equatable, Identifiable, Sendable
     }
 }
 
-/// One trade the interpreter read from a post, before any account sizing.
+/// One call as the engine places it, before any account sizing.
 public struct SourceInstruction: Codable, Equatable, Sendable {
     public let action: String
     public let symbol: String
     public let price: String
+    public let entryPrice: String?
     public let fraction: String?
+    public let exitBasis: String?
+    /// For a guru whose sells refer to the whole position: a buy joins the stock's one lot, and a
+    /// sell sells from it.
+    public let wholePosition: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case action, symbol, price, fraction
+        case entryPrice = "entry_price"
+        case exitBasis = "exit_basis"
+        case wholePosition = "whole_position"
+    }
 }
 
 public struct SourceActivity: Codable, Equatable, Identifiable, Sendable {
@@ -406,6 +418,8 @@ public struct SourceActivity: Codable, Equatable, Identifiable, Sendable {
     public let parserProfile: String?
     public let interpretedBy: String?
     public let instructions: [SourceInstruction]
+    /// For a post that waits for the owner: what Copy places (ADR-0007).
+    public let suggested: [SourceInstruction]
     public let sourceEvent: SourceEventEvidence
     public let destinations: [DestinationActivity]
     public var id: Int { sequence }
@@ -428,6 +442,7 @@ public struct SourceActivity: Codable, Equatable, Identifiable, Sendable {
         case parserProfile = "parser_profile"
         case interpretedBy = "interpreted_by"
         case instructions
+        case suggested
         case sourceEvent = "source_event"
         case destinations
     }

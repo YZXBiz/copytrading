@@ -11,6 +11,7 @@ func runConnectionsDraftTests() throws {
     try statusWordsClassifyAsWholeWords()
     try pickingAProviderSuggestsItsModelButKeepsATypedOne()
     try marketHoursAlsoReadInTheOwnersTime()
+    try skippedCallsAreKeptAWeek()
 }
 
 @MainActor
@@ -159,4 +160,21 @@ private func marketHoursAlsoReadInTheOwnersTime() throws {
     try #require(overnight.hasPrefix("20:00–4:00 New York time (8:00–16:00 "), "Overnight hours read \(overnight) in Shanghai")
     let home = MarketHoursText.hours([((20, 0), (4, 0))], now: october, zone: newYork)
     try #require(home == "20:00–4:00 New York time", "Hours read \(home) on a Mac in New York")
+}
+
+/// Skipping a waiting call takes it off the owner's list across launches, and the list forgets it
+/// a week later, long after the call has expired.
+@MainActor
+private func skippedCallsAreKeptAWeek() throws {
+    let suite = "skipped-calls-\(UUID().uuidString)"
+    let defaults = try #require(UserDefaults(suiteName: suite))
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let monday = Date(timeIntervalSince1970: 1_791_200_000)
+
+    SkippedCalls(defaults: defaults, now: monday).skip("discord:1:2", at: monday)
+
+    try #require(SkippedCalls(defaults: defaults, now: monday.addingTimeInterval(3600)).contains("discord:1:2"), "a skip was lost")
+    try #require(
+        !SkippedCalls(defaults: defaults, now: monday.addingTimeInterval(8 * 24 * 3600)).contains("discord:1:2"),
+        "a skip was kept past a week")
 }
