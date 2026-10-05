@@ -114,13 +114,37 @@ def test_other_source_cannot_close_owned_lot(system):
     assert broker.holdings["ABC"] == 4
 
 
-def test_same_entry_price_in_multiple_lots_is_ambiguous(system):
-    engine, broker, _ = system
+def test_buys_at_the_same_price_are_one_position_that_one_exit_sells(system):
+    """The guru counts two buys at one price as one position: "sell half of the 25 lot" sells
+    half of both, and closing it sells all of them."""
+    engine, broker, store = system
     deliver(engine, event())
     later = NOW + dt.timedelta(minutes=11)
     deliver(engine, event("2", timestamp=later), later)
-    deliver(engine, event("3", "close", "27", "25", timestamp=later), later)
-    assert broker.calls == 2
+    assert broker.holdings["ABC"] == 8
+    [(key, lot)] = store.load().lots.items()
+    assert (lot.original_qty, lot.remaining_qty) == (8, 8)
+    assert len(lot.entries(key)) == 2
+
+    deliver(engine, event("3", "reduce", "27", "25", timestamp=later), later)
+    assert broker.holdings["ABC"] == 4
+    deliver(engine, event("4", "close", "28", "25", timestamp=later), later)
+    assert broker.holdings["ABC"] == 0
+
+
+def test_a_buy_after_the_position_was_sold_opens_its_own_lot(system):
+    engine, broker, store = system
+    deliver(engine, event())
+    deliver(engine, event("2", "close", "27", "25"))
+    later = NOW + dt.timedelta(minutes=11)
+    deliver(engine, event("3", timestamp=later), later)
+
+    lots = store.load().lots
+    assert sorted((lot.remaining_qty, lot.joined_entries) for lot in lots.values()) == [
+        (0, ()),
+        (4, ()),
+    ]
+    assert broker.holdings["ABC"] == 4
 
 
 def test_aged_cancelable_limit_order_is_canceled_and_confirmed(system):

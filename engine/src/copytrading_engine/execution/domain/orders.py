@@ -115,6 +115,13 @@ class OwnedLot(Value):
     original_qty: Positive
     remaining_qty: Quantity
     average_price: Positive
+    # Later buys at the guru's same price that joined this lot while it was open. The guru
+    # counts them as one position, so an exit naming that price sells from all of them.
+    joined_entries: tuple[Identifier, ...] = ()
+
+    def entries(self, key: str) -> tuple[str, ...]:
+        """Every buy order in this lot: the one that opened it, which keys it, then the rest."""
+        return (key, *self.joined_entries)
 
     @model_validator(mode="after")
     def valid_remaining(self) -> Self:

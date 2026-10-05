@@ -62,29 +62,32 @@ def reconcile_restore_snapshot(
     for lot_id, lot in snapshot.lots.items():
         if lot.remaining_qty <= 0:
             continue
-        order = snapshot.orders.get(lot_id)
-        broker_order = evidence.known_orders.get(lot_id)
-        if order is None or broker_order is None:
-            raise RestoreReconciliationError(
-                "open owned lot is missing fresh broker order evidence"
-            )
-        if (
-            order.side != "buy"
-            or order.broker_id is None
-            or broker_order.id != order.broker_id
-            or broker_order.client_order_id != lot_id
-            or broker_order.symbol != order.symbol
-            or broker_order.side != order.side
-            or broker_order.qty != order.qty
-            or broker_order.filled_qty != order.filled_qty
-            or broker_order.filled_avg_price != lot.average_price
-            or broker_order.position_intent != order.position_intent
-            or map_broker_status(broker_order.status) != order.status
-        ):
-            raise RestoreReconciliationError(
-                "open owned lot differs from fresh broker order identity, quantity, status, or "
-                "price"
-            )
+        for entry in lot.entries(lot_id):
+            order = snapshot.orders.get(entry)
+            broker_order = evidence.known_orders.get(entry)
+            if order is None or broker_order is None:
+                raise RestoreReconciliationError(
+                    "open owned lot is missing fresh broker order evidence"
+                )
+            # A lot of one buy carries that buy's average; a joined lot checks each buy's own.
+            average = lot.average_price if not lot.joined_entries else order.filled_avg_price
+            if (
+                order.side != "buy"
+                or order.broker_id is None
+                or broker_order.id != order.broker_id
+                or broker_order.client_order_id != entry
+                or broker_order.symbol != order.symbol
+                or broker_order.side != order.side
+                or broker_order.qty != order.qty
+                or broker_order.filled_qty != order.filled_qty
+                or broker_order.filled_avg_price != average
+                or broker_order.position_intent != order.position_intent
+                or map_broker_status(broker_order.status) != order.status
+            ):
+                raise RestoreReconciliationError(
+                    "open owned lot differs from fresh broker order identity, quantity, status, "
+                    "or price"
+                )
 
     expected = _expected_positions(snapshot)
     actual = {symbol: quantity for symbol, quantity in evidence.positions.items() if quantity}

@@ -310,10 +310,11 @@ class AlpacaBroker:
         for lot_id, lot in snapshot.lots.items():
             if lot.remaining_qty <= 0:
                 continue
-            found = self.lookup(lot_id)
-            if found is None:
-                raise BrokerResponseError()
-            known_orders[lot_id] = found
+            for entry in lot.entries(lot_id):
+                found = self.lookup(entry)
+                if found is None:
+                    raise BrokerResponseError()
+                known_orders[entry] = found
 
         order_events = self._orders_after(created_at)
         activity_events = self._activity_events_after(created_at)
