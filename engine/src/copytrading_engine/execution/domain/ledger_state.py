@@ -115,6 +115,14 @@ class LedgerSnapshot(Value):
     def buy_halted(self) -> bool:
         return self.entry_halted
 
+    @property
+    def has_outstanding_work(self) -> bool:
+        """A call still to act on, or an order still open: work a clock decides, such as an
+        order timeout or a call waiting for the market to open, so its account checks often."""
+        return any(message.status == "queued" for message in self.messages.values()) or any(
+            order.pending for order in self.orders.values()
+        )
+
     @model_validator(mode="after")
     def validate_references(self) -> Self:
         has_state = (

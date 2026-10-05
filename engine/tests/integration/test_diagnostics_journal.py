@@ -336,6 +336,7 @@ async def test_runtime_registered_credentials_never_reach_the_journal(
 
         async def cycle(self, now, *, halted):
             del now, halted
+            return SimpleNamespace(ledger=SimpleNamespace(has_outstanding_work=False))
 
         async def receive(self, delivery, now):
             del delivery, now

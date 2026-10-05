@@ -58,7 +58,7 @@ class AccountUnavailable(Exception):
 class AccountOwner(Protocol):
     async def receive(self, delivery: DestinationSignal, now: dt.datetime) -> None: ...
 
-    async def cycle(self, now: dt.datetime, *, halted: bool) -> object: ...
+    async def cycle(self, now: dt.datetime, *, halted: bool) -> ExecutionObservation: ...
 
     async def recover_account(self, now: dt.datetime) -> OwnershipInspection: ...
 
@@ -123,7 +123,15 @@ class AccountOwner(Protocol):
 class WatchesOrders(Protocol):
     """An owner that can say the moment one of its broker orders changes."""
 
-    async def watch_orders(self, on_update: Callable[[], None], stop: asyncio.Event) -> None: ...
+    async def watch_orders(
+        self, on_update: Callable[[], None], on_live: Callable[[bool], None], stop: asyncio.Event
+    ) -> None: ...
+
+
+# While the order stream is live and nothing waits on a clock, fills arrive the moment they
+# happen, so the periodic check is only a safety net for balances and reconciliation; it stays
+# well inside Alpaca's per-account request limits with many accounts.
+STREAM_SAFETY_SECONDS = 30.0
 
 
 class AccountSupervisor:
@@ -144,8 +152,11 @@ class AccountSupervisor:
         self.error_code: str | None = None if owner is not None else "account_unavailable"
         self._account_status = AccountStatus(self.id, self.state, self.error_code)
         self._task: asyncio.Task[None] | None = None
-        self._order_activity = asyncio.Event()
+        # Set by an order update or a newly received call: the next cycle starts at once.
+        self._wake = asyncio.Event()
         self._order_watch: asyncio.Task[None] | None = None
+        self._stream_live = False
+        self._outstanding_work = True
 
     @property
     def status(self) -> AccountStatus:
@@ -188,7 +199,7 @@ class AccountSupervisor:
         self._task = asyncio.create_task(self._reconcile())
         if isinstance(self.owner, WatchesOrders):
             self._order_watch = asyncio.create_task(
-                self.owner.watch_orders(self._order_activity.set, self.stop)
+                self.owner.watch_orders(self._wake.set, self._stream_changed, self.stop)
             )
         self.on_change()
 
@@ -204,29 +215,46 @@ class AccountSupervisor:
         except Exception as exc:  # noqa: BLE001 - the supervisor records the account failure
             self._fail(exc)
             raise AccountUnavailable from None
+        # A new call is acted on now, not at the next periodic check.
+        self._wake.set()
 
     async def _reconcile(self) -> None:
         assert self.owner is not None
         while not self.stop.is_set() and self.state == "running":
-            # Cleared before the cycle: an order change during it starts the next cycle at once.
-            self._order_activity.clear()
+            # Cleared before the cycle: a wake during it starts the next cycle at once.
+            self._wake.clear()
             try:
-                await self.owner.cycle(dt.datetime.now(dt.UTC), halted=False)
+                observation = await self.owner.cycle(dt.datetime.now(dt.UTC), halted=False)
+                self._outstanding_work = observation.ledger.has_outstanding_work
                 await self.refresh()
             except Exception as exc:  # noqa: BLE001 - the supervisor records the account failure
                 self._fail(exc)
                 return
             await self._idle()
 
+    @property
+    def check_seconds(self) -> float:
+        """How long until the next periodic check: a slow safety net while the order stream is
+        live and nothing waits on a clock, otherwise the account's own short interval."""
+        if self._stream_live and not self._outstanding_work:
+            return max(self.poll_seconds, STREAM_SAFETY_SECONDS)
+        return self.poll_seconds
+
+    def _stream_changed(self, live: bool) -> None:
+        self._stream_live = live
+        if not live:
+            # Updates may have been missed while it was down: reconcile now, then check often.
+            self._wake.set()
+
     async def _idle(self) -> None:
-        """Wait for the periodic check, ended early by a live order update or Stop."""
+        """Wait for the periodic check, ended early by an order update, a new call, or Stop."""
         waits = {
             asyncio.ensure_future(self.stop.wait()),
-            asyncio.ensure_future(self._order_activity.wait()),
+            asyncio.ensure_future(self._wake.wait()),
         }
         try:
             await asyncio.wait(
-                waits, timeout=self.poll_seconds, return_when=asyncio.FIRST_COMPLETED
+                waits, timeout=self.check_seconds, return_when=asyncio.FIRST_COMPLETED
             )
         finally:
             for wait in waits:

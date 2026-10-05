@@ -127,10 +127,13 @@ class ExecutionOwner:
             ),
         )
 
-    async def watch_orders(self, on_update: Callable[[], None], stop: asyncio.Event) -> None:
-        """Call `on_update` whenever Alpaca reports a change to one of this account's orders."""
+    async def watch_orders(
+        self, on_update: Callable[[], None], on_live: Callable[[bool], None], stop: asyncio.Event
+    ) -> None:
+        """Call `on_update` whenever Alpaca reports a change to one of this account's orders, and
+        `on_live` as the stream connects and drops."""
         if self._order_stream is not None:
-            await self._order_stream(on_update, stop)
+            await self._order_stream(on_update, on_live, stop)
 
     @classmethod
     async def _from_resource_factory(

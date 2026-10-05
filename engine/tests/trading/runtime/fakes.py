@@ -4,6 +4,7 @@ import asyncio
 import sqlite3
 from decimal import Decimal
 from pathlib import Path
+from types import SimpleNamespace
 
 from copytrading_engine.parsing.extraction import DecodedMessage
 from copytrading_engine.shared.signals import Evidence
@@ -68,6 +69,7 @@ class Owner:
         self.stopped = False
         self.closed = False
         self.cycles = 0
+        self.outstanding_work = False
         self.deliveries = []
 
     async def receive(self, delivery, now):
@@ -86,6 +88,7 @@ class Owner:
     async def cycle(self, now, *, halted):
         assert not halted
         self.cycles += 1
+        return SimpleNamespace(ledger=SimpleNamespace(has_outstanding_work=self.outstanding_work))
 
     async def account_status(self):
         from copytrading_engine.execution.application.ports import AccountRuntimeView
