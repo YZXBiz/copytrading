@@ -55,6 +55,12 @@ public enum L10n {
         sentences.joined(separator: AppLanguagePreference.shared.language == .simplifiedChinese ? "" : " ")
     }
 
+    /// Items joined as a list in the app's language, not the Mac's: "A, B and C", "A、B和C".
+    @MainActor
+    public static func list(_ items: [String]) -> String {
+        items.formatted(.list(type: .and).locale(AppLanguagePreference.shared.language.formatLocale))
+    }
+
     @MainActor
     public static func string(_ englishSourceText: String, _ arguments: CVarArg...) -> String {
         let language = AppLanguagePreference.shared.language

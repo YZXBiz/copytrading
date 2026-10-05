@@ -88,7 +88,7 @@ private func aTrimmedBuyIsTradedSmallerAndSaysByHowMuch() throws {
     let line = try #require(outcome.accounts.first?.lines.first)
     try #require(line.what == "Bought 42 SOUN at $5.85", "what was \(line.what)")
     try #require(
-        line.why == "The call asked for $333.33. Your maximum per order trimmed it to $250.",
+        line.why == "The call was for $333.33. Your max per order cut it to $250.",
         "why was \(line.why ?? "nil")")
 }
 
@@ -111,7 +111,7 @@ private func aSkipNamesTheLimitWithItsNumbers() throws {
                 .init(
                     what: "Not bought",
                     why:
-                        "zhao-paper already holds $1,900 of SOUN, and $333.33 more would pass its $2,000 maximum per stock."
+                        "zhao-paper already has $1,900 of SOUN. Buying $333.33 more would go over its $2,000 limit for one stock."
                 )
             ], "lines were \(outcome.accounts.first?.lines ?? [])")
 }

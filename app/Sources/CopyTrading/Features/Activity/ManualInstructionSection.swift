@@ -19,7 +19,7 @@ struct ManualInstructionSection: View {
             TextField(L10n.string("Source price"), text: $instruction.price, prompt: Text(L10n.string("Price quoted in the message")))
                 .accessibilityLabel(L10n.string("Source price"))
             if instruction.action == .buy {
-                TextField(L10n.string("Size"), text: size, prompt: Text(L10n.string("e.g. 1/6; empty buys the default share")))
+                TextField(L10n.string("Size"), text: size, prompt: Text(L10n.string("e.g. 1/6. Leave empty for the default.")))
                     .accessibilityLabel(L10n.string("Size"))
             } else {
                 if instruction.wholePosition {

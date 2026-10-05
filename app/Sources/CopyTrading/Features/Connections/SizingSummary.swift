@@ -14,24 +14,24 @@ enum SizingSummary {
             let sixth = terms.copiedBudgetUSD(sourceFraction: Decimal(1) / Decimal(6)),
             let half = terms.copiedBudgetUSD(sourceFraction: Decimal(1) / Decimal(2))
         else {
-            return L10n.string("Set this account's maximum per stock first: it is the guru's full position.")
+            return L10n.string("First set this account's max per stock. It's the guru's full position.")
         }
         // What each call buys once the per-order limit has trimmed it, as the engine does.
         let cap = policy.flatMap { Decimal(string: $0.maxOrderUSD.trimmed) }.flatMap { $0 > 0 ? $0 : nil }
         func bought(_ asked: Decimal) -> Decimal { cap.map { min(asked, $0) } ?? asked }
         let fallback = terms.copiedBudgetUSD(sourceFraction: nil)
         var sentences = [
-            L10n.string("The guru's full position is %@'s maximum per stock, **%@**.", account, dollars(maximum)),
+            L10n.string("%@'s max per stock, **%@**, is this guru's full position.", account, dollars(maximum)),
             L10n.string("A 1/6 call buys **%@** and a 1/2 call **%@**.", dollars(bought(sixth)), dollars(bought(half))),
         ]
         if let cap, [sixth, half, fallback ?? 0].contains(where: { $0 > cap }) {
             sentences.append(
-                L10n.string("The per-order limit, **%@**, trims anything bigger, and Activity says when it does.", dollars(cap)))
+                L10n.string("Your max per order, **%@**, cuts bigger buys down. Activity shows when.", dollars(cap)))
         }
         if let fallback {
-            sentences.append(L10n.string("A call that names no size buys **%@**.", dollars(bought(fallback))))
+            sentences.append(L10n.string("A post with no size buys **%@**.", dollars(bought(fallback))))
         } else {
-            sentences.append(L10n.string("A call that names no size waits for you to review it."))
+            sentences.append(L10n.string("A post with no size waits for you."))
         }
         return L10n.sentences(sentences)
     }

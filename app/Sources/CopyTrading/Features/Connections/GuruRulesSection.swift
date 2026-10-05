@@ -19,7 +19,7 @@ struct GuruRulesSection: View {
             .pickerStyle(.segmented)
             Toggle(isOn: buysInBatches) {
                 Text(L10n.string("Buys in batches"))
-                Text(L10n.string("“First batch”, “second batch”: each is an equal part of the full position."))
+                Text(L10n.string("“First batch”, “second batch”: each batch buys an equal part of the full position."))
             }
             .compactSwitch()
             if let batches = route.batches {
@@ -28,16 +28,16 @@ struct GuruRulesSection: View {
                 }
             }
         } header: {
-            SetupSectionHeader(title: "How they trade", detail: "The two habits that differ most between gurus.")
+            SetupSectionHeader(title: "How they trade", detail: "Two things that differ from guru to guru.")
         }
     }
 
     private static func sellsHint(_ rule: TradingSellsReferTo) -> String {
         switch rule {
         case .buyPrice:
-            "Each buy is its own lot, and a sell names the one it sells, like “sell half of the 39.5”."
+            "Each buy is kept separate. A sell says which buy, like “sell half of the 39.5”."
         case .wholePosition:
-            "Every buy of a stock is one position, and a sell like “out of RCL” sells from all of it."
+            "All buys of a stock count as one. A sell like “out of RCL” sells from all of them."
         }
     }
 

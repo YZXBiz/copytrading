@@ -87,7 +87,6 @@ class AccountPolicy(BaseModel):
     max_above_signal_pct: Decimal = Field(default=Decimal("0"), ge=0, le=100)
     # How far the market may be from the guru's price before a buy waits for you.
     max_price_move_pct: Decimal = Field(default=Decimal("5"), gt=0, le=100)
-    max_price_move_extended_pct: Decimal = Field(default=Decimal("10"), gt=0, le=100)
 
     @model_validator(mode="after")
     def validate_sessions(self) -> Self:

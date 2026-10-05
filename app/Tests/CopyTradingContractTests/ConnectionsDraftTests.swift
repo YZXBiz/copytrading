@@ -160,6 +160,13 @@ private func marketHoursAlsoReadInTheOwnersTime() throws {
     try #require(overnight.hasPrefix("20:00–4:00 New York time (8:00–16:00 "), "Overnight hours read \(overnight) in Shanghai")
     let home = MarketHoursText.hours([((20, 0), (4, 0))], now: october, zone: newYork)
     try #require(home == "20:00–4:00 New York time", "Hours read \(home) on a Mac in New York")
+
+    let preference = AppLanguagePreference.shared
+    let original = preference.language
+    defer { preference.select(original) }
+    preference.select(.simplifiedChinese)
+    let chinese = MarketHoursText.hours([((4, 0), (9, 30)), ((16, 0), (20, 0))], now: october, zone: newYork)
+    try #require(chinese == "纽约时间 4:00–9:30和16:00–20:00", "Chinese extended hours read \(chinese)")
 }
 
 /// Skipping a waiting call takes it off the owner's list across launches, and the list forgets it

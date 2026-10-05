@@ -743,7 +743,7 @@ class TradingRuntime:
 
 def _copy_policy(configuration: TradingConfiguration, account_id: str) -> CopyConfig:
     account = next(account for account in configuration.accounts if account.id == account_id)
-    pricing = {"max_above_signal_pct", "max_price_move_pct", "max_price_move_extended_pct"}
+    pricing = {"max_above_signal_pct", "max_price_move_pct"}
     return CopyConfig(
         sources=tuple(f"discord:{channel}" for channel in configuration.source.channel_ids),
         entry_pricing=EntryPricingPolicy(**account.policy.model_dump(include=pricing)),

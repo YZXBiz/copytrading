@@ -86,7 +86,7 @@ struct HistoricalProfileEvaluationSheet: View {
                                 LabeledContent(
                                     connection.accountID,
                                     value: L10n.string(
-                                        "Full position %@: each call buys the guru's share of it",
+                                        "Full position %@. A 1/6 call buys a sixth of it.",
                                         Humanize.usd(connection.fullPositionUSD))
                                 )
                             }

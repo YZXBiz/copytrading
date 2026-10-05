@@ -237,7 +237,8 @@ final class AppModel {
 
     func createOperationalBackup(to destination: URL) async {
         guard !isRunningBackupRestore, !isInstallingUpdate, let engineActions else {
-            backupRestoreMessage = L10n.string("Start the local engine before creating a backup.")
+            backupRestoreMessage = L10n.string(
+                "The engine isn't running. Start it in Settings → Engine. If another CopyTrading is open, quit it first.")
             return
         }
         do {
@@ -271,7 +272,8 @@ final class AppModel {
             restoreRecoveryMessage == nil,
             let engineActions
         else {
-            backupRestoreMessage = L10n.string("Start the local engine before validating a restore archive.")
+            backupRestoreMessage = L10n.string(
+                "The engine isn't running. Start it in Settings → Engine. If another CopyTrading is open, quit it first.")
             return
         }
         isRunningBackupRestore = true
@@ -1132,7 +1134,7 @@ final class AppModel {
 
     func runSelfTest() async {
         guard engineActions != nil else {
-            message = L10n.string("Start the local engine before running a self-test.")
+            message = L10n.string("The engine isn't running. Start it in Settings → Engine. If another CopyTrading is open, quit it first.")
             return
         }
         guard pendingCommandID == nil else {
@@ -1213,7 +1215,7 @@ final class AppModel {
             providerAPIKey.isEmpty && draft.provider.requiresAPIKey ? "the model API key" : nil,
         ].compactMap(\.self)
         guard missing.isEmpty else {
-            throw TradingSettingsError.missingCredentials(ListFormatter.localizedString(byJoining: missing))
+            throw TradingSettingsError.missingCredentials(L10n.list(missing))
         }
         return (engine, channelID, discordToken, providerAPIKey)
     }
@@ -1222,7 +1224,7 @@ final class AppModel {
     func learnPlaybook(for route: TradingRouteDraft, in draft: ConnectionsDraft) async throws -> LearnedGuruPlaybook {
         let reading = try channelReading(
             for: route, in: draft, locked: L10n.string("Unlock CopyTrading before learning a playbook."),
-            stopped: L10n.string("Start the local engine before learning a playbook."))
+            stopped: L10n.string("The engine isn't running. Start it in Settings → Engine. If another CopyTrading is open, quit it first."))
         do {
             return try await reading.engine.learnGuruPlaybook(
                 GuruPlaybookLearningRequest(
@@ -1244,7 +1246,7 @@ final class AppModel {
     func replayPosts(for route: TradingRouteDraft, in draft: ConnectionsDraft) async throws -> GuruReplay {
         let reading = try channelReading(
             for: route, in: draft, locked: L10n.string("Unlock CopyTrading before replaying posts."),
-            stopped: L10n.string("Start the local engine before replaying posts."))
+            stopped: L10n.string("The engine isn't running. Start it in Settings → Engine. If another CopyTrading is open, quit it first."))
         let profile = try TradingProfileBuilder().build(
             TradingProfileDraft(
                 guruID: route.guruID.trimmed,
@@ -1343,7 +1345,7 @@ final class AppModel {
                     ? (configuration.notification?.service == .discord ? "the Discord webhook URL" : "the Telegram bot token") : nil,
             ].compactMap(\.self)
             guard missing.isEmpty else {
-                throw TradingSettingsError.missingCredentials(ListFormatter.localizedString(byJoining: missing))
+                throw TradingSettingsError.missingCredentials(L10n.list(missing))
             }
             let secrets = TradingSecrets(
                 discordToken: discordToken, providerAPIKey: providerAPIKey,
@@ -1795,7 +1797,7 @@ final class AppModel {
     static func failedChecksMessage(_ report: TradingCapabilityReport) -> String {
         let failed = report.checks.filter { $0.state == .failed }.map(\.title)
         guard !failed.isEmpty else { return L10n.string("A required connection check failed. Processing remains paused.") }
-        let names = ListFormatter.localizedString(byJoining: failed)
+        let names = L10n.list(failed)
         return L10n.string(
             failed.count == 1
                 ? "%@ failed its connection check. Processing remains paused."
@@ -1934,11 +1936,11 @@ final class AppModel {
             guard let full = Decimal(string: account.policy.maxSymbolUSD), full > 0,
                 connection.fullPositionUSD == account.policy.maxSymbolUSD
             else {
-                throw fail(L10n.string("Set a maximum per stock for “%@”: it is %@'s full position.", account.id, name))
+                throw fail(L10n.string("Set a max per stock for “%@”. It's %@'s full position.", account.id, name))
             }
             if let rawDefault = connection.defaultFraction {
                 guard let fraction = Decimal(string: rawDefault), fraction > 0, fraction <= 1 else {
-                    throw fail(L10n.string("“%@”: the default share must be more than 0 and at most the whole position.", name))
+                    throw fail(L10n.string("“%@”: set a default size above 0, up to the full position.", name))
                 }
             }
             if let other = copiedInto[connection.accountID] {

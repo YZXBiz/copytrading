@@ -35,9 +35,9 @@ struct GuruReplaySection: View {
             }
         } header: {
             SetupSectionHeader(
-                title: "Try it on recent posts", detail: "What each of their recent posts would have done with these settings.")
+                title: "Try it on recent posts", detail: "See what their last posts would have done with these settings.")
         } footer: {
-            Text(L10n.string("Reads up to 15 recent posts with your model, so it may charge for them. Nothing is placed."))
+            Text(L10n.string("Reads their last 15 posts with your model, which may cost a little. Nothing is bought or sold."))
         }
     }
 

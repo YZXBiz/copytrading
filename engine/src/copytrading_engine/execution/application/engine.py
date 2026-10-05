@@ -324,7 +324,7 @@ class CopyEngine:
         budget_usd = None
         if s.action == "buy":
             if not manual:
-                moved = self._market_check(s, session, now)
+                moved = self._market_check(s, now)
                 if moved is not None:
                     return TradeDecision(None, moved)
             limit_price = c.entry_pricing.limit_price(s.price)
@@ -462,7 +462,7 @@ class CopyEngine:
             "ready",
         )
 
-    def _market_check(self, s: Instruction, session: Session, now: dt.datetime) -> str | None:
+    def _market_check(self, s: Instruction, now: dt.datetime) -> str | None:
         """Why a buy should wait for the owner instead of following a market that has moved
         away from the guru's price (ADR-0007), if it should. Without a usable quote, as in a
         thin overnight market, the limit price alone bounds the buy."""
@@ -475,7 +475,7 @@ class CopyEngine:
         if quote_problem(quote, quote.ask, now) is not None:
             return None
         assert quote.ask is not None
-        if self.config.entry_pricing.market_moved(s.price, quote.ask, session):
+        if self.config.entry_pricing.market_moved(s.price, quote.ask):
             return "price_moved"
         return None
 

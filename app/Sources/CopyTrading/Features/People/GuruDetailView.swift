@@ -109,6 +109,6 @@ struct GuruDetailView: View {
         let amount =
             Decimal(engine: destination.fullPositionUSD)?.formatted(.currency(code: "USD").precision(.fractionLength(0...2)))
             ?? destination.fullPositionUSD
-        return L10n.string("Full position %@: each call buys the guru's share of it", amount)
+        return L10n.string("Full position %@. A 1/6 call buys a sixth of it.", amount)
     }
 }

@@ -27,7 +27,7 @@ struct DestinationEditorSection: View {
                 }
             }
             if let draft = connection {
-                Toggle(L10n.string("When a call names no size, buy a default share"), isOn: useDefaultShare)
+                Toggle(L10n.string("If a post gives no size, buy this much"), isOn: useDefaultShare)
                     .compactSwitch()
                 if draft.useDefaultFraction {
                     TextField(L10n.string("Default share"), text: defaultShare, prompt: Text(L10n.string("e.g. %@", "1/6")))
@@ -43,7 +43,7 @@ struct DestinationEditorSection: View {
         } header: {
             Text(L10n.string("Copies into"))
         } footer: {
-            Text(L10n.string("Each account copies one guru, so its maximum per stock is that guru's full position."))
+            Text(L10n.string("Each account follows one guru. Its max per stock is that guru's full position."))
         }
     }
 

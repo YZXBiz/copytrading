@@ -72,7 +72,7 @@ struct ActivityCardOutcome {
                 what: DestinationOutcome.order(order, count: 1).detail,
                 why: wasTrimmed(order)
                     ? L10n.string(
-                        "The call asked for %@. Your maximum per order trimmed it to %@.",
+                        "The call was for %@. Your max per order cut it to %@.",
                         Humanize.dollars(order.requestedUSD), Humanize.dollars(order.budgetUSD))
                     : nil)
         }
@@ -96,7 +96,7 @@ struct ActivityCardOutcome {
                 ? L10n.string("You skipped this call.")
                 : open
                     ? L10n.string("You can copy it until 20:00 New York time.")
-                    : L10n.string("This call expired when its trading day ended.")
+                    : L10n.string("Too late to copy: its trading day is over.")
             lines.append(Line(what: L10n.string(open ? "Not copied yet" : "Not copied"), why: L10n.sentences([reason + ".", when])))
         } else if ["stale", "out_of_order"].contains(destination.status), lines.isEmpty {
             lines.append(Line(what: L10n.string("Not copied"), why: Reason.text(destination.status)))
@@ -111,11 +111,11 @@ struct ActivityCardOutcome {
         if limit.scope == "symbol" {
             let symbol = source.instructions.indices.contains(part) ? source.instructions[part].symbol : ""
             return L10n.string(
-                "%@ already holds %@ of %@, and %@ more would pass its %@ maximum per stock.", account,
+                "%@ already has %@ of %@. Buying %@ more would go over its %@ limit for one stock.", account,
                 Humanize.dollars(limit.current), symbol, Humanize.dollars(limit.proposed), Humanize.dollars(limit.limit))
         }
         return L10n.string(
-            "%@ already holds %@ in all, and %@ more would pass its %@ maximum in total.", account,
+            "%@ already holds %@ in total. Buying %@ more would go over its %@ total limit.", account,
             Humanize.dollars(limit.current), Humanize.dollars(limit.proposed), Humanize.dollars(limit.limit))
     }
 }

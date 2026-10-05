@@ -50,12 +50,10 @@ def _outcome(engine: CopyEngine, message_id: str = "1") -> object:
 @pytest.mark.parametrize(
     ("ask", "at", "moved"),
     [
-        pytest.param("26.24", NOW, False, id="regular-4.96%-above"),
-        pytest.param("26.26", NOW, True, id="regular-5.04%-above"),
-        pytest.param("23.74", NOW, True, id="regular-5.04%-below"),
-        pytest.param("27.49", PREMARKET, False, id="extended-9.96%-above"),
-        pytest.param("27.51", PREMARKET, True, id="extended-10.04%-above"),
-        pytest.param("22.49", PREMARKET, True, id="extended-10.04%-below"),
+        pytest.param("26.24", NOW, False, id="4.96%-above"),
+        pytest.param("26.26", NOW, True, id="5.04%-above"),
+        pytest.param("23.74", NOW, True, id="5.04%-below"),
+        pytest.param("26.26", PREMARKET, True, id="the-same-limit-before-the-open"),
     ],
 )
 def test_a_buy_waits_when_the_market_is_too_far_from_the_gurus_price(ask, at, moved):

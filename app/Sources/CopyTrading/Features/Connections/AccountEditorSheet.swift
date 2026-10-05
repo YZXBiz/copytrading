@@ -61,57 +61,52 @@ struct AccountEditorSheet: View {
 
                 Section(L10n.string("Position limits (USD)")) {
                     textLimit(
-                        "Maximum per order", hint: "The most one copied buy can spend. A bigger call is cut down to this.",
+                        "Maximum per order", hint: "The most one buy can spend. A bigger buy is made smaller.",
                         text: $account.policy.maxOrderUSD,
                         example: LimitExamples.maxOrder)
                     textLimit(
                         "Maximum per stock",
                         hint:
-                            "The most this account holds in any one stock, counting shares you bought yourself. It is also the full position of the guru it copies. A buy that would go over is skipped.",
+                            "The most this account can hold in one stock, including shares you bought yourself. It's also the guru's full position. A buy that would go over is skipped.",
                         text: $account.policy.maxSymbolUSD,
                         example: LimitExamples.maxSymbol)
                     textLimit(
                         "Maximum total exposure",
                         hint:
-                            "The most this account holds in all stocks together, counting ones you bought yourself. A buy that would go over is skipped.",
+                            "The most this account can hold in all stocks, including your own. A buy that would go over is skipped.",
                         text: $account.policy.maxTotalUSD,
                         example: LimitExamples.maxTotal)
                     textLimit(
                         "Daily loss cap",
-                        hint: "Once the account is down this much since yesterday's close, buys stop for the day. Sells still run.",
+                        hint: "If the account is down this much today, it stops buying until tomorrow. It still sells.",
                         text: $account.policy.dailyLossCapUSD,
                         example: LimitExamples.dailyLossCap)
                     textLimit(
                         "Maximum above signal price (%)",
                         hint:
-                            "How far above the guru's price a buy may fill. Outside regular hours, also how far below it a sell may go. 0 means exactly the guru's price.",
+                            "The most a buy can pay above the guru's price. 0 means never more than the guru paid.",
                         text: $account.policy.maxAboveSignalPct,
                         example: LimitExamples.maxAboveSignal)
                     textLimit(
                         "Market move allowed (%)",
                         hint:
-                            "From 9:30 to 16:00 New York time, a buy isn't copied on its own when the market is further than this from the guru's price, above or below.",
+                            "If the price has moved more than this from the guru's price, up or down, the buy waits for you to decide.",
                         text: $account.policy.maxPriceMovePct,
                         example: LimitExamples.maxPriceMove)
-                    textLimit(
-                        "Market move allowed outside regular hours (%)",
-                        hint: "The same check before 9:30 and after 16:00 New York time, when quotes are thinner.",
-                        text: $account.policy.maxPriceMoveExtendedPct,
-                        example: LimitExamples.maxPriceMoveExtended)
                 }
 
                 Section(L10n.string("Timing")) {
                     numberLimit(
-                        "Entries per day", hint: "The most copied buys in one trading day. Sells don't count.",
+                        "Entries per day", hint: "The most buys in one day. Sells don't count.",
                         value: $account.policy.maxEntriesPerDay,
                         example: LimitExamples.entriesPerDay)
                     numberLimit(
                         "Maximum signal age (seconds)",
-                        hint: "A post older than this is skipped instead of copied. You can still copy it yourself from Activity.",
+                        hint: "If a post takes longer than this to arrive, it isn't copied. You can still copy it yourself in Activity.",
                         value: $account.policy.maxSignalAgeSeconds,
                         example: LimitExamples.maxSignalAge)
                     numberLimit(
-                        "Order timeout (seconds)", hint: "A limit order that hasn't filled by then is canceled.",
+                        "Order timeout (seconds)", hint: "An order that hasn't filled by then is cancelled.",
                         value: $account.policy.orderTimeoutSeconds,
                         example: LimitExamples.orderTimeout)
                 }

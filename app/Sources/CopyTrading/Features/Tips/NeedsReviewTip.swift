@@ -17,7 +17,7 @@ struct NeedsReviewTip: Tip {
         title = Text(L10n.string("A call is waiting for you"))
         message = Text(
             L10n.string(
-                "A suggestion, a condition, or a price the market has left behind is never copied on its own. It waits here for you to copy or skip it."
+                "Some posts need you: a suggestion, an “if”, or a price that has moved. They wait here until you copy or skip them."
             ))
     }
 

@@ -105,10 +105,9 @@ public struct TradingAccountPolicy: Codable, Equatable, Sendable {
     public var overnight = false
     public var copyExits = true
     public var maxAboveSignalPct = "0"
-    /// How far the market may be from the guru's price, above or below, before a buy waits for
-    /// the owner: in regular hours, and outside them (ADR-0007).
+    /// How far the market may be from the guru's price, up or down, before a buy waits for the
+    /// owner (ADR-0007).
     public var maxPriceMovePct = "5"
-    public var maxPriceMoveExtendedPct = "10"
 
     public init() {}
 
@@ -126,7 +125,6 @@ public struct TradingAccountPolicy: Codable, Equatable, Sendable {
         case copyExits = "copy_exits"
         case maxAboveSignalPct = "max_above_signal_pct"
         case maxPriceMovePct = "max_price_move_pct"
-        case maxPriceMoveExtendedPct = "max_price_move_extended_pct"
     }
 }
 

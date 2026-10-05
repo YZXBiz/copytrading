@@ -12,10 +12,10 @@ enum MarketHoursText {
         _ ranges: [(from: (Int, Int), to: (Int, Int))], now: Date = .now, zone: TimeZone = .current
     ) -> String {
         let newYorkSpans = ranges.map { "\(clock($0.from))–\(clock($0.to))" }
-        let inNewYork = L10n.string("%@ New York time", ListFormatter.localizedString(byJoining: newYorkSpans))
+        let inNewYork = L10n.string("%@ New York time", L10n.list(newYorkSpans))
         guard zone.secondsFromGMT(for: now) != newYork.secondsFromGMT(for: now) else { return inNewYork }
         let localSpans = ranges.map { "\(local($0.from, now: now, zone: zone))–\(local($0.to, now: now, zone: zone))" }
-        return "\(inNewYork) (\(ListFormatter.localizedString(byJoining: localSpans)) \(zoneName(zone, at: now)))"
+        return "\(inNewYork) (\(L10n.list(localSpans)) \(zoneName(zone, at: now)))"
     }
 
     /// The owner's zone as people write it: "PT", "CET"; a GMT offset where there is no short name.
