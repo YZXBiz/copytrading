@@ -12,6 +12,7 @@ func runConnectionsDraftTests() throws {
     try pickingAProviderSuggestsItsModelButKeepsATypedOne()
     try marketHoursAlsoReadInTheOwnersTime()
     try skippedCallsAreKeptAWeek()
+    try orderTimeoutExampleUsesTheAccountsTolerance()
 }
 
 @MainActor
@@ -184,4 +185,16 @@ private func skippedCallsAreKeptAWeek() throws {
     try #require(
         !SkippedCalls(defaults: defaults, now: monday.addingTimeInterval(8 * 24 * 3600)).contains("discord:1:2"),
         "a skip was kept past a week")
+}
+
+/// The order-timeout example prices the buy with this account's own tolerance above the guru's
+/// price, so it never contradicts the setting above it.
+@MainActor
+private func orderTimeoutExampleUsesTheAccountsTolerance() throws {
+    let atOne = LimitExamples.orderTimeout(maxAboveSignalPct: "1")
+    try #require(atOne.contains("**1%**") && atOne.contains("**$202.00 or less**") && atOne.contains("**$205**"), "\(atOne)")
+    let atZero = LimitExamples.orderTimeout(maxAboveSignalPct: "0")
+    try #require(atZero.contains("**$200.00 or less**") && atZero.contains("**$203**"), "\(atZero)")
+    let unreadable = LimitExamples.orderTimeout(maxAboveSignalPct: "")
+    try #require(unreadable.contains("**$200.00 or less**"), "\(unreadable)")
 }

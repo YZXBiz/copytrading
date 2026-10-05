@@ -1,3 +1,5 @@
+import Foundation
+
 /// One worked example per account limit, shown behind the "i" beside its name, in short plain
 /// sentences. Each matches what the engine does: the per-order limit makes a buy smaller, the
 /// holding limits skip it.
@@ -37,9 +39,26 @@ enum LimitExamples {
         Set to **120**. The guru posts at **9:31:00**. If it reaches CopyTrading after **9:33:00** \
         (say your Mac was asleep), it isn't copied. You can still copy it yourself in **Activity**.
         """
-    static let orderTimeout = """
-        Set to **60**. The guru buys at **$200**, so your order fills only at $200 or less. If the \
-        price stays at **$201**, the order is cancelled after **60 seconds**, so it can't fill hours \
-        later.
-        """
+    /// The order timeout, priced with this account's own tolerance above the guru's price, so the
+    /// example never disagrees with the setting just above it.
+    @MainActor
+    static func orderTimeout(maxAboveSignalPct: String) -> String {
+        let percent = Decimal(string: maxAboveSignalPct.trimmingCharacters(in: .whitespaces)) ?? 0
+        var ceiling = Decimal(200) * (1 + max(percent, 0) / 100)
+        var limit = Decimal()
+        NSDecimalRound(&limit, &ceiling, 2, .down)
+        var above = limit + 3
+        var jump = Decimal()
+        NSDecimalRound(&jump, &above, 0, .up)
+        return L10n.string(
+            """
+            Set to **60**. The guru buys NVDA at **$200.00**. With **Maximum above signal price** at **%@%%**, \
+            your buy fills at **%@ or less**. The price jumps to **%@** and stays there, so nothing fills. \
+            After **60 seconds** the order is cancelled, so it can't fill hours later.
+            """,
+            percent.formatted(),
+            limit.formatted(.currency(code: "USD").precision(.fractionLength(2))),
+            jump.formatted(.currency(code: "USD").precision(.fractionLength(0)))
+        )
+    }
 }

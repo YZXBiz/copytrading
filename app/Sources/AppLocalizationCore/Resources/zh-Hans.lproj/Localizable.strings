@@ -1554,7 +1554,6 @@
 "Set to **1**. The guru buys AAPL at **$200**. You pay **$202** at most. At **0**, you pay **$200** at most." = "设为 **1**。信号源以 **$200** 买入 AAPL，你最多付 **$202**。设为 **0**，最多付 **$200**。";
 "Set to **5**. After 5 buys today, more buys are skipped until tomorrow. Sells still go through." = "设为 **5**。今天买了 5 次后，之后的买入都跳过，直到明天。卖出照常。";
 "Set to **120**. The guru posts at **9:31:00**. If it reaches CopyTrading after **9:33:00** (say your Mac was asleep), it isn't copied. You can still copy it yourself in **Activity**." = "设为 **120**。信号源 **9:31:00** 发帖。如果 **9:33:00** 之后才到 CopyTrading（比如 Mac 在睡眠），就不跟单。你仍可以在**“活动”**里自己跟单。";
-"Set to **60**. The guru buys at **$200**, so your order fills only at $200 or less. If the price stays at **$201**, the order is cancelled after **60 seconds**, so it can't fill hours later." = "设为 **60**。信号源以 **$200** 买入，你的订单只在 $200 或更低成交。如果价格一直是 **$201**，**60 秒**后订单取消，不会在几小时后才成交。";
 "The engine isn't running. Start it in Settings → Engine. If another CopyTrading is open, quit it first." = "引擎没有运行。请在“设置 → 引擎”里启动。如果还开着另一个 CopyTrading，请先退出它。";
 "Sells %@ with a limit order at %@. It fills at that price or better, or not at all." = "卖出%@，限价 %@。订单只在该价格或更高价格成交，否则不成交。";
 "At today’s bid of %@, that comes to about %@." = "按今日买价 %@ 估算，金额约为 %@。";
@@ -1569,3 +1568,4 @@
 "You can approve it until 20:00 New York time." = "纽约时间 20:00 前可以批准。";
 "Too late to approve: its trading day is over." = "已来不及批准：这条信号的交易日已经结束。";
 "Not sent" = "未发送";
+"Set to **60**. The guru buys NVDA at **$200.00**. With **Maximum above signal price** at **%@%%**, your buy fills at **%@ or less**. The price jumps to **%@** and stays there, so nothing fills. After **60 seconds** the order is cancelled, so it can't fill hours later." = "设为 **60**。信号源以 **$200.00** 买入 NVDA。**高于信号价格的最高幅度**为 **%@%%** 时，你的买单最高只以 **%@ 或更低** 成交。价格涨到 **%@** 并停在那里，所以不会成交。**60 秒**后订单会被取消，不会过几个小时才成交。";

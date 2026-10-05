@@ -1554,7 +1554,6 @@
 "Set to **1**. The guru buys AAPL at **$200**. You pay **$202** at most. At **0**, you pay **$200** at most." = "Set to **1**. The guru buys AAPL at **$200**. You pay **$202** at most. At **0**, you pay **$200** at most.";
 "Set to **5**. After 5 buys today, more buys are skipped until tomorrow. Sells still go through." = "Set to **5**. After 5 buys today, more buys are skipped until tomorrow. Sells still go through.";
 "Set to **120**. The guru posts at **9:31:00**. If it reaches CopyTrading after **9:33:00** (say your Mac was asleep), it isn't copied. You can still copy it yourself in **Activity**." = "Set to **120**. The guru posts at **9:31:00**. If it reaches CopyTrading after **9:33:00** (say your Mac was asleep), it isn't copied. You can still copy it yourself in **Activity**.";
-"Set to **60**. The guru buys at **$200**, so your order fills only at $200 or less. If the price stays at **$201**, the order is cancelled after **60 seconds**, so it can't fill hours later." = "Set to **60**. The guru buys at **$200**, so your order fills only at $200 or less. If the price stays at **$201**, the order is cancelled after **60 seconds**, so it can't fill hours later.";
 "The engine isn't running. Start it in Settings → Engine. If another CopyTrading is open, quit it first." = "The engine isn't running. Start it in Settings → Engine. If another CopyTrading is open, quit it first.";
 "Sells %@ with a limit order at %@. It fills at that price or better, or not at all." = "Sells %@ with a limit order at %@. It fills at that price or better, or not at all.";
 "At today’s bid of %@, that comes to about %@." = "At today’s bid of %@, that comes to about %@.";
@@ -1569,3 +1568,4 @@
 "You can approve it until 20:00 New York time." = "You can approve it until 20:00 New York time.";
 "Too late to approve: its trading day is over." = "Too late to approve: its trading day is over.";
 "Not sent" = "Not sent";
+"Set to **60**. The guru buys NVDA at **$200.00**. With **Maximum above signal price** at **%@%%**, your buy fills at **%@ or less**. The price jumps to **%@** and stays there, so nothing fills. After **60 seconds** the order is cancelled, so it can't fill hours later." = "Set to **60**. The guru buys NVDA at **$200.00**. With **Maximum above signal price** at **%@%%**, your buy fills at **%@ or less**. The price jumps to **%@** and stays there, so nothing fills. After **60 seconds** the order is cancelled, so it can't fill hours later.";
