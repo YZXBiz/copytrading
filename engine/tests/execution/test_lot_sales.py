@@ -77,6 +77,15 @@ def confirmation(preview_id: str = "sale-preview-1", command_id: str = "sale-1")
     )
 
 
+def test_an_approving_account_still_sells_the_lot_the_owner_chose(tmp_path):
+    engine, _, app, lot_id, lot = owned_lot(tmp_path)
+    engine.config = CopyConfig.model_validate(engine.config.model_dump() | {"approve_orders": True})
+    preview = app.preview(preview_request(lot_id, lot.remaining_qty), NOW)
+    assert preview.reasons == (), "the owner's own sale is the approval; it is not held again"
+    assert preview.plan is not None
+    assert preview.plan.side == "sell"
+
+
 def test_selling_a_whole_lot_sells_its_remaining_shares_with_a_limit_and_closes_it(tmp_path):
     engine, broker, app, lot_id, lot = owned_lot(tmp_path)
     submitted_before = broker.calls

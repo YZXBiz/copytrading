@@ -7,6 +7,7 @@ struct PositionsTable: View {
     let positions: [AccountPositionView]
     let accountID: String
     let environment: TradingEnvironment
+    let approvesOrders: Bool
     let gurus: GuruDirectory
     /// Loaded Activity, where a lot's post can be opened.
     let activity: [SourceActivity]
@@ -52,7 +53,7 @@ struct PositionsTable: View {
                                     sell: {
                                         selling = LotSaleTarget(
                                             accountID: accountID, environment: environment, symbol: position.symbol, lot: lot,
-                                            guruName: guruName)
+                                            guruName: guruName, approvesOrders: approvesOrders)
                                     }
                                 )
                             }

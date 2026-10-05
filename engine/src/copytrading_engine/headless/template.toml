@@ -40,6 +40,7 @@ environment = "paper"   # "paper" trades pretend money at real prices; "live" is
   max_price_move_pct = 5       # if the price is now further than this from the trader's, the buy waits
   extended_hours = true        # also copy before 9:30 and after 16:00 New York time
   copy_exits = true            # sell when the trader sells
+  approve_orders = false       # true: no order is sent until you approve it in the app
 
 [[gurus]]
 id = "zhao"

@@ -20,9 +20,9 @@ enum DestinationOutcome: Equatable {
             return
         }
         if destination.status == "review_required" {
-            self = .needsReview(L10n.string(Reason.text(destination.status)))
+            self = .needsReview(Reason.text(destination.status))
         } else if ["stale", "out_of_order", "ignored"].contains(destination.status) {
-            self = .skipped(L10n.string(Reason.text(destination.status)))
+            self = .skipped(Reason.text(destination.status))
         } else if destination.status == "done" {
             self = .processedWithoutOrder
         } else {
@@ -132,7 +132,7 @@ enum DestinationInstructionDetails {
         summary: DestinationOutcome
     ) -> [DestinationInstructionDetail] {
         let details = destination.instructionOutcomes.enumerated().map { offset, code in
-            DestinationInstructionDetail(offset: offset, value: L10n.string(Reason.text(code)))
+            DestinationInstructionDetail(offset: offset, value: Reason.text(code))
         }
         guard destination.orders.isEmpty,
             details.count == 1,

@@ -437,6 +437,10 @@ class CopyEngine:
             return TradeDecision(None, "external_open_order")
         if s.action != "buy" and qty > owned:
             return TradeDecision(None, "insufficient_owned_shares")
+        if c.approve_orders and not manual:
+            # Every check passed, so this is an order the account would have sent: hold it for the
+            # owner, who approves it by hand (a manual copy plans afresh and is not held again).
+            return TradeDecision(None, "approval_required")
         return TradeDecision(
             OrderPlan(
                 symbol=s.symbol,

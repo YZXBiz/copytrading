@@ -114,6 +114,20 @@ MUTATIONS = (
     Mutation("budget minimum", "execution/domain/risk", "budget = min(", "budget = max("),
     Mutation("cash equality", "execution/domain/risk", "if budget > min(", "if budget >= min("),
     Mutation(
+        "approval gate dropped",
+        "execution/application/engine",
+        "if c.approve_orders and not manual:",
+        "if False and not manual:",
+        ("execution/test_order_approval.py",),
+    ),
+    Mutation(
+        "owner's own order held for approval again",
+        "execution/application/engine",
+        "if c.approve_orders and not manual:",
+        "if c.approve_orders:",
+        ("execution/test_lot_sales.py",),
+    ),
+    Mutation(
         "exit sells above the signal",
         "execution/domain/pricing",
         "floor = signal_price * (Decimal(1) - self.max_below_signal_pct",

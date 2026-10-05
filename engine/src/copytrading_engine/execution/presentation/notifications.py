@@ -47,6 +47,8 @@ REASONS = {
     "duplicate": "This instruction duplicates a recent signal",
     "price_moved": "The market is too far from the guru's price, so this account didn't buy on "
     "its own. Open Activity to copy or skip it; it expires when its trading day ends",
+    "approval_required": "This account asks you to approve every order, so it didn't send "
+    "this one. Open Activity to approve or skip it; it expires when its trading day ends",
 }
 
 

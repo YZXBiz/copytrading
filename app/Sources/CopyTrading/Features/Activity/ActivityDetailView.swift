@@ -229,12 +229,15 @@ struct ActivityDetailView: View {
     /// A call that waits for the owner (ADR-0007): copy it, or skip it, until its trading day ends.
     private func waitingActions(_ waiting: WaitingCall) -> some View {
         HStack(spacing: 8) {
-            Button(L10n.string(waiting.calls.isEmpty ? "Enter Trade…" : "Copy…"), action: { copy(waiting) })
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.capsule)
-                .disabled(!canReview)
-                .accessibilityIdentifier("activity.copy")
-                .accessibilityHint(L10n.string("Opens the call to check, then previews the order in each waiting account."))
+            Button(
+                L10n.string(waiting.calls.isEmpty ? "Enter Trade…" : waiting.awaitsApproval ? "Approve…" : "Copy…"),
+                action: { copy(waiting) }
+            )
+            .buttonStyle(.borderedProminent)
+            .buttonBorderShape(.capsule)
+            .disabled(!canReview)
+            .accessibilityIdentifier("activity.copy")
+            .accessibilityHint(L10n.string("Opens the call to check, then previews the order in each waiting account."))
             Button(L10n.string("Skip")) { skippedCalls.skip(item.sourceID) }
                 .buttonStyle(.bordered)
                 .buttonBorderShape(.capsule)

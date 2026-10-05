@@ -116,7 +116,8 @@ struct ActivityView: View {
                 copying: copying,
                 accounts: feature.accounts,
                 operations: model.accountActions(),
-                feature: reviewFeature
+                feature: reviewFeature,
+                confirmOrders: { try await model.confirmOrders(for: $0, reason: L10n.string("send these orders")) }
             )
         case .historicalEvaluation(let source):
             HistoricalProfileEvaluationSheet(source: source, model: model)

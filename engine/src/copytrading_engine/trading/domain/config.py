@@ -84,6 +84,7 @@ class AccountPolicy(BaseModel):
     extended_hours: StrictBool = True
     overnight: StrictBool = False
     copy_exits: StrictBool = True
+    approve_orders: StrictBool = False
     max_above_signal_pct: Decimal = Field(default=Decimal("0"), ge=0, le=100)
     max_below_signal_pct: Decimal = Field(default=Decimal("1"), ge=0, le=100)
     # How far the market may be from the guru's price before a buy waits for you.

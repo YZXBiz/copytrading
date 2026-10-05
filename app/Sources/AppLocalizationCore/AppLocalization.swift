@@ -55,6 +55,12 @@ public enum L10n {
         sentences.joined(separator: AppLanguagePreference.shared.language == .simplifiedChinese ? "" : " ")
     }
 
+    /// A phrase made a sentence, with the full stop of the app's language: "." or "。".
+    @MainActor
+    public static func sentence(_ phrase: String) -> String {
+        phrase + (AppLanguagePreference.shared.language == .simplifiedChinese ? "。" : ".")
+    }
+
     /// Items joined as a list in the app's language, not the Mac's: "A, B and C", "A、B和C".
     @MainActor
     public static func list(_ items: [String]) -> String {

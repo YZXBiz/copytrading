@@ -47,6 +47,7 @@ struct AccountSection: View {
                     positions: account.positions,
                     accountID: account.accountID,
                     environment: account.environment,
+                    approvesOrders: model.approvesOrders(accountID: account.accountID),
                     gurus: GuruDirectory(model.savedTradingConfiguration),
                     activity: feature.activity,
                     openPost: openPost,

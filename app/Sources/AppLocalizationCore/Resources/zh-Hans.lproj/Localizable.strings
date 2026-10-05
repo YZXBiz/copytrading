@@ -1561,3 +1561,11 @@
 "Maximum below signal price (%)" = "低于信号价格的最大幅度（%）";
 "The lowest a sell can go below the guru's price. A sell that can't fill by then is cancelled." = "卖出价最多可以比信号源的价格低这么多。到时还没成交的卖单会被取消。";
 "Set to **1**. The guru sells AAPL at **$200**. You sell at **$198** or better. At **0**, you sell at **$200** or better." = "设为 **1**。信号源以 **$200** 卖出 AAPL，你以 **$198** 或更高价卖出。设为 **0**，则以 **$200** 或更高价卖出。";
+"Ask me before sending orders" = "发送订单前先问我";
+"Nothing is sent by itself. Each order waits in Activity until you approve it with Touch ID." = "不会自动发送任何订单。每笔订单都会在“活动”里等你用Touch ID 批准。";
+"You asked to approve every order for this account" = "你设置了这个账户的每笔订单都要先经你批准";
+"Nothing was sent: Touch ID was not confirmed." = "没有发送任何订单：Touch ID 未通过。";
+"send these orders" = "发送这些订单";
+"You can approve it until 20:00 New York time." = "纽约时间 20:00 前可以批准。";
+"Too late to approve: its trading day is over." = "已来不及批准：这条信号的交易日已经结束。";
+"Not sent" = "未发送";

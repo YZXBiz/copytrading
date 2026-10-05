@@ -6,6 +6,8 @@ struct ManualReviewSheet: View {
     let accounts: [AccountOverview]
     let operations: (any ManualReviewOperations)?
     let feature: ManualReviewFeatureModel
+    /// Asks for Touch ID when an order goes to a live account or one that asks to approve orders.
+    let confirmOrders: (Set<String>) async throws -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var correctionID = UUID().uuidString.lowercased()
@@ -18,18 +20,21 @@ struct ManualReviewSheet: View {
     @State private var confirmationRequests: [String: ManualConfirmationRequest] = [:]
     @State private var confirmationToSubmit: [ManualConfirmationRequest] = []
     @State private var showsConfirmation = false
+    @State private var approvalProblem: String?
 
     init(
         source: SourceActivity,
         copying: WaitingCall? = nil,
         accounts: [AccountOverview],
         operations: (any ManualReviewOperations)?,
-        feature: ManualReviewFeatureModel
+        feature: ManualReviewFeatureModel,
+        confirmOrders: @escaping (Set<String>) async throws -> Void
     ) {
         self.source = source
         self.accounts = accounts
         self.operations = operations
         self.feature = feature
+        self.confirmOrders = confirmOrders
         let available = Set(accounts.map(\.accountID))
         let needsReview = Set(source.destinations.filter { $0.status == "review_required" }.map(\.accountID))
         _selectedAccountIDs = State(initialValue: available.intersection(copying.map { Set($0.accountIDs) } ?? needsReview))
@@ -214,6 +219,9 @@ struct ManualReviewSheet: View {
                         ForEach(sortedPreviewRequests, id: \.previewID) { request in
                             previewRow(request)
                         }
+                        if let approvalProblem {
+                            Callout(approvalProblem, tone: .critical)
+                        }
                         if !readyConfirmationRequests.isEmpty {
                             Button(L10n.string("Review %@…", Humanize.count(readyConfirmationRequests.count, "Ready Order"))) {
                                 confirmationToSubmit = readyConfirmationRequests
@@ -307,7 +315,16 @@ struct ManualReviewSheet: View {
                 titleVisibility: .visible
             ) {
                 Button(L10n.string("Confirm %lld order(s)", Int64(confirmationToSubmit.count)), role: .destructive) {
-                    Task { await feature.confirm(confirmationToSubmit, using: operations) }
+                    Task {
+                        do {
+                            try await confirmOrders(Set(confirmationToSubmit.map(\.accountID)))
+                        } catch {
+                            approvalProblem = L10n.string("Nothing was sent: Touch ID was not confirmed.")
+                            return
+                        }
+                        approvalProblem = nil
+                        await feature.confirm(confirmationToSubmit, using: operations)
+                    }
                 }
                 Button(L10n.string("Cancel"), role: .cancel) { confirmationToSubmit = [] }
             } message: {

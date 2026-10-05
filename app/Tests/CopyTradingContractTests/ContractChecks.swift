@@ -18,6 +18,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
     case assistantHelp = "assistant help"
     case assistantPanel = "assistant panel"
     case settingsSaveFlow = "settings save and start flow"
+    case orderApproval = "order approval"
 
     var testDescription: String { rawValue }
 
@@ -38,6 +39,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
         case .assistantHelp: try runAssistantHelpTests()
         case .assistantPanel: try runAssistantPanelTests()
         case .settingsSaveFlow: try await TradingSettingsSaveTests.runSettingsSaveFlow()
+        case .orderApproval: try await runOrderApprovalTests()
         }
     }
 }

@@ -196,8 +196,8 @@ struct LotSaleSheet: View {
             return L10n.string("The broker has the order. Accounts updates as it fills.")
         case "uncertain":
             return L10n.string("CopyTrading did not get the broker’s answer. It checks again on its own and never sends the order twice.")
-        case "rejected": return L10n.string(Reason.text(result.reason))
-        default: return L10n.string(Reason.text(result.reason ?? result.status))
+        case "rejected": return Reason.text(result.reason)
+        default: return Reason.text(result.reason ?? result.status)
         }
     }
 
@@ -265,7 +265,7 @@ struct LotSaleSheet: View {
     @MainActor private func sellTitle(_ preview: LotSalePreview) -> String {
         let quantity = preview.plan.flatMap { Decimal(engine: $0.quantity) } ?? flow.shares
         return L10n.string(
-            target.environment == .live ? "Sell %@ %@ with Touch ID" : "Sell %@ %@",
+            target.asksForOwner ? "Sell %@ %@ with Touch ID" : "Sell %@ %@",
             quantity.formatted(), target.symbol
         )
     }

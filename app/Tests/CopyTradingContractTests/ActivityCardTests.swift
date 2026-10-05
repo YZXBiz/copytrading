@@ -10,6 +10,7 @@ func runActivityCardTests() throws {
     try aRepeatedNumberIsMarkedBesideTheOtherCitedWords()
     try aTrimmedBuyIsTradedSmallerAndSaysByHowMuch()
     try aSkipNamesTheLimitWithItsNumbers()
+    try aCallHeldForApprovalAsksToBeApproved()
 }
 
 private func readings() throws -> [PostReading] {
@@ -114,4 +115,32 @@ private func aSkipNamesTheLimitWithItsNumbers() throws {
                         "zhao-paper already has $1,900 of SOUN. Buying $333.33 more would go over its $2,000 limit for one stock."
                 )
             ], "lines were \(outcome.accounts.first?.lines ?? [])")
+}
+
+@MainActor
+private func aCallHeldForApprovalAsksToBeApproved() throws {
+    let source = try activity(
+        destination: """
+            {"account_id": "zhao-paper", "environment": "paper", "status": "done",
+             "instruction_outcomes": ["approval_required"], "limits_hit": [], "orders": []}
+            """, instructions: soun)
+    let sameDay = try Date("2026-10-05T15:00:00Z", strategy: .iso8601)
+    let nextDay = try Date("2026-10-06T15:00:00Z", strategy: .iso8601)
+
+    let open = ActivityCardOutcome(source, skipped: false, now: sameDay)
+    let late = ActivityCardOutcome(source, skipped: false, now: nextDay)
+
+    try #require(open.title == "Waiting for you", "badge was \(open.title)")
+    try #require(
+        open.accounts.first?.lines
+            == [
+                .init(
+                    what: "Waiting for your approval",
+                    why:
+                        "You asked to approve every order for this account. You can approve it until 20:00 New York time.")
+            ], "lines were \(open.accounts.first?.lines ?? [])")
+    try #require(open.accounts.first?.waits == true, "the account did not wait")
+    try #require(
+        late.accounts.first?.lines.first?.what == "Not sent",
+        "an expired approval read \(late.accounts.first?.lines.first?.what ?? "nil")")
 }

@@ -48,6 +48,23 @@ private func buy(_ symbol: String, _ price: String) -> String {
     #expect(waiting.calls.map(\.symbol) == ["DEF"])
 }
 
+@Test func aBuyHeldForApprovalWaitsToBeApprovedNotCopied() throws {
+    let held = try post(decision: "trade", status: "done", outcomes: ["approval_required"], instructions: [buy("ABC", "25")])
+
+    let waiting = try #require(WaitingCall(held))
+
+    #expect(waiting.calls.map(\.symbol) == ["ABC"])
+    #expect(waiting.awaitsApproval)
+}
+
+@Test func aCallHeldForAnotherReasonIsCopiedNotApproved() throws {
+    let moved = try post(decision: "trade", status: "done", outcomes: ["price_moved"], instructions: [buy("ABC", "25")])
+    let review = try post(decision: "review", status: "review_required", outcomes: [], suggested: [buy("SCO", "20")])
+
+    #expect(try #require(WaitingCall(moved)).awaitsApproval == false)
+    #expect(try #require(WaitingCall(review)).awaitsApproval == false)
+}
+
 @Test(arguments: ["order_linked", "insufficient_cash"])
 func aCallTheAccountTradedOrRefusedDoesNotWait(outcome: String) throws {
     let finished = try post(decision: "trade", status: "done", outcomes: [outcome], instructions: [buy("ABC", "25")])

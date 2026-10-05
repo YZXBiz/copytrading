@@ -710,7 +710,9 @@ def j6_setup_editing(app: AppDriver) -> None:
         "Alpaca keys",
         "Position limits (USD)",
         "Maximum per stock",
+        "Maximum below signal price (%)",
         "Market move allowed (%)",
+        "Ask me before sending orders",
         "Remove Account",
     )
     app.click("Done")

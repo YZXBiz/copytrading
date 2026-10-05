@@ -104,6 +104,8 @@ public struct TradingAccountPolicy: Codable, Equatable, Sendable {
     public var extendedHours = true
     public var overnight = false
     public var copyExits = true
+    /// Off by default. On, no order is sent by itself: each waits for the owner's Touch ID (ADR-0008).
+    public var approveOrders = false
     public var maxAboveSignalPct = "0"
     /// How far below the guru's sell price an exit may fill: every sell is a limit order.
     public var maxBelowSignalPct = "1"
@@ -125,6 +127,7 @@ public struct TradingAccountPolicy: Codable, Equatable, Sendable {
         case extendedHours = "extended_hours"
         case overnight
         case copyExits = "copy_exits"
+        case approveOrders = "approve_orders"
         case maxAboveSignalPct = "max_above_signal_pct"
         case maxBelowSignalPct = "max_below_signal_pct"
         case maxPriceMovePct = "max_price_move_pct"

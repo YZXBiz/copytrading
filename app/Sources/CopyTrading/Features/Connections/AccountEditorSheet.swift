@@ -132,6 +132,10 @@ struct AccountEditorSheet: View {
                     behavior(
                         "Copy exits", hint: "Sell when the guru sells. Off means you sell copied shares yourself.",
                         isOn: $account.policy.copyExits)
+                    behavior(
+                        "Ask me before sending orders",
+                        hint: "Nothing is sent by itself. Each order waits in Activity until you approve it with Touch ID.",
+                        isOn: $account.policy.approveOrders)
                 } header: {
                     Text(L10n.string("Behavior"))
                 } footer: {

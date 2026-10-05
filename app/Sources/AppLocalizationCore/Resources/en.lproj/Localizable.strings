@@ -1561,3 +1561,11 @@
 "Maximum below signal price (%)" = "Maximum below signal price (%)";
 "The lowest a sell can go below the guru's price. A sell that can't fill by then is cancelled." = "The lowest a sell can go below the guru's price. A sell that can't fill by then is cancelled.";
 "Set to **1**. The guru sells AAPL at **$200**. You sell at **$198** or better. At **0**, you sell at **$200** or better." = "Set to **1**. The guru sells AAPL at **$200**. You sell at **$198** or better. At **0**, you sell at **$200** or better.";
+"Ask me before sending orders" = "Ask me before sending orders";
+"Nothing is sent by itself. Each order waits in Activity until you approve it with Touch ID." = "Nothing is sent by itself. Each order waits in Activity until you approve it with Touch ID.";
+"You asked to approve every order for this account" = "You asked to approve every order for this account";
+"Nothing was sent: Touch ID was not confirmed." = "Nothing was sent: Touch ID was not confirmed.";
+"send these orders" = "send these orders";
+"You can approve it until 20:00 New York time." = "You can approve it until 20:00 New York time.";
+"Too late to approve: its trading day is over." = "Too late to approve: its trading day is over.";
+"Not sent" = "Not sent";

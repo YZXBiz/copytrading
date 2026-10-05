@@ -1,10 +1,12 @@
 import Foundation
 
-/// Engine reason codes in the words a trader would use; unknown codes fall back to `Humanize`.
+/// Engine reason codes in the words a trader would use, in the app's language; unknown codes fall
+/// back to `Humanize`.
+@MainActor
 enum Reason {
     static func text(_ code: String?) -> String {
         guard let code else { return "—" }
-        return known[code] ?? Humanize.code(code)
+        return known[code].map { L10n.string($0) } ?? Humanize.code(code)
     }
 
     /// Keeps parser identifiers out of the main explanation while preserving free readable text.
@@ -12,7 +14,7 @@ enum Reason {
         guard let raw else { return nil }
         let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty else { return nil }
-        if let explanation = known[value] { return explanation }
+        if let explanation = known[value] { return L10n.string(explanation) }
 
         let isMachineIdentifier =
             value == value.lowercased()
@@ -99,6 +101,7 @@ enum Reason {
         "batch_size_unknown": "The post named a batch, not a size",
         "sell_names_no_buy": "The sell didn't say which buy it comes from",
         "price_moved": "The market moved too far from the guru's price",
+        "approval_required": "You asked to approve every order for this account",
         "waiting_expired": "Too late to copy: its trading day is over",
     ]
 }

@@ -91,13 +91,22 @@ struct ActivityCardOutcome {
                 source.decision == "review"
                 ? Reason.text(source.parserReason)
                 : Reason.text(destination.instructionOutcomes.first { WaitingCall.heldForOwner.contains($0) })
+            // An account that asked to approve every order is asked to approve, not to copy.
+            let approving = destination.instructionOutcomes.contains("approval_required") && source.decision != "review"
             let when =
                 skipped
                 ? L10n.string("You skipped this call.")
                 : open
-                    ? L10n.string("You can copy it until 20:00 New York time.")
-                    : L10n.string("Too late to copy: its trading day is over.")
-            lines.append(Line(what: L10n.string(open ? "Not copied yet" : "Not copied"), why: L10n.sentences([reason + ".", when])))
+                    ? L10n.string(
+                        approving
+                            ? "You can approve it until 20:00 New York time." : "You can copy it until 20:00 New York time.")
+                    : L10n.string(
+                        approving ? "Too late to approve: its trading day is over." : "Too late to copy: its trading day is over.")
+            let what =
+                approving
+                ? L10n.string(open ? "Waiting for your approval" : "Not sent")
+                : L10n.string(open ? "Not copied yet" : "Not copied")
+            lines.append(Line(what: what, why: L10n.sentences([L10n.sentence(reason), when])))
         } else if ["stale", "out_of_order"].contains(destination.status), lines.isEmpty {
             lines.append(Line(what: L10n.string("Not copied"), why: Reason.text(destination.status)))
         }

@@ -64,7 +64,7 @@ class CashAnchor(Value):
 
 
 # Skips that hold a call back for the owner rather than refuse it.
-HELD_FOR_OWNER = frozenset({"price_moved"})
+HELD_FOR_OWNER = frozenset({"price_moved", "approval_required"})
 
 
 class MessageRecord(StockSignal):

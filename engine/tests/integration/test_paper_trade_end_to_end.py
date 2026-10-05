@@ -141,7 +141,7 @@ async def _unwind_orders(client_ids: set[str]) -> None:
                 await asyncio.sleep(1)
 
 
-def _configuration() -> TradingConfiguration:
+def _configuration(*, approve_orders: bool = False) -> TradingConfiguration:
     profile = ProfileBuilder().build(
         ProfileDraft(
             guru_id="replay-guru",
@@ -167,6 +167,7 @@ def _configuration() -> TradingConfiguration:
                         "max_order_usd": "50",
                         "max_symbol_usd": "40",
                         "max_above_signal_pct": "1",
+                        "approve_orders": approve_orders,
                     },
                 }
             ],
@@ -199,7 +200,10 @@ def _post(text: str) -> RawMessage:
 class _Run:
     """One replayed conversation: the guru's posts go in, the orders sent to Alpaca come out."""
 
-    def __init__(self, tmp_path, posts: tuple[RawMessage, ...]) -> None:
+    def __init__(
+        self, tmp_path, posts: tuple[RawMessage, ...], *, approve_orders: bool = False
+    ) -> None:
+        self.approve_orders = approve_orders
         self.gates = tuple(asyncio.Event() for _ in posts)
         self.posts = posts
         self.placed: set[str] = set()
@@ -225,7 +229,7 @@ class _Run:
         self.secrets = secrets
 
     async def __aenter__(self) -> _Run:
-        await self.runtime.start(_configuration(), self.secrets)
+        await self.runtime.start(_configuration(approve_orders=self.approve_orders), self.secrets)
         for _ in range(60):
             if self.runtime.status().accounts:
                 break
@@ -309,4 +313,34 @@ async def test_replayed_sell_reaches_alpaca_as_a_limit_order_under_the_guru_pric
         # Every sell is a limit order: the guru's price less the 1% allowance, rounded up a cent.
         assert order.limit_price == (price * Decimal("0.99")).quantize(
             Decimal("0.01"), rounding=ROUND_UP
+        )
+
+
+async def test_an_account_that_approves_orders_holds_the_buy_and_sends_nothing(tmp_path):
+    price = await _latest_ask(_SYMBOL)
+    buy = _post(f"ALERT: Bought {_SYMBOL} at {price}")
+    async with _Run(tmp_path, (buy,), approve_orders=True) as run:
+        activity, orders = await run.post(
+            0,
+            wait_for=lambda activity, _: bool(
+                activity and activity.destinations and activity.destinations[0].instruction_outcomes
+            ),
+            seconds=45,
+        )
+        assert activity is not None, "the post was never captured"
+        assert activity.decision == "trade", activity.decision
+        [destination] = activity.destinations
+        assert destination.instruction_outcomes == ("approval_required",), destination
+        assert orders == [], "a held call must never reach the broker"
+        # Give the engine a few more cycles to prove nothing slips out later.
+        await asyncio.sleep(8)
+        async with httpx.AsyncClient(headers=_ALPACA_HEADERS, timeout=10) as client:
+            open_orders = (
+                await client.get(
+                    "https://paper-api.alpaca.markets/v2/orders",
+                    params={"status": "open", "symbols": _SYMBOL},
+                )
+            ).json()
+        assert open_orders == [], (
+            f"an order reached Alpaca although it needed approval: {open_orders}"
         )
