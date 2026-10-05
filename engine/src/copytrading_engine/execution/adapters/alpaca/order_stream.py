@@ -1,8 +1,9 @@
 """Alpaca's live order updates: wake an account the moment one of its orders changes.
 
 The stream only says *that* something changed. The account's own reconciliation reads the
-broker and decides what it means, so a dropped or duplicated update can never corrupt state:
-the periodic check still runs as a backup.
+broker and decides what it means, so a dropped or duplicated update can never corrupt state.
+The stream also says whether it is live: while it is, the periodic check only needs to be a
+slow safety net; while it is not, the account checks often again.
 """
 
 import asyncio
@@ -22,7 +23,9 @@ STREAM_URLS = {
 }
 RETRY_SECONDS = (1.0, 2.0, 5.0, 10.0, 30.0)
 
-type OrderStream = Callable[[Callable[[], None], asyncio.Event], Awaitable[None]]
+type OrderStream = Callable[
+    [Callable[[], None], Callable[[bool], None], asyncio.Event], Awaitable[None]
+]
 type Connect = Callable[[str], Awaitable[aiohttp.ClientWebSocketResponse]]
 
 
@@ -37,10 +40,13 @@ def alpaca_order_stream(
     connect: Connect | None = None,
     retry_seconds: tuple[float, ...] = RETRY_SECONDS,
 ) -> OrderStream:
-    """Watch one account's `trade_updates` until `stop`, reconnecting with backoff."""
+    """Watch one account's `trade_updates` until `stop`, reconnecting with backoff. `on_live`
+    hears True once Alpaca confirms it is listening, and False whenever the connection ends."""
     url = STREAM_URLS[environment]
 
-    async def watch(on_update: Callable[[], None], stop: asyncio.Event) -> None:
+    async def watch(
+        on_update: Callable[[], None], on_live: Callable[[bool], None], stop: asyncio.Event
+    ) -> None:
         failures = 0
         while not stop.is_set():
             try:
@@ -61,8 +67,11 @@ def alpaca_order_stream(
                                 break
                             if message.get("stream") == "trade_updates":
                                 on_update()
+                            elif message.get("stream") == "listening":
+                                on_live(_listens_to_trades(message))
                     finally:
                         closer.cancel()
+                        on_live(False)
                 if stop.is_set():
                     return
             except asyncio.CancelledError:
@@ -122,6 +131,12 @@ async def _authorize(
     data = reply.get("data") if reply is not None else None
     if not isinstance(data, dict) or data.get("status") != "authorized":
         raise StreamRefused
+
+
+def _listens_to_trades(message: dict[str, object]) -> bool:
+    data = message.get("data")
+    streams = data.get("streams") if isinstance(data, dict) else None
+    return isinstance(streams, list) and "trade_updates" in streams
 
 
 def _message(frame: aiohttp.WSMessage) -> dict[str, object] | None:

@@ -69,7 +69,7 @@ async def _serve(fake: _FakeAlpaca):
     return connect, close
 
 
-async def _watch_until(watch, stop: asyncio.Event, done) -> list[None]:
+async def _watch_until(watch, stop: asyncio.Event, done, live: list[bool] | None = None):
     updates: list[None] = []
 
     def on_update() -> None:
@@ -77,7 +77,8 @@ async def _watch_until(watch, stop: asyncio.Event, done) -> list[None]:
         if done(updates):
             stop.set()
 
-    await asyncio.wait_for(watch(on_update, stop), timeout=5)
+    on_live = live.append if live is not None else lambda _value: None
+    await asyncio.wait_for(watch(on_update, on_live, stop), timeout=5)
     return updates
 
 
@@ -119,7 +120,8 @@ async def test_refused_keys_never_wake_the_account_and_retry_with_backoff():
         watch = alpaca_order_stream(
             CREDENTIALS, "paper", connect=connect, retry_seconds=(0.01, 0.01, 10.0)
         )
-        task = asyncio.create_task(watch(lambda: updates.append(None), stop))
+        live: list[bool] = []
+        task = asyncio.create_task(watch(lambda: updates.append(None), live.append, stop))
         await asyncio.sleep(0.3)
         stop.set()
         await asyncio.wait_for(task, timeout=2)
@@ -127,4 +129,27 @@ async def test_refused_keys_never_wake_the_account_and_retry_with_backoff():
         await close()
 
     assert updates == []
+    assert True not in live, "a refused stream is never live"
     assert fake.connections == 3, "two quick retries, then the long backoff"
+
+
+async def test_the_stream_is_live_once_alpaca_listens_and_down_when_it_drops():
+    fake = _FakeAlpaca(updates=0, drop=True)
+    connect, close = await _serve(fake)
+    stop = asyncio.Event()
+    live: list[bool] = []
+
+    def on_live(value: bool) -> None:
+        live.append(value)
+        if live.count(True) == 2:
+            stop.set()
+
+    try:
+        watch = alpaca_order_stream(CREDENTIALS, "paper", connect=connect, retry_seconds=(0.01,))
+        await asyncio.wait_for(watch(lambda: None, on_live, stop), timeout=5)
+    finally:
+        await close()
+
+    # Live on the first connection, down when it dropped, live again after reconnecting, and
+    # down once stopped.
+    assert live == [True, False, True, False]

@@ -57,7 +57,7 @@ A second pass against *Robust Python*, *Clean Architecture with Python*, *Archit
   | `host/pipe_server.py` (an `isinstance` chain) | `host/pipe/`: `requests` (contract models and `RequestHandler`), `responses`, `session` (`PipeSession`: running, stopping, reply-then-stop), `services`, `server` (line framing and error mapping), and `handlers/` with one module per contract area: `trading`, `accounts`, `manual`, `profiles`, `restore`, `control` |
   | `backup/service.py` | `backup/`: `ports`, `manifest`, `files`, `databases`, `configuration`, `archive`, `snapshot`, `service`; restore steps under `backup/restore/`: `candidates`, `gate`, `inspector` |
   | `diagnostics/otel.py` | `diagnostics/telemetry/`: `config`, `events`, `attributes`, `journal`, `local` |
-  | `execution/adapters/alpaca.py`, `alpaca_models.py` | `execution/adapters/alpaca/`: `broker`, `models` |
+  | `execution/adapters/alpaca.py`, `alpaca_models.py` | `execution/adapters/alpaca/`: `broker`, `models`, `order_stream` (trade updates, and whether the stream is live) |
 
 - **Classes that did two jobs are two.** `execution/adapters/owner.py` keeps the async `ExecutionOwner`; the resources it confines to its worker thread live in `resources.py`.
 - **One path per operation.** The source store's `add`, `reject`, and `capture_recovery_page` each had a `*_with_evidence` twin that the session probed for with `getattr`. Each is now one method that always carries its evidence, declared by the capture protocol; live and recovered captures share the same transaction helpers.

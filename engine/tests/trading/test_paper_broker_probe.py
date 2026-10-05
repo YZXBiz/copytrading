@@ -71,15 +71,19 @@ def test_paper_equity_history_decodes_from_the_real_endpoint(window):
 
 
 async def test_paper_order_stream_authorizes_and_listens():
-    """The live order stream really connects: the catch-up wake only follows auth and listen."""
+    """The live order stream really connects: Alpaca confirms it is listening to trade updates,
+    after the catch-up wake, and the stream reports itself down once stopped."""
     watch = alpaca_order_stream(AlpacaCredentials(SecretStr(_KEY), SecretStr(_SECRET)), "paper")
     stop = asyncio.Event()
     wakes: list[None] = []
+    live: list[bool] = []
 
-    def on_update() -> None:
-        wakes.append(None)
-        stop.set()
+    def on_live(value: bool) -> None:
+        live.append(value)
+        if value:
+            stop.set()
 
-    await asyncio.wait_for(watch(on_update, stop), timeout=20)
+    await asyncio.wait_for(watch(lambda: wakes.append(None), on_live, stop), timeout=20)
 
     assert wakes == [None]
+    assert live == [True, False]
