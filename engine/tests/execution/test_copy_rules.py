@@ -224,3 +224,25 @@ def test_a_held_buy_alerts_that_it_waits_for_the_owner():
 
     assert held.payload.annotations["summary"] == "ABC — waiting for you"
     assert "copy or skip" in held.payload.annotations["evidence"]
+
+
+def test_activity_shows_what_a_trimmed_buy_asked_for_and_which_limit_a_skip_hit():
+    from copytrading_engine.execution.presentation.operator_views import destination_views
+
+    engine = _engine(FakeBroker())
+    trimmed = event("1")
+    for item in (*trimmed["instructions"], *trimmed["evidence"]):
+        item["fraction"] = "0.5"
+    deliver(engine, trimmed)
+    engine.config = CopyConfig.model_validate(
+        engine.config.model_dump() | {"max_symbol_usd": "150", "max_order_usd": "150"}
+    )
+    later = NOW + dt.timedelta(minutes=11)
+    deliver(engine, event("2", timestamp=later), later)
+
+    views = destination_views(engine.ledger.snapshot(), {"discord:demo:1", "discord:demo:2"})
+
+    [order] = views["discord:demo:1"].orders
+    assert (order.instruction_index, order.requested_usd, order.budget_usd) == (0, 300, 100)
+    [limit] = views["discord:demo:2"].limits_hit
+    assert (limit.part, limit.scope, limit.limit) == (0, "symbol", 150)

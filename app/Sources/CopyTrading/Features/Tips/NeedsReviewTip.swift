@@ -14,9 +14,11 @@ struct NeedsReviewTip: Tip {
     @MainActor
     init(generation: Int) {
         self.generation = generation
-        title = Text(L10n.string("A post needs you"))
+        title = Text(L10n.string("A call is waiting for you"))
         message = Text(
-            L10n.string("When CopyTrading can't read a post with confidence, it trades nothing and waits here for you to review it."))
+            L10n.string(
+                "A suggestion, a condition, or a price the market has left behind is never copied on its own. It waits here for you to copy or skip it."
+            ))
     }
 
     var image: Image? { Image(systemName: "exclamationmark.bubble") }

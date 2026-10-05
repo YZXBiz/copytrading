@@ -17,7 +17,8 @@ private func post(
          "source_event": {"event_type": "discord_message", "content": "sco 20", "embeds": [],
            "attachments": [], "attachments_omitted": 0, "capture_status": "complete", "payload_bytes": 6},
          "destinations": [{"account_id": "paper", "environment": "paper", "status": "\(status)",
-           "instruction_outcomes": [\(outcomes.map { "\"\($0)\"" }.joined(separator: ","))], "orders": []}]}
+           "instruction_outcomes": [\(outcomes.map { "\"\($0)\"" }.joined(separator: ","))], "limits_hit": [],
+           "orders": []}]}
         """
     return try JSONDecoder().decode(SourceActivity.self, from: Data(json.utf8))
 }

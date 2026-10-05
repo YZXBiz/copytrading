@@ -185,6 +185,7 @@ def source_page(
                 interpreted_by=decision.model if decision else None,
                 instructions=decision.instructions if decision else (),
                 suggested=decision.suggested if decision else (),
+                reading=decision.reading if decision else None,
                 guru_id=decision.guru_id if decision else None,
                 profile_revision=decision.profile_revision if decision else None,
                 source_event=source_event,

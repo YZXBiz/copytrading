@@ -9,6 +9,7 @@ from copytrading_engine.execution.presentation.operator_views import (
     AccountUnavailable,
     DestinationView,
 )
+from copytrading_engine.shared.reading import PostReading
 from copytrading_engine.shared.signals import Instruction
 
 
@@ -86,6 +87,8 @@ class SourceActivity(Value):
     instructions: tuple[Instruction, ...]
     # For a post that waits for the owner: what Copy places (ADR-0007).
     suggested: tuple[Instruction, ...] = ()
+    # How the reader read the post, for Activity's "Read as".
+    reading: PostReading | None = None
     guru_id: str | None = None
     profile_revision: str | None = None
     source_event: SourceEventEvidence

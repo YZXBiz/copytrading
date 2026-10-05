@@ -2530,11 +2530,11 @@ private func check(_ condition: @autoclosure () -> Bool, _ message: String) thro
 private func checkActivityScreenStateAndStatusPolicy() throws {
     let state = ActivityScreenState()
     state.selectedActivityID = 42
-    state.applyFilter(.needsReview, visibleIDs: [7, 9])
+    state.applyFilter(.waiting, visibleIDs: [7, 9])
     let reviewFilter = state.filter
     let firstVisibleID = state.selectedActivityID
     try check(
-        reviewFilter == .needsReview && firstVisibleID == 7,
+        reviewFilter == .waiting && firstVisibleID == 7,
         "Filtering Activity did not move the detail to the first visible post"
     )
 

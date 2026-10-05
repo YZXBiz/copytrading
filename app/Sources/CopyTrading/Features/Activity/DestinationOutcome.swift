@@ -31,7 +31,7 @@ enum DestinationOutcome: Equatable {
     }
 
     @MainActor
-    private static func order(_ order: OrderActivity, count: Int) -> Self {
+    static func order(_ order: OrderActivity, count: Int) -> Self {
         let verb = L10n.string(order.side == "sell" ? "Sold" : "Bought")
         let filled = Decimal(engine: order.filledQuantity) ?? 0
         let quantity = Decimal(engine: order.quantity) ?? 0

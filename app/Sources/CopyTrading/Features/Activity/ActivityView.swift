@@ -7,10 +7,9 @@ struct ActivityView: View {
     @Bindable var screenState: ActivityScreenState
     @State private var reviewFeature = ManualReviewFeatureModel()
     @State private var selectedSheet: ActivitySheet?
-    @State private var skippedCalls = SkippedCalls()
 
     private var visibleActivity: [SourceActivity] {
-        feature.activity.filter(screenState.filter.includes)
+        feature.activity.filter { screenState.filter.includes($0, skipped: model.skippedCalls) }
     }
 
     private var selectedItem: SourceActivity? {
@@ -62,7 +61,8 @@ struct ActivityView: View {
             prepareForDisplay()
         }
         .onChange(of: screenState.filter) { _, filter in
-            screenState.applyFilter(filter, visibleIDs: feature.activity.filter(filter.includes).map(\.id))
+            screenState.applyFilter(
+                filter, visibleIDs: feature.activity.filter { filter.includes($0, skipped: model.skippedCalls) }.map(\.id))
         }
         .onChange(of: feature.activity) {
             screenState.reconcileSelection(visibleIDs: visibleActivity.map(\.id))
@@ -94,7 +94,7 @@ struct ActivityView: View {
                         guruName: directory.name(for: selectedItem.guruID),
                         canReview: !feature.accounts.isEmpty,
                         canEvaluate: model.savedTradingConfiguration?.routes.isEmpty == false,
-                        skippedCalls: skippedCalls,
+                        skippedCalls: model.skippedCalls,
                         review: { selectedSheet = .manualReview(selectedItem, copying: nil) },
                         copy: { selectedSheet = .manualReview(selectedItem, copying: $0) },
                         evaluate: { selectedSheet = .historicalEvaluation(selectedItem) }
@@ -155,7 +155,10 @@ struct ActivityView: View {
     private var filterBinding: Binding<ActivityFilter> {
         Binding(
             get: { screenState.filter },
-            set: { screenState.applyFilter($0, visibleIDs: feature.activity.filter($0.includes).map(\.id)) }
+            set: { chosen in
+                screenState.applyFilter(
+                    chosen, visibleIDs: feature.activity.filter { chosen.includes($0, skipped: model.skippedCalls) }.map(\.id))
+            }
         )
     }
 }

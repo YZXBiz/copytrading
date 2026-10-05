@@ -1,7 +1,8 @@
 import DesktopCore
 import SwiftUI
 
-/// The original post is a reading surface; interpretation and account evidence follow on the canvas.
+/// The Activity card (ADR-0007): the post with the words the reader cited, how it was read, and
+/// what each account did, on one reading surface; technical evidence follows on the canvas.
 struct ActivityDetailView: View {
     let item: SourceActivity
     let guruName: String?
@@ -14,19 +15,17 @@ struct ActivityDetailView: View {
     let evaluate: () -> Void
     @State private var readerPosition = ScrollPosition(edge: .top)
 
+    private var outcome: ActivityCardOutcome {
+        ActivityCardOutcome(item, skipped: skippedCalls.contains(item.sourceID))
+    }
+
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                sourcePage
-                VStack(alignment: .leading, spacing: 20) {
-                    understood
-                    Divider()
-                    results
-                    ActivityTechnicalDetails(item: item)
-                        .id(item.sourceID)
-                        .padding(.top, 4)
-                }
-                .padding(.horizontal, 24)
+            VStack(alignment: .leading, spacing: 20) {
+                card
+                ActivityTechnicalDetails(item: item)
+                    .id(item.sourceID)
+                    .padding(.horizontal, 22)
             }
             .frame(maxWidth: DesignTokens.readingContentMaxWidth, alignment: .leading)
             .padding(24)
@@ -39,13 +38,21 @@ struct ActivityDetailView: View {
         }
     }
 
-    private var sourcePage: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            header
-            Divider()
-            ActivitySourceContentView(item: item)
+    private var card: some View {
+        let outcome = outcome
+        return VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 16) {
+                header(outcome)
+                ActivitySourceContentView(item: item, citedWords: item.reading?.citedWords ?? [])
+            }
+            .padding(22)
+            hairline
+            readAs.padding(22)
+            if item.decision != "ignore" {
+                hairline
+                accounts(outcome).padding(22)
+            }
         }
-        .padding(24)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Palette.page, in: .rect(cornerRadius: DesignTokens.readingCornerRadius))
         .overlay {
@@ -54,23 +61,23 @@ struct ActivityDetailView: View {
         }
     }
 
-    private var header: some View {
+    private var hairline: some View {
+        Rectangle().fill(Palette.hairline).frame(height: 1)
+    }
+
+    private func header(_ outcome: ActivityCardOutcome) -> some View {
         ViewThatFits(in: .horizontal) {
             HStack(alignment: .center, spacing: 12) {
                 author
                 Spacer(minLength: 8)
-                StatusBadge(decisionLabel, tone: item.decisionTone)
+                StatusBadge(outcome.title, tone: outcome.tone)
             }
             VStack(alignment: .leading, spacing: 8) {
                 author
-                StatusBadge(decisionLabel, tone: item.decisionTone)
+                StatusBadge(outcome.title, tone: outcome.tone)
                     .padding(.leading, 42)
             }
         }
-    }
-
-    private var decisionLabel: String {
-        item.decision == "trade" ? L10n.string("Trade identified") : item.decisionTitle
     }
 
     private var author: some View {
@@ -81,70 +88,120 @@ struct ActivityDetailView: View {
                     .font(DesignTokens.personTitle)
                     .foregroundStyle(Palette.ink)
                     .lineLimit(1)
-                postedAt
+                Text(Humanize.timestamp(item.sourceAt))
+                    .font(DesignTokens.caption)
+                    .foregroundStyle(Palette.tertiaryInk)
+                    .lineLimit(2)
             }
         }
     }
 
-    private var postedAt: some View {
-        Text(Humanize.timestamp(item.sourceAt))
-            .font(DesignTokens.caption)
+    private func label(_ text: String) -> some View {
+        Text(text)
+            .font(DesignTokens.caption.weight(.medium))
             .foregroundStyle(Palette.tertiaryInk)
-            .lineLimit(2)
     }
 
-    private var understood: some View {
+    /// How the reader read the post: its kind, one line per call, and the facts behind them.
+    private var readAs: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(L10n.string("Understood as"))
-                .font(DesignTokens.caption.weight(.medium))
-                .foregroundStyle(Palette.secondaryInk)
-            if item.instructions.isEmpty {
+            if let reading = item.reading {
+                label(L10n.string("Read as · %@", ReadAsText.kind(reading)))
+                if reading.calls.isEmpty {
+                    readLine(ReadAsText.lines(reading).first ?? "")
+                } else {
+                    ForEach(Array(reading.calls.enumerated()), id: \.offset) { index, call in
+                        VStack(alignment: .leading, spacing: 8) {
+                            readLine(ReadAsText.line(call))
+                            facts(ReadAsText.facts(call))
+                        }
+                        .padding(.top, index == 0 ? 0 : 6)
+                    }
+                }
+            } else {
+                label(L10n.string("Read as"))
                 Text(item.headline)
                     .font(DesignTokens.bodyText)
                     .foregroundStyle(Palette.ink)
                     .fixedSize(horizontal: false, vertical: true)
-            } else {
-                ForEach(Array(item.instructions.enumerated()), id: \.offset) { _, instruction in
-                    Text(instruction.phrase)
-                        .font(DesignTokens.bodyEmphasis)
-                        .foregroundStyle(Palette.ink)
-                        .monospacedDigit()
+                if let reason = Reason.parserMessage(item.parserReason, needsReview: item.needsManualReview) {
+                    Text(reason)
+                        .font(DesignTokens.bodyText)
+                        .foregroundStyle(Palette.secondaryInk)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            if let reason = Reason.parserMessage(item.parserReason, needsReview: item.needsManualReview) {
-                Text(reason)
-                    .font(DesignTokens.bodyText)
-                    .foregroundStyle(Palette.secondaryInk)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if item.needsManualReview || item.isHistorical {
-                actions
-                    .padding(.top, 4)
+            if WaitingCall(item) == nil, item.needsManualReview || item.isHistorical {
+                actions.padding(.top, 4)
             }
         }
     }
 
-    private var results: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(L10n.string("What each account did"))
-                .font(DesignTokens.caption.weight(.medium))
-                .foregroundStyle(Palette.secondaryInk)
-            if item.destinations.isEmpty {
+    private func readLine(_ text: String) -> some View {
+        Text(text)
+            .font(DesignTokens.cardSerif)
+            .foregroundStyle(Palette.ink)
+            .monospacedDigit()
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func facts(_ facts: [String]) -> some View {
+        HStack(spacing: 6) {
+            ForEach(facts, id: \.self) { fact in
+                Text(fact)
+                    .font(DesignTokens.caption)
+                    .monospacedDigit()
+                    .foregroundStyle(Palette.secondaryInk)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Palette.well, in: .rect(cornerRadius: 6))
+            }
+        }
+    }
+
+    /// What each account did with the post, and why, with Copy and Skip where one waits.
+    @ViewBuilder
+    private func accounts(_ outcome: ActivityCardOutcome) -> some View {
+        VStack(alignment: .leading, spacing: 18) {
+            if outcome.accounts.isEmpty {
                 // "Yet" only while the trade is still on its way to the accounts; once delivered with
                 // no account attached, none will act on it.
-                let waiting = item.decision == "trade" && item.deliveryStatus != "delivered"
-                Label(
-                    waiting
+                let onTheWay = item.decision == "trade" && item.deliveryStatus != "delivered"
+                label(L10n.string("Your account"))
+                Text(
+                    onTheWay
                         ? L10n.string("No account has acted on this post yet.")
-                        : L10n.string("No account was asked to act on this post."),
-                    systemImage: waiting ? "clock" : "minus.circle"
+                        : L10n.string("No account was asked to act on this post.")
                 )
-                .font(.body)
-                .foregroundStyle(.secondary)
-            } else {
-                ForEach(item.destinations) { destination in
-                    DestinationResultView(destination: destination)
+                .font(DesignTokens.bodyText)
+                .foregroundStyle(Palette.secondaryInk)
+            }
+            ForEach(outcome.accounts) { account in
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        label(L10n.string("Your account · %@", account.id))
+                        if let environment = TradingEnvironment(rawValue: account.environment), environment == .live {
+                            EnvironmentBadge(environment: environment)
+                        }
+                    }
+                    ForEach(Array(account.lines.enumerated()), id: \.offset) { _, line in
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(line.what)
+                                .font(DesignTokens.bodyEmphasis.scaled(by: 15.0 / 14))
+                                .foregroundStyle(Palette.ink)
+                                .monospacedDigit()
+                            if let why = line.why {
+                                Text(why)
+                                    .font(DesignTokens.bodyText)
+                                    .foregroundStyle(Palette.secondaryInk)
+                                    .monospacedDigit()
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+                    if account.waits, let waiting = WaitingCall(item) {
+                        waitingActions(waiting).padding(.top, 6)
+                    }
                 }
             }
         }
@@ -160,9 +217,7 @@ struct ActivityDetailView: View {
 
     @ViewBuilder
     private var actionButtons: some View {
-        if let waiting = WaitingCall(item) {
-            waitingActions(waiting)
-        } else if item.needsManualReview {
+        if item.needsManualReview {
             Button(L10n.string("Review and Correct…"), systemImage: "pencil.and.list.clipboard", action: review)
                 .buttonStyle(.borderedProminent)
                 .disabled(!canReview)
@@ -172,24 +227,17 @@ struct ActivityDetailView: View {
     }
 
     /// A call that waits for the owner (ADR-0007): copy it, or skip it, until its trading day ends.
-    @ViewBuilder
     private func waitingActions(_ waiting: WaitingCall) -> some View {
-        if skippedCalls.contains(item.sourceID) {
-            Label(L10n.string("You skipped this call."), systemImage: "forward.end")
-                .foregroundStyle(.secondary)
-        } else if waiting.hasExpired(at: .now) {
-            Label(L10n.string("This call expired when its trading day ended."), systemImage: "clock.badge.xmark")
-                .foregroundStyle(.secondary)
-        } else {
-            Button(
-                L10n.string(waiting.calls.isEmpty ? "Enter Trade…" : "Copy…"), systemImage: "doc.on.doc",
-                action: { copy(waiting) }
-            )
-            .buttonStyle(.borderedProminent)
-            .disabled(!canReview)
-            .accessibilityIdentifier("activity.copy")
-            .accessibilityHint(L10n.string("Opens the call to check, then previews the order in each waiting account."))
-            Button(L10n.string("Skip"), systemImage: "forward") { skippedCalls.skip(item.sourceID) }
+        HStack(spacing: 8) {
+            Button(L10n.string(waiting.calls.isEmpty ? "Enter Trade…" : "Copy…"), action: { copy(waiting) })
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
+                .disabled(!canReview)
+                .accessibilityIdentifier("activity.copy")
+                .accessibilityHint(L10n.string("Opens the call to check, then previews the order in each waiting account."))
+            Button(L10n.string("Skip")) { skippedCalls.skip(item.sourceID) }
+                .buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
                 .accessibilityIdentifier("activity.skip")
         }
     }

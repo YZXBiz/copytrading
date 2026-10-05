@@ -272,6 +272,11 @@ public struct OrderActivity: Codable, Equatable, Identifiable, Sendable {
     public let averageFillPrice: String?
     public let brokerID: String?
     public let createdAt: String
+    /// Which of the post's calls this order places.
+    public let instructionIndex: Int
+    /// For a buy: what the call asked for, and what the maximum per order allowed of it.
+    public let requestedUSD: String?
+    public let budgetUSD: String?
     public var id: String { clientID }
 
     enum CodingKeys: String, CodingKey {
@@ -282,7 +287,21 @@ public struct OrderActivity: Codable, Equatable, Identifiable, Sendable {
         case averageFillPrice = "average_fill_price"
         case brokerID = "broker_id"
         case createdAt = "created_at"
+        case instructionIndex = "instruction_index"
+        case requestedUSD = "requested_usd"
+        case budgetUSD = "budget_usd"
     }
+}
+
+/// The limit a skipped call would have passed, with its numbers.
+public struct LimitHit: Codable, Equatable, Sendable {
+    /// The call it skipped.
+    public let part: Int
+    /// "symbol" (the maximum per stock) or "total".
+    public let scope: String
+    public let current: String
+    public let proposed: String
+    public let limit: String
 }
 
 public struct DestinationActivity: Codable, Equatable, Identifiable, Sendable {
@@ -290,6 +309,7 @@ public struct DestinationActivity: Codable, Equatable, Identifiable, Sendable {
     public let environment: String
     public let status: String
     public let instructionOutcomes: [String]
+    public let limitsHit: [LimitHit]
     public let orders: [OrderActivity]
     public var id: String { accountID }
 
@@ -297,6 +317,7 @@ public struct DestinationActivity: Codable, Equatable, Identifiable, Sendable {
         case accountID = "account_id"
         case environment, status
         case instructionOutcomes = "instruction_outcomes"
+        case limitsHit = "limits_hit"
         case orders
     }
 }
@@ -420,6 +441,8 @@ public struct SourceActivity: Codable, Equatable, Identifiable, Sendable {
     public let instructions: [SourceInstruction]
     /// For a post that waits for the owner: what Copy places (ADR-0007).
     public let suggested: [SourceInstruction]
+    /// How the reader read the post; nil for a post never read.
+    public let reading: PostReading?
     public let sourceEvent: SourceEventEvidence
     public let destinations: [DestinationActivity]
     public var id: Int { sequence }
@@ -443,6 +466,7 @@ public struct SourceActivity: Codable, Equatable, Identifiable, Sendable {
         case interpretedBy = "interpreted_by"
         case instructions
         case suggested
+        case reading
         case sourceEvent = "source_event"
         case destinations
     }

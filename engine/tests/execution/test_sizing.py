@@ -84,7 +84,12 @@ def test_compound_entries_obey_shared_total_cap(system):
     message["evidence"].append(evidence(message["instructions"][1]))
     deliver(engine, message)
     assert broker.calls == 1
-    assert engine.ledger.message("discord:demo:1").parts[1] == Skipped(reason="total_exposure_cap")
+    skipped = engine.ledger.message("discord:demo:1").parts[1]
+    assert isinstance(skipped, Skipped)
+    assert (skipped.reason, [limit.scope for limit in skipped.exposure]) == (
+        "total_exposure_cap",
+        ["total"],
+    )
 
 
 def test_compound_entries_obey_shared_cash_when_broker_balance_is_stale(system):
@@ -290,9 +295,11 @@ def test_configured_500_budget_keeps_limit_price_sizing(system, whole_shares):
         engine, event(id="second", price="33.12", timestamp=later), later, full_position_usd="3000"
     )
     assert broker.calls == 1  # the configured $600 per-symbol cap still applies
-    assert engine.ledger.message("discord:demo:second").parts == (
-        Skipped(reason="symbol_exposure_cap"),
-    )
+    [skipped] = engine.ledger.message("discord:demo:second").parts
+    assert isinstance(skipped, Skipped)
+    # The skip keeps the limit it would have passed, with its numbers, for Activity to show.
+    [limit] = skipped.exposure
+    assert (skipped.reason, limit.scope, limit.limit) == ("symbol_exposure_cap", "symbol", 600)
 
 
 @pytest.mark.parametrize("field", ["full_position_usd", "max_order_usd"])

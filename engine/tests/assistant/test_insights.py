@@ -23,6 +23,7 @@ def destination(account_id: str, *outcomes: str) -> DestinationView:
         environment="paper",
         status="done",
         instruction_outcomes=outcomes,
+        limits_hit=(),
         orders=(),
     )
 

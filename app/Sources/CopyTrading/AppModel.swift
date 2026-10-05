@@ -151,6 +151,8 @@ final class AppModel {
     @ObservationIgnored var agentRelay: AgentRelay?
     /// The conversation with the assistant; it is forgotten on lock, quit, and engine stop.
     let assistant = AssistantModel()
+    /// The waiting calls the owner skipped, shared by every screen that lists posts.
+    let skippedCalls = SkippedCalls()
     @ObservationIgnored var agentAccessStore: AgentAccessStore?
     @ObservationIgnored private var diagnosticsSettingsStore: DiagnosticsSettingsStore
     @ObservationIgnored private var diagnosticsJournal: DiagnosticsJournal

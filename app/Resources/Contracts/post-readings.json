@@ -1,0 +1,161 @@
+[
+  {
+    "kind": "trade_made",
+    "summary": "Sold half of the IREN bought at 39.5",
+    "calls": [
+      {
+        "action": "sell",
+        "action_words": "出一半",
+        "stock": {
+          "ticker": "IREN",
+          "words": "iren"
+        },
+        "price": {
+          "kind": "exact",
+          "value": "41.27",
+          "words": "41.27"
+        },
+        "share": {
+          "kind": "fraction",
+          "value": "0.5",
+          "words": "一半"
+        },
+        "counts_from": null,
+        "sell_from": {
+          "kind": "lot",
+          "buy_price": "39.5",
+          "words": "39.5"
+        }
+      }
+    ]
+  },
+  {
+    "kind": "trade_made",
+    "summary": "Bought a sixth of SOUN",
+    "calls": [
+      {
+        "action": "buy",
+        "action_words": "加了",
+        "stock": {
+          "ticker": "SOUN",
+          "words": "soun"
+        },
+        "price": {
+          "kind": "exact",
+          "value": "5.85",
+          "words": "5.85"
+        },
+        "size": {
+          "kind": "fraction",
+          "value": "0.1666666666666666666666666667",
+          "words": "6分之一"
+        }
+      }
+    ]
+  },
+  {
+    "kind": "trade_made",
+    "summary": "Sold all RCL",
+    "calls": [
+      {
+        "action": "sell",
+        "action_words": "跑路了",
+        "stock": {
+          "ticker": "RCL",
+          "words": "rcl"
+        },
+        "price": {
+          "kind": "exact",
+          "value": "260",
+          "words": "260"
+        },
+        "share": {
+          "kind": "all",
+          "words": "跑路了"
+        },
+        "counts_from": null,
+        "sell_from": {
+          "kind": "not_said"
+        }
+      }
+    ]
+  },
+  {
+    "kind": "suggestion",
+    "summary": "Build CBRS between 160 and 179",
+    "calls": [
+      {
+        "action": "buy",
+        "action_words": "建仓",
+        "stock": {
+          "ticker": "CBRS",
+          "words": "Cbrs"
+        },
+        "price": {
+          "kind": "range",
+          "low": "160",
+          "high": "179",
+          "low_words": "160",
+          "high_words": "179"
+        },
+        "size": {
+          "kind": "not_given"
+        }
+      }
+    ]
+  },
+  {
+    "kind": "conditional",
+    "summary": "Buys a first batch of SCO under 20",
+    "condition": "如果明天20以下",
+    "calls": [
+      {
+        "action": "buy",
+        "action_words": "我会买",
+        "stock": {
+          "ticker": "SCO",
+          "words": "Sco"
+        },
+        "price": {
+          "kind": "exact",
+          "value": "20",
+          "words": "20"
+        },
+        "size": {
+          "kind": "batch",
+          "number": 1,
+          "words": "第一批"
+        }
+      }
+    ]
+  },
+  {
+    "kind": "trade_made",
+    "summary": "Buy SCO at the market",
+    "calls": [
+      {
+        "action": "buy",
+        "action_words": "现价买",
+        "stock": {
+          "ticker": "SCO",
+          "words": "Sco"
+        },
+        "price": {
+          "kind": "at_market",
+          "words": "现价"
+        },
+        "size": {
+          "kind": "not_given"
+        }
+      }
+    ]
+  },
+  {
+    "kind": "commentary",
+    "summary": "TSLA 373 is still resistance today"
+  },
+  {
+    "kind": "unclear",
+    "summary": "Cannot tell"
+  }
+]

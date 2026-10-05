@@ -321,6 +321,7 @@ class CopyEngine:
             return TradeDecision(None, "account_risk_unavailable")
         joins_lot = None
         requested_usd = None
+        budget_usd = None
         if s.action == "buy":
             if not manual:
                 moved = self._market_check(s, session, now)
@@ -382,6 +383,7 @@ class CopyEngine:
             if decision.budget is None:
                 return TradeDecision(None, decision.reason, decision.breaches)
             requested_usd = decision.requested
+            budget_usd = decision.budget
             qty = (decision.budget / limit_price).quantize(STEP, rounding=ROUND_DOWN)
             entry_price = s.price
         else:
@@ -455,6 +457,7 @@ class CopyEngine:
                 session=session,
                 joins_lot=joins_lot,
                 requested_usd=requested_usd,
+                budget_usd=budget_usd,
             ),
             "ready",
         )

@@ -859,7 +859,7 @@ class TradingLedger:
         if message.status != "queued" or not isinstance(message.parts[part], Pending):
             raise RuntimeError("Instruction was already processed")
         parts = list(message.parts)
-        parts[part] = Skipped(reason=reason)
+        parts[part] = Skipped(reason=reason, exposure=exposure or ())
         self._commit(
             self._message_state(key, parts=tuple(parts)),
             JournalEvent(
