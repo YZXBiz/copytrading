@@ -72,8 +72,16 @@ def without_mentions(text: str) -> str:
     return text.strip()
 
 
+# A Chinese keyboard types the full stop as a decimal point: "381。3" or "16 。1" is 381.3 or
+# 16.1. Only a stop between two digits is a decimal point; one ending a sentence stays.
+CHINESE_DECIMAL_POINT = re.compile(r"(?<=\d)\s*[。｡]\s*(?=\d)")
+
+
 def normalize(text: str) -> str:
-    return without_mentions(unicodedata.normalize("NFKC", text))
+    """The post as the reader and its checks see it: compatibility forms folded, Chinese
+    decimal points written as ".", and mass mentions removed."""
+    text = unicodedata.normalize("NFKC", text)
+    return without_mentions(CHINESE_DECIMAL_POINT.sub(".", text))
 
 
 # Models write 1/6 as 0.16666666666666666; Decimal division gives 28 digits. Same fraction.
