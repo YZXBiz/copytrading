@@ -21,6 +21,10 @@ struct MainSplitView: View {
     }
 
     var body: some View {
+        content.environment(model.skippedCalls)
+    }
+
+    private var content: some View {
         HStack(spacing: 0) {
             if showsSidebar {
                 ZStack {

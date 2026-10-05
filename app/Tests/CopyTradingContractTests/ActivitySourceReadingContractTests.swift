@@ -153,6 +153,9 @@ func checkActivityDestinationInstructionOutcomes() throws {
         "average_fill_price": NSNull(),
         "broker_id": NSNull(),
         "created_at": "2026-09-29T12:00:00Z",
+        "instruction_index": 0,
+        "requested_usd": NSNull(),
+        "budget_usd": NSNull(),
     ]
     let partiallyFilled = try activityWithSourceText(
         "",
@@ -162,6 +165,7 @@ func checkActivityDestinationInstructionOutcomes() throws {
                 "environment": "paper",
                 "status": "done",
                 "instruction_outcomes": ["submitted", "symbol_unresolved"],
+                "limits_hit": [],
                 "orders": [order],
             ]
         ])
@@ -189,6 +193,7 @@ func checkActivityDestinationInstructionOutcomes() throws {
                 "environment": "paper",
                 "status": "done",
                 "instruction_outcomes": ["symbol_unresolved"],
+                "limits_hit": [],
                 "orders": [],
             ]
         ])
@@ -214,6 +219,7 @@ func checkActivityDestinationInstructionOutcomes() throws {
                 "environment": "paper",
                 "status": "ignored",
                 "instruction_outcomes": ["ignored"],
+                "limits_hit": [],
                 "orders": [],
             ]
         ])
@@ -225,6 +231,7 @@ func checkActivityDestinationInstructionOutcomes() throws {
                 "environment": "paper",
                 "status": "ignored",
                 "instruction_outcomes": ["ignored", "ignored"],
+                "limits_hit": [],
                 "orders": [],
             ]
         ])
@@ -267,6 +274,7 @@ private func activityWithSourceText(
         "parse_status": "complete",
         "delivery_status": "delivered",
         "instructions": [],
+        "suggested": [],
         "source_event": [
             "event_type": "discord_message",
             "content": eventContent ?? text,

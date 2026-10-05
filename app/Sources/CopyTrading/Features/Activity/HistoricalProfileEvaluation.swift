@@ -85,7 +85,9 @@ struct HistoricalProfileEvaluationSheet: View {
                             ForEach(selectedRoute.connections) { connection in
                                 LabeledContent(
                                     connection.accountID,
-                                    value: "\(Humanize.code(connection.mode.rawValue)) · \(Humanize.usd(connection.amountUSD))"
+                                    value: L10n.string(
+                                        "Full position %@. A 1/6 call buys a sixth of it.",
+                                        Humanize.usd(connection.fullPositionUSD))
                                 )
                             }
                         }

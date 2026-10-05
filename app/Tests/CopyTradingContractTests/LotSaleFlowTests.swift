@@ -25,8 +25,8 @@ private actor FakeLotSales: LotSaleOperations {
                 "broker_account_id":"broker","environment":"paper","symbol":"ABC","lot_remaining_qty":"12",\
                 "created_at":"2026-09-26T15:00:03Z","expires_at":"2026-09-26T15:00:33Z","session":"regular",\
                 "quote":{"feed":"iex","bid":"26.10","ask":"26.12","timestamp":"2026-09-26T15:00:02Z"},"fresh_price":"26.10",\
-                "plan":{"side":"sell","position_intent":"sell_to_close","type":"market","limit_price":null,"symbol":"ABC",\
-                "qty":"\(preview.quantity)","source_price":"26.10","entry_tolerance_pct":"0","lot_id":"\(preview.lotID)",\
+                "plan":{"side":"sell","position_intent":"sell_to_close","type":"limit","limit_price":"25.84","symbol":"ABC",\
+                "qty":"\(preview.quantity)","source_price":"26.10","entry_tolerance_pct":"1","lot_id":"\(preview.lotID)",\
                 "entry_price":"25.10","session":"regular"},"checks":[],"reasons":[],\
                 "facts_sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}
                 """.utf8))

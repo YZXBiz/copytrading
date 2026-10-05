@@ -51,6 +51,7 @@ from copytrading_engine.trading.domain.profiles import (
     LearnedPlaybook,
     ProfileEvaluation,
     ProfileExampleReview,
+    ProfileReplay,
     ProfileRevision,
 )
 from copytrading_engine.trading.domain.status import TradingStatus
@@ -150,6 +151,16 @@ class ProfileReview(Protocol):
         provider: ProviderConfiguration,
         provider_api_key: SecretStr,
     ) -> LearnedPlaybook: ...
+
+    async def replay_posts(
+        self,
+        channel_id: str,
+        author_id: str | None,
+        discord_token: SecretStr,
+        provider: ProviderConfiguration,
+        provider_api_key: SecretStr,
+        profile: ProfileRevision,
+    ) -> ProfileReplay: ...
 
 
 @dataclass(frozen=True, slots=True)

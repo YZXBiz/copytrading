@@ -6,6 +6,8 @@ struct ManualReviewSheet: View {
     let accounts: [AccountOverview]
     let operations: (any ManualReviewOperations)?
     let feature: ManualReviewFeatureModel
+    /// Asks for Touch ID when an order goes to a live account or one that asks to approve orders.
+    let confirmOrders: (Set<String>) async throws -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var correctionID = UUID().uuidString.lowercased()
@@ -18,20 +20,31 @@ struct ManualReviewSheet: View {
     @State private var confirmationRequests: [String: ManualConfirmationRequest] = [:]
     @State private var confirmationToSubmit: [ManualConfirmationRequest] = []
     @State private var showsConfirmation = false
+    @State private var approvalProblem: String?
 
     init(
         source: SourceActivity,
+        copying: WaitingCall? = nil,
         accounts: [AccountOverview],
         operations: (any ManualReviewOperations)?,
-        feature: ManualReviewFeatureModel
+        feature: ManualReviewFeatureModel,
+        confirmOrders: @escaping (Set<String>) async throws -> Void
     ) {
         self.source = source
         self.accounts = accounts
         self.operations = operations
         self.feature = feature
+        self.confirmOrders = confirmOrders
         let available = Set(accounts.map(\.accountID))
         let needsReview = Set(source.destinations.filter { $0.status == "review_required" }.map(\.accountID))
-        _selectedAccountIDs = State(initialValue: available.intersection(needsReview))
+        _selectedAccountIDs = State(initialValue: available.intersection(copying.map { Set($0.accountIDs) } ?? needsReview))
+        // Copying fills in the calls the post waits on, for the owner to check before previewing.
+        if let copying {
+            if !copying.calls.isEmpty {
+                _instructions = State(initialValue: copying.calls.map(ManualInstructionDraft.init(call:)))
+            }
+            _reason = State(initialValue: L10n.string("Copied a call that was waiting for me"))
+        }
     }
 
     private var savedCorrection: ManualCorrectionRecord? {
@@ -206,6 +219,9 @@ struct ManualReviewSheet: View {
                         ForEach(sortedPreviewRequests, id: \.previewID) { request in
                             previewRow(request)
                         }
+                        if let approvalProblem {
+                            Callout(approvalProblem, tone: .critical)
+                        }
                         if !readyConfirmationRequests.isEmpty {
                             Button(L10n.string("Review %@…", Humanize.count(readyConfirmationRequests.count, "Ready Order"))) {
                                 confirmationToSubmit = readyConfirmationRequests
@@ -299,7 +315,16 @@ struct ManualReviewSheet: View {
                 titleVisibility: .visible
             ) {
                 Button(L10n.string("Confirm %lld order(s)", Int64(confirmationToSubmit.count)), role: .destructive) {
-                    Task { await feature.confirm(confirmationToSubmit, using: operations) }
+                    Task {
+                        do {
+                            try await confirmOrders(Set(confirmationToSubmit.map(\.accountID)))
+                        } catch {
+                            approvalProblem = L10n.string("Nothing was sent: Touch ID was not confirmed.")
+                            return
+                        }
+                        approvalProblem = nil
+                        await feature.confirm(confirmationToSubmit, using: operations)
+                    }
                 }
                 Button(L10n.string("Cancel"), role: .cancel) { confirmationToSubmit = [] }
             } message: {
@@ -331,7 +356,7 @@ struct ManualReviewSheet: View {
             return
                 L10n.string(
                     "%@: %@ %@ %@ at %@", request.accountID, preview?.plan?.side ?? "order",
-                    preview?.plan?.quantity ?? "", preview?.plan?.symbol ?? "", preview?.plan?.limitPrice ?? "market"
+                    preview?.plan?.quantity ?? "", preview?.plan?.symbol ?? "", preview?.plan?.limitPrice ?? "—"
                 )
         }.joined(separator: "\n")
     }
@@ -379,7 +404,7 @@ struct ManualReviewSheet: View {
                 .bold()
             if let preview = feature.previews[request.previewID] {
                 if let plan = preview.plan {
-                    Text(L10n.string("%@ %@ %@ · limit %@", plan.side.capitalized, plan.quantity, plan.symbol, plan.limitPrice ?? "market"))
+                    Text(L10n.string("%@ %@ %@ · limit %@", plan.side.capitalized, plan.quantity, plan.symbol, plan.limitPrice ?? "—"))
                     if let lotID = plan.lotID {
                         Text(L10n.string("Owned lot: %@", lotID))
                             .font(.caption)

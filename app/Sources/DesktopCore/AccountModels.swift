@@ -272,6 +272,11 @@ public struct OrderActivity: Codable, Equatable, Identifiable, Sendable {
     public let averageFillPrice: String?
     public let brokerID: String?
     public let createdAt: String
+    /// Which of the post's calls this order places.
+    public let instructionIndex: Int
+    /// For a buy: what the call asked for, and what the maximum per order allowed of it.
+    public let requestedUSD: String?
+    public let budgetUSD: String?
     public var id: String { clientID }
 
     enum CodingKeys: String, CodingKey {
@@ -282,7 +287,21 @@ public struct OrderActivity: Codable, Equatable, Identifiable, Sendable {
         case averageFillPrice = "average_fill_price"
         case brokerID = "broker_id"
         case createdAt = "created_at"
+        case instructionIndex = "instruction_index"
+        case requestedUSD = "requested_usd"
+        case budgetUSD = "budget_usd"
     }
+}
+
+/// The limit a skipped call would have passed, with its numbers.
+public struct LimitHit: Codable, Equatable, Sendable {
+    /// The call it skipped.
+    public let part: Int
+    /// "symbol" (the maximum per stock) or "total".
+    public let scope: String
+    public let current: String
+    public let proposed: String
+    public let limit: String
 }
 
 public struct DestinationActivity: Codable, Equatable, Identifiable, Sendable {
@@ -290,6 +309,7 @@ public struct DestinationActivity: Codable, Equatable, Identifiable, Sendable {
     public let environment: String
     public let status: String
     public let instructionOutcomes: [String]
+    public let limitsHit: [LimitHit]
     public let orders: [OrderActivity]
     public var id: String { accountID }
 
@@ -297,6 +317,7 @@ public struct DestinationActivity: Codable, Equatable, Identifiable, Sendable {
         case accountID = "account_id"
         case environment, status
         case instructionOutcomes = "instruction_outcomes"
+        case limitsHit = "limits_hit"
         case orders
     }
 }
@@ -380,12 +401,24 @@ public struct RejectedSourceActivity: Codable, Equatable, Identifiable, Sendable
     }
 }
 
-/// One trade the interpreter read from a post, before any account sizing.
+/// One call as the engine places it, before any account sizing.
 public struct SourceInstruction: Codable, Equatable, Sendable {
     public let action: String
     public let symbol: String
     public let price: String
+    public let entryPrice: String?
     public let fraction: String?
+    public let exitBasis: String?
+    /// For a guru whose sells refer to the whole position: a buy joins the stock's one lot, and a
+    /// sell sells from it.
+    public let wholePosition: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case action, symbol, price, fraction
+        case entryPrice = "entry_price"
+        case exitBasis = "exit_basis"
+        case wholePosition = "whole_position"
+    }
 }
 
 public struct SourceActivity: Codable, Equatable, Identifiable, Sendable {
@@ -406,6 +439,10 @@ public struct SourceActivity: Codable, Equatable, Identifiable, Sendable {
     public let parserProfile: String?
     public let interpretedBy: String?
     public let instructions: [SourceInstruction]
+    /// For a post that waits for the owner: what Copy places (ADR-0007).
+    public let suggested: [SourceInstruction]
+    /// How the reader read the post; nil for a post never read.
+    public let reading: PostReading?
     public let sourceEvent: SourceEventEvidence
     public let destinations: [DestinationActivity]
     public var id: Int { sequence }
@@ -428,6 +465,8 @@ public struct SourceActivity: Codable, Equatable, Identifiable, Sendable {
         case parserProfile = "parser_profile"
         case interpretedBy = "interpreted_by"
         case instructions
+        case suggested
+        case reading
         case sourceEvent = "source_event"
         case destinations
     }

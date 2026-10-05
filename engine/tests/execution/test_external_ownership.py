@@ -563,7 +563,12 @@ def test_external_market_value_consumes_cap_and_missing_value_blocks_entry():
     engine.bind(NOW)
     receive(engine, StockSignal.model_validate(event()), NOW)
     engine.process(NOW)
-    assert engine.ledger.message("discord:demo:1").parts == (Skipped(reason="total_exposure_cap"),)
+    [skipped] = engine.ledger.message("discord:demo:1").parts
+    assert isinstance(skipped, Skipped)
+    assert (skipped.reason, [limit.scope for limit in skipped.exposure]) == (
+        "total_exposure_cap",
+        ["total"],
+    )
     assert broker.calls == 0
 
     broker.positions = lambda: (Position(symbol="ABC", qty=Decimal("100")),)
@@ -603,8 +608,11 @@ def test_pending_buy_reservation_consumes_total_cap_without_double_counting_fill
     other["evidence"][0]["symbol_evidence"] = "XYZ"
     receive(engine, StockSignal.model_validate(other), NOW + dt.timedelta(minutes=11))
     engine.process(NOW + dt.timedelta(minutes=11))
-    assert engine.ledger.message("discord:demo:other").parts == (
-        Skipped(reason="total_exposure_cap"),
+    [skipped] = engine.ledger.message("discord:demo:other").parts
+    assert isinstance(skipped, Skipped)
+    assert (skipped.reason, [limit.scope for limit in skipped.exposure]) == (
+        "total_exposure_cap",
+        ["total"],
     )
     assert broker.calls == 1
 
@@ -617,7 +625,7 @@ def test_resolution_sqlite_failure_rolls_back_and_reopens_with_incident(tmp_path
     broker.holdings["ABC"] = Decimal("100")
     engine = engine_with_wide_limits(store, broker)
     engine.bind(NOW)
-    receive(engine, StockSignal.model_validate(event()), NOW, amount_usd="1250")
+    receive(engine, StockSignal.model_validate(event()), NOW, full_position_usd="7500")
     engine.process(NOW)
     assert engine.ledger.owned("ABC") == 50
     order = BrokerOrder(
@@ -742,7 +750,7 @@ async def test_owner_cancellation_waits_for_resolution_commit_and_reopens(tmp_pa
             NOW,
         )
         await owner.receive(
-            destination_signal(StockSignal.model_validate(event()), amount_usd="1250"),
+            destination_signal(StockSignal.model_validate(event()), full_position_usd="7500"),
             NOW,
         )
         await owner._submit(lambda resource: resource.engine.process(NOW))

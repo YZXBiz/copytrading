@@ -7,7 +7,7 @@ from pydantic import AwareDatetime, TypeAdapter
 
 from copytrading_engine.parsing.diagnostics import ValidationIssue
 from copytrading_engine.shared.notification_models import NotificationIntent, NotificationPayload
-from copytrading_engine.shared.signals import StockSignal
+from copytrading_engine.shared.signals import Instruction, StockSignal
 
 _SOURCE_TIMESTAMP_SERIALIZER = TypeAdapter(AwareDatetime)
 
@@ -17,6 +17,61 @@ def _serialize_source_timestamp(value: datetime) -> str:
     if not isinstance(serialized, str):
         raise TypeError("Source timestamp did not serialize to text")
     return serialized
+
+
+# Why a post waits for the owner (ADR-0007), as the alert says it.
+WAITING = {
+    "conditional": "The guru would trade only if something happens",
+    "suggestion": "The guru suggested it but didn't trade",
+    "unclear": "The post's meaning wasn't clear",
+    "price_range": "The guru gave a price range",
+    "price_at_market": "The guru said to trade at the market price",
+    "price_not_given": "The post gave no price",
+    "batch_size_unknown": "The post named a batch, not a size",
+    "sell_names_no_buy": "The sell didn't say which buy it comes from",
+}
+
+
+def _call(instruction: Instruction) -> str:
+    action = {"buy": "Buy", "reduce": "Sell part of", "close": "Sell"}[instruction.action]
+    return f"{action} {instruction.symbol} at ${instruction.price}"
+
+
+def waiting_notification(
+    key: str, result: StockSignal, *, observed_at: datetime | None = None
+) -> NotificationIntent:
+    """A post that waits for the owner: what it says, why it waits, and what Copy places."""
+    summary = result.reading.summary if result.reading is not None else result.reason
+    copy = "; ".join(_call(instruction) for instruction in result.suggested)
+    return NotificationIntent(
+        key=key,
+        stream_id=key,
+        payload=NotificationPayload(
+            labels={
+                "alertname": "SignalWaiting",
+                "system": "copytrade",
+                "job": "stock-parser",
+                "severity": "warning",
+                "signal_id": key,
+            },
+            annotations={
+                "summary": f"Waiting for you: {summary}"[:300],
+                "evidence": WAITING[result.reason] + ".",
+                "impact": (
+                    f"Copy places: {copy}. Nothing is placed unless you copy it."
+                    if copy
+                    else "Nothing is placed unless you enter the trade yourself."
+                ),
+                "action": "Open Activity to copy or skip it. It expires when its trading day ends.",
+                "signal_id": key,
+                "trace_id": hashlib.sha256(key.encode()).hexdigest()[:32],
+                "reason": result.reason,
+                "source_time": _serialize_source_timestamp(result.timestamp),
+                "source_excerpt": " ".join(result.text.split())[:240],
+            },
+            starts_at=observed_at if observed_at is not None else result.timestamp,
+        ),
+    )
 
 
 def review_notification(
@@ -100,6 +155,8 @@ def decision_notification(
     *,
     observed_at: datetime | None = None,
 ) -> NotificationIntent:
+    if result.decision == "review" and result.reason in WAITING:
+        return waiting_notification(key, result, observed_at=observed_at)
     if result.decision == "review":
         return review_notification(key, result, issues, observed_at=observed_at)
     trade = result.decision == "trade"

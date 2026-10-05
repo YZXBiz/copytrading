@@ -194,6 +194,7 @@ private func assistantPost(sequence: Int, sourceID: String) throws -> SourceActi
         "parse_status": "complete",
         "delivery_status": "delivered",
         "instructions": [],
+        "suggested": [],
         "source_event": [
             "event_type": "discord_message", "content": "AMD long", "embeds": [], "attachments": [],
             "attachments_omitted": 0, "capture_status": "complete", "payload_bytes": 0,

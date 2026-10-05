@@ -196,6 +196,18 @@ class LearnGuruPlaybookRequest(PipeRequest):
     provider_api_key: SecretStr
 
 
+class ReplayGuruPostsRequest(PipeRequest):
+    """Read a guru's recent posts with a draft profile, before switching them on (ADR-0007)."""
+
+    operation: Literal["replay_guru_posts"]
+    channel_id: str = Field(pattern=r"^[0-9]{1,32}$")
+    author_id: str | None = Field(default=None, pattern=r"^[0-9]{1,32}$")
+    discord_token: SecretStr = Field(min_length=1)
+    provider: ProviderConfiguration
+    provider_api_key: SecretStr
+    profile: ProfileRevision
+
+
 class GetAccountEventsRequest(PipeRequest):
     operation: Literal["get_account_events"]
     account_id: str = Field(min_length=1, max_length=64)
@@ -329,6 +341,7 @@ RequestType = Annotated[
     | EvaluateHistoricalProfileRequest
     | ReviewProfileExamplesRequest
     | LearnGuruPlaybookRequest
+    | ReplayGuruPostsRequest
     | GetAccountEventsRequest
     | GetEquityHistoryRequest
     | SaveManualCorrectionRequest

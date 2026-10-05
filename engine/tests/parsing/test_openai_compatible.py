@@ -17,7 +17,7 @@ from copytrading_engine.shared.model_providers import (
 )
 from copytrading_engine.trading.domain.config import ProviderConfiguration
 
-IGNORE = {"decision": "ignore", "reason": "No trade action", "instructions": []}
+IGNORE = {"reading": {"kind": "commentary", "summary": "No trade action"}}
 
 
 def reply(content: dict) -> dict:
@@ -72,7 +72,7 @@ async def test_each_named_service_is_asked_at_its_own_address(requests, name):
     finally:
         await decoder.close()
 
-    assert result.decision == "ignore"
+    assert result.kind == "commentary"
     [request] = requests
     assert service.endpoint is not None
     assert str(request.url) == service.endpoint.rstrip("/") + "/chat/completions"

@@ -6,20 +6,34 @@ from collections.abc import AsyncIterable, AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Protocol
 
-from pydantic_ai import Agent
+import pydantic_ai
+from pydantic_ai import Agent, ModelRetry, NativeOutput, PromptedOutput, RunContext
 from pydantic_ai.exceptions import (
     ModelAPIError,
     ModelHTTPError,
     UnexpectedModelBehavior,
     UsageLimitExceeded,
 )
+from pydantic_ai.models import Model
+from pydantic_ai.settings import ModelSettings
 from pydantic_ai.usage import UsageLimits
 
 from copytrading_engine.parsing.diagnostics import validation_issues
-from copytrading_engine.parsing.extraction import DecodedMessage, DecodeError
+from copytrading_engine.parsing.extraction import (
+    DecodeError,
+    GroundingError,
+    ReadingInput,
+    ReadingOutput,
+    check_reading,
+)
 from copytrading_engine.parsing.learning import PlaybookProposal
-from copytrading_engine.parsing.prompt import playbook_instructions
+from copytrading_engine.parsing.prompt import INSTRUCTIONS, playbook_instructions
 from copytrading_engine.parsing.routes import Route
+from copytrading_engine.shared.reading import PostReading
+
+# The engine owns its output: its stdout and stderr are the app's pipe and log. The library
+# leaves the flag unannotated, so its type is inferred as the literal True.
+pydantic_ai.BANNER_ENABLED = False  # ty: ignore[invalid-assignment]
 
 
 class _ListedModel(Protocol):
@@ -55,7 +69,7 @@ _MODEL_NAME_LIMIT = 2000
 class PydanticAIDecoder:
     def __init__(
         self,
-        agent: Agent[None, DecodedMessage],
+        agent: Agent[ReadingInput, ReadingOutput],
         learner: Agent[None, PlaybookProposal],
         client: _ProviderClient,
         timeout: float,
@@ -68,15 +82,17 @@ class PydanticAIDecoder:
         self.timeout = timeout
         self.connection_errors = connection_errors
 
-    async def decode(self, text: str, route: Route) -> DecodedMessage:
+    async def decode(self, text: str, route: Route) -> PostReading:
         async with _translated_errors(self.connection_errors):
             async with asyncio.timeout(self.timeout):
+                # A reading that fails a check goes back once with the reason, then to review.
                 result = await self.agent.run(
                     json.dumps({"message": text}, ensure_ascii=False),
+                    deps=ReadingInput(text=text, route=route),
                     instructions=playbook_instructions(route.playbook),
-                    usage_limits=UsageLimits(request_limit=1, output_tokens_limit=3000),
+                    usage_limits=UsageLimits(request_limit=2, output_tokens_limit=6000),
                 )
-            return result.output
+            return result.output.reading
 
     async def learn(self, posts: tuple[str, ...]) -> PlaybookProposal:
         async with _translated_errors(self.connection_errors):
@@ -115,6 +131,33 @@ def _rejection(exc: ModelHTTPError) -> str:
     if exc.status_code in {400, 404} and quotes_name and any(w in text for w in _UNKNOWN_MODEL):
         return "provider_model_not_found"
     return "provider_rejected"
+
+
+def reading_agent(
+    model: Model,
+    output_type: NativeOutput[ReadingOutput] | PromptedOutput[ReadingOutput],
+    model_settings: ModelSettings,
+) -> Agent[ReadingInput, ReadingOutput]:
+    """The reader every provider shares: one reading per post, held to the post's own words."""
+    agent = Agent(
+        model,
+        output_type=output_type,
+        instructions=INSTRUCTIONS,
+        deps_type=ReadingInput,
+        retries=1,
+        model_settings=model_settings,
+    )
+    agent.output_validator(_checked)
+    return agent
+
+
+def _checked(context: RunContext[ReadingInput], output: ReadingOutput) -> ReadingOutput:
+    """Holds the model to the post's own words; a failure gives it one retry with the reason."""
+    try:
+        check_reading(output.reading, context.deps.text, context.deps.route)
+    except GroundingError as exc:
+        raise ModelRetry(f"{exc.issue.path}: {exc}") from None
+    return output
 
 
 @asynccontextmanager

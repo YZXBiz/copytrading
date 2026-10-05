@@ -11,6 +11,7 @@ func runConnectionsDraftTests() throws {
     try statusWordsClassifyAsWholeWords()
     try pickingAProviderSuggestsItsModelButKeepsATypedOne()
     try marketHoursAlsoReadInTheOwnersTime()
+    try skippedCallsAreKeptAWeek()
     try orderTimeoutExampleUsesTheAccountsTolerance()
 }
 
@@ -49,7 +50,8 @@ private func savedConfigurationRoundTripsThroughDraft() throws {
         TradingRouteDraft(
             channelID: "111", authorID: "333", guruID: "guru", displayName: "Guru",
             prefix: "ALERT:", playbook: "  apple means AAPL\n英伟达 means NVDA\n",
-            connections: [TradingConnectionDraft(accountID: "primary", mode: .proportional, amountUSD: "3000", defaultFraction: "0.25")]
+            batches: 3, sellsReferTo: .wholePosition,
+            connection: TradingConnectionDraft(accountID: "primary", defaultFraction: "0.25")
         )
     ]
     seed.notificationsEnabled = true
@@ -61,6 +63,12 @@ private func savedConfigurationRoundTripsThroughDraft() throws {
         "the playbook lost its lines or kept surrounding blank space"
     )
     try #require(configuration.routes.first?.connections.first?.defaultFraction == "0.25", "default fraction was dropped")
+    try #require(
+        configuration.routes.first?.connections.map(\.fullPositionUSD) == [seed.accounts[0].policy.maxSymbolUSD],
+        "the guru's full position is not its account's maximum per stock")
+    try #require(
+        configuration.profiles.first.map { ($0.batches, $0.sellsReferTo) } ?? (nil, .buyPrice) == (3, .wholePosition),
+        "the guru's batches or sell rule was dropped")
 
     var reloaded = ConnectionsDraft()
     reloaded.load(configuration)
@@ -144,9 +152,39 @@ private func marketHoursAlsoReadInTheOwnersTime() throws {
     let october = try #require(ISO8601DateFormatter().date(from: "2026-10-04T12:00:00Z"))
     let shanghai = try #require(TimeZone(identifier: "Asia/Shanghai"))
     let newYork = try #require(TimeZone(identifier: "America/New_York"))
-    let overnight = MarketHoursText.yourTime([((20, 0), (4, 0))], now: october, zone: shanghai)
-    try #require(overnight == " Your time: 8:00–16:00.", "Overnight hours read \(overnight) in Shanghai")
-    try #require(MarketHoursText.yourTime([((20, 0), (4, 0))], now: october, zone: newYork).isEmpty)
+    let losAngeles = try #require(TimeZone(identifier: "America/Los_Angeles"))
+    let extended = MarketHoursText.hours([((4, 0), (9, 30)), ((16, 0), (20, 0))], now: october, zone: losAngeles)
+    try #require(
+        extended == "4:00–9:30 and 16:00–20:00 New York time (1:00–6:30 and 13:00–17:00 PT)",
+        "Extended hours read \(extended) in Los Angeles")
+    let overnight = MarketHoursText.hours([((20, 0), (4, 0))], now: october, zone: shanghai)
+    try #require(overnight.hasPrefix("20:00–4:00 New York time (8:00–16:00 "), "Overnight hours read \(overnight) in Shanghai")
+    let home = MarketHoursText.hours([((20, 0), (4, 0))], now: october, zone: newYork)
+    try #require(home == "20:00–4:00 New York time", "Hours read \(home) on a Mac in New York")
+
+    let preference = AppLanguagePreference.shared
+    let original = preference.language
+    defer { preference.select(original) }
+    preference.select(.simplifiedChinese)
+    let chinese = MarketHoursText.hours([((4, 0), (9, 30)), ((16, 0), (20, 0))], now: october, zone: newYork)
+    try #require(chinese == "纽约时间 4:00–9:30和16:00–20:00", "Chinese extended hours read \(chinese)")
+}
+
+/// Skipping a waiting call takes it off the owner's list across launches, and the list forgets it
+/// a week later, long after the call has expired.
+@MainActor
+private func skippedCallsAreKeptAWeek() throws {
+    let suite = "skipped-calls-\(UUID().uuidString)"
+    let defaults = try #require(UserDefaults(suiteName: suite))
+    defer { defaults.removePersistentDomain(forName: suite) }
+    let monday = Date(timeIntervalSince1970: 1_791_200_000)
+
+    SkippedCalls(defaults: defaults, now: monday).skip("discord:1:2", at: monday)
+
+    try #require(SkippedCalls(defaults: defaults, now: monday.addingTimeInterval(3600)).contains("discord:1:2"), "a skip was lost")
+    try #require(
+        !SkippedCalls(defaults: defaults, now: monday.addingTimeInterval(8 * 24 * 3600)).contains("discord:1:2"),
+        "a skip was kept past a week")
 }
 
 /// The order-timeout example prices the buy with this account's own tolerance above the guru's

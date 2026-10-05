@@ -46,7 +46,7 @@ def test_lot_sale_response_fixtures_match_engine_contracts():
     )
     assert preview.plan is not None
     assert preview.plan.lot_id == preview.request.lot_id
-    assert preview.plan.type == "market"
+    assert preview.plan.type == "limit"
 
     result = _round_trip(LotSaleResult, _fixture("lot-sale-response.json")["ok"]["sale"])
     assert result.status == "filled"

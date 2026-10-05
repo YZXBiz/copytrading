@@ -9,7 +9,7 @@ struct ActivityView: View {
     @State private var selectedSheet: ActivitySheet?
 
     private var visibleActivity: [SourceActivity] {
-        feature.activity.filter(screenState.filter.includes)
+        feature.activity.filter { screenState.filter.includes($0, skipped: model.skippedCalls) }
     }
 
     private var selectedItem: SourceActivity? {
@@ -61,7 +61,8 @@ struct ActivityView: View {
             prepareForDisplay()
         }
         .onChange(of: screenState.filter) { _, filter in
-            screenState.applyFilter(filter, visibleIDs: feature.activity.filter(filter.includes).map(\.id))
+            screenState.applyFilter(
+                filter, visibleIDs: feature.activity.filter { filter.includes($0, skipped: model.skippedCalls) }.map(\.id))
         }
         .onChange(of: feature.activity) {
             screenState.reconcileSelection(visibleIDs: visibleActivity.map(\.id))
@@ -93,7 +94,9 @@ struct ActivityView: View {
                         guruName: directory.name(for: selectedItem.guruID),
                         canReview: !feature.accounts.isEmpty,
                         canEvaluate: model.savedTradingConfiguration?.routes.isEmpty == false,
-                        review: { selectedSheet = .manualReview(selectedItem) },
+                        skippedCalls: model.skippedCalls,
+                        review: { selectedSheet = .manualReview(selectedItem, copying: nil) },
+                        copy: { selectedSheet = .manualReview(selectedItem, copying: $0) },
                         evaluate: { selectedSheet = .historicalEvaluation(selectedItem) }
                     )
                 } else {
@@ -107,12 +110,14 @@ struct ActivityView: View {
     @ViewBuilder
     private func sheet(for selected: ActivitySheet) -> some View {
         switch selected {
-        case .manualReview(let source):
+        case .manualReview(let source, let copying):
             ManualReviewSheet(
                 source: source,
+                copying: copying,
                 accounts: feature.accounts,
                 operations: model.accountActions(),
-                feature: reviewFeature
+                feature: reviewFeature,
+                confirmOrders: { try await model.confirmOrders(for: $0, reason: L10n.string("send these orders")) }
             )
         case .historicalEvaluation(let source):
             HistoricalProfileEvaluationSheet(source: source, model: model)
@@ -151,7 +156,10 @@ struct ActivityView: View {
     private var filterBinding: Binding<ActivityFilter> {
         Binding(
             get: { screenState.filter },
-            set: { screenState.applyFilter($0, visibleIDs: feature.activity.filter($0.includes).map(\.id)) }
+            set: { chosen in
+                screenState.applyFilter(
+                    chosen, visibleIDs: feature.activity.filter { chosen.includes($0, skipped: model.skippedCalls) }.map(\.id))
+            }
         )
     }
 }

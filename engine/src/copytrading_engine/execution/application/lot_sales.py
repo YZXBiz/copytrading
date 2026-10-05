@@ -23,10 +23,10 @@ from copytrading_engine.execution.domain.lot_sales import (
 )
 from copytrading_engine.execution.domain.manual_commands import ManualCheck
 from copytrading_engine.execution.domain.market import Quote
+from copytrading_engine.execution.domain.pricing import quote_problem
 from copytrading_engine.shared.signals import Instruction
 
 LOT_SALE_PREVIEW_TTL_SECONDS = 30
-LOT_SALE_QUOTE_MAX_AGE_SECONDS = 30
 log = logging.getLogger(__name__)
 
 
@@ -187,12 +187,7 @@ class LotSaleApplication:
             try:
                 quote = broker.quote(lot.symbol)
                 bid = quote.bid
-                if quote.timestamp is None or bid is None or bid <= 0:
-                    quote_reason = "quote_unavailable"
-                else:
-                    age = (now - quote.timestamp).total_seconds()
-                    if age < -5 or age > LOT_SALE_QUOTE_MAX_AGE_SECONDS:
-                        quote_reason = "quote_stale"
+                quote_reason = quote_problem(quote, bid, now)
             except BrokerError:
                 quote_reason = "quote_unavailable"
             except Exception as exc:  # noqa: BLE001 - unexpected preview failures become a reason

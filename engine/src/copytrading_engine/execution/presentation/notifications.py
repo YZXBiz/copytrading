@@ -18,7 +18,7 @@ from copytrading_engine.execution.domain.events import (
     SubmitError,
 )
 from copytrading_engine.execution.domain.events import Skipped as SkippedEvent
-from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
+from copytrading_engine.execution.domain.ledger_state import HELD_FOR_OWNER, LedgerSnapshot
 from copytrading_engine.execution.domain.order_lifecycle import OrderStatus
 from copytrading_engine.execution.domain.progress import Skipped as SkippedInstruction
 from copytrading_engine.shared.notification_models import NotificationIntent, NotificationPayload
@@ -45,6 +45,10 @@ REASONS = {
     "external_open_order": "An external order already exists for this asset",
     "insufficient_owned_shares": "The copier does not own enough shares for this exit",
     "duplicate": "This instruction duplicates a recent signal",
+    "price_moved": "The market is too far from the guru's price, so this account didn't buy on "
+    "its own. Open Activity to copy or skip it; it expires when its trading day ends",
+    "approval_required": "This account asks you to approve every order, so it didn't send "
+    "this one. Open Activity to approve or skip it; it expires when its trading day ends",
 }
 
 
@@ -64,11 +68,19 @@ def execution_notification(
     if isinstance(payload, Message) and payload.status in {"stale", "out_of_order"}:
         title = "Trade skipped"
         detail = REASONS[payload.status]
+    elif isinstance(payload, Message) and payload.status == "review_required":
+        title = "Waiting for you"
+        detail = (
+            "The post names no size and this account waits for you on such calls. "
+            "Open Activity to copy or skip it; it expires when its trading day ends"
+        )
+        category = "warning"
     elif isinstance(payload, SkippedEvent):
         part = payload.part
         instruction = message.instructions[part]
-        title = f"{instruction.symbol} — trade skipped"
         reason = payload.reason
+        waits = reason in HELD_FOR_OWNER
+        title = f"{instruction.symbol} — {'waiting for you' if waits else 'trade skipped'}"
         detail = REASONS.get(reason, reason.replace("_", " "))
         for breach in payload.exposure or ():
             detail += (

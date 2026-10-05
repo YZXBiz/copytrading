@@ -124,7 +124,7 @@ enum SetupHelp {
         steps: [
             "In **Connections**, under **Gurus**, choose **Add a guru** and give them a name.",
             "Pick the channel they post in, then choose **Learn from Channel**. CopyTrading reads their recent posts and drafts how they write buys, sells, and tickers.",
-            "Read the playbook and fix anything that's off. Under **Copies into**, choose how much each account puts into one of their calls.",
+            "Read the playbook and fix anything that's off. Under **How they trade**, say what their sells refer to and whether they buy in batches; under **Copies into**, choose their account.",
         ]
     )
 

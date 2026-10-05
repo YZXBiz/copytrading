@@ -31,6 +31,9 @@ class CopyConfig(BaseModel):
     extended_hours: StrictBool = True
     overnight: StrictBool = False
     copy_exits: StrictBool = True
+    # Off by default. On, no order is sent by itself: a call that would have traded waits for
+    # the owner, who approves it in the app (ADR-0008).
+    approve_orders: StrictBool = False
 
     @model_validator(mode="after")
     def validate_sessions(self) -> Self:

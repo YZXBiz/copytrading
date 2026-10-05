@@ -4,6 +4,7 @@ from copytrading_engine.host.pipe.requests import (
     EvaluateHistoricalProfileRequest,
     LearnGuruPlaybookRequest,
     PipeRequest,
+    ReplayGuruPostsRequest,
     RequestHandler,
     ReviewProfileExamplesRequest,
 )
@@ -22,6 +23,7 @@ class ProfileHandlers:
             EvaluateHistoricalProfileRequest: self._on_evaluate_historical_profile,
             ReviewProfileExamplesRequest: self._on_review_profile_examples,
             LearnGuruPlaybookRequest: self._on_learn_guru_playbook,
+            ReplayGuruPostsRequest: self._on_replay_guru_posts,
         }
 
     async def _on_evaluate_historical_profile(
@@ -77,4 +79,21 @@ class ProfileHandlers:
             request.version,
             request.request_id,
             ok={"type": "learned_playbook", "playbook": learned.model_dump(mode="json")},
+        )
+
+    async def _on_replay_guru_posts(self, request: ReplayGuruPostsRequest) -> bytes:
+        if self._trading is None:
+            return reply(request.version, request.request_id, error="unavailable")
+        replay = await self._trading.profiles.replay_posts(
+            request.channel_id,
+            request.author_id,
+            request.discord_token,
+            request.provider,
+            request.provider_api_key,
+            request.profile,
+        )
+        return reply(
+            request.version,
+            request.request_id,
+            ok={"type": "guru_replay", "replay": replay.model_dump(mode="json")},
         )

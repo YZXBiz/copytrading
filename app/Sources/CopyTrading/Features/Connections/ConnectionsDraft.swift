@@ -94,11 +94,12 @@ struct ConnectionsDraft {
                 prefix: profile?.prefix ?? "ALERT:",
                 playbook: profile?.playbook ?? "",
                 exitBasis: profile?.exitBasis ?? .originalPosition,
+                batches: profile?.batches,
+                sellsReferTo: profile?.sellsReferTo ?? .buyPrice,
                 examples: profile?.examples.map(TradingProfileExampleDraft.init(example:)) ?? [],
-                connections: route.connections.map { connection in
+                connection: route.connections.first.map { connection in
                     TradingConnectionDraft(
-                        accountID: connection.accountID, mode: connection.mode,
-                        amountUSD: connection.amountUSD, defaultFraction: connection.defaultFraction
+                        accountID: connection.accountID, defaultFraction: connection.defaultFraction
                     )
                 }
             )
@@ -138,7 +139,9 @@ struct ConnectionsDraft {
                     prefix: route.prefix.trimmed,
                     playbook: route.playbook.trimmedLines,
                     examples: route.examples.map(\.profileExample),
-                    exitBasis: route.exitBasis
+                    exitBasis: route.exitBasis,
+                    batches: route.batches,
+                    sellsReferTo: route.sellsReferTo
                 ))
             profileByRevision[profile.profileRevision] = profile
             convertedRoutes.append(
@@ -147,15 +150,7 @@ struct ConnectionsDraft {
                     authorID: route.authorID.trimmed.nilIfEmpty,
                     guruID: profile.guruID,
                     profileRevision: profile.profileRevision,
-                    connections: route.connections.map { connection in
-                        TradingRouteConnection(
-                            accountID: connection.accountID.trimmed,
-                            mode: connection.mode,
-                            amountUSD: connection.amountUSD.trimmed,
-                            defaultFraction: connection.mode == .proportional && connection.useDefaultFraction
-                                ? connection.defaultFraction.trimmed : nil
-                        )
-                    }
+                    connections: route.connection.map { [$0.terms(fullPositionUSD: fullPosition(for: $0))] } ?? []
                 ))
         }
         let configuration = TradingConfiguration(
@@ -179,6 +174,24 @@ struct ConnectionsDraft {
             notificationToken: notificationsEnabled ? notificationToken : nil
         )
         return (configuration, secrets)
+    }
+
+    /// The guru's full position: the account's current maximum per stock, so the two can never
+    /// disagree (ADR-0007).
+    func fullPosition(for connection: TradingConnectionDraft) -> String {
+        policy(of: connection.accountID)?.maxSymbolUSD.trimmed ?? ""
+    }
+
+    func policy(of accountID: String) -> TradingAccountPolicy? {
+        accounts.first { $0.name.trimmed == accountID.trimmed }?.policy
+    }
+
+    /// The accounts a guru may copy into: those no other guru copies into, and its own.
+    func accountChoices(for route: TradingRouteDraft) -> [String] {
+        let taken = Set(
+            routes.filter { $0.id != route.id }.compactMap { $0.connection?.accountID.trimmed }
+        )
+        return accountIDs.filter { !taken.contains($0) }
     }
 
     /// Splits on ASCII and full-width commas, so text typed with a Chinese keyboard works too.

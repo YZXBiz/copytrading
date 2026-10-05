@@ -50,8 +50,8 @@ class ManualSourceEvidence(Value):
             or self.text != signal.text
         ):
             raise ValueError("Source evidence differs from its accepted interpretation")
-        if signal.decision != "review":
-            raise ValueError("Only reviewed source interpretations can be corrected")
+        if signal.decision == "ignore":
+            raise ValueError("An ignored post has nothing to copy")
         return self
 
 
@@ -82,7 +82,7 @@ class ManualCorrectionRecord(Value):
             self.source_id != f"{signal.source}:{signal.channel_id}:{signal.id}"
             or self.source_at != signal.timestamp
             or self.source_text != signal.text
-            or signal.decision != "review"
+            or signal.decision == "ignore"
         ):
             raise ValueError("Correction does not retain matching reviewed source evidence")
         return self

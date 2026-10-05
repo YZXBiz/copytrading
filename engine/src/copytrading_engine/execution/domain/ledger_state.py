@@ -23,7 +23,12 @@ from copytrading_engine.execution.domain.ownership import (
     OwnershipIncident,
     OwnershipResolution,
 )
-from copytrading_engine.execution.domain.progress import InstructionProgress, OrderLinked, Pending
+from copytrading_engine.execution.domain.progress import (
+    InstructionProgress,
+    OrderLinked,
+    Pending,
+    Skipped,
+)
 from copytrading_engine.execution.domain.recovery import (
     LateOrderIncident,
     ManualSale,
@@ -58,6 +63,10 @@ class CashAnchor(Value):
     buying_power: Quantity
 
 
+# Skips that hold a call back for the owner rather than refuse it.
+HELD_FOR_OWNER = frozenset({"price_moved", "approval_required"})
+
+
 class MessageRecord(StockSignal):
     model_config = ConfigDict(frozen=True, extra="forbid", hide_input_in_errors=True)
     source_key: Identifier
@@ -82,6 +91,18 @@ class MessageRecord(StockSignal):
     @property
     def key(self) -> str:
         return f"{self.source_key}:{self.id}"
+
+    @property
+    def waits_for_owner(self) -> bool:
+        """The account will not act on this post by itself (ADR-0007): it waits for review, or it
+        finished and held a call back for the owner. Only such a post can be copied by hand, so a
+        copy never doubles an order the account already sent."""
+        return self.status == "review_required" or (
+            self.status == "done"
+            and any(
+                isinstance(part, Skipped) and part.reason in HELD_FOR_OWNER for part in self.parts
+            )
+        )
 
 
 class LedgerSnapshot(Value):
@@ -223,8 +244,7 @@ class LedgerSnapshot(Value):
                 key != correction.correction_id
                 or revision_key in correction_revisions
                 or message is None
-                or message.status != "review_required"
-                or message.decision != "review"
+                or not message.waits_for_owner
                 or accepted != correction.accepted_interpretation
                 or correction.source_text != message.text
                 or correction.source_at != message.timestamp
@@ -251,7 +271,11 @@ class LedgerSnapshot(Value):
                 instruction = correction.instructions[instruction_index]
                 expected_side = "buy" if instruction.action == "buy" else "sell"
                 expected_entry = (
-                    instruction.price if expected_side == "buy" else instruction.entry_price
+                    instruction.price
+                    if expected_side == "buy"
+                    else instruction.entry_price
+                    if instruction.entry_price is not None
+                    else preview.plan.entry_price
                 )
                 if (
                     preview.plan.side,
@@ -515,11 +539,12 @@ class LedgerSnapshot(Value):
                     raise ValueError("Sell order references an unknown or different lot")
         for key, lot in self.lots.items():
             entries = [self.orders.get(entry) for entry in lot.entries(key)]
+            # A buy that joined this lot for a whole-position guru may be at another price.
             if any(
                 entry is None
                 or entry.side != "buy"
-                or (lot.symbol, lot.source_key, lot.entry_price)
-                != (entry.symbol, entry.source_key, entry.entry_price)
+                or (lot.symbol, lot.source_key) != (entry.symbol, entry.source_key)
+                or (lot.entry_price != entry.entry_price and entry.joins_lot != key)
                 for entry in entries
             ) or lot.original_qty != sum(
                 (entry.filled_qty for entry in entries if entry is not None), Decimal(0)

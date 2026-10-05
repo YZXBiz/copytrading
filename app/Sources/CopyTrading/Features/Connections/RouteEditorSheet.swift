@@ -1,12 +1,18 @@
 import DesktopCore
 import SwiftUI
 
-/// One guru: where they post, how to read their calls, and which accounts copy them.
+/// One guru: where they post, how to read their calls, how they trade, and the account that
+/// copies them.
 struct RouteEditorSheet: View {
     @Binding var route: TradingRouteDraft
+    /// The accounts this guru may copy into: those no other guru copies into.
     let accountIDs: [String]
+    /// Each account's limits, by account name, for sizing.
+    let policies: [String: TradingAccountPolicy]
     let channelIDs: [String]
     let learn: (TradingRouteDraft) async throws -> LearnedGuruPlaybook
+    /// Reads recent posts with this draft before the guru is switched on.
+    let replay: (TradingRouteDraft) async throws -> GuruReplay
     let remove: () -> Void
     @Environment(\.dismiss) private var dismiss
 
@@ -80,26 +86,15 @@ struct RouteEditorSheet: View {
                     )
                 }
 
-                ForEach($route.connections) { $connection in
-                    DestinationEditorSection(
-                        connection: $connection,
-                        accountIDs: accountIDs,
-                        canRemove: route.connections.count > 1,
-                        remove: { removeConnection(connection.id) }
-                    )
-                }
-                Section {
-                    if accountIDs.isEmpty {
-                        Text(L10n.string("Add a broker account in Connections, then choose it here."))
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Button(
-                            L10n.string(route.connections.isEmpty ? "Choose an Account to Copy Into" : "Copy into Another Account"),
-                            systemImage: "plus", action: addConnection
-                        )
-                        .buttonStyle(.borderless)
-                    }
-                }
+                GuruRulesSection(route: $route)
+
+                GuruReplaySection(route: route, replay: replay)
+
+                DestinationEditorSection(
+                    connection: $route.connection,
+                    accountIDs: accountIDs,
+                    policy: route.connection.flatMap { policies[$0.accountID.trimmed] }
+                )
 
                 Section {
                     Button(L10n.string("Remove Guru"), role: .destructive, action: removeGuru)
@@ -135,16 +130,6 @@ struct RouteEditorSheet: View {
 
     private func removeExample(_ id: UUID) {
         route.examples.removeAll { $0.id == id }
-    }
-
-    private func addConnection() {
-        let used = Set(route.connections.map(\.accountID))
-        let next = accountIDs.first { !used.contains($0) } ?? accountIDs.first ?? ""
-        route.connections.append(TradingConnectionDraft(accountID: next))
-    }
-
-    private func removeConnection(_ id: UUID) {
-        route.connections.removeAll { $0.id == id }
     }
 
     private func removeGuru() {

@@ -15,10 +15,11 @@ from copytrading_engine.execution.domain.sizing import (
     RouteConnection,
 )
 from copytrading_engine.parsing.contracts import RawMessage, RequestReservation
-from copytrading_engine.parsing.extraction import DecodedMessage, DecodeError, Route
+from copytrading_engine.parsing.extraction import DecodeError, Route
 from copytrading_engine.parsing.worker import ParseWorker
 from copytrading_engine.shared.correlation import current_workflow_attempt
 
+from ..readings import buy, commentary, trade
 from .fakes import InMemoryExtractionStore
 
 NOW = dt.datetime(2026, 1, 5, 15, tzinfo=dt.UTC)
@@ -48,7 +49,7 @@ class FakeDecoder:
         self.calls += 1
         if self.fail:
             raise DecodeError("provider_timeout", retryable=True)
-        return DecodedMessage(decision="ignore", reason="Commentary", instructions=[])
+        return commentary("Commentary")
 
 
 def box_and_worker(*, fail=False, age=0, daily_limit=200, text="Commentary only"):
@@ -244,7 +245,7 @@ async def test_channel_profile_routes_resolve_by_author_and_keep_source_identity
     class Decoder:
         async def decode(self, text, route):
             observed.append((route.guru_id, route.profile_revision))
-            return DecodedMessage(decision="ignore", reason="Commentary", instructions=())
+            return commentary("Commentary")
 
     first_revision, second_revision = "a" * 64, "b" * 64
     worker = ParseWorker(
@@ -364,24 +365,7 @@ async def test_omitted_allocation_never_reaches_default_sized_destination_order(
 ):
     class OmittedFractionDecoder:
         async def decode(self, text, route):
-            return DecodedMessage(
-                decision="trade",
-                reason="buy",
-                instructions=[
-                    {
-                        "action": "buy",
-                        "symbol": "ABC",
-                        "price": "25",
-                        "entry_price": None,
-                        "fraction": None,
-                        "action_evidence": action,
-                        "symbol_evidence": symbol,
-                        "price_evidence": "25",
-                        "entry_evidence": None,
-                        "fraction_evidence": None,
-                    }
-                ],
-            )
+            return trade(buy("ABC", "25", said=action, ticker_said=symbol))
 
     class ReviewRepository:
         def __init__(self):
@@ -441,8 +425,7 @@ async def test_omitted_allocation_never_reaches_default_sized_destination_order(
             terms=DestinationTerms(
                 connection=RouteConnection(
                     account_id="paper-demo",
-                    mode="proportional",
-                    amount_usd="3000",
+                    full_position_usd="3000",
                     default_fraction="1",
                 ),
                 environment="paper",

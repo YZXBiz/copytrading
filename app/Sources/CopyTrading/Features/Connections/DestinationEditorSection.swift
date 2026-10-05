@@ -1,82 +1,88 @@
 import DesktopCore
 import SwiftUI
 
+/// The one account a guru copies into (ADR-0007), the share a call with no size buys, and what
+/// the guru's calls come to in that account.
 struct DestinationEditorSection: View {
-    @Binding var connection: TradingConnectionDraft
+    @Binding var connection: TradingConnectionDraft?
+    /// Accounts no other guru copies into; each account copies one guru.
     let accountIDs: [String]
-    let canRemove: Bool
-    let remove: () -> Void
-
-    private var accountChoices: [String] {
-        accountIDs.contains(connection.accountID) || connection.accountID.isEmpty
-            ? accountIDs
-            : accountIDs + [connection.accountID]
-    }
-
-    private var policy: TradingRouteConnection {
-        TradingRouteConnection(
-            accountID: connection.accountID,
-            mode: connection.mode,
-            amountUSD: connection.amountUSD,
-            defaultFraction: connection.mode == .proportional && connection.useDefaultFraction
-                ? connection.defaultFraction : nil
-        )
-    }
+    /// The chosen account's limits: its per-stock maximum is the guru's full position, and its
+    /// per-order limit trims a bigger buy.
+    let policy: TradingAccountPolicy?
 
     var body: some View {
         Section {
-            Picker(L10n.string("Account"), selection: $connection.accountID) {
-                ForEach(accountChoices, id: \.self) { accountID in
-                    Text(accountID).tag(accountID)
+            if accountIDs.isEmpty && connection == nil {
+                Text(L10n.string("Every account already copies a guru. Add a broker account in Connections first."))
+                    .foregroundStyle(.secondary)
+            } else {
+                Picker(L10n.string("Account"), selection: account) {
+                    if connection == nil {
+                        Text(L10n.string("Choose an account")).tag("")
+                    }
+                    ForEach(accountChoices, id: \.self) { accountID in
+                        Text(accountID).tag(accountID)
+                    }
                 }
             }
-            Picker(L10n.string("Sizing"), selection: $connection.mode) {
-                Text(L10n.string("Fixed dollars per entry")).tag(TradingSizingMode.fixed)
-                Text(L10n.string("Proportional to source")).tag(TradingSizingMode.proportional)
-            }
-            TextField(
-                L10n.string(connection.mode == .fixed ? "Dollars per entry" : "Full position (USD)"),
-                text: $connection.amountUSD
-            )
-            if connection.mode == .proportional {
-                Toggle(L10n.string("Use a default when the source gives no fraction"), isOn: $connection.useDefaultFraction)
+            if let draft = connection {
+                Toggle(L10n.string("If a post gives no size, buy this much"), isOn: useDefaultShare)
                     .compactSwitch()
-                if connection.useDefaultFraction {
-                    TextField(
-                        L10n.string("Default fraction"), text: $connection.defaultFraction,
-                        prompt: Text(L10n.string("e.g. %@", "0.1666667"))
-                    )
-                    .accessibilityLabel(L10n.string("Default fraction"))
+                if draft.useDefaultFraction {
+                    TextField(L10n.string("Default share"), text: defaultShare, prompt: Text(L10n.string("e.g. %@", "1/6")))
+                        .accessibilityLabel(L10n.string("Default share"))
                 }
-            }
-            LabeledContent(L10n.string("Sizing preview")) {
-                HStack(spacing: 16) {
-                    preview("1/6", budget: policy.copiedBudgetUSD(sourceFraction: Decimal(1) / Decimal(6)))
-                    preview("1/3", budget: policy.copiedBudgetUSD(sourceFraction: Decimal(1) / Decimal(3)))
-                    preview(L10n.string("none"), budget: policy.copiedBudgetUSD(sourceFraction: nil))
-                }
-            }
-            .help(L10n.string("Budget per entry at each source fraction, before account risk limits and price checks."))
-        } header: {
-            HStack {
-                Text(L10n.string("Copies into"))
-                Spacer()
-                Button(L10n.string("Remove"), role: .destructive, action: remove)
-                    .buttonStyle(.borderless)
+                let summary = SizingSummary.text(draft, policy: policy)
+                Text((try? AttributedString(markdown: summary)) ?? AttributedString(summary))
                     .font(.callout)
-                    .disabled(!canRemove)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("guru.sizingSummary")
             }
+        } header: {
+            Text(L10n.string("Copies into"))
+        } footer: {
+            Text(L10n.string("Each account follows one guru. Its max per stock is that guru's full position."))
         }
     }
 
-    @MainActor private func preview(_ fraction: String, budget: Decimal?) -> some View {
-        VStack(alignment: .trailing, spacing: 1) {
-            Text(L10n.string(budget.map(Humanize.usd) ?? "Review"))
-                .monospacedDigit()
-                .foregroundStyle(budget == nil ? .orange : .primary)
-            Text(L10n.string("at %@", fraction))
-                .font(.caption)
-                .foregroundStyle(.secondary)
+    private var accountChoices: [String] {
+        guard let chosen = connection?.accountID, !chosen.isEmpty, !accountIDs.contains(chosen) else {
+            return accountIDs
         }
+        return accountIDs + [chosen]
+    }
+
+    private var account: Binding<String> {
+        Binding(
+            get: { connection?.accountID ?? "" },
+            set: { accountID in
+                guard !accountID.isEmpty else { return }
+                if connection == nil {
+                    connection = TradingConnectionDraft(accountID: accountID)
+                } else {
+                    connection?.accountID = accountID
+                }
+            }
+        )
+    }
+
+    private var useDefaultShare: Binding<Bool> {
+        Binding(
+            get: { connection?.useDefaultFraction ?? true },
+            set: { connection?.useDefaultFraction = $0 }
+        )
+    }
+
+    /// The default share as the guru would write it, "1/6", kept as the decimal the engine uses.
+    private var defaultShare: Binding<String> {
+        Binding(
+            get: {
+                let stored = connection?.defaultFraction.trimmed ?? ""
+                return Decimal(string: stored) == nil ? stored : Humanize.fraction(stored)
+            },
+            set: { connection?.defaultFraction = ExampleEditorSection.decimal(fromSize: $0) }
+        )
     }
 }

@@ -6,41 +6,57 @@ from copytrading_engine.trading.domain.config import TradingConfiguration, Tradi
 from copytrading_engine.trading.domain.profiles import ProfileBuilder, ProfileDraft
 from copytrading_engine.trading.entrypoints.runtime import TradingRuntime
 
+# The account's default maximum per stock, which is its guru's full position (ADR-0007).
+FULL_POSITION_USD = "600"
+ACCOUNTS = ("first", "second", "third")
 
-def connection(account_id: str, *, mode: str = "fixed", amount_usd: str = "100") -> dict:
-    return {"account_id": account_id, "mode": mode, "amount_usd": amount_usd}
+
+def channel(account_id: str) -> str:
+    """One guru per account: the guru for "first" posts on 123, for "second" on 124, and so on."""
+    return str(123 + ACCOUNTS.index(account_id))
 
 
-def trading_configuration():
-    profile = ProfileBuilder().build(
+def connection(account_id: str, *, full_position_usd: str = FULL_POSITION_USD) -> dict:
+    return {"account_id": account_id, "full_position_usd": full_position_usd}
+
+
+def guru(account_id: str):
+    return ProfileBuilder().build(
         ProfileDraft(
-            guru_id="default-guru",
-            display_name="Default Guru",
+            guru_id=f"{account_id}-guru",
+            display_name=f"{account_id.title()} Guru",
             prefix="ALERT:",
             playbook="",
             examples=(),
             exit_basis="original_position",
         )
     )
+
+
+def route(account_id: str, channel_id: str) -> dict:
+    profile = guru(account_id)
+    return {
+        "channel_id": channel_id,
+        "author_id": None,
+        "guru_id": profile.guru_id,
+        "profile_revision": profile.profile_revision,
+        "connections": [connection(account_id)],
+    }
+
+
+def trading_configuration(*accounts: str, policy: dict | None = None):
+    accounts = accounts or ("first", "second")
+    account_policy = {} if policy is None else {"policy": policy}
     return TradingConfiguration.model_validate(
         {
-            "version": 4,
-            "source": {"channel_ids": ["123"]},
+            "version": 5,
+            "source": {"channel_ids": [channel(account) for account in accounts]},
             "provider": {"name": "anthropic", "model": "test-model"},
             "accounts": [
-                {"id": "first", "environment": "paper"},
-                {"id": "second", "environment": "paper"},
+                {"id": account, "environment": "paper", **account_policy} for account in accounts
             ],
-            "profiles": [profile.model_dump(mode="json")],
-            "routes": [
-                {
-                    "channel_id": "123",
-                    "author_id": None,
-                    "guru_id": profile.guru_id,
-                    "profile_revision": profile.profile_revision,
-                    "connections": [connection("first"), connection("second")],
-                }
-            ],
+            "profiles": [guru(account).model_dump(mode="json") for account in accounts],
+            "routes": [route(account, channel(account)) for account in accounts],
         }
     )
 

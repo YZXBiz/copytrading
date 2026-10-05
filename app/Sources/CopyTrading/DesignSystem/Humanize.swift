@@ -89,6 +89,16 @@ enum Humanize {
         value.formatted(.currency(code: "USD"))
     }
 
+    /// An amount as a person says it: whole dollars without cents ("$160"), otherwise to the cent
+    /// ("$39.50").
+    static func dollars(_ value: String?) -> String {
+        guard let value, var decimal = Decimal(string: value) else { return "—" }
+        var rounded = Decimal()
+        NSDecimalRound(&rounded, &decimal, 0, .plain)
+        let whole = decimal == rounded
+        return decimal.formatted(.currency(code: "USD").precision(.fractionLength(whole ? 0 : 2)))
+    }
+
     static func bytes(_ value: Int64) -> String {
         value.formatted(.byteCount(style: .file))
     }

@@ -5,6 +5,7 @@ import Testing
 enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible {
     case activitySourceReading = "activity source reading"
     case activityDestinationOutcomes = "activity destination outcomes"
+    case activityCard = "activity card"
     case appWindowLifecycle = "app window lifecycle"
     case connectionsDraft = "connections draft"
     case guidedSetup = "guided setup"
@@ -17,6 +18,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
     case assistantHelp = "assistant help"
     case assistantPanel = "assistant panel"
     case settingsSaveFlow = "settings save and start flow"
+    case orderApproval = "order approval"
 
     var testDescription: String { rawValue }
 
@@ -24,6 +26,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
         switch self {
         case .activitySourceReading: try checkActivitySourceReadingRepresentation()
         case .activityDestinationOutcomes: try checkActivityDestinationInstructionOutcomes()
+        case .activityCard: try runActivityCardTests()
         case .appWindowLifecycle: try await runAppWindowLifecycleTests()
         case .connectionsDraft: try runConnectionsDraftTests()
         case .guidedSetup: try runGuidedSetupTests()
@@ -36,6 +39,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
         case .assistantHelp: try runAssistantHelpTests()
         case .assistantPanel: try runAssistantPanelTests()
         case .settingsSaveFlow: try await TradingSettingsSaveTests.runSettingsSaveFlow()
+        case .orderApproval: try await runOrderApprovalTests()
         }
     }
 }

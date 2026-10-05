@@ -10,7 +10,7 @@ struct PeopleInvitation: View {
             lead: "The traders",
             emphasis: "you choose to copy",
             message:
-                "The traders you follow show here once you add them in Connections: the channel they post in, how to read their calls, and how much each account puts into one."
+                "The traders you follow show here once you add them in Connections: the channel they post in, how to read their calls, and the account that copies them."
         ) {
             PeopleInvitationFigure()
         } actions: {

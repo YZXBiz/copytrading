@@ -153,7 +153,7 @@ private func checkLotSaleFixtures() throws {
     guard case .lotSalePreview(let preview) = try previewResponse.successValue() else {
         throw VerificationFailure(description: "a lot sale preview did not decode as one")
     }
-    try #require(preview.plan?.lotID == lotID && preview.plan?.type == "market", "a lot sale plan lost its lot or order type")
+    try #require(preview.plan?.lotID == lotID && preview.plan?.type == "limit", "a lot sale plan lost its lot or order type")
     try #require(preview.freshPrice == "26.10" && preview.reasons.isEmpty, "a lot sale preview lost its price or reasons")
 
     let saleResponse = try JSONDecoder().decode(EngineResponse.self, from: contractFixture("lot-sale-response.json"))

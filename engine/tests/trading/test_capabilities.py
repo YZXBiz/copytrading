@@ -38,7 +38,7 @@ def _configuration(*, notification: bool = False) -> TradingConfiguration:
     )
     return TradingConfiguration.model_validate(
         {
-            "version": 4,
+            "version": 5,
             "source": {"channel_ids": ["123"]},
             "provider": {"name": "deepseek", "model": "test-model"},
             "accounts": [
@@ -52,10 +52,8 @@ def _configuration(*, notification: bool = False) -> TradingConfiguration:
                     "author_id": None,
                     "guru_id": profile.guru_id,
                     "profile_revision": profile.profile_revision,
-                    "connections": [
-                        {"account_id": "paper-account", "mode": "fixed", "amount_usd": "100"},
-                        {"account_id": "live-account", "mode": "fixed", "amount_usd": "100"},
-                    ],
+                    # One guru per account; the live account is checked but follows no one.
+                    "connections": [{"account_id": "paper-account", "full_position_usd": "600"}],
                 }
             ],
             "notification": {"chat_id": "room-1"} if notification else None,

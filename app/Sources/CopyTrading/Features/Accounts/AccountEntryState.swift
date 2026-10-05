@@ -2,6 +2,7 @@ import DesktopCore
 
 /// Whether an account is taking new entries, in words and a tone, from the engine's own
 /// readiness values (enabled, enabled_waiting_for_session, manual_resume_required, …).
+@MainActor
 struct AccountEntryState: Equatable {
     let text: String
     let tone: StatusTone

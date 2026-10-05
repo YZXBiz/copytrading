@@ -55,7 +55,7 @@ struct ActivityListView: View {
         .overlay {
             if items.isEmpty && filter != .all {
                 ContentUnavailableView(
-                    L10n.string(filter == .needsReview ? "Nothing needs review" : "No trades yet"),
+                    L10n.string(filter == .waiting ? "Nothing is waiting for you" : "No trades yet"),
                     systemImage: "line.3.horizontal.decrease.circle"
                 )
             }

@@ -239,6 +239,7 @@ class OperatorQueryService:
                             environment=accounts[connection.account_id].environment,
                             status="pending_delivery",
                             instruction_outcomes=(),
+                            limits_hit=(),
                             orders=(),
                         )
                     )

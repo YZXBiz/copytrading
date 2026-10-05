@@ -25,14 +25,13 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.providers.openrouter import OpenRouterProvider
 from pydantic_ai.providers.together import TogetherProvider
 
-from copytrading_engine.parsing.extraction import DecodedMessage
+from copytrading_engine.parsing.extraction import ReadingOutput
 from copytrading_engine.parsing.learning import LEARN_INSTRUCTIONS, PlaybookProposal
-from copytrading_engine.parsing.prompt import INSTRUCTIONS
 from copytrading_engine.shared.cleanup import close_logged
 from copytrading_engine.shared.model_providers import OLLAMA_ENDPOINT, ModelProvider, ProviderConfig
 from copytrading_engine.shared.payload_capture import PayloadCapture
 
-from .pydantic_ai import PydanticAIDecoder
+from .pydantic_ai import PydanticAIDecoder, reading_agent
 from .registry import DecoderFactory, ManagedDecoder
 from .transport import DiagnosticHTTPTransport
 
@@ -111,12 +110,10 @@ def build_decoder(
     service: Service, config: ProviderConfig, client: AsyncOpenAI
 ) -> PydanticAIDecoder:
     model = chat_model(service, config, client)
-    agent = Agent(
+    agent = reading_agent(
         model,
-        output_type=PromptedOutput(DecodedMessage),
-        instructions=INSTRUCTIONS,
-        retries=0,
-        model_settings={"temperature": 0, "max_tokens": 3000},
+        PromptedOutput(ReadingOutput),
+        {"temperature": 0, "max_tokens": 3000},
     )
     learner = Agent(
         model,

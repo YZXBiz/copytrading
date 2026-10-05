@@ -1,6 +1,7 @@
 """Read-only profile work: learn a playbook, evaluate history, and check examples."""
 
 import asyncio
+import datetime as dt
 import logging
 from collections.abc import Callable, Collection
 from pathlib import Path
@@ -8,11 +9,13 @@ from pathlib import Path
 from pydantic import SecretStr, ValidationError
 
 from copytrading_engine.execution.domain.sizing import RouteConnection
+from copytrading_engine.parsing.application import transform
 from copytrading_engine.parsing.extraction import DecodeError, normalize, without_mentions
 from copytrading_engine.parsing.learning import PlaybookProposal
 from copytrading_engine.parsing.providers.registry import NamedDecoderFactory
 from copytrading_engine.shared.cleanup import close_logged
 from copytrading_engine.shared.owner_facing import OwnerFacingError
+from copytrading_engine.shared.raw_message import RawMessage
 from copytrading_engine.trading.application.ports import ChannelHistory, OperatorEvidence
 from copytrading_engine.trading.domain.config import ProviderConfiguration
 from copytrading_engine.trading.domain.profiles import (
@@ -22,11 +25,16 @@ from copytrading_engine.trading.domain.profiles import (
     ProfileExample,
     ProfileExampleReview,
     ProfileExampleReviewService,
+    ProfileReplay,
     ProfileRevision,
+    ReplayedPost,
 )
 
 # Enough posts to see a guru's habits; few enough to stay one bounded model call.
 LEARNING_POST_LIMIT = 80
+# A replay reads each post with its own model call, so it reads the most recent few, a few at once.
+REPLAY_POST_LIMIT = 15
+REPLAY_CONCURRENCY = 4
 # Writing a whole playbook takes far longer than reading one post.
 LEARNING_TIMEOUT_SECONDS = 150
 
@@ -133,6 +141,68 @@ class ProfileReviewService:
         finally:
             await close_logged(decoder.close, resource="provider", log=log)
         return _verified_draft(proposal, posts, provider)
+
+    async def replay_posts(
+        self,
+        channel_id: str,
+        author_id: str | None,
+        discord_token: SecretStr,
+        provider: ProviderConfiguration,
+        provider_api_key: SecretStr,
+        profile: ProfileRevision,
+    ) -> ProfileReplay:
+        """Read the guru's recent posts as the live pipeline would, with this draft's playbook and
+        rules, and say what each would have done. Nothing is placed or saved."""
+        self._register_secrets(
+            (discord_token.get_secret_value(), provider_api_key.get_secret_value())
+        )
+        posts = await self._history.recent_posts(
+            discord_token.get_secret_value(), channel_id, author_id, REPLAY_POST_LIMIT
+        )
+        if not posts:
+            raise OwnerFacingError("This channel has no text posts to replay yet.")
+        decoder = await self._decoder(provider.name, provider.reader(provider_api_key, timeout=20))
+        route = profile.route()
+        gate = asyncio.Semaphore(REPLAY_CONCURRENCY)
+
+        async def replay(index: int, text: str) -> ReplayedPost:
+            message = RawMessage(
+                schema_version=1,
+                event_type="raw_message",
+                source="discord",
+                channel_id=channel_id,
+                id=f"replay-{index}",
+                timestamp=dt.datetime.now(dt.UTC),
+                text=text,
+            )
+            async with gate:
+                try:
+                    signal = await transform(message, route, decoder, provider.model)
+                except DecodeError as exc:
+                    return ReplayedPost(
+                        text=text,
+                        decision="review",
+                        reason=exc.reason,
+                        reading=None,
+                        instructions=(),
+                        suggested=(),
+                    )
+            return ReplayedPost(
+                text=text,
+                decision=signal.decision,
+                reason=signal.reason,
+                reading=signal.reading,
+                instructions=signal.instructions,
+                suggested=signal.suggested,
+            )
+
+        try:
+            replayed = await asyncio.gather(
+                *(replay(index, text) for index, text in enumerate(posts))
+            )
+        finally:
+            await close_logged(decoder.close, resource="provider", log=log)
+        return ProfileReplay(posts=tuple(replayed), provider=provider.name, model=provider.model)
 
 
 _LEARNING_FAILED = "The model could not draft a playbook. Try again."

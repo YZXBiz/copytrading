@@ -7,8 +7,8 @@ import pytest
 
 from copytrading_engine.assistant.insights import explain_skip, guru_record
 from copytrading_engine.execution.presentation.operator_views import DestinationView
+from copytrading_engine.shared.signals import Instruction
 from copytrading_engine.trading.presentation.operator_models import (
-    InstructionView,
     SourceActivity,
     SourceActivityPage,
     SourceEventEvidence,
@@ -23,6 +23,7 @@ def destination(account_id: str, *outcomes: str) -> DestinationView:
         environment="paper",
         status="done",
         instruction_outcomes=outcomes,
+        limits_hit=(),
         orders=(),
     )
 
@@ -42,9 +43,7 @@ def call(source_id: str, *destinations: DestinationView) -> SourceActivity:
         parser_reason=None,
         parser_profile=None,
         interpreted_by=None,
-        instructions=(
-            InstructionView(action="buy", symbol="NVDA", price=Decimal("125"), fraction=None),
-        ),
+        instructions=(Instruction(action="buy", symbol="NVDA", price=Decimal("125")),),
         guru_id="zhao",
         source_event=SourceEventEvidence(
             event_type="raw_message",

@@ -54,9 +54,20 @@ class OrderPlan(OrderTerms):
     lot_id: Identifier | None
     entry_price: Positive
     session: Session
+    # A buy for a guru whose sells refer to the whole position joins this open lot.
+    joins_lot: Identifier | None = None
+    # What the call asked for, and what the maximum per order allowed of it (ADR-0007).
+    requested_usd: Positive | None = None
+    budget_usd: Positive | None = None
 
     @model_validator(mode="after")
     def valid_plan(self) -> Self:
+        if self.side == "sell" and (
+            self.joins_lot is not None
+            or self.requested_usd is not None
+            or self.budget_usd is not None
+        ):
+            raise ValueError("Only buys join a lot or carry a requested amount")
         if self.session == Session.CLOSED:
             raise ValueError("Cannot prepare an order in a closed session")
         if self.type == "market" and self.session != Session.REGULAR:

@@ -146,18 +146,17 @@ struct LotSaleSheet: View {
         let bid = preview.freshPrice.flatMap { Decimal(engine: $0) }
         let noun = L10n.string(quantity == 1 ? "share" : "shares")
         let shares = L10n.string("%@ %@ of %@", quantity.formatted(), noun, plan.symbol)
-        if plan.type == "limit", let limit = plan.limitPrice.flatMap({ Decimal(engine: $0) }) {
-            return L10n.string(
-                "Sells %@ with a limit order at %@, since the market is outside regular hours. It fills at that price or better, or not at all.",
-                shares, limit.formatted(.currency(code: "USD"))
-            )
-        }
-        guard let bid else { return L10n.string("Sells %@ at the market price.", shares) }
+        guard let limit = plan.limitPrice.flatMap({ Decimal(engine: $0) }) else { return shares }
+        let sentence = L10n.string(
+            "Sells %@ with a limit order at %@. It fills at that price or better, or not at all.",
+            shares, limit.formatted(.currency(code: "USD")))
+        guard let bid else { return sentence }
         let proceeds = (quantity * bid).formatted(.currency(code: "USD"))
-        return L10n.string(
-            "Sells %@ at the market price. At today’s bid of %@, that comes to about %@.",
-            shares, bid.formatted(.currency(code: "USD")), proceeds
-        )
+        return L10n.sentences([
+            sentence,
+            L10n.string(
+                "At today’s bid of %@, that comes to about %@.", bid.formatted(.currency(code: "USD")), proceeds),
+        ])
     }
 
     @ViewBuilder
@@ -197,8 +196,8 @@ struct LotSaleSheet: View {
             return L10n.string("The broker has the order. Accounts updates as it fills.")
         case "uncertain":
             return L10n.string("CopyTrading did not get the broker’s answer. It checks again on its own and never sends the order twice.")
-        case "rejected": return L10n.string(Reason.text(result.reason))
-        default: return L10n.string(Reason.text(result.reason ?? result.status))
+        case "rejected": return Reason.text(result.reason)
+        default: return Reason.text(result.reason ?? result.status)
         }
     }
 
@@ -266,7 +265,7 @@ struct LotSaleSheet: View {
     @MainActor private func sellTitle(_ preview: LotSalePreview) -> String {
         let quantity = preview.plan.flatMap { Decimal(engine: $0.quantity) } ?? flow.shares
         return L10n.string(
-            target.environment == .live ? "Sell %@ %@ with Touch ID" : "Sell %@ %@",
+            target.asksForOwner ? "Sell %@ %@ with Touch ID" : "Sell %@ %@",
             quantity.formatted(), target.symbol
         )
     }

@@ -2,6 +2,35 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
+## Unreleased
+
+Every guru's post is now read into one shape, and plain rules turn it into orders ([ADR-0007](docs/adr/0007-one-reading-contract.md)).
+
+### How a post becomes an order
+
+- **One reading for every guru.** The model reads each post as a trade made, an instruction, a condition, a suggestion, or talk, with each buy and sell's price, size, and the buy a sell refers to, every value in the post's own words. A reading that cites words the post doesn't contain goes back to the model once with the reason.
+- **One guru per account.** A guru's full position is its account's maximum per stock, so a 1/6 call buys a sixth of it and a call that names no size buys all of it (or waits, if you choose). The maximum per order trims a buy and says so. Fixed dollars per entry are gone; the app asks you to set up again.
+- **How each guru trades.** Set whether a sell refers to the buy price it names (each buy is its own lot) or to the whole position (every buy of a stock is one lot), and how many batches make a full position.
+- **Market moved.** If the price has moved more than 5% from the guru's price, up or down, the buy waits for you to decide. You set the percentage per account.
+- **Sells are limit orders.** A copied sell is a limit order at all hours, no lower than 1% under the guru's price ("Maximum below signal price", set per account), where it used to sell at market in regular hours. A sell that hasn't filled by the order timeout is cancelled and the shares stay yours.
+
+### Ask me before orders are sent
+
+- **Optional, per account, off by default.** "Ask me before sending orders" (in an account's Behavior settings, paper or live) holds every order the account would have sent. It waits in Activity as "Waiting for your approval"; **Approve…** previews it fresh and sends it after Touch ID, and **Skip** drops it. A held call expires when its trading day ends ([ADR-0008](docs/adr/0008-optional-order-approval.md)).
+- Sending an order by hand into a live account, or selling a lot from Accounts, asks for Touch ID. Paper accounts ask only when they have asked to approve orders.
+
+### Waiting for you
+
+- Conditions, suggestions, ranges, posts with no price, and buys the market has moved away from wait for you, with an alert. **Copy…** opens the call already filled in for you to check, then previews it in each account; **Skip** takes it off your list. A call can be copied until its trading day ends at 20:00 New York time, and only from an account that is still waiting on it, so a copy never doubles an order.
+
+### Activity
+
+- Each post is one card: the post with the words the reader took each value from marked, **Read as** in your language, and **Your account** with what happened and why. Every post ends **Traded**, **Traded smaller** (and by how much), **Waiting for you**, **Skipped** (which limit, with its numbers), or **Ignored**. **Needs Review** is now **Waiting for You**.
+
+### Gurus
+
+- **Try it on recent posts** reads a guru's last 15 posts with the settings you're editing and shows what each would have done, before you switch them on. Nothing is placed.
+
 ## 0.1.0-alpha.1 — developer preview
 
 The first developer preview. CopyTrading reads the stock calls traders post on Discord, turns each one into an exact order, checks it against per-account limits, and places it with Alpaca. A native macOS app supervises a local Python engine that owns every decision.

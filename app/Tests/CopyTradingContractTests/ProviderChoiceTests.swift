@@ -68,7 +68,7 @@ private func savedSetup(
         routes: [
             TradingRouteConfiguration(
                 channelID: "123", authorID: nil, guruID: "alex", profileRevision: profile.profileRevision,
-                connections: [TradingRouteConnection(accountID: "paper", mode: .fixed, amountUSD: "500", defaultFraction: nil)])
+                connections: [TradingRouteConnection(accountID: "paper", fullPositionUSD: "600", defaultFraction: nil)])
         ]
     )
     let secrets = TradingSecrets(

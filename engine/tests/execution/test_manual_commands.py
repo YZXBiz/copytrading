@@ -647,7 +647,9 @@ def test_manual_decision_does_not_cancel_a_competing_pending_order(tmp_path):
     broker.auto_fill = False
     engine, broker, _, app, correction = setup_manual(tmp_path, broker=broker)
     automatic = StockSignal.model_validate(event("competing-entry"))
-    engine.receive(destination_signal(automatic, amount_usd="300", account_id="paper-demo"), NOW)
+    engine.receive(
+        destination_signal(automatic, full_position_usd="300", account_id="paper-demo"), NOW
+    )
     engine.process(NOW)
     assert broker.calls == 1
 
@@ -713,7 +715,7 @@ def test_manual_close_uses_the_matching_app_owned_lot(tmp_path):
     engine = CopyEngine(MemoryRepository(), broker, CopyConfig(sources=("discord:demo",)))
     engine.bind(NOW)
     entry = StockSignal.model_validate(event("entry-1"))
-    engine.receive(destination_signal(entry, amount_usd="600", account_id="paper-demo"), NOW)
+    engine.receive(destination_signal(entry, full_position_usd="600", account_id="paper-demo"), NOW)
     engine.process(NOW)
     assert broker.holdings["ABC"] == Decimal("4")
 
@@ -931,3 +933,22 @@ async def test_paused_runtime_pipe_recovers_retained_command_without_owner_or_re
     assert runtime.status().state == "paused"
     assert runtime._accounts == {}
     assert broker.calls == 1
+
+
+@pytest.mark.parametrize(
+    ("later", "expired"),
+    [
+        pytest.param(dt.timedelta(hours=4), False, id="later-the-same-trading-day"),
+        pytest.param(dt.timedelta(days=1), True, id="the-next-trading-day"),
+    ],
+)
+def test_a_waiting_call_can_be_copied_only_through_its_own_trading_day(tmp_path, later, expired):
+    engine, broker, _, app, correction = setup_manual(tmp_path)
+    engine.bind(NOW + later)
+    broker.quote_time = NOW + later
+
+    preview = app.preview(preview_request(correction), NOW + later)
+
+    assert ("waiting_expired" in preview.reasons) is expired
+    source = next(check for check in preview.checks if check.name == "source")
+    assert source.status == ("blocked" if expired else "passed")

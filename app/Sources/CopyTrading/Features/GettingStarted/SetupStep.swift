@@ -34,7 +34,7 @@ enum SetupStep: Int, CaseIterable, Identifiable, Hashable {
         case .discord: "The channels your gurus post in, and the token CopyTrading reads them with."
         case .interpreter: "The AI model that turns each post into an exact order."
         case .account: "Where orders go. Start with an Alpaca paper account: it trades pretend money at real prices."
-        case .guru: "Each guru's channel, how to read their calls, and how much each account puts in."
+        case .guru: "Each guru's channel, how to read their calls, and the account that copies them."
         case .start:
             "CopyTrading tests every connection and reads your examples while you watch. Nothing is saved or traded before this."
         }

@@ -8,6 +8,7 @@ struct CopyingLiveCard: View {
     let model: AppModel
     let feature: AccountFeatureModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var hasRippled = false
     @Environment(\.colorSchemeContrast) private var contrast
 
     @MainActor private var title: String {
@@ -40,7 +41,10 @@ struct CopyingLiveCard: View {
             Image(systemName: "dot.radiowaves.left.and.right")
                 .font(.system(size: 17, weight: .medium))
                 .foregroundStyle(Palette.accent)
-                .symbolEffect(.variableColor.iterative.dimInactiveLayers, options: .repeat(.continuous), isActive: !reduceMotion)
+                // A few ripples when the card appears, then still: a symbol that animates forever
+                // keeps the window redrawing, which costs a third of a core behind a sheet.
+                .symbolEffect(.variableColor.iterative.dimInactiveLayers, options: .repeat(3), value: hasRippled)
+                .task { hasRippled = !reduceMotion }
                 .frame(width: 38, height: 38)
                 .background(Palette.accent.opacity(0.12), in: .circle)
                 .accessibilityHidden(true)

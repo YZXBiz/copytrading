@@ -20,7 +20,7 @@ enum TradingSettingsError: Error, LocalizedError {
         case .privateAccessLocked:
             "Unlock private activity before evaluating a historical message."
         case .engineUnavailable:
-            "Start the local engine before evaluating a historical message."
+            "The engine isn't running. Start it in Settings → Engine. If another CopyTrading is open, quit it first."
         case .historicalEvaluationUnavailable:
             "Evaluating an older post needs a saved guru that copies into an account."
         case .invalidEvaluationResult:

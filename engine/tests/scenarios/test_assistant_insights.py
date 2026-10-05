@@ -45,16 +45,14 @@ async def test_a_gurus_record_counts_calls_copied_and_why_the_rest_were_skipped(
     ]
 
 
-async def test_a_skip_is_explained_account_by_account_in_plain_words(tmp_path):
-    accounts = {"rich": Account(cash="5000"), "poor": Account(cash="100")}
-    async with Rig(tmp_path, accounts, {"NVDA": "125"}) as rig:
+async def test_a_skip_is_explained_in_plain_words(tmp_path):
+    async with Rig(tmp_path, {"poor": Account(cash="100")}, {"NVDA": "125"}) as rig:
         rig.reader.expect("买入 NVDA 125", buy("NVDA", "125"))
         post = await rig.post("买入 NVDA 125")
-        explanation = await explain_skip(rig.runtime.operator, post.source_id)
+        explanation = await explain_skip(rig.runtime.operator, post.source_ids[0])
 
     assert explanation.untrusted_source_text.endswith("买入 NVDA 125")
     assert explanation.understood_as == ["buy NVDA at $125"]
-    outcomes = {item.account_id: (item.outcome, item.reason) for item in explanation.accounts}
-    assert outcomes["rich"][0] == "order_linked"
-    assert outcomes["poor"][0] == "insufficient_cash"
-    assert "cash" in outcomes["poor"][1].lower()
+    [account] = explanation.accounts
+    assert (account.account_id, account.outcome) == ("poor", "insufficient_cash")
+    assert "cash" in account.reason.lower()

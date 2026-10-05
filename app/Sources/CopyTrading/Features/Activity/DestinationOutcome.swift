@@ -20,9 +20,9 @@ enum DestinationOutcome: Equatable {
             return
         }
         if destination.status == "review_required" {
-            self = .needsReview(L10n.string(Reason.text(destination.status)))
+            self = .needsReview(Reason.text(destination.status))
         } else if ["stale", "out_of_order", "ignored"].contains(destination.status) {
-            self = .skipped(L10n.string(Reason.text(destination.status)))
+            self = .skipped(Reason.text(destination.status))
         } else if destination.status == "done" {
             self = .processedWithoutOrder
         } else {
@@ -31,7 +31,7 @@ enum DestinationOutcome: Equatable {
     }
 
     @MainActor
-    private static func order(_ order: OrderActivity, count: Int) -> Self {
+    static func order(_ order: OrderActivity, count: Int) -> Self {
         let verb = L10n.string(order.side == "sell" ? "Sold" : "Bought")
         let filled = Decimal(engine: order.filledQuantity) ?? 0
         let quantity = Decimal(engine: order.quantity) ?? 0
@@ -132,7 +132,7 @@ enum DestinationInstructionDetails {
         summary: DestinationOutcome
     ) -> [DestinationInstructionDetail] {
         let details = destination.instructionOutcomes.enumerated().map { offset, code in
-            DestinationInstructionDetail(offset: offset, value: L10n.string(Reason.text(code)))
+            DestinationInstructionDetail(offset: offset, value: Reason.text(code))
         }
         guard destination.orders.isEmpty,
             details.count == 1,

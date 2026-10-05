@@ -57,7 +57,7 @@ struct ConnectionStatus: Equatable {
             return .init(text: "Needs a channel", tone: .caution)
         }
         let accounts = Set(draft.accountIDs)
-        if !route.connections.contains(where: { accounts.contains($0.accountID.trimmed) }) {
+        if route.connection.map({ accounts.contains($0.accountID.trimmed) }) != true {
             return .init(text: "Needs an account to copy into", tone: .caution)
         }
         let isSaved = model.savedTradingConfiguration?.profiles.contains { $0.guruID == route.guruID.trimmed } == true

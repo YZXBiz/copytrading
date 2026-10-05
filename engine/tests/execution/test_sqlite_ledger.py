@@ -106,7 +106,8 @@ def test_destination_terms_commit_before_ack_and_survive_restart(tmp_path):
     engine = CopyEngine(store, broker, policy)
     engine.bind(NOW)
     signal = StockSignal.model_validate(event(price="33.12"))
-    accepted = destination_signal(signal, amount_usd="500", revision="a" * 64)
+    # A 1/6 call into a $3000 full position is $500.
+    accepted = destination_signal(signal, full_position_usd="3000", revision="a" * 64)
     engine.receive(accepted, NOW)
     saved = store.load().messages["discord:demo:1"]
     assert saved.destination == accepted.terms
@@ -123,7 +124,7 @@ def test_destination_terms_commit_before_ack_and_survive_restart(tmp_path):
     replay.bind(NOW)
     replay.receive(accepted, NOW)
     with pytest.raises(ValueError, match="accepted terms"):
-        replay.receive(destination_signal(signal, amount_usd="100", revision="b" * 64), NOW)
+        replay.receive(destination_signal(signal, full_position_usd="100", revision="b" * 64), NOW)
     replay.process(NOW)
     order = replay.ledger.orders()[0]
     assert order.qty * order.limit_price <= 500
@@ -132,7 +133,7 @@ def test_destination_terms_commit_before_ack_and_survive_restart(tmp_path):
     reopened.close()
 
 
-def test_missing_proportional_fraction_is_durable_review_without_order(tmp_path):
+def test_a_call_with_no_size_for_an_account_set_to_wait_is_a_durable_review(tmp_path):
     path = tmp_path / "execution.sqlite3"
     store = _store(path)
     broker = FakeBroker()
@@ -142,12 +143,12 @@ def test_missing_proportional_fraction_is_durable_review_without_order(tmp_path)
     source["instructions"][0]["fraction"] = None
     source["evidence"][0]["fraction"] = None
     signal = StockSignal.model_validate(source)
-    engine.receive(destination_signal(signal, mode="proportional", amount_usd="3000"), NOW)
+    engine.receive(destination_signal(signal, full_position_usd="3000", default_fraction=None), NOW)
     message = store.load().messages["discord:demo:1"]
     assert message.status == "review_required"
     assert message.review_reason == "missing_source_fraction"
     assert message.evidence == signal.evidence
-    assert message.destination.connection.amount_usd == 3000
+    assert message.destination.connection.full_position_usd == 3000
     assert any(
         report.event.payload.kind == "message"
         and report.event.payload.review_reason == "missing_source_fraction"

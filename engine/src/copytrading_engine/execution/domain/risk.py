@@ -1,7 +1,7 @@
 """Pure entry-budget policy: input facts in, approved budget or reason out."""
 
 from dataclasses import dataclass
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
 from typing import Literal, Protocol
 
 from copytrading_engine.execution.domain.market import Position
@@ -22,6 +22,9 @@ class EntryLimits(Protocol):
     def daily_loss_cap_usd(self) -> Decimal: ...
     @property
     def max_entries_per_day(self) -> int: ...
+
+
+PRODUCT_PLACES = Decimal("1e-10")
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,28 +52,33 @@ class BudgetDecision:
     budget: Decimal | None
     reason: str
     breaches: tuple[ExposureBreach, ...] = ()
+    # What the call asked for before the maximum per order trimmed it.
+    requested: Decimal | None = None
+
+    @property
+    def trimmed(self) -> bool:
+        return (
+            self.budget is not None and self.requested is not None and self.budget < self.requested
+        )
 
 
 def requested_entry_budget(
     connection: RouteConnection,
     source_fraction: Decimal | None,
 ) -> BudgetDecision:
-    """Return destination sizing before account facts and risk limits are applied."""
-    if connection.mode == "proportional":
-        fraction = source_fraction if source_fraction is not None else connection.default_fraction
-        if fraction is None:
-            return BudgetDecision(None, "missing_source_fraction_review")
-        if not fraction.is_finite() or not 0 < fraction <= 1:
-            raise ValueError("Source fraction must be between zero and one")
-        requested = connection.amount_usd * fraction
-    else:
-        requested = connection.amount_usd
-    # Connection amounts are cents. Decimal ratios such as 1/6 are repeating;
-    # normalize their product to cents before broker quantity is rounded down.
-    requested = requested.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    """The call's share of the guru's full position, before account facts and limits."""
+    fraction = source_fraction if source_fraction is not None else connection.default_fraction
+    if fraction is None:
+        return BudgetDecision(None, "missing_source_fraction_review")
+    if not fraction.is_finite() or not 0 < fraction <= 1:
+        raise ValueError("Source fraction must be between zero and one")
+    # A third is 0.333…3 in Decimal, so first settle the product's last digits (a third of $3000
+    # is $1000, not $999.99), then round down to the cent so six sixths never pass the position.
+    exact = (connection.full_position_usd * fraction).quantize(PRODUCT_PLACES, ROUND_HALF_UP)
+    requested = exact.quantize(Decimal("0.01"), rounding=ROUND_DOWN)
     if requested <= 0:
         return BudgetDecision(None, "below_minimum_budget")
-    return BudgetDecision(requested, "ready")
+    return BudgetDecision(requested, "ready", requested=requested)
 
 
 @dataclass(frozen=True, slots=True)
@@ -132,10 +140,12 @@ def entry_budget(
         return BudgetDecision(None, "daily_loss_cap")
     if facts.entries_today >= config.max_entries_per_day:
         return BudgetDecision(None, "daily_entry_cap")
-    requested = requested_entry_budget(connection, source_fraction)
-    if requested.budget is None:
-        return requested
-    budget = min(requested.budget, config.max_order_usd)
+    asked = requested_entry_budget(connection, source_fraction)
+    if asked.budget is None:
+        return asked
+    requested = asked.budget
+    # The maximum per order only trims; the trim is recorded so it can be shown.
+    budget = min(requested, config.max_order_usd)
     breaches = []
     if facts.symbol_exposure + budget > config.max_symbol_usd:
         breaches.append(
@@ -150,7 +160,7 @@ def entry_budget(
             if len(scopes) == 2
             else f"{next(iter(scopes))}_exposure_cap"
         )
-        return BudgetDecision(None, reason, tuple(breaches))
+        return BudgetDecision(None, reason, tuple(breaches), requested)
     if budget > min(facts.cash, facts.buying_power):
-        return BudgetDecision(None, "insufficient_cash")
-    return BudgetDecision(budget, "ready")
+        return BudgetDecision(None, "insufficient_cash", requested=requested)
+    return BudgetDecision(budget, "ready", requested=requested)

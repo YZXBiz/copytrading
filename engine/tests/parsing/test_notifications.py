@@ -110,3 +110,28 @@ def test_every_parser_decision_has_a_truthful_notification(decision):
         assert "Signal ignored" in notice.payload.annotations["summary"]
     else:
         assert notice.payload.labels["alertname"] == "SignalNeedsReview"
+
+
+async def test_a_waiting_post_alerts_with_what_it_says_why_and_what_copy_places():
+    from copytrading_engine.parsing.application import transform
+    from copytrading_engine.parsing.notifications import decision_notification
+    from copytrading_engine.parsing.routes import Route
+    from copytrading_engine.shared.reading import Conditional, Exact, NotGiven
+
+    from ..readings import buy
+    from .builders import raw
+    from .fakes import FakeDecoder
+
+    call = buy("SCO", "20", said="买", ticker_said="sco").model_copy(
+        update={"price": Exact(value=20, words="20"), "size": NotGiven()}
+    )
+    reading = Conditional(summary="Buys SCO if it is under 20", condition="如果", calls=(call,))
+    result = await transform(raw("如果明天20以下买sco"), Route(), FakeDecoder(reading), "test")
+
+    alert = decision_notification("discord:test:1", result, ()).payload
+
+    assert alert.labels["alertname"] == "SignalWaiting"
+    assert alert.annotations["summary"] == "Waiting for you: Buys SCO if it is under 20"
+    assert alert.annotations["evidence"] == "The guru would trade only if something happens."
+    assert "Copy places: Buy SCO at $20" in alert.annotations["impact"]
+    assert "expires when its trading day ends" in alert.annotations["action"]

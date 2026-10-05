@@ -3,13 +3,10 @@
 import asyncio
 import datetime as dt
 import sqlite3
-from decimal import Decimal
 from uuid import uuid4
 
-from copytrading_engine.parsing.extraction import DecodedMessage
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore
 from copytrading_engine.shared.raw_message import RawMessage
-from copytrading_engine.shared.signals import Evidence
 from copytrading_engine.sources.sqlite import SQLiteSourceStore
 from copytrading_engine.trading.adapters.routing import (
     RoutingRevision,
@@ -18,8 +15,9 @@ from copytrading_engine.trading.domain.config import TradingConfiguration
 from copytrading_engine.trading.entrypoints.factories import TradingFactories
 from copytrading_engine.trading.entrypoints.runtime import TradingRuntime
 
+from ...readings import sell, trade
 from .builders import (
-    connection,
+    channel,
     trading_configuration,
     trading_secrets,
     trading_secrets_for,
@@ -63,9 +61,7 @@ async def test_slow_decoder_does_not_block_broker_reconciliation(tmp_path):
         decoder=decoder_factory,
         session=lambda source, channels, authors, stop, report_failure: Session(source, event),
     )
-    config = trading_configuration().model_dump(mode="json")
-    config["accounts"] = [{"id": "first", "environment": "paper", "policy": {"poll_seconds": 1}}]
-    config["routes"][0]["connections"] = [connection("first")]
+    config = trading_configuration("first", policy={"poll_seconds": 1}).model_dump(mode="json")
     runtime = TradingRuntime(tmp_path, factories=factories)
     await runtime.start(TradingConfiguration.model_validate(config), trading_secrets_for("first"))
     await asyncio.wait_for(entered_decode.wait(), timeout=3)
@@ -89,9 +85,7 @@ async def test_failed_source_does_not_stop_broker_reconciliation(tmp_path):
         opened[path.name] = owner
         return owner
 
-    config = trading_configuration().model_dump(mode="json")
-    config["accounts"] = [{"id": "first", "environment": "paper", "policy": {"poll_seconds": 1}}]
-    config["routes"][0]["connections"] = [connection("first")]
+    config = trading_configuration("first", policy={"poll_seconds": 1}).model_dump(mode="json")
     event = RawMessage(
         schema_version=1,
         event_type="raw_message",
@@ -151,14 +145,7 @@ async def test_old_failed_account_deliveries_do_not_starve_later_healthy_route(t
     source = await SQLiteSourceStore.open(database)
     parser = await SQLiteExtractionStore.open(database)
     guard = await RoutingRevision.open(database)
-    config = trading_configuration().model_dump(mode="json")
-    config["source"]["channel_ids"] = ["123", "124"]
-    shared = config["routes"][0]
-    config["routes"] = [
-        {**shared, "channel_id": "123", "connections": [connection("second")]},
-        {**shared, "channel_id": "124", "connections": [connection("first")]},
-    ]
-    configuration = TradingConfiguration.model_validate(config)
+    configuration = trading_configuration()
     await guard.accept(configuration)
     try:
         for index in range(101):
@@ -167,7 +154,7 @@ async def test_old_failed_account_deliveries_do_not_starve_later_healthy_route(t
                     schema_version=1,
                     event_type="raw_message",
                     source="discord",
-                    channel_id="123" if index < 100 else "124",
+                    channel_id=channel("second") if index < 100 else channel("first"),
                     id=f"message-{index:03d}",
                     timestamp=dt.datetime.now(dt.UTC),
                     text="ALERT: Bought AAPL at 200",
@@ -226,7 +213,7 @@ async def test_slow_account_open_does_not_block_healthy_account_or_capture(tmp_p
         schema_version=1,
         event_type="raw_message",
         source="discord",
-        channel_id="123",
+        channel_id=channel("second"),
         id="slow-account",
         timestamp=dt.datetime.now(dt.UTC),
         text="ALERT: Bought AAPL at 200",
@@ -278,23 +265,17 @@ class _UngroundedThenBuyDecoder:
 
     async def decode(self, text, route):
         if text == "Sold AAPL at 210 from 200":
-            return DecodedMessage(
-                decision="trade",
-                reason="Close",
-                instructions=(
-                    Evidence(
-                        action="reduce",
-                        symbol="AAPL",
-                        price=Decimal("210"),
-                        entry_price=Decimal("200"),
-                        fraction=Decimal("0.5"),
-                        action_evidence="Sold",
-                        symbol_evidence="AAPL",
-                        price_evidence="210",
-                        entry_evidence="200",
-                        fraction_evidence="half",
-                    ),
+            return trade(
+                sell(
+                    "AAPL",
+                    "210",
+                    bought_at="200",
+                    said="Sold",
+                    ticker_said="AAPL",
+                    fraction="0.5",
+                    fraction_said="half",
                 ),
+                summary="Close",
             )
         return await Decoder().decode(text, route)
 
