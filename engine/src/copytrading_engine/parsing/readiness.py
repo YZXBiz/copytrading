@@ -4,6 +4,7 @@ import time
 from dataclasses import dataclass, field
 
 from copytrading_engine.parsing.extraction import DecodeError, Decoder, Route
+from copytrading_engine.shared.reading import Commentary
 
 
 @dataclass
@@ -24,11 +25,7 @@ async def probe_model(decoder: Decoder, health: ModelReadiness) -> None:
     revision = health.revision
     try:
         result = await decoder.decode("Market commentary only. No trade action.", Route())
-        error = (
-            None
-            if result.decision == "ignore" and not result.instructions
-            else "unexpected_probe_output"
-        )
+        error = None if isinstance(result, Commentary) else "unexpected_probe_output"
     except DecodeError as exc:
         error = exc.reason
     # Real extraction is stronger evidence than a probe started before that extraction.

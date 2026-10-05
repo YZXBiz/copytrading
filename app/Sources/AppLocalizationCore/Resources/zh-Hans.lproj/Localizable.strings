@@ -70,7 +70,6 @@
 "**Pause Copying** in the toolbar stops reading new posts and placing orders for every account, from any screen. The menu bar has it too." = "工具栏中的 **暂停跟单** 会在任何页面停止读取新帖子和为所有账户下单。菜单栏中也有此按钮。";
 ", and %@ %@ waiting" = "，另有 %@%@项待处理";
 "0 to 1" = "0到1";
-"0 to 1, optional" = "0到1，可选";
 "1 example" = "1个示例";
 "a" = "";
 "A backup holds your records, saved setup, captured posts, and attachments. Keys and disposable logs are left out." = "备份包含你的记录、已保存的设置、捕获的帖子和附件。密钥和可丢弃的日志不会包含在内。";
@@ -302,7 +301,6 @@
 "days" = "天";
 "Decision" = "决策";
 "DeepSeek models, at a low price" = "低价使用 DeepSeek 模型";
-"Default fraction" = "默认仓位比例";
 "Degraded" = "状态不佳";
 "Delayed · %@" = "延迟 · %@";
 "Delivered" = "已送达";
@@ -384,7 +382,6 @@
 "Expanded" = "已展开";
 "Expected" = "预期";
 "Expected action" = "预期操作";
-"Expected fraction" = "预期比例";
 "Expected ticker" = "预期股票代码";
 "Expired unfilled" = "已过期，未成交";
 "Expires" = "到期时间";
@@ -416,7 +413,6 @@
 "from %@" = "来自 %@";
 "from %@ to %@" = "从 %@ 到 %@";
 "From %@ to %@, %@. High %@, low %@." = "从 %@ 到 %@，变动 %@。最高 %@，最低 %@。";
-"Full position (USD)" = "全仓金额（美元）";
 "Gemini models" = "Gemini 模型";
 "General" = "通用";
 "General Settings" = "通用设置";
@@ -728,7 +724,6 @@
 "Reading the log…" = "正在读取日志…";
 "Reading the message…" = "正在读取消息…";
 "Reading their posts" = "读取其帖子";
-"Reads as" = "解读为";
 "Ready" = "就绪";
 "Ready Order" = "个待审核订单";
 "Ready Orders" = "个待审核订单";
@@ -1018,7 +1013,6 @@
 "Unsupported" = "暂不支持";
 "Unsure whether an order reached the broker" = "不确定订单是否已送达券商";
 "Up %@" = "上涨 %@";
-"Up to %@, scaled to the post's size" = "最高 %@，按帖子中的仓位比例缩放";
 "updated" = "已更新";
 "Updates" = "更新";
 "Updates delayed · last %@" = "更新延迟 · 上次同步%@";
@@ -1381,7 +1375,6 @@
 "Copies into %@" = "跟单到 %@";
 "Copies into %@ · %@" = "跟单到 %@ · %@";
 "%@ a call" = "每次 %@";
-"sized to the call" = "按信号比例";
 "Edit in Connections" = "在“连接”中编辑";
 "Edit this account's keys and limits in Connections" = "在“连接”中编辑此账户的密钥和限额";
 "Set Up in Connections" = "前往“连接”设置";
@@ -1443,21 +1436,17 @@
 "No copied buy at the price the guru named" = "没有按信号源所说价格买入的跟单持仓";
 "The post didn't say what size to buy" = "帖子没有说明买入多少";
 "A repeat of an earlier call" = "重复了之前的信号";
+"The guru would trade only if something happens" = "信号源只在条件满足时才会交易";
+"The guru suggested it but didn't trade" = "信号源只是建议，自己没有交易";
+"The post's meaning wasn't clear" = "帖子的意思不清楚";
+"The guru gave a price range" = "信号源给的是价格区间";
+"The guru said to trade at the market price" = "信号源说按市价交易";
+"The post gave no price" = "帖子没有给出价格";
+"The post named a batch, not a size" = "帖子只说了第几批，没有说仓位大小";
+"The sell didn't say which buy it comes from" = "卖出没有说明对应哪一笔买入";
 "How far above the guru's price a buy may fill. Outside regular hours, also how far below it a sell may go. 0 means exactly the guru's price." = "买入成交价最多可以比信号源的价格高出多少。在常规交易时段以外，也决定卖出价最多可以比它低多少。0 表示与信号源价格完全一致。";
 "this account" = "此账户";
-"Enter how many dollars each buy call puts in." = "请填写每次买入信号投入多少美元。";
-"Every buy call puts **%@** into %@, whatever size the guru names." = "每次买入信号都向 %2$@ 投入 **%1$@**，无论信号源说的仓位大小。";
-"Its per-order limit cuts that to **%@**." = "单笔订单上限会将其降到 **%@**。";
-"Enter what a full position is worth." = "请填写一个完整仓位的金额。";
-"A call for 1/6 puts **%@** into %@ and a call for 1/2 puts **%@**: the guru's size of %@." = "1/6 的信号向 %2$@ 投入 **%1$@**，1/2 的信号投入 **%3$@**：即信号源所说的比例乘以 %4$@。";
-"Its per-order limit caps any one call at **%@**." = "单笔订单上限让每次信号最多投入 **%@**。";
-"A call that names no size puts in **%@**." = "没有说明仓位大小的信号投入 **%@**。";
 "A call that names no size waits for you to review it." = "没有说明仓位大小的信号会等你检查。";
-"Each buy" = "每次买入";
-"Same amount every call" = "每次信号金额相同";
-"Scaled by the guru's size" = "按信号源的仓位比例";
-"Dollars per call" = "每次信号的美元金额";
-"When a call names no size, use a default" = "信号没有说明仓位大小时使用默认比例";
 "%@ New York time" = "纽约时间 %@";
 "Also copy calls %@, with limit orders." = "也跟单 %@ 的信号，使用限价单。";
 "Also copy calls %@. Needs extended hours on." = "也跟单 %@ 的信号。需要先开启盘前盘后交易。";

@@ -2,34 +2,19 @@
 
 import asyncio
 import sqlite3
-from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
 
-from copytrading_engine.parsing.extraction import DecodedMessage
-from copytrading_engine.shared.signals import Evidence
+from ...readings import buy, commentary, trade
 
 
 class Decoder:
     async def decode(self, text, route):
         if text == "Market commentary only. No trade action.":
-            return DecodedMessage(decision="ignore", reason="No trade action", instructions=())
+            return commentary("No trade action")
         assert text == "Bought AAPL at 200"
         assert route.prefix == "ALERT:"
-        return DecodedMessage(
-            decision="trade",
-            reason="Current buy",
-            instructions=(
-                Evidence(
-                    action="buy",
-                    symbol="AAPL",
-                    price=Decimal("200"),
-                    action_evidence="Bought",
-                    symbol_evidence="AAPL",
-                    price_evidence="200",
-                ),
-            ),
-        )
+        return trade(buy("AAPL", "200", said="Bought", ticker_said="AAPL"), summary="Current buy")
 
     async def close(self):
         pass

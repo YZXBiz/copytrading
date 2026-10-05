@@ -6,7 +6,6 @@ import datetime as dt
 import pytest
 from pydantic import SecretStr, ValidationError
 
-from copytrading_engine.parsing.extraction import DecodedMessage
 from copytrading_engine.shared.raw_message import RawMessage
 from copytrading_engine.sources.sqlite import SQLiteSourceStore
 from copytrading_engine.trading.adapters.telemetry import TradingTelemetry
@@ -16,6 +15,7 @@ from copytrading_engine.trading.entrypoints.factories import TradingFactories
 from copytrading_engine.trading.entrypoints.runtime import TradingRuntime
 
 from ...diagnostics.telemetry.builders import journal_events, journal_sink, journal_text
+from ...readings import commentary
 from .builders import trading_configuration, trading_secrets, wait_for
 from .fakes import Decoder, Owner, Session
 
@@ -54,7 +54,7 @@ async def test_runtime_registers_all_loaded_credentials_before_source_and_model_
                 provider="anthropic",
                 payload={"error": "provider rejected " + credential_values[1][1]},
             )
-            return DecodedMessage(decision="ignore", reason="synthetic probe", instructions=())
+            return commentary("synthetic probe")
 
         async def close(self):
             pass
@@ -129,7 +129,7 @@ async def test_redaction_registry_overflow_marks_gap_without_blocking_runtime(tm
                 provider="anthropic",
                 payload={"error": "upstream echoed provider-secret"},
             )
-            return DecodedMessage(decision="ignore", reason="probe ok", instructions=())
+            return commentary("probe ok")
 
         async def close(self):
             pass

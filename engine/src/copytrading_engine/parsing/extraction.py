@@ -1,17 +1,36 @@
-"""Untrusted model output and deterministic grounding checks."""
+"""The model's reading of a post is untrusted: plain checks hold it to the post's own words."""
 
 import re
 import unicodedata
+from dataclasses import dataclass
 from decimal import Decimal
-from typing import Literal, Protocol, Self
+from typing import Protocol
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict
 
 from copytrading_engine.parsing.diagnostics import ValidationIssue
 from copytrading_engine.parsing.routes import Route
-from copytrading_engine.shared.signals import Evidence
+from copytrading_engine.shared.reading import (
+    All,
+    AtMarket,
+    Batch,
+    Buy,
+    Call,
+    Conditional,
+    Exact,
+    Fraction,
+    Instruction,
+    Lot,
+    NotGiven,
+    PostReading,
+    Range,
+    Sell,
+    Stock,
+    Suggestion,
+    TradeMade,
+)
 
-PROMPT_VERSION = "stock-extraction-v2"
+PROMPT_VERSION = "stock-reading-v3"
 
 # Chinese characters and ASCII letters both count as Unicode word characters.
 # Match complete numeric tokens and bound English words by ASCII letters so
@@ -27,22 +46,6 @@ EXPLICIT_ALLOCATION = re.compile(
 )
 
 
-ExtractedInstruction = Evidence
-
-
-class DecodedMessage(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
-    decision: Literal["trade", "ignore", "review"]
-    reason: str = Field(min_length=1, max_length=300)
-    instructions: tuple[ExtractedInstruction, ...] = Field(max_length=20)
-
-    @model_validator(mode="after")
-    def consistent_decision(self) -> Self:
-        if (self.decision == "trade") != bool(self.instructions):
-            raise ValueError("Only trade decisions can contain instructions")
-        return self
-
-
 class DecodeError(Exception):
     """Provider-independent failure; no provider response or secret is retained."""
 
@@ -53,8 +56,24 @@ class DecodeError(Exception):
         super().__init__(reason)
 
 
+class ReadingOutput(BaseModel):
+    """What the reader model returns: one reading of the post."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
+    reading: PostReading
+
+
+@dataclass(frozen=True)
+class ReadingInput:
+    """The post as the checks see it, and its guru's route, so a failed check can go back to
+    the model with its reason."""
+
+    text: str
+    route: Route
+
+
 class Decoder(Protocol):
-    async def decode(self, text: str, route: Route) -> DecodedMessage: ...
+    async def decode(self, text: str, route: Route) -> PostReading: ...
 
 
 def playbook_maps(playbook: str, phrase: str, symbol: str) -> bool:
@@ -169,101 +188,114 @@ class GroundingError(ValueError):
         super().__init__(explanation)
 
 
-def validate_grounding(result: DecodedMessage, text: str, route: Route) -> None:
-    if result.decision != "trade":
+# Words that make a trade conditional or historical. A reading that calls such a post a trade
+# made or an instruction goes back to the model.
+NONCURRENT = re.compile(
+    r"如果|假如|计划|附近|突破.*再|昨天.*加了|\b(if|would|might|yesterday)\b", re.I
+)
+
+# The batch number as written: 第二批, 第2批, batch 2.
+BATCH_NUMBER = re.compile(r"第\s*(\d+|[一二两三四五六七八九十])\s*批|batch\s*(\d+)", re.I)
+_CHINESE_DIGITS = dict(zip("一二三四五六七八九十", range(1, 11), strict=True)) | {"两": 2}
+
+
+def check_reading(reading: PostReading, text: str, route: Route) -> None:
+    """Every stated value must be the post's own words, a name a ticker only through the
+    playbook, and a trade must not be conditional or historical. Raises GroundingError."""
+    if not isinstance(reading, TradeMade | Instruction | Conditional | Suggestion):
         return
-    # Conservative vetoes supplement semantic classification, not a sentence parser.
-    if re.search(
-        r"如果|假如|计划|附近|突破.*再|昨天.*加了|\b(if|would|might|yesterday)\b", text, re.I
-    ):
+    if isinstance(reading, TradeMade | Instruction) and NONCURRENT.search(text):
         raise GroundingError(
-            "noncurrent_trade", "<root>", "Conditional or historical language requires review"
+            "noncurrent_trade", "kind", "Conditional or historical words make this not a trade"
         )
-    for index, item in enumerate(result.instructions):
-        # What the words mean is the model's call, guided by the guru's playbook; the words
-        # themselves must be in the post.
-        if not item.action_evidence.strip() or item.action_evidence not in text:
-            raise GroundingError(
-                "action_not_grounded",
-                f"instructions.{index}.action_evidence",
-                "Action is not supported by source text",
-            )
-        symbol_text = item.symbol_evidence
-        if symbol_text not in text:
-            raise GroundingError(
-                "symbol_evidence_missing",
-                f"instructions.{index}.symbol_evidence",
-                "Symbol evidence is absent",
-            )
-        named = symbol_text.lstrip("$").upper() != item.symbol
-        if named and not playbook_maps(route.playbook, symbol_text, item.symbol):
-            raise GroundingError(
-                "symbol_not_in_playbook",
-                f"instructions.{index}.symbol",
-                "A company name resolves only when the playbook states its ticker",
-            )
-        if not named and not re.search(
-            r"(?<![A-Za-z0-9])" + re.escape(symbol_text) + r"(?![A-Za-z0-9])", text
-        ):
-            raise GroundingError(
-                "partial_symbol",
-                f"instructions.{index}.symbol_evidence",
-                "Symbol evidence must be a complete ticker",
-            )
-        if not number_is_grounded(item.price, item.price_evidence, text):
-            raise GroundingError(
-                "price_not_grounded",
-                f"instructions.{index}.price_evidence",
-                "Price is not grounded",
-            )
-        if item.entry_price is not None and not number_is_grounded(
-            item.entry_price, item.entry_evidence, text
-        ):
-            raise GroundingError(
-                "entry_not_grounded",
-                f"instructions.{index}.entry_evidence",
-                "Entry reference is not grounded",
-            )
-        if item.entry_price == item.price:
+    if isinstance(reading, Conditional):
+        _words(reading.condition, text, "condition")
+    for index, call in enumerate(reading.calls):
+        _check_call(call, text, route, f"calls.{index}")
+
+
+def _check_call(call: Call, text: str, route: Route, path: str) -> None:
+    _words(call.action_words, text, f"{path}.action_words")
+    _check_stock(call.stock, text, route, f"{path}.stock")
+    _check_price(call.price, text, f"{path}.price")
+    if isinstance(call, Buy):
+        _check_size(call, text, f"{path}.size")
+        return
+    _check_share(call, text, f"{path}.share")
+    if isinstance(call.sell_from, Lot):
+        _number(call.sell_from.buy_price, call.sell_from.words, text, f"{path}.sell_from")
+        if isinstance(call.price, Exact) and call.price.value == call.sell_from.buy_price:
             occurrences = re.findall(r"(?<![\d.])\d+(?:\.\d+)?(?![\d.])", text)
-            if sum(Decimal(value) == item.price for value in occurrences) < 2:
+            if sum(Decimal(value) == call.price.value for value in occurrences) < 2:
                 raise GroundingError(
                     "price_occurrence_reused",
-                    f"instructions.{index}.entry_evidence",
-                    "Current and entry price require distinct source occurrences",
+                    f"{path}.sell_from",
+                    "The current price and the buy price need two numbers in the post",
                 )
-        if item.action == "reduce":
-            if item.fraction is None or not allocation_is_grounded(
-                item.fraction, item.fraction_evidence, text
-            ):
-                raise GroundingError(
-                    "fraction_not_grounded",
-                    f"instructions.{index}.fraction_evidence",
-                    "Trim fraction is not explicitly supported",
-                )
-        if item.action == "buy":
-            if item.fraction is None:
-                if item.fraction_evidence is not None:
-                    raise GroundingError(
-                        "fraction_without_value",
-                        f"instructions.{index}.fraction_evidence",
-                        "Fraction evidence requires a matching fraction",
-                    )
-                if EXPLICIT_ALLOCATION.search(text):
-                    raise GroundingError(
-                        "source_fraction_omitted",
-                        f"instructions.{index}.fraction",
-                        "An explicit source allocation was omitted from a buy",
-                    )
-            elif not allocation_is_grounded(item.fraction, item.fraction_evidence, text):
-                raise GroundingError(
-                    "fraction_not_grounded",
-                    f"instructions.{index}.fraction_evidence",
-                    "Buy fraction is not explicitly supported",
-                )
-        if item.action == "close" and item.fraction != 1:
-            raise GroundingError(
-                "invalid_close_fraction",
-                f"instructions.{index}.fraction",
-                "A close must refer to all remaining shares",
-            )
+
+
+def _check_stock(stock: Stock, text: str, route: Route, path: str) -> None:
+    _words(stock.words, text, path)
+    named = stock.words.lstrip("$").upper() != stock.ticker
+    if named and not playbook_maps(route.playbook, stock.words, stock.ticker):
+        raise GroundingError(
+            "symbol_not_in_playbook",
+            path,
+            "A company name becomes a ticker only when the playbook says so",
+        )
+    if not named and not re.search(
+        r"(?<![A-Za-z0-9])" + re.escape(stock.words) + r"(?![A-Za-z0-9])", text
+    ):
+        raise GroundingError("partial_symbol", path, "The ticker must be a whole word in the post")
+
+
+def _check_price(price: object, text: str, path: str) -> None:
+    if isinstance(price, Exact):
+        _number(price.value, price.words, text, path)
+    elif isinstance(price, Range):
+        _number(price.low, price.low_words, text, f"{path}.low")
+        _number(price.high, price.high_words, text, f"{path}.high")
+    elif isinstance(price, AtMarket):
+        _words(price.words, text, path)
+
+
+def _check_size(buy: Buy, text: str, path: str) -> None:
+    size = buy.size
+    if isinstance(size, Fraction):
+        if not allocation_is_grounded(size.value, size.words, text):
+            raise GroundingError("fraction_not_grounded", path, "The size is not in the post")
+    elif isinstance(size, Batch):
+        _words(size.words, text, path)
+        match = BATCH_NUMBER.search(size.words)
+        written = match and (match.group(1) or match.group(2))
+        number = None
+        if written:
+            number = int(written) if written.isdigit() else _CHINESE_DIGITS.get(written)
+        if number != size.number:
+            raise GroundingError("batch_not_grounded", path, "The batch number is not in the post")
+    elif isinstance(size, NotGiven) and EXPLICIT_ALLOCATION.search(text):
+        raise GroundingError("source_fraction_omitted", path, "The post states a size")
+
+
+def _check_share(sell: Sell, text: str, path: str) -> None:
+    share = sell.share
+    if isinstance(share, All):
+        _words(share.words, text, path)
+    elif not allocation_is_grounded(share.value, share.words, text):
+        raise GroundingError("fraction_not_grounded", path, "The share is not in the post")
+
+
+def _words(words: str, text: str, path: str) -> None:
+    if not words.strip() or words not in text:
+        raise GroundingError(
+            "words_not_in_post", path, "words must be copied exactly from the post"
+        )
+
+
+def _number(value: Decimal, words: str, text: str, path: str) -> None:
+    if not number_is_grounded(value, words, text):
+        raise GroundingError(
+            "number_not_grounded",
+            path,
+            f"words must be only this number exactly as the post writes it, such as {value}",
+        )

@@ -70,7 +70,6 @@
 "**Pause Copying** in the toolbar stops reading new posts and placing orders for every account, from any screen. The menu bar has it too." = "**Pause Copying** in the toolbar stops reading new posts and placing orders for every account, from any screen. The menu bar has it too.";
 ", and %@ %@ waiting" = ", and %@ %@ waiting";
 "0 to 1" = "0 to 1";
-"0 to 1, optional" = "0 to 1, optional";
 "1 example" = "1 example";
 "a" = "a";
 "A backup holds your records, saved setup, captured posts, and attachments. Keys and disposable logs are left out." = "A backup holds your records, saved setup, captured posts, and attachments. Keys and disposable logs are left out.";
@@ -302,7 +301,6 @@
 "days" = "days";
 "Decision" = "Decision";
 "DeepSeek models, at a low price" = "DeepSeek models, at a low price";
-"Default fraction" = "Default fraction";
 "Degraded" = "Degraded";
 "Delayed · %@" = "Delayed · %@";
 "Delivered" = "Delivered";
@@ -384,7 +382,6 @@
 "Expanded" = "Expanded";
 "Expected" = "Expected";
 "Expected action" = "Expected action";
-"Expected fraction" = "Expected fraction";
 "Expected ticker" = "Expected ticker";
 "Expired unfilled" = "Expired unfilled";
 "Expires" = "Expires";
@@ -416,7 +413,6 @@
 "from %@" = "from %@";
 "from %@ to %@" = "from %@ to %@";
 "From %@ to %@, %@. High %@, low %@." = "From %@ to %@, %@. High %@, low %@.";
-"Full position (USD)" = "Full position (USD)";
 "Gemini models" = "Gemini models";
 "General" = "General";
 "General Settings" = "General Settings";
@@ -728,7 +724,6 @@
 "Reading the log…" = "Reading the log…";
 "Reading the message…" = "Reading the message…";
 "Reading their posts" = "Reading their posts";
-"Reads as" = "Reads as";
 "Ready" = "Ready";
 "Ready Order" = "Ready Order";
 "Ready Orders" = "Ready Orders";
@@ -1018,7 +1013,6 @@
 "Unsupported" = "Unsupported";
 "Unsure whether an order reached the broker" = "Unsure whether an order reached the broker";
 "Up %@" = "Up %@";
-"Up to %@, scaled to the post's size" = "Up to %@, scaled to the post's size";
 "updated" = "updated";
 "Updates" = "Updates";
 "Updates delayed · last %@" = "Updates delayed · last %@";
@@ -1381,7 +1375,6 @@
 "Copies into %@" = "Copies into %@";
 "Copies into %@ · %@" = "Copies into %@ · %@";
 "%@ a call" = "%@ a call";
-"sized to the call" = "sized to the call";
 "Edit in Connections" = "Edit in Connections";
 "Edit this account's keys and limits in Connections" = "Edit this account's keys and limits in Connections";
 "Set Up in Connections" = "Set Up in Connections";
@@ -1443,21 +1436,17 @@
 "No copied buy at the price the guru named" = "No copied buy at the price the guru named";
 "The post didn't say what size to buy" = "The post didn't say what size to buy";
 "A repeat of an earlier call" = "A repeat of an earlier call";
+"The guru would trade only if something happens" = "The guru would trade only if something happens";
+"The guru suggested it but didn't trade" = "The guru suggested it but didn't trade";
+"The post's meaning wasn't clear" = "The post's meaning wasn't clear";
+"The guru gave a price range" = "The guru gave a price range";
+"The guru said to trade at the market price" = "The guru said to trade at the market price";
+"The post gave no price" = "The post gave no price";
+"The post named a batch, not a size" = "The post named a batch, not a size";
+"The sell didn't say which buy it comes from" = "The sell didn't say which buy it comes from";
 "How far above the guru's price a buy may fill. Outside regular hours, also how far below it a sell may go. 0 means exactly the guru's price." = "How far above the guru's price a buy may fill. Outside regular hours, also how far below it a sell may go. 0 means exactly the guru's price.";
 "this account" = "this account";
-"Enter how many dollars each buy call puts in." = "Enter how many dollars each buy call puts in.";
-"Every buy call puts **%@** into %@, whatever size the guru names." = "Every buy call puts **%@** into %@, whatever size the guru names.";
-"Its per-order limit cuts that to **%@**." = "Its per-order limit cuts that to **%@**.";
-"Enter what a full position is worth." = "Enter what a full position is worth.";
-"A call for 1/6 puts **%@** into %@ and a call for 1/2 puts **%@**: the guru's size of %@." = "A call for 1/6 puts **%@** into %@ and a call for 1/2 puts **%@**: the guru's size of %@.";
-"Its per-order limit caps any one call at **%@**." = "Its per-order limit caps any one call at **%@**.";
-"A call that names no size puts in **%@**." = "A call that names no size puts in **%@**.";
 "A call that names no size waits for you to review it." = "A call that names no size waits for you to review it.";
-"Each buy" = "Each buy";
-"Same amount every call" = "Same amount every call";
-"Scaled by the guru's size" = "Scaled by the guru's size";
-"Dollars per call" = "Dollars per call";
-"When a call names no size, use a default" = "When a call names no size, use a default";
 "%@ New York time" = "%@ New York time";
 "Also copy calls %@, with limit orders." = "Also copy calls %@, with limit orders.";
 "Also copy calls %@. Needs extended hours on." = "Also copy calls %@. Needs extended hours on.";

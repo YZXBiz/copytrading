@@ -90,5 +90,13 @@ enum Reason {
         "unresolved_account_order": "An open order at the broker needs your review",
         "incomplete_account_orders": "The broker's order list was incomplete",
         "plan_unavailable": "The order couldn't be planned",
+        "conditional": "The guru would trade only if something happens",
+        "suggestion": "The guru suggested it but didn't trade",
+        "unclear": "The post's meaning wasn't clear",
+        "price_range": "The guru gave a price range",
+        "price_at_market": "The guru said to trade at the market price",
+        "price_not_given": "The post gave no price",
+        "batch_size_unknown": "The post named a batch, not a size",
+        "sell_names_no_buy": "The sell didn't say which buy it comes from",
     ]
 }

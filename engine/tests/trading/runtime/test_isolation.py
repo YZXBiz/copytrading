@@ -3,13 +3,10 @@
 import asyncio
 import datetime as dt
 import sqlite3
-from decimal import Decimal
 from uuid import uuid4
 
-from copytrading_engine.parsing.extraction import DecodedMessage
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore
 from copytrading_engine.shared.raw_message import RawMessage
-from copytrading_engine.shared.signals import Evidence
 from copytrading_engine.sources.sqlite import SQLiteSourceStore
 from copytrading_engine.trading.adapters.routing import (
     RoutingRevision,
@@ -18,6 +15,7 @@ from copytrading_engine.trading.domain.config import TradingConfiguration
 from copytrading_engine.trading.entrypoints.factories import TradingFactories
 from copytrading_engine.trading.entrypoints.runtime import TradingRuntime
 
+from ...readings import sell, trade
 from .builders import (
     connection,
     trading_configuration,
@@ -278,23 +276,17 @@ class _UngroundedThenBuyDecoder:
 
     async def decode(self, text, route):
         if text == "Sold AAPL at 210 from 200":
-            return DecodedMessage(
-                decision="trade",
-                reason="Close",
-                instructions=(
-                    Evidence(
-                        action="reduce",
-                        symbol="AAPL",
-                        price=Decimal("210"),
-                        entry_price=Decimal("200"),
-                        fraction=Decimal("0.5"),
-                        action_evidence="Sold",
-                        symbol_evidence="AAPL",
-                        price_evidence="210",
-                        entry_evidence="200",
-                        fraction_evidence="half",
-                    ),
+            return trade(
+                sell(
+                    "AAPL",
+                    "210",
+                    bought_at="200",
+                    said="Sold",
+                    ticker_said="AAPL",
+                    fraction="0.5",
+                    fraction_said="half",
                 ),
+                summary="Close",
             )
         return await Decoder().decode(text, route)
 

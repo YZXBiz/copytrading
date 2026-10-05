@@ -180,9 +180,8 @@ struct ConnectionsDraft {
         return (configuration, secrets)
     }
 
-    /// The dollars a connection's calls are sized against: its own amount for the same amount
-    /// every call, and for a share of the per-stock maximum, that account's current maximum, so
-    /// the guru's full position and the account's limit can never disagree.
+    /// The guru's full position: the account's current maximum per stock, so the two can never
+    /// disagree (ADR-0007).
     func amount(for connection: TradingConnectionDraft) -> String {
         accounts.first { $0.name.trimmed == connection.accountID.trimmed }?.policy.maxSymbolUSD.trimmed ?? ""
     }

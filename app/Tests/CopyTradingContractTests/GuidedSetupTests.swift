@@ -128,15 +128,20 @@ private func unsavedChangesFollowTheSavedSetup() throws {
 
     let profile = try TradingProfileBuilder().build(
         TradingProfileDraft(guruID: "alex", displayName: "Alex", prefix: "ALERT:", exitBasis: .originalPosition))
+    let account = TradingAccountConfiguration(id: "paper", environment: .paper)
     let saved = TradingConfiguration(
         source: TradingSourceConfiguration(channelIDs: ["123"]),
         provider: TradingProviderConfiguration(name: .anthropic, model: "claude-sonnet-5-5"),
-        accounts: [TradingAccountConfiguration(id: "paper", environment: .paper)],
+        accounts: [account],
         profiles: [profile],
         routes: [
             TradingRouteConfiguration(
                 channelID: "123", authorID: nil, guruID: "alex", profileRevision: profile.profileRevision,
-                connections: [TradingRouteConnection(accountID: "paper", mode: .fixed, amountUSD: "500", defaultFraction: nil)])
+                connections: [
+                    TradingRouteConnection(
+                        accountID: "paper", mode: .proportional, amountUSD: account.policy.maxSymbolUSD,
+                        defaultFraction: nil)
+                ])
         ]
     )
     model.savedTradingConfiguration = saved

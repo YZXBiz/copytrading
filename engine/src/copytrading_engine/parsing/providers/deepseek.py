@@ -8,14 +8,13 @@ from pydantic_ai import Agent, PromptedOutput
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.deepseek import DeepSeekProvider
 
-from copytrading_engine.parsing.extraction import DecodedMessage
+from copytrading_engine.parsing.extraction import ReadingOutput
 from copytrading_engine.parsing.learning import LEARN_INSTRUCTIONS, PlaybookProposal
-from copytrading_engine.parsing.prompt import INSTRUCTIONS
 from copytrading_engine.shared.cleanup import close_logged
 from copytrading_engine.shared.model_providers import ProviderConfig
 from copytrading_engine.shared.payload_capture import PayloadCapture
 
-from .pydantic_ai import PydanticAIDecoder
+from .pydantic_ai import PydanticAIDecoder, reading_agent
 from .registry import ManagedDecoder
 from .transport import DiagnosticHTTPTransport
 
@@ -41,12 +40,10 @@ def chat_model(config: ProviderConfig, client: AsyncOpenAI) -> OpenAIChatModel:
 
 def build_decoder(config: ProviderConfig, client: AsyncOpenAI) -> PydanticAIDecoder:
     model = chat_model(config, client)
-    agent = Agent(
+    agent = reading_agent(
         model,
-        output_type=PromptedOutput(DecodedMessage),
-        instructions=INSTRUCTIONS,
-        retries=0,
-        model_settings={
+        PromptedOutput(ReadingOutput),
+        {
             "temperature": 0,
             "max_tokens": 3000,
             "extra_body": {"thinking": {"type": "disabled"}},

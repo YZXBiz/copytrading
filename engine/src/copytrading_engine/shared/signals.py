@@ -6,6 +6,8 @@ from typing import Literal, Self
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 from pydantic_core import PydanticCustomError
 
+from copytrading_engine.shared.reading import PostReading
+
 
 class SourceIdentityConflict(ValueError):
     """An existing source message identity was reused with different content."""
@@ -63,6 +65,9 @@ class StockSignal(BaseModel):
     profile_revision: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     decision: Literal["trade", "ignore", "review"]
     reason: str = Field(min_length=1, max_length=300)
+    # How the reader read the post (ADR-0007); absent on signals read before it, or never sent
+    # to the reader.
+    reading: PostReading | None = None
     evidence: tuple[Evidence, ...] = Field(max_length=20)
     instructions: tuple[Instruction, ...] = Field(max_length=20)
 

@@ -12,9 +12,12 @@ import pytest
 from pydantic import SecretStr, ValidationError
 
 from copytrading_engine.execution.domain.sizing import RouteConnection
-from copytrading_engine.parsing.extraction import DecodedMessage
 from copytrading_engine.shared.raw_message import RawMessage
-from copytrading_engine.shared.signals import Evidence
+
+from ..readings import buy, sell, trade
+
+SIXTH = str(Decimal(1) / Decimal(6))
+THIRD = str(Decimal(1) / Decimal(3))
 
 
 def _profiles_module():
@@ -109,21 +112,15 @@ def test_profile_examples_compare_expected_and_actual_without_execution():
 
         async def decode(self, text, route):
             self.calls += 1
-            return DecodedMessage(
-                decision="trade",
-                reason="explicit_entry",
-                instructions=(
-                    Evidence(
-                        action="buy",
-                        symbol=_mapped(route, "Apple"),
-                        price=Decimal("200"),
-                        fraction=Decimal("1") / Decimal("6"),
-                        action_evidence="Bought",
-                        symbol_evidence="Apple",
-                        price_evidence="200",
-                        fraction_evidence="1/6",
-                    ),
-                ),
+            return trade(
+                buy(
+                    _mapped(route, "Apple"),
+                    "200",
+                    said="Bought",
+                    ticker_said="Apple",
+                    fraction=SIXTH,
+                    fraction_said="1/6",
+                )
             )
 
     decoder = Decoder()
@@ -184,21 +181,15 @@ def test_profile_example_mismatch_requires_settings_correction_and_rerun():
 
     class Decoder:
         async def decode(self, text, route):
-            return DecodedMessage(
-                decision="trade",
-                reason="explicit_entry",
-                instructions=(
-                    Evidence(
-                        action="buy",
-                        symbol=_mapped(route, "Apple"),
-                        price=Decimal("200"),
-                        fraction=Decimal("1") / Decimal("3"),
-                        action_evidence="Bought",
-                        symbol_evidence="Apple",
-                        price_evidence="200",
-                        fraction_evidence="1/3",
-                    ),
-                ),
+            return trade(
+                buy(
+                    _mapped(route, "Apple"),
+                    "200",
+                    said="Bought",
+                    ticker_said="Apple",
+                    fraction=THIRD,
+                    fraction_said="1/3",
+                )
             )
 
     review = asyncio.run(
@@ -225,21 +216,15 @@ def test_ungrounded_example_interpretation_returns_review_and_never_activates():
 
     class Decoder:
         async def decode(self, text, route):
-            return DecodedMessage(
-                decision="trade",
-                reason="explicit_entry",
-                instructions=(
-                    Evidence(
-                        action="buy",
-                        symbol="MSFT",
-                        price=Decimal("200"),
-                        fraction=Decimal("1") / Decimal("6"),
-                        action_evidence="Bought",
-                        symbol_evidence="Apple",
-                        price_evidence="200",
-                        fraction_evidence="1/6",
-                    ),
-                ),
+            return trade(
+                buy(
+                    "MSFT",
+                    "200",
+                    said="Bought",
+                    ticker_said="Apple",
+                    fraction=SIXTH,
+                    fraction_said="1/6",
+                )
             )
 
     review = asyncio.run(
@@ -282,23 +267,16 @@ def test_matching_exit_example_preserves_position_sizing_review_without_blocking
 
     class Decoder:
         async def decode(self, text, route):
-            return DecodedMessage(
-                decision="trade",
-                reason="explicit_exit",
-                instructions=(
-                    Evidence(
-                        action="reduce",
-                        symbol="AAPL",
-                        price=Decimal("200"),
-                        entry_price=Decimal("150"),
-                        fraction=Decimal("0.5"),
-                        action_evidence="Sold",
-                        symbol_evidence="Apple",
-                        price_evidence="200",
-                        entry_evidence="150",
-                        fraction_evidence="half",
-                    ),
-                ),
+            return trade(
+                sell(
+                    "AAPL",
+                    "200",
+                    bought_at="150",
+                    said="Sold",
+                    ticker_said="Apple",
+                    fraction="0.5",
+                    fraction_said="half",
+                )
             )
 
     review = asyncio.run(
@@ -362,21 +340,15 @@ def test_historical_evaluation_keeps_guru_revision_and_destination_sizing_indepe
     class Decoder:
         async def decode(self, text, route):
             mapped_symbol = _mapped(route, "Apple")
-            return DecodedMessage(
-                decision="trade",
-                reason="explicit_entry",
-                instructions=(
-                    Evidence(
-                        action="buy",
-                        symbol=mapped_symbol,
-                        price=Decimal("200"),
-                        fraction=Decimal("1") / Decimal("6"),
-                        action_evidence="Bought",
-                        symbol_evidence="Apple",
-                        price_evidence="200",
-                        fraction_evidence="1/6",
-                    ),
-                ),
+            return trade(
+                buy(
+                    mapped_symbol,
+                    "200",
+                    said="Bought",
+                    ticker_said="Apple",
+                    fraction=SIXTH,
+                    fraction_said="1/6",
+                )
             )
 
     service = module.ProfileEvaluationService(Decoder(), provider="deepseek", model="test-model")
@@ -467,21 +439,15 @@ def test_runtime_historical_profile_action_does_not_open_execution_owners(tmp_pa
 
     class Decoder:
         async def decode(self, text, route):
-            return DecodedMessage(
-                decision="trade",
-                reason="historical_preview",
-                instructions=(
-                    Evidence(
-                        action="buy",
-                        symbol=_mapped(route, "Apple"),
-                        price=Decimal("200"),
-                        fraction=Decimal("1") / Decimal("6"),
-                        action_evidence="Bought",
-                        symbol_evidence="Apple",
-                        price_evidence="200",
-                        fraction_evidence="1/6",
-                    ),
-                ),
+            return trade(
+                buy(
+                    _mapped(route, "Apple"),
+                    "200",
+                    said="Bought",
+                    ticker_said="Apple",
+                    fraction=SIXTH,
+                    fraction_said="1/6",
+                )
             )
 
         async def close(self):

@@ -18,19 +18,29 @@ same as his 1/6.
 ## Decision
 1. **The model reads; code decides.** The reader only turns a post into the contract below. Every
    decision about money is plain code, the same for every guru.
-2. **One contract.** Every post is read into a `PostReading`:
-   * `kind`: `trade_made` (he did it), `instruction` (do it now), `conditional` (if…), `suggestion`
-     (consider…, a zone), or `commentary`.
-   * `calls`, each with `action` (buy or sell), the stock and how it was written, `price` (exact,
-     range, at market, or not given), `size` (a fraction, a batch, or not given), for sells which
-     shares (a lot at a price, all, what's left, or not said) and whether a fraction counts from
-     the original buy or what's left, a `condition` for conditionals, and the post's own words
-     behind every field.
-   * A field the post does not state is "not given". The reader never fills a gap.
+2. **One contract, with no invalid states.** Every post is read into a `PostReading`, built from
+   tagged alternatives so a combination that makes no sense cannot be written down:
+   ```
+   PostReading = TradeMade | Instruction | Conditional | Suggestion | Commentary | Unclear
+   Call        = Buy | Sell
+   Price       = Exact | Range | AtMarket | NotGiven
+   Size        = Fraction | Batch | NotGiven          (a buy)
+   Share       = Fraction | All                       (a sell)
+   SellFrom    = Lot | NotSaid
+   ```
+   `shared/reading.py` holds the contract; the reader model is given its JSON schema.
+   Every stated value carries the post's own words beside it, so a value without its evidence
+   cannot exist. A field the post does not state is `NotGiven` or `NotSaid`; the reader never
+   fills a gap. The model's output is validated strictly, without coercion.
 3. **Checks before trading.** The contract's shape is valid; every cited word is in the post; a
-   name becomes a ticker only through the playbook; a failed check gives the model one retry with
-   the reason, then the post goes to review.
-4. **Three rules.**
+   name becomes a ticker only through the playbook; a trade made or an instruction has no
+   conditional or past-tense words. The checks run as the reader agent's output validator, so a
+   failed check gives the model one retry with the reason; a second failure sends the post to
+   review.
+4. **Three rules, one pure function.** `decide(reading, guru rules, account limits, market)`
+   returns an order, a wait with its reason, a skip with its reason, or ignore. It is the policy;
+   placing orders and keeping lots stay the engine's mechanism, which receives only the simple
+   executable call `decide` builds, as today.
    * *Act or ask.* `trade_made` and `instruction` trade. `suggestion`, `conditional`, and any range
      wait for the owner. `commentary` is ignored. A guru can be set to ask before every trade.
    * *How much.* One guru copies into one account, so the account's maximum per stock is that
@@ -40,7 +50,8 @@ same as his 1/6.
    * *At what price.* A buy is a limit at the guru's price plus X%. When the market is more than
      Y% away from the guru's price, above or below, the call waits for the owner. X and Y are set
      per account; Y defaults to 5% in regular hours and 10% outside them. A call with no price
-     waits for the owner.
+     waits for the owner, and so does a call at market, a batch until its guru's N is set, and a
+     sell that names no buy for a guru whose sells refer to the buy price.
 5. **Limits only protect.** Maximum per order trims a buy and the trim is shown. A buy that would
    pass the maximum per stock or the maximum total, the daily loss cap, or the entries per day is
    skipped, with the reason shown.
