@@ -1,10 +1,12 @@
 import Foundation
 
-/// Engine reason codes in the words a trader would use; unknown codes fall back to `Humanize`.
+/// Engine reason codes in the words a trader would use, in the app's language; unknown codes fall
+/// back to `Humanize`.
+@MainActor
 enum Reason {
     static func text(_ code: String?) -> String {
         guard let code else { return "—" }
-        return known[code] ?? Humanize.code(code)
+        return known[code].map { L10n.string($0) } ?? Humanize.code(code)
     }
 
     /// Keeps parser identifiers out of the main explanation while preserving free readable text.
@@ -12,7 +14,7 @@ enum Reason {
         guard let raw else { return nil }
         let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty else { return nil }
-        if let explanation = known[value] { return explanation }
+        if let explanation = known[value] { return L10n.string(explanation) }
 
         let isMachineIdentifier =
             value == value.lowercased()
@@ -48,7 +50,7 @@ enum Reason {
         "quote_stale": "The price quote was too old",
         "quote_above_limit": "The price moved above your limit",
         "total_exposure_cap": "Your total exposure limit was reached",
-        "symbol_exposure_cap": "Your per-symbol limit was reached",
+        "symbol_exposure_cap": "Your per-stock limit was reached",
         "symbol_and_total_exposure_cap": "Your exposure limits were reached",
         "daily_loss_cap": "Your daily loss limit was reached",
         "daily_entry_cap": "Your daily entry limit was reached",
@@ -59,14 +61,14 @@ enum Reason {
         "exits_disabled": "Copying exits is off",
         "unsupported_asset": "The broker does not support this symbol",
         "invalid_price_tick": "The price was not a valid tick",
-        "missing_or_ambiguous_lot": "The matching entry could not be found",
-        "missing_source_fraction": "The post did not say how much to sell",
-        "missing_source_fraction_review": "The post did not say how much to sell",
+        "missing_or_ambiguous_lot": "You don't hold a copied buy at that price",
+        "missing_source_fraction": "The post didn't say what size to buy",
+        "missing_source_fraction_review": "The post didn't say what size to buy",
         "wait_pending_order": "Waiting for an earlier order",
         "external_open_order": "Another open order is in the way",
         "ownership_incident": "Holdings need your review",
         "position_mismatch": "Holdings differ from the broker",
-        "duplicate": "Already handled",
+        "duplicate": "A repeat of an earlier call",
         "stale": "Too old to copy",
         "provider_rejected": "The model service refused the request",
         "provider_key_rejected": "The model service didn't accept the API key",
@@ -77,5 +79,29 @@ enum Reason {
         "session_changed": "The market session changed",
         "processing_stopped": "Copying is paused",
         "not_checked": "Not checked yet",
+        "stale_signal": "Too old to copy",
+        "source_profile_not_configured": "No guru is set up for this poster",
+        "evidence_validation_failed": "The model's reading didn't match the post",
+        "invalid_model_output": "The model's answer couldn't be read",
+        "model_output_budget_exceeded": "The model's answer was too long",
+        "provider_timeout": "The model service didn't answer in time",
+        "provider_unavailable": "The model service couldn't be reached",
+        "broker_rejected": "The broker rejected the order",
+        "position_required_for_exit_sizing": "Nothing held to sell from",
+        "unresolved_order_incident": "An earlier order needs your review",
+        "unresolved_account_order": "An open order at the broker needs your review",
+        "incomplete_account_orders": "The broker's order list was incomplete",
+        "plan_unavailable": "The order couldn't be planned",
+        "conditional": "The guru would trade only if something happens",
+        "suggestion": "The guru suggested it but didn't trade",
+        "unclear": "The post's meaning wasn't clear",
+        "price_range": "The guru gave a price range",
+        "price_at_market": "The guru said to trade at the market price",
+        "price_not_given": "The post gave no price",
+        "batch_size_unknown": "The post named a batch, not a size",
+        "sell_names_no_buy": "The sell didn't say which buy it comes from",
+        "price_moved": "The market moved too far from the guru's price",
+        "approval_required": "You asked to approve every order for this account",
+        "waiting_expired": "Too late to copy: its trading day is over",
     ]
 }

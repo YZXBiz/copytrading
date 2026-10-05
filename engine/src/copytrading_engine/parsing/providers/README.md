@@ -10,12 +10,12 @@ Implement `Decoder.decode(text, route)` and `ManagedDecoder.close()`:
 
 ```python
 class ExampleDecoder:
-    async def decode(self, text: str, route: Route) -> DecodedMessage: ...
+    async def decode(self, text: str, route: Route) -> PostReading: ...
 
     async def close(self) -> None: ...
 ```
 
-`DecodedMessage` is frozen and rejects unknown fields. It contains `decision` (`trade`, `ignore`, or `review`), a nonempty bounded `reason`, and at most 20 typed instructions. Only `trade` may contain instructions; ignore and review results have none. The parser applies deterministic grounding and route validation after decode, so a provider response alone cannot authorize an order.
+`PostReading` (`shared/reading.py`, ADR-0007) is the one reading contract for every guru: a tagged union of `trade_made`, `instruction`, `conditional`, `suggestion`, `commentary`, and `unclear`, whose calls carry the post's own words beside every value. Build the agent with `reading_agent()` in `pydantic_ai.py`: it registers the output validator that runs `check_reading` and gives the model one retry with the reason. The parser runs the same checks again after decode and decides what to do with the reading, so a provider response alone cannot authorize an order.
 
 Translate expected provider, timeout, and output-validation failures to `DecodeError(reason, retryable=..., issues=...)`. Use a stable sanitized reason and typed `ValidationIssue` values. Do not retain provider response bodies, prompts, API keys, or exception text in errors or diagnostics. Let cancellation propagate; it is lifecycle control, not a provider failure. The common PydanticAI adapter shows the existing timeout, bounded-output, and sanitized-error pattern.
 

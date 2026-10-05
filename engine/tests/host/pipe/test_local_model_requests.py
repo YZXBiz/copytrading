@@ -60,7 +60,7 @@ def test_the_other_provider_requests_accept_an_empty_key_for_a_local_model():
     evaluate = review | {
         "operation": "evaluate_historical_profile",
         "source_id": "discord:123:1",
-        "destinations": [{"account_id": "paper", "mode": "fixed", "amount_usd": "100"}],
+        "destinations": [{"account_id": "paper", "full_position_usd": "100"}],
     }
     for payload in (review, evaluate):
         try:

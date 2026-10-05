@@ -21,7 +21,7 @@ from ..diagnostics.telemetry.builders import journal_events, journal_sink
 
 async def test_native_output_uses_provider_schema_and_no_tools():
     requests = []
-    payload = {"decision": "ignore", "reason": "Commentary", "instructions": []}
+    payload = {"reading": {"kind": "commentary", "summary": "Commentary"}}
 
     def handler(request):
         requests.append(json.loads(request.content))
@@ -50,7 +50,7 @@ async def test_native_output_uses_provider_schema_and_no_tools():
     )
     try:
         result = await decoder.decode("Market commentary", Route(playbook="苹果 means AAPL"))
-        assert result.decision == "ignore"
+        assert result.kind == "commentary"
         assert len(requests) == 1
         assert requests[0]["output_config"]["format"]["type"] == "json_schema"
         assert not requests[0].get("tools")
@@ -85,11 +85,7 @@ async def test_deepseek_stalled_response_obeys_total_deadline_without_sdk_retrie
                             "message": {
                                 "role": "assistant",
                                 "content": json.dumps(
-                                    {
-                                        "decision": "ignore",
-                                        "reason": "Commentary",
-                                        "instructions": [],
-                                    }
+                                    {"reading": {"kind": "commentary", "summary": "Commentary"}}
                                 ),
                             },
                         }
@@ -111,7 +107,7 @@ async def test_deepseek_stalled_response_obeys_total_deadline_without_sdk_retrie
         ProviderConfig(api_key="test-only", model="deepseek-flash", timeout=20), client
     )
     try:
-        assert (await decoder.decode("Warm up the SDK", Route())).decision == "ignore"
+        assert (await decoder.decode("Warm up the SDK", Route())).kind == "commentary"
         decoder.timeout = 2
         started_at = asyncio.get_running_loop().time()
         with pytest.raises(DecodeError) as failure:
@@ -145,7 +141,7 @@ async def test_deepseek_uses_json_mode_without_executable_tools():
                         "message": {
                             "role": "assistant",
                             "content": json.dumps(
-                                {"decision": "ignore", "reason": "Commentary", "instructions": []}
+                                {"reading": {"kind": "commentary", "summary": "Commentary"}}
                             ),
                         },
                     }
@@ -165,7 +161,7 @@ async def test_deepseek_uses_json_mode_without_executable_tools():
     )
     try:
         result = await decoder.decode("Market commentary", Route())
-        assert result.decision == "ignore"
+        assert result.kind == "commentary"
         assert len(requests) == 1
         assert requests[0]["response_format"] == {"type": "json_object"}
         assert requests[0]["thinking"] == {"type": "disabled"}
@@ -194,7 +190,7 @@ async def test_provider_transport_captures_actual_serialized_wire_payloads_redac
                         "message": {
                             "role": "assistant",
                             "content": json.dumps(
-                                {"decision": "ignore", "reason": secret, "instructions": []}
+                                {"reading": {"kind": "commentary", "summary": secret}}
                             ),
                         },
                     }
@@ -230,7 +226,7 @@ async def test_provider_transport_captures_actual_serialized_wire_payloads_redac
     try:
         with bind_workflow_attempt(context):
             result = await decoder.decode("Market " + secret, Route())
-        assert result.decision == "ignore"
+        assert result.kind == "commentary"
         assert len(requests) == 1
         assert sink.flush(timeout_seconds=5)
         assert [record.capture_kind for record in journal_events(tmp_path / "diagnostics")] == [
@@ -269,9 +265,7 @@ async def test_anthropic_provider_transport_captures_sdk_wire_request_and_respon
                 "content": [
                     {
                         "type": "text",
-                        "text": json.dumps(
-                            {"decision": "ignore", "reason": secret, "instructions": []}
-                        ),
+                        "text": json.dumps({"reading": {"kind": "commentary", "summary": secret}}),
                     }
                 ],
                 "stop_reason": "end_turn",
@@ -310,7 +304,7 @@ async def test_anthropic_provider_transport_captures_sdk_wire_request_and_respon
             )
         ):
             result = await decoder.decode("Commentary " + secret, Route())
-        assert result.decision == "ignore"
+        assert result.kind == "commentary"
         assert len(request_bodies) == 1
         assert "output_config" in request_bodies[0]
         assert sink.flush(timeout_seconds=5)
@@ -496,7 +490,7 @@ async def test_observer_failure_does_not_replace_provider_connection_failure():
         await decoder.close()
 
 
-async def test_invalid_buy_lot_reference_retains_safe_schema_diagnostic():
+async def test_a_buy_naming_a_lot_keeps_only_a_safe_schema_diagnostic():
     from openai import AsyncOpenAI
 
     def handler(request):
@@ -515,21 +509,24 @@ async def test_invalid_buy_lot_reference_retains_safe_schema_diagnostic():
                             "role": "assistant",
                             "content": json.dumps(
                                 {
-                                    "decision": "trade",
-                                    "reason": "PRIVATE_PROVIDER_TEXT",
-                                    "instructions": [
-                                        {
-                                            "action": "buy",
-                                            "symbol": "ABC",
-                                            "price": "25",
-                                            "entry_price": "29",
-                                            "fraction": "1",
-                                            "action_evidence": "加回",
-                                            "symbol_evidence": "abc",
-                                            "price_evidence": "25",
-                                            "entry_evidence": "29",
-                                        }
-                                    ],
+                                    "reading": {
+                                        "kind": "trade_made",
+                                        "summary": "PRIVATE_PROVIDER_TEXT",
+                                        "calls": [
+                                            {
+                                                "action": "buy",
+                                                "action_words": "加回",
+                                                "stock": {"ticker": "ABC", "words": "abc"},
+                                                "price": {
+                                                    "kind": "exact",
+                                                    "value": "25",
+                                                    "words": "25",
+                                                },
+                                                "size": {"kind": "not_given"},
+                                                "sell_from": {"kind": "not_said"},
+                                            }
+                                        ],
+                                    }
                                 }
                             ),
                         },
@@ -554,9 +551,10 @@ async def test_invalid_buy_lot_reference_retains_safe_schema_diagnostic():
         error = failure.value
         assert error.reason == "invalid_model_output"
         assert not error.retryable
-        assert [issue.model_dump() for issue in error.issues] == [
-            {"path": "instructions.0", "code": "entry_has_lot_reference"}
-        ]
+        assert error.issues[0].model_dump() == {
+            "path": "reading.trade_made.calls.0.buy.sell_from",
+            "code": "extra_forbidden",
+        }
         assert "PRIVATE" not in repr(error.issues) + str(error)
         assert error.__cause__ is None
     finally:

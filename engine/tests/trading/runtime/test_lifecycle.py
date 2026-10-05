@@ -20,6 +20,7 @@ from copytrading_engine.trading.entrypoints.factories import TradingFactories
 from copytrading_engine.trading.entrypoints.runtime import TradingRuntime
 
 from .builders import (
+    channel,
     connection,
     trading_configuration,
     trading_secrets,
@@ -69,12 +70,12 @@ async def test_maintenance_fence_drains_runtime_before_yield_and_blocks_start(tm
     await runtime.shutdown()
 
 
-async def test_capture_parse_fanout_replays_only_unconfirmed_account_after_restart(tmp_path):
+async def test_a_post_for_an_account_that_failed_to_open_is_delivered_after_restart(tmp_path):
     event = RawMessage(
         schema_version=1,
         event_type="raw_message",
         source="discord",
-        channel_id="123",
+        channel_id=channel("second"),
         id="456",
         timestamp=dt.datetime.now(dt.UTC),
         text="ALERT: Bought AAPL at 200",
@@ -85,7 +86,7 @@ async def test_capture_parse_fanout_replays_only_unconfirmed_account_after_resta
 
     async def owner_factory(path, credentials, policy, environment):
         assert environment == "paper"
-        assert policy.sources == ("discord:123",)
+        assert policy.sources == ("discord:123", "discord:124")
         assert credentials.key.get_secret_value().endswith("-key")
         owner = Owner(path, fail_once, attempts)
         opened[path.name] = owner
@@ -97,7 +98,7 @@ async def test_capture_parse_fanout_replays_only_unconfirmed_account_after_resta
         return Decoder()
 
     def session_factory(source, channels, authors, stop, report_failure):
-        assert channels == {123}
+        assert channels == {123, 124}
         assert authors is None
         return Session(source, event)
 
@@ -134,17 +135,15 @@ async def test_capture_parse_fanout_replays_only_unconfirmed_account_after_resta
     assert running.state == "running"
     await runtime.shutdown()
     assert runtime.status().state == "paused"
-    assert attempts["first"] >= 2
     assert attempts["second"] == 2
-    for account in ("first", "second"):
-        accepted = opened[account].deliveries[0]
-        assert accepted.signal.guru_id == "default-guru"
-        assert accepted.terms.guru_id == "default-guru"
-        assert accepted.terms.profile_revision == accepted.signal.profile_revision
-    for account in ("first", "second"):
-        receipt = sqlite3.connect(tmp_path / "accounts" / account / "fake-receipts.sqlite3")
-        assert receipt.execute("SELECT count(*) FROM receipts").fetchone() == (1,)
-        receipt.close()
+    # One guru per account: the post was only ever for "second".
+    assert opened["first"].deliveries == []
+    [accepted] = opened["second"].deliveries
+    assert accepted.signal.guru_id == accepted.terms.guru_id == "second-guru"
+    assert accepted.terms.profile_revision == accepted.signal.profile_revision
+    receipt = sqlite3.connect(tmp_path / "accounts" / "second" / "fake-receipts.sqlite3")
+    assert receipt.execute("SELECT count(*) FROM receipts").fetchone() == (1,)
+    receipt.close()
 
 
 async def test_a_channel_route_delivers_a_post_that_carries_its_author(tmp_path):
@@ -179,9 +178,9 @@ async def test_a_channel_route_delivers_a_post_that_carries_its_author(tmp_path)
         runtime, lambda status: status.processed_signals == 1 and status.pending_signals == 0
     )
     await runtime.shutdown()
-    for account in ("first", "second"):
-        assert len(opened[account].deliveries) == 1
-        assert opened[account].deliveries[0].signal.author_id == "999"
+    [delivered] = opened["first"].deliveries
+    assert delivered.signal.author_id == "999"
+    assert opened["second"].deliveries == []
 
 
 async def test_pending_signal_rejects_changed_destination_after_restart(tmp_path):
@@ -189,7 +188,7 @@ async def test_pending_signal_rejects_changed_destination_after_restart(tmp_path
         schema_version=1,
         event_type="raw_message",
         source="discord",
-        channel_id="123",
+        channel_id=channel("second"),
         id="pending",
         timestamp=dt.datetime.now(dt.UTC),
         text="ALERT: Bought AAPL at 200",
@@ -216,7 +215,7 @@ async def test_pending_signal_rejects_changed_destination_after_restart(tmp_path
     await runtime.shutdown()
     changed = trading_configuration().model_dump(mode="json")
     changed["accounts"].append({"id": "third", "environment": "paper"})
-    changed["routes"][0]["connections"] = [connection("third")]
+    changed["routes"][1]["connections"] = [connection("third")]
     await runtime.start(
         TradingConfiguration.model_validate(changed),
         trading_secrets_for("first", "second", "third"),
@@ -246,6 +245,7 @@ async def test_pending_source_rejects_changed_destination(tmp_path):
         )
         changed = trading_configuration().model_dump(mode="json")
         changed["routes"][0]["connections"] = [connection("second")]
+        changed["routes"][1]["connections"] = [connection("first")]
         changed_configuration = TradingConfiguration.model_validate(changed)
         with pytest.raises(RoutingChangePending):
             await guard.validate(changed_configuration)
@@ -264,10 +264,7 @@ async def test_account_removal_requires_settled_execution_ownership(tmp_path, mo
     guard = await RoutingRevision.open(database)
     try:
         await guard.accept(trading_configuration())
-        changed = trading_configuration().model_dump(mode="json")
-        changed["accounts"] = [changed["accounts"][0]]
-        changed["routes"][0]["connections"] = [connection("first")]
-        replacement = TradingConfiguration.model_validate(changed)
+        replacement = trading_configuration("first")
         monkeypatch.setattr(
             "copytrading_engine.trading.adapters.routing.has_unresolved_ownership",
             lambda path: True,

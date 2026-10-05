@@ -11,6 +11,7 @@ from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
 from copytrading_engine.execution.domain.market import Account
 from copytrading_engine.execution.domain.orders import OwnedLot
 from copytrading_engine.execution.domain.ownership import OwnershipInspection
+from copytrading_engine.execution.domain.progress import Skipped
 from copytrading_engine.execution.domain.values import Money, Positive, Quantity, Value
 from copytrading_engine.shared.queue_snapshot import QueueSnapshot
 
@@ -120,6 +121,21 @@ class OrderView(Value):
     average_fill_price: Positive | None
     broker_id: str | None
     created_at: AwareDatetime
+    # Which of the post's calls this order places, and for a buy what the call asked for and
+    # what the maximum per order allowed of it (ADR-0007).
+    instruction_index: int
+    requested_usd: Positive | None
+    budget_usd: Positive | None
+
+
+class LimitHit(Value):
+    """The limit a skipped call would have passed, with its numbers."""
+
+    part: int
+    scope: Literal["symbol", "total"]
+    current: Quantity
+    proposed: Quantity
+    limit: Quantity
 
 
 class DestinationView(Value):
@@ -127,6 +143,7 @@ class DestinationView(Value):
     environment: str
     status: str
     instruction_outcomes: tuple[str, ...]
+    limits_hit: tuple[LimitHit, ...]
     orders: tuple[OrderView, ...]
 
 
@@ -276,6 +293,9 @@ def destination_views(snapshot: LedgerSnapshot, source_ids: set[str]) -> dict[st
                 average_fill_price=order.filled_avg_price,
                 broker_id=order.broker_id,
                 created_at=order.created_at,
+                instruction_index=order.instruction_index,
+                requested_usd=order.requested_usd,
+                budget_usd=order.budget_usd,
             )
             for order in snapshot.orders.values()
             if order.message_id == message.key
@@ -286,6 +306,12 @@ def destination_views(snapshot: LedgerSnapshot, source_ids: set[str]) -> dict[st
             status=message.status,
             instruction_outcomes=tuple(
                 part.reason if part.kind == "skipped" else part.kind for part in message.parts
+            ),
+            limits_hit=tuple(
+                LimitHit(part=index, **exposure.model_dump())
+                for index, part in enumerate(message.parts)
+                if isinstance(part, Skipped)
+                for exposure in part.exposure
             ),
             orders=orders,
         )

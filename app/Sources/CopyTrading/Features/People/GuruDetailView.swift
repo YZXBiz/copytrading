@@ -107,13 +107,8 @@ struct GuruDetailView: View {
 
     @MainActor private func sizing(_ destination: TradingRouteConnection) -> String {
         let amount =
-            Decimal(engine: destination.amountUSD)?.formatted(.currency(code: "USD").precision(.fractionLength(0...2)))
-            ?? destination.amountUSD
-        switch destination.mode {
-        case .fixed:
-            return L10n.string("%@ per entry", amount)
-        case .proportional:
-            return L10n.string("Up to %@, scaled to the post's size", amount)
-        }
+            Decimal(engine: destination.fullPositionUSD)?.formatted(.currency(code: "USD").precision(.fractionLength(0...2)))
+            ?? destination.fullPositionUSD
+        return L10n.string("Full position %@. A 1/6 call buys a sixth of it.", amount)
     }
 }

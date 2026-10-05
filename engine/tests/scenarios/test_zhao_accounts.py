@@ -18,10 +18,10 @@ async def test_an_account_without_cash_never_holds_back_the_others(tmp_path):
         assert rig.brokers["poor"].submitted() == []
 
 
-async def test_proportional_accounts_size_by_the_fraction_zhao_names(tmp_path):
+async def test_each_account_sizes_zhaos_share_from_its_own_full_position(tmp_path):
     accounts = {
-        "fixed": Account(cash="5000", amount_usd="500"),
-        "share": Account(cash="5000", amount_usd="3000", mode="proportional"),
+        "small": Account(cash="5000", full_position_usd="750"),
+        "large": Account(cash="5000", full_position_usd="3000"),
     }
     async with Rig(tmp_path, accounts, {"NVDA": "125"}) as rig:
         text = "买入 NVDA 125 6分之一"
@@ -29,18 +29,25 @@ async def test_proportional_accounts_size_by_the_fraction_zhao_names(tmp_path):
             text, buy("NVDA", "125", fraction=str(Decimal(1) / 6), fraction_said="6分之一")
         )
         activity = await rig.post(text)
-        assert orders(activity, "fixed")[0].quantity == 4
-        assert orders(activity, "share")[0].quantity == 4
+        assert orders(activity, "small")[0].quantity == 1
+        assert orders(activity, "large")[0].quantity == 4
 
 
-async def test_a_proportional_account_waits_for_review_when_zhao_names_no_size(tmp_path):
-    accounts = {"share": Account(cash="5000", amount_usd="3000", mode="proportional")}
+async def test_a_call_with_no_size_buys_the_full_position(tmp_path):
+    async with Rig(tmp_path, {"paper": Account(cash="5000")}, {"NVDA": "125"}) as rig:
+        rig.reader.expect("买入 NVDA 125", buy("NVDA", "125"))
+        activity = await rig.post("买入 NVDA 125")
+        assert orders(activity, "paper")[0].quantity == 4
+
+
+async def test_an_account_set_to_wait_leaves_a_call_with_no_size_for_review(tmp_path):
+    accounts = {"paper": Account(cash="5000", default_share=None)}
     async with Rig(tmp_path, accounts, {"NVDA": "125"}) as rig:
         rig.reader.expect("买入 NVDA 125", buy("NVDA", "125"))
         activity = await rig.post("买入 NVDA 125")
-        destination = next(d for d in activity.destinations if d.account_id == "share")
+        [destination] = activity.destinations
         assert destination.status == "review_required"
-        assert rig.brokers["share"].submitted() == []
+        assert rig.brokers["paper"].submitted() == []
 
 
 async def test_selling_part_of_a_lot_from_accounts_leaves_the_rest_for_zhao(tmp_path):
@@ -50,12 +57,12 @@ async def test_selling_part_of_a_lot_from_accounts_leaves_the_rest_for_zhao(tmp_
         rig.reader.expect("NVDA 125买的 140 清仓", close("NVDA", "140", bought_at="125"))
         bought = await rig.post("买入 NVDA 125")
         [lot] = await rig.lots("paper", "NVDA")
-        assert lot.source_id == bought.source_id
+        assert lot.source_id == bought.source_ids[0]
 
         broker.move("NVDA", "130")
         preview, result = await rig.sell_lot("paper", lot.lot_id, "1")
         assert preview.plan is not None
-        assert preview.plan.type == "market"
+        assert preview.plan.type == "limit"
         assert result.status == "filled"
         [lot] = await rig.lots("paper", "NVDA")
         assert lot.remaining_qty == 3

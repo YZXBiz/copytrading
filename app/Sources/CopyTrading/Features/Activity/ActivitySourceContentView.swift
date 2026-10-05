@@ -4,7 +4,10 @@ import SwiftUI
 /// The readable original post and separately captured source evidence.
 struct ActivitySourceContentView: View {
     let item: SourceActivity
+    /// The words the reader took each value from, marked where they appear (ADR-0007).
+    var citedWords: [String] = []
     @ScaledMetric(relativeTo: .body) private var readingBodySize = 17
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -23,7 +26,7 @@ struct ActivitySourceContentView: View {
                         markdown: said,
                         options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
                     )) ?? AttributedString(said)
-                Text(attributed)
+                Text(marked(attributed))
                     .font(.system(size: readingBodySize))
                     .foregroundStyle(Palette.ink)
                     .lineSpacing(5)
@@ -55,4 +58,16 @@ struct ActivitySourceContentView: View {
         .textSelection(.enabled)
     }
 
+    /// The post with each cited word softly marked; words the post shows differently stay plain.
+    private func marked(_ text: AttributedString) -> AttributedString {
+        var text = text
+        let plain = String(text.characters)
+        for range in CitedWordMarks.ranges(of: citedWords, in: plain) {
+            let start = text.characters.index(
+                text.startIndex, offsetBy: plain.distance(from: plain.startIndex, to: range.lowerBound))
+            let end = text.characters.index(start, offsetBy: plain.distance(from: range.lowerBound, to: range.upperBound))
+            text[start..<end].backgroundColor = Palette.accent.opacity(colorScheme == .dark ? 0.24 : 0.13)
+        }
+        return text
+    }
 }

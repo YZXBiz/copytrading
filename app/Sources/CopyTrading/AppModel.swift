@@ -32,6 +32,8 @@ protocol TradingStarting: Sendable {
     func learnGuruPlaybook(
         _ learning: GuruPlaybookLearningRequest
     ) async throws -> LearnedGuruPlaybook
+
+    func replayGuruPosts(_ replay: GuruReplayRequest) async throws -> GuruReplay
 }
 
 extension EngineActions: TradingStarting {}
@@ -151,6 +153,8 @@ final class AppModel {
     @ObservationIgnored var agentRelay: AgentRelay?
     /// The conversation with the assistant; it is forgotten on lock, quit, and engine stop.
     let assistant = AssistantModel()
+    /// The waiting calls the owner skipped, shared by every screen that lists posts.
+    let skippedCalls = SkippedCalls()
     @ObservationIgnored var agentAccessStore: AgentAccessStore?
     @ObservationIgnored private var diagnosticsSettingsStore: DiagnosticsSettingsStore
     @ObservationIgnored private var diagnosticsJournal: DiagnosticsJournal
@@ -233,7 +237,8 @@ final class AppModel {
 
     func createOperationalBackup(to destination: URL) async {
         guard !isRunningBackupRestore, !isInstallingUpdate, let engineActions else {
-            backupRestoreMessage = L10n.string("Start the local engine before creating a backup.")
+            backupRestoreMessage = L10n.string(
+                "The engine isn't running. Start it in Settings → Engine. If another CopyTrading is open, quit it first.")
             return
         }
         do {
@@ -267,7 +272,8 @@ final class AppModel {
             restoreRecoveryMessage == nil,
             let engineActions
         else {
-            backupRestoreMessage = L10n.string("Start the local engine before validating a restore archive.")
+            backupRestoreMessage = L10n.string(
+                "The engine isn't running. Start it in Settings → Engine. If another CopyTrading is open, quit it first.")
             return
         }
         isRunningBackupRestore = true
@@ -1128,7 +1134,7 @@ final class AppModel {
 
     func runSelfTest() async {
         guard engineActions != nil else {
-            message = L10n.string("Start the local engine before running a self-test.")
+            message = L10n.string("The engine isn't running. Start it in Settings → Engine. If another CopyTrading is open, quit it first.")
             return
         }
         guard pendingCommandID == nil else {
@@ -1187,14 +1193,14 @@ final class AppModel {
         }
     }
 
-    /// Reads the route's channel and has the configured model draft a playbook. Nothing is saved;
-    /// keys left blank in Setup fall back to the saved ones, exactly as Validate does.
-    func learnPlaybook(for route: TradingRouteDraft, in draft: ConnectionsDraft) async throws -> LearnedGuruPlaybook {
+    /// Where a guru posts and the keys to read it with: keys left blank in Setup fall back to the
+    /// saved ones, exactly as Validate does.
+    private func channelReading(
+        for route: TradingRouteDraft, in draft: ConnectionsDraft, locked: String, stopped: String
+    ) throws -> (engine: any TradingStarting, channelID: String, discordToken: String, providerAPIKey: String) {
         func fail(_ reason: String) -> TradingSettingsError { .invalidConfiguration(reason) }
-        guard isTradingUnlocked else { throw fail(L10n.string("Unlock CopyTrading before learning a playbook.")) }
-        guard let learner: any TradingStarting = tradingStarter ?? engineActions else {
-            throw fail(L10n.string("Start the local engine before learning a playbook."))
-        }
+        guard isTradingUnlocked else { throw fail(locked) }
+        guard let engine: any TradingStarting = tradingStarter ?? engineActions else { throw fail(stopped) }
         let channelID = draft.effectiveChannel(for: route)
         guard !channelID.isEmpty else { throw fail(L10n.string("Add the guru's Discord channel ID first.")) }
         guard !draft.modelName.trimmed.isEmpty else { throw fail(L10n.string("Choose a model under Interpreter first.")) }
@@ -1209,21 +1215,63 @@ final class AppModel {
             providerAPIKey.isEmpty && draft.provider.requiresAPIKey ? "the model API key" : nil,
         ].compactMap(\.self)
         guard missing.isEmpty else {
-            throw TradingSettingsError.missingCredentials(ListFormatter.localizedString(byJoining: missing))
+            throw TradingSettingsError.missingCredentials(L10n.list(missing))
         }
+        return (engine, channelID, discordToken, providerAPIKey)
+    }
+
+    /// Reads the route's channel and has the configured model draft a playbook. Nothing is saved.
+    func learnPlaybook(for route: TradingRouteDraft, in draft: ConnectionsDraft) async throws -> LearnedGuruPlaybook {
+        let reading = try channelReading(
+            for: route, in: draft, locked: L10n.string("Unlock CopyTrading before learning a playbook."),
+            stopped: L10n.string("The engine isn't running. Start it in Settings → Engine. If another CopyTrading is open, quit it first."))
         do {
-            return try await learner.learnGuruPlaybook(
+            return try await reading.engine.learnGuruPlaybook(
                 GuruPlaybookLearningRequest(
-                    channelID: channelID,
+                    channelID: reading.channelID,
                     authorID: route.authorID.trimmed.nilIfEmpty,
-                    discordToken: discordToken,
+                    discordToken: reading.discordToken,
                     provider: draft.providerConfiguration,
-                    providerAPIKey: providerAPIKey
+                    providerAPIKey: reading.providerAPIKey
                 ))
         } catch EngineContractError.remote(code: _, message: let message?) {
-            throw fail(message)
+            throw TradingSettingsError.invalidConfiguration(message)
         } catch is EngineContractError {
-            throw fail(L10n.string("The engine could not learn from this channel. Try again."))
+            throw TradingSettingsError.invalidConfiguration(L10n.string("The engine could not learn from this channel. Try again."))
+        }
+    }
+
+    /// Reads the guru's recent posts with this draft's playbook and rules and says what each would
+    /// have done (ADR-0007). Nothing is placed or saved.
+    func replayPosts(for route: TradingRouteDraft, in draft: ConnectionsDraft) async throws -> GuruReplay {
+        let reading = try channelReading(
+            for: route, in: draft, locked: L10n.string("Unlock CopyTrading before replaying posts."),
+            stopped: L10n.string("The engine isn't running. Start it in Settings → Engine. If another CopyTrading is open, quit it first."))
+        let profile = try TradingProfileBuilder().build(
+            TradingProfileDraft(
+                guruID: route.guruID.trimmed,
+                displayName: route.displayName.trimmed.isEmpty ? route.guruID.trimmed : route.displayName.trimmed,
+                prefix: route.prefix.trimmed,
+                playbook: route.playbook.trimmedLines,
+                examples: [],
+                exitBasis: route.exitBasis,
+                batches: route.batches,
+                sellsReferTo: route.sellsReferTo
+            ))
+        do {
+            return try await reading.engine.replayGuruPosts(
+                GuruReplayRequest(
+                    channelID: reading.channelID,
+                    authorID: route.authorID.trimmed.nilIfEmpty,
+                    discordToken: reading.discordToken,
+                    provider: draft.providerConfiguration,
+                    providerAPIKey: reading.providerAPIKey,
+                    profile: profile
+                ))
+        } catch EngineContractError.remote(code: _, message: let message?) {
+            throw TradingSettingsError.invalidConfiguration(message)
+        } catch is EngineContractError {
+            throw TradingSettingsError.invalidConfiguration(L10n.string("The engine could not replay this channel. Try again."))
         }
     }
 
@@ -1297,7 +1345,7 @@ final class AppModel {
                     ? (configuration.notification?.service == .discord ? "the Discord webhook URL" : "the Telegram bot token") : nil,
             ].compactMap(\.self)
             guard missing.isEmpty else {
-                throw TradingSettingsError.missingCredentials(ListFormatter.localizedString(byJoining: missing))
+                throw TradingSettingsError.missingCredentials(L10n.list(missing))
             }
             let secrets = TradingSecrets(
                 discordToken: discordToken, providerAPIKey: providerAPIKey,
@@ -1749,7 +1797,7 @@ final class AppModel {
     static func failedChecksMessage(_ report: TradingCapabilityReport) -> String {
         let failed = report.checks.filter { $0.state == .failed }.map(\.title)
         guard !failed.isEmpty else { return L10n.string("A required connection check failed. Processing remains paused.") }
-        let names = ListFormatter.localizedString(byJoining: failed)
+        let names = L10n.list(failed)
         return L10n.string(
             failed.count == 1
                 ? "%@ failed its connection check. Processing remains paused."
@@ -1856,7 +1904,7 @@ final class AppModel {
                 let draft = TradingProfileDraft(
                     guruID: profile.guruID, displayName: profile.displayName,
                     prefix: profile.prefix, playbook: profile.playbook, examples: profile.examples,
-                    exitBasis: profile.exitBasis
+                    exitBasis: profile.exitBasis, batches: profile.batches, sellsReferTo: profile.sellsReferTo
                 )
                 return (try? TradingProfileBuilder().build(draft)) == profile
             })
@@ -1868,6 +1916,7 @@ final class AppModel {
             configuration.profiles.map { ($0.profileRevision, $0) },
             uniquingKeysWith: { first, _ in first }
         )
+        var copiedInto: [String: String] = [:]
         for route in configuration.routes {
             let name = profiles[route.profileRevision]?.displayName ?? route.guruID
             guard !route.channelID.isEmpty else { throw fail(L10n.string("“%@” needs a Discord channel.", name)) }
@@ -1877,33 +1926,27 @@ final class AppModel {
             guard route.source == "discord", route.guruID == profiles[route.profileRevision]?.guruID else {
                 throw fail(L10n.string("“%@” doesn't match its saved details. Open the guru in Connections and check its fields.", name))
             }
-            guard !route.connections.isEmpty else { throw fail(L10n.string("“%@” needs an account to copy into.", name)) }
-            guard Set(route.connections.map(\.accountID)).count == route.connections.count else {
-                throw fail(L10n.string("“%@” lists the same account twice.", name))
+            // One guru copies into one account, sized from that account's maximum per stock.
+            guard let connection = route.connections.first else {
+                throw fail(L10n.string("“%@” needs an account to copy into.", name))
             }
-            for connection in route.connections {
-                guard accountIDs.contains(connection.accountID) else {
-                    throw fail(L10n.string("“%@” copies into “%@”, which isn't one of your broker accounts.", name, connection.accountID))
-                }
-                guard let amount = Decimal(string: connection.amountUSD), amount > 0 else {
-                    throw fail(L10n.string("“%@” needs a dollar amount above zero for “%@”.", name, connection.accountID))
-                }
-                var value = amount
-                var cents = Decimal()
-                NSDecimalRound(&cents, &value, 2, .plain)
-                guard cents == amount else {
-                    throw fail(L10n.string("“%@”: amounts for “%@” must be whole cents.", name, connection.accountID))
-                }
-                if connection.mode == .fixed {
-                    guard connection.defaultFraction == nil else {
-                        throw fail(L10n.string("“%@”: a fixed amount can't also use a default fraction.", name))
-                    }
-                } else if let rawDefault = connection.defaultFraction {
-                    guard let fraction = Decimal(string: rawDefault), fraction > 0, fraction <= 1 else {
-                        throw fail(L10n.string("“%@”: the default fraction must be between 0 and 1.", name))
-                    }
+            guard let account = configuration.accounts.first(where: { $0.id == connection.accountID }) else {
+                throw fail(L10n.string("“%@” copies into “%@”, which isn't one of your broker accounts.", name, connection.accountID))
+            }
+            guard let full = Decimal(string: account.policy.maxSymbolUSD), full > 0,
+                connection.fullPositionUSD == account.policy.maxSymbolUSD
+            else {
+                throw fail(L10n.string("Set a max per stock for “%@”. It's %@'s full position.", account.id, name))
+            }
+            if let rawDefault = connection.defaultFraction {
+                guard let fraction = Decimal(string: rawDefault), fraction > 0, fraction <= 1 else {
+                    throw fail(L10n.string("“%@”: set a default size above 0, up to the full position.", name))
                 }
             }
+            if let other = copiedInto[connection.accountID] {
+                throw fail(L10n.string("“%@” already copies “%@”. Each account copies one guru.", connection.accountID, other))
+            }
+            copiedInto[connection.accountID] = name
         }
         let identityRules = configuration.routes.map { "\($0.source):\($0.channelID):\($0.authorID ?? "*")" }
         guard Set(identityRules).count == identityRules.count else {

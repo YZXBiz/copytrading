@@ -62,7 +62,7 @@ struct SetupStepAction: View {
         if model.setupDraft.routes.isEmpty {
             model.addGuru()
         } else if !isDone,
-            let unfinished = model.setupDraft.routes.first(where: { $0.displayName.trimmed.isEmpty || $0.connections.isEmpty })
+            let unfinished = model.setupDraft.routes.first(where: { $0.displayName.trimmed.isEmpty || $0.connection == nil })
         {
             model.setupEditor = .route(unfinished.id)
         }

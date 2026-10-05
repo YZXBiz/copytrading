@@ -41,14 +41,14 @@ private func progressTicksFromTheDraft() throws {
     draft.routes = [route]
     try verifyGuide(!progress().isDone(.guru), "An unnamed guru with no account ticked the guru step")
     route.displayName = "Alex"
-    route.connections = [TradingConnectionDraft(accountID: "primary")]
+    route.connection = TradingConnectionDraft(accountID: "primary")
     draft.routes = [route]
     try verifyGuide(progress().isDone(.guru), "A named guru copying into an account did not tick the guru step")
     try verifyGuide(progress().isReadyToCheck, "Four finished steps did not allow a check")
     try verifyGuide(!progress().isDone(.start), "An unsaved setup ticked Start")
     try verifyGuide(progress().next == .start, "The last step was not next")
 
-    draft.routes[0].connections = [TradingConnectionDraft(accountID: "removed-account")]
+    draft.routes[0].connection = TradingConnectionDraft(accountID: "removed-account")
     try verifyGuide(!progress().isDone(.guru), "A guru copying into a missing account ticked the guru step")
 }
 
@@ -108,15 +108,28 @@ private func newAccountsAndGurusStartUsable() throws {
     let model = AppModel()
     model.addGuru()
     try verifyGuide(model.setupDraft.routes.count == 1 && model.setupEditor != nil, "Add Guru did not open the new guru")
-    try verifyGuide(model.setupDraft.routes[0].connections.isEmpty, "A guru copied into an account that does not exist")
+    try verifyGuide(model.setupDraft.routes[0].connection == nil, "A guru copied into an account that does not exist")
     model.addAccount()
     try verifyGuide(
-        model.setupDraft.routes[0].connections.map(\.accountID) == ["primary"],
+        model.setupDraft.routes[0].connection?.accountID == "primary",
         "The first account was not attached to the guru waiting for one")
     model.setupDraft.accounts[0].name = "main"
     model.renameAccountReferences(from: "primary", to: "main")
     try verifyGuide(
-        model.setupDraft.routes[0].connections.map(\.accountID) == ["main"], "Renaming an account lost the guru's link to it")
+        model.setupDraft.routes[0].connection?.accountID == "main", "Renaming an account lost the guru's link to it")
+
+    // One guru per account: a second guru is not offered, or given, the account the first copies.
+    model.addGuru()
+    let secondGuru = model.setupDraft.routes[1]
+    try verifyGuide(secondGuru.connection == nil, "A second guru was given an account another guru copies into")
+    try verifyGuide(
+        model.setupDraft.accountChoices(for: secondGuru).isEmpty, "A second guru was offered an account another guru copies into")
+    model.addAccount()
+    try verifyGuide(
+        model.setupDraft.routes[1].connection?.accountID == model.setupDraft.accounts[1].name,
+        "A new account was not given to the guru waiting for one")
+    try verifyGuide(
+        model.setupDraft.routes[0].connection?.accountID == "main", "A new account took the first guru's account")
 }
 
 @MainActor
@@ -128,15 +141,19 @@ private func unsavedChangesFollowTheSavedSetup() throws {
 
     let profile = try TradingProfileBuilder().build(
         TradingProfileDraft(guruID: "alex", displayName: "Alex", prefix: "ALERT:", exitBasis: .originalPosition))
+    let account = TradingAccountConfiguration(id: "paper", environment: .paper)
     let saved = TradingConfiguration(
         source: TradingSourceConfiguration(channelIDs: ["123"]),
         provider: TradingProviderConfiguration(name: .anthropic, model: "claude-sonnet-5-5"),
-        accounts: [TradingAccountConfiguration(id: "paper", environment: .paper)],
+        accounts: [account],
         profiles: [profile],
         routes: [
             TradingRouteConfiguration(
                 channelID: "123", authorID: nil, guruID: "alex", profileRevision: profile.profileRevision,
-                connections: [TradingRouteConnection(accountID: "paper", mode: .fixed, amountUSD: "500", defaultFraction: nil)])
+                connections: [
+                    TradingRouteConnection(
+                        accountID: "paper", fullPositionUSD: account.policy.maxSymbolUSD, defaultFraction: nil)
+                ])
         ]
     )
     model.savedTradingConfiguration = saved

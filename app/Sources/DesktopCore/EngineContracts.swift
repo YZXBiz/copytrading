@@ -294,6 +294,7 @@ public enum EngineResult: Equatable, Sendable {
     case profileEvaluation(ProfileEvaluation)
     case profileExampleReview(ProfileExampleReview)
     case learnedPlaybook(LearnedGuruPlaybook)
+    case guruReplay(GuruReplay)
     case accountEvents(AccountEventPage)
     case equityHistory(accountID: String, history: EquityHistory?)
     case manualCorrection(ManualCorrectionOutcome)
@@ -412,6 +413,7 @@ public struct EngineSuccess: Decodable, Equatable, Sendable {
         case evaluation
         case review
         case playbook
+        case replay
         case line
         case count
         case proposals
@@ -462,6 +464,8 @@ public struct EngineSuccess: Decodable, Equatable, Sendable {
             result = .learnedPlaybook(
                 try container.decode(LearnedGuruPlaybook.self, forKey: .playbook)
             )
+        case "guru_replay":
+            result = .guruReplay(try container.decode(GuruReplay.self, forKey: .replay))
         case "account_events":
             result = .accountEvents(try container.decode(AccountEventPage.self, forKey: .events))
         case "equity_history":
@@ -572,6 +576,7 @@ enum EngineOperation: Sendable {
     case evaluateHistoricalProfile(HistoricalProfileEvaluationRequest)
     case reviewProfileExamples(ProfileExampleReviewRequest)
     case learnGuruPlaybook(GuruPlaybookLearningRequest)
+    case replayGuruPosts(GuruReplayRequest)
     case accountEvents(accountID: String, beforeSeq: Int?, limit: Int)
     case equityHistory(accountID: String, window: EquityHistoryWindow)
     case saveManualCorrection(ManualCorrectionRequest)
@@ -741,6 +746,14 @@ struct EngineRequest: Encodable, Sendable {
             try container.encode(learning.discordToken, forKey: .discordToken)
             try container.encode(learning.provider, forKey: .provider)
             try container.encode(learning.providerAPIKey, forKey: .providerAPIKey)
+        case .replayGuruPosts(let replay):
+            try container.encode("replay_guru_posts", forKey: .operation)
+            try container.encode(replay.channelID, forKey: .channelID)
+            try container.encodeIfPresent(replay.authorID, forKey: .authorID)
+            try container.encode(replay.discordToken, forKey: .discordToken)
+            try container.encode(replay.provider, forKey: .provider)
+            try container.encode(replay.providerAPIKey, forKey: .providerAPIKey)
+            try container.encode(replay.profile, forKey: .profile)
         case .accountEvents(let accountID, let beforeSeq, let limit):
             try container.encode("get_account_events", forKey: .operation)
             try container.encode(accountID, forKey: .accountID)

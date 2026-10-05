@@ -6,6 +6,8 @@ from typing import Literal, Self
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 from pydantic_core import PydanticCustomError
 
+from copytrading_engine.shared.reading import PostReading
+
 
 class SourceIdentityConflict(ValueError):
     """An existing source message identity was reused with different content."""
@@ -19,13 +21,18 @@ class Instruction(BaseModel):
     entry_price: Decimal | None = Field(default=None, gt=0, le=100000)
     fraction: Decimal | None = Field(default=None, gt=0, le=1, allow_inf_nan=False)
     exit_basis: Literal["original_position", "remaining_position"] | None = None
+    # For a guru whose sells refer to the whole position (ADR-0007): a buy joins the stock's open
+    # lot, and a sell sells from it, naming no buy price.
+    whole_position: bool = False
 
     @model_validator(mode="after")
     def validate_reference(self) -> Self:
-        if self.action != "buy" and self.entry_price is None:
+        if self.action != "buy" and self.entry_price is None and not self.whole_position:
             raise PydanticCustomError(
                 "exit_missing_lot_reference", "An exit requires an explicit source entry reference"
             )
+        if self.action != "buy" and self.entry_price is not None and self.whole_position:
+            raise ValueError("A whole-position exit names no buy price")
         if self.action == "buy" and self.entry_price is not None:
             raise PydanticCustomError(
                 "entry_has_lot_reference", "An entry cannot reference an existing lot"
@@ -63,6 +70,11 @@ class StockSignal(BaseModel):
     profile_revision: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     decision: Literal["trade", "ignore", "review"]
     reason: str = Field(min_length=1, max_length=300)
+    # How the reader read the post (ADR-0007); absent on signals read before it, or never sent
+    # to the reader.
+    reading: PostReading | None = None
+    # For a post that waits for the owner: what Copy places, as the reader read it (ADR-0007).
+    suggested: tuple[Instruction, ...] = Field(default=(), max_length=20)
     evidence: tuple[Evidence, ...] = Field(max_length=20)
     instructions: tuple[Instruction, ...] = Field(max_length=20)
 
@@ -72,6 +84,8 @@ class StockSignal(BaseModel):
             raise ValueError("Guru identity and profile revision must be recorded together")
         if (self.decision == "trade") != bool(self.instructions):
             raise ValueError("Only validated trade decisions contain instructions")
+        if self.suggested and self.decision != "review":
+            raise ValueError("Only a post that waits for the owner suggests calls to copy")
         if len(self.evidence) != len(self.instructions):
             raise ValueError("Every instruction requires evidence")
         for instruction, evidence in zip(self.instructions, self.evidence, strict=True):

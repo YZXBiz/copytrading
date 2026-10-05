@@ -75,12 +75,13 @@ extension AppModel {
         setupDraftSource = saved
     }
 
-    /// A new account; gurus that copy into nothing yet copy into it.
+    /// A new account; the first guru that copies into nothing yet copies into it, since an
+    /// account copies one guru.
     func addAccount(_ environment: TradingEnvironment = .paper) {
         let account = TradingAccountDraft(name: setupDraft.nextAccountName, environment: environment)
         setupDraft.accounts.append(account)
-        for index in setupDraft.routes.indices where setupDraft.routes[index].connections.isEmpty {
-            setupDraft.routes[index].connections = [TradingConnectionDraft(accountID: account.name)]
+        if let index = setupDraft.routes.firstIndex(where: { $0.connection == nil }) {
+            setupDraft.routes[index].connection = TradingConnectionDraft(accountID: account.name)
         }
         setupEditor = .account(account.id)
     }
@@ -88,19 +89,18 @@ extension AppModel {
     /// Renaming an account keeps every guru that copies into it pointed at it.
     func renameAccountReferences(from oldName: String, to newName: String) {
         guard !oldName.isEmpty, oldName != newName else { return }
-        for route in setupDraft.routes.indices {
-            for connection in setupDraft.routes[route].connections.indices
-            where setupDraft.routes[route].connections[connection].accountID.trimmed == oldName {
-                setupDraft.routes[route].connections[connection].accountID = newName
-            }
+        for route in setupDraft.routes.indices
+        where setupDraft.routes[route].connection?.accountID.trimmed == oldName {
+            setupDraft.routes[route].connection?.accountID = newName
         }
     }
 
-    /// A new guru copies into the first account until the owner chooses otherwise.
+    /// A new guru copies into the first account no other guru copies into, until the owner
+    /// chooses otherwise.
     func addGuru() {
         var route = TradingRouteDraft()
-        if let first = setupDraft.accountIDs.first {
-            route.connections = [TradingConnectionDraft(accountID: first)]
+        if let free = setupDraft.accountChoices(for: route).first {
+            route.connection = TradingConnectionDraft(accountID: free)
         }
         setupDraft.routes.append(route)
         setupEditor = .route(route.id)

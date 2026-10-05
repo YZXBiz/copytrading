@@ -1,24 +1,27 @@
 """Safe validation metadata: retain rules and schema paths, never provider payloads."""
 
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError
 
-FIELDS = frozenset(
-    {
-        "decision",
-        "reason",
-        "instructions",
-        "action",
-        "symbol",
-        "price",
-        "entry_price",
-        "fraction",
-        "action_evidence",
-        "symbol_evidence",
-        "price_evidence",
-        "entry_evidence",
-        "fraction_evidence",
-    }
-)
+from copytrading_engine.shared.reading import PostReading
+
+
+def _contract_names(schema: object) -> set[str]:
+    """Every field name and tag in the reading contract: schema words, never post text."""
+    names: set[str] = set()
+    if isinstance(schema, dict):
+        names.update(schema.get("properties", {}))
+        names.update(schema.get("discriminator", {}).get("mapping", {}))
+        if isinstance(schema.get("const"), str):
+            names.add(schema["const"])
+        for value in schema.values():
+            names |= _contract_names(value)
+    elif isinstance(schema, list):
+        for value in schema:
+            names |= _contract_names(value)
+    return names
+
+
+FIELDS = frozenset({"reading"} | _contract_names(TypeAdapter(PostReading).json_schema()))
 
 
 class ValidationIssue(BaseModel):

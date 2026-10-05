@@ -1,0 +1,126 @@
+{
+  "about": "What a call asks for: its share of the guru's full position (ADR-0007). The engine (requested_entry_budget) and the app (copiedBudgetUSD) must both give these.",
+  "examples": [
+    {
+      "case": "a sixth of 3000",
+      "full_position_usd": "3000",
+      "fraction": {
+        "numerator": 1,
+        "denominator": 6
+      },
+      "default_fraction": "1",
+      "budget_usd": "500.00"
+    },
+    {
+      "case": "a third of 3000",
+      "full_position_usd": "3000",
+      "fraction": {
+        "numerator": 1,
+        "denominator": 3
+      },
+      "default_fraction": "1",
+      "budget_usd": "1000.00"
+    },
+    {
+      "case": "a sixth of 1000 rounds down",
+      "full_position_usd": "1000",
+      "fraction": {
+        "numerator": 1,
+        "denominator": 6
+      },
+      "default_fraction": "1",
+      "budget_usd": "166.66"
+    },
+    {
+      "case": "half of 600",
+      "full_position_usd": "600",
+      "fraction": {
+        "numerator": 1,
+        "denominator": 2
+      },
+      "default_fraction": "1",
+      "budget_usd": "300.00"
+    },
+    {
+      "case": "a sixth of 750",
+      "full_position_usd": "750",
+      "fraction": {
+        "numerator": 1,
+        "denominator": 6
+      },
+      "default_fraction": "1",
+      "budget_usd": "125.00"
+    },
+    {
+      "case": "a third of 500 rounds down",
+      "full_position_usd": "500",
+      "fraction": {
+        "numerator": 1,
+        "denominator": 3
+      },
+      "default_fraction": "1",
+      "budget_usd": "166.66"
+    },
+    {
+      "case": "a seventh of 100 rounds down",
+      "full_position_usd": "100",
+      "fraction": {
+        "numerator": 1,
+        "denominator": 7
+      },
+      "default_fraction": "1",
+      "budget_usd": "14.28"
+    },
+    {
+      "case": "two thirds of 40 rounds down",
+      "full_position_usd": "40",
+      "fraction": {
+        "numerator": 2,
+        "denominator": 3
+      },
+      "default_fraction": "1",
+      "budget_usd": "26.66"
+    },
+    {
+      "case": "a quarter of 1234.56",
+      "full_position_usd": "1234.56",
+      "fraction": {
+        "numerator": 1,
+        "denominator": 4
+      },
+      "default_fraction": "1",
+      "budget_usd": "308.64"
+    },
+    {
+      "case": "no size buys the full position",
+      "full_position_usd": "3000",
+      "fraction": null,
+      "default_fraction": "1",
+      "budget_usd": "3000.00"
+    },
+    {
+      "case": "no size buys a lowered default",
+      "full_position_usd": "3000",
+      "fraction": null,
+      "default_fraction": "0.5",
+      "budget_usd": "1500.00"
+    },
+    {
+      "case": "no size waits when set to wait",
+      "full_position_usd": "3000",
+      "fraction": null,
+      "default_fraction": null,
+      "budget_usd": null
+    },
+    {
+      "case": "under a cent buys nothing",
+      "full_position_usd": "0.05",
+      "fraction": {
+        "numerator": 1,
+        "denominator": 6
+      },
+      "default_fraction": "1",
+      "budget_usd": null
+    }
+  ]
+}

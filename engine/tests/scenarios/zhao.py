@@ -2,9 +2,9 @@
 interpreter would. The reading is scripted, but the engine still checks that every price, ticker,
 and fraction it cites is in the post, exactly as it checks a real model's answer."""
 
-from decimal import Decimal
+from copytrading_engine.shared.reading import Buy, PostReading, Sell
 
-from copytrading_engine.parsing.extraction import DecodedMessage, ExtractedInstruction
+from .. import readings
 
 PREFIX = "ZHAO:"
 # The app gives every guru an id of its own; the owner only ever sees the name.
@@ -19,16 +19,9 @@ def buy(
     said: str = "买入",
     fraction: str | None = None,
     fraction_said: str | None = None,
-) -> ExtractedInstruction:
-    return ExtractedInstruction(
-        action="buy",
-        symbol=symbol,
-        price=Decimal(price),
-        fraction=Decimal(fraction) if fraction else None,
-        action_evidence=said,
-        symbol_evidence=symbol,
-        price_evidence=price,
-        fraction_evidence=fraction_said,
+) -> Buy:
+    return readings.buy(
+        symbol, price, said=said, ticker_said=symbol, fraction=fraction, fraction_said=fraction_said
     )
 
 
@@ -40,53 +33,36 @@ def trim(
     fraction: str,
     fraction_said: str,
     said: str = "卖出",
-) -> ExtractedInstruction:
-    return ExtractedInstruction(
-        action="reduce",
-        symbol=symbol,
-        price=Decimal(price),
-        entry_price=Decimal(bought_at),
-        fraction=Decimal(fraction),
-        exit_basis="original_position",
-        action_evidence=said,
-        symbol_evidence=symbol,
-        price_evidence=price,
-        entry_evidence=bought_at,
-        fraction_evidence=fraction_said,
+) -> Sell:
+    return readings.sell(
+        symbol,
+        price,
+        bought_at=bought_at,
+        said=said,
+        ticker_said=symbol,
+        fraction=fraction,
+        fraction_said=fraction_said,
+        counts_from="original",
     )
 
 
-def close(symbol: str, price: str, *, bought_at: str, said: str = "清仓") -> ExtractedInstruction:
-    return ExtractedInstruction(
-        action="close",
-        symbol=symbol,
-        price=Decimal(price),
-        entry_price=Decimal(bought_at),
-        fraction=Decimal(1),
-        action_evidence=said,
-        symbol_evidence=symbol,
-        price_evidence=price,
-        entry_evidence=bought_at,
-    )
+def close(symbol: str, price: str, *, bought_at: str, said: str = "清仓") -> Sell:
+    return readings.sell(symbol, price, bought_at=bought_at, said=said, ticker_said=symbol)
 
 
 class ZhaoReader:
     """The model: each post Zhao writes has the reading a careful interpreter gives it."""
 
     def __init__(self) -> None:
-        self.readings: dict[str, DecodedMessage] = {}
+        self.readings: dict[str, PostReading] = {}
         self.read: list[str] = []
 
-    def expect(self, text: str, *instructions: ExtractedInstruction) -> None:
-        self.readings[text] = (
-            DecodedMessage(decision="trade", reason="A current call", instructions=instructions)
-            if instructions
-            else DecodedMessage(decision="ignore", reason="No trade action", instructions=())
-        )
+    def expect(self, text: str, *calls: Buy | Sell) -> None:
+        self.readings[text] = readings.trade(*calls) if calls else readings.commentary()
 
     async def decode(self, text, route):
         if text == "Market commentary only. No trade action.":  # the runtime's readiness probe
-            return DecodedMessage(decision="ignore", reason="No trade action", instructions=())
+            return readings.commentary()
         assert route.prefix == PREFIX
         self.read.append(text)
         return self.readings[text]

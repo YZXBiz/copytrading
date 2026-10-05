@@ -4,11 +4,13 @@ import pytest
 from pydantic import SecretStr, ValidationError
 from pydantic_ai.exceptions import ModelHTTPError, UsageLimitExceeded
 
-from copytrading_engine.parsing.extraction import DecodedMessage, DecodeError
+from copytrading_engine.parsing.extraction import DecodeError
 from copytrading_engine.parsing.providers.pydantic_ai import PydanticAIDecoder
 from copytrading_engine.parsing.providers.registry import ProviderRegistry, builtin_registry
 from copytrading_engine.parsing.routes import Route
 from copytrading_engine.shared.model_providers import MODEL_PROVIDERS, ProviderConfig
+
+from ..readings import commentary
 
 
 def config() -> ProviderConfig:
@@ -44,7 +46,7 @@ async def test_fake_provider_can_register_decode_and_close_without_worker_change
 
         async def decode(self, text, route):
             calls.append((text, route))
-            return DecodedMessage(decision="ignore", reason="fake", instructions=())
+            return commentary("fake")
 
         async def close(self):
             self.close_calls += 1
@@ -62,10 +64,10 @@ async def test_fake_provider_can_register_decode_and_close_without_worker_change
     assert registry.names() == ("fake",)
     registered = await registry.create("fake", config())
     route = Route()
-    decoded = await registered.decode("message", route)
+    reading = await registered.decode("message", route)
     await registered.close()
 
-    assert decoded.decision == "ignore"
+    assert reading.kind == "commentary"
     assert calls == [("message", route)]
     assert decoder.close_calls == 1
 
@@ -126,7 +128,7 @@ def test_prompt_bytes_match_the_pre_adapter_prompt():
 
     assert (
         hashlib.sha256(INSTRUCTIONS.encode()).hexdigest()
-        == "a5835055fa8a376c082c79e68d62e8bc1975ecd74faa8a63cac7b73dafe88469"
+        == "39cd43cb5a5eb1363f64cbe209a80282178df63812e53c120dbd078763fb920d"
     )
 
 

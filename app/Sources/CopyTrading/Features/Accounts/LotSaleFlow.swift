@@ -51,11 +51,11 @@ final class LotSaleFlow {
         }
     }
 
-    /// Sends the reviewed sale. `confirmOwner` asks for Touch ID; it runs only for live accounts.
+    /// Sends the reviewed sale. `confirmOwner` asks for Touch ID; it runs for live accounts and for accounts that ask to approve every order.
     func confirm(using operations: (any LotSaleOperations)?, confirmOwner: () async throws -> Void) async {
         guard let operations, case .reviewing(let preview) = phase, preview.plan != nil else { return }
         problem = nil
-        if target.environment == .live {
+        if target.asksForOwner {
             do {
                 try await confirmOwner()
             } catch {

@@ -19,7 +19,6 @@ from copytrading_engine.execution.domain.sizing import DestinationTerms
 from copytrading_engine.parsing.providers.registry import ManagedDecoder
 from copytrading_engine.parsing.readiness import probe_model
 from copytrading_engine.parsing.relay import deliver_notifications
-from copytrading_engine.parsing.routes import Route
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore
 from copytrading_engine.parsing.worker import ParseWorker
 from copytrading_engine.shared.notification_models import NotificationPayload
@@ -384,13 +383,7 @@ class TradingRuntime:
                 key = route_key(
                     route_binding.source, route_binding.channel_id, route_binding.author_id
                 )
-                routes[key] = Route(
-                    prefix=profile.prefix,
-                    playbook=profile.playbook,
-                    guru_id=profile.guru_id,
-                    profile_revision=profile.profile_revision,
-                    exit_basis=profile.exit_basis,
-                )
+                routes[key] = profile.route()
             worker = ParseWorker(
                 parser,
                 decoder,
@@ -750,11 +743,11 @@ class TradingRuntime:
 
 def _copy_policy(configuration: TradingConfiguration, account_id: str) -> CopyConfig:
     account = next(account for account in configuration.accounts if account.id == account_id)
-    values = account.policy.model_dump(exclude={"max_above_signal_pct"})
+    pricing = {"max_above_signal_pct", "max_below_signal_pct", "max_price_move_pct"}
     return CopyConfig(
         sources=tuple(f"discord:{channel}" for channel in configuration.source.channel_ids),
-        entry_pricing=EntryPricingPolicy(max_above_signal_pct=account.policy.max_above_signal_pct),
-        **values,
+        entry_pricing=EntryPricingPolicy(**account.policy.model_dump(include=pricing)),
+        **account.policy.model_dump(exclude=pricing),
     )
 
 

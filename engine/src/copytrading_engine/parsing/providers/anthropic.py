@@ -8,14 +8,13 @@ from pydantic_ai import Agent, NativeOutput
 from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.providers.anthropic import AnthropicProvider
 
-from copytrading_engine.parsing.extraction import DecodedMessage
+from copytrading_engine.parsing.extraction import ReadingOutput
 from copytrading_engine.parsing.learning import LEARN_INSTRUCTIONS, PlaybookProposal
-from copytrading_engine.parsing.prompt import INSTRUCTIONS
 from copytrading_engine.shared.cleanup import close_logged
 from copytrading_engine.shared.model_providers import ProviderConfig
 from copytrading_engine.shared.payload_capture import PayloadCapture
 
-from .pydantic_ai import PydanticAIDecoder
+from .pydantic_ai import PydanticAIDecoder, reading_agent
 from .registry import ManagedDecoder
 from .transport import DiagnosticHTTPTransport
 
@@ -38,12 +37,10 @@ def chat_model(config: ProviderConfig, client: AsyncAnthropic) -> AnthropicModel
 
 def build_decoder(config: ProviderConfig, client: AsyncAnthropic) -> PydanticAIDecoder:
     model = chat_model(config, client)
-    agent = Agent(
+    agent = reading_agent(
         model,
-        output_type=NativeOutput(DecodedMessage),
-        instructions=INSTRUCTIONS,
-        retries=0,
-        model_settings={"temperature": 0, "max_tokens": 3000},
+        NativeOutput(ReadingOutput),
+        {"temperature": 0, "max_tokens": 3000},
     )
     learner = Agent(
         model,

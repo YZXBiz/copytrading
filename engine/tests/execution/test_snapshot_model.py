@@ -95,7 +95,7 @@ def test_snapshot_round_trip_preserves_tagged_progress_json():
 
     assert loaded == snapshot
     assert json.loads(encoded)["messages"][message.key]["parts"] == [
-        {"kind": "skipped", "reason": "outside_session"}
+        {"kind": "skipped", "reason": "outside_session", "exposure": []}
     ]
 
 

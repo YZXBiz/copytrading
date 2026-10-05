@@ -85,10 +85,25 @@ from copytrading_engine.execution.domain.recovery import (
 )
 from copytrading_engine.execution.domain.sessions import trade_date
 from copytrading_engine.execution.domain.sizing import DestinationSignal
-from copytrading_engine.shared.signals import StockSignal
+from copytrading_engine.shared.signals import Instruction, StockSignal
 
 ZERO = Decimal(0)
 log = logging.getLogger(__name__)
+
+
+def _repeats(instruction: Instruction, at: dt.datetime, earlier: MessageRecord) -> bool:
+    """A guru re-posting a call is not a new call. A buy repeated within ten minutes is the same
+    buy; later it can be a real second buy at that price. A sell repeated the same trading day,
+    naming the same lot, price, and size, is always the same sell: done twice it would sell the
+    rest of the lot, as when a guru re-posts the day's calls in a recap."""
+    if instruction not in earlier.instructions:
+        return False
+    since = (at - earlier.timestamp).total_seconds()
+    if since < 0:
+        return False
+    if instruction.action == "buy":
+        return since <= 600
+    return trade_date(at) == trade_date(earlier.timestamp)
 
 
 class _SnapshotChanges(TypedDict, total=False):
@@ -198,12 +213,16 @@ class TradingLedger:
         return owned + reserved
 
     def _entry_lot(self, lots: dict[str, OwnedLot], key: str, order: OrderRecord) -> str:
-        """The lot a buy's fills belong to: the one it opened or already joined, else an open
-        lot from the same guru at the same price, which the guru counts as one position, else
-        its own."""
+        """The lot a buy's fills belong to: the one it opened or already joined; else the open
+        lot it was planned to join; else an open lot from the same guru at the same price, which
+        the guru counts as one position; else its own."""
         for lot_key, lot in lots.items():
             if key in lot.entries(lot_key):
                 return lot_key
+        joined = lots.get(order.joins_lot or "")
+        if joined is not None and joined.remaining_qty > 0 and joined.symbol == order.symbol:
+            assert order.joins_lot is not None
+            return order.joins_lot
         for lot_key, lot in lots.items():
             if lot.remaining_qty > 0 and (lot.source_key, lot.symbol, lot.entry_price) == (
                 order.source_key,
@@ -212,6 +231,15 @@ class TradingLedger:
             ):
                 return lot_key
         return key
+
+    def position_lots(self, source: str, symbol: str) -> tuple[tuple[str, OwnedLot], ...]:
+        """The guru's open lots of a stock; one for a guru whose sells refer to the whole
+        position."""
+        return tuple(
+            (key, lot)
+            for key, lot in self._snapshot.lots.items()
+            if lot.source_key == source and lot.symbol == symbol and lot.remaining_qty > 0
+        )
 
     def matching_lots(
         self, source: str, symbol: str, entry_price: Decimal
@@ -365,8 +393,7 @@ class TradingLedger:
             correction.correction_id in self._snapshot.manual_corrections
             or self.account_id not in correction.selected_account_ids
             or message is None
-            or message.status != "review_required"
-            or message.decision != "review"
+            or not message.waits_for_owner
             or message.timestamp != correction.source_at
             or message.text != correction.source_text
             or StockSignal.model_validate(
@@ -744,7 +771,6 @@ class TradingLedger:
         review_reason: Literal["missing_source_fraction"] | None = None
         if (
             status == "queued"
-            and destination.connection.mode == "proportional"
             and destination.connection.default_fraction is None
             and any(item.action == "buy" and item.fraction is None for item in signal.instructions)
         ):
@@ -763,11 +789,7 @@ class TradingLedger:
         parts = tuple(
             Skipped(reason="duplicate")
             if status == "queued"
-            and any(
-                0 <= (signal.timestamp - m.timestamp).total_seconds() <= 600
-                and instruction in m.instructions
-                for m in previous
-            )
+            and any(_repeats(instruction, signal.timestamp, m) for m in previous)
             else Pending()
             for instruction in signal.instructions
         )
@@ -837,7 +859,7 @@ class TradingLedger:
         if message.status != "queued" or not isinstance(message.parts[part], Pending):
             raise RuntimeError("Instruction was already processed")
         parts = list(message.parts)
-        parts[part] = Skipped(reason=reason)
+        parts[part] = Skipped(reason=reason, exposure=exposure or ())
         self._commit(
             self._message_state(key, parts=tuple(parts)),
             JournalEvent(
@@ -863,7 +885,14 @@ class TradingLedger:
             raise RuntimeError("Instruction was already processed")
         instruction = message.instructions[part]
         side = "buy" if instruction.action == "buy" else "sell"
-        entry_price = instruction.price if side == "buy" else instruction.entry_price
+        # A whole-position sell names no buy price; it sells from the lot its plan found.
+        entry_price = (
+            instruction.price
+            if side == "buy"
+            else instruction.entry_price
+            if instruction.entry_price is not None
+            else plan.entry_price
+        )
         if (plan.symbol, plan.side, plan.source_price, plan.entry_price) != (
             instruction.symbol,
             side,
@@ -1130,7 +1159,7 @@ class TradingLedger:
                 total = sum((o.filled_qty for o in filled.values()), ZERO) + update.filled_qty
                 updated_lot = OwnedLot(
                     symbol=order.symbol,
-                    entry_price=order.entry_price,
+                    entry_price=lot.entry_price if lot is not None else order.entry_price,
                     source_key=order.source_key,
                     original_qty=total,
                     remaining_qty=(lot.remaining_qty if lot else ZERO) + delta,

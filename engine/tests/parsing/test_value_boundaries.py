@@ -7,10 +7,10 @@ from pydantic import ValidationError
 
 from copytrading_engine.parsing.application import outcome
 from copytrading_engine.parsing.contracts import RawMessage
-from copytrading_engine.parsing.extraction import DecodedMessage
 from copytrading_engine.shared.signals import StockSignal
 
-from .builders import decoded, raw
+from ..readings import buy, trade
+from .builders import raw
 
 
 @pytest.mark.parametrize(
@@ -34,14 +34,10 @@ def test_raw_value_cannot_change_after_validation():
         message.__setattr__("timestamp", dt.datetime(2026, 1, 1))
 
 
-def test_decoded_instructions_cannot_mutate_a_validated_decision():
-    original = decoded()
-    items = list(original.instructions)
-    result = DecodedMessage(decision="trade", reason="Current entry", instructions=items)
-    items.clear()
-    assert result.instructions == original.instructions
+def test_a_reading_cannot_change_after_validation():
+    reading = trade(buy("ABC", "25"))
     with pytest.raises(ValidationError):
-        result.__setattr__("instructions", ())
+        reading.__setattr__("calls", ())
 
 
 def test_signal_collection_and_time_invariants_survive_json():

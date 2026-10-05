@@ -114,16 +114,24 @@ MUTATIONS = (
     Mutation("budget minimum", "execution/domain/risk", "budget = min(", "budget = max("),
     Mutation("cash equality", "execution/domain/risk", "if budget > min(", "if budget >= min("),
     Mutation(
-        "market exit terms",
+        "approval gate dropped",
         "execution/application/engine",
-        'type="limit" if limit_price is not None else "market"',
-        'type="limit"',
+        "if c.approve_orders and not manual:",
+        "if False and not manual:",
+        ("execution/test_order_approval.py",),
     ),
     Mutation(
-        "extended-hours exit sells above the signal",
+        "owner's own order held for approval again",
+        "execution/application/engine",
+        "if c.approve_orders and not manual:",
+        "if c.approve_orders:",
+        ("execution/test_lot_sales.py",),
+    ),
+    Mutation(
+        "exit sells above the signal",
         "execution/domain/pricing",
-        "floor = signal_price * (Decimal(1) - self.max_above_signal_pct",
-        "floor = signal_price * (Decimal(1) + self.max_above_signal_pct",
+        "floor = signal_price * (Decimal(1) - self.max_below_signal_pct",
+        "floor = signal_price * (Decimal(1) + self.max_below_signal_pct",
     ),
     Mutation(
         "review drops the route's guru",
@@ -131,12 +139,6 @@ MUTATIONS = (
         "guru_id=route.guru_id if route is not None else None,",
         "guru_id=None,",
         ("trading/runtime/test_isolation.py",),
-    ),
-    Mutation(
-        "market timeout exemption",
-        "execution/application/engine",
-        'and current.type == "limit"',
-        "and True",
     ),
     Mutation(
         "cumulative fill delta",
@@ -147,8 +149,8 @@ MUTATIONS = (
     Mutation(
         "fraction applied twice",
         "execution/domain/risk",
-        "requested = connection.amount_usd * fraction",
-        "requested = connection.amount_usd * fraction * fraction",
+        "exact = (connection.full_position_usd * fraction)",
+        "exact = (connection.full_position_usd * fraction * fraction)",
         SIZING_TESTS,
     ),
     Mutation(
@@ -159,17 +161,17 @@ MUTATIONS = (
         SIZING_TESTS,
     ),
     Mutation(
-        "fixed sizing uses fraction",
+        "sizing ignores the fraction",
         "execution/domain/risk",
-        "        requested = connection.amount_usd\n",
-        "        requested = connection.amount_usd * (source_fraction or 1)\n",
+        "exact = (connection.full_position_usd * fraction)",
+        "exact = (connection.full_position_usd)",
         SIZING_TESTS,
     ),
     Mutation(
         "budget rounds up",
         "execution/domain/risk",
-        "rounding=ROUND_HALF_UP",
-        'rounding="ROUND_UP"',
+        'requested = exact.quantize(Decimal("0.01"), rounding=ROUND_DOWN)',
+        'requested = exact.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)',
         SIZING_TESTS,
     ),
     Mutation(

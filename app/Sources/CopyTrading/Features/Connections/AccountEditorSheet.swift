@@ -61,67 +61,88 @@ struct AccountEditorSheet: View {
 
                 Section(L10n.string("Position limits (USD)")) {
                     textLimit(
-                        "Maximum per order", hint: "The most one copied buy can spend. A bigger call is cut down to this.",
+                        "Maximum per order", hint: "The most one buy can spend. A bigger buy is made smaller.",
                         text: $account.policy.maxOrderUSD,
                         example: LimitExamples.maxOrder)
                     textLimit(
-                        "Maximum per symbol",
+                        "Maximum per stock",
                         hint:
-                            "The most this account holds in any one stock, counting shares you bought yourself. A buy that would go over is skipped.",
+                            "The most this account can hold in one stock, including shares you bought yourself. It's also the guru's full position. A buy that would go over is skipped.",
                         text: $account.policy.maxSymbolUSD,
                         example: LimitExamples.maxSymbol)
                     textLimit(
                         "Maximum total exposure",
                         hint:
-                            "The most this account holds in all stocks together, counting ones you bought yourself. A buy that would go over is skipped.",
+                            "The most this account can hold in all stocks, including your own. A buy that would go over is skipped.",
                         text: $account.policy.maxTotalUSD,
                         example: LimitExamples.maxTotal)
                     textLimit(
                         "Daily loss cap",
-                        hint: "Once the account is down this much since yesterday's close, buys stop for the day. Sells still run.",
+                        hint: "If the account is down this much today, it stops buying until tomorrow. It still sells.",
                         text: $account.policy.dailyLossCapUSD,
                         example: LimitExamples.dailyLossCap)
                     textLimit(
                         "Maximum above signal price (%)",
-                        hint: "How far above the guru's price a buy may fill. 0 means never pay more than they did.",
+                        hint:
+                            "The most a buy can pay above the guru's price. 0 means never more than the guru paid.",
                         text: $account.policy.maxAboveSignalPct,
                         example: LimitExamples.maxAboveSignal)
+                    textLimit(
+                        "Maximum below signal price (%)",
+                        hint:
+                            "The lowest a sell can go below the guru's price. A sell that can't fill by then is cancelled.",
+                        text: $account.policy.maxBelowSignalPct,
+                        example: LimitExamples.maxBelowSignal)
+                    textLimit(
+                        "Market move allowed (%)",
+                        hint:
+                            "If the price has moved more than this from the guru's price, up or down, the buy waits for you to decide.",
+                        text: $account.policy.maxPriceMovePct,
+                        example: LimitExamples.maxPriceMove)
                 }
 
                 Section(L10n.string("Timing")) {
                     numberLimit(
-                        "Entries per day", hint: "The most copied buys in one trading day. Sells don't count.",
+                        "Entries per day", hint: "The most buys in one day. Sells don't count.",
                         value: $account.policy.maxEntriesPerDay,
                         example: LimitExamples.entriesPerDay)
                     numberLimit(
                         "Maximum signal age (seconds)",
-                        hint: "A post older than this is skipped instead of copied. You can still copy it yourself from Activity.",
+                        hint: "If a post takes longer than this to arrive, it isn't copied. You can still copy it yourself in Activity.",
                         value: $account.policy.maxSignalAgeSeconds,
                         example: LimitExamples.maxSignalAge)
                     numberLimit(
-                        "Order timeout (seconds)", hint: "A limit order that hasn't filled by then is canceled.",
+                        "Order timeout (seconds)", hint: "An order that hasn't filled by then is cancelled.",
                         value: $account.policy.orderTimeoutSeconds,
-                        example: LimitExamples.orderTimeout)
+                        example: LimitExamples.orderTimeout(maxAboveSignalPct: account.policy.maxAboveSignalPct))
                 }
 
                 Section {
                     behavior(
                         "Trade in extended hours",
-                        hint: L10n.string("Also copy calls from 4:00 to 9:30 and 16:00 to 20:00 New York time, with limit orders.")
-                            + MarketHoursText.yourTime([((4, 0), (9, 30)), ((16, 0), (20, 0))]),
+                        hint: L10n.string(
+                            "Also copy calls %@, with limit orders.",
+                            MarketHoursText.hours([((4, 0), (9, 30)), ((16, 0), (20, 0))])),
                         isOn: $account.policy.extendedHours)
                     behavior(
                         "Trade overnight",
-                        hint: L10n.string("Also copy calls from 20:00 to 4:00 New York time. Needs extended hours on.")
-                            + MarketHoursText.yourTime([((20, 0), (4, 0))]),
+                        hint: L10n.string(
+                            "Also copy calls %@. Needs extended hours on.", MarketHoursText.hours([((20, 0), (4, 0))])),
                         isOn: $account.policy.overnight)
                     behavior(
                         "Copy exits", hint: "Sell when the guru sells. Off means you sell copied shares yourself.",
                         isOn: $account.policy.copyExits)
+                    behavior(
+                        "Ask me before sending orders",
+                        hint: "Nothing is sent by itself. Each order waits in Activity until you approve it with Touch ID.",
+                        isOn: $account.policy.approveOrders)
                 } header: {
                     Text(L10n.string("Behavior"))
                 } footer: {
-                    Text(L10n.string("Shares you already hold are never sold by CopyTrading."))
+                    Text(
+                        L10n.string(
+                            "CopyTrading only sells shares it bought from a guru's call. Stocks you bought yourself are never sold, even when the guru sells the same stock."
+                        ))
                 }
 
                 Section {

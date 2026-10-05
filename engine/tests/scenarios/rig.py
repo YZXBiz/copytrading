@@ -42,14 +42,36 @@ ROOMY = {
 
 @dataclass
 class Account:
+    """An account following Zhao. Its maximum per stock is Zhao's full position (ADR-0007)."""
+
     cash: str
-    amount_usd: str = "500"
-    mode: str = "fixed"
+    full_position_usd: str = "500"
+    # The share a call that names no size buys; None waits for the owner.
+    default_share: str | None = "1"
     limits: dict = field(default_factory=dict)
 
     @property
     def policy(self) -> dict:
-        return ROOMY | self.limits
+        return ROOMY | {"max_symbol_usd": self.full_position_usd} | self.limits
+
+
+@dataclass(frozen=True)
+class Activity:
+    """One post as every account saw it: each account follows Zhao on its own channel."""
+
+    items: tuple
+
+    @property
+    def destinations(self) -> tuple:
+        return tuple(d for item in self.items for d in item.destinations)
+
+    @property
+    def decision(self) -> str | None:
+        return self.items[0].decision
+
+    @property
+    def source_ids(self) -> tuple[str, ...]:
+        return tuple(item.source_id for item in self.items)
 
 
 class Rig:
@@ -62,6 +84,8 @@ class Rig:
             for name, account in accounts.items()
         }
         self._ids = itertools.count(1)
+        # One guru per account: each account follows Zhao on a channel of its own.
+        self.channels = {name: str(int(CHANNEL) + index) for index, name in enumerate(accounts)}
         self.runtime = TradingRuntime(
             root,
             factories=TradingFactories(
@@ -91,39 +115,48 @@ class Rig:
     async def _open_reader(self, name, config, **_):
         return self.reader
 
+    def guru_id(self, account: str) -> str:
+        return GURU_ID if len(self.accounts) == 1 else f"{GURU_ID}-{account}"
+
     def configuration(self) -> TradingConfiguration:
-        profile = ProfileBuilder().build(
-            ProfileDraft(
-                guru_id=GURU_ID,
-                display_name=NAME,
-                prefix=PREFIX,
-                playbook="",
-                examples=(),
-                exit_basis="original_position",
+        profiles = {
+            name: ProfileBuilder().build(
+                ProfileDraft(
+                    guru_id=self.guru_id(name),
+                    display_name=NAME,
+                    prefix=PREFIX,
+                    playbook="",
+                    examples=(),
+                    exit_basis="original_position",
+                )
             )
-        )
-        connections = [
-            {"account_id": name, "mode": account.mode, "amount_usd": account.amount_usd}
-            for name, account in self.accounts.items()
-        ]
+            for name in self.accounts
+        }
         return TradingConfiguration.model_validate(
             {
-                "version": 4,
-                "source": {"channel_ids": [CHANNEL]},
+                "version": 5,
+                "source": {"channel_ids": list(self.channels.values())},
                 "provider": {"name": "deepseek", "model": "scripted-zhao"},
                 "accounts": [
                     {"id": name, "environment": "paper", "policy": account.policy}
                     for name, account in self.accounts.items()
                 ],
-                "profiles": [profile.model_dump(mode="json")],
+                "profiles": [profile.model_dump(mode="json") for profile in profiles.values()],
                 "routes": [
                     {
-                        "channel_id": CHANNEL,
+                        "channel_id": self.channels[name],
                         "author_id": None,
-                        "guru_id": profile.guru_id,
-                        "profile_revision": profile.profile_revision,
-                        "connections": connections,
+                        "guru_id": profiles[name].guru_id,
+                        "profile_revision": profiles[name].profile_revision,
+                        "connections": [
+                            {
+                                "account_id": name,
+                                "full_position_usd": account.policy["max_symbol_usd"],
+                                "default_fraction": account.default_share,
+                            }
+                        ],
                     }
+                    for name, account in self.accounts.items()
                 ],
             }
         )
@@ -156,37 +189,46 @@ class Rig:
 
     # What Zhao and the owner do.
 
-    async def post(self, text: str, *, expect_destinations: bool = True, age_seconds: int = 0):
-        """Zhao posts; returns the post's activity once every account has settled it."""
+    async def post(
+        self, text: str, *, expect_destinations: bool = True, age_seconds: int = 0
+    ) -> Activity:
+        """Zhao posts on every account's channel; returns the post once every account has
+        settled it."""
         assert self.channel is not None, "the runtime has not opened Zhao's channel"
         message_id = str(1_700_000_000_000 + next(self._ids))
-        await self.channel.source.add(
-            RawMessage(
-                schema_version=1,
-                event_type="raw_message",
-                source="discord",
-                channel_id=CHANNEL,
-                id=message_id,
-                timestamp=dt.datetime.now(dt.UTC) - dt.timedelta(seconds=age_seconds),
-                text=f"{PREFIX} {text}",
+        at = dt.datetime.now(dt.UTC) - dt.timedelta(seconds=age_seconds)
+        for channel in self.channels.values():
+            await self.channel.source.add(
+                RawMessage(
+                    schema_version=1,
+                    event_type="raw_message",
+                    source="discord",
+                    channel_id=channel,
+                    id=message_id,
+                    timestamp=at,
+                    text=f"{PREFIX} {text}",
+                )
             )
-        )
-        source_id = f"discord:{CHANNEL}:{message_id}"
-        found = None
+        source_ids = [f"discord:{channel}:{message_id}" for channel in self.channels.values()]
+        found: dict[str, object] = {}
 
         async def settled() -> bool:
-            nonlocal found
             page = await self.runtime.operator.source_activity(None, 100)
-            found = next((item for item in page.items if item.source_id == source_id), None)
-            if found is None or found.parse_status in {"pending", "queued"}:
+            for item in page.items:
+                if item.source_id in source_ids:
+                    found[item.source_id] = item
+            items = [found.get(source_id) for source_id in source_ids]
+            if any(item is None or item.parse_status in {"pending", "queued"} for item in items):
                 return False
             if not expect_destinations:
-                return found.decision is not None
-            done = {d.account_id for d in found.destinations if d.status in SETTLED}
+                return all(item.decision is not None for item in items)
+            done = {
+                d.account_id for item in items for d in item.destinations if d.status in SETTLED
+            }
             return done == set(self.accounts)
 
         await self._until_async(settled, f"Zhao's post {text!r} to settle")
-        return found
+        return Activity(tuple(found[source_id] for source_id in source_ids))
 
     async def entries(self, account: str, action: str) -> None:
         await self.runtime.manual.control_account(

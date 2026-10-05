@@ -28,9 +28,8 @@ NOW = dt.datetime(2026, 1, 5, 15, tzinfo=dt.UTC)
 def destination_signal(
     signal: StockSignal,
     *,
-    amount_usd: str = "100",
-    mode: str = "fixed",
-    default_fraction: str | None = None,
+    full_position_usd: str = "600",
+    default_fraction: str | None = "1",
     revision: str = "a" * 64,
     account_id: str = "paper-demo",
 ) -> DestinationSignal:
@@ -40,8 +39,7 @@ def destination_signal(
             connection=RouteConnection.model_validate(
                 {
                     "account_id": account_id,
-                    "mode": mode,
-                    "amount_usd": amount_usd,
+                    "full_position_usd": full_position_usd,
                     "default_fraction": default_fraction,
                 }
             ),
@@ -52,9 +50,9 @@ def destination_signal(
 
 
 def receive(
-    engine: CopyEngine, signal: StockSignal, now: dt.datetime, *, amount_usd: str = "100"
+    engine: CopyEngine, signal: StockSignal, now: dt.datetime, *, full_position_usd: str = "600"
 ) -> None:
-    engine.receive(destination_signal(signal, amount_usd=amount_usd), now)
+    engine.receive(destination_signal(signal, full_position_usd=full_position_usd), now)
 
 
 def evidence(instruction):
@@ -101,8 +99,8 @@ def event(id="1", action="buy", price="25", entry=None, timestamp=NOW, channel="
     return result
 
 
-def deliver(engine, message, now=NOW, *, amount_usd="100"):
-    receive(engine, StockSignal.model_validate(message), now, amount_usd=amount_usd)
+def deliver(engine, message, now=NOW, *, full_position_usd="600"):
+    receive(engine, StockSignal.model_validate(message), now, full_position_usd=full_position_usd)
     engine.process(now)
 
 
@@ -144,7 +142,9 @@ def late_sell_with_consumed_source_lot():
 
     repository = MemoryRepository()
     broker = FakeBroker()
-    engine = CopyEngine(repository, broker, CopyConfig(sources=["discord:demo"]))
+    # The late sell is a limit order; a long timeout keeps the engine from cancelling it.
+    config = CopyConfig(sources=["discord:demo"], order_timeout_seconds=600)
+    engine = CopyEngine(repository, broker, config)
     engine.bind(NOW)
 
     first_at = NOW
@@ -217,7 +217,7 @@ def mixed_account():
     broker.holdings["ABC"] = Decimal("100")
     engine = engine_with_wide_limits(store, broker)
     engine.bind(NOW)
-    receive(engine, StockSignal.model_validate(event()), NOW, amount_usd="1250")
+    receive(engine, StockSignal.model_validate(event()), NOW, full_position_usd="7500")
     engine.process(NOW)
     assert engine.ledger.owned("ABC") == 50
     return store, broker, engine

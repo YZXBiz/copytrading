@@ -46,9 +46,7 @@ class _Receiver:
 
 def _terms(account_id: str) -> DestinationTerms:
     return DestinationTerms(
-        connection=RouteConnection(
-            account_id=account_id, mode="fixed", amount_usd=Decimal("100.00")
-        ),
+        connection=RouteConnection(account_id=account_id, full_position_usd=Decimal("100.00")),
         environment="paper",
         configuration_revision="a" * 64,
     )

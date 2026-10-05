@@ -30,8 +30,8 @@ def test_fills_conserve_shares_through_replay_failure_and_restart(
             deliver(engine, event("exit", "close", "27", "25"))
         order = engine.pending()[0]
         if side == "sell":
-            assert order.type == "market"
-            assert order.limit_price is None
+            assert order.type == "limit"
+            assert order.limit_price == Decimal("26.73")
         for units in sorted(set(steps) | {4_000_000}):
             quantity = MICRO * units
             broker.fill(order.client_id, str(quantity))

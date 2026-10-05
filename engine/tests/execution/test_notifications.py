@@ -239,22 +239,22 @@ def test_incident_notification_replay_is_stable_and_reopen_has_new_identity():
     assert repository.notices[-1].key == reopened.key
 
 
-def test_market_sell_notifications_show_market_and_actual_fill():
+def test_sell_notifications_show_the_limit_and_actual_fill():
     repository, broker, engine = system()
     broker.auto_fill = True
     engine.process(NOW)
     broker.auto_fill = False
-    receive(engine, StockSignal.model_validate(event("exit", "reduce", "27", "25")), NOW)
+    receive(engine, StockSignal.model_validate(event("exit", "reduce", "24", "25")), NOW)
     engine.process(NOW)
     accepted = repository.notices[-1].payload.annotations
-    assert "Market order." in accepted["evidence"]
-    assert "Limit:" not in accepted["evidence"]
+    assert "Limit: $23.76." in accepted["evidence"]
+    assert "Market order." not in accepted["evidence"]
     order = engine.ledger.orders()[-1]
     broker.fill(order.client_id, str(order.qty))
     engine.reconcile(NOW)
     filled = repository.notices[-1].payload.annotations
-    assert "Average fill: $24.50" in filled["evidence"]
-    assert "Market order." in filled["evidence"]
+    assert "Average fill: $23.76" in filled["evidence"]
+    assert "Limit: $23.76." in filled["evidence"]
 
 
 def test_exit_outside_regular_hours_reports_its_limit_order():

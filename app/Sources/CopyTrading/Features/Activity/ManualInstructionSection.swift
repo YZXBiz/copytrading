@@ -18,12 +18,19 @@ struct ManualInstructionSection: View {
                 .accessibilityLabel(L10n.string("Symbol"))
             TextField(L10n.string("Source price"), text: $instruction.price, prompt: Text(L10n.string("Price quoted in the message")))
                 .accessibilityLabel(L10n.string("Source price"))
-            if instruction.action != .buy {
-                TextField(
-                    L10n.string("Owned entry price"), text: $instruction.entryPrice,
-                    prompt: Text(L10n.string("Entry price of the lot to exit"))
-                )
-                .accessibilityLabel(L10n.string("Owned entry price"))
+            if instruction.action == .buy {
+                TextField(L10n.string("Size"), text: size, prompt: Text(L10n.string("e.g. 1/6. Leave empty for the default.")))
+                    .accessibilityLabel(L10n.string("Size"))
+            } else {
+                if instruction.wholePosition {
+                    LabeledContent(L10n.string("Sells from"), value: L10n.string("The whole position"))
+                } else {
+                    TextField(
+                        L10n.string("Owned entry price"), text: $instruction.entryPrice,
+                        prompt: Text(L10n.string("Entry price of the lot to exit"))
+                    )
+                    .accessibilityLabel(L10n.string("Owned entry price"))
+                }
                 if instruction.action == .reduce {
                     TextField(L10n.string("Fraction to reduce"), text: $instruction.fraction, prompt: Text(L10n.string("0 to 1")))
                         .accessibilityLabel(L10n.string("Fraction to reduce"))
@@ -42,5 +49,16 @@ struct ManualInstructionSection: View {
                 }
             }
         }
+    }
+
+    /// A buy's share as a guru writes it, "1/6", kept as the decimal the engine uses.
+    private var size: Binding<String> {
+        Binding(
+            get: {
+                let stored = instruction.fraction.trimmed
+                return Decimal(string: stored) == nil ? stored : Humanize.fraction(stored)
+            },
+            set: { instruction.fraction = ExampleEditorSection.decimal(fromSize: $0) }
+        )
     }
 }

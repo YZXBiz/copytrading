@@ -21,6 +21,8 @@ from copytrading_engine.trading.domain.profiles import (
     ProfileBuilder,
     ProfileDraft,
     ProfileExampleReview,
+    ProfileReplay,
+    ReplayedPost,
 )
 from copytrading_engine.trading.domain.status import TradingStatus
 
@@ -40,7 +42,7 @@ def _configuration():
     )
     return TradingConfiguration.model_validate(
         {
-            "version": 4,
+            "version": 5,
             "source": {"channel_ids": ["123"]},
             "provider": {"name": "deepseek", "model": "test-model"},
             "accounts": [{"id": "paper", "environment": "paper"}],
@@ -51,7 +53,7 @@ def _configuration():
                     "author_id": None,
                     "guru_id": profile.guru_id,
                     "profile_revision": profile.profile_revision,
-                    "connections": [{"account_id": "paper", "mode": "fixed", "amount_usd": "100"}],
+                    "connections": [{"account_id": "paper", "full_position_usd": "600"}],
                 }
             ],
         }
@@ -73,6 +75,7 @@ class _Trading:
         self.evaluations = []
         self.example_reviews = []
         self.learnings = []
+        self.replays = []
         self.learning_error: str | None = None
         self.activation_id = None
         self.revision = None
@@ -142,6 +145,25 @@ class _Trading:
 
         return Evaluation()
 
+    async def replay_posts(
+        self, channel_id, author_id, discord_token, provider, provider_api_key, profile
+    ):
+        self.replays.append((channel_id, profile.guru_id, profile.batches))
+        return ProfileReplay(
+            posts=(
+                ReplayedPost(
+                    text="赵哥-股票：今天大盘不错",  # noqa: RUF001 - the guru's real fullwidth colon
+                    decision="ignore",
+                    reason="No trade action",
+                    reading=None,
+                    instructions=(),
+                    suggested=(),
+                ),
+            ),
+            provider=provider.name,
+            model=provider.model,
+        )
+
     async def learn_playbook(
         self, channel_id, author_id, discord_token, provider, provider_api_key
     ):
@@ -190,7 +212,7 @@ async def test_historical_evaluation_has_typed_no_order_pipe_operation(store: Pa
     queries = EngineQueries(store, store.installation.instance_id)
     server = PipeServer(SelfTestService(store, SelfTestParser()), queries, services(trading))
     profile = _configuration().profiles[0]
-    destination = {"account_id": "paper", "mode": "fixed", "amount_usd": "100"}
+    destination = {"account_id": "paper", "full_position_usd": "100"}
     request = request_line(
         "evaluate_historical_profile",
         "evaluate-historical",
@@ -214,7 +236,7 @@ async def test_historical_evaluation_has_typed_no_order_pipe_operation(store: Pa
             profile.profile_revision,
             "deepseek",
             "private-provider-key",
-            [RouteConnection(account_id="paper", mode="fixed", amount_usd="100")],
+            [RouteConnection(account_id="paper", full_position_usd="100")],
         )
     ]
     assert trading.starts == 0
@@ -250,7 +272,7 @@ async def test_profile_example_review_pipe_is_typed_and_cannot_submit_work(store
         profile=profile.model_dump(mode="json"),
         provider={"name": "deepseek", "model": "test-model"},
         provider_api_key="private-provider-key",
-        destinations=[{"account_id": "paper", "mode": "fixed", "amount_usd": "100"}],
+        destinations=[{"account_id": "paper", "full_position_usd": "100"}],
     )
 
     response = json.loads(await server.handle_line(request))
@@ -266,7 +288,7 @@ async def test_profile_example_review_pipe_is_typed_and_cannot_submit_work(store
             profile.profile_revision,
             "deepseek",
             "private-provider-key",
-            [RouteConnection(account_id="paper", mode="fixed", amount_usd="100")],
+            [RouteConnection(account_id="paper", full_position_usd="100")],
         )
     ]
     assert trading.starts == 0
@@ -530,3 +552,31 @@ async def test_a_connection_of_an_unknown_kind_is_refused(store: Path):
 
     assert refused["error"]["code"] == "invalid_request"
     assert trading.connection_checks == []
+
+
+async def test_replay_pipe_reads_recent_posts_with_the_draft_and_never_echoes_tokens(store: Path):
+    trading = _Trading()
+    server = PipeServer(
+        SelfTestService(store, SelfTestParser()),
+        EngineQueries(store, store.installation.instance_id),
+        services(trading),
+    )
+    profile = _configuration().profiles[0].model_copy()
+    request = request_line(
+        "replay_guru_posts",
+        "replay",
+        channel_id="1517754775674949742",
+        discord_token="private-discord-token",
+        provider={"name": "deepseek", "model": "test-model"},
+        provider_api_key="private-provider-key",
+        profile=profile.model_dump(mode="json"),
+    )
+
+    raw = (await server.handle_line(request)).decode()
+    response = json.loads(raw)
+
+    assert response["ok"]["type"] == "guru_replay"
+    assert [post["decision"] for post in response["ok"]["replay"]["posts"]] == ["ignore"]
+    assert "private-discord-token" not in raw
+    assert "private-provider-key" not in raw
+    assert trading.replays == [("1517754775674949742", profile.guru_id, None)]

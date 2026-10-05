@@ -1,7 +1,7 @@
 """Immutable destination sizing terms carried with each delivered source signal."""
 
 from decimal import Decimal
-from typing import Literal, Self
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -9,18 +9,15 @@ from copytrading_engine.shared.signals import StockSignal
 
 
 class RouteConnection(BaseModel):
+    """One guru copying into one account (ADR-0007). The guru's full position is the account's
+    maximum per stock; a call buys its share of it."""
+
     model_config = ConfigDict(frozen=True, extra="forbid", hide_input_in_errors=True)
 
     account_id: str = Field(pattern=r"^[a-zA-Z0-9_-]{1,64}$")
-    mode: Literal["fixed", "proportional"]
-    amount_usd: Decimal = Field(gt=0, decimal_places=2, allow_inf_nan=False)
-    default_fraction: Decimal | None = Field(default=None, gt=0, le=1, allow_inf_nan=False)
-
-    @model_validator(mode="after")
-    def valid_default(self) -> Self:
-        if self.mode == "fixed" and self.default_fraction is not None:
-            raise ValueError("Fixed sizing cannot have a fraction default")
-        return self
+    full_position_usd: Decimal = Field(gt=0, decimal_places=2, allow_inf_nan=False)
+    # The share a call that names no size buys; None leaves such a call for the owner.
+    default_fraction: Decimal | None = Field(default=Decimal(1), gt=0, le=1, allow_inf_nan=False)
 
 
 class DestinationTerms(BaseModel):

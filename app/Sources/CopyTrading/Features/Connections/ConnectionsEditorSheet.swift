@@ -29,9 +29,13 @@ struct ConnectionsEditorSheet: View {
             if let index = model.setupDraft.routes.firstIndex(where: { $0.id == id }) {
                 RouteEditorSheet(
                     route: $model.setupDraft.routes[index],
-                    accountIDs: model.setupDraft.accountIDs,
+                    accountIDs: model.setupDraft.accountChoices(for: model.setupDraft.routes[index]),
+                    policies: Dictionary(
+                        model.setupDraft.accounts.map { ($0.name.trimmed, $0.policy) },
+                        uniquingKeysWith: { first, _ in first }),
                     channelIDs: model.setupDraft.sourceChannelIDs,
                     learn: learn,
+                    replay: { try await model.replayPosts(for: $0, in: model.setupDraft) },
                     remove: { removeGuru(id) }
                 )
             }

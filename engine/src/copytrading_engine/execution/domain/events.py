@@ -20,6 +20,7 @@ from copytrading_engine.execution.domain.ownership import (
     OwnershipIncident,
     OwnershipResolution,
 )
+from copytrading_engine.execution.domain.progress import Exposure
 from copytrading_engine.execution.domain.recovery import (
     IncidentClearanceEvidence,
     LateOrderIncident,
@@ -30,15 +31,6 @@ from copytrading_engine.execution.domain.sessions import Session
 from copytrading_engine.execution.domain.sizing import DestinationTerms
 from copytrading_engine.execution.domain.values import Identifier, Positive, Quantity, Side, Value
 from copytrading_engine.shared.signals import Instruction
-
-
-class Exposure(Value):
-    """A named comparison of current, proposed, and permitted exposure."""
-
-    scope: Literal["symbol", "total"]
-    current: Quantity
-    proposed: Quantity
-    limit: Quantity
 
 
 class EventPayloadValue(Value):

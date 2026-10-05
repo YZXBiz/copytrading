@@ -47,8 +47,7 @@ struct TradingSettingsSaveTests {
                     profileRevision: profile.profileRevision,
                     connections: [
                         TradingRouteConnection(
-                            accountID: "paper", mode: .proportional,
-                            amountUSD: "3000", defaultFraction: "0.5"
+                            accountID: "paper", fullPositionUSD: "600", defaultFraction: "0.5"
                         )
                     ]
                 )
@@ -286,7 +285,7 @@ struct TradingSettingsSaveTests {
             providerAPIKey: "private-provider-key",
             destinations: [
                 TradingRouteConnection(
-                    accountID: "paper", mode: .fixed, amountUSD: "100"
+                    accountID: "paper", fullPositionUSD: "600"
                 )
             ]
         )
@@ -321,7 +320,7 @@ struct TradingSettingsSaveTests {
             profile: profile,
             provider: TradingProviderConfiguration(name: .anthropic, model: "test-model"),
             providerAPIKey: "private-provider-key",
-            destinations: [TradingRouteConnection(accountID: "paper", mode: .fixed, amountUSD: "100")]
+            destinations: [TradingRouteConnection(accountID: "paper", fullPositionUSD: "600")]
         )
         let result = try await EngineClient(transport: transport).reviewProfileExamples(request)
         try check(
@@ -370,7 +369,7 @@ struct TradingSettingsSaveTests {
                 TradingRouteConfiguration(
                     channelID: "123", authorID: "456", guruID: originalProfile.guruID,
                     profileRevision: originalProfile.profileRevision,
-                    connections: [TradingRouteConnection(accountID: "paper", mode: .fixed, amountUSD: "100")]
+                    connections: [TradingRouteConnection(accountID: "paper", fullPositionUSD: "600")]
                 )
             ]
         )
@@ -428,7 +427,7 @@ struct TradingSettingsSaveTests {
                 TradingRouteConfiguration(
                     channelID: "123", authorID: "456", guruID: profile.guruID,
                     profileRevision: profile.profileRevision,
-                    connections: [TradingRouteConnection(accountID: "paper", mode: .fixed, amountUSD: "100")]
+                    connections: [TradingRouteConnection(accountID: "paper", fullPositionUSD: "600")]
                 )
             ]
         )
@@ -504,7 +503,7 @@ struct TradingSettingsSaveTests {
                     profileRevision: profile.profileRevision,
                     connections: [
                         TradingRouteConnection(
-                            accountID: "paper", mode: .fixed, amountUSD: "100"
+                            accountID: "paper", fullPositionUSD: "600"
                         )
                     ]
                 )
@@ -708,10 +707,8 @@ struct TradingSettingsSaveTests {
                 TradingRouteConfiguration(
                     channelID: "123", authorID: "456", guruID: profile.guruID,
                     profileRevision: profile.profileRevision,
-                    connections: [
-                        TradingRouteConnection(accountID: "paper-a", mode: .fixed, amountUSD: "500"),
-                        TradingRouteConnection(accountID: "paper-b", mode: .fixed, amountUSD: "125"),
-                    ]
+                    // One guru per account; paper-b follows no one.
+                    connections: [TradingRouteConnection(accountID: "paper-a", fullPositionUSD: "600")]
                 )
             ]
         )
@@ -1391,7 +1388,7 @@ struct TradingSettingsSaveTests {
                 TradingRouteConfiguration(
                     channelID: "123", authorID: "456", guruID: profile.guruID,
                     profileRevision: profile.profileRevision,
-                    connections: [TradingRouteConnection(accountID: "paper", mode: .fixed, amountUSD: "100")]
+                    connections: [TradingRouteConnection(accountID: "paper", fullPositionUSD: "600")]
                 )
             ]
         )
@@ -2533,11 +2530,11 @@ private func check(_ condition: @autoclosure () -> Bool, _ message: String) thro
 private func checkActivityScreenStateAndStatusPolicy() throws {
     let state = ActivityScreenState()
     state.selectedActivityID = 42
-    state.applyFilter(.needsReview, visibleIDs: [7, 9])
+    state.applyFilter(.waiting, visibleIDs: [7, 9])
     let reviewFilter = state.filter
     let firstVisibleID = state.selectedActivityID
     try check(
-        reviewFilter == .needsReview && firstVisibleID == 7,
+        reviewFilter == .waiting && firstVisibleID == 7,
         "Filtering Activity did not move the detail to the first visible post"
     )
 
@@ -2812,6 +2809,11 @@ private actor RecordingTradingStarter: TradingStarting {
             examples: comparisons,
             automaticActivationAllowed: exampleReviewMatches
         )
+    }
+
+    func replayGuruPosts(_ replay: GuruReplayRequest) async throws -> GuruReplay {
+        operationEvents.append("replay")
+        return GuruReplay(posts: [], provider: replay.provider.name.rawValue, model: replay.provider.model, costNotice: "")
     }
 
     func learnGuruPlaybook(_ learning: GuruPlaybookLearningRequest) async throws -> LearnedGuruPlaybook {
