@@ -1381,7 +1381,6 @@
 "Connect to %@" = "连接 %@";
 "Step by step" = "分步说明";
 "A bot you make messages you for every order and problem." = "你创建的机器人会为每笔订单和每个问题给你发消息。";
-"Set to **60**. The guru buys NVDA at **$200.00**, so CopyTrading places a buy that only fills at **$200.00 or less**. The price jumps to **$201** and stays there, so nothing fills. After **60 seconds** CopyTrading cancels the order, so it can't quietly fill an hour later, when the call is old." = "设为 **60**。信号源以 **$200.00** 买入 NVDA，CopyTrading 会下一笔只在 **$200.00 或更低** 成交的买单。价格涨到 **$201** 并停在那里，所以一直没成交。**60 秒**后 CopyTrading 会撤单，免得它在一小时后、信号已经过时的时候悄悄成交。";
 "Also copy calls from 4:00 to 9:30 and 16:00 to 20:00 New York time, with limit orders." = "纽约时间 4:00 至 9:30 和 16:00 至 20:00 也跟单，使用限价单。";
 "Also copy calls from 20:00 to 4:00 New York time. Needs extended hours on." = "纽约时间 20:00 至次日 4:00 也跟单。需先开启盘前盘后交易。";
 " Your time: %@." = " 你的时间：%@。";
@@ -1455,3 +1454,4 @@
 "Nothing answered at that address. Check the Base URL and that %@ is running." = "该地址没有响应。请检查 Base URL，并确认 %@ 正在运行。";
 "%@ didn't answer. Check your connection and try again." = "%@ 没有响应。请检查网络后重试。";
 "Nothing answered at that address. Check the Base URL and that the server is running." = "该地址没有响应。请检查 Base URL，并确认服务器正在运行。";
+"Set to **60**. The guru buys NVDA at **$200.00**. With **Maximum above signal price** at **%@%%**, CopyTrading's buy only fills at **%@ or less**. The price jumps to **%@** and stays there, so nothing fills. After **60 seconds** CopyTrading cancels the order, so it can't quietly fill an hour later, when the call is old." = "设为 **60**。信号源以 **$200.00** 买入 NVDA。**高于信号价格的最高幅度**为 **%@%%** 时，CopyTrading 的买单只在 **%@ 或更低** 成交。价格涨到 **%@** 并停在那里，所以一直没成交。**60 秒**后 CopyTrading 会撤单，免得它在一小时后、信号已经过时的时候悄悄成交。";

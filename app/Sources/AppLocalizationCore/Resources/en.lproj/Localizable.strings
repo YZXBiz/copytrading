@@ -1381,7 +1381,6 @@
 "Connect to %@" = "Connect to %@";
 "Step by step" = "Step by step";
 "A bot you make messages you for every order and problem." = "A bot you make messages you for every order and problem.";
-"Set to **60**. The guru buys NVDA at **$200.00**, so CopyTrading places a buy that only fills at **$200.00 or less**. The price jumps to **$201** and stays there, so nothing fills. After **60 seconds** CopyTrading cancels the order, so it can't quietly fill an hour later, when the call is old." = "Set to **60**. The guru buys NVDA at **$200.00**, so CopyTrading places a buy that only fills at **$200.00 or less**. The price jumps to **$201** and stays there, so nothing fills. After **60 seconds** CopyTrading cancels the order, so it can't quietly fill an hour later, when the call is old.";
 "Also copy calls from 4:00 to 9:30 and 16:00 to 20:00 New York time, with limit orders." = "Also copy calls from 4:00 to 9:30 and 16:00 to 20:00 New York time, with limit orders.";
 "Also copy calls from 20:00 to 4:00 New York time. Needs extended hours on." = "Also copy calls from 20:00 to 4:00 New York time. Needs extended hours on.";
 " Your time: %@." = " Your time: %@.";
@@ -1455,3 +1454,4 @@
 "Nothing answered at that address. Check the Base URL and that %@ is running." = "Nothing answered at that address. Check the Base URL and that %@ is running.";
 "%@ didn't answer. Check your connection and try again." = "%@ didn't answer. Check your connection and try again.";
 "Nothing answered at that address. Check the Base URL and that the server is running." = "Nothing answered at that address. Check the Base URL and that the server is running.";
+"Set to **60**. The guru buys NVDA at **$200.00**. With **Maximum above signal price** at **%@%%**, CopyTrading's buy only fills at **%@ or less**. The price jumps to **%@** and stays there, so nothing fills. After **60 seconds** CopyTrading cancels the order, so it can't quietly fill an hour later, when the call is old." = "Set to **60**. The guru buys NVDA at **$200.00**. With **Maximum above signal price** at **%@%%**, CopyTrading's buy only fills at **%@ or less**. The price jumps to **%@** and stays there, so nothing fills. After **60 seconds** CopyTrading cancels the order, so it can't quietly fill an hour later, when the call is old.";

@@ -101,7 +101,7 @@ struct AccountEditorSheet: View {
                     numberLimit(
                         "Order timeout (seconds)", hint: "A limit order that hasn't filled by then is canceled.",
                         value: $account.policy.orderTimeoutSeconds,
-                        example: LimitExamples.orderTimeout)
+                        example: LimitExamples.orderTimeout(maxAboveSignalPct: account.policy.maxAboveSignalPct))
                 }
 
                 Section {
