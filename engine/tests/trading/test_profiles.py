@@ -129,10 +129,8 @@ def test_profile_examples_compare_expected_and_actual_without_execution():
         service.evaluate(
             profile,
             destinations=(
-                RouteConnection(account_id="paper-fixed", mode="fixed", amount_usd="500"),
-                RouteConnection(
-                    account_id="paper-proportional", mode="proportional", amount_usd="3000"
-                ),
+                RouteConnection(account_id="paper-500", full_position_usd="500"),
+                RouteConnection(account_id="paper-3000", full_position_usd="3000"),
             ),
         )
     )
@@ -150,7 +148,7 @@ def test_profile_examples_compare_expected_and_actual_without_execution():
     assert {
         destination.account_id: destination.budget_usd
         for destination in result.examples[0].actual.destinations
-    } == {"paper-fixed": Decimal("500.00"), "paper-proportional": Decimal("500.00")}
+    } == {"paper-500": Decimal("83.33"), "paper-3000": Decimal("500.00")}
     assert decoder.calls == 1
     assert not hasattr(result, "orders")
 
@@ -232,7 +230,7 @@ def test_ungrounded_example_interpretation_returns_review_and_never_activates():
             Decoder(), provider="deepseek", model="test-model"
         ).evaluate(
             profile,
-            destinations=(RouteConnection(account_id="paper", mode="fixed", amount_usd="500"),),
+            destinations=(RouteConnection(account_id="paper", full_position_usd="500"),),
         )
     )
     assert review.simulated is True
@@ -284,7 +282,7 @@ def test_matching_exit_example_preserves_position_sizing_review_without_blocking
             Decoder(), provider="deepseek", model="test-model"
         ).evaluate(
             profile,
-            destinations=(RouteConnection(account_id="paper", mode="fixed", amount_usd="500"),),
+            destinations=(RouteConnection(account_id="paper", full_position_usd="500"),),
         )
     )
     comparison = review.examples[0]
@@ -303,12 +301,11 @@ def test_matching_exit_example_preserves_position_sizing_review_without_blocking
             "AAPL",
             "original_position",
             (
-                RouteConnection(account_id="paper-fixed", mode="fixed", amount_usd="500"),
-                RouteConnection(
-                    account_id="paper-proportional", mode="proportional", amount_usd="3000"
-                ),
+                RouteConnection(account_id="paper-500", full_position_usd="500"),
+                RouteConnection(account_id="paper-3000", full_position_usd="3000"),
             ),
-            {"paper-fixed": Decimal("500.00"), "paper-proportional": Decimal("500.00")},
+            # A 1/6 call is a sixth of each account's full position, rounded down to the cent.
+            {"paper-500": Decimal("83.33"), "paper-3000": Decimal("500.00")},
         ),
         (
             "other-guru",
@@ -316,10 +313,10 @@ def test_matching_exit_example_preserves_position_sizing_review_without_blocking
             "MSFT",
             "remaining_position",
             (
-                RouteConnection(account_id="paper-small", mode="fixed", amount_usd="125"),
-                RouteConnection(account_id="paper-large", mode="proportional", amount_usd="1200"),
+                RouteConnection(account_id="paper-small", full_position_usd="125"),
+                RouteConnection(account_id="paper-large", full_position_usd="1200"),
             ),
-            {"paper-small": Decimal("125.00"), "paper-large": Decimal("200.00")},
+            {"paper-small": Decimal("20.83"), "paper-large": Decimal("200.00")},
         ),
     ],
 )
@@ -475,7 +472,7 @@ def test_runtime_historical_profile_action_does_not_open_execution_owners(tmp_pa
             profile,
             ProviderConfiguration(name="deepseek", model="test-model"),
             SecretStr("provider-secret"),
-            [RouteConnection(account_id="paper", mode="fixed", amount_usd="300")],
+            [RouteConnection(account_id="paper", full_position_usd="300")],
         )
         after = hashlib.sha256((tmp_path / "application.db").read_bytes()).hexdigest()
         return result, before, after, runtime
@@ -486,7 +483,7 @@ def test_runtime_historical_profile_action_does_not_open_execution_owners(tmp_pa
     assert result.no_order is True
     assert result.message_identity == source.identity
     assert result.profile_revision == profile.profile_revision
-    assert result.destinations[0].budget_usd == Decimal("300.00")
+    assert result.destinations[0].budget_usd == Decimal("50.00")  # a sixth of $300
     assert before == after
     assert calls == [("decoder", "deepseek", "test-model"), "decoder_closed"]
     assert not (tmp_path / "accounts").exists()

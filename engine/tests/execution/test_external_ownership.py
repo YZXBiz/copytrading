@@ -617,7 +617,7 @@ def test_resolution_sqlite_failure_rolls_back_and_reopens_with_incident(tmp_path
     broker.holdings["ABC"] = Decimal("100")
     engine = engine_with_wide_limits(store, broker)
     engine.bind(NOW)
-    receive(engine, StockSignal.model_validate(event()), NOW, amount_usd="1250")
+    receive(engine, StockSignal.model_validate(event()), NOW, full_position_usd="7500")
     engine.process(NOW)
     assert engine.ledger.owned("ABC") == 50
     order = BrokerOrder(
@@ -742,7 +742,7 @@ async def test_owner_cancellation_waits_for_resolution_commit_and_reopens(tmp_pa
             NOW,
         )
         await owner.receive(
-            destination_signal(StockSignal.model_validate(event()), amount_usd="1250"),
+            destination_signal(StockSignal.model_validate(event()), full_position_usd="7500"),
             NOW,
         )
         await owner._submit(lambda resource: resource.engine.process(NOW))

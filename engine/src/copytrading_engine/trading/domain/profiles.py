@@ -4,7 +4,7 @@ import datetime as dt
 import hashlib
 import json
 from decimal import ROUND_DOWN, Decimal
-from typing import Literal, Self
+from typing import Annotated, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -16,6 +16,8 @@ from copytrading_engine.parsing.routes import Route
 from copytrading_engine.shared.raw_message import RawMessage
 
 type ExitBasis = Literal["original_position", "remaining_position"]
+type SellsReferTo = Literal["buy_price", "whole_position"]
+Batches = Annotated[int, Field(ge=1, le=20)]
 PROFILE_EVALUATION_COST_NOTICE = (
     "Model calls use the configured provider; provider charges may apply."
 )
@@ -63,6 +65,9 @@ class ProfileDraft(BaseModel):
     playbook: str = Field(max_length=PLAYBOOK_MAX_LENGTH)
     examples: tuple[ProfileExample, ...] = Field(default=(), max_length=32)
     exit_basis: ExitBasis
+    # How many batches make the guru's full position; None leaves a batch call for the owner.
+    batches: Batches | None = None
+    sells_refer_to: SellsReferTo = "buy_price"
 
     @model_validator(mode="after")
     def validate_inputs(self) -> Self:
@@ -106,6 +111,8 @@ class ProfileRevision(BaseModel):
     playbook: str = Field(max_length=PLAYBOOK_MAX_LENGTH)
     examples: tuple[ProfileExample, ...] = Field(default=(), max_length=32)
     exit_basis: ExitBasis
+    batches: Batches | None = None
+    sells_refer_to: SellsReferTo = "buy_price"
     profile_revision: str = Field(pattern=r"^[0-9a-f]{64}$")
 
     @model_validator(mode="after")
@@ -114,6 +121,18 @@ class ProfileRevision(BaseModel):
         if self.profile_revision != _profile_digest(base):
             raise ValueError("Profile revision does not match its immutable content")
         return self
+
+    def route(self) -> Route:
+        """How the reader and its rules treat this guru's posts."""
+        return Route(
+            prefix=self.prefix,
+            playbook=self.playbook,
+            guru_id=self.guru_id,
+            profile_revision=self.profile_revision,
+            exit_basis=self.exit_basis,
+            batches=self.batches,
+            sells_refer_to=self.sells_refer_to,
+        )
 
 
 class ProfileBuilder:
@@ -371,14 +390,7 @@ class ProfileEvaluationService:
             destinations
         ):
             raise ValueError("Evaluation destinations must be unique and bounded")
-        route = Route(
-            prefix=profile.prefix,
-            playbook=profile.playbook,
-            guru_id=profile.guru_id,
-            profile_revision=profile.profile_revision,
-            exit_basis=profile.exit_basis,
-        )
-        signal = await transform(message, route, self._decoder, self.model)
+        signal = await transform(message, profile.route(), self._decoder, self.model)
         instructions = tuple(
             InstructionEvaluation(
                 action=item.action,

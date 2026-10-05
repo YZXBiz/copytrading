@@ -1444,6 +1444,7 @@
 "The post gave no price" = "帖子没有给出价格";
 "The post named a batch, not a size" = "帖子只说了第几批，没有说仓位大小";
 "The sell didn't say which buy it comes from" = "卖出没有说明对应哪一笔买入";
+"The market moved too far from the guru's price" = "市价离信号源的价格太远";
 "How far above the guru's price a buy may fill. Outside regular hours, also how far below it a sell may go. 0 means exactly the guru's price." = "买入成交价最多可以比信号源的价格高出多少。在常规交易时段以外，也决定卖出价最多可以比它低多少。0 表示与信号源价格完全一致。";
 "this account" = "此账户";
 "A call that names no size waits for you to review it." = "没有说明仓位大小的信号会等你检查。";

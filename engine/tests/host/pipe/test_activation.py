@@ -40,7 +40,7 @@ def _configuration():
     )
     return TradingConfiguration.model_validate(
         {
-            "version": 4,
+            "version": 5,
             "source": {"channel_ids": ["123"]},
             "provider": {"name": "deepseek", "model": "test-model"},
             "accounts": [{"id": "paper", "environment": "paper"}],
@@ -51,7 +51,7 @@ def _configuration():
                     "author_id": None,
                     "guru_id": profile.guru_id,
                     "profile_revision": profile.profile_revision,
-                    "connections": [{"account_id": "paper", "mode": "fixed", "amount_usd": "100"}],
+                    "connections": [{"account_id": "paper", "full_position_usd": "600"}],
                 }
             ],
         }
@@ -190,7 +190,7 @@ async def test_historical_evaluation_has_typed_no_order_pipe_operation(store: Pa
     queries = EngineQueries(store, store.installation.instance_id)
     server = PipeServer(SelfTestService(store, SelfTestParser()), queries, services(trading))
     profile = _configuration().profiles[0]
-    destination = {"account_id": "paper", "mode": "fixed", "amount_usd": "100"}
+    destination = {"account_id": "paper", "full_position_usd": "100"}
     request = request_line(
         "evaluate_historical_profile",
         "evaluate-historical",
@@ -214,7 +214,7 @@ async def test_historical_evaluation_has_typed_no_order_pipe_operation(store: Pa
             profile.profile_revision,
             "deepseek",
             "private-provider-key",
-            [RouteConnection(account_id="paper", mode="fixed", amount_usd="100")],
+            [RouteConnection(account_id="paper", full_position_usd="100")],
         )
     ]
     assert trading.starts == 0
@@ -250,7 +250,7 @@ async def test_profile_example_review_pipe_is_typed_and_cannot_submit_work(store
         profile=profile.model_dump(mode="json"),
         provider={"name": "deepseek", "model": "test-model"},
         provider_api_key="private-provider-key",
-        destinations=[{"account_id": "paper", "mode": "fixed", "amount_usd": "100"}],
+        destinations=[{"account_id": "paper", "full_position_usd": "100"}],
     )
 
     response = json.loads(await server.handle_line(request))
@@ -266,7 +266,7 @@ async def test_profile_example_review_pipe_is_typed_and_cannot_submit_work(store
             profile.profile_revision,
             "deepseek",
             "private-provider-key",
-            [RouteConnection(account_id="paper", mode="fixed", amount_usd="100")],
+            [RouteConnection(account_id="paper", full_position_usd="100")],
         )
     ]
     assert trading.starts == 0

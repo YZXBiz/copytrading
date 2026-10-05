@@ -49,7 +49,8 @@ same as his 1/6.
      given. Amounts round down to the cent, so six 1/6 calls fill the position exactly.
    * *At what price.* A buy is a limit at the guru's price plus X%. When the market is more than
      Y% away from the guru's price, above or below, the call waits for the owner. X and Y are set
-     per account; Y defaults to 5% in regular hours and 10% outside them. A call with no price
+     per account; Y defaults to 5% in regular hours and 10% outside them. Without a usable
+     quote, as in a thin overnight market, the limit alone bounds the buy. A call with no price
      waits for the owner, and so does a call at market, a batch until its guru's N is set, and a
      sell that names no buy for a guru whose sells refer to the buy price.
 5. **Limits only protect.** Maximum per order trims a buy and the trim is shown. A buy that would

@@ -1,13 +1,43 @@
 """Deterministic signal pricing policy, independent of quotes and broker clients."""
 
+import datetime as dt
 from decimal import ROUND_DOWN, ROUND_UP, Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from copytrading_engine.execution.domain.market import Quote
+from copytrading_engine.execution.domain.sessions import Session
+
+# A quote older than this is not the market now.
+QUOTE_MAX_AGE_SECONDS = 30
+
+
+def quote_problem(quote: Quote, price: Decimal | None, now: dt.datetime) -> str | None:
+    """Why a quote's price cannot stand for the market now, if it cannot."""
+    if quote.timestamp is None or price is None or price <= 0:
+        return "quote_unavailable"
+    age = (now - quote.timestamp).total_seconds()
+    if age < -5 or age > QUOTE_MAX_AGE_SECONDS:
+        return "quote_stale"
+    return None
 
 
 class EntryPricingPolicy(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     max_above_signal_pct: Decimal = Field(default=Decimal("0"), ge=0, le=100)
+    # How far the market may be from the guru's price, above or below, before a buy waits for
+    # the owner (ADR-0007): a wider band outside regular hours, when quotes are thinner.
+    max_price_move_pct: Decimal = Field(default=Decimal("5"), gt=0, le=100)
+    max_price_move_extended_pct: Decimal = Field(default=Decimal("10"), gt=0, le=100)
+
+    def market_moved(self, signal_price: Decimal, market: Decimal, session: Session) -> bool:
+        """Whether the market is further from the guru's price than this session allows."""
+        allowed = (
+            self.max_price_move_pct
+            if session == Session.REGULAR
+            else self.max_price_move_extended_pct
+        )
+        return abs(market - signal_price) * 100 > allowed * signal_price
 
     def limit_price(self, signal_price: Decimal) -> Decimal:
         """Return a valid stock tick that never exceeds the configured ceiling."""

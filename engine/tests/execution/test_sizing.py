@@ -32,7 +32,7 @@ def test_fixed_budget_ignores_source_fraction(system):
     assert Decimal(order["qty"]) * Decimal(order["limit_price"]) == Decimal("100")
 
 
-def test_one_source_signal_has_independent_connection_budgets():
+def test_each_account_sizes_a_call_from_its_own_full_position():
     signal_data = event()
     signal_data["instructions"][0]["fraction"] = "0.3333333333333333333333333333"
     signal_data["evidence"][0]["fraction"] = "0.3333333333333333333333333333"
@@ -43,26 +43,27 @@ def test_one_source_signal_has_independent_connection_budgets():
         max_symbol_usd=Decimal(2000),
         max_total_usd=Decimal(5000),
     )
-    fixed_broker = FakeBroker()
-    fixed_broker.account_data["id"] = "account-a"
-    proportional_broker = FakeBroker()
-    proportional_broker.account_data["id"] = "account-b"
-    fixed = CopyEngine(MemoryRepository(), fixed_broker, config)
-    proportional = CopyEngine(MemoryRepository(), proportional_broker, config)
-    fixed.bind(NOW)
-    proportional.bind(NOW)
-    fixed.receive(destination_signal(signal, account_id="account-a", amount_usd="500"), NOW)
-    proportional.receive(
-        destination_signal(signal, account_id="account-b", mode="proportional", amount_usd="3000"),
+    small_broker = FakeBroker()
+    small_broker.account_data["id"] = "account-a"
+    large_broker = FakeBroker()
+    large_broker.account_data["id"] = "account-b"
+    small = CopyEngine(MemoryRepository(), small_broker, config)
+    large = CopyEngine(MemoryRepository(), large_broker, config)
+    small.bind(NOW)
+    large.bind(NOW)
+    small.receive(destination_signal(signal, account_id="account-a", full_position_usd="500"), NOW)
+    large.receive(
+        destination_signal(signal, account_id="account-b", full_position_usd="3000"),
         NOW,
     )
-    fixed.process(NOW)
-    proportional.process(NOW)
-    assert fixed.ledger.orders()[0].qty == Decimal(20)
-    assert proportional.ledger.orders()[0].qty == Decimal(40)
+    small.process(NOW)
+    large.process(NOW)
+    # A third of $500 is $166.66 and of $3000 is $1000, at the $25 limit.
+    assert small.ledger.orders()[0].qty == Decimal("6.6664")
+    assert large.ledger.orders()[0].qty == Decimal(40)
 
 
-def test_compound_alert_uses_fixed_budget_per_entry(system):
+def test_compound_alert_sizes_each_entry_on_its_own(system):
     engine, broker, _ = system
     message = event()
     message["instructions"].append({**message["instructions"][0], "symbol": "DEF", "price": "20"})
@@ -277,26 +278,29 @@ def test_configured_500_budget_keeps_limit_price_sizing(system, whole_shares):
     broker.asset = lambda symbol: original_asset(symbol).model_copy(
         update={"fractionable": not whole_shares}
     )
-    deliver(engine, event(price="33.12"), amount_usd="500")
+    # A 1/6 call into a $3000 full position is a $500 budget.
+    deliver(engine, event(price="33.12"), full_position_usd="3000")
     order = engine.ledger.orders()[0]
     assert order.limit_price == Decimal("33.45")
     assert Decimal("450") < order.qty * order.limit_price <= Decimal("500")
     if whole_shares:
         assert order.qty == 14
     later = NOW + dt.timedelta(minutes=11)
-    deliver(engine, event(id="second", price="33.12", timestamp=later), later, amount_usd="500")
+    deliver(
+        engine, event(id="second", price="33.12", timestamp=later), later, full_position_usd="3000"
+    )
     assert broker.calls == 1  # the configured $600 per-symbol cap still applies
     assert engine.ledger.message("discord:demo:second").parts == (
         Skipped(reason="symbol_exposure_cap"),
     )
 
 
-@pytest.mark.parametrize("field", ["amount_usd", "max_order_usd"])
+@pytest.mark.parametrize("field", ["full_position_usd", "max_order_usd"])
 @pytest.mark.parametrize("value", ["0", "-1", "NaN", "Infinity"])
 def test_entry_sizing_configuration_rejects_invalid_money(field, value):
     def build() -> object:
-        if field == "amount_usd":
-            return RouteConnection(account_id="paper-demo", mode="fixed", amount_usd=value)
+        if field == "full_position_usd":
+            return RouteConnection(account_id="paper-demo", full_position_usd=value)
         return CopyConfig.model_validate({"sources": ["discord:demo"], field: value})
 
     with pytest.raises(ValidationError, match=field):

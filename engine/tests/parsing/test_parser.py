@@ -249,6 +249,54 @@ async def test_prefix_and_post_are_normalized_alike():
     assert result.decision == "trade"
 
 
+# --- The guru's rules -------------------------------------------------------------------------
+
+
+async def test_a_batch_is_one_nth_of_the_full_position_when_the_guru_has_n_batches():
+    reading = trade(SCO.model_copy(update={"size": Batch(number=2, words="第二批")}))
+
+    result = await read("sco 20买第二批", reading, Route(batches=3))
+
+    [instruction] = result.instructions
+    assert result.decision == "trade"
+    assert instruction.fraction == Decimal(1) / 3
+    assert result.evidence[0].fraction_evidence == "第二批"
+
+
+@pytest.mark.parametrize(
+    ("post", "call"),
+    [
+        pytest.param(
+            "sco 20跑路了",
+            sell("SCO", "20", bought_at=None, said="跑路了"),
+            id="naming-no-buy",
+        ),
+        pytest.param(
+            "sco 20出掉18的",
+            sell("SCO", "20", bought_at="18"),
+            id="naming-a-buy-price",
+        ),
+    ],
+)
+async def test_a_whole_position_gurus_sell_sells_from_the_whole_position(post, call):
+    result = await read(post, trade(call), Route(sells_refer_to="whole_position"))
+
+    [instruction] = result.instructions
+    assert (instruction.action, instruction.entry_price, instruction.whole_position) == (
+        "close",
+        None,
+        True,
+    )
+
+
+async def test_a_whole_position_gurus_buy_joins_the_position():
+    result = await read(
+        "25加了abc", trade(buy("ABC", "25")), Route(sells_refer_to="whole_position")
+    )
+
+    assert result.instructions[0].whole_position is True
+
+
 # --- Every value is the post's words ----------------------------------------------------------
 
 

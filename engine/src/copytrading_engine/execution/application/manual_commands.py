@@ -24,10 +24,10 @@ from copytrading_engine.execution.domain.manual_commands import (
 from copytrading_engine.execution.domain.market import Quote
 from copytrading_engine.execution.domain.order_lifecycle import OrderStatus
 from copytrading_engine.execution.domain.orders import OrderRecord
+from copytrading_engine.execution.domain.pricing import quote_problem
 from copytrading_engine.execution.domain.sessions import Session
 
 MANUAL_PREVIEW_TTL_SECONDS = 30
-MANUAL_QUOTE_MAX_AGE_SECONDS = 30
 log = logging.getLogger(__name__)
 
 
@@ -293,12 +293,7 @@ class ManualTradingApplication:
             try:
                 quote = broker.quote(instruction.symbol)
                 fresh_price = quote.ask if instruction.action == "buy" else quote.bid
-                if quote.timestamp is None or fresh_price is None or fresh_price <= 0:
-                    quote_reason = "quote_unavailable"
-                else:
-                    age = (now - quote.timestamp).total_seconds()
-                    if age < -5 or age > MANUAL_QUOTE_MAX_AGE_SECONDS:
-                        quote_reason = "quote_stale"
+                quote_reason = quote_problem(quote, fresh_price, now)
             except BrokerError:
                 quote_reason = "quote_unavailable"
             except Exception as exc:  # noqa: BLE001 - unexpected preview failures become a reason

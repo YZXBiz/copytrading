@@ -251,7 +251,11 @@ class LedgerSnapshot(Value):
                 instruction = correction.instructions[instruction_index]
                 expected_side = "buy" if instruction.action == "buy" else "sell"
                 expected_entry = (
-                    instruction.price if expected_side == "buy" else instruction.entry_price
+                    instruction.price
+                    if expected_side == "buy"
+                    else instruction.entry_price
+                    if instruction.entry_price is not None
+                    else preview.plan.entry_price
                 )
                 if (
                     preview.plan.side,
@@ -515,11 +519,12 @@ class LedgerSnapshot(Value):
                     raise ValueError("Sell order references an unknown or different lot")
         for key, lot in self.lots.items():
             entries = [self.orders.get(entry) for entry in lot.entries(key)]
+            # A buy that joined this lot for a whole-position guru may be at another price.
             if any(
                 entry is None
                 or entry.side != "buy"
-                or (lot.symbol, lot.source_key, lot.entry_price)
-                != (entry.symbol, entry.source_key, entry.entry_price)
+                or (lot.symbol, lot.source_key) != (entry.symbol, entry.source_key)
+                or (lot.entry_price != entry.entry_price and entry.joins_lot != key)
                 for entry in entries
             ) or lot.original_qty != sum(
                 (entry.filled_qty for entry in entries if entry is not None), Decimal(0)

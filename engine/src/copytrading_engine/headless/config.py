@@ -32,6 +32,7 @@ from copytrading_engine.trading.domain.profiles import (
     ProfileBuilder,
     ProfileDraft,
     ProfileExample,
+    SellsReferTo,
 )
 
 type AgentAccess = Literal["off", "read_pause", "propose"]
@@ -40,6 +41,9 @@ DISCORD_TOKEN = "COPYTRADING_DISCORD_TOKEN"
 MODEL_API_KEY = "COPYTRADING_MODEL_API_KEY"
 TELEGRAM_TOKEN = "COPYTRADING_TELEGRAM_TOKEN"
 DISCORD_WEBHOOK_URL = "COPYTRADING_DISCORD_WEBHOOK_URL"
+
+
+DEFAULT_LIMITS = AccountPolicy()
 
 
 class ConfigError(Exception):
@@ -78,13 +82,6 @@ class _Example(_Strict):
     fraction: Decimal | None = None
 
 
-class _CopyInto(_Strict):
-    account: str
-    sizing: Literal["fixed", "proportional"]
-    amount_usd: Decimal
-    default_fraction: Decimal | None = None
-
-
 class _Guru(_Strict):
     id: str
     name: str
@@ -95,7 +92,12 @@ class _Guru(_Strict):
     playbook: str = ""
     playbook_file: str | None = None
     examples: tuple[_Example, ...] = ()
-    copy_into: tuple[_CopyInto, ...] = Field(min_length=1)
+    # One guru copies into one account; that account's max_symbol_usd is the guru's full position.
+    account: str
+    # The share a call that names no size buys, or "wait" to leave such a call for you.
+    default_share: Decimal | Literal["wait"] = Decimal(1)
+    batches: int | None = None
+    sells_refer_to: SellsReferTo = "buy_price"
 
 
 class _Telegram(_Strict):
@@ -172,6 +174,8 @@ def load_setup(path: Path) -> ServerSetup:
                             for example in guru.examples
                         ),
                         exit_basis=guru.exits,
+                        batches=guru.batches,
+                        sells_refer_to=guru.sells_refer_to,
                     )
                 )
             )
@@ -181,6 +185,7 @@ def load_setup(path: Path) -> ServerSetup:
         problems.append("Choose one place for alerts: [telegram] or [discord_alerts], not both.")
     if problems:
         raise ConfigError(problems)
+    limits = {account.id: account.limits for account in parsed.accounts}
     try:
         configuration = TradingConfiguration(
             source=SourceConfiguration(
@@ -202,14 +207,16 @@ def load_setup(path: Path) -> ServerSetup:
                     author_id=guru.author,
                     guru_id=guru.id,
                     profile_revision=profile.profile_revision,
-                    connections=tuple(
+                    connections=(
                         RouteConnection(
-                            account_id=item.account,
-                            mode=item.sizing,
-                            amount_usd=item.amount_usd,
-                            default_fraction=item.default_fraction,
-                        )
-                        for item in guru.copy_into
+                            account_id=guru.account,
+                            full_position_usd=limits.get(
+                                guru.account, AccountPolicy()
+                            ).max_symbol_usd,
+                            default_fraction=None
+                            if guru.default_share == "wait"
+                            else guru.default_share,
+                        ),
                     ),
                 )
                 for guru, profile in zip(parsed.gurus, profiles, strict=True)

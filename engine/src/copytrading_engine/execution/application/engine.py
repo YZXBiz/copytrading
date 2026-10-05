@@ -31,6 +31,7 @@ from copytrading_engine.execution.domain.order_lifecycle import OrderStatus, is_
 from copytrading_engine.execution.domain.orders import OrderPlan, OrderRecord, OrderRequest
 from copytrading_engine.execution.domain.ownership import account_activity_reason
 from copytrading_engine.execution.domain.positions import PositionAudit, compare_positions
+from copytrading_engine.execution.domain.pricing import quote_problem
 from copytrading_engine.execution.domain.progress import Pending
 from copytrading_engine.execution.domain.risk import (
     EntryFacts,
@@ -318,8 +319,18 @@ class CopyEngine:
             )
         except ValueError:
             return TradeDecision(None, "account_risk_unavailable")
+        joins_lot = None
+        requested_usd = None
         if s.action == "buy":
+            if not manual:
+                moved = self._market_check(s, session, now)
+                if moved is not None:
+                    return TradeDecision(None, moved)
             limit_price = c.entry_pricing.limit_price(s.price)
+            if s.whole_position:
+                # Every buy of a stock joins the guru's one open lot of it.
+                open_lots = self.ledger.position_lots(source_key, s.symbol)
+                joins_lot = open_lots[0][0] if open_lots else None
             anchor = None
             if not manual:
                 anchor = self.ledger.anchor_cash(
@@ -370,9 +381,11 @@ class CopyEngine:
             decision = entry_budget(c, facts, connection, s.fraction)
             if decision.budget is None:
                 return TradeDecision(None, decision.reason, decision.breaches)
+            requested_usd = decision.requested
             qty = (decision.budget / limit_price).quantize(STEP, rounding=ROUND_DOWN)
+            entry_price = s.price
         else:
-            if s.entry_price is None:
+            if s.entry_price is None and not s.whole_position:
                 raise ValueError("An exit requires its source entry price")
             if chosen_lot is not None:
                 lot = self.ledger.snapshot().lots.get(chosen_lot)
@@ -380,10 +393,15 @@ class CopyEngine:
                     return TradeDecision(None, "lot_unavailable")
                 lot_id = chosen_lot
             else:
-                lots = self.ledger.matching_lots(source_key, s.symbol, s.entry_price)
+                lots = (
+                    self.ledger.position_lots(source_key, s.symbol)
+                    if s.entry_price is None
+                    else self.ledger.matching_lots(source_key, s.symbol, s.entry_price)
+                )
                 if len(lots) != 1:
                     return TradeDecision(None, "missing_or_ambiguous_lot")
                 lot_id, lot = lots[0]
+            entry_price = lot.entry_price
             qty = lot.remaining_qty if chosen_qty is None else min(lot.remaining_qty, chosen_qty)
             if s.action == "reduce":
                 assert s.fraction is not None
@@ -420,8 +438,6 @@ class CopyEngine:
             return TradeDecision(None, "external_open_order")
         if s.action != "buy" and qty > owned:
             return TradeDecision(None, "insufficient_owned_shares")
-        entry_price = s.price if s.action == "buy" else s.entry_price
-        assert entry_price is not None  # enforced by the exit contract above
         return TradeDecision(
             OrderPlan(
                 symbol=s.symbol,
@@ -437,9 +453,28 @@ class CopyEngine:
                 lot_id=lot_id,
                 entry_price=entry_price,
                 session=session,
+                joins_lot=joins_lot,
+                requested_usd=requested_usd,
             ),
             "ready",
         )
+
+    def _market_check(self, s: Instruction, session: Session, now: dt.datetime) -> str | None:
+        """Why a buy should wait for the owner instead of following a market that has moved
+        away from the guru's price (ADR-0007), if it should. Without a usable quote, as in a
+        thin overnight market, the limit price alone bounds the buy."""
+        if not isinstance(self.broker, QuoteBroker):
+            return None
+        try:
+            quote = self.broker.quote(s.symbol)
+        except BrokerError:
+            return None
+        if quote_problem(quote, quote.ask, now) is not None:
+            return None
+        assert quote.ask is not None
+        if self.config.entry_pricing.market_moved(s.price, quote.ask, session):
+            return "price_moved"
+        return None
 
     def process(
         self,

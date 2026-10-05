@@ -134,14 +134,19 @@ def _configuration() -> TradingConfiguration:
     )
     return TradingConfiguration.model_validate(
         {
-            "version": 4,
+            "version": 5,
             "source": {"channel_ids": [_CHANNEL]},
             "provider": {"name": "deepseek", "model": _DEEPSEEK_MODEL},
             "accounts": [
                 {
                     "id": "paper-e2e",
                     "environment": "paper",
-                    "policy": {"max_order_usd": "50", "max_above_signal_pct": "1"},
+                    # Its maximum per stock, $40, is the guru's full position (ADR-0007).
+                    "policy": {
+                        "max_order_usd": "50",
+                        "max_symbol_usd": "40",
+                        "max_above_signal_pct": "1",
+                    },
                 }
             ],
             "profiles": [profile.model_dump(mode="json")],
@@ -151,9 +156,7 @@ def _configuration() -> TradingConfiguration:
                     "author_id": None,
                     "guru_id": profile.guru_id,
                     "profile_revision": profile.profile_revision,
-                    "connections": [
-                        {"account_id": "paper-e2e", "mode": "fixed", "amount_usd": "40"}
-                    ],
+                    "connections": [{"account_id": "paper-e2e", "full_position_usd": "40"}],
                 }
             ],
         }

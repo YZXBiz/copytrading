@@ -10,7 +10,6 @@ from copytrading_engine.execution.domain.risk import requested_entry_budget
 from copytrading_engine.execution.domain.sizing import RouteConnection
 
 CENT = Decimal("0.01")
-HALF_CENT = Decimal("0.005")
 AMOUNTS = st.decimals(
     min_value=Decimal("0.01"), max_value=Decimal("1000000"), places=2, allow_nan=False
 )
@@ -19,37 +18,35 @@ FRACTIONS = st.fractions(min_value=Fraction(1, 1000), max_value=1, max_denominat
 )
 
 
-def _connection(mode: str, amount: Decimal, default: Decimal | None = None) -> RouteConnection:
-    return RouteConnection(
-        account_id="paper", mode=mode, amount_usd=amount, default_fraction=default
-    )
-
-
-@given(amount=AMOUNTS, fraction=st.none() | FRACTIONS)
-def test_fixed_sizing_ignores_any_source_fraction(amount, fraction):
-    decision = requested_entry_budget(_connection("fixed", amount), fraction)
-
-    assert decision.budget == amount
+def _connection(amount: Decimal, default: Decimal | None = Decimal(1)) -> RouteConnection:
+    return RouteConnection(account_id="paper", full_position_usd=amount, default_fraction=default)
 
 
 @given(amount=AMOUNTS, fraction=FRACTIONS)
-def test_proportional_sizing_applies_the_fraction_once_in_cents(amount, fraction):
-    decision = requested_entry_budget(_connection("proportional", amount), fraction)
+def test_a_share_is_the_fraction_of_the_full_position_rounded_down_to_the_cent(amount, fraction):
+    decision = requested_entry_budget(_connection(amount), fraction)
 
     exact = amount * fraction
     if decision.budget is None:
         assert decision.reason == "below_minimum_budget"
-        assert exact <= HALF_CENT
+        assert exact < CENT
         return
-    assert abs(decision.budget - exact) <= HALF_CENT
+    assert exact - CENT < decision.budget <= exact + Decimal("1e-10")
     assert decision.budget <= amount
     assert decision.budget.as_tuple().exponent == -2
 
 
+@given(amount=AMOUNTS, denominator=st.integers(min_value=1, max_value=20))
+def test_n_shares_of_one_nth_never_pass_the_full_position(amount, denominator):
+    share = requested_entry_budget(_connection(amount), Decimal(1) / denominator).budget
+
+    assert share is None or denominator * share <= amount
+
+
 @given(amount=AMOUNTS, smaller=FRACTIONS, larger=FRACTIONS)
-def test_proportional_sizing_never_decreases_as_the_fraction_grows(amount, smaller, larger):
+def test_a_larger_share_never_buys_less(amount, smaller, larger):
     smaller, larger = sorted((smaller, larger))
-    connection = _connection("proportional", amount)
+    connection = _connection(amount)
 
     low = requested_entry_budget(connection, smaller).budget or Decimal(0)
     high = requested_entry_budget(connection, larger).budget or Decimal(0)
@@ -58,12 +55,12 @@ def test_proportional_sizing_never_decreases_as_the_fraction_grows(amount, small
 
 
 @given(amount=AMOUNTS, default=FRACTIONS)
-def test_missing_fraction_uses_only_the_configured_default(amount, default):
-    with_default = _connection("proportional", amount, default)
+def test_a_call_with_no_size_buys_only_the_default_share(amount, default):
+    with_default = _connection(amount, default)
 
     assert requested_entry_budget(with_default, None) == requested_entry_budget(
         with_default, default
     )
-    missing = requested_entry_budget(_connection("proportional", amount), None)
+    missing = requested_entry_budget(_connection(amount, None), None)
     assert missing.budget is None
     assert missing.reason == "missing_source_fraction_review"

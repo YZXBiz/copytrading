@@ -21,13 +21,18 @@ class Instruction(BaseModel):
     entry_price: Decimal | None = Field(default=None, gt=0, le=100000)
     fraction: Decimal | None = Field(default=None, gt=0, le=1, allow_inf_nan=False)
     exit_basis: Literal["original_position", "remaining_position"] | None = None
+    # For a guru whose sells refer to the whole position (ADR-0007): a buy joins the stock's open
+    # lot, and a sell sells from it, naming no buy price.
+    whole_position: bool = False
 
     @model_validator(mode="after")
     def validate_reference(self) -> Self:
-        if self.action != "buy" and self.entry_price is None:
+        if self.action != "buy" and self.entry_price is None and not self.whole_position:
             raise PydanticCustomError(
                 "exit_missing_lot_reference", "An exit requires an explicit source entry reference"
             )
+        if self.action != "buy" and self.entry_price is not None and self.whole_position:
+            raise ValueError("A whole-position exit names no buy price")
         if self.action == "buy" and self.entry_price is not None:
             raise PydanticCustomError(
                 "entry_has_lot_reference", "An entry cannot reference an existing lot"

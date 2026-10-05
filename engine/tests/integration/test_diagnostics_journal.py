@@ -120,8 +120,7 @@ async def test_a_workflow_journals_its_source_model_and_destination_records_reda
         DestinationTerms(
             connection=RouteConnection(
                 account_id=account_id,
-                mode="fixed",
-                amount_usd=Decimal("100.00"),
+                full_position_usd=Decimal("100.00"),
             ),
             environment="paper",
             configuration_revision=revision,
@@ -307,7 +306,7 @@ async def test_runtime_registered_credentials_never_reach_the_journal(
     )
     configuration = TradingConfiguration.model_validate(
         {
-            "version": 4,
+            "version": 5,
             "source": {"channel_ids": ["123"]},
             "provider": {"name": "deepseek", "model": "deepseek-flash"},
             "accounts": [{"id": "account-a", "environment": "paper"}],
@@ -318,9 +317,7 @@ async def test_runtime_registered_credentials_never_reach_the_journal(
                     "author_id": None,
                     "guru_id": profile.guru_id,
                     "profile_revision": profile.profile_revision,
-                    "connections": [
-                        {"account_id": "account-a", "mode": "fixed", "amount_usd": "100"}
-                    ],
+                    "connections": [{"account_id": "account-a", "full_position_usd": "600"}],
                 }
             ],
         }

@@ -28,18 +28,16 @@ async def test_when_the_cash_is_spent_the_next_buy_never_reaches_the_broker(tmp_
 
 
 async def test_a_buy_bigger_than_what_is_left_is_skipped_not_shrunk(tmp_path):
-    async with Rig(tmp_path, {"paper": Account(cash="700")}, {"NVDA": "125"}) as rig:
+    async with Rig(tmp_path, {"paper": Account(cash="700")}, {"NVDA": "125", "AMD": "100"}) as rig:
         rig.reader.expect("买入 NVDA 125", buy("NVDA", "125"))
-        rig.reader.expect("加仓 NVDA 130", buy("NVDA", "130", said="加仓"))
+        rig.reader.expect("买入 AMD 100", buy("AMD", "100"))
 
         await rig.post("买入 NVDA 125")
         assert rig.brokers["paper"].cash == Decimal("200.00")
 
-        rig.brokers["paper"].move("NVDA", "130")
-        again = await rig.post("加仓 NVDA 130")
+        again = await rig.post("买入 AMD 100")
         assert outcomes(again, "paper") == ("insufficient_cash",)
-        [lot] = await rig.lots("paper", "NVDA")
-        assert lot.remaining_qty == 4
+        assert rig.brokers["paper"].holdings.get("AMD", 0) == 0
 
 
 async def test_selling_frees_the_cash_and_the_next_buy_fills(tmp_path):

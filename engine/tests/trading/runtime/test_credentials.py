@@ -301,7 +301,7 @@ async def test_preview_paths_register_provider_keys_before_decoder_factory(tmp_p
         )
     )
     provider = ProviderConfiguration(name="anthropic", model="test-model")
-    destinations = [RouteConnection(account_id="first", mode="fixed", amount_usd="100")]
+    destinations = [RouteConnection(account_id="first", full_position_usd="100")]
     await runtime.profiles.evaluate_historical_profile(
         source_event.identity,
         profile,

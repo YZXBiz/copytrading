@@ -425,8 +425,7 @@ async def test_omitted_allocation_never_reaches_default_sized_destination_order(
             terms=DestinationTerms(
                 connection=RouteConnection(
                     account_id="paper-demo",
-                    mode="proportional",
-                    amount_usd="3000",
+                    full_position_usd="3000",
                     default_fraction="1",
                 ),
                 environment="paper",

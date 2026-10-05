@@ -43,9 +43,36 @@ def test_the_template_init_writes_is_a_valid_setup(tmp_path):
     assert (profile.guru_id, profile.display_name, profile.prefix) == ("zhao", "Zhao", "ALERT:")
     [route] = configuration.routes
     assert route.profile_revision == profile.profile_revision
-    assert route.connections[0].amount_usd == Decimal("100")
+    [connection] = route.connections
+    # The guru's full position is its account's maximum per stock; a call with no size buys it.
+    assert connection.full_position_usd == configuration.accounts[0].policy.max_symbol_usd
+    assert connection.default_fraction == 1
     assert configuration.accounts[0].policy.max_order_usd == Decimal("100")
     assert setup.agent_access == "read_pause"
+
+
+@pytest.mark.parametrize(
+    ("settings", "default_fraction", "batches", "sells_refer_to"),
+    [
+        pytest.param('default_share = "wait"', None, None, "buy_price", id="wait-without-size"),
+        pytest.param("default_share = 0.5", Decimal("0.5"), None, "buy_price", id="half"),
+        pytest.param("batches = 3", Decimal(1), 3, "buy_price", id="three-batches"),
+        pytest.param(
+            'sells_refer_to = "whole_position"', Decimal(1), None, "whole_position", id="whole"
+        ),
+    ],
+)
+def test_a_gurus_rules_reach_its_profile_and_connection(
+    tmp_path, settings, default_fraction, batches, sells_refer_to
+):
+    path = template_with(tmp_path, 'account = "paper-main"', f'account = "paper-main"\n{settings}')
+
+    configuration = load_setup(path).configuration
+
+    [profile] = configuration.profiles
+    [route] = configuration.routes
+    assert route.connections[0].default_fraction == default_fraction
+    assert (profile.batches, profile.sells_refer_to) == (batches, sells_refer_to)
 
 
 def test_decimal_settings_stay_exact(tmp_path):

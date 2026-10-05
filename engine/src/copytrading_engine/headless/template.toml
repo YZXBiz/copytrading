@@ -36,6 +36,8 @@ environment = "paper"   # "paper" trades pretend money at real prices; "live" is
   max_entries_per_day = 30     # copied buys per trading day; sells don't count
   max_signal_age_seconds = 120 # an older post is skipped instead of copied
   max_above_signal_pct = 0     # how far above the trader's price a buy may fill
+  max_price_move_pct = 5       # a buy waits for you when the market is further than this from
+  max_price_move_extended_pct = 10   # the trader's price; the second applies outside 9:30-16:00
   extended_hours = true        # also copy before 9:30 and after 16:00 New York time
   copy_exits = true            # sell when the trader sells
 
@@ -51,18 +53,18 @@ playbook = """
 Buys look like "ALERT: Bought NVDA 1/6 at 121.38": the fraction is the share of a full position.
 """
 # playbook_file = "zhao-playbook.md"
+account = "paper-main"   # the one account this guru copies into; its max_symbol_usd is the
+                         # guru's full position, so a 1/6 call buys a sixth of it
+# default_share = 1      # the share a call naming no size buys, or "wait" to ask you first
+# batches = 3            # how many batches make a full position, when the guru buys in batches
+# sells_refer_to = "buy_price"   # or "whole_position": every buy of a stock is one lot, and
+                                 # a sell that names no buy sells from it
 
   # Examples are read by the model during `check`; a different reading stops the start.
   [[gurus.examples]]
   message = "ALERT: Bought NVDA 1/6 at 121.38"
   action = "buy"           # buy, reduce, or close
   symbol = "NVDA"
-
-  [[gurus.copy_into]]
-  account = "paper-main"
-  sizing = "fixed"         # "fixed" dollars per entry, or "proportional" to a full position
-  amount_usd = 100
-  # default_fraction = 0.25   # proportional only: used when a post gives no fraction
 
 # Alerts for every order and problem: a Telegram chat, or a Discord channel (one, not both).
 # [telegram]

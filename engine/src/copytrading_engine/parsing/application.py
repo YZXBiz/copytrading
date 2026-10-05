@@ -131,7 +131,8 @@ def _act_on(
 
 
 def _placeable(call: r.Call, route: Route) -> tuple[Instruction, Evidence]:
-    """The engine's call for a stated one, with the post's words behind each field."""
+    """The engine's call for a stated one, under the guru's rules, with the post's words behind
+    each field."""
     match call.price:
         case r.Exact(value=price, words=price_words):
             pass
@@ -141,35 +142,49 @@ def _placeable(call: r.Call, route: Route) -> tuple[Instruction, Evidence]:
             raise _Wait("price_at_market")
         case _:
             raise _Wait("price_not_given")
+    whole_position = route.sells_refer_to == "whole_position"
+    entry_words = None
     if isinstance(call, r.Buy):
         match call.size:
             case r.Fraction(value=fraction, words=fraction_words):
                 pass
-            case r.Batch():
-                raise _Wait("batch_size_unknown")
+            case r.Batch(words=fraction_words):
+                # Each batch is an equal share of the full position.
+                if route.batches is None:
+                    raise _Wait("batch_size_unknown")
+                fraction = Decimal(1) / route.batches
             case _:
                 fraction, fraction_words = None, None
         instruction = Instruction(
-            action="buy", symbol=call.stock.ticker, price=price, fraction=fraction
+            action="buy",
+            symbol=call.stock.ticker,
+            price=price,
+            fraction=fraction,
+            whole_position=whole_position,
         )
-        entry_words = None
     else:
-        if not isinstance(call.sell_from, r.Lot):
+        # A guru whose sells refer to the whole position holds one lot per stock, so a named buy
+        # price only describes it.
+        if not whole_position and not isinstance(call.sell_from, r.Lot):
             raise _Wait("sell_names_no_buy")
         share = Decimal(1) if isinstance(call.share, r.All) else call.share.value
+        entry_price = None
+        if not whole_position and isinstance(call.sell_from, r.Lot):
+            entry_price, entry_words = call.sell_from.buy_price, call.sell_from.words
         instruction = Instruction(
             action="close" if share == 1 else "reduce",
             symbol=call.stock.ticker,
             price=price,
-            entry_price=call.sell_from.buy_price,
+            entry_price=entry_price,
             fraction=share,
             exit_basis=(
                 ("original_position" if call.counts_from == "original" else "remaining_position")
                 if call.counts_from
                 else route.exit_basis
             ),
+            whole_position=whole_position,
         )
-        fraction_words, entry_words = call.share.words, call.sell_from.words
+        fraction_words = call.share.words
     evidence = Evidence(
         **instruction.model_dump(),
         action_evidence=call.action_words,

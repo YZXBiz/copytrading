@@ -46,10 +46,12 @@ async def test_the_same_alert_nine_minutes_later_is_still_a_repost(tmp_path, clo
 
 
 async def test_the_same_alert_after_ten_minutes_is_a_new_buy(tmp_path, clock):
-    async with Rig(tmp_path, {"paper": Account(cash="2000")}, {"NVDA": "125"}) as rig:
-        rig.reader.expect("买入 NVDA 125", buy("NVDA", "125"))
-        await rig.post("买入 NVDA 125")
+    accounts = {"paper": Account(cash="2000", full_position_usd="1000")}
+    async with Rig(tmp_path, accounts, {"NVDA": "125"}) as rig:
+        text = "买入 NVDA 125 一半"
+        rig.reader.expect(text, buy("NVDA", "125", fraction="0.5", fraction_said="一半"))
+        await rig.post(text)
         clock.shift(dt.timedelta(minutes=11))
-        later = await rig.post("买入 NVDA 125")
+        later = await rig.post(text)
         assert outcomes(later, "paper") == ("order_linked",)
         assert len(rig.brokers["paper"].submitted("buy")) == 2

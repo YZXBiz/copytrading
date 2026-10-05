@@ -85,6 +85,9 @@ class AccountPolicy(BaseModel):
     overnight: StrictBool = False
     copy_exits: StrictBool = True
     max_above_signal_pct: Decimal = Field(default=Decimal("0"), ge=0, le=100)
+    # How far the market may be from the guru's price before a buy waits for you.
+    max_price_move_pct: Decimal = Field(default=Decimal("5"), gt=0, le=100)
+    max_price_move_extended_pct: Decimal = Field(default=Decimal("10"), gt=0, le=100)
 
     @model_validator(mode="after")
     def validate_sessions(self) -> Self:
@@ -145,7 +148,7 @@ class NotificationConfiguration(BaseModel):
 class TradingConfiguration(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
 
-    version: Literal[4] = CONFIGURATION_VERSION
+    version: Literal[5] = CONFIGURATION_VERSION
     source: SourceConfiguration
     provider: ProviderConfiguration
     accounts: tuple[AccountConfiguration, ...] = Field(min_length=1)
@@ -159,8 +162,8 @@ class TradingConfiguration(BaseModel):
 
     @model_validator(mode="after")
     def validate_references(self) -> Self:
-        account_ids = [account.id for account in self.accounts]
-        if len(set(account_ids)) != len(account_ids):
+        accounts = {account.id: account for account in self.accounts}
+        if len(accounts) != len(self.accounts):
             raise ValueError("account identifiers must be unique")
         profile_revisions = {profile.profile_revision: profile for profile in self.profiles}
         if len(profile_revisions) != len(self.profiles):
@@ -176,11 +179,22 @@ class TradingConfiguration(BaseModel):
             profile = profile_revisions.get(route.profile_revision)
             if profile is None or profile.guru_id != route.guru_id:
                 raise ValueError("route references an unknown guru profile revision")
-            destination_ids = [connection.account_id for connection in route.connections]
-            if len(set(destination_ids)) != len(destination_ids):
-                raise ValueError("route account identifiers must be unique")
-            if not set(destination_ids).issubset(account_ids):
+            # One guru copies into one account, and its full position is that account's
+            # maximum per stock (ADR-0007).
+            if len(route.connections) != 1:
+                raise ValueError("a guru copies into exactly one account")
+            [connection] = route.connections
+            account = accounts.get(connection.account_id)
+            if account is None:
                 raise ValueError("route references an unknown account")
+            if connection.full_position_usd != account.policy.max_symbol_usd:
+                raise ValueError("a guru's full position is its account's maximum per stock")
+        copied_into = [route.connections[0].account_id for route in self.routes]
+        if len(set(copied_into)) != len(copied_into):
+            raise ValueError("an account copies one guru")
+        gurus = [route.guru_id for route in self.routes]
+        if len(set(gurus)) != len(gurus):
+            raise ValueError("a guru copies into one account")
         for rules in by_channel.values():
             if len(rules) > 1 and any(route.author_id is None for route in rules):
                 raise ValueError("shared channels require disambiguating author identities")

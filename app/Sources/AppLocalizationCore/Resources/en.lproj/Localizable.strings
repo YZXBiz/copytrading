@@ -1444,6 +1444,7 @@
 "The post gave no price" = "The post gave no price";
 "The post named a batch, not a size" = "The post named a batch, not a size";
 "The sell didn't say which buy it comes from" = "The sell didn't say which buy it comes from";
+"The market moved too far from the guru's price" = "The market moved too far from the guru's price";
 "How far above the guru's price a buy may fill. Outside regular hours, also how far below it a sell may go. 0 means exactly the guru's price." = "How far above the guru's price a buy may fill. Outside regular hours, also how far below it a sell may go. 0 means exactly the guru's price.";
 "this account" = "this account";
 "A call that names no size waits for you to review it." = "A call that names no size waits for you to review it.";
