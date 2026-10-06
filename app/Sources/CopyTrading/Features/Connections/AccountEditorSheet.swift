@@ -186,6 +186,9 @@ struct AccountEditorSheet: View {
             Text(L10n.string(hint))
         }
         .compactSwitch()
+        // A two-line label otherwise leaves the switch announced by its value ("1, checkbox").
+        .accessibilityLabel(Text(L10n.string(title)))
+        .accessibilityHint(Text(L10n.string(hint)))
     }
 
     /// Done checks the keys with Alpaca first, and keeps the sheet open when Alpaca says no.

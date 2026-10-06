@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 from dataclasses import asdict
 from typing import Protocol
 
@@ -77,6 +78,8 @@ from copytrading_engine.host.self_test.model import SubmitSelfTest
 from copytrading_engine.host.self_test.service import SelfTestService
 from copytrading_engine.host.status import EngineQueries, EngineState
 from copytrading_engine.shared.owner_facing import OwnerFacingError
+
+log = logging.getLogger(__name__)
 
 MAX_REQUEST_LINE_BYTES = 1024 * 1024
 _READ_CHUNK_BYTES = 64 * 1024
@@ -189,6 +192,10 @@ class PipeServer:
         except InvalidCommand:
             code = "invalid_request"
         except ValueError as exc:
+            # Refusals are fixed sentences; recording them makes a failed request explainable.
+            log.warning(
+                "request_refused operation=%s reason=%s", type(request).__name__, str(exc)[:160]
+            )
             if isinstance(
                 request,
                 (

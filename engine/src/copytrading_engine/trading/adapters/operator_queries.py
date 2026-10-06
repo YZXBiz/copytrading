@@ -159,7 +159,8 @@ def source_page(
                 sequence=seq,
                 source_id=source_id,
                 author_id=source.author_id,
-                source_revision=source.schema_version,
+                # The capture's sequence: the revision a manual correction is checked against.
+                source_revision=seq,
                 source_at=dt.datetime.fromisoformat(source_at),
                 captured_at=dt.datetime.fromisoformat(captured_at),
                 text=source.text,

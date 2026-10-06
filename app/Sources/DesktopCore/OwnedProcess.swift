@@ -46,6 +46,11 @@ actor OwnedProcess: EngineTransport {
         Task.detached { [weak self] in
             do {
                 while let chunk = try readPipeChunk(errorHandle) {
+                    #if DEBUG
+                        // Debug builds pass the engine's own warnings through, so a journey's
+                        // dist/ui-test/app-stderr.log shows why a request failed.
+                        FileHandle.standardError.write(chunk)
+                    #endif
                     await self?.appendError(chunk)
                 }
             } catch {

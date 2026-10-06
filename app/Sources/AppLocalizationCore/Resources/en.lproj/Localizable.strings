@@ -231,7 +231,6 @@
 "Connections" = "Connections";
 "Continue Getting Started" = "Continue Getting Started";
 "Copied" = "Copied";
-"Copied exposure" = "Copied exposure";
 "Copies %@ into %@. Your keys stay in this Mac's Keychain." = "Copies %@ into %@. Your keys stay in this Mac's Keychain.";
 "Copies into" = "Copies into";
 "Copies into %@ and %@." = "Copies into %@ and %@.";
@@ -370,7 +369,6 @@
 "Expected ticker" = "Expected ticker";
 "Expired unfilled" = "Expired unfilled";
 "Expires" = "Expires";
-"Exposure" = "Exposure";
 "Failed" = "Failed";
 "Failed steps and captures that were too large or could not be kept appear here." = "Failed steps and captures that were too large or could not be kept appear here.";
 "Failed validation" = "Failed validation";
@@ -629,7 +627,7 @@
 "Original position" = "Original position";
 "original position" = "original position";
 "Original post: %@" = "Original post: %@";
-"Original source age at review: %@ seconds · %@" = "Original source age at review: %@ seconds · %@";
+"Posted %@ · %@ before this preview" = "Posted %@ · %@ before this preview";
 "Other (OpenAI-compatible)" = "Other (OpenAI-compatible)";
 "Overnight trading is not supported" = "Overnight trading is not supported";
 "Overnight trading was halted" = "Overnight trading was halted";
@@ -1601,3 +1599,6 @@
 "Restored from a backup; waits for you after a restart" = "Restored from a backup; waits for you after a restart";
 "Asked you to approve %@'s after-restart setting" = "Asked you to approve %@'s after-restart setting";
 "Couldn't ask you to approve %@'s after-restart setting" = "Couldn't ask you to approve %@'s after-restart setting";
+
+"In stocks" = "In stocks";
+"Start copying first. A call is copied by hand only while its account runs." = "Start copying first. A call is copied by hand only while its account runs.";

@@ -57,6 +57,8 @@ class ManualTradingApplication:
         self.stopping = stopping
 
     def record_correction(self, correction: ManualCorrectionRecord) -> ManualCorrectionRecord:
+        if self.local_account_id not in correction.selected_account_ids:
+            raise ValueError("Manual correction does not select this account")
         return self.engine.ledger.record_manual_correction(correction)
 
     def preview(self, request: ManualPreviewRequest, now: dt.datetime) -> ManualOrderPreview:

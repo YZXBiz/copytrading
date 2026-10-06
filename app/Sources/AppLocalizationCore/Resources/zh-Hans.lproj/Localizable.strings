@@ -231,7 +231,6 @@
 "Connections" = "连接";
 "Continue Getting Started" = "继续“快速开始”";
 "Copied" = "已复制";
-"Copied exposure" = "跟单敞口";
 "Copies %@ into %@. Your keys stay in this Mac's Keychain." = "将 %@ 跟单到 %@。你的密钥保存在这台 Mac 的钥匙串中。";
 "Copies into" = "跟单到";
 "Copies into %@ and %@." = "跟单到 %@ 和 %@。";
@@ -370,7 +369,6 @@
 "Expected ticker" = "预期股票代码";
 "Expired unfilled" = "已过期，未成交";
 "Expires" = "到期时间";
-"Exposure" = "敞口";
 "Failed" = "失败";
 "Failed steps and captures that were too large or could not be kept appear here." = "失败的步骤、过大或无法保留的捕获内容会显示在这里。";
 "Failed validation" = "验证失败";
@@ -629,7 +627,7 @@
 "Original position" = "原始仓位";
 "original position" = "原始仓位";
 "Original post: %@" = "原始帖子：%@";
-"Original source age at review: %@ seconds · %@" = "审核时原始信号已发布%@秒 · %@";
+"Posted %@ · %@ before this preview" = "发布于 %@ · 比本次预览早 %@";
 "Other (OpenAI-compatible)" = "其他（兼容 OpenAI）";
 "Overnight trading is not supported" = "不支持盘前盘后交易";
 "Overnight trading was halted" = "盘前盘后交易已暂停";
@@ -1601,3 +1599,6 @@
 "Restored from a backup; waits for you after a restart" = "已从备份恢复；重启后等你确认";
 "Asked you to approve %@'s after-restart setting" = "已请你批准 %@ 的重启后设置";
 "Couldn't ask you to approve %@'s after-restart setting" = "无法请你批准 %@ 的重启后设置";
+
+"In stocks" = "股票持仓";
+"Start copying first. A call is copied by hand only while its account runs." = "请先开始跟单。只有账户在运行时，才能手动复制一条喊单。";

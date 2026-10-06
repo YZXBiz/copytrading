@@ -964,3 +964,39 @@ def test_command_history_is_read_by_the_apps_account_name():
     snapshot = LedgerSnapshot(account_id="8f3c1a52-alpaca-paper-account", environment="paper")
     page = manual_command_page_from_snapshot(snapshot, account_id="primary", source_id="post-1")
     assert (page.account_id, page.items, page.next_before_command_id) == ("primary", (), None)
+
+
+def test_an_account_named_apart_from_its_broker_number_copies_a_call_by_hand(tmp_path):
+    """The ledger records Alpaca's account number; the owner picks accounts by the app's name."""
+    broker = QuotedBroker()
+    broker.account_data = {**broker.account_data, "id": "8f3c1a52-alpaca-paper-account"}
+    engine = CopyEngine(MemoryRepository(), broker, CopyConfig(sources=("discord:demo",)))
+    engine.bind(NOW)
+    signal = reviewed_signal()
+    engine.receive(destination_signal(signal, account_id="primary"), NOW)
+    instruction = Instruction(
+        action="buy", symbol="ABC", price=Decimal("25"), fraction=Decimal("0.25")
+    )
+    correction = correction_for(signal, instruction).model_copy(
+        update={"selected_account_ids": ("primary",)}
+    )
+    app = ManualTradingApplication(
+        engine,
+        local_account_id="primary",
+        broker_account_id="8f3c1a52-alpaca-paper-account",
+        environment="paper",
+        halted=lambda: False,
+        entry_block_reason=lambda: None,
+        recovery_ready=lambda: True,
+        stopping=lambda: False,
+    )
+
+    app.record_correction(correction)
+    request = preview_request(correction).model_copy(update={"account_id": "primary"})
+    preview = app.preview(request, NOW)
+    assert preview.plan is not None, preview.reasons
+    confirm = confirmation_request().model_copy(update={"account_id": "primary"})
+    result = app.confirm(confirm, NOW + dt.timedelta(seconds=1))
+
+    assert result.status != "rejected", result.reason
+    assert broker.calls == 1

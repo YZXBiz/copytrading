@@ -32,6 +32,7 @@ from copytrading_engine.execution.domain.ownership import (
     OwnershipResolution,
     OwnershipResolutionRequest,
 )
+from copytrading_engine.shared.owner_facing import OwnerFacingError
 from copytrading_engine.trading.application.account_access import (
     AccountAccess,
     OwnerUnavailable,
@@ -135,7 +136,12 @@ class ManualInterventionService:
                 *(record_one(account_id) for account_id in request.selected_account_ids)
             )
             if not any(account.status == "recorded" for account in accounts):
-                raise RuntimeError("Manual correction could not be durably recorded")
+                # An expected refusal, reported to the owner; it must not stop the engine.
+                if all(account.status == "unavailable" for account in accounts):
+                    raise OwnerFacingError(
+                        "Start copying first. A call is copied by hand only while its account runs."
+                    )
+                raise ValueError("Manual correction could not be recorded in any selected account")
             return ManualCorrectionOutcome(correction=correction, accounts=tuple(accounts))
 
     async def preview_manual_order(self, request: ManualPreviewRequest) -> ManualOrderPreview:

@@ -391,7 +391,6 @@ class TradingLedger:
         message = self._snapshot.messages.get(correction.source_id)
         if (
             correction.correction_id in self._snapshot.manual_corrections
-            or self.account_id not in correction.selected_account_ids
             or message is None
             or not message.waits_for_owner
             or message.timestamp != correction.source_at
@@ -599,13 +598,14 @@ class TradingLedger:
         return sale, order
 
     def _validate_manual_command(self, command: ManualCommandRecord) -> None:
+        # Requests name the account the app's way; ManualTradingApplication checks that name,
+        # and this ledger only knows the broker's number for it.
         preview = self._snapshot.manual_previews.get(command.request.preview_id)
         correction = self._snapshot.manual_corrections.get(command.correction_id)
         if (
             preview is None
             or correction is None
-            or command.request.account_id != self.account_id
-            or preview.request.account_id != self.account_id
+            or command.request.account_id != preview.request.account_id
             or preview.request.correction_id != command.correction_id
             or preview.request.instruction_index != command.instruction_index
             or command.source_id != correction.source_id

@@ -1283,12 +1283,28 @@ def j33_backup_and_restore(app: AppDriver) -> None:
         shutil.rmtree(folder, ignore_errors=True)
 
 
-TEST_SYMBOLS = ("SOFI", "NIO", "PLUG", "LCID", "AAL", "SNAP")
-
-
-def _market_open() -> bool:
-    now = dt.datetime.now(ZoneInfo("America/New_York"))
-    return now.weekday() < 5 and dt.time(9, 35) <= now.time() <= dt.time(15, 50)
+TEST_SYMBOLS = (
+    "SOFI",
+    "NIO",
+    "PLUG",
+    "LCID",
+    "AAL",
+    "SNAP",
+    "RIG",
+    "GRAB",
+    "HOOD",
+    "RIVN",
+    "PFE",
+    "KGC",
+    "VALE",
+    "NOK",
+    "MARA",
+    "RIOT",
+    "CLSK",
+    "BTG",
+    "AMC",
+    "T",
+)
 
 
 def _latest_price(setup: dict[str, str], symbol: str) -> Decimal:
@@ -1318,19 +1334,8 @@ def _post_test_call(setup: dict[str, str], text: str) -> None:
         raise JourneyFailure(f"the test post failed: {posted.stderr.strip()[-300:]}")
 
 
-def j35_copy_and_sell(app: AppDriver) -> None:
-    """A real call in the test channel is held for approval, approved into Alpaca paper, and the
-    lot it bought is sold from Accounts.
-
-    Needs a saved paper setup (run after J31, or with --reuse-state) and an open market. It posts
-    one short call in the test channel and trades one share on Alpaca paper.
-    """
-    if app.state_root is None:
-        raise JourneySkipped("needs the run's state root")
-    setup = _paper_setup()
-    if not _market_open():
-        raise JourneySkipped("the market is closed")
-
+def _copying_with_entries(app: AppDriver) -> None:
+    """Copying on, automatic recovery, and entries on, asking the owner where the app asks."""
     # Copying is paused after a restore; start it again from the toolbar.
     app.open_screen("today")
     app.click("toolbar.copying")
@@ -1354,6 +1359,110 @@ def j35_copy_and_sell(app: AppDriver) -> None:
         if done["state"] != "succeeded":
             raise JourneyFailure(f"resuming entries ended {done['state']}")
 
+
+def _trading_hours() -> bool:
+    """Regular hours, a little inside the bell. Copying, previews, and sales check the quote's
+    age, and the free IEX feed goes quiet outside regular hours, so quotes read as stale."""
+    now = dt.datetime.now(ZoneInfo("America/New_York"))
+    return now.weekday() < 5 and dt.time(9, 35) <= now.time() <= dt.time(15, 50)
+
+
+def _set_ask_before_orders(app: AppDriver, on: bool) -> None:
+    """Flip "Ask me before sending orders" in the account sheet and apply it with Start Copying.
+
+    A saved setup changes only while copying is paused ("Pause copying to save these changes")."""
+    toolbar = app.see().find("toolbar.copying")
+    if toolbar is not None and "Pause" in toolbar.label:
+        app.click("toolbar.copying")
+        app.wait_for("Start Copying", timeout=60)
+    app.open_screen("connections")
+    app.click("connections.account.primary")
+    switch = app.see().find("Ask me before sending orders", role="checkbox")
+    if switch is None:
+        raise JourneyFailure("the account sheet has no 'Ask me before sending orders' switch")
+    if (switch.value == "1") != on:
+        app.click("Ask me before sending orders", role="checkbox")
+    app.click("Done")
+    start = app.see().find("setup.startCopying")
+    if start is not None and start.enabled:
+        app.click("setup.startCopying")
+    else:
+        toolbar = app.see().find("toolbar.copying")
+        if toolbar is not None and "Start" in toolbar.label:
+            app.click("toolbar.copying")
+    _wait_for_account(app, "primary", timeout=180)
+
+
+def _post_and_wait_for_hold(app: AppDriver, setup: dict[str, str], symbol: str) -> None:
+    price = (_latest_price(setup, symbol) * Decimal("1.004")).quantize(Decimal("0.01"))
+    _post_test_call(setup, f"Bought {symbol} at {price}")
+    app.open_screen("activity")
+    app.click("Waiting for You")
+    app.wait_for("activity.copy", timeout=240, name=f"held-{symbol.lower()}")
+
+
+def j36_approve_and_skip(app: AppDriver) -> None:
+    """With "Ask me before sending orders" on, a real call waits in Activity: Skip drops it, and
+    Approve… copies it into Alpaca paper through the review sheet. The lot is then sold.
+
+    Needs a saved paper setup (after J31, or --reuse-state) and Alpaca's trading hours.
+    """
+    if app.state_root is None:
+        raise JourneySkipped("needs the run's state root")
+    setup = _paper_setup()
+    if not _trading_hours():
+        raise JourneySkipped("the market is not in regular hours")
+    _copying_with_entries(app)
+    _set_ask_before_orders(app, True)
+    unused = _unposted_symbols(app)
+    if len(unused) < 2:
+        raise JourneySkipped("no unused test symbols left today")
+    try:
+        # Skip: the call leaves the waiting list and nothing is bought.
+        _post_and_wait_for_hold(app, setup, unused[0])
+        app.click("activity.skip")
+        app.wait_gone("activity.copy", timeout=30)
+        if _lots(app, unused[0]):
+            raise JourneyFailure("a skipped call still bought shares")
+
+        # Approve: review the held call, preview it, and confirm one order.
+        symbol = unused[1]
+        _post_and_wait_for_hold(app, setup, symbol)
+        app.click("activity.copy")
+        app.wait_for("Save Correction", timeout=30, name="approval-sheet")
+        app.click("Save Correction")
+        app.wait_for("Preview Orders", timeout=60, name="approval-saved")
+        app.click("Preview Orders")
+        app.wait_for("Review 1 Ready Order…", timeout=60, name="approval-preview")
+        app.click("Review 1 Ready Order…")
+        app.click("Confirm 1 order(s)", outcome_checked=True)
+        deadline = time.monotonic() + 180
+        while not (bought := [lot for lot in _lots(app, symbol) if _open(lot)]):
+            if time.monotonic() > deadline:
+                app.see("timeout-approved-order")
+                raise JourneyFailure(f"the approved call did not buy {symbol} on Alpaca paper")
+            time.sleep(5)
+        app.click("Close")
+        _sell_lot(app, symbol, bought[0])
+    finally:
+        _set_ask_before_orders(app, False)
+
+
+def j35_copy_and_sell(app: AppDriver) -> None:
+    """A real call in the test channel is held for approval, approved into Alpaca paper, and the
+    lot it bought is sold from Accounts.
+
+    Needs a saved paper setup (run after J31, or with --reuse-state) and an open market. It posts
+    one short call in the test channel and trades one share on Alpaca paper.
+    """
+    if app.state_root is None:
+        raise JourneySkipped("needs the run's state root")
+    setup = _paper_setup()
+    if not _trading_hours():
+        raise JourneySkipped("the market is not in regular hours")
+
+    _copying_with_entries(app)
+
     # A lot an earlier run bought and never sold is sold first, so a rerun does not buy again.
     held = [(s, lot) for s in TEST_SYMBOLS for lot in _lots(app, s) if _open(lot)]
     if held:
@@ -1361,7 +1470,10 @@ def j35_copy_and_sell(app: AppDriver) -> None:
     else:
         # A call identical to an earlier one is skipped as a repeat, so each run picks the
         # first cheap symbol the account has not bought today.
-        symbol = next(s for s in TEST_SYMBOLS if not _lots(app, s))
+        unposted = _unposted_symbols(app)
+        if not unposted:
+            raise JourneySkipped("every test symbol was already posted today")
+        symbol = unposted[0]
         # Quote a little above the last trade so the copied limit order fills on paper, as a
         # real guru's buy usually does; a limit exactly at the last price can time out.
         price = (_latest_price(setup, symbol) * Decimal("1.004")).quantize(Decimal("0.01"))
@@ -1375,7 +1487,12 @@ def j35_copy_and_sell(app: AppDriver) -> None:
             time.sleep(5)
         lot = bought[0]
 
-    # Sell that lot from Accounts: review first, then sell.
+    _sell_lot(app, symbol, lot)
+    _agent_result(app, 0, "accounts", "pause", "primary")
+
+
+def _sell_lot(app: AppDriver, symbol: str, lot: dict[str, Any]) -> None:
+    """Sell one lot from Accounts: review first, then sell, and wait for the fill."""
     app.open_screen("accounts")
     app.click(f"accounts.position.{symbol}")
     app.click(f"accounts.lot.sell.{lot['lot_id']}")
@@ -1389,7 +1506,15 @@ def j35_copy_and_sell(app: AppDriver) -> None:
             raise JourneyFailure("the lot sale did not fill on Alpaca paper within two minutes")
         time.sleep(5)
     app.click("Done")
-    _agent_result(app, 0, "accounts", "pause", "primary")
+
+
+def _unposted_symbols(app: AppDriver) -> list[str]:
+    """Test symbols with no call in the channel yet: a second identical call is a repeat."""
+    posts = " ".join(
+        str(item.get("untrusted_source_text") or "")
+        for item in _agent_result(app, 0, "activity", "--limit", "100")["items"]
+    )
+    return [symbol for symbol in TEST_SYMBOLS if f"Bought {symbol} " not in posts]
 
 
 def _open(lot: dict[str, Any]) -> bool:
@@ -1692,6 +1817,7 @@ JOURNEYS: list[tuple[str, Callable[[AppDriver], None]]] = [
     ("J31 agent approval", j31_agent_approval),
     ("J33 backup and restore", j33_backup_and_restore),
     ("J35 copy and sell", j35_copy_and_sell),
+    ("J36 approve and skip", j36_approve_and_skip),
 ]
 
 

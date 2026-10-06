@@ -30,7 +30,7 @@ struct AccountLimits: View {
             }
             if let totalCap = Decimal(engine: configuration.policy.maxTotalUSD) {
                 LimitMeter(
-                    title: "Exposure",
+                    title: "In stocks",
                     used: Decimal(engine: overview?.totalExposureUSD) ?? 0,
                     limit: totalCap
                 )

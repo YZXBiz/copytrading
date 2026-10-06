@@ -2139,6 +2139,14 @@ final class AppModel {
         case .stopped:
             runtimeState = .stopped
         case .childExited(let child, _, let restarting):
+            #if DEBUG
+                if child == .engine, let supervisor {
+                    Task {
+                        let tail = await supervisor.stderrTail(for: .engine)
+                        FileHandle.standardError.write(Data("engine exited; stderr:\n\(tail)\n".utf8))
+                    }
+                }
+            #endif
             if child == .engine {
                 engineGeneration.advance()
                 statusTask?.cancel()

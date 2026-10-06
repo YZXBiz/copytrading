@@ -22,6 +22,7 @@ struct GuruRulesSection: View {
                 Text(L10n.string("“First batch”, “second batch”: each batch buys an equal part of the full position."))
             }
             .compactSwitch()
+            .accessibilityLabel(Text(L10n.string("Buys in batches")))
             if let batches = route.batches {
                 Stepper(value: batchCount, in: 2...20) {
                     Text(L10n.string("%@ batches make a full position", "\(batches)"))
