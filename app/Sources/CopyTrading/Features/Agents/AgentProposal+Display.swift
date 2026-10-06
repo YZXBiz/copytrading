@@ -9,7 +9,8 @@ extension AgentProposal {
         case .resumeAccount(let accountID):
             return L10n.string("Resume new entries in %@", accountID)
         case .setRecovery(let accountID, let preference):
-            return L10n.string("Set recovery in %@ to %@", accountID, L10n.string(Humanize.code(preference).lowercased()))
+            let title = RecoveryPreference(rawValue: preference)?.title ?? Humanize.code(preference)
+            return L10n.string("In %@, after a restart: %@", accountID, title)
         case .manualOrder(let order):
             let orderType =
                 order.limitPrice.map { L10n.string("limit %@", Humanize.usd($0)) }

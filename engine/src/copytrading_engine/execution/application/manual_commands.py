@@ -167,7 +167,12 @@ class ManualTradingApplication:
             return "configuration_changed"
         if saved.facts_sha256 != fresh.facts_sha256:
             return "account_facts_changed"
-        if saved.plan != fresh.plan or fresh.reasons:
+        if (
+            fresh.reasons
+            or saved.plan is None
+            or fresh.plan is None
+            or not saved.plan.same_order_as(fresh.plan)
+        ):
             return fresh.reasons[0] if fresh.reasons else "plan_changed"
         return None
 
@@ -332,8 +337,8 @@ class ManualTradingApplication:
         if reasons:
             plan = None
         facts = {
-            "account": account.model_dump(mode="json"),
-            "positions": [item.model_dump(mode="json") for item in self.engine.broker.positions()],
+            "account": account.standing(),
+            "positions": [item.holding() for item in self.engine.broker.positions()],
             "open_orders": [
                 item.model_dump(mode="json") for item in self.engine.broker.open_orders()
             ],
@@ -362,7 +367,6 @@ class ManualTradingApplication:
             }
             if quote is not None
             else None,
-            "plan": plan.model_dump(mode="json") if plan is not None else None,
             "reasons": sorted(set(reasons)),
         }
         return ManualOrderPreview(

@@ -128,7 +128,12 @@ class LotSaleApplication:
             return "account_changed"
         if saved.facts_sha256 != fresh.facts_sha256:
             return "account_facts_changed"
-        if saved.plan != fresh.plan or fresh.reasons:
+        if (
+            fresh.reasons
+            or saved.plan is None
+            or fresh.plan is None
+            or not saved.plan.same_order_as(fresh.plan)
+        ):
             return fresh.reasons[0] if fresh.reasons else "plan_changed"
         return None
 
@@ -247,8 +252,8 @@ class LotSaleApplication:
         plan = decision.plan if decision is not None and not reasons else None
         session = decision.plan.session if decision is not None and decision.plan else None
         facts = {
-            "account": account.model_dump(mode="json"),
-            "positions": [item.model_dump(mode="json") for item in broker.positions()],
+            "account": account.standing(),
+            "positions": [item.holding() for item in broker.positions()],
             "open_orders": [item.model_dump(mode="json") for item in broker.open_orders()],
             "lot": lot.model_dump(mode="json"),
             "pending": [item.model_dump(mode="json") for item in self.engine.pending()],
@@ -264,7 +269,6 @@ class LotSaleApplication:
                 key for key, item in snapshot.late_order_incidents.items() if item.unresolved
             ),
             "session": session.value if session is not None else None,
-            "plan": plan.model_dump(mode="json") if plan is not None else None,
             "reasons": sorted(set(reasons)),
         }
         return LotSalePreview(

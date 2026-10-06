@@ -153,7 +153,6 @@
 "Author ID" = "作者 ID";
 "authors" = "位作者";
 "Automatic" = "自动";
-"Automatic recovery resumes entries after a restart once the account checks out; manual waits for you." = "自动恢复会在重启后、账户检查通过时恢复开仓；手动恢复需等待你操作。";
 "Back" = "返回";
 "Backup & Restore" = "备份与恢复";
 "Backup identity" = "备份标识";
@@ -504,7 +503,6 @@
 "Loss today" = "今日亏损";
 "Make sure the account switcher at the top left shows your **Paper** account." = "确认左上角的账户切换器显示你的 **模拟账户**。";
 "Manual" = "手动";
-"Manual recovery restored" = "已切换回手动恢复";
 "Many services and local servers, such as LM Studio, vLLM, and LiteLLM, answer the same way OpenAI does. CopyTrading can read posts through any of them." = "许多服务和本地服务器（例如 LM Studio、vLLM、LiteLLM）都使用与 OpenAI 相同的接口响应。CopyTrading 可以通过其中任意一种服务读取帖子。";
 "Matches" = "一致";
 "Maximum above signal price (%)" = "高于信号价格的最高幅度（%）";
@@ -723,10 +721,6 @@
 "Recording" = "正在记录";
 "records" = "条记录";
 "Records dropped" = "已丢弃的记录数";
-"Recovery" = "恢复";
-"Recovery set to automatic" = "已将恢复方式设为自动";
-"Recovery set to manual" = "已将恢复方式设为手动";
-"Recovery: %@" = "恢复方式：%@";
 "Redacted payload" = "已脱敏载荷";
 "Reduce owned position" = "减少自有持仓";
 "Refresh" = "刷新";
@@ -821,7 +815,6 @@
 "Sent %@ %@ %@, limit %@" = "已提交 %@ %@股 %@，限价 %@";
 "Sent an order to the broker" = "已向券商发送订单";
 "Sent, but the result is not confirmed yet: %@. Check Accounts." = "已发送，但尚未确认结果：%@。请检查“账户”。";
-"Set recovery in %@ to %@" = "将账户 %@ 的恢复方式设为 %@";
 "Settings" = "设置";
 "Settings (⌘,)" = "设置（⌘,）";
 "Settings…" = "设置…";
@@ -903,7 +896,6 @@
 "That is more than this lot holds." = "数量超过了此批次的持有量。";
 "The account changed since you reviewed the sale" = "审核卖出后，账户状态已变化";
 "The account could not be reached" = "无法连接此账户";
-"The account is still recovering" = "此账户仍在恢复中";
 "The AI model that turns each post into an exact order." = "把每条帖子转换成明确订单的 AI 模型。";
 "The balance appears once copying is on and the broker has been read." = "开始跟单并读取券商账户后，余额才会显示。";
 "The biggest fall from a high to a later low in this window." = "此时间段内从高点到之后低点的最大跌幅。";
@@ -1100,7 +1092,6 @@
 "Paused copying" = "已暂停跟单";
 "Paused new entries for %@" = "已暂停 %@ 的新开仓";
 "Asked you to approve resuming %@" = "已请你批准恢复 %@ 的开仓";
-"Asked you to approve %@'s recovery change" = "已请你批准更改 %@ 的恢复方式";
 "Added up %@'s calls" = "已统计 %@ 的交易信号";
 "Looked at that post" = "已查看那条帖子";
 "Couldn't check whether copying is running" = "未能查看跟单是否在运行";
@@ -1111,7 +1102,6 @@
 "Couldn't pause copying" = "未能暂停跟单";
 "Couldn't pause new entries for %@" = "未能暂停 %@ 的新开仓";
 "Couldn't ask you to approve resuming %@" = "未能发起恢复 %@ 开仓的批准请求";
-"Couldn't ask you to approve %@'s recovery change" = "未能发起更改 %@ 恢复方式的批准请求";
 "Couldn't find that post" = "没有找到那条帖子";
 "Outcome unknown" = "结果未知";
 "Discarded" = "已作废";
@@ -1600,3 +1590,14 @@
 "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Pause Copying** stops everything at once." = "**它只跟单，不做判断**。不提供建议，也不设止损。每日亏损上限只停止买入，不停止卖出。**暂停跟单**会一次停止所有操作。";
 "Max per stock" = "单只股票上限";
 "Needs a name" = "缺少名称";
+
+"After a restart" = "重启后";
+"After a restart: %@" = "重启后：%@";
+"Wait for me" = "等我确认";
+"Carry on by itself" = "自动继续";
+"After CopyTrading restarts, from a crash, a Mac restart, waking from sleep, or a restore, this account either waits for you before buying again or carries on by itself once Alpaca matches its records." = "CopyTrading 重启后（崩溃、Mac 重启、从睡眠唤醒或恢复备份），此账户要么等你确认后再买入，要么在核对 Alpaca 记录一致后自动继续。";
+"Still checking the account after a restart" = "重启后仍在核对账户";
+"In %@, after a restart: %@" = "%@ 重启后：%@";
+"Restored from a backup; waits for you after a restart" = "已从备份恢复；重启后等你确认";
+"Asked you to approve %@'s after-restart setting" = "已请你批准 %@ 的重启后设置";
+"Couldn't ask you to approve %@'s after-restart setting" = "无法请你批准 %@ 的重启后设置";

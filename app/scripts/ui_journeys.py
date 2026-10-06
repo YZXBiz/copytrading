@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import datetime as dt
 import json
 import os
 import select
@@ -18,12 +19,15 @@ import sys
 import tempfile
 import threading
 import time
+import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from decimal import Decimal
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from types import TracebackType
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from local_signing import local_identity
 from swift_paths import swift_bin_path
@@ -434,6 +438,49 @@ end tell
             labels = sorted(e.label for e in fields)
             raise JourneyFailure(f"no text field labeled {into!r}; fields on screen: {labels}")
         return element, snapshot
+
+    def press_action(self, text: str) -> None:
+        """Press a control through Accessibility alone, which works while it is scrolled out of
+        view; a pointer click needs it on screen."""
+        snapshot = self.see()
+        element = snapshot.find(text)
+        if element is None:
+            raise JourneyFailure(f"no element matching {text!r}")
+        peekaboo(
+            "click",
+            "--on",
+            element.id,
+            "--snapshot",
+            snapshot.id,
+            "--app",
+            APP_NAME,
+            "--input-strategy",
+            "actionOnly",
+        )
+        time.sleep(0.6)
+
+    def scroll_down(self, within: str, *, ticks: int = 10) -> None:
+        """Scroll the area that holds a visible element, to reach what sits below it."""
+        peekaboo("app", "switch", "--to", APP_NAME, "--foreground", "--verify")
+        time.sleep(0.5)
+        snapshot = self.see()
+        element = snapshot.find(within)
+        if element is None:
+            raise JourneyFailure(f"no element matching {within!r} to scroll from")
+        peekaboo(
+            "scroll",
+            "--direction",
+            "down",
+            "--amount",
+            str(ticks),
+            "--on",
+            element.id,
+            "--snapshot",
+            snapshot.id,
+            # SwiftUI scroll views have no Accessibility scroll action; use real wheel events.
+            "--foreground",
+        )
+        time.sleep(0.6)
 
     def press(self, keys: str) -> None:
         """Send a key chord to the focused element; Peekaboo refuses `--app` for raw chords."""
@@ -1100,7 +1147,7 @@ def j31_agent_approval(app: AppDriver) -> None:
 
     # Approving: the change waits for the owner, then runs exactly once.
     asked = _agent_result(app, 10, "accounts", "recovery", "primary", "automatic")
-    sheet = app.wait_for("Set recovery in primary", timeout=30, name="approval-sheet")
+    sheet = app.wait_for("In primary, after a restart", timeout=30, name="approval-sheet")
     app.expect(sheet, "An agent is asking for approval", "Reject", "Approve…")
     if _wait_for_account(app, "primary", timeout=5)["recovery_preference"] != "manual":
         raise JourneyFailure("the recovery change ran before the owner approved it")
@@ -1234,6 +1281,133 @@ def j33_backup_and_restore(app: AppDriver) -> None:
         raise
     finally:
         shutil.rmtree(folder, ignore_errors=True)
+
+
+TEST_SYMBOLS = ("SOFI", "NIO", "PLUG", "LCID", "AAL", "SNAP")
+
+
+def _market_open() -> bool:
+    now = dt.datetime.now(ZoneInfo("America/New_York"))
+    return now.weekday() < 5 and dt.time(9, 35) <= now.time() <= dt.time(15, 50)
+
+
+def _latest_price(setup: dict[str, str], symbol: str) -> Decimal:
+    """The last trade on Alpaca's data feed, read with the paper keys."""
+    request = urllib.request.Request(
+        f"https://data.alpaca.markets/v2/stocks/{symbol}/trades/latest",
+        headers={
+            "APCA-API-KEY-ID": setup["alpaca_key"],
+            "APCA-API-SECRET-KEY": setup["alpaca_secret"],
+        },
+    )
+    with urllib.request.urlopen(request, timeout=20) as response:
+        return Decimal(str(json.load(response)["trade"]["p"]))
+
+
+def _post_test_call(setup: dict[str, str], text: str) -> None:
+    """Post one call into the test channel as the test account, the way a guru would."""
+    posted = subprocess.run(
+        [sys.executable, str(ROOT / "app/scripts/discord_test_post.py"), setup["channel"], text],
+        env={**os.environ, "COPYTRADING_TEST_DISCORD_TOKEN": setup["discord_token"]},
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    if posted.returncode != 0:
+        raise JourneyFailure(f"the test post failed: {posted.stderr.strip()[-300:]}")
+
+
+def j35_copy_and_sell(app: AppDriver) -> None:
+    """A real call in the test channel is held for approval, approved into Alpaca paper, and the
+    lot it bought is sold from Accounts.
+
+    Needs a saved paper setup (run after J31, or with --reuse-state) and an open market. It posts
+    one short call in the test channel and trades one share on Alpaca paper.
+    """
+    if app.state_root is None:
+        raise JourneySkipped("needs the run's state root")
+    setup = _paper_setup()
+    if not _market_open():
+        raise JourneySkipped("the market is closed")
+
+    # Copying is paused after a restore; start it again from the toolbar.
+    app.open_screen("today")
+    app.click("toolbar.copying")
+    _wait_for_account(app, "primary", timeout=180)
+
+    # A restored account waits for the owner to choose automatic recovery again.
+    if _wait_for_account(app, "primary", timeout=10)["recovery_preference"] != "automatic":
+        asked = _agent_result(app, 10, "accounts", "recovery", "primary", "automatic")
+        app.wait_for("In primary, after a restart", timeout=30, name="recovery-sheet")
+        app.click("Approve…", outcome_checked=True)
+        done = _agent_result(app, 0, "proposals", "wait", asked["proposal_id"], "--timeout", "60")
+        if done["state"] != "succeeded":
+            raise JourneyFailure(f"setting automatic recovery ended {done['state']}")
+
+    # Entries start off after setup and after a restore; turning them on asks the owner.
+    if _wait_for_account(app, "primary", timeout=10)["entry_permission"] != "enabled":
+        resume = _agent_result(app, 10, "accounts", "resume", "primary")
+        app.wait_for("Resume new entries in primary", timeout=30, name="resume-sheet")
+        app.click("Approve…", outcome_checked=True)
+        done = _agent_result(app, 0, "proposals", "wait", resume["proposal_id"], "--timeout", "60")
+        if done["state"] != "succeeded":
+            raise JourneyFailure(f"resuming entries ended {done['state']}")
+
+    # A lot an earlier run bought and never sold is sold first, so a rerun does not buy again.
+    held = [(s, lot) for s in TEST_SYMBOLS for lot in _lots(app, s) if _open(lot)]
+    if held:
+        symbol, lot = held[0]
+    else:
+        # A call identical to an earlier one is skipped as a repeat, so each run picks the
+        # first cheap symbol the account has not bought today.
+        symbol = next(s for s in TEST_SYMBOLS if not _lots(app, s))
+        # Quote a little above the last trade so the copied limit order fills on paper, as a
+        # real guru's buy usually does; a limit exactly at the last price can time out.
+        price = (_latest_price(setup, symbol) * Decimal("1.004")).quantize(Decimal("0.01"))
+        _post_test_call(setup, f"Bought {symbol} at {price}")
+        deadline = time.monotonic() + 240
+        while not (bought := [lot for lot in _lots(app, symbol) if _open(lot)]):
+            if time.monotonic() > deadline:
+                app.open_screen("activity")
+                app.see("timeout-copied-call")
+                raise JourneyFailure(f"the posted call did not buy {symbol} on Alpaca paper")
+            time.sleep(5)
+        lot = bought[0]
+
+    # Sell that lot from Accounts: review first, then sell.
+    app.open_screen("accounts")
+    app.click(f"accounts.position.{symbol}")
+    app.click(f"accounts.lot.sell.{lot['lot_id']}")
+    app.click("lotSale.review.button")
+    app.wait_for("lotSale.sell", timeout=60, name="lot-sale-review")
+    app.click("lotSale.sell", outcome_checked=True)
+    app.wait_for("lotSale.outcome", timeout=60, name="lot-sale-sent")
+    deadline = time.monotonic() + 120
+    while any(left["lot_id"] == lot["lot_id"] and _open(left) for left in _lots(app, symbol)):
+        if time.monotonic() > deadline:
+            raise JourneyFailure("the lot sale did not fill on Alpaca paper within two minutes")
+        time.sleep(5)
+    app.click("Done")
+    _agent_result(app, 0, "accounts", "pause", "primary")
+
+
+def _open(lot: dict[str, Any]) -> bool:
+    return Decimal(str(lot["remaining_qty"])) > 0
+
+
+def _lots(app: AppDriver, symbol: str) -> list[dict[str, Any]]:
+    """The copier's lots of one symbol in the primary account, as the agent sees them."""
+    accounts = _agent_result(app, 0, "accounts")["items"]
+    primary = next((a for a in accounts if a["account_id"] == "primary"), None)
+    if primary is None:
+        return []
+    return [
+        lot
+        for position in primary["positions"]
+        if position["symbol"] == symbol
+        for lot in position["lots"]
+    ]
 
 
 def _check_mcp_reads_the_running_setup(app: AppDriver) -> None:
@@ -1517,6 +1691,7 @@ JOURNEYS: list[tuple[str, Callable[[AppDriver], None]]] = [
     # Last: starting copying saves a setup that the journeys above expect to be empty.
     ("J31 agent approval", j31_agent_approval),
     ("J33 backup and restore", j33_backup_and_restore),
+    ("J35 copy and sell", j35_copy_and_sell),
 ]
 
 

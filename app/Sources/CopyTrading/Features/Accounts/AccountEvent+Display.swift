@@ -9,9 +9,8 @@ extension AccountEvent {
             case "pause": L10n.string("Entries paused")
             case "resume": L10n.string("Entries resumed")
             case "set_recovery":
-                status == "automatic"
-                    ? L10n.string("Recovery set to automatic") : L10n.string("Recovery set to manual")
-            case "restore_manual": L10n.string("Manual recovery restored")
+                L10n.string("After a restart: %@", (RecoveryPreference(rawValue: status ?? "") ?? .manual).title)
+            case "restore_manual": L10n.string("Restored from a backup; waits for you after a restart")
             default: L10n.string("Account settings changed")
             }
         case "account_bound": L10n.string("Connected to the broker account")
