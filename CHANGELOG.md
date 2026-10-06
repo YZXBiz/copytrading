@@ -2,6 +2,18 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
+## Unreleased
+
+Every button tested against the real app and Alpaca paper, and the ones that did not work now do.
+
+- **Selling a lot works while the market is open.** Accounts → Sell… used to refuse every sale during market hours, because prices moved between Review Sale and Sell. Price movement no longer blocks it; your limits are still checked when you press Sell.
+- **Ask me before sending orders works.** Approve… on a waiting call opens the call already filled in and sends it after Preview and Confirm; before, approving always failed. Review and Correct works for every post, not only the first one captured.
+- **Backups and restore work for accounts connected to Alpaca.** Create Backup…, Restore from Backup…, and Restore This Backup all failed once an account had connected; they now back up and restore it, and messages say what happened in plain words.
+- **"After a restart: Wait for me / Carry on by itself"** replaces "Recovery: Manual / Automatic" on each account.
+- **"In stocks"** replaces "Copied exposure": the number includes shares you bought yourself, as the account's limit always did.
+- **Switches have names for VoiceOver** in the account, guru, and review sheets, instead of "1, checkbox".
+- **A correction that cannot be recorded no longer stops the engine**; you see why instead ("Start copying first…" when copying is paused).
+
 ## 0.1.0-alpha.3 — developer preview
 
 Simpler setup, a Mac that stays awake while copying, and a guide that follows one post from Discord to your account.
