@@ -6,19 +6,22 @@ import SwiftUI
 @MainActor
 public struct CopyTradingScene: Scene {
     let lifecycle: AppLifecycleDelegate
+    let updater: any AppUpdating
     @State private var model = AppModel.makeForLaunch()
     @State private var languagePreference = AppLanguagePreference.shared
     /// Accounts and activity are shared by the window and the menu bar; both clear on lock.
     @State private var accountFeature = AccountFeatureModel()
 
-    public init(lifecycle: AppLifecycleDelegate) {
+    public init(lifecycle: AppLifecycleDelegate, updater: any AppUpdating) {
         self.lifecycle = lifecycle
+        self.updater = updater
         TipsSetup.configure()
     }
 
     public var body: some Scene {
         Window("CopyTrading", id: "main") {
             PlatformRootView(model: model, accountFeature: accountFeature)
+                .environment(\.appUpdater, updater)
                 .environment(languagePreference)
                 .environment(\.locale, Locale(identifier: languagePreference.language.rawValue))
                 .environment(\.tipGeneration, model.tipGeneration)
@@ -32,6 +35,7 @@ public struct CopyTradingScene: Scene {
         .defaultSize(width: 1180, height: 800)
         .windowStyle(.hiddenTitleBar)
         .commands {
+            UpdateCommands(updater: updater)
             GoCommands(model: model)
             HelpCommands(model: model)
             AssistantCommands(model: model)

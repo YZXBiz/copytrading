@@ -123,7 +123,7 @@ def _valid_app_zip(
     }
     info = {
         "CFBundleIdentifier": "dev.copytrading.app",
-        "CFBundleShortVersionString": "0.1.0",
+        "CFBundleShortVersionString": "0.1.0-alpha.1",  # full release version
     }
     with zipfile.ZipFile(path, "w") as archive:
         for relative in (
@@ -355,7 +355,7 @@ def test_build_release_keeps_contents_path_relative_to_app_root(
         info = {
             "CFBundleIdentifier": "dev.copytrading.app",
             "CFBundleExecutable": "CopyTrading",
-            "CFBundleShortVersionString": "0.1.0",
+            "CFBundleShortVersionString": "0.1.0-alpha.1",  # full release version
         }
         with (contents / "Info.plist").open("wb") as stream:
             plistlib.dump(info, stream)

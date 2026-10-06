@@ -140,13 +140,6 @@ final class AppModel {
     var restorePreflightBlockers: [String] = []
     var restoreCredentialStatus: String?
     var restoreRecoveryMessage: String?
-    var isCheckingForUpdate = false
-    var isDownloadingUpdate = false
-    var isInstallingUpdate = false
-    var updateRecoveryRequired = false
-    var latestUpdate: UpdateRelease?
-    var stagedUpdate: StagedUpdate?
-    var updateMessage: String?
 
     @ObservationIgnored private var runtimePaths: RuntimePaths?
     @ObservationIgnored private var supervisor: ProcessSupervisor?
@@ -196,13 +189,12 @@ final class AppModel {
     }
 
     func accountActions() -> EngineActions? {
-        isTradingUnlocked && !isRunningBackupRestore && !isInstallingUpdate && pendingRestoreCandidate == nil
+        isTradingUnlocked && !isRunningBackupRestore && pendingRestoreCandidate == nil
             && restoreRecoveryMessage == nil ? engineActions : nil
     }
 
     var canActivateOperationalRestore: Bool {
         guard !isRunningBackupRestore,
-            !isInstallingUpdate,
             startupOwnership != nil,
             engineActions != nil,
             runtimePaths?.activeGenerationID != nil,
@@ -215,32 +207,14 @@ final class AppModel {
 
     var canRollbackOperationalRestore: Bool {
         !isRunningBackupRestore
-            && !isInstallingUpdate
             && startupOwnership != nil
             && runtimePaths?.activeGenerationID != nil
             && (pendingRestoreCandidate != nil || restoreRecoveryMessage != nil)
             && (runtimeState == .ready || runtimeState == .degraded || runtimeState == .failed)
     }
 
-    var canInstallStagedUpdate: Bool {
-        guard !isCheckingForUpdate,
-            !isDownloadingUpdate,
-            !isInstallingUpdate,
-            !isRunningBackupRestore,
-            !updateRecoveryRequired,
-            stagedUpdate != nil,
-            startupOwnership != nil,
-            supervisor != nil,
-            runtimePaths?.activeGenerationID != nil,
-            runtimeState == .ready || runtimeState == .degraded,
-            pendingRestoreCandidate == nil,
-            restoreRecoveryMessage == nil
-        else { return false }
-        return true
-    }
-
     func createOperationalBackup(to destination: URL) async {
-        guard !isRunningBackupRestore, !isInstallingUpdate, let engineActions else {
+        guard !isRunningBackupRestore, let engineActions else {
             backupRestoreNote = .problem(
                 L10n.string(
                     "The engine isn't running. Start it in Settings → Engine. If another CopyTrading is open, quit it first."))
@@ -273,7 +247,6 @@ final class AppModel {
 
     func previewOperationalRestore(from archive: URL) async {
         guard !isRunningBackupRestore,
-            !isInstallingUpdate,
             pendingRestoreCandidate == nil,
             restoreRecoveryMessage == nil,
             let engineActions
@@ -406,7 +379,6 @@ final class AppModel {
 
     func rollbackOperationalRestore() async {
         guard !isRunningBackupRestore,
-            !isInstallingUpdate,
             let owner = startupOwnership,
             let paths = runtimePaths
         else { return }
@@ -470,138 +442,6 @@ final class AppModel {
         engineStatus = nil
         tradingStatus = nil
         runtimeState = .starting
-    }
-
-    func beginUpdateMaintenance() async throws -> MaintenanceTransition {
-        guard let owner = startupOwnership,
-            supervisor != nil,
-            runtimeState == .ready || runtimeState == .degraded,
-            pendingRestoreCandidate == nil,
-            restoreRecoveryMessage == nil,
-            !isRunningBackupRestore
-        else {
-            throw UpdateInstallError.recoveryRequired
-        }
-        let transition = try await owner.beginMaintenanceTransition()
-        do {
-            try await stopRuntimeForMaintenance(during: transition)
-            return transition
-        } catch {
-            await owner.finishMaintenanceTransition(transition)
-            throw error
-        }
-    }
-
-    func restartRuntimeAfterUpdateRollback(during transition: MaintenanceTransition) async throws {
-        try await startRuntime(during: transition)
-        guard runtimeState == .ready || runtimeState == .degraded,
-            supervisor != nil
-        else {
-            throw UpdateInstallError.installationFailed
-        }
-    }
-
-    func finishUpdateMaintenance(_ transition: MaintenanceTransition) async {
-        await startupOwnership?.finishMaintenanceTransition(transition)
-    }
-
-    func checkForUpdate() async {
-        guard !isCheckingForUpdate, !isDownloadingUpdate, !isRunningBackupRestore, !isInstallingUpdate else { return }
-        isCheckingForUpdate = true
-        updateMessage = L10n.string("Checking the public GitHub release feed…")
-        defer { isCheckingForUpdate = false }
-        do {
-            let schemaVersion = try operationalSchemaVersionForUpdate()
-            let release = try await updateService.latestRelease(currentEngineSchema: schemaVersion)
-            if let stagedUpdate, stagedUpdate.release.version != release.version {
-                try updateService.discard(stagedUpdate, in: updateStagingDirectory)
-                self.stagedUpdate = nil
-            }
-            latestUpdate = release
-            updateMessage = L10n.string("Release notes loaded. No account or trading data was sent.")
-        } catch {
-            latestUpdate = nil
-            updateMessage = Self.userMessage(for: error)
-        }
-    }
-
-    func downloadAndVerifyUpdate() async {
-        guard !isCheckingForUpdate, !isDownloadingUpdate, !isRunningBackupRestore, !isInstallingUpdate else { return }
-        guard let latestUpdate else {
-            updateMessage = L10n.string("Check for a release before downloading an update.")
-            return
-        }
-        isDownloadingUpdate = true
-        updateMessage = L10n.string("Checking compatibility and publisher trust before staging…")
-        defer { isDownloadingUpdate = false }
-        do {
-            let schemaVersion = try operationalSchemaVersionForUpdate()
-            let staged = try await updateService.stage(
-                latestUpdate,
-                in: updateStagingDirectory,
-                currentEngineSchema: schemaVersion
-            )
-            if let previous = stagedUpdate, previous.artifactURL != staged.artifactURL {
-                do {
-                    try updateService.discard(previous, in: updateStagingDirectory)
-                } catch {
-                    try? updateService.discard(staged, in: updateStagingDirectory)
-                    throw error
-                }
-            }
-            stagedUpdate = staged
-            updateMessage = L10n.string("Verified update staged at %@. The engine has not been stopped.", staged.artifactURL.path)
-        } catch {
-            updateMessage = Self.userMessage(for: error)
-        }
-    }
-
-    func installStagedUpdate() async {
-        guard canInstallStagedUpdate, let stagedUpdate else {
-            updateMessage = "A verified update can be installed only while the current runtime is healthy and no restore is pending."
-            return
-        }
-        isInstallingUpdate = true
-        updateMessage = L10n.string("Revalidating the signed package and replacement location before stopping the engine…")
-        defer { isInstallingUpdate = false }
-        let lifecycle = AppUpdateRuntimeLifecycle(model: self)
-        let installer = MacOSUpdateBundleInstaller()
-        do {
-            try await UpdateInstallCoordinator(lifecycle: lifecycle, installer: installer)
-                .install(stagedUpdate)
-            updateRecoveryRequired = false
-            updateMessage = L10n.string("The replacement app was launched. This app is closing while the new runtime confirms its startup.")
-        } catch let error as UpdateInstallError {
-            if error == .recoveryRequired || error == .handoffTimedOut {
-                updateRecoveryRequired = true
-                runtimeState = .failed
-            }
-            updateMessage = error.localizedDescription
-        } catch {
-            updateMessage = Self.userMessage(for: error)
-        }
-    }
-
-    private var updateStagingDirectory: URL {
-        if let runtimePaths {
-            return runtimePaths.ownerSupportDirectory.appending(path: ".updates", directoryHint: .isDirectory)
-        }
-        let root =
-            ProcessInfo.processInfo.environment["COPYTRADING_STATE_ROOT"].map {
-                URL(filePath: $0, directoryHint: .isDirectory)
-            } ?? URL.applicationSupportDirectory.appending(path: "CopyTrading", directoryHint: .isDirectory)
-        return root.appending(path: ".updates", directoryHint: .isDirectory)
-    }
-
-    private func operationalSchemaVersionForUpdate() throws -> Int {
-        if let runtimePaths {
-            return try OperationalSchemaReader.applicationDatabaseVersion(at: runtimePaths.databaseURL)
-        }
-        let ownerPaths = try RuntimePaths.discover()
-        let lock = try ownerPaths.acquireInstallationLock()
-        defer { lock.release() }
-        let activePaths = try ownerPaths.resolveActiveGeneration(whileHolding: lock)
-        return try OperationalSchemaReader.applicationDatabaseVersion(at: activePaths.databaseURL)
     }
 
     func evaluateHistoricalProfile(
@@ -682,7 +522,6 @@ final class AppModel {
     @ObservationIgnored private var startupIntent = AppStartupIntent()
     @ObservationIgnored private let appUnlock: AppUnlock
     @ObservationIgnored private let shutdownCoordinator = ShutdownCoordinator()
-    @ObservationIgnored private let updateService = UpdateService()
     @ObservationIgnored private var windowSessionID: UUID?
     @ObservationIgnored private var eventTask: Task<Void, Never>?
     @ObservationIgnored private var statusTask: Task<Void, Never>?
@@ -747,20 +586,13 @@ final class AppModel {
         guard startupTask == nil, runtimeState == .stopped || runtimeState == .failed else { return }
         startupTask = Task { [weak self] in
             guard let self else { return }
-            let updateRecoveryHandled = await self.recoverPendingUpdateAtStartup()
-            if !updateRecoveryHandled {
-                await self.startRuntime()
-            }
+            await self.startRuntime()
             self.startupTask = nil
         }
     }
 
     func requestStart() {
         startupIntent.startRequested()
-        guard !updateRecoveryRequired else {
-            updateMessage = L10n.string("Update recovery is pending. Quit and reopen the app to retry the recorded bundle handoff.")
-            return
-        }
         startIfNeeded()
     }
 
@@ -774,50 +606,6 @@ final class AppModel {
 
     func startRuntime(during transition: MaintenanceTransition) async throws {
         try await launchRuntime(during: transition)
-    }
-
-    private func startRuntimeForUpdateRecovery() async -> UpdateRuntimeStartOutcome {
-        do {
-            try await launchRuntime(during: nil, propagateStartupFailure: true)
-            return runtimeState == .ready || runtimeState == .degraded ? .ready : .failed
-        } catch let error as RuntimePathsError {
-            return error == .alreadyRunning ? .ownerLockBusy : .failed
-        } catch {
-            return .failed
-        }
-    }
-
-    private func recoverPendingUpdateAtStartup() async -> Bool {
-        let installer = MacOSUpdateBundleInstaller()
-        do {
-            let recovered = try await UpdateStartupRecoveryCoordinator(installer: installer)
-                .recoverPendingUpdate(
-                    startRuntime: { [weak self] in
-                        guard let self else { return .failed }
-                        return await self.startRuntimeForUpdateRecovery()
-                    },
-                    terminateCurrentApplication: { [weak self] in
-                        await self?.terminateAfterUpdateRecovery()
-                    }
-                )
-            if recovered, runtimeState == .ready || runtimeState == .degraded {
-                updateRecoveryRequired = false
-                updateMessage = L10n.string("The replacement application started successfully and recovery evidence was cleared.")
-            }
-            return recovered
-        } catch {
-            updateRecoveryRequired = true
-            runtimeState = .failed
-            updateMessage =
-                L10n.string(
-                    "Update recovery is still pending: %@ Quit and reopen after the installation lock is released.",
-                    Self.userMessage(for: error))
-            return true
-        }
-    }
-
-    private func terminateAfterUpdateRecovery() {
-        NSApplication.shared.terminate(nil)
     }
 
     private func launchRuntime(
@@ -2183,14 +1971,6 @@ final class AppModel {
                 }
             }
         }
-    }
-
-    /// The in-flight update statuses that stay out of the Updates page until a result replaces them.
-    static var updateProgressMessages: [String] {
-        [
-            L10n.string("Checking the public GitHub release feed…"),
-            L10n.string("Checking compatibility and publisher trust before staging…"),
-        ]
     }
 
     static func userMessage(for error: any Error) -> String {

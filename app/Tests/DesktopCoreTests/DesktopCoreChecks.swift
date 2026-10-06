@@ -11,7 +11,6 @@ enum DesktopCoreCheck: String, CaseIterable, Sendable, CustomTestStringConvertib
     case runtimePaths = "runtime paths"
     case equityCurve = "equity curve"
     case operationalGenerationOwnership = "operational generation ownership"
-    case operationalSchemaLookup = "operational schema lookup"
     case diagnosticsSettingsAndJournal = "diagnostics settings and journal"
     case runtimeManifest = "runtime manifest"
     case processSupervisor = "process supervisor"
@@ -22,7 +21,6 @@ enum DesktopCoreCheck: String, CaseIterable, Sendable, CustomTestStringConvertib
     case agentRelaySocket = "agent relay socket"
     case agentAccessAndApprovals = "agent access and approvals"
     case nativeBackupAndRestoreActions = "native backup and restore actions"
-    case userControlledUpdateService = "user controlled update service"
     case engineActionsAfterRestart = "engine actions after restart"
     case appStartupIntent = "app startup intent"
     case appUnlockSession = "app unlock session"
@@ -45,7 +43,6 @@ enum DesktopCoreCheck: String, CaseIterable, Sendable, CustomTestStringConvertib
         case .runtimePaths: try runRuntimePathsTests()
         case .equityCurve: try runEquityCurveTests()
         case .operationalGenerationOwnership: try runOperationalGenerationTests()
-        case .operationalSchemaLookup: try runOperationalSchemaTests()
         case .diagnosticsSettingsAndJournal: try runDiagnosticsJournalTests()
         case .runtimeManifest: try runRuntimeManifestTests()
         case .processSupervisor: try await runProcessSupervisorTests()
@@ -56,7 +53,6 @@ enum DesktopCoreCheck: String, CaseIterable, Sendable, CustomTestStringConvertib
         case .agentRelaySocket: try await runAgentRelayTests()
         case .agentAccessAndApprovals: try await runAgentAccessTests()
         case .nativeBackupAndRestoreActions: try await runEngineActionsBackupRestoreTests()
-        case .userControlledUpdateService: try await runUpdateServiceTests()
         case .engineActionsAfterRestart: try await runEngineActionsRestartTests()
         case .appStartupIntent: try runAppStartupIntentTests()
         case .appUnlockSession: try await runAppUnlockSessionTests()

@@ -488,7 +488,7 @@ def inspect_app_zip(archive: Path, version: str, tag: str, commit: str) -> None:
                         version_match is None
                         or not isinstance(info, dict)
                         or info.get("CFBundleIdentifier") != "dev.copytrading.app"
-                        or info.get("CFBundleShortVersionString") != version_match.group("core")
+                        or info.get("CFBundleShortVersionString") != version
                     ):
                         raise ReleaseError("app ZIP Info.plist does not match the release identity")
             missing = required - seen
@@ -622,6 +622,8 @@ def build_release(
             str(built_app),
             "--runtime",
             str(runtime_path.expanduser().absolute()),
+            "--version",
+            version,
             cwd=root,
         )
         source_name = f"copytrading-source-v{version}.tar.gz"

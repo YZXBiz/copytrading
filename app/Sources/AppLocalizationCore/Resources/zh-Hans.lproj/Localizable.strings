@@ -197,7 +197,6 @@
 "Chat ID" = "聊天 ID";
 "Check and start copying" = "检查并开始跟单";
 "Check cancelled. Nothing was saved." = "检查已取消。未保存任何内容。";
-"Check for Updates" = "检查更新";
 "Checking current account and market state…" = "正在检查账户与市场最新状态…";
 "Checking every connection…" = "正在检查所有连接…";
 "Checking the account" = "正在检查账户";
@@ -312,7 +311,6 @@
 "Done" = "已完成";
 "Done: %@." = "已完成：%@。";
 "Down %@" = "下跌 %@";
-"Download and Verify" = "下载并验证";
 "Download Ollama" = "下载 Ollama";
 "Drag across the chart to see the change between two times. Click or press Esc to clear it." = "在图表上拖动可查看两个时刻之间的变化。点击图表或按 Esc 清除选择。";
 "e.g. %@" = "例如 %@";
@@ -437,7 +435,6 @@
 "In Telegram, message **@BotFather**, send **/newbot**, and follow its steps." = "在 Telegram 中向 **@BotFather** 发消息，发送 **/newbot**，并按提示操作。";
 "In Terminal, run **ollama pull llama3.2**, or pull any model you prefer." = "在终端中运行 **ollama pull llama3.2**，也可以下载你喜欢的其他模型。";
 "Install **Ollama** and open it." = "安装并打开 **Ollama**。";
-"Install and Relaunch" = "安装并重新启动";
 "Installation %@\nStaging %@" = "安装标识 %@\n暂存标识 %@";
 "Instruction %lld" = "指令%lld";
 "Instruction details" = "信号详情";
@@ -497,7 +494,6 @@
 "Log Retention" = "日志保留";
 "Logging" = "日志记录";
 "Logs" = "日志";
-"Looks for a newer release on GitHub." = "在 GitHub 上查找更新版本。";
 "Loss today" = "今日亏损";
 "Make sure the account switcher at the top left shows your **Paper** account." = "确认左上角的账户切换器显示你的 **模拟账户**。";
 "Manual" = "手动";
@@ -556,7 +552,6 @@
 "No price quote was available" = "暂无可用报价";
 "No prior account delivery details are recorded." = "未记录此前向账户发送订单的详情。";
 "No problems recorded" = "尚未记录问题";
-"No release notes were provided." = "未提供版本说明。";
 "No saved gurus" = "尚无已保存的信号源";
 "No saved manual command results for this source." = "尚无此来源的已保存手动操作结果。";
 "No shares left to sell" = "没有可卖出的持仓";
@@ -705,7 +700,6 @@
 "Ready" = "就绪";
 "Ready Order" = "个待审核订单";
 "Ready Orders" = "个待审核订单";
-"Ready to Install" = "已就绪，可安装";
 "Ready to start" = "已就绪，可开始";
 "Reason" = "原因";
 "Received" = "已接收";
@@ -728,7 +722,6 @@
 "Reject" = "拒绝";
 "Rejected a post: %@" = "帖子已拒绝：%@";
 "Rejected by the broker" = "已被券商拒绝";
-"Release %@" = "版本 %@";
 "Release gate: %@" = "发布阻断项：%@";
 "Remaining position" = "剩余仓位";
 "remaining position" = "剩余仓位";
@@ -987,7 +980,6 @@
 "Use the left and right arrow keys to read recorded points." = "使用左右方向键浏览已记录的数据点。";
 "Values redacted" = "值已脱敏";
 "Verified as %@" = "已验证为 %@";
-"Verified download" = "已验证的下载文件";
 "Version on this Mac" = "此 Mac 上的版本";
 "vs previous close" = "与前一收盘价相比";
 "Waiting" = "等待中";
@@ -1222,14 +1214,7 @@
 "The half-finished restore didn't pass its checks, so it can only be rolled back." = "未完成的恢复没有通过检查，只能回滚。";
 "A restore is half-finished. Resume it, or roll back to your data from before." = "有一次恢复尚未完成。请继续恢复，或回滚到之前的数据。";
 "Restore recovery could not stop the replacement runtime. The durable gate and installation lock remain held." = "恢复无法停止替换的运行环境。持久闸门和安装锁仍然保持。";
-"Checking the public GitHub release feed…" = "正在检查公开的 GitHub 发布列表…";
-"Release notes loaded. No account or trading data was sent." = "已加载发布说明。没有发送任何账户或交易数据。";
-"Check for a release before downloading an update." = "请先检查新版本，再下载更新。";
-"Checking compatibility and publisher trust before staging…" = "暂存前正在检查兼容性和发布者可信度…";
-"Revalidating the signed package and replacement location before stopping the engine…" = "停止引擎前，正在重新验证已签名的安装包和替换位置…";
 "The replacement app was launched. This app is closing while the new runtime confirms its startup." = "替换后的应用已启动。新版确认启动期间，当前应用会关闭。";
-"Update recovery is pending. Quit and reopen the app to retry the recorded bundle handoff." = "更新恢复尚未完成。请退出并重新打开应用，重试已记录的安装包交接。";
-"The replacement application started successfully and recovery evidence was cleared." = "替换后的应用已成功启动，恢复记录已清除。";
 "Your setup was saved by an older version of CopyTrading. Set it up again from Getting Started, including your keys." = "你的设置由旧版 CopyTrading 保存。请从“快速开始”重新设置，包括你的密钥。";
 "A required connection check failed. Processing remains paused." = "有一项必需的连接检查未通过。处理仍保持暂停。";
 "Each guru needs a name." = "每个信号源都需要一个名称。";
@@ -1244,8 +1229,6 @@
 "the Alpaca API key and secret for “%@”" = "“%@”的 Alpaca API 密钥和密钥口令";
 "Backup saved and checked: %@. Copying stopped while it ran; choose Start Copying to carry on." = "备份已保存并检查完毕：%@。备份期间已停止跟单，选择“开始跟单”即可继续。";
 "Restored. Each account stays off, with manual recovery, until you turn it back on." = "已恢复。在你重新开启之前，每个账户都保持关闭，并使用手动恢复。";
-"Verified update staged at %@. The engine has not been stopped." = "已在 %@ 暂存经过验证的更新。引擎尚未停止。";
-"Update recovery is still pending: %@ Quit and reopen after the installation lock is released." = "更新恢复仍未完成：%@ 请在安装锁释放后退出并重新打开应用。";
 "%@ failed its connection check. Processing remains paused." = "%@ 的连接检查未通过。处理仍保持暂停。";
 "%@ failed their connection check. Processing remains paused." = "%@ 的连接检查未通过。处理仍保持暂停。";
 "The account name “%@” may only use letters, digits, “-” and “_”." = "账户名称“%@”只能使用字母、数字、“-”和“_”。";
@@ -1610,3 +1593,8 @@
 "posts in the backup were still being read" = "备份中仍有正在读取的喊单";
 "an account in the backup is incomplete" = "备份中的某个账户不完整";
 "the backup's files changed or failed their check" = "备份文件已更改或未通过检查";
+"Check for Updates…" = "检查更新…";
+"Shows what's new and asks before installing." = "先显示新内容，安装前会询问你。";
+"A check reads the public list of releases. Nothing about your accounts or trading is sent." = "检查更新只会读取公开的版本列表，不会发送任何账户或交易信息。";
+"Check for updates automatically" = "自动检查更新";
+"Once a day. You still choose when to install." = "每天一次。何时安装仍由你决定。";

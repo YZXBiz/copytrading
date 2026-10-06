@@ -23,7 +23,8 @@ point at a commit on `main`, which already passed CI, and the release not to exi
 yet. It builds and verifies the app and its records (`app/scripts/release.py`),
 wraps the app in the drag-to-install image (`make dmg`), smoke-tests the released
 app, checks every asset against the manifest and checksums, and publishes the
-prerelease with the changelog section as its notes.
+prerelease with the changelog section as its notes. Last, it signs the DMG for
+Sparkle and publishes the update feed (below), so installed copies find it.
 
 Pull requests that change the release scripts, the workflow, the toolchain pin, or
 the changelog run the same workflow as a dry run: it builds the newest changelog
@@ -31,7 +32,23 @@ version and stops before publishing, so a broken release fails on the pull reque
 instead of on the tag.
 
 Versions are `MAJOR.MINOR.PATCH-alpha.N`, `beta.N`, or `rc.N`, and the core
-version must match the app bundle and engine metadata.
+version must match the app bundle and engine metadata. The built app shows the full
+version (`CFBundleShortVersionString`) and carries the commit count of its history as
+its build number (`CFBundleVersion`), which only grows on `main`.
+
+## Updates
+
+Installed copies update through Sparkle ([ADR-0009](adr/0009-updates-with-sparkle.md)).
+A tagged release signs its DMG with Sparkle's `sign_update` and the private key in
+the `SPARKLE_ED_PRIVATE_KEY` repository secret, adds itself to `appcast.xml`
+(`app/scripts/appcast.py`), and pushes that feed to the `appcast` branch after the
+GitHub release exists. The app reads the feed from
+`https://raw.githubusercontent.com/YZXBiz/copytrading/appcast/appcast.xml` and checks
+each download against the public key in its `Info.plist`.
+
+The private key is also in the owner's login Keychain ("Sparkle EdDSA key for
+CopyTrading updates"), because a repository secret cannot be read back. Copies from
+before 0.1.0-alpha.4 have no updater and need that one DMG installed by hand.
 
 ## Release assets
 

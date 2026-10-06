@@ -8,6 +8,7 @@ import hashlib
 import importlib.metadata
 import json
 import os
+import plistlib
 import re
 import shutil
 import subprocess
@@ -237,7 +238,24 @@ def copy_localization_bundle(bin_dir: Path, resources: Path) -> Path:
     return destination
 
 
-def build(app: Path, prepared: Path) -> None:
+def build_number() -> str:
+    """Commits on the checked-out history: it only grows on main, so Sparkle sees each release as
+    newer than the last (CFBundleVersion)."""
+    return run("git", "rev-list", "--count", "HEAD", cwd=ROOT, capture=True).strip()
+
+
+def stamp_versions(info_path: Path, version: str | None) -> None:
+    """A release shows its full version, such as 0.1.0-alpha.4; every build gets a build number."""
+    with info_path.open("rb") as stream:
+        info = plistlib.load(stream)
+    if version is not None:
+        info["CFBundleShortVersionString"] = version
+    info["CFBundleVersion"] = build_number()
+    with info_path.open("wb") as stream:
+        plistlib.dump(info, stream)
+
+
+def build(app: Path, prepared: Path, version: str | None = None) -> None:
     manifest_path = MACOS / "Resources/Runtime/artifacts.json"
     load_artifacts(manifest_path)
     manifest = json.loads(manifest_path.read_text())
@@ -305,9 +323,17 @@ def build(app: Path, prepared: Path) -> None:
         macos.mkdir(parents=True)
         resources.mkdir(parents=True)
         shutil.copy2(MACOS / "Resources/Info.plist", staged / "Contents/Info.plist")
+        stamp_versions(staged / "Contents/Info.plist", version)
         shutil.copy2(MACOS / "Resources/AppIcon.icns", resources / "AppIcon.icns")
         shutil.copy2(bin_dir / "CopyTrading", macos / "CopyTrading")
         run("/usr/bin/strip", "-S", str(macos / "CopyTrading"))
+        # Sparkle, the updater (ADR-0009), keeps its own signature; the app finds it through
+        # its @executable_path/../Frameworks run path.
+        frameworks = staged / "Contents/Frameworks"
+        frameworks.mkdir()
+        shutil.copytree(
+            bin_dir / "Sparkle.framework", frameworks / "Sparkle.framework", symlinks=True
+        )
         copy_localization_bundle(bin_dir, resources)
         helpers = staged / "Contents/Helpers"
         helpers.mkdir()
@@ -390,9 +416,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--app", type=Path, default=ROOT / "dist/CopyTrading.app")
     parser.add_argument("--runtime", type=Path, default=ROOT / "dist/desktop-runtime/prepared")
+    parser.add_argument("--version", help="the release version to show, such as 0.1.0-alpha.4")
     arguments = parser.parse_args()
     try:
-        build(arguments.app.resolve(), arguments.runtime.resolve())
+        build(arguments.app.resolve(), arguments.runtime.resolve(), arguments.version)
     except (OSError, ValueError, subprocess.CalledProcessError) as error:
         print(f"desktop build failed: {error}", file=sys.stderr)
         return 1

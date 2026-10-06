@@ -197,7 +197,6 @@
 "Chat ID" = "Chat ID";
 "Check and start copying" = "Check and start copying";
 "Check cancelled. Nothing was saved." = "Check cancelled. Nothing was saved.";
-"Check for Updates" = "Check for Updates";
 "Checking current account and market state…" = "Checking current account and market state…";
 "Checking every connection…" = "Checking every connection…";
 "Checking the account" = "Checking the account";
@@ -312,7 +311,6 @@
 "Done" = "Done";
 "Done: %@." = "Done: %@.";
 "Down %@" = "Down %@";
-"Download and Verify" = "Download and Verify";
 "Download Ollama" = "Download Ollama";
 "Drag across the chart to see the change between two times. Click or press Esc to clear it." = "Drag across the chart to see the change between two times. Click or press Esc to clear it.";
 "e.g. %@" = "e.g. %@";
@@ -437,7 +435,6 @@
 "In Telegram, message **@BotFather**, send **/newbot**, and follow its steps." = "In Telegram, message **@BotFather**, send **/newbot**, and follow its steps.";
 "In Terminal, run **ollama pull llama3.2**, or pull any model you prefer." = "In Terminal, run **ollama pull llama3.2**, or pull any model you prefer.";
 "Install **Ollama** and open it." = "Install **Ollama** and open it.";
-"Install and Relaunch" = "Install and Relaunch";
 "Installation %@\nStaging %@" = "Installation %@\nStaging %@";
 "Instruction %lld" = "Instruction %lld";
 "Instruction details" = "Instruction details";
@@ -497,7 +494,6 @@
 "Log Retention" = "Log Retention";
 "Logging" = "Logging";
 "Logs" = "Logs";
-"Looks for a newer release on GitHub." = "Looks for a newer release on GitHub.";
 "Loss today" = "Loss today";
 "Make sure the account switcher at the top left shows your **Paper** account." = "Make sure the account switcher at the top left shows your **Paper** account.";
 "Manual" = "Manual";
@@ -556,7 +552,6 @@
 "No price quote was available" = "No price quote was available";
 "No prior account delivery details are recorded." = "No prior account delivery details are recorded.";
 "No problems recorded" = "No problems recorded";
-"No release notes were provided." = "No release notes were provided.";
 "No saved gurus" = "No saved gurus";
 "No saved manual command results for this source." = "No saved manual command results for this source.";
 "No shares left to sell" = "No shares left to sell";
@@ -705,7 +700,6 @@
 "Ready" = "Ready";
 "Ready Order" = "Ready Order";
 "Ready Orders" = "Ready Orders";
-"Ready to Install" = "Ready to Install";
 "Ready to start" = "Ready to start";
 "Reason" = "Reason";
 "Received" = "Received";
@@ -728,7 +722,6 @@
 "Reject" = "Reject";
 "Rejected a post: %@" = "Rejected a post: %@";
 "Rejected by the broker" = "Rejected by the broker";
-"Release %@" = "Release %@";
 "Release gate: %@" = "Release gate: %@";
 "Remaining position" = "Remaining position";
 "remaining position" = "remaining position";
@@ -987,7 +980,6 @@
 "Use the left and right arrow keys to read recorded points." = "Use the left and right arrow keys to read recorded points.";
 "Values redacted" = "Values redacted";
 "Verified as %@" = "Verified as %@";
-"Verified download" = "Verified download";
 "Version on this Mac" = "Version on this Mac";
 "vs previous close" = "vs previous close";
 "Waiting" = "Waiting";
@@ -1222,14 +1214,7 @@
 "The half-finished restore didn't pass its checks, so it can only be rolled back." = "The half-finished restore didn't pass its checks, so it can only be rolled back.";
 "A restore is half-finished. Resume it, or roll back to your data from before." = "A restore is half-finished. Resume it, or roll back to your data from before.";
 "Restore recovery could not stop the replacement runtime. The durable gate and installation lock remain held." = "Restore recovery could not stop the replacement runtime. The durable gate and installation lock remain held.";
-"Checking the public GitHub release feed…" = "Checking the public GitHub release feed…";
-"Release notes loaded. No account or trading data was sent." = "Release notes loaded. No account or trading data was sent.";
-"Check for a release before downloading an update." = "Check for a release before downloading an update.";
-"Checking compatibility and publisher trust before staging…" = "Checking compatibility and publisher trust before staging…";
-"Revalidating the signed package and replacement location before stopping the engine…" = "Revalidating the signed package and replacement location before stopping the engine…";
 "The replacement app was launched. This app is closing while the new runtime confirms its startup." = "The replacement app was launched. This app is closing while the new runtime confirms its startup.";
-"Update recovery is pending. Quit and reopen the app to retry the recorded bundle handoff." = "Update recovery is pending. Quit and reopen the app to retry the recorded bundle handoff.";
-"The replacement application started successfully and recovery evidence was cleared." = "The replacement application started successfully and recovery evidence was cleared.";
 "Your setup was saved by an older version of CopyTrading. Set it up again from Getting Started, including your keys." = "Your setup was saved by an older version of CopyTrading. Set it up again from Getting Started, including your keys.";
 "A required connection check failed. Processing remains paused." = "A required connection check failed. Processing remains paused.";
 "Each guru needs a name." = "Each guru needs a name.";
@@ -1244,8 +1229,6 @@
 "the Alpaca API key and secret for “%@”" = "the Alpaca API key and secret for “%@”";
 "Backup saved and checked: %@. Copying stopped while it ran; choose Start Copying to carry on." = "Backup saved and checked: %@. Copying stopped while it ran; choose Start Copying to carry on.";
 "Restored. Each account stays off, with manual recovery, until you turn it back on." = "Restored. Each account stays off, with manual recovery, until you turn it back on.";
-"Verified update staged at %@. The engine has not been stopped." = "Verified update staged at %@. The engine has not been stopped.";
-"Update recovery is still pending: %@ Quit and reopen after the installation lock is released." = "Update recovery is still pending: %@ Quit and reopen after the installation lock is released.";
 "%@ failed its connection check. Processing remains paused." = "%@ failed its connection check. Processing remains paused.";
 "%@ failed their connection check. Processing remains paused." = "%@ failed their connection check. Processing remains paused.";
 "The account name “%@” may only use letters, digits, “-” and “_”." = "The account name “%@” may only use letters, digits, “-” and “_”.";
@@ -1610,3 +1593,8 @@
 "posts in the backup were still being read" = "posts in the backup were still being read";
 "an account in the backup is incomplete" = "an account in the backup is incomplete";
 "the backup's files changed or failed their check" = "the backup's files changed or failed their check";
+"Check for Updates…" = "Check for Updates…";
+"Shows what's new and asks before installing." = "Shows what's new and asks before installing.";
+"A check reads the public list of releases. Nothing about your accounts or trading is sent." = "A check reads the public list of releases. Nothing about your accounts or trading is sent.";
+"Check for updates automatically" = "Check for updates automatically";
+"Once a day. You still choose when to install." = "Once a day. You still choose when to install.";
