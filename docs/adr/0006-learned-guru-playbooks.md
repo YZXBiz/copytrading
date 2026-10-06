@@ -3,6 +3,9 @@
 ## Status
 Accepted, September 2026.
 
+Amended October 2026: the guru's message prefix was removed. Each channel carries one guru, so
+every post in it is read; Learn no longer drafts a prefix.
+
 ## Context
 Reading a guru's posts is the model's job, but guru knowledge had leaked into code and forms:
 an alias table (英伟达=NVDA) the owner typed by hand, a hard-coded list of Chinese and English
@@ -15,7 +18,7 @@ and a model that wrote 1/6 with fewer digits sent every 1/6 buy to review.
    the reader model and sent as trusted instructions, separate from the untrusted post.
 2. **Learned, then edited.** Learn from Channel reads the channel's recent posts the way the
    live pipeline does and asks the model for a draft: playbook (with one worked line per
-   convention), prefix, exit basis, and examples. Only examples that are verbatim posts and pass
+   convention), exit basis, and examples. Only examples that are verbatim posts and pass
    the same validation as hand-written ones survive. Nothing is saved until the owner saves.
 3. **Examples are the gate.** Validate runs every example through the reader with the playbook;
    any mismatch blocks activation. A bad draft is caught before it trades.

@@ -34,7 +34,6 @@ def _configuration():
         ProfileDraft(
             guru_id="stable-guru",
             display_name="Stable Guru",
-            prefix="ALERT:",
             playbook="",
             examples=(),
             exit_basis="original_position",
@@ -42,7 +41,7 @@ def _configuration():
     )
     return TradingConfiguration.model_validate(
         {
-            "version": 5,
+            "version": 7,
             "source": {"channel_ids": ["123"]},
             "provider": {"name": "deepseek", "model": "test-model"},
             "accounts": [{"id": "paper", "environment": "paper"}],
@@ -180,7 +179,6 @@ class _Trading:
             raise OwnerFacingError(self.learning_error)
         return LearnedPlaybook(
             posts_read=3,
-            prefix="赵哥-股票：",  # noqa: RUF001 - the guru's real fullwidth colon
             exit_basis="original_position",
             playbook="加 means buy\n英伟达 means NVDA",
             summary="Buys are written price first.",
@@ -440,7 +438,6 @@ async def test_learn_playbook_pipe_returns_a_draft_and_never_echoes_tokens(store
 
     assert response["ok"]["type"] == "learned_playbook"
     draft = response["ok"]["playbook"]
-    assert draft["prefix"] == "赵哥-股票："  # noqa: RUF001 - the guru's real fullwidth colon
     assert draft["playbook"] == "加 means buy\n英伟达 means NVDA"
     assert "private-discord-token" not in raw
     assert "private-provider-key" not in raw

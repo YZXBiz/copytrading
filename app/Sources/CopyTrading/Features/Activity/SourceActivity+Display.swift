@@ -53,13 +53,9 @@ extension SourceActivity {
 
     var sourceDate: Date? { Humanize.date(sourceAt) }
 
-    /// A compact captured-source excerpt without mass mentions or the configured guru prefix.
-    func readableText(dropping prefix: String? = nil) -> String {
+    /// A compact captured-source excerpt without mass mentions.
+    func readableText() -> String {
         var source = readingText()
-        if let prefix, !prefix.isEmpty, source.hasPrefix(prefix) {
-            source = String(source.dropFirst(prefix.count))
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-        }
         if source.isEmpty, let embed = readableSourceEmbeds.first {
             // An embed-only post still has a source; retain its captured words and order.
             source =

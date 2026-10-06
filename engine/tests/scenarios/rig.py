@@ -22,7 +22,7 @@ from copytrading_engine.trading.entrypoints.factories import TradingFactories
 from copytrading_engine.trading.entrypoints.runtime import TradingRuntime
 
 from .broker import SimulatedBroker
-from .zhao import GURU_ID, NAME, PREFIX, ZhaoChannel, ZhaoReader
+from .zhao import GURU_ID, NAME, ZhaoChannel, ZhaoReader
 
 CHANNEL = "900000000000000777"
 # A Wednesday, 11:00 in New York: regular hours, so market orders and full-session rules apply.
@@ -124,7 +124,6 @@ class Rig:
                 ProfileDraft(
                     guru_id=self.guru_id(name),
                     display_name=NAME,
-                    prefix=PREFIX,
                     playbook="",
                     examples=(),
                     exit_basis="original_position",
@@ -134,7 +133,7 @@ class Rig:
         }
         return TradingConfiguration.model_validate(
             {
-                "version": 5,
+                "version": 7,
                 "source": {"channel_ids": list(self.channels.values())},
                 "provider": {"name": "deepseek", "model": "scripted-zhao"},
                 "accounts": [
@@ -206,7 +205,7 @@ class Rig:
                     channel_id=channel,
                     id=message_id,
                     timestamp=at,
-                    text=f"{PREFIX} {text}",
+                    text=text,
                 )
             )
         source_ids = [f"discord:{channel}:{message_id}" for channel in self.channels.values()]

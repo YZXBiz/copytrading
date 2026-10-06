@@ -7,8 +7,6 @@ struct GuruDirectory {
         let name: String
         let channels: [String]
         let destinations: [TradingRouteConnection]
-        /// The label every post from this guru starts with, from the saved profile.
-        let prefix: String?
     }
 
     let gurus: [Guru]
@@ -27,16 +25,15 @@ struct GuruDirectory {
                 id: route.guruID,
                 name: name,
                 channels: Array(Set((existing?.channels ?? []) + [route.channelID])).sorted(),
-                destinations: (existing?.destinations ?? []) + route.connections,
-                prefix: profile?.prefix
+                destinations: (existing?.destinations ?? []) + route.connections
             )
         }
         gurus = byID.values.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
     }
 
-    /// The post as a person would read it in a list: no @everyone and no guru prefix.
+    /// The post as a person would read it in a list: no @everyone.
     func preview(of item: SourceActivity) -> String {
-        item.readableText(dropping: gurus.first { $0.id == item.guruID }?.prefix)
+        item.readableText()
     }
 
     func name(for guruID: String?) -> String? {

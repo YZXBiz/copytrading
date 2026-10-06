@@ -77,7 +77,7 @@ struct GuruReplaySection: View {
                 let lines = post.reading.map { $0.calls.map(ReadAsText.line) } ?? []
                 (kind, detail) = (.trade, lines.isEmpty ? nil : L10n.sentences(lines))
             case "ignore":
-                (kind, detail) = (.ignored, post.reason == "source_prefix_mismatch" ? Reason.text(post.reason) : nil)
+                (kind, detail) = (.ignored, nil)
             default:
                 let waits = post.reading != nil || !post.suggested.isEmpty
                 (kind, detail) = (waits ? .wait : .unreadable, Reason.text(post.reason))

@@ -1,33 +1,22 @@
+import CopyTradingTestSupport
 import DesktopCore
 import Foundation
 import Testing
 
 /// A post as the engine reports it: one account's outcome, and the calls it read or suggests.
 private func post(
-    decision: String, status: String, outcomes: [String], instructions: [String] = [],
-    suggested: [String] = [], at sourceAt: String = "2026-10-05T14:30:00Z"
+    decision: String, status: String, outcomes: [String], instructions: [[String: Any]] = [],
+    suggested: [[String: Any]] = [], at sourceAt: String = "2026-10-05T14:30:00Z"
 ) throws -> SourceActivity {
-    let json = """
-        {"sequence": 1, "source_id": "discord:1:2", "source_revision": 1,
-         "source_at": "\(sourceAt)", "captured_at": "\(sourceAt)", "text": "sco 20",
-         "capture_status": "delivered", "parse_status": "complete", "delivery_status": "delivered",
-         "decision": "\(decision)", "parser_reason": "conditional", "parser_profile": "stock-reading-v3",
-         "interpreted_by": "deepseek-flash", "instructions": [\(instructions.joined(separator: ","))],
-         "suggested": [\(suggested.joined(separator: ","))],
-         "source_event": {"event_type": "discord_message", "content": "sco 20", "embeds": [],
-           "attachments": [], "attachments_omitted": 0, "capture_status": "complete", "payload_bytes": 6},
-         "destinations": [{"account_id": "paper", "environment": "paper", "status": "\(status)",
-           "instruction_outcomes": [\(outcomes.map { "\"\($0)\"" }.joined(separator: ","))], "limits_hit": [],
-           "orders": []}]}
-        """
-    return try JSONDecoder().decode(SourceActivity.self, from: Data(json.utf8))
+    try SourceActivityBuilder()
+        .text("sco 20").posted(at: sourceAt).decision(decision, reason: "conditional")
+        .calls(instructions).suggested(suggested)
+        .destination("paper", status: status, outcomes: outcomes)
+        .build()
 }
 
-private func buy(_ symbol: String, _ price: String) -> String {
-    """
-    {"action": "buy", "symbol": "\(symbol)", "price": "\(price)", "entry_price": null,
-     "fraction": null, "exit_basis": null, "whole_position": false}
-    """
+private func buy(_ symbol: String, _ price: String) -> [String: Any] {
+    SourceActivityBuilder.buy(symbol, price)
 }
 
 @Test func aPostTheReaderLeftForTheOwnerWaitsWithItsSuggestedCalls() throws {
@@ -38,9 +27,9 @@ private func buy(_ symbol: String, _ price: String) -> String {
     #expect(waiting.calls.map(\.symbol) == ["SCO"])
 }
 
-@Test func aBuyHeldBecauseTheMarketMovedWaitsWithOnlyThatCall() throws {
+@Test func aBuyHeldForApprovalWaitsWithOnlyThatCall() throws {
     let traded = try post(
-        decision: "trade", status: "done", outcomes: ["order_linked", "price_moved"],
+        decision: "trade", status: "done", outcomes: ["order_linked", "approval_required"],
         instructions: [buy("ABC", "25"), buy("DEF", "40")])
 
     let waiting = try #require(WaitingCall(traded))
@@ -57,12 +46,17 @@ private func buy(_ symbol: String, _ price: String) -> String {
     #expect(waiting.awaitsApproval)
 }
 
-@Test func aCallHeldForAnotherReasonIsCopiedNotApproved() throws {
-    let moved = try post(decision: "trade", status: "done", outcomes: ["price_moved"], instructions: [buy("ABC", "25")])
+@Test func aPostLeftForReviewIsCopiedNotApproved() throws {
     let review = try post(decision: "review", status: "review_required", outcomes: [], suggested: [buy("SCO", "20")])
 
-    #expect(try #require(WaitingCall(moved)).awaitsApproval == false)
     #expect(try #require(WaitingCall(review)).awaitsApproval == false)
+}
+
+@Test func aSkipThatIsNoLongerAHoldDoesNotWait() throws {
+    // `price_moved` was a hold until the market-move check was removed; old history must not wait.
+    let old = try post(decision: "trade", status: "done", outcomes: ["price_moved"], instructions: [buy("ABC", "25")])
+
+    #expect(WaitingCall(old) == nil)
 }
 
 @Test(arguments: ["order_linked", "insufficient_cash"])

@@ -94,9 +94,13 @@ final class AppModel {
     var settingsTrail: [SettingsPage] = []
     /// Where closing Settings returns to.
     var screenBeforeSettings: Screen = .today
-    var runtimeState: RuntimeState = .stopped
+    var runtimeState: RuntimeState = .stopped {
+        didSet { holdMacAwakeWhileCopying() }
+    }
     var engineStatus: EngineStatus?
-    var tradingStatus: TradingStatus?
+    var tradingStatus: TradingStatus? {
+        didSet { holdMacAwakeWhileCopying() }
+    }
     var savedTradingConfiguration: TradingConfiguration?
     var hasTradingSecrets = false
     var tradingValidation: TradingValidation?
@@ -697,6 +701,7 @@ final class AppModel {
     @ObservationIgnored var launchStartRetryDelays: [Duration] = [.seconds(10), .seconds(30), .seconds(60)]
     @ObservationIgnored private var launchStartRetry: Task<Void, Never>?
     private(set) var launchPreferences: LaunchPreferences
+    @ObservationIgnored private let sleepGuard: SleepGuard
 
     private struct PendingTradingActivation: Sendable {
         let configuration: TradingConfiguration
@@ -718,9 +723,11 @@ final class AppModel {
         tradingStarter: (any TradingStarting)? = nil,
         appUnlock: AppUnlock? = nil,
         launchPreferencesStore: LaunchPreferencesStore? = nil,
-        agentProposalOperations: (any AgentProposalOperations)? = nil
+        agentProposalOperations: (any AgentProposalOperations)? = nil,
+        sleepGuard: SleepGuard = SleepGuard()
     ) {
         proposalOperations = agentProposalOperations
+        self.sleepGuard = sleepGuard
         let stateRoot = Self.stateRoot
         let logsDirectory = stateRoot.appending(path: "logs", directoryHint: .isDirectory)
         diagnosticsSettingsStore = DiagnosticsSettingsStore(url: logsDirectory.appending(path: "settings.json"))
@@ -1251,7 +1258,6 @@ final class AppModel {
             TradingProfileDraft(
                 guruID: route.guruID.trimmed,
                 displayName: route.displayName.trimmed.isEmpty ? route.guruID.trimmed : route.displayName.trimmed,
-                prefix: route.prefix.trimmed,
                 playbook: route.playbook.trimmedLines,
                 examples: [],
                 exitBasis: route.exitBasis,
@@ -1739,6 +1745,25 @@ final class AppModel {
         await appUnlock.setOwnerCheckRequired(asks)
     }
 
+    func setKeepsMacAwake(_ keeps: Bool) {
+        guard keeps != launchPreferences.keepsMacAwake else { return }
+        var chosen = launchPreferences
+        chosen.keepsMacAwake = keeps
+        saveLaunchPreferences(chosen)
+    }
+
+    /// Copying is on: the engine is up and copying is starting, running, or running with a problem
+    /// it is working through. A stopped or failed engine copies nothing, whatever it last reported.
+    var isCopying: Bool {
+        [.starting, .ready, .degraded].contains(runtimeState)
+            && [.starting, .running, .degraded].contains(tradingStatus?.state)
+    }
+
+    /// Holds the Mac awake exactly while copying is on and the owner wants it (Settings → General).
+    private func holdMacAwakeWhileCopying() {
+        sleepGuard.hold(isCopying && launchPreferences.keepsMacAwake)
+    }
+
     func setStartsCopying(_ starts: Bool) {
         guard starts != launchPreferences.startsCopying else { return }
         var chosen = launchPreferences
@@ -1751,6 +1776,7 @@ final class AppModel {
         do {
             try launchPreferencesStore?.save(chosen)
             launchPreferences = chosen
+            holdMacAwakeWhileCopying()
             return true
         } catch {
             message = L10n.string("That setting could not be saved in the Keychain.")
@@ -1903,7 +1929,7 @@ final class AppModel {
             configuration.profiles.allSatisfy({ profile in
                 let draft = TradingProfileDraft(
                     guruID: profile.guruID, displayName: profile.displayName,
-                    prefix: profile.prefix, playbook: profile.playbook, examples: profile.examples,
+                    playbook: profile.playbook, examples: profile.examples,
                     exitBasis: profile.exitBasis, batches: profile.batches, sellsReferTo: profile.sellsReferTo
                 )
                 return (try? TradingProfileBuilder().build(draft)) == profile

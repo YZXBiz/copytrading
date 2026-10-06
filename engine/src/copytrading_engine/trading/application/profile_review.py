@@ -10,7 +10,7 @@ from pydantic import SecretStr, ValidationError
 
 from copytrading_engine.execution.domain.sizing import RouteConnection
 from copytrading_engine.parsing.application import transform
-from copytrading_engine.parsing.extraction import DecodeError, normalize, without_mentions
+from copytrading_engine.parsing.extraction import DecodeError, normalize
 from copytrading_engine.parsing.learning import PlaybookProposal
 from copytrading_engine.parsing.providers.registry import NamedDecoderFactory
 from copytrading_engine.shared.cleanup import close_logged
@@ -221,7 +221,7 @@ def _verified_draft(
     """Keep only what checks out, compared the way the live pipeline reads posts.
 
     An example must be one of the posts read (after the same normalization the pipeline
-    applies) and must pass ProfileExample validation; the prefix must start at least one post.
+    applies) and must pass ProfileExample validation.
     """
     by_normal_form = {normalize(post): post for post in posts}
     examples: list[ProfileExample] = []
@@ -240,12 +240,8 @@ def _verified_draft(
             )
         except ValidationError:
             continue
-    prefix = without_mentions(proposal.prefix or "") or None
-    if prefix and not any(normal.startswith(normalize(prefix)) for normal in by_normal_form):
-        prefix = None
     return LearnedPlaybook(
         posts_read=len(posts),
-        prefix=prefix,
         exit_basis=proposal.exit_basis,
         playbook=proposal.playbook.strip(),
         examples=tuple(examples),

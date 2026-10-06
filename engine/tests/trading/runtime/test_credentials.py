@@ -40,7 +40,7 @@ async def test_runtime_registers_all_loaded_credentials_before_source_and_model_
         channel_id="123",
         id="credential-echo",
         timestamp=dt.datetime.now(dt.UTC),
-        text="ALERT: " + " ".join(value for _, value in credential_values),
+        text="" + " ".join(value for _, value in credential_values),
     )
 
     class _EchoDecoder:
@@ -259,7 +259,7 @@ async def test_preview_paths_register_provider_keys_before_decoder_factory(tmp_p
         channel_id="123",
         id="999",
         timestamp=dt.datetime.now(dt.UTC) - dt.timedelta(minutes=10),
-        text="ALERT: Bought AAPL at 200",
+        text="Bought AAPL at 200",
     )
     store = await SQLiteSourceStore.open(tmp_path / "application.db")
     await store.recovery_start(123, 1)
@@ -288,11 +288,10 @@ async def test_preview_paths_register_provider_keys_before_decoder_factory(tmp_p
         ProfileDraft(
             guru_id="preview-guru",
             display_name="Preview Guru",
-            prefix="ALERT:",
             playbook="",
             examples=(
                 ProfileExample(
-                    message="ALERT: Bought AAPL at 200",
+                    message="Bought AAPL at 200",
                     expected_action="buy",
                     expected_symbol="AAPL",
                 ),

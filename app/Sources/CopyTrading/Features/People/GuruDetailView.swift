@@ -72,7 +72,7 @@ struct GuruDetailView: View {
                         Button {
                             openPost(item)
                         } label: {
-                            ActivityInboxRow(item: item, guruName: guru.name, preview: item.readableText(dropping: guru.prefix))
+                            ActivityInboxRow(item: item, guruName: guru.name, preview: item.readableText())
                                 .padding(14)
                                 .background(hoveredPostID == item.id ? Palette.hover : Palette.page, in: .rect(cornerRadius: 10))
                                 .contentShape(.rect(cornerRadius: 10))

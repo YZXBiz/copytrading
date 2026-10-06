@@ -13,7 +13,6 @@ class Decoder:
         if text == "Market commentary only. No trade action.":
             return commentary("No trade action")
         assert text == "Bought AAPL at 200"
-        assert route.prefix == "ALERT:"
         return trade(buy("AAPL", "200", said="Bought", ticker_said="AAPL"), summary="Current buy")
 
     async def close(self):

@@ -7,7 +7,7 @@ func runTradingContractTests() throws {
     try alertsNameTheirService()
     let profile = try TradingProfileBuilder().build(
         TradingProfileDraft(
-            guruID: "stable-guru", displayName: "Stable Guru", prefix: "ALERT:",
+            guruID: "stable-guru", displayName: "Stable Guru",
             exitBasis: .originalPosition
         ))
     let configuration = TradingConfiguration(
@@ -36,13 +36,13 @@ func runTradingContractTests() throws {
         !String(decoding: encoded, as: UTF8.self).contains("token"),
         "saved trading configuration unexpectedly contains a credential field"
     )
-    try #require(configuration.version == 5, "profile configuration did not use v5")
+    try #require(configuration.version == 7, "profile configuration did not use v7")
     try #require(
-        profile.profileRevision == "f8c321baa04fc5a0f906a52e139954d25f56c83befb64700a25056d4b8a8c984",
+        profile.profileRevision == "f9d0063f8729dadeb2d80ed607b2e38a9966fa8afdc40495f1b8f2b73a3cf74d",
         "native content address differs from the engine profile builder")
     let exampleProfile = try TradingProfileBuilder().build(
         TradingProfileDraft(
-            guruID: "zhao", displayName: "Zhao", prefix: "ALERT:", playbook: "Apple means AAPL",
+            guruID: "zhao", displayName: "Zhao", playbook: "Apple means AAPL",
             examples: [
                 TradingProfileExample(
                     message: "ALERT: Bought Apple at 200 1/6", expectedAction: .buy,
@@ -52,23 +52,23 @@ func runTradingContractTests() throws {
             exitBasis: .originalPosition
         ))
     try #require(
-        exampleProfile.profileRevision == "9b95a94709607f334674d5524806b3f99922555cf8ef73386c56e380ed7c4821",
+        exampleProfile.profileRevision == "265a667b20c8327f426a52011879bc1d38d91c89caf7b77ec80e998241e0b4b9",
         "native profile examples do not use the engine canonical revision format")
     // A learned playbook is multi-line Chinese with quotes, tabs, and slashes: every one of those
     // must hash exactly as the engine hashes it, or activation would stall on a revision mismatch.
     let chineseProfile = try TradingProfileBuilder().build(
         TradingProfileDraft(
-            guruID: "zhao", displayName: "赵哥", prefix: "赵哥-股票：",
+            guruID: "zhao", displayName: "赵哥",
             playbook: "加了 means buy\n英伟达 means NVDA\n\"quoted\" words, a\ttab, and a / slash",
             exitBasis: .remainingPosition
         ))
     try #require(
-        chineseProfile.profileRevision == "0ee796fd1bfeef273b6bb55e1f6865d5a3566e7abb1affec0500af2ae3229ccf",
+        chineseProfile.profileRevision == "12c1a3884b59797dc374cd45aa6063ed96eb7932ac7361f024b73ebcd20e2026",
         "a multi-line Chinese playbook does not hash to the engine's revision")
     do {
         _ = try TradingProfileBuilder().build(
             TradingProfileDraft(
-                guruID: "zhao", displayName: "Zhao", prefix: "ALERT:",
+                guruID: "zhao", displayName: "Zhao",
                 playbook: String(repeating: "x", count: tradingPlaybookMaxLength + 1),
                 exitBasis: .originalPosition
             ))
@@ -76,11 +76,11 @@ func runTradingContractTests() throws {
     } catch TradingProfileBuilderError.invalidProfile {}
     let rulesProfile = try TradingProfileBuilder().build(
         TradingProfileDraft(
-            guruID: "analyst", displayName: "分析师", prefix: "分析师：", exitBasis: .originalPosition,
+            guruID: "analyst", displayName: "分析师", exitBasis: .originalPosition,
             batches: 3, sellsReferTo: .wholePosition
         ))
     try #require(
-        rulesProfile.profileRevision == "68db085c762db50da0236f39ef4bbe5bb1d8602c876633d240f822d6db7ae24e",
+        rulesProfile.profileRevision == "366a3a180b01e2d3235567697fc190275d90081609828e48b18ee713a86e52f4",
         "a guru's batches and sell rule do not hash to the engine's revision")
     try sizingMatchesTheEngineOnEverySharedExample()
     let prepared = try TradingProfileBuilder().preparedProfiles()
@@ -90,7 +90,7 @@ func runTradingContractTests() throws {
     let learned = Data(
         """
         {"version":1,"request_id":"learn-1","ok":{"type":"learned_playbook","playbook":{
-        "posts_read":80,"prefix":"赵哥-股票：","exit_basis":"original_position",
+        "posts_read":80,"exit_basis":"original_position",
         "playbook":"加了 means buy","examples":[{"message":"赵哥-股票： 25加了abc",
         "expected_action":"buy","expected_symbol":"ABC","expected_fraction":null}],
         "summary":"Buys lead with the price.","provider":"deepseek","model":"deepseek-flash",
@@ -104,7 +104,7 @@ func runTradingContractTests() throws {
         throw VerificationFailure(description: "a learned playbook did not decode as a learned result")
     }
     try #require(
-        draft.postsRead == 80 && draft.prefix == "赵哥-股票：" && draft.examples.count == 1,
+        draft.postsRead == 80 && draft.examples.count == 1,
         "a learned playbook lost its fields")
 
     try runTradingConfigurationPersistenceTests()

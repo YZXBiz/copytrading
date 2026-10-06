@@ -249,7 +249,7 @@ private func temporaryTradingFile() -> URL {
 private func tradingConfiguration(model: String) throws -> TradingConfiguration {
     let profile = try TradingProfileBuilder().build(
         TradingProfileDraft(
-            guruID: "test-guru", displayName: "Test Guru", prefix: "ALERT:",
+            guruID: "test-guru", displayName: "Test Guru",
             exitBasis: .originalPosition
         ))
     return TradingConfiguration(

@@ -75,7 +75,6 @@ struct TradingRouteDraft: Identifiable {
     var authorID: String
     var guruID: String
     var displayName: String
-    var prefix: String
     /// The owner's guidance for reading this guru, usually edited from a learned draft.
     var playbook: String
     var exitBasis: TradingExitBasis
@@ -95,7 +94,7 @@ struct TradingRouteDraft: Identifiable {
     init(
         channelID: String = "", authorID: String = "",
         guruID: String = TradingRouteDraft.newGuruID(), displayName: String = "",
-        prefix: String = "ALERT:", playbook: String = "",
+        playbook: String = "",
         exitBasis: TradingExitBasis = .originalPosition,
         batches: Int? = nil, sellsReferTo: TradingSellsReferTo = .buyPrice,
         examples: [TradingProfileExampleDraft] = [],
@@ -105,7 +104,6 @@ struct TradingRouteDraft: Identifiable {
         self.authorID = authorID
         self.guruID = guruID
         self.displayName = displayName
-        self.prefix = prefix
         self.playbook = playbook
         self.exitBasis = exitBasis
         self.batches = batches

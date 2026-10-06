@@ -11,10 +11,6 @@ enum LimitExamples {
         Set to **$3,000**. That's the guru's full position, so a 1/6 call buys **$500**. If you \
         already hold **$2,500** of NVDA, a **$1,000** NVDA buy would make $3,500, so it's **skipped**.
         """
-    static let maxPriceMove = """
-        Set to **5**. The guru buys NVDA at **$200**. If NVDA is now above **$210** or below **$190**, \
-        the buy waits in Activity for you to copy or skip.
-        """
     static let maxTotal = """
         Set to **$10,000**. You hold **$9,500** in all. A new **$1,000** buy would go over, so it's \
         **skipped**.

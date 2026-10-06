@@ -140,7 +140,7 @@ private func unsavedChangesFollowTheSavedSetup() throws {
     try verifyGuide(model.hasUnsavedSetupChanges && model.hasSetupToStart, "A first edit did not show the start card")
 
     let profile = try TradingProfileBuilder().build(
-        TradingProfileDraft(guruID: "alex", displayName: "Alex", prefix: "ALERT:", exitBasis: .originalPosition))
+        TradingProfileDraft(guruID: "alex", displayName: "Alex", exitBasis: .originalPosition))
     let account = TradingAccountConfiguration(id: "paper", environment: .paper)
     let saved = TradingConfiguration(
         source: TradingSourceConfiguration(channelIDs: ["123"]),

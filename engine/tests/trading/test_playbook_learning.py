@@ -52,7 +52,6 @@ class _Learner:
 
 def _proposal(**changes) -> PlaybookProposal:
     values = dict(
-        prefix="赵哥-股票：",
         exit_basis="original_position",
         playbook="  加 means buy\nabc is a literal ticker  ",
         examples=(
@@ -96,7 +95,7 @@ async def _learn(tmp_path: Path, history: _History, learner: _Learner):
     return result, registered
 
 
-async def test_draft_keeps_only_verbatim_valid_examples_and_a_prefix_the_posts_use(tmp_path):
+async def test_draft_keeps_only_verbatim_valid_examples(tmp_path):
     history, learner = _History(POSTS), _Learner(_proposal())
 
     draft, registered = await _learn(tmp_path, history, learner)
@@ -106,16 +105,9 @@ async def test_draft_keeps_only_verbatim_valid_examples_and_a_prefix_the_posts_u
     assert history.calls == [("discord-token", "1517754775674949742", None, 80)]
     assert registered == ["discord-token", "provider-key"]
     assert draft.posts_read == 3
-    assert draft.prefix == "赵哥-股票："
     assert draft.playbook == "加 means buy\nabc is a literal ticker"
     assert [example.message for example in draft.examples] == [POSTS[0]]
     assert draft.summary == "Buys lead with the price."
-
-
-async def test_a_prefix_no_post_starts_with_is_dropped(tmp_path):
-    draft, _ = await _learn(tmp_path, _History(POSTS), _Learner(_proposal(prefix="ALERT:")))
-
-    assert draft.prefix is None
 
 
 async def test_an_empty_channel_is_explained_without_calling_the_model(tmp_path):
@@ -153,9 +145,3 @@ def test_learned_fractions_are_read_exactly(written, exact):
         message="post", expected_action="buy", expected_symbol="ABC", expected_fraction=written
     )
     assert example.exact_fraction() == exact
-
-
-async def test_a_mention_only_prefix_means_no_prefix(tmp_path):
-    draft, _ = await _learn(tmp_path, _History(POSTS), _Learner(_proposal(prefix="@everyone")))
-
-    assert draft.prefix is None

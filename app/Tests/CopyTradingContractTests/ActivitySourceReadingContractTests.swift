@@ -47,8 +47,8 @@ func checkActivitySourceReadingRepresentation() throws {
         withEmbed.readableText() == capturedContent,
         "The shared post-row preview repeated flattened embed content instead of the captured message"
     )
-    let prefixed = try activityWithSourceText("[Jordan] **Buy NVDA** @here\n[chart](https://example.com/chart)")
-    let personPreview = PeopleSourcePreview.text(for: prefixed, dropping: "[Jordan]")
+    let formattedPost = try activityWithSourceText("**Buy NVDA** @here\n[chart](https://example.com/chart)")
+    let personPreview = PeopleSourcePreview.text(for: formattedPost)
     let formatted = PeopleSourcePreview.formatted(personPreview)
     try requireActivityReading(
         String(formatted.characters) == "Buy NVDA chart" && formatted.runs.allSatisfy { $0.link == nil },
@@ -65,25 +65,19 @@ func checkActivitySourceReadingRepresentation() throws {
         PeopleSourcePreview.text(for: embedOnly) == "NVDA thesis Captured target. Target $140",
         "An embed-only People preview did not use captured source evidence in order"
     )
-    let prefixOnlyWithEmbed = try activityWithSourceText(
-        "[Jordan] NVDA thesis Captured target. Target $140",
-        eventContent: "[Jordan] @here\n  ",
+    let mentionOnlyWithEmbed = try activityWithSourceText(
+        "NVDA thesis Captured target. Target $140",
+        eventContent: "@here\n  ",
         embeds: [embed]
     )
     try requireActivityReading(
-        PeopleSourcePreview.text(for: prefixOnlyWithEmbed, dropping: "[Jordan]")
-            == "NVDA thesis Captured target. Target $140",
-        "A prefix-only captured People message suppressed readable embed evidence"
+        PeopleSourcePreview.text(for: mentionOnlyWithEmbed) == "NVDA thesis Captured target. Target $140",
+        "A mention-only captured People message suppressed readable embed evidence"
     )
+    let mentionOnly = try activityWithSourceText("@here\n  ")
     try requireActivityReading(
-        prefixOnlyWithEmbed.readableText(dropping: "[Jordan]")
-            == "NVDA thesis Captured target. Target $140",
-        "The shared post-row preview suppressed embed evidence after dropping the configured prefix"
-    )
-    let prefixOnly = try activityWithSourceText("[Jordan] @here\n  ")
-    try requireActivityReading(
-        PeopleSourcePreview.text(for: prefixOnly, dropping: "[Jordan]").isEmpty,
-        "A prefix-only People post invented source text without embed evidence"
+        PeopleSourcePreview.text(for: mentionOnly).isEmpty,
+        "A mention-only People post invented source text without embed evidence"
     )
     try requireActivityReading(
         PeopleSourcePreview.text(for: blank).isEmpty,

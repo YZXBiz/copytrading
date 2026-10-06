@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import select
 import shutil
 import subprocess
 import sys
@@ -623,9 +624,14 @@ def j2_engine_starts(app: AppDriver) -> None:
 
 
 def j3_first_run_guidance(app: AppDriver) -> None:
-    """With nothing saved, the app opens on Getting Started; its first step opens Connections."""
+    """With nothing saved, the app opens on Getting Started; a step opens its help when clicked,
+    and the first step's button opens Connections."""
     guide = app.open_screen("gettingStarted")
-    app.expect(guide, "Status: Not set up yet", "guide.step.0", "Find a channel ID", "0 of 5")
+    app.expect(
+        guide, "Status: Not set up yet", "guide.step.0", "0 of 5", "How a post becomes a trade"
+    )
+    app.click("guide.step.0")
+    app.expect(app.see("guide-step-open"), "Find a channel ID")
     app.click("guide.openDiscord")
     connections = app.see("connections-from-guide")
     app.expect(connections, "Discord", "Interpreter", "Alerts", "Channel IDs", "Step by step")
@@ -669,7 +675,13 @@ def j20_toolbar(app: AppDriver) -> None:
 def j21_settings_pages(app: AppDriver) -> None:
     """Every Settings page opens from its own sidebar; back retraces them and close returns."""
     expected = {
-        "general": ("When CopyTrading Opens", "settings.asksForOwner", "settings.startsCopying"),
+        "general": (
+            "When CopyTrading Opens",
+            "settings.asksForOwner",
+            "settings.startsCopying",
+            "While Copying",
+            "settings.keepsMacAwake",
+        ),
         "appearance": (
             "settings.appearance.system",
             "settings.appearance.dark",
@@ -692,7 +704,7 @@ def j21_settings_pages(app: AppDriver) -> None:
 
 def j5_self_test(app: AppDriver) -> None:
     app.open_settings("engine")
-    app.click("system.runSelfTest")
+    app.click("system.runSelfTest", outcome_checked=True)
     snapshot = app.wait_for("Last result", timeout=120, name="self-test")
     result = snapshot.find("Last result")
     if result is None or ("Completed" not in result.text and "Delivered" not in result.text):
@@ -711,7 +723,6 @@ def j6_setup_editing(app: AppDriver) -> None:
         "Position limits (USD)",
         "Maximum per stock",
         "Maximum below signal price (%)",
-        "Market move allowed (%)",
         "Ask me before sending orders",
         "Remove Account",
     )
@@ -936,7 +947,7 @@ def j22_setup_keeps_typing(app: AppDriver) -> None:
 def j25_getting_started(app: AppDriver) -> None:
     """The guide ticks Connect Discord as soon as a channel and a token are typed."""
     guide = app.open_screen("gettingStarted")
-    app.expect(guide, "Get set up", "Your day in CopyTrading", "Staying safe", "Shortcuts")
+    app.expect(guide, "Get set up", "How a post becomes a trade", "Before you go", "Shortcuts")
     step = guide.find("guide.step.0")
     if step is None or "To do" not in step.text:
         raise JourneyFailure("Connect Discord was ticked before anything was typed")
@@ -1039,6 +1050,8 @@ def j31_agent_approval(app: AppDriver) -> None:
     app.wait_for("Listening", timeout=30, name="agent-approval-access")
     _start_paper_setup(app, setup)
     before = _wait_for_account(app, "primary", timeout=180)
+    _wait_for_keep_awake(timeout=30)
+    _check_mcp_reads_the_running_setup(app)
     if before["recovery_preference"] != "manual":
         raise JourneyFailure(f"a new account starts with recovery {before['recovery_preference']}")
 
@@ -1067,6 +1080,105 @@ def j31_agent_approval(app: AppDriver) -> None:
     if after["entry_permission"] != before["entry_permission"]:
         raise JourneyFailure("a rejected resume still changed the account's entries")
     _agent_result(app, 0, "pause")
+
+
+def _check_mcp_reads_the_running_setup(app: AppDriver) -> None:
+    """`copytrading mcp` answers an MCP client with the same setup the window shows."""
+    assert app.state_root is not None
+    server = subprocess.Popen(
+        [str(DEBUG_APP / "Contents/Helpers/copytrading"), "mcp"],
+        env={
+            "PATH": "/usr/bin:/bin",
+            "HOME": str(Path.home()),
+            "COPYTRADING_STATE_ROOT": str(app.state_root),
+        },
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+    )
+    assert server.stdin is not None
+    assert server.stdout is not None
+    output = server.stdout
+    replies: dict[int, dict[str, Any]] = {}
+
+    def send(message: dict[str, Any]) -> None:
+        assert server.stdin is not None
+        server.stdin.write(json.dumps(message) + "\n")
+        server.stdin.flush()
+
+    def reply(request_id: int, method: str, params: dict[str, Any]) -> dict[str, Any]:
+        send({"jsonrpc": "2.0", "id": request_id, "method": method, "params": params})
+        deadline = time.monotonic() + 30
+        while request_id not in replies:
+            remaining = deadline - time.monotonic()
+            # Wait for a line with a deadline: a hung server must fail the journey, not stall it.
+            if remaining <= 0 or not select.select([output], [], [], remaining)[0]:
+                raise JourneyFailure(f"MCP {method} got no reply")
+            line = output.readline()
+            if not line:
+                raise JourneyFailure(f"MCP server exited during {method}")
+            message = json.loads(line)
+            if "id" in message:
+                replies[message["id"]] = message
+        answer = replies[request_id]
+        if "error" in answer:
+            raise JourneyFailure(f"MCP {method} failed: {answer['error']}")
+        return answer["result"]
+
+    try:
+        reply(
+            1,
+            "initialize",
+            {
+                "protocolVersion": "2025-06-18",
+                "capabilities": {},
+                "clientInfo": {"name": "ui-journeys", "version": "1"},
+            },
+        )
+        send({"jsonrpc": "2.0", "method": "notifications/initialized"})
+        tools = {tool["name"] for tool in reply(2, "tools/list", {})["tools"]}
+        missing = {"get_status", "list_accounts", "list_activity", "pause_processing"} - tools
+        if missing:
+            raise JourneyFailure(f"the MCP server lacks {sorted(missing)}")
+        status = reply(3, "tools/call", {"name": "get_status", "arguments": {}})
+        accounts = reply(4, "tools/call", {"name": "list_accounts", "arguments": {}})
+        if status.get("isError") or accounts.get("isError"):
+            raise JourneyFailure(f"an MCP read failed: {status} {accounts}")
+        if "primary" not in json.dumps(accounts):
+            raise JourneyFailure("MCP list_accounts did not include the account the window shows")
+    finally:
+        server.terminate()
+        try:
+            server.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            server.kill()
+
+
+def _wait_for_keep_awake(timeout: float) -> None:
+    """While copying, macOS must list the app under test as keeping the Mac awake.
+
+    The assertion has to belong to the debug app's own process: another CopyTrading on this Mac
+    holds one with the same name when it copies.
+    """
+    pids = subprocess.run(
+        ["pgrep", "-f", str(DEBUG_APP / "Contents/MacOS/CopyTrading")],
+        capture_output=True,
+        text=True,
+        check=False,
+    ).stdout.split()
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        assertions = subprocess.run(
+            ["pmset", "-g", "assertions"], capture_output=True, text=True, check=False
+        ).stdout.splitlines()
+        if any(
+            "CopyTrading is copying trades" in line and any(f"pid {pid}(" in line for pid in pids)
+            for line in assertions
+        ):
+            return
+        time.sleep(1)
+    raise JourneyFailure("copying did not keep the Mac awake: no CopyTrading sleep assertion")
 
 
 def _forget_test_keychain(state_root: Path) -> int:

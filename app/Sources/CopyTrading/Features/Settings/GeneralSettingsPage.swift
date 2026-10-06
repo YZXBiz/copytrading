@@ -1,11 +1,12 @@
 import SwiftUI
 
 /// What happens when CopyTrading opens: whether it asks for Touch ID, and whether copying starts
-/// on its own.
+/// on its own; and whether the Mac stays awake while it copies.
 struct GeneralSettingsPage: View {
     let model: AppModel
     @State private var asksForOwner = true
     @State private var startsCopying = false
+    @State private var keepsMacAwake = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 30) {
@@ -24,6 +25,15 @@ struct GeneralSettingsPage: View {
                     identifier: "settings.startsCopying"
                 )
                 .disabled(!model.canStartCopyingOnLaunch)
+            }
+            SettingsSection(title: "While Copying") {
+                SettingsToggleRow(
+                    title: "Keep this Mac awake",
+                    detail:
+                        "So no post is missed. The screen can still turn off and lock. Closing a MacBook's lid still puts it to sleep unless it's plugged in with a display connected.",
+                    isOn: $keepsMacAwake,
+                    identifier: "settings.keepsMacAwake"
+                )
             }
             SettingsSection(title: "Help") {
                 SettingsActionRow(
@@ -44,6 +54,9 @@ struct GeneralSettingsPage: View {
         .onChange(of: startsCopying) { _, starts in
             model.setStartsCopying(starts)
         }
+        .onChange(of: keepsMacAwake) { _, keeps in
+            model.setKeepsMacAwake(keeps)
+        }
     }
 
     private var startDetail: String {
@@ -55,5 +68,6 @@ struct GeneralSettingsPage: View {
     private func load() {
         asksForOwner = model.launchPreferences.asksForOwner
         startsCopying = model.launchPreferences.startsCopying
+        keepsMacAwake = model.launchPreferences.keepsMacAwake
     }
 }

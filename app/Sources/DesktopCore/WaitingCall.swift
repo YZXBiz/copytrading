@@ -5,7 +5,7 @@ import Foundation
 public struct WaitingCall: Equatable, Sendable {
     /// Skips that hold a call back for the owner rather than refuse it; the engine's
     /// `HELD_FOR_OWNER`.
-    public static let heldForOwner: Set<String> = ["price_moved", "approval_required"]
+    public static let heldForOwner: Set<String> = ["approval_required"]
 
     public let source: SourceActivity
     /// The accounts waiting on it.

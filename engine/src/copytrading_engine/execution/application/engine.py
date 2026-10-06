@@ -31,7 +31,6 @@ from copytrading_engine.execution.domain.order_lifecycle import OrderStatus, is_
 from copytrading_engine.execution.domain.orders import OrderPlan, OrderRecord, OrderRequest
 from copytrading_engine.execution.domain.ownership import account_activity_reason
 from copytrading_engine.execution.domain.positions import PositionAudit, compare_positions
-from copytrading_engine.execution.domain.pricing import quote_problem
 from copytrading_engine.execution.domain.progress import Pending
 from copytrading_engine.execution.domain.risk import (
     EntryFacts,
@@ -322,10 +321,6 @@ class CopyEngine:
         requested_usd = None
         budget_usd = None
         if s.action == "buy":
-            if not manual:
-                moved = self._market_check(s, now)
-                if moved is not None:
-                    return TradeDecision(None, moved)
             limit_price = c.entry_pricing.limit_price(s.price)
             if s.whole_position:
                 # Every buy of a stock joins the guru's one open lot of it.
@@ -462,23 +457,6 @@ class CopyEngine:
             ),
             "ready",
         )
-
-    def _market_check(self, s: Instruction, now: dt.datetime) -> str | None:
-        """Why a buy should wait for the owner instead of following a market that has moved
-        away from the guru's price (ADR-0007), if it should. Without a usable quote, as in a
-        thin overnight market, the limit price alone bounds the buy."""
-        if not isinstance(self.broker, QuoteBroker):
-            return None
-        try:
-            quote = self.broker.quote(s.symbol)
-        except BrokerError:
-            return None
-        if quote_problem(quote, quote.ask, now) is not None:
-            return None
-        assert quote.ask is not None
-        if self.config.entry_pricing.market_moved(s.price, quote.ask):
-            return "price_moved"
-        return None
 
     def process(
         self,

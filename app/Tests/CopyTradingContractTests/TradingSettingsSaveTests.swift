@@ -1,3 +1,4 @@
+import CopyTradingTestSupport
 import DesktopCore
 import Darwin
 import Foundation
@@ -33,7 +34,7 @@ struct TradingSettingsSaveTests {
 
         let profile = try TradingProfileBuilder().build(
             TradingProfileDraft(
-                guruID: "stable-guru", displayName: "Stable Guru", prefix: "Alert:",
+                guruID: "stable-guru", displayName: "Stable Guru",
                 exitBasis: .originalPosition
             ))
         let configuration = TradingConfiguration(
@@ -122,22 +123,11 @@ struct TradingSettingsSaveTests {
     }
 
     private static func status(_ state: TradingRunState) throws -> TradingStatus {
-        let json = """
-            {"state":"\(state.rawValue)","configured_accounts":0,"active_accounts":0,
-             "source_connected":false,"model_ready":false,"pending_source":0,
-             "pending_signals":0,"processed_signals":0,"error_code":null,"accounts":[]}
-            """
-        return try JSONDecoder().decode(TradingStatus.self, from: Data(json.utf8))
+        try TradingStatusBuilder(state).build()
     }
 
     private static func status(_ state: TradingRunState, errorCode: String?) throws -> TradingStatus {
-        let code = errorCode.map { "\"\($0)\"" } ?? "null"
-        let json = """
-            {"state":"\(state.rawValue)","configured_accounts":1,"active_accounts":1,
-             "source_connected":true,"model_ready":true,"pending_source":0,
-             "pending_signals":0,"processed_signals":0,"error_code":\(code),"accounts":[]}
-            """
-        return try JSONDecoder().decode(TradingStatus.self, from: Data(json.utf8))
+        try TradingStatusBuilder(state).connected().error(errorCode).build()
     }
 
     private static func checkCopyingSummary() throws {
@@ -357,7 +347,7 @@ struct TradingSettingsSaveTests {
         )
         let originalProfile = try TradingProfileBuilder().build(
             TradingProfileDraft(
-                guruID: "prior-guru", displayName: "Prior Guru", prefix: "ALERT:",
+                guruID: "prior-guru", displayName: "Prior Guru",
                 exitBasis: .originalPosition
             ))
         let original = TradingConfiguration(
@@ -416,7 +406,7 @@ struct TradingSettingsSaveTests {
         )
         let profile = try TradingProfileBuilder().build(
             TradingProfileDraft(
-                guruID: "launch-guru", displayName: "Launch Guru", prefix: "ALERT:", exitBasis: .originalPosition
+                guruID: "launch-guru", displayName: "Launch Guru", exitBasis: .originalPosition
             ))
         let configuration = TradingConfiguration(
             source: TradingSourceConfiguration(channelIDs: ["123"], authorIDs: ["456"]),
@@ -489,7 +479,7 @@ struct TradingSettingsSaveTests {
         )
         let profile = try TradingProfileBuilder().build(
             TradingProfileDraft(
-                guruID: "resume-guru", displayName: "Resume Guru", prefix: "ALERT:",
+                guruID: "resume-guru", displayName: "Resume Guru",
                 exitBasis: .originalPosition
             ))
         let prior = TradingConfiguration(
@@ -683,7 +673,7 @@ struct TradingSettingsSaveTests {
             TradingProfileDraft(
                 guruID: "example-action-guru",
                 displayName: "Example Action Guru",
-                prefix: "ALERT:",
+
                 playbook: "Apple means AAPL",
                 examples: [
                     TradingProfileExample(
@@ -1376,7 +1366,7 @@ struct TradingSettingsSaveTests {
         )
         let profile = try TradingProfileBuilder().build(
             TradingProfileDraft(
-                guruID: "prior-guru", displayName: "Prior Guru", prefix: "ALERT:",
+                guruID: "prior-guru", displayName: "Prior Guru",
                 exitBasis: .originalPosition
             ))
         let original = TradingConfiguration(
@@ -2823,7 +2813,7 @@ private actor RecordingTradingStarter: TradingStarting {
             throw EngineContractError.remote(code: .invalidRequest, message: learningFailure)
         }
         return LearnedGuruPlaybook(
-            postsRead: 3, prefix: "赵哥-股票：", exitBasis: .originalPosition,
+            postsRead: 3, exitBasis: .originalPosition,
             playbook: "加了 means buy", examples: [], summary: "Buys lead with the price.",
             provider: learning.provider.name.rawValue, model: learning.provider.model,
             costNotice: "Provider charges may apply."

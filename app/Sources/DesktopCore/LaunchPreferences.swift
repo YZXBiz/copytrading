@@ -1,16 +1,19 @@
 import Foundation
 import Security
 
-/// What CopyTrading does when it opens.
+/// What CopyTrading does when it opens, and while it copies.
 public struct LaunchPreferences: Codable, Equatable, Sendable {
     /// Ask for Touch ID (or the Mac password) before showing anything private.
     public var asksForOwner: Bool
     /// Start copying on its own once the app is open, when every account is paper.
     public var startsCopying: Bool
+    /// Keep the Mac from idle-sleeping while copying is on, so no post is missed.
+    public var keepsMacAwake: Bool
 
-    public init(asksForOwner: Bool = true, startsCopying: Bool = false) {
+    public init(asksForOwner: Bool = true, startsCopying: Bool = false, keepsMacAwake: Bool = true) {
         self.asksForOwner = asksForOwner
         self.startsCopying = startsCopying
+        self.keepsMacAwake = keepsMacAwake
     }
 }
 

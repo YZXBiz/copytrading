@@ -87,8 +87,6 @@ class AccountPolicy(BaseModel):
     approve_orders: StrictBool = False
     max_above_signal_pct: Decimal = Field(default=Decimal("0"), ge=0, le=100)
     max_below_signal_pct: Decimal = Field(default=Decimal("1"), ge=0, le=100)
-    # How far the market may be from the guru's price before a buy waits for you.
-    max_price_move_pct: Decimal = Field(default=Decimal("5"), gt=0, le=100)
 
     @model_validator(mode="after")
     def validate_sessions(self) -> Self:
@@ -149,7 +147,7 @@ class NotificationConfiguration(BaseModel):
 class TradingConfiguration(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
 
-    version: Literal[5] = CONFIGURATION_VERSION
+    version: Literal[7] = CONFIGURATION_VERSION
     source: SourceConfiguration
     provider: ProviderConfiguration
     accounts: tuple[AccountConfiguration, ...] = Field(min_length=1)

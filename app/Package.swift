@@ -40,9 +40,14 @@ let package = Package(
             dependencies: ["CopyTradingUI"],
             path: "Sources/CopyTradingApp"
         ),
+        .target(
+            name: "CopyTradingTestSupport",
+            dependencies: ["DesktopCore"],
+            path: "Tests/TestSupport"
+        ),
         .testTarget(
             name: "DesktopCoreTests",
-            dependencies: ["DesktopCore"],
+            dependencies: ["DesktopCore", "CopyTradingTestSupport"],
             path: "Tests/DesktopCoreTests"
         ),
         .testTarget(
@@ -53,7 +58,7 @@ let package = Package(
         ),
         .testTarget(
             name: "CopyTradingContractTests",
-            dependencies: ["DesktopCore", "AppLocalizationCore"],
+            dependencies: ["DesktopCore", "AppLocalizationCore", "CopyTradingTestSupport"],
             path: "Tests/CopyTradingContractTests"
         ),
     ],

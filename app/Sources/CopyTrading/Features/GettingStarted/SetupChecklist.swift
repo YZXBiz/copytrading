@@ -1,11 +1,10 @@
 import SwiftUI
 
-/// The five steps of a first setup, ticking themselves from what is typed and saved. The next step
-/// to do is open; finishing it opens the one after.
+/// The five steps of a first setup, ticking themselves from what is typed and saved. A step opens
+/// its help only when clicked, so the list stays short.
 struct SetupChecklist: View {
     @Bindable var model: AppModel
     @State private var expanded: SetupStep?
-    @State private var hasOpenedNext = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -25,30 +24,11 @@ struct SetupChecklist: View {
                 }
             }
         }
-        .onAppear(perform: openNextStep)
-        .onChange(of: progress.next) { previous, next in
-            follow(from: previous, to: next)
-        }
     }
 
     private func toggle(_ step: SetupStep) {
         withAnimation(reduceMotion ? nil : .smooth(duration: 0.28)) {
             expanded = expanded == step ? nil : step
-        }
-    }
-
-    /// Opens the first unfinished step once, when the guide first appears.
-    private func openNextStep() {
-        guard !hasOpenedNext else { return }
-        hasOpenedNext = true
-        expanded = model.setupProgress.next
-    }
-
-    /// When the open step gets done, the next one opens, so the guide keeps pace with the owner.
-    private func follow(from previous: SetupStep?, to next: SetupStep?) {
-        guard expanded == previous else { return }
-        withAnimation(reduceMotion ? nil : .smooth(duration: 0.28)) {
-            expanded = next
         }
     }
 

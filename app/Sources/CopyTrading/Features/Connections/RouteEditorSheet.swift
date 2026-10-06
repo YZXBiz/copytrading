@@ -54,8 +54,6 @@ struct RouteEditorSheet: View {
                 PlaybookSection(route: $route, learn: learn)
 
                 Section {
-                    TextField(L10n.string("Message prefix"), text: $route.prefix, prompt: Text(L10n.string("e.g. %@", "ALERT:")))
-                        .accessibilityLabel(L10n.string("Message prefix"))
                     Picker(selection: $route.exitBasis) {
                         Text(L10n.string("Original position")).tag(TradingExitBasis.originalPosition)
                         Text(L10n.string("Remaining position")).tag(TradingExitBasis.remainingPosition)
@@ -65,8 +63,6 @@ struct RouteEditorSheet: View {
                     }
                 } header: {
                     SetupSectionHeader(title: "Reading their posts", detail: "Learn from Channel fills these in; edit anything.")
-                } footer: {
-                    Text(L10n.string("Only messages starting with the prefix are read as calls."))
                 }
 
                 ForEach($route.examples) { $example in

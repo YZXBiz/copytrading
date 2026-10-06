@@ -279,19 +279,12 @@ async def test_a_post_with_one_unplaceable_call_places_none_of_them():
     assert (result.decision, result.instructions) == ("review", ())
 
 
-async def test_a_prefix_mismatch_never_calls_the_model():
-    decoder = FakeDecoder(trade(buy("ABC", "25")))
-
-    result = await transform(raw(), Route(prefix="Different:"), decoder, "test")
-
-    assert (result.decision, decoder.calls) == ("ignore", 0)
-
-
-async def test_prefix_and_post_are_normalized_alike():
+async def test_every_post_in_the_channel_is_read_whole():
+    # One guru per channel: nothing is filtered or cut from the start of a post.
     result = await read(
-        "Example：" + TEXT,  # noqa: RUF001 - the fullwidth colon is the input under test
+        "Example：" + TEXT,  # noqa: RUF001 - a guru's own label stays part of the post
         trade(buy("ABC", "25", fraction=SIXTH, fraction_said="6分之一")),
-        Route(prefix="Example："),  # noqa: RUF001 - the fullwidth colon is the input under test
+        Route(),
     )
 
     assert result.decision == "trade"

@@ -1,3 +1,4 @@
+import CopyTradingTestSupport
 import DesktopCore
 import Foundation
 
@@ -183,23 +184,7 @@ private func inSimplifiedChineseTheAssistantAsksAndShowsItsWorkInChinese() throw
 }
 
 private func assistantPost(sequence: Int, sourceID: String) throws -> SourceActivity {
-    let payload: [String: Any] = [
-        "sequence": sequence,
-        "source_id": sourceID,
-        "source_revision": 1,
-        "source_at": "2026-10-01T12:00:00Z",
-        "captured_at": "2026-10-01T12:00:01Z",
-        "text": "AMD long",
-        "capture_status": "delivered",
-        "parse_status": "complete",
-        "delivery_status": "delivered",
-        "instructions": [],
-        "suggested": [],
-        "source_event": [
-            "event_type": "discord_message", "content": "AMD long", "embeds": [], "attachments": [],
-            "attachments_omitted": 0, "capture_status": "complete", "payload_bytes": 0,
-        ],
-        "destinations": [],
-    ]
-    return try JSONDecoder().decode(SourceActivity.self, from: JSONSerialization.data(withJSONObject: payload))
+    try SourceActivityBuilder()
+        .sequence(sequence, sourceID: sourceID).text("AMD long").posted(at: "2026-10-01T12:00:00Z").decision(nil)
+        .build()
 }

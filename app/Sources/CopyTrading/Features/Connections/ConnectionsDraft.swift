@@ -91,7 +91,6 @@ struct ConnectionsDraft {
                 authorID: route.authorID ?? "",
                 guruID: route.guruID,
                 displayName: profile?.displayName ?? route.guruID,
-                prefix: profile?.prefix ?? "ALERT:",
                 playbook: profile?.playbook ?? "",
                 exitBasis: profile?.exitBasis ?? .originalPosition,
                 batches: profile?.batches,
@@ -136,7 +135,6 @@ struct ConnectionsDraft {
                 TradingProfileDraft(
                     guruID: route.guruID.trimmed,
                     displayName: route.displayName.trimmed,
-                    prefix: route.prefix.trimmed,
                     playbook: route.playbook.trimmedLines,
                     examples: route.examples.map(\.profileExample),
                     exitBasis: route.exitBasis,

@@ -50,8 +50,8 @@ struct ConnectionStatus: Equatable {
     @MainActor
     static func guru(_ route: TradingRouteDraft, in model: AppModel) -> ConnectionStatus {
         let draft = model.setupDraft
-        if route.displayName.trimmed.isEmpty || route.prefix.trimmed.isEmpty {
-            return .init(text: "Needs a name and how their calls start", tone: .caution)
+        if route.displayName.trimmed.isEmpty {
+            return .init(text: "Needs a name", tone: .caution)
         }
         if draft.effectiveChannel(for: route).isEmpty {
             return .init(text: "Needs a channel", tone: .caution)

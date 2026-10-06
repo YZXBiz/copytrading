@@ -93,12 +93,6 @@ struct AccountEditorSheet: View {
                             "The lowest a sell can go below the guru's price. A sell that can't fill by then is cancelled.",
                         text: $account.policy.maxBelowSignalPct,
                         example: LimitExamples.maxBelowSignal)
-                    textLimit(
-                        "Market move allowed (%)",
-                        hint:
-                            "If the price has moved more than this from the guru's price, up or down, the buy waits for you to decide.",
-                        text: $account.policy.maxPriceMovePct,
-                        example: LimitExamples.maxPriceMove)
                 }
 
                 Section(L10n.string("Timing")) {

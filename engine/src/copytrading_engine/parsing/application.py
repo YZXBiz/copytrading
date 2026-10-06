@@ -52,19 +52,8 @@ def outcome(
 
 
 def without_model(event: _RawMessage, route: Route, model: str) -> StockSignal | None:
-    """Resolve source filtering before reserving a paid provider attempt."""
-    text = normalize(event.text)
-    prefix = normalize(route.prefix)
-    if not text.startswith(prefix):
-        return outcome(
-            event,
-            "ignore",
-            "source_prefix_mismatch",
-            model=model,
-            guru_id=route.guru_id,
-            profile_revision=route.profile_revision,
-        )
-    text = text[len(prefix) :].strip()
+    """Settle an empty post before reserving a paid provider attempt."""
+    text = normalize(event.text).strip()
     if not text:
         return outcome(
             event,
@@ -81,7 +70,7 @@ async def transform(event: _RawMessage, route: Route, decoder: Decoder, model: s
     local = without_model(event, route, model)
     if local is not None:
         return local
-    text = normalize(event.text)[len(normalize(route.prefix)) :].strip()
+    text = normalize(event.text).strip()
     reading = await decoder.decode(text, route)
     try:
         check_reading(reading, text, route)

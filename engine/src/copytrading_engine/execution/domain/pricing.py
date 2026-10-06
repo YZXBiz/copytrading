@@ -26,13 +26,6 @@ class EntryPricingPolicy(BaseModel):
     max_above_signal_pct: Decimal = Field(default=Decimal("0"), ge=0, le=100)
     # How far below the guru's sell price an exit may fill: a sell is always a limit order.
     max_below_signal_pct: Decimal = Field(default=Decimal("1"), ge=0, le=100)
-    # How far the market may be from the guru's price, up or down, before a buy waits for the
-    # owner instead of going through (ADR-0007).
-    max_price_move_pct: Decimal = Field(default=Decimal("5"), gt=0, le=100)
-
-    def market_moved(self, signal_price: Decimal, market: Decimal) -> bool:
-        """Whether the market is further from the guru's price than the owner allows."""
-        return abs(market - signal_price) * 100 > self.max_price_move_pct * signal_price
 
     def limit_price(self, signal_price: Decimal) -> Decimal:
         """Return a valid stock tick that never exceeds the configured ceiling."""

@@ -49,7 +49,7 @@ private func savedConfigurationRoundTripsThroughDraft() throws {
     seed.routes = [
         TradingRouteDraft(
             channelID: "111", authorID: "333", guruID: "guru", displayName: "Guru",
-            prefix: "ALERT:", playbook: "  apple means AAPL\n英伟达 means NVDA\n",
+            playbook: "  apple means AAPL\n英伟达 means NVDA\n",
             batches: 3, sellsReferTo: .wholePosition,
             connection: TradingConnectionDraft(accountID: "primary", defaultFraction: "0.25")
         )
