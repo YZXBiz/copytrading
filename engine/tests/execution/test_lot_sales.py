@@ -16,7 +16,6 @@ from copytrading_engine.execution.domain.lot_sales import (
 from copytrading_engine.execution.domain.market import Quote
 from copytrading_engine.execution.domain.signals import CopyConfig
 from copytrading_engine.execution.presentation.operator_views import account_overview
-from copytrading_engine.shared.queue_snapshot import QueueSnapshot
 from copytrading_engine.shared.signals import StockSignal
 
 from .builders import NOW, event, receive
@@ -110,7 +109,6 @@ def test_selling_a_whole_lot_sells_its_remaining_shares_with_a_limit_and_closes_
     overview = account_overview(
         snapshot,
         None,
-        QueueSnapshot(0, None, 0),
         local_account_id="paper-demo",
         active_configuration=True,
         readiness="ready",

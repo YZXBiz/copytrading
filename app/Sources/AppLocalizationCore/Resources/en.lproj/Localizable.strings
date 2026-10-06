@@ -1255,7 +1255,7 @@
 "Enter %@ first." = "Enter %@ first.";
 "the Alpaca API key and secret for “%@”" = "the Alpaca API key and secret for “%@”";
 "Backup saved and checked: %@. Copying stopped while it ran; choose Start Copying to carry on." = "Backup saved and checked: %@. Copying stopped while it ran; choose Start Copying to carry on.";
-"Restored into %@. Each account stays off, with manual recovery, until you turn it back on." = "Restored into %@. Each account stays off, with manual recovery, until you turn it back on.";
+"Restored. Each account stays off, with manual recovery, until you turn it back on." = "Restored. Each account stays off, with manual recovery, until you turn it back on.";
 "Your broker's records don't match the backup (%@), so nothing was restored. Your data is as it was." = "Your broker's records don't match the backup (%@), so nothing was restored. Your data is as it was.";
 "Verified update staged at %@. The engine has not been stopped." = "Verified update staged at %@. The engine has not been stopped.";
 "Update recovery is still pending: %@ Quit and reopen after the installation lock is released." = "Update recovery is still pending: %@ Quit and reopen after the installation lock is released.";

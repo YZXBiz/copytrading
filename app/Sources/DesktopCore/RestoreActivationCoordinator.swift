@@ -249,11 +249,7 @@ public struct RestoreActivationCoordinator: Sendable {
             guard pending.candidateValid else { throw RestoreActivationError.candidateInvalid }
 
             let candidateEngine = try await startRuntime(transition)
-            let reportedCandidate = try await candidateEngine.restoreCandidateStatus()
-            #if DEBUG
-                FileHandle.standardError.write(Data("restore candidate after start: \(String(reflecting: reportedCandidate))\n".utf8))
-            #endif
-            guard let runningCandidate = reportedCandidate,
+            guard let runningCandidate = try await candidateEngine.restoreCandidateStatus(),
                 runningCandidate.candidateID == pending.candidateID,
                 runningCandidate.activeGeneration == pending.candidateID,
                 runningCandidate.candidateValid

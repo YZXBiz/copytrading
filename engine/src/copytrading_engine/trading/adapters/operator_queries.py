@@ -21,7 +21,6 @@ from copytrading_engine.execution.presentation.operator_views import (
     account_overview,
     event_page,
 )
-from copytrading_engine.shared.queue_snapshot import QueueSnapshot
 from copytrading_engine.shared.raw_message import RawMessage
 from copytrading_engine.shared.signals import StockSignal
 from copytrading_engine.trading.presentation.operator_models import (
@@ -370,10 +369,6 @@ def retained_account(
         snapshot = decode_ledger_snapshot(row[0])
         if (snapshot.environment, snapshot.account_id) != identity:
             raise RuntimeError("Retained account identity mismatch")
-        pending, oldest = db.execute(
-            "SELECT count(*),min(enqueued_at) FROM journal WHERE published=0"
-        ).fetchone()
-        queue = QueueSnapshot(pending, dt.datetime.fromisoformat(oldest) if oldest else None, 0)
         rows = db.execute(
             "SELECT id,event FROM journal WHERE (? IS NULL OR id < ?) ORDER BY id DESC LIMIT ?",
             (before_seq, before_seq, limit),
@@ -381,7 +376,6 @@ def retained_account(
     overview = account_overview(
         snapshot,
         None,
-        queue,
         local_account_id=path.parent.name,
         active_configuration=False,
         readiness="inactive_evidence",

@@ -30,7 +30,6 @@ from copytrading_engine.execution.application.ports import (
     ExecutionObserver,
 )
 from copytrading_engine.execution.application.recovery import RecoveryApplication
-from copytrading_engine.execution.application.reports import StoredReport
 from copytrading_engine.execution.domain.events import JournalEvent, SignalRejected
 from copytrading_engine.execution.domain.lifecycle import (
     AccountControlCommand,
@@ -180,7 +179,6 @@ class ExecutionResources:
         return account_overview(
             self.engine.ledger.snapshot(),
             self.last_inspection,
-            self.store.report_snapshot(),
             local_account_id=self.data_dir.name,
             active_configuration=True,
             readiness=self.account_status().readiness,
@@ -273,7 +271,6 @@ class ExecutionResources:
             ledger=deepcopy(self.engine.ledger.snapshot()),
             total_cost_exposure_usd=self.engine.ledger.exposure(),
             position_audit=deepcopy(self.position_audit),
-            report_queue=deepcopy(self.store.report_snapshot()),
         )
 
     def cycle(
@@ -310,12 +307,6 @@ class ExecutionResources:
                 payload=SignalRejected(payload_hash=payload_hash, reason=reason),
             )
         )
-
-    def pending_reports(self) -> tuple[StoredReport, ...]:
-        return deepcopy(self.store.pending_reports())
-
-    def confirm_report(self, event_id: int) -> None:
-        self.store.confirm_report(event_id)
 
     def pending_notifications(self) -> tuple[tuple[int, str, str, dict[str, object]], ...]:
         return deepcopy(self.store.pending_notifications())

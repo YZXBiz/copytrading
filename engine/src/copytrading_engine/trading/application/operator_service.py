@@ -120,8 +120,6 @@ class OperatorQueryService:
                 unresolved_incidents=(),
                 ownership_incidents=(),
                 pending_orders=None,
-                pending_reports=None,
-                oldest_report_at=None,
                 balance=None,
             ), unavailable
 

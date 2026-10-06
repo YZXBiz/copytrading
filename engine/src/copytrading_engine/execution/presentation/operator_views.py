@@ -13,7 +13,6 @@ from copytrading_engine.execution.domain.orders import OwnedLot
 from copytrading_engine.execution.domain.ownership import OwnershipInspection
 from copytrading_engine.execution.domain.progress import Skipped
 from copytrading_engine.execution.domain.values import Money, Positive, Quantity, Value
-from copytrading_engine.shared.queue_snapshot import QueueSnapshot
 
 EXCERPT_LENGTH = 140
 
@@ -89,8 +88,6 @@ class AccountOverview(Value):
     unresolved_incidents: tuple[str, ...]
     ownership_incidents: tuple[OwnershipIncidentView, ...]
     pending_orders: int | None
-    pending_reports: int | None
-    oldest_report_at: AwareDatetime | None
     balance: AccountBalanceView | None
 
 
@@ -196,7 +193,6 @@ def _excerpt(text: str) -> str | None:
 def account_overview(
     snapshot: LedgerSnapshot,
     inspection: OwnershipInspection | None,
-    queue: QueueSnapshot,
     *,
     local_account_id: str,
     active_configuration: bool,
@@ -267,8 +263,6 @@ def account_overview(
             if not item.resolved
         ),
         pending_orders=sum(order.pending for order in snapshot.orders.values()),
-        pending_reports=queue.count,
-        oldest_report_at=queue.oldest_at,
         balance=balance,
     )
 

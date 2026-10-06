@@ -1255,7 +1255,7 @@
 "Enter %@ first." = "请先输入%@。";
 "the Alpaca API key and secret for “%@”" = "“%@”的 Alpaca API 密钥和密钥口令";
 "Backup saved and checked: %@. Copying stopped while it ran; choose Start Copying to carry on." = "备份已保存并检查完毕：%@。备份期间已停止跟单，选择“开始跟单”即可继续。";
-"Restored into %@. Each account stays off, with manual recovery, until you turn it back on." = "已恢复到 %@。在你重新开启之前，每个账户都保持关闭，并使用手动恢复。";
+"Restored. Each account stays off, with manual recovery, until you turn it back on." = "已恢复。在你重新开启之前，每个账户都保持关闭，并使用手动恢复。";
 "Your broker's records don't match the backup (%@), so nothing was restored. Your data is as it was." = "券商的记录与备份不一致（%@），因此没有恢复任何内容，你的数据保持原样。";
 "Verified update staged at %@. The engine has not been stopped." = "已在 %@ 暂存经过验证的更新。引擎尚未停止。";
 "Update recovery is still pending: %@ Quit and reopen after the installation lock is released." = "更新恢复仍未完成：%@ 请在安装锁释放后退出并重新打开应用。";

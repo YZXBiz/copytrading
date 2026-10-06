@@ -262,7 +262,8 @@ final class AppModel {
             backupManifest = try await engineActions.createBackup(destination: destination)
             tradingStatus = try? await engineActions.tradingStatus()
             backupRestoreNote = .done(
-                L10n.string("Backup saved and checked: %@. Copying stopped while it ran; choose Start Copying to carry on.", destination.path))
+                L10n.string(
+                    "Backup saved and checked: %@. Copying stopped while it ran; choose Start Copying to carry on.", destination.path))
         } catch is CancellationError {
             backupRestoreNote = .problem(L10n.string("The backup was cancelled. Nothing was left half-written."))
         } catch {
@@ -383,9 +384,7 @@ final class AppModel {
             pendingRestoreCandidate = nil
             restoreCredentialStatus = nil
             backupRestoreNote = .done(
-                L10n.string(
-                    "Restored into %@. Each account stays off, with manual recovery, until you turn it back on.",
-                    operationalStoragePath))
+                L10n.string("Restored. Each account stays off, with manual recovery, until you turn it back on."))
         } catch let error as RestoreActivationError {
             if case .preflightBlocked(let blockers) = error {
                 restorePreflightBlockers = blockers
@@ -995,6 +994,12 @@ final class AppModel {
             guard runtimeGeneration.accepts(startingGeneration), !Task.isCancelled else { throw CancellationError() }
             startStatusPolling()
         } catch {
+            #if DEBUG
+                if let supervisor {
+                    let tail = await supervisor.stderrTail(for: .engine)
+                    FileHandle.standardError.write(Data("desktop startup engine stderr:\n\(tail)\n".utf8))
+                }
+            #endif
             if let transition, let attempt {
                 do {
                     _ = try await attempt.stopReplacementForMaintenance(during: transition)

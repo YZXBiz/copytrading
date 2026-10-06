@@ -25,6 +25,7 @@ from pathlib import Path
 from types import TracebackType
 from typing import Any
 
+from local_signing import local_identity
 from swift_paths import swift_bin_path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -538,7 +539,22 @@ def build_debug_bundle() -> None:
         subprocess.run(
             ["/usr/libexec/PlistBuddy", "-c", f"Set :{key} {value}", str(info)], check=True
         )
-    subprocess.run(["codesign", "--force", "--deep", "-s", "-", str(DEBUG_APP)], check=True)
+    # The owner's Apple Development identity keeps Keychain trust across rebuilds, so a state
+    # kept with --keep-state can be reused without macOS asking for the saved keys again.
+    identity = local_identity() or "-"
+    subprocess.run(
+        [
+            "codesign",
+            "--force",
+            "--deep",
+            "--sign",
+            identity,
+            "--identifier",
+            BUNDLE_ID,
+            str(DEBUG_APP),
+        ],
+        check=True,
+    )
 
 
 def launch(state_root: Path, *, quit_first: bool = True) -> None:
@@ -1203,11 +1219,16 @@ def j33_backup_and_restore(app: AppDriver) -> None:
         preview = app.wait_for("Restore Preview", timeout=120, name="restore-preview")
         app.expect(preview, "Same installation", "primary", "Restore This Backup")
         app.click("Restore This Backup", outcome_checked=True)
-        done = app.wait_for("Restored into", timeout=240, name="restore-activated")
+        done = app.wait_for("Restored.", timeout=240, name="restore-activated")
         app.expect_absent(done, "Before it can restore")
-        account = _wait_for_account(app, "primary", timeout=180)
-        if (account["entry_permission"], account["recovery_preference"]) != ("disabled", "manual"):
-            raise JourneyFailure(f"the restored account came back as {account}")
+        # A restore leaves copying paused, so read the account rather than wait for processing.
+        accounts = _agent_result(app, 0, "accounts")["items"]
+        restored = next((a for a in accounts if a["account_id"] == "primary"), None)
+        if restored is None or (restored["entry_permission"], restored["recovery_preference"]) != (
+            "disabled",
+            "manual",
+        ):
+            raise JourneyFailure(f"the restored account came back as {restored}")
     except JourneyFailure:
         app.press("escape")  # a file panel left open would keep the app from quitting
         raise
