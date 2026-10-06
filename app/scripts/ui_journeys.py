@@ -623,16 +623,14 @@ def j2_engine_starts(app: AppDriver) -> None:
 
 
 def j3_first_run_guidance(app: AppDriver) -> None:
-    """With nothing saved, the app opens on Getting Started; its first step opens Connections."""
+    """With nothing saved, the app opens on Getting Started; a step opens its help when clicked,
+    and the first step's button opens Connections."""
     guide = app.open_screen("gettingStarted")
     app.expect(
-        guide,
-        "Status: Not set up yet",
-        "guide.step.0",
-        "Find a channel ID",
-        "0 of 5",
-        "What CopyTrading does",
+        guide, "Status: Not set up yet", "guide.step.0", "0 of 5", "How a post becomes a trade"
     )
+    app.click("guide.step.0")
+    app.expect(app.see("guide-step-open"), "Find a channel ID")
     app.click("guide.openDiscord")
     connections = app.see("connections-from-guide")
     app.expect(connections, "Discord", "Interpreter", "Alerts", "Channel IDs", "Step by step")
@@ -948,7 +946,7 @@ def j22_setup_keeps_typing(app: AppDriver) -> None:
 def j25_getting_started(app: AppDriver) -> None:
     """The guide ticks Connect Discord as soon as a channel and a token are typed."""
     guide = app.open_screen("gettingStarted")
-    app.expect(guide, "Get set up", "Your day in CopyTrading", "Staying safe", "Shortcuts")
+    app.expect(guide, "Get set up", "How a post becomes a trade", "Before you go", "Shortcuts")
     step = guide.find("guide.step.0")
     if step is None or "To do" not in step.text:
         raise JourneyFailure("Connect Discord was ticked before anything was typed")
