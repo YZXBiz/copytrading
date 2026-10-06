@@ -625,7 +625,14 @@ def j2_engine_starts(app: AppDriver) -> None:
 def j3_first_run_guidance(app: AppDriver) -> None:
     """With nothing saved, the app opens on Getting Started; its first step opens Connections."""
     guide = app.open_screen("gettingStarted")
-    app.expect(guide, "Status: Not set up yet", "guide.step.0", "Find a channel ID", "0 of 5")
+    app.expect(
+        guide,
+        "Status: Not set up yet",
+        "guide.step.0",
+        "Find a channel ID",
+        "0 of 5",
+        "What CopyTrading does",
+    )
     app.click("guide.openDiscord")
     connections = app.see("connections-from-guide")
     app.expect(connections, "Discord", "Interpreter", "Alerts", "Channel IDs", "Step by step")

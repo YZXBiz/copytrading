@@ -1567,3 +1567,17 @@
 "Keep this Mac awake" = "让这台 Mac 保持唤醒";
 "So no post is missed. The screen can still turn off and lock. Closing a MacBook's lid still puts it to sleep unless it's plugged in with a display connected." = "这样不会漏掉任何帖子。屏幕仍会关闭和锁定。合上 MacBook 的盖子仍会让它睡眠，除非接着电源并连接了显示器。";
 "%lld waiting" = "%lld项待处理";
+"What CopyTrading does" = "CopyTrading 会做什么";
+"The guru buys" = "信号源买入";
+"The guru sells" = "信号源卖出";
+"An idea, a condition, a range" = "建议、条件、价格区间";
+"Talk" = "闲聊";
+"**Buys** a sixth of the guru's full position (your **maximum per stock**), paying no more than their price plus your allowance. Your other limits can make it smaller or skip it." = "**买入**信号源满仓（你的**单只股票上限**）的六分之一，价格不超过信号源的价格加上你允许的幅度。其他限额可能会让它变小或跳过。";
+"**Sells** that part of the shares it bought on this guru's calls, at no less than their price minus 1%. Shares you bought yourself are never sold." = "**卖出**它按这个信号源的信号买入的那部分股票，价格不低于信号源的价格减 1%。你自己买的股票永远不会被卖出。";
+"**Waits for you** in Activity. Copy it or skip it, until its trading day ends." = "在“活动”里**等你决定**：跟单或跳过，直到这个交易日结束。";
+"**Nothing.** It's shown in Activity as ignored." = "**什么都不做。**在“活动”里显示为已忽略。";
+"It never:" = "它从不：";
+"sell shares you bought yourself" = "卖出你自己买的股票";
+"short a stock, or trade options or crypto" = "做空，或交易期权、加密货币";
+"set its own stop-loss or take-profit: it sells when the guru sells, or when you do" = "自己设止损或止盈：只在信号源卖出或你卖出时卖出";
+"trade outside the hours you allow, or in an account whose entries are off" = "在你没允许的时段交易，或在关闭开仓的账户里买入";

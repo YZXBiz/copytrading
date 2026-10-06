@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// The guide's white page: title, lead, the opening figure, the checklist, each screen, safety,
+/// The guide's white page: title, lead, the opening figure, what it does with each kind of post,
+/// the checklist, each screen, safety,
 /// shortcuts, and where to get help.
 struct GuideDocument: View {
     @Bindable var model: AppModel
@@ -12,6 +13,9 @@ struct GuideDocument: View {
                 .id(GuideAnchor.top)
             GuideLeadBlock()
             GuideFlowFigure()
+            GuideSection("What CopyTrading does") {
+                GuideCapabilitiesSection()
+            }
             GuideSection("Get set up") {
                 SetupChecklist(model: model)
             }

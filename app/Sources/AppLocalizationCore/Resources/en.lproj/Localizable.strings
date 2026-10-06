@@ -1567,3 +1567,17 @@
 "Keep this Mac awake" = "Keep this Mac awake";
 "So no post is missed. The screen can still turn off and lock. Closing a MacBook's lid still puts it to sleep unless it's plugged in with a display connected." = "So no post is missed. The screen can still turn off and lock. Closing a MacBook's lid still puts it to sleep unless it's plugged in with a display connected.";
 "%lld waiting" = "%lld waiting";
+"What CopyTrading does" = "What CopyTrading does";
+"The guru buys" = "The guru buys";
+"The guru sells" = "The guru sells";
+"An idea, a condition, a range" = "An idea, a condition, a range";
+"Talk" = "Talk";
+"**Buys** a sixth of the guru's full position (your **maximum per stock**), paying no more than their price plus your allowance. Your other limits can make it smaller or skip it." = "**Buys** a sixth of the guru's full position (your **maximum per stock**), paying no more than their price plus your allowance. Your other limits can make it smaller or skip it.";
+"**Sells** that part of the shares it bought on this guru's calls, at no less than their price minus 1%. Shares you bought yourself are never sold." = "**Sells** that part of the shares it bought on this guru's calls, at no less than their price minus 1%. Shares you bought yourself are never sold.";
+"**Waits for you** in Activity. Copy it or skip it, until its trading day ends." = "**Waits for you** in Activity. Copy it or skip it, until its trading day ends.";
+"**Nothing.** It's shown in Activity as ignored." = "**Nothing.** It's shown in Activity as ignored.";
+"It never:" = "It never:";
+"sell shares you bought yourself" = "sell shares you bought yourself";
+"short a stock, or trade options or crypto" = "short a stock, or trade options or crypto";
+"set its own stop-loss or take-profit: it sells when the guru sells, or when you do" = "set its own stop-loss or take-profit: it sells when the guru sells, or when you do";
+"trade outside the hours you allow, or in an account whose entries are off" = "trade outside the hours you allow, or in an account whose entries are off";
