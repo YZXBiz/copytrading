@@ -94,7 +94,9 @@ final class AppModel {
     var settingsTrail: [SettingsPage] = []
     /// Where closing Settings returns to.
     var screenBeforeSettings: Screen = .today
-    var runtimeState: RuntimeState = .stopped
+    var runtimeState: RuntimeState = .stopped {
+        didSet { holdMacAwakeWhileCopying() }
+    }
     var engineStatus: EngineStatus?
     var tradingStatus: TradingStatus? {
         didSet { holdMacAwakeWhileCopying() }
@@ -1750,9 +1752,11 @@ final class AppModel {
         saveLaunchPreferences(chosen)
     }
 
-    /// Copying is on: starting, running, or running with a problem it is working through.
+    /// Copying is on: the engine is up and copying is starting, running, or running with a problem
+    /// it is working through. A stopped or failed engine copies nothing, whatever it last reported.
     var isCopying: Bool {
-        [.starting, .running, .degraded].contains(tradingStatus?.state)
+        [.starting, .ready, .degraded].contains(runtimeState)
+            && [.starting, .running, .degraded].contains(tradingStatus?.state)
     }
 
     /// Holds the Mac awake exactly while copying is on and the owner wants it (Settings → General).

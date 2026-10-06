@@ -1334,7 +1334,6 @@
 "Edit this account's keys and limits in Connections" = "在“连接”中编辑此账户的密钥和限额";
 "Set Up in Connections" = "前往“连接”设置";
 "Needs a channel" = "缺少频道";
-"Needs a name and how their calls start" = "缺少名称和信号开头";
 "Needs an account to copy into" = "缺少跟单账户";
 "Needs keys" = "缺少密钥";
 "New accounts start with entries off, so nothing is bought until you allow it." = "新账户默认关闭开仓，你允许之前不会买入任何股票。";
@@ -1589,3 +1588,4 @@
 "**Your AI service bills you** for each post it reads, usually a fraction of a cent." = "**你的 AI 服务按读取的帖子收费**，通常每条不到一美分。";
 "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Pause Copying** stops everything at once." = "**它只跟单，不做判断**。不提供建议，也不设止损。每日亏损上限只停止买入，不停止卖出。**暂停跟单**会一次停止所有操作。";
 "Max per stock" = "单只股票上限";
+"Needs a name" = "缺少名称";

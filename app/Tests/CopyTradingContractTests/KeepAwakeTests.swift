@@ -14,6 +14,7 @@ func runKeepAwakeTests() throws {
         },
         end: { _ in held.append(false) })
     let model = AppModel(sleepGuard: sleepGuard)
+    model.runtimeState = .ready
 
     model.tradingStatus = try status(.paused)
     try #require(!sleepGuard.isHolding, "a paused setup kept the Mac awake")
@@ -34,7 +35,13 @@ func runKeepAwakeTests() throws {
     model.tradingStatus = try status(.running)
     model.tradingStatus = nil
     try #require(!sleepGuard.isHolding, "a stopped engine kept the Mac awake")
-    try #require(held == [true, false, true, false, true, false], "unexpected hold sequence \(held)")
+
+    // The engine fails while its last report still says running: nothing is copying any more.
+    model.tradingStatus = try status(.running)
+    model.runtimeState = .failed
+    try #require(!sleepGuard.isHolding, "a failed engine kept the Mac awake on a stale status")
+    try #require(
+        held == [true, false, true, false, true, false, true, false], "unexpected hold sequence \(held)")
 }
 
 private func status(_ state: TradingRunState) throws -> TradingStatus {

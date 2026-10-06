@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import select
 import shutil
 import subprocess
 import sys
@@ -1110,7 +1111,9 @@ def _check_mcp_reads_the_running_setup(app: AppDriver) -> None:
         send({"jsonrpc": "2.0", "id": request_id, "method": method, "params": params})
         deadline = time.monotonic() + 30
         while request_id not in replies:
-            if time.monotonic() > deadline:
+            remaining = deadline - time.monotonic()
+            # Wait for a line with a deadline: a hung server must fail the journey, not stall it.
+            if remaining <= 0 or not select.select([output], [], [], remaining)[0]:
                 raise JourneyFailure(f"MCP {method} got no reply")
             line = output.readline()
             if not line:
@@ -1146,17 +1149,33 @@ def _check_mcp_reads_the_running_setup(app: AppDriver) -> None:
             raise JourneyFailure("MCP list_accounts did not include the account the window shows")
     finally:
         server.terminate()
-        server.wait(timeout=10)
+        try:
+            server.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            server.kill()
 
 
 def _wait_for_keep_awake(timeout: float) -> None:
-    """While copying, macOS must list CopyTrading as keeping the Mac awake (Settings → General)."""
+    """While copying, macOS must list the app under test as keeping the Mac awake.
+
+    The assertion has to belong to the debug app's own process: another CopyTrading on this Mac
+    holds one with the same name when it copies.
+    """
+    pids = subprocess.run(
+        ["pgrep", "-f", str(DEBUG_APP / "Contents/MacOS/CopyTrading")],
+        capture_output=True,
+        text=True,
+        check=False,
+    ).stdout.split()
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         assertions = subprocess.run(
             ["pmset", "-g", "assertions"], capture_output=True, text=True, check=False
-        ).stdout
-        if "CopyTrading is copying trades" in assertions:
+        ).stdout.splitlines()
+        if any(
+            "CopyTrading is copying trades" in line and any(f"pid {pid}(" in line for pid in pids)
+            for line in assertions
+        ):
             return
         time.sleep(1)
     raise JourneyFailure("copying did not keep the Mac awake: no CopyTrading sleep assertion")

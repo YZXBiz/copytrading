@@ -6,9 +6,7 @@ struct ToolbarStatus: View {
     let model: AppModel
     let accountFeature: AccountFeatureModel
 
-    private var isCopying: Bool {
-        model.tradingStatus?.state == .running || model.tradingStatus?.state == .degraded
-    }
+    private var isCopying: Bool { model.isCopying }
 
     var body: some View {
         HStack(spacing: 10) {

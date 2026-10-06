@@ -1334,7 +1334,6 @@
 "Edit this account's keys and limits in Connections" = "Edit this account's keys and limits in Connections";
 "Set Up in Connections" = "Set Up in Connections";
 "Needs a channel" = "Needs a channel";
-"Needs a name and how their calls start" = "Needs a name and how their calls start";
 "Needs an account to copy into" = "Needs an account to copy into";
 "Needs keys" = "Needs keys";
 "New accounts start with entries off, so nothing is bought until you allow it." = "New accounts start with entries off, so nothing is bought until you allow it.";
@@ -1589,3 +1588,4 @@
 "**Your AI service bills you** for each post it reads, usually a fraction of a cent." = "**Your AI service bills you** for each post it reads, usually a fraction of a cent.";
 "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Pause Copying** stops everything at once." = "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Pause Copying** stops everything at once.";
 "Max per stock" = "Max per stock";
+"Needs a name" = "Needs a name";
