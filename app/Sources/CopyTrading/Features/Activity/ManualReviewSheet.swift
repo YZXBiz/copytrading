@@ -204,7 +204,8 @@ struct ManualReviewSheet: View {
                         .accessibilityHint(L10n.string("Creates a new immutable correction identity for the same source."))
                     }
                     if let correctionRequest, let error = feature.errors[correctionRequest.correctionID] {
-                        Callout(L10n.string(error), tone: .critical).accessibilityLabel(L10n.string("Correction error: %@", L10n.string(error)))
+                        Callout(L10n.string(error), tone: .critical).accessibilityLabel(
+                            L10n.string("Correction error: %@", L10n.string(error)))
                     }
                     if feature.pendingCorrections.contains(correctionID) {
                         ProgressView(L10n.string("Saving correction"))
@@ -427,9 +428,10 @@ struct ManualReviewSheet: View {
                         L10n.string(
                             "Posted %@ · %@ before this preview", Humanize.timestamp(preview.sourceAt),
                             Duration.seconds(preview.sourceAgeSeconds).formatted(
-                                .units(allowed: [.hours, .minutes, .seconds], width: .wide, maximumUnitCount: 2))))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                                .units(allowed: [.hours, .minutes, .seconds], width: .wide, maximumUnitCount: 2)))
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
                 ForEach(preview.checks) { check in
                     StatusRow(
