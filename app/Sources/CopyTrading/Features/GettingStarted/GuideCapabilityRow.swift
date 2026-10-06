@@ -13,8 +13,8 @@ struct GuideCapabilityRow: View {
                 Text(L10n.string(kind))
                     .font(DesignTokens.caption.weight(.medium))
                     .foregroundStyle(Palette.tertiaryInk)
-                // The guru's own words, so they are never translated.
-                Text(verbatim: example)
+                // A post as a guru would write it, in the app's language.
+                Text(L10n.string(example))
                     .font(DesignTokens.bodyText)
                     .foregroundStyle(Palette.ink)
                     .padding(.horizontal, 10)

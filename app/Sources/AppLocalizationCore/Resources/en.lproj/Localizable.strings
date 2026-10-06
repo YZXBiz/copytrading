@@ -1581,3 +1581,12 @@
 "short a stock, or trade options or crypto" = "short a stock, or trade options or crypto";
 "set its own stop-loss or take-profit: it sells when the guru sells, or when you do" = "set its own stop-loss or take-profit: it sells when the guru sells, or when you do";
 "trade outside the hours you allow, or in an account whose entries are off" = "trade outside the hours you allow, or in an account whose entries are off";
+"Added 1/6 position SOUN at 5.85" = "Added 1/6 position SOUN at 5.85";
+"Sold half of my 39.5 IREN at 41.27" = "Sold half of my 39.5 IREN at 41.27";
+"If SCO dips under 20 tomorrow, I'll buy the first batch" = "If SCO dips under 20 tomorrow, I'll buy the first batch";
+"TSLA 373 is still resistance today" = "TSLA 373 is still resistance today";
+"What it looks for in a post:" = "What it looks for in a post:";
+"**The stock**: a ticker, or a name the guru's playbook maps to one. Without it, nothing is traded." = "**The stock**: a ticker, or a name the guru's playbook maps to one. Without it, nothing is traded.";
+"**The price**: what they traded at. Without one, or \"at market\", the call waits for you." = "**The price**: what they traded at. Without one, or \"at market\", the call waits for you.";
+"**The size**, optional: \"1/6\", \"half\", \"the first batch\". Without one, it buys your default share: the full position, unless you lower it." = "**The size**, optional: \"1/6\", \"half\", \"the first batch\". Without one, it buys your default share: the full position, unless you lower it.";
+"**For a sell, which buy**, optional: \"half of my 39.5\". For a guru whose sells refer to the buy price, a sell that doesn't say waits for you." = "**For a sell, which buy**, optional: \"half of my 39.5\". For a guru whose sells refer to the buy price, a sell that doesn't say waits for you.";
