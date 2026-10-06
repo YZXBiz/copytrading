@@ -180,6 +180,44 @@ jobs:
           path: dist/release-notes.md
           if-no-files-found: error
           retention-days: 1
+      # Sparkle (ADR-0009) installs only a download whose EdDSA signature matches the key in the
+      # app, so the release signs its DMG and adds itself to the feed the app reads.
+      - name: Sign the update and add it to the feed
+        if: github.event_name == 'push'
+        env:
+          RELEASE_VERSION: ${{ steps.metadata.outputs.version }}
+          RELEASE_TAG: ${{ steps.metadata.outputs.tag }}
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          tools="$RUNNER_TEMP/sparkle"
+          mkdir -p "$tools"
+          curl -fsSL -o "$tools/Sparkle.tar.xz" \
+            https://github.com/sparkle-project/Sparkle/releases/download/2.10.0/Sparkle-2.10.0.tar.xz
+          echo "c2bf58aa8387266ac179357b1415d6f2635f044da8be41042af32425dae6da0c  $tools/Sparkle.tar.xz" | shasum -a 256 -c -
+          tar -xJf "$tools/Sparkle.tar.xz" -C "$tools"
+          key="$RUNNER_TEMP/sparkle-key"
+          (umask 077 && printf '%s' "$SPARKLE_ED_PRIVATE_KEY" > "$key")
+          dmg="dist/release-assets/CopyTrading-${RELEASE_VERSION}.dmg"
+          signature="$("$tools/bin/sign_update" --ed-key-file "$key" "$dmg")"
+          rm -f "$key"
+          mkdir -p dist/feed
+          curl -fsSL -o dist/feed/appcast.xml \
+            "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/appcast/appcast.xml" || rm -f dist/feed/appcast.xml
+          "$UV_PYTHON" app/scripts/appcast.py \
+            --feed dist/feed/appcast.xml \
+            --version "$RELEASE_VERSION" \
+            --build "$(git rev-list --count HEAD)" \
+            --url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/CopyTrading-${RELEASE_VERSION}.dmg" \
+            --notes-url "https://github.com/${GITHUB_REPOSITORY}/releases/tag/${RELEASE_TAG}" \
+            --signature-line "$signature"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: github.event_name == 'push'
+        with:
+          name: update-feed
+          path: dist/feed/appcast.xml
+          if-no-files-found: error
+          retention-days: 1
 
   publish:
     needs: build
@@ -219,3 +257,25 @@ jobs:
             --prerelease \
             --title "CopyTrading ${RELEASE_VERSION} (developer preview)" \
             --notes-file dist/release-notes.md
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: update-feed
+          path: dist/feed
+      # After the release exists, so the feed never offers a download that is not there yet.
+      - name: Publish the update feed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          set -euo pipefail
+          feed="$RUNNER_TEMP/feed"
+          git init -q "$feed"
+          cp dist/feed/appcast.xml "$feed/appcast.xml"
+          cd "$feed"
+          git checkout -q --orphan appcast
+          git add appcast.xml
+          git -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Update feed for ${RELEASE_TAG}"
+          git push -q --force "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" appcast

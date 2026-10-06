@@ -62,7 +62,7 @@ struct SettingsView: View {
         switch model.settingsPage {
         case .general: GeneralSettingsPage(model: model)
         case .appearance: AppearanceSettingsPage()
-        case .updates: UpdatesSettingsPage(model: model)
+        case .updates: UpdatesSettingsPage()
         case .engine: EngineSettingsPage(model: model)
         case .agents: AgentAccessPage(model: model)
         case .backups: BackupsSettingsPage(model: model)

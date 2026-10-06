@@ -12,6 +12,7 @@ Every button tested against the real app and Alpaca paper, and the ones that did
 - **"After a restart: Wait for me / Carry on by itself"** replaces "Recovery: Manual / Automatic" on each account.
 - **"In stocks"** replaces "Copied exposure": the number includes shares you bought yourself, as the account's limit always did.
 - **Switches have names for VoiceOver** in the account, guru, and review sheets, instead of "1, checkbox".
+- **Updates come through Sparkle.** Check for Updates… (in the CopyTrading menu and Settings → Updates) shows what's new, downloads the release, checks its signature, and installs when you say so; the app also checks once a day, which you can turn off. Settings shows the full version, such as 0.1.0-alpha.4. Copies from before this release update once by hand ([ADR-0009](docs/adr/0009-updates-with-sparkle.md)).
 - **A correction that cannot be recorded no longer stops the engine**; you see why instead ("Start copying first…" when copying is paused).
 
 ## 0.1.0-alpha.3 — developer preview

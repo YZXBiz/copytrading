@@ -10,6 +10,10 @@ let package = Package(
         .library(name: "CopyTradingUI", targets: ["CopyTradingUI"]),
         .executable(name: "CopyTrading", targets: ["CopyTrading"]),
     ],
+    dependencies: [
+        // Updates: the standard updater for Mac apps outside the App Store (ADR-0009).
+        .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.10.0")
+    ],
     targets: [
         .target(
             name: "DesktopCore",
@@ -37,8 +41,9 @@ let package = Package(
         ),
         .executableTarget(
             name: "CopyTrading",
-            dependencies: ["CopyTradingUI"],
-            path: "Sources/CopyTradingApp"
+            dependencies: ["CopyTradingUI", .product(name: "Sparkle", package: "Sparkle")],
+            path: "Sources/CopyTradingApp",
+            linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])]
         ),
         .target(
             name: "CopyTradingTestSupport",

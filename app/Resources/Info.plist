@@ -13,6 +13,10 @@
     <key>CFBundleShortVersionString</key><string>0.1.0</string>
     <key>CFBundleVersion</key><string>2</string>
     <key>LSMinimumSystemVersion</key><string>26.0</string>
+    <key>SUFeedURL</key><string>https://raw.githubusercontent.com/YZXBiz/copytrading/appcast/appcast.xml</string>
+    <key>SUPublicEDKey</key><string>X0frmQi9jRWteFu84IpL8NUt1McSbTtJfm5cBON0JrQ=</string>
+    <key>SUEnableAutomaticChecks</key><true/>
+    <key>SUAutomaticallyUpdate</key><false/>
     <key>NSHighResolutionCapable</key><true/>
 </dict>
 </plist>
