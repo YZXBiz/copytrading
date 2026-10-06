@@ -952,3 +952,15 @@ def test_a_waiting_call_can_be_copied_only_through_its_own_trading_day(tmp_path,
     assert ("waiting_expired" in preview.reasons) is expired
     source = next(check for check in preview.checks if check.name == "source")
     assert source.status == ("blocked" if expired else "passed")
+
+
+def test_command_history_is_read_by_the_apps_account_name():
+    """The ledger records the broker's account number; history is asked for by the app's name."""
+    from copytrading_engine.execution.application.manual_commands import (
+        manual_command_page_from_snapshot,
+    )
+    from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
+
+    snapshot = LedgerSnapshot(account_id="8f3c1a52-alpaca-paper-account", environment="paper")
+    page = manual_command_page_from_snapshot(snapshot, account_id="primary", source_id="post-1")
+    assert (page.account_id, page.items, page.next_before_command_id) == ("primary", (), None)

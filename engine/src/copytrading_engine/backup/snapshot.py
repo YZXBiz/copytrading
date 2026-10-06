@@ -21,7 +21,7 @@ from copytrading_engine.backup.configuration import (
     validate_activation_json,
 )
 from copytrading_engine.backup.databases import (
-    account_identity,
+    account_environment,
     snapshot_database,
     sqlite_schema_version,
     validate_sqlite,
@@ -184,9 +184,7 @@ def _snapshot_members(
                 schema_catalog,
                 snapshot_schema,
             )
-            account_id, environment = account_identity(target)
-            if account_id != account_dir.name:
-                raise BackupManifestError("account database identity does not match its path")
+            account_id, environment = account_dir.name, account_environment(target)
             if configured_environments.get(account_id, environment) != environment:
                 raise BackupManifestError(
                     "account database environment conflicts with configuration"

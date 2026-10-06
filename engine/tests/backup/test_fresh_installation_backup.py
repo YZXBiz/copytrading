@@ -52,3 +52,27 @@ async def test_a_new_installation_is_backup_ready_once_its_schema_is_created(tmp
 
     assert (tmp_path / "after.zip").is_file()
     assert manifest.installation_id == installation.instance_id
+
+
+async def test_a_connected_account_is_backed_up_under_its_local_name(tmp_path):
+    """The ledger records the broker's account number; its folder holds the app's account name."""
+    from .builders import execution_database_bytes
+
+    data = tmp_path / "data"
+    owner = tmp_path / "owner"
+    data.mkdir()
+    owner.mkdir()
+    with (
+        Installation(data / "application.db") as installation,
+        SQLiteSelfTestStore(installation),
+    ):
+        (owner / "installation-id").write_text(installation.instance_id + "\n")
+        create_application_schema(data / "application.db")
+        account_dir = data / "accounts" / "primary"
+        account_dir.mkdir(parents=True)
+        execution_database_bytes(
+            account_dir / "execution.sqlite3", "8f3c1a52-alpaca-paper-account", "paper"
+        )
+        manifest = await _service(data, owner).create_backup(tmp_path / "backup.zip")
+
+    assert any(m.path == "accounts/primary/execution.sqlite3" for m in manifest.members)

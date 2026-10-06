@@ -423,9 +423,10 @@ def manual_command_page_from_snapshot(
     before_command_id: str | None = None,
     limit: int = 50,
 ) -> ManualCommandPage:
-    """Build a bounded source-scoped history page from one validated account snapshot."""
-    if snapshot.account_id != account_id:
-        raise ValueError("Manual command account identity mismatch")
+    """Build a bounded source-scoped history page from one validated account snapshot.
+
+    `account_id` is the app's name for the account; the snapshot records the broker's number.
+    """
     if type(limit) is not int or not 1 <= limit <= 100:
         raise ValueError("Manual command page limit must be between 1 and 100")
     commands = [

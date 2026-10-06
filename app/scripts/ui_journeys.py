@@ -1014,7 +1014,7 @@ def _agent_result(app: AppDriver, expected_exit: int, *arguments: str) -> dict[s
     if completed.returncode != expected_exit:
         raise JourneyFailure(
             f"`copytrading {' '.join(arguments)}` exited {completed.returncode}, "
-            f"expected {expected_exit}: {completed.stderr.strip()[:200]}"
+            f"expected {expected_exit}: {(completed.stderr or completed.stdout).strip()[:300]}"
         )
     return json.loads(completed.stdout)["ok"]
 
@@ -1079,7 +1079,61 @@ def j31_agent_approval(app: AppDriver) -> None:
     after = _wait_for_account(app, "primary", timeout=5)
     if after["entry_permission"] != before["entry_permission"]:
         raise JourneyFailure("a rejected resume still changed the account's entries")
+    _check_every_cli_command(app, asked["proposal_id"])
     _agent_result(app, 0, "pause")
+    _check_locked_app_still_pauses(app)
+
+
+def _expect_exit(app: AppDriver, expected: int, *arguments: str) -> None:
+    completed = _agent_command(app, *arguments)
+    if completed.returncode != expected:
+        raise JourneyFailure(
+            f"`copytrading {' '.join(arguments)}` exited {completed.returncode}, "
+            f"expected {expected}: {(completed.stderr or completed.stdout).strip()[:300]}"
+        )
+
+
+def _check_every_cli_command(app: AppDriver, approved_id: str) -> None:
+    """Every `copytrading` command answers the running setup, in text and in JSON."""
+    accounts = _agent_result(app, 0, "accounts")
+    if [item["account_id"] for item in accounts["items"]] != ["primary"]:
+        raise JourneyFailure(f"`accounts` listed {accounts['items']}")
+    _expect_exit(app, 0, "accounts")
+    _agent_result(app, 0, "activity")
+    _expect_exit(app, 0, "activity")
+    events = _agent_result(app, 0, "events", "primary")
+    if not events["items"]:
+        raise JourneyFailure("`events primary` lost the approved recovery change")
+    _expect_exit(app, 0, "events", "primary")
+    if _agent_result(app, 0, "proposals", "show", approved_id)["state"] != "succeeded":
+        raise JourneyFailure("`proposals show` disagrees with the approved request")
+    schema = _agent_command(app, "schema")
+    if schema.returncode != 0 or {"request", "response"} - json.loads(schema.stdout).keys():
+        raise JourneyFailure("`schema` did not print the contract's JSON Schema")
+
+    # Manual orders refer to a post's reading; unknown ones fail without asking the owner.
+    _agent_result(app, 0, "manual", "list", "primary", "no-such-post")
+    _expect_exit(app, 6, "manual", "show", "primary", "no-such-command")
+    _expect_exit(
+        app, 6, "manual", "preview", "primary", "--correction", "none", "--instruction", "0"
+    )
+    _expect_exit(app, 6, "manual", "confirm", "primary", "--preview", "none")
+    _expect_exit(app, 2, "accounts", "recovery", "primary", "sometimes")
+
+    # Pausing an account is safer, so it runs at once without asking.
+    _agent_result(app, 0, "accounts", "pause", "primary")
+    if _wait_for_account(app, "primary", timeout=5)["entry_permission"] != "paused":
+        raise JourneyFailure("`accounts pause` did not pause the account's entries")
+
+
+def _check_locked_app_still_pauses(app: AppDriver) -> None:
+    """A locked app refuses reads but still lets an agent pause."""
+    app.click("Lock")
+    app.wait_for("CopyTrading is locked", timeout=20)
+    _expect_exit(app, 4, "status")
+    _expect_exit(app, 0, "pause")
+    app.click("app.unlock")
+    app.wait_for("navigation.today", timeout=30)
 
 
 def _check_mcp_reads_the_running_setup(app: AppDriver) -> None:

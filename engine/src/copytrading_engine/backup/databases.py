@@ -141,7 +141,9 @@ def _component_revisions(connection: sqlite3.Connection) -> dict[str, int]:
     return {name: revision for name, revision in rows}
 
 
-def account_identity(path: Path) -> tuple[str, str]:
+def account_environment(path: Path) -> str:
+    """The ledger's environment. Its broker account number is checked against the broker, never
+    against the account's folder, which holds the app's own name for the account."""
     connection = sqlite3.connect(path)
     try:
         row = connection.execute(
@@ -153,7 +155,7 @@ def account_identity(path: Path) -> tuple[str, str]:
         connection.close()
     if row is None or row[0] not in {"paper", "live"} or not isinstance(row[1], str):
         raise BackupManifestError("account identity is invalid")
-    return row[1], row[0]
+    return row[0]
 
 
 def validate_sqlite(
@@ -176,11 +178,8 @@ def validate_sqlite(
             connection.close()
         if row is None or row[0] != installation_id:
             raise BackupManifestError("operational database belongs to a different installation")
-    elif account_match := ACCOUNT_DATABASE.fullmatch(member_path):
-        account_id, _ = account_identity(path)
-        expected = account_match.group(1)
-        if account_id != expected:
-            raise BackupManifestError("account database belongs to a different account")
+    elif ACCOUNT_DATABASE.fullmatch(member_path):
+        account_environment(path)
         connection = sqlite3.connect(path)
         try:
             snapshot_row = connection.execute(
