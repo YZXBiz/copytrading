@@ -38,6 +38,7 @@ DEBUG_APP = ROOT / "dist/ui-test/CopyTrading Debug.app"
 APP_NAME = "CopyTrading Debug"
 BUNDLE_ID = "dev.copytrading.app.uitest"
 APP_LOG = ROOT / "dist/ui-test/app-stderr.log"
+APPEARANCE_KEY = "appearance"  # AppAppearance.storageKey in the app
 
 
 ASSISTANT_ANSWER = "Copying is paused, so nothing is being copied right now."
@@ -711,6 +712,91 @@ def j1_launch_and_unlock(app: AppDriver) -> None:
 def j2_engine_starts(app: AppDriver) -> None:
     app.open_settings("engine")
     app.wait_for("Local engine, Ready", timeout=90, name="engine-ready")
+
+
+def _saved_appearance() -> str | None:
+    """The appearance the debug app saved, as SwiftUI's AppStorage keeps it."""
+    read = subprocess.run(
+        ["defaults", "read", BUNDLE_ID, APPEARANCE_KEY], capture_output=True, text=True, check=False
+    )
+    return read.stdout.strip() or None
+
+
+def j37_everyday_buttons(app: AppDriver) -> None:
+    """Buttons that do not trade do their job: Run Self-Test fills the log, Search narrows it,
+    Save log… writes it to disk, Appearance switches, Settings stops and starts the engine, and
+    each Getting Started step opens the part of Connections it names."""
+    diagnostics = app.open_screen("diagnostics")
+    app.expect(diagnostics, "diagnostics.runSelfTest")
+    app.click("diagnostics.runSelfTest")
+    app.wait_for("Self-test completed", timeout=60, name="self-test-logged")
+    app.type("completed", into="Search")
+    narrowed = app.see("diagnostics-search")
+    app.expect(narrowed, "Self-test completed")
+    app.expect_absent(narrowed, "Self-test captured")
+    app.type("", into="Search")
+    app.click("diagnostics.refresh")
+    app.wait_for("Self-test captured", timeout=30)
+
+    folder = Path(tempfile.mkdtemp(prefix="copytrading-ui-log.")).resolve()
+    try:
+        app.open_settings("logs")
+        app.click("settings.support.saveLog", real=True)
+        _choose_in_file_panel(app, folder, "journey-log.jsonl")
+        saved = folder / "journey-log.jsonl"
+        deadline = time.monotonic() + 30
+        while not saved.is_file():
+            if time.monotonic() > deadline:
+                app.see("log-not-saved")
+                raise JourneyFailure("Save log… did not write the log")
+            time.sleep(1)
+        records = [json.loads(line) for line in saved.read_text().splitlines() if line.strip()]
+        if not records:
+            raise JourneyFailure("Save log… wrote an empty log")
+    except JourneyFailure:
+        app.press("escape")  # a save panel left open would keep the app from quitting
+        raise
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+    app.open_settings("appearance")
+    for choice in ("dark", "system"):
+        app.click(f"settings.appearance.{choice}")
+        time.sleep(1)
+        if _saved_appearance() != choice:
+            raise JourneyFailure(f"choosing {choice} did not save it ({_saved_appearance()!r})")
+
+    app.open_settings("engine")
+    app.click("settings.stopEngine")
+    app.wait_for("settings.startEngine", timeout=60, name="engine-stopped-in-settings")
+    app.click("settings.startEngine")
+    app.wait_for("Local engine, Ready", timeout=90, name="engine-started-in-settings")
+
+    for row, (step, lands_on) in enumerate(
+        (
+            ("guide.openDiscord", "Channel IDs"),
+            ("guide.openInterpreter", "connections.provider.deepseek"),
+            ("guide.openAccounts", "Alpaca keys"),
+            ("guide.openPeople", "Where they post"),
+        )
+    ):
+        app.open_screen("gettingStarted")
+        app.click(f"guide.step.{row}")  # a checklist row opens to show what it offers
+        app.click(step)
+        app.wait_for(lands_on, timeout=15, name=f"guide-{step.split('.')[-1]}")
+        for close in ("connections.close", "Done"):
+            if app.see().find(close) is not None:
+                app.click(close)
+                break
+    # Leave the setup as found, so later journeys start from nothing saved.
+    app.open_screen("connections")
+    for row, remove in (
+        ("connections.guru", "Remove Guru"),
+        ("connections.account.primary", "Remove Account"),
+    ):
+        if app.see().find(row) is not None:
+            app.click(row)
+            app.click(remove)
 
 
 def j3_first_run_guidance(app: AppDriver) -> None:
@@ -1792,6 +1878,7 @@ def j17_crash_recovery(app: AppDriver) -> None:
 JOURNEYS: list[tuple[str, Callable[[AppDriver], None]]] = [
     ("J1 launch and unlock", j1_launch_and_unlock),
     ("J2 engine starts", j2_engine_starts),
+    ("J37 everyday buttons", j37_everyday_buttons),
     ("J3 first-run guidance", j3_first_run_guidance),
     ("J4 every screen", j4_every_screen),
     ("J20 toolbar", j20_toolbar),
