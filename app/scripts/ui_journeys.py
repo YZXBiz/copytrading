@@ -1534,6 +1534,28 @@ def j36_approve_and_skip(app: AppDriver) -> None:
         _set_ask_before_orders(app, False)
 
 
+def j38_today_chart(app: AppDriver) -> None:
+    """With a saved setup, Today's chart opens its day picker and its range details, and the
+    toolbar opens and closes the assistant. Run after J31, or with --reuse-state."""
+    if app.state_root is None:
+        raise JourneySkipped("needs the run's state root")
+    _paper_setup()
+    today = app.open_screen("today")
+    if today.find("today.day") is None:
+        raise JourneySkipped("needs a saved setup with an equity chart")
+    app.click("today.day")
+    picker = app.wait_for("Chart day", timeout=15, name="chart-day-picker")
+    app.expect(picker, "Done")
+    app.click("Done")
+    app.wait_gone("Done", timeout=10)  # the button itself is labelled "Chart day, …"
+    app.click("today.rangeDetails")
+    app.expect(app.wait_for("High", timeout=15, name="range-details"), "Low")
+    app.click("toolbar.assistant")
+    app.wait_for("assistant.panel", timeout=15, name="assistant-open")
+    app.click("toolbar.assistant")
+    app.wait_gone("assistant.panel", timeout=15)
+
+
 def j35_copy_and_sell(app: AppDriver) -> None:
     """A real call in the test channel is held for approval, approved into Alpaca paper, and the
     lot it bought is sold from Accounts.
@@ -1903,6 +1925,7 @@ JOURNEYS: list[tuple[str, Callable[[AppDriver], None]]] = [
     # Last: starting copying saves a setup that the journeys above expect to be empty.
     ("J31 agent approval", j31_agent_approval),
     ("J33 backup and restore", j33_backup_and_restore),
+    ("J38 today chart", j38_today_chart),
     ("J35 copy and sell", j35_copy_and_sell),
     ("J36 approve and skip", j36_approve_and_skip),
 ]
