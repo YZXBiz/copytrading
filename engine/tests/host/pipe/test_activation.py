@@ -42,7 +42,7 @@ def _configuration():
     )
     return TradingConfiguration.model_validate(
         {
-            "version": 5,
+            "version": 6,
             "source": {"channel_ids": ["123"]},
             "provider": {"name": "deepseek", "model": "test-model"},
             "accounts": [{"id": "paper", "environment": "paper"}],

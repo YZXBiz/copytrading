@@ -155,7 +155,7 @@ def _configuration(*, approve_orders: bool = False) -> TradingConfiguration:
     )
     return TradingConfiguration.model_validate(
         {
-            "version": 5,
+            "version": 6,
             "source": {"channel_ids": [_CHANNEL]},
             "provider": {"name": "deepseek", "model": _DEEPSEEK_MODEL},
             "accounts": [

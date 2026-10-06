@@ -100,7 +100,6 @@ enum Reason {
         "price_not_given": "The post gave no price",
         "batch_size_unknown": "The post named a batch, not a size",
         "sell_names_no_buy": "The sell didn't say which buy it comes from",
-        "price_moved": "The market moved too far from the guru's price",
         "approval_required": "You asked to approve every order for this account",
         "waiting_expired": "Too late to copy: its trading day is over",
     ]

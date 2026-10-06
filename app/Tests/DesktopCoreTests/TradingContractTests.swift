@@ -36,7 +36,7 @@ func runTradingContractTests() throws {
         !String(decoding: encoded, as: UTF8.self).contains("token"),
         "saved trading configuration unexpectedly contains a credential field"
     )
-    try #require(configuration.version == 5, "profile configuration did not use v5")
+    try #require(configuration.version == 6, "profile configuration did not use v6")
     try #require(
         profile.profileRevision == "f8c321baa04fc5a0f906a52e139954d25f56c83befb64700a25056d4b8a8c984",
         "native content address differs from the engine profile builder")

@@ -1417,7 +1417,6 @@
 "The post gave no price" = "The post gave no price";
 "The post named a batch, not a size" = "The post named a batch, not a size";
 "The sell didn't say which buy it comes from" = "The sell didn't say which buy it comes from";
-"The market moved too far from the guru's price" = "The market moved too far from the guru's price";
 "this account" = "this account";
 "A post with no size waits for you." = "A post with no size waits for you.";
 "%@ New York time" = "%@ New York time";
@@ -1451,7 +1450,6 @@
 "%@ batches make a full position" = "%@ batches make a full position";
 "How they trade" = "How they trade";
 "Two things that differ from guru to guru." = "Two things that differ from guru to guru.";
-"Market move allowed (%)" = "Market move allowed (%)";
 "%@ Agent access stays off until you choose again." = "%@ Agent access stays off until you choose again.";
 "%@ Fix it under Interpreter in Connections." = "%@ Fix it under Interpreter in Connections.";
 "“%@” needs a Discord channel." = "“%@” needs a Discord channel.";
@@ -1542,13 +1540,11 @@
 "The most this account can hold in all stocks, including your own. A buy that would go over is skipped." = "The most this account can hold in all stocks, including your own. A buy that would go over is skipped.";
 "If the account is down this much today, it stops buying until tomorrow. It still sells." = "If the account is down this much today, it stops buying until tomorrow. It still sells.";
 "The most a buy can pay above the guru's price. 0 means never more than the guru paid." = "The most a buy can pay above the guru's price. 0 means never more than the guru paid.";
-"If the price has moved more than this from the guru's price, up or down, the buy waits for you to decide." = "If the price has moved more than this from the guru's price, up or down, the buy waits for you to decide.";
 "The most buys in one day. Sells don't count." = "The most buys in one day. Sells don't count.";
 "If a post takes longer than this to arrive, it isn't copied. You can still copy it yourself in Activity." = "If a post takes longer than this to arrive, it isn't copied. You can still copy it yourself in Activity.";
 "An order that hasn't filled by then is cancelled." = "An order that hasn't filled by then is cancelled.";
 "Set to **$1,000**. The guru's call would buy **$2,500** of NVDA. You buy **$1,000** instead." = "Set to **$1,000**. The guru's call would buy **$2,500** of NVDA. You buy **$1,000** instead.";
 "Set to **$3,000**. That's the guru's full position, so a 1/6 call buys **$500**. If you already hold **$2,500** of NVDA, a **$1,000** NVDA buy would make $3,500, so it's **skipped**." = "Set to **$3,000**. That's the guru's full position, so a 1/6 call buys **$500**. If you already hold **$2,500** of NVDA, a **$1,000** NVDA buy would make $3,500, so it's **skipped**.";
-"Set to **5**. The guru buys NVDA at **$200**. If NVDA is now above **$210** or below **$190**, the buy waits in Activity for you to copy or skip." = "Set to **5**. The guru buys NVDA at **$200**. If NVDA is now above **$210** or below **$190**, the buy waits in Activity for you to copy or skip.";
 "Set to **$10,000**. You hold **$9,500** in all. A new **$1,000** buy would go over, so it's **skipped**." = "Set to **$10,000**. You hold **$9,500** in all. A new **$1,000** buy would go over, so it's **skipped**.";
 "Set to **$500**. The account closed yesterday at **$20,000**. If it drops to **$19,500** today, buying stops until tomorrow. Sells still go through." = "Set to **$500**. The account closed yesterday at **$20,000**. If it drops to **$19,500** today, buying stops until tomorrow. Sells still go through.";
 "Set to **1**. The guru buys AAPL at **$200**. You pay **$202** at most. At **0**, you pay **$200** at most." = "Set to **1**. The guru buys AAPL at **$200**. You pay **$202** at most. At **0**, you pay **$200** at most.";
@@ -1569,3 +1565,6 @@
 "Too late to approve: its trading day is over." = "Too late to approve: its trading day is over.";
 "Not sent" = "Not sent";
 "Set to **60**. The guru buys NVDA at **$200.00**. With **Maximum above signal price** at **%@%%**, your buy fills at **%@ or less**. The price jumps to **%@** and stays there, so nothing fills. After **60 seconds** the order is cancelled, so it can't fill hours later." = "Set to **60**. The guru buys NVDA at **$200.00**. With **Maximum above signal price** at **%@%%**, your buy fills at **%@ or less**. The price jumps to **%@** and stays there, so nothing fills. After **60 seconds** the order is cancelled, so it can't fill hours later.";
+"While Copying" = "While Copying";
+"Keep this Mac awake" = "Keep this Mac awake";
+"So no post is missed. The screen can still turn off and lock. Closing a MacBook's lid still puts it to sleep unless it's plugged in with a display connected." = "So no post is missed. The screen can still turn off and lock. Closing a MacBook's lid still puts it to sleep unless it's plugged in with a display connected.";

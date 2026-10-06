@@ -19,6 +19,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
     case assistantPanel = "assistant panel"
     case settingsSaveFlow = "settings save and start flow"
     case orderApproval = "order approval"
+    case keepAwake = "keep the Mac awake while copying"
 
     var testDescription: String { rawValue }
 
@@ -40,6 +41,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
         case .assistantPanel: try runAssistantPanelTests()
         case .settingsSaveFlow: try await TradingSettingsSaveTests.runSettingsSaveFlow()
         case .orderApproval: try await runOrderApprovalTests()
+        case .keepAwake: try runKeepAwakeTests()
         }
     }
 }

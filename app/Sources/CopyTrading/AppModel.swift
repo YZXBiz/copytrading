@@ -96,7 +96,9 @@ final class AppModel {
     var screenBeforeSettings: Screen = .today
     var runtimeState: RuntimeState = .stopped
     var engineStatus: EngineStatus?
-    var tradingStatus: TradingStatus?
+    var tradingStatus: TradingStatus? {
+        didSet { holdMacAwakeWhileCopying() }
+    }
     var savedTradingConfiguration: TradingConfiguration?
     var hasTradingSecrets = false
     var tradingValidation: TradingValidation?
@@ -697,6 +699,7 @@ final class AppModel {
     @ObservationIgnored var launchStartRetryDelays: [Duration] = [.seconds(10), .seconds(30), .seconds(60)]
     @ObservationIgnored private var launchStartRetry: Task<Void, Never>?
     private(set) var launchPreferences: LaunchPreferences
+    @ObservationIgnored private let sleepGuard: SleepGuard
 
     private struct PendingTradingActivation: Sendable {
         let configuration: TradingConfiguration
@@ -718,9 +721,11 @@ final class AppModel {
         tradingStarter: (any TradingStarting)? = nil,
         appUnlock: AppUnlock? = nil,
         launchPreferencesStore: LaunchPreferencesStore? = nil,
-        agentProposalOperations: (any AgentProposalOperations)? = nil
+        agentProposalOperations: (any AgentProposalOperations)? = nil,
+        sleepGuard: SleepGuard = SleepGuard()
     ) {
         proposalOperations = agentProposalOperations
+        self.sleepGuard = sleepGuard
         let stateRoot = Self.stateRoot
         let logsDirectory = stateRoot.appending(path: "logs", directoryHint: .isDirectory)
         diagnosticsSettingsStore = DiagnosticsSettingsStore(url: logsDirectory.appending(path: "settings.json"))
@@ -1739,6 +1744,23 @@ final class AppModel {
         await appUnlock.setOwnerCheckRequired(asks)
     }
 
+    func setKeepsMacAwake(_ keeps: Bool) {
+        guard keeps != launchPreferences.keepsMacAwake else { return }
+        var chosen = launchPreferences
+        chosen.keepsMacAwake = keeps
+        saveLaunchPreferences(chosen)
+    }
+
+    /// Copying is on: starting, running, or running with a problem it is working through.
+    var isCopying: Bool {
+        [.starting, .running, .degraded].contains(tradingStatus?.state)
+    }
+
+    /// Holds the Mac awake exactly while copying is on and the owner wants it (Settings → General).
+    private func holdMacAwakeWhileCopying() {
+        sleepGuard.hold(isCopying && launchPreferences.keepsMacAwake)
+    }
+
     func setStartsCopying(_ starts: Bool) {
         guard starts != launchPreferences.startsCopying else { return }
         var chosen = launchPreferences
@@ -1751,6 +1773,7 @@ final class AppModel {
         do {
             try launchPreferencesStore?.save(chosen)
             launchPreferences = chosen
+            holdMacAwakeWhileCopying()
             return true
         } catch {
             message = L10n.string("That setting could not be saved in the Keychain.")

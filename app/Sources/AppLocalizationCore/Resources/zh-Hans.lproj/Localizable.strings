@@ -1417,7 +1417,6 @@
 "The post gave no price" = "帖子没有给出价格";
 "The post named a batch, not a size" = "帖子只说了第几批，没有说仓位大小";
 "The sell didn't say which buy it comes from" = "卖出没有说明对应哪一笔买入";
-"The market moved too far from the guru's price" = "市价离信号源的价格太远";
 "this account" = "此账户";
 "A post with no size waits for you." = "没说仓位的帖子会等你决定。";
 "%@ New York time" = "纽约时间 %@";
@@ -1451,7 +1450,6 @@
 "%@ batches make a full position" = "%@ 批为满仓";
 "How they trade" = "交易习惯";
 "Two things that differ from guru to guru." = "每位信号源不一样的两件事。";
-"Market move allowed (%)" = "允许的价格偏离（%）";
 "%@ Agent access stays off until you choose again." = "%@ 在你重新选择之前，智能体访问保持关闭。";
 "%@ Fix it under Interpreter in Connections." = "%@ 请在“连接”的“AI 模型”中修正。";
 "“%@” needs a Discord channel." = "“%@”需要一个 Discord 频道。";
@@ -1542,13 +1540,11 @@
 "The most this account can hold in all stocks, including your own. A buy that would go over is skipped." = "这个账户所有股票加起来最多持有这么多，包括你自己买的。会超过的买入会被跳过。";
 "If the account is down this much today, it stops buying until tomorrow. It still sells." = "如果账户今天亏了这么多，就停止买入到明天。卖出照常。";
 "The most a buy can pay above the guru's price. 0 means never more than the guru paid." = "买入最多比信号源的价格高这么多。0 表示不超过信号源的价格。";
-"If the price has moved more than this from the guru's price, up or down, the buy waits for you to decide." = "如果现价和信号源的价格相差超过这么多（涨或跌），这笔买入会等你决定。";
 "The most buys in one day. Sells don't count." = "一天最多买入几次。卖出不算。";
 "If a post takes longer than this to arrive, it isn't copied. You can still copy it yourself in Activity." = "帖子如果超过这个时间才到，就不跟单。你仍可以在“活动”里自己跟单。";
 "An order that hasn't filled by then is cancelled." = "订单到时还没成交就取消。";
 "Set to **$1,000**. The guru's call would buy **$2,500** of NVDA. You buy **$1,000** instead." = "设为 **$1,000**。信号源的信号要买 **$2,500** 的 NVDA，你只买 **$1,000**。";
 "Set to **$3,000**. That's the guru's full position, so a 1/6 call buys **$500**. If you already hold **$2,500** of NVDA, a **$1,000** NVDA buy would make $3,500, so it's **skipped**." = "设为 **$3,000**。这就是信号源的满仓，所以 1/6 的信号买 **$500**。如果你已持有 **$2,500** 的 NVDA，再买 **$1,000** 会到 $3,500，所以这笔被**跳过**。";
-"Set to **5**. The guru buys NVDA at **$200**. If NVDA is now above **$210** or below **$190**, the buy waits in Activity for you to copy or skip." = "设为 **5**。信号源以 **$200** 买入 NVDA。如果 NVDA 现价高于 **$210** 或低于 **$190**，这笔买入会在“活动”里等你跟单或跳过。";
 "Set to **$10,000**. You hold **$9,500** in all. A new **$1,000** buy would go over, so it's **skipped**." = "设为 **$10,000**。你总共持有 **$9,500**，再买 **$1,000** 会超过，所以这笔被**跳过**。";
 "Set to **$500**. The account closed yesterday at **$20,000**. If it drops to **$19,500** today, buying stops until tomorrow. Sells still go through." = "设为 **$500**。账户昨天收盘时有 **$20,000**。如果今天跌到 **$19,500**，就停止买入到明天。卖出照常。";
 "Set to **1**. The guru buys AAPL at **$200**. You pay **$202** at most. At **0**, you pay **$200** at most." = "设为 **1**。信号源以 **$200** 买入 AAPL，你最多付 **$202**。设为 **0**，最多付 **$200**。";
@@ -1569,3 +1565,6 @@
 "Too late to approve: its trading day is over." = "已来不及批准：这条信号的交易日已经结束。";
 "Not sent" = "未发送";
 "Set to **60**. The guru buys NVDA at **$200.00**. With **Maximum above signal price** at **%@%%**, your buy fills at **%@ or less**. The price jumps to **%@** and stays there, so nothing fills. After **60 seconds** the order is cancelled, so it can't fill hours later." = "设为 **60**。信号源以 **$200.00** 买入 NVDA。**高于信号价格的最高幅度**为 **%@%%** 时，你的买单最高只以 **%@ 或更低** 成交。价格涨到 **%@** 并停在那里，所以不会成交。**60 秒**后订单会被取消，不会过几个小时才成交。";
+"While Copying" = "跟单时";
+"Keep this Mac awake" = "让这台 Mac 保持唤醒";
+"So no post is missed. The screen can still turn off and lock. Closing a MacBook's lid still puts it to sleep unless it's plugged in with a display connected." = "这样不会漏掉任何帖子。屏幕仍会关闭和锁定。合上 MacBook 的盖子仍会让它睡眠，除非接着电源并连接了显示器。";

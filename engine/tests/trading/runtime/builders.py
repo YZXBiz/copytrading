@@ -49,7 +49,7 @@ def trading_configuration(*accounts: str, policy: dict | None = None):
     account_policy = {} if policy is None else {"policy": policy}
     return TradingConfiguration.model_validate(
         {
-            "version": 5,
+            "version": 6,
             "source": {"channel_ids": [channel(account) for account in accounts]},
             "provider": {"name": "anthropic", "model": "test-model"},
             "accounts": [

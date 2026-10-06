@@ -1,7 +1,8 @@
 # ADR-0007: Every post is read into one contract; plain rules turn it into orders
 
 ## Status
-Accepted, October 2026. Extends ADR-0006.
+Accepted, October 2026. Extends ADR-0006. Amended October 2026: the market-move hold (Y below)
+was removed; a buy is bounded by its limit alone.
 
 ## Context
 Gurus write very differently. 赵哥 states every trade, its size as a share of his normal
@@ -47,10 +48,11 @@ same as his 1/6.
      guru's full position. A buy is its share of it: the stated fraction, 1/N for a batch (N per
      guru), or the guru's default share, the whole position unless lowered, when no size is
      given. Amounts round down to the cent, so six 1/6 calls fill the position exactly.
-   * *At what price.* A buy is a limit at the guru's price plus X%. When the market is more than
-     Y% away from the guru's price, above or below, the call waits for the owner. X and Y are set
-     per account; Y defaults to 5%, at all hours. Without a usable quote, as in a thin overnight
-     market, the limit alone bounds the buy. A sell is a limit too, at the guru's price less Z%
+   * *At what price.* A buy is a limit at the guru's price plus X%, set per account. Nothing
+     else looks at how far the market has moved: the limit alone bounds the buy. (A hold when the
+     market was more than Y% away was tried and removed: on the way up the limit already stops a
+     buy that can't fill, and the owner preferred fewer settings to a prompt after a drop.) A sell
+     is a limit too, at the guru's price less Z%
      (Z defaults to 1%, set per account), so it never fills far below what the guru got; one that
      hasn't filled by the order timeout is cancelled and the shares stay. A call with no price
      waits for the owner, and so does a call at market, a batch until its guru's N is set, and a
@@ -61,7 +63,7 @@ same as his 1/6.
 6. **Five outcomes.** Every post ends as traded, traded smaller, waiting for you, skipped, or
    ignored. Activity shows the post, how it was read, and what the account did.
 7. **Waiting for you.** A post waits when the reader leaves it for the owner, or when an account
-   holds a call back (the market moved). It shows Copy and Skip, raises an alert when alerts are
+   holds a call back (it asks to approve every order, ADR-0008). It shows Copy and Skip, raises an alert when alerts are
    on, and can be copied until its trading day ends (20:00 New York time). Copy opens the calls the
    engine suggests in the review sheet: a range as a limit at its top, a batch the guru has no N for
    at the default share. The owner checks them, then each account previews the order under its

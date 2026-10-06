@@ -10,7 +10,7 @@ struct MenuBarView: View {
 
     private var state: TradingRunState? { model.tradingStatus?.state }
     private var isEngineStopped: Bool { model.runtimeState == .stopped || model.runtimeState == .failed }
-    private var isCopying: Bool { state == .running || state == .degraded || state == .starting }
+    private var isCopying: Bool { model.isCopying }
 
     private var balances: [AccountBalance] {
         accountFeature.accounts.filter(\.activeConfiguration).compactMap(\.balance)

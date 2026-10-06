@@ -38,9 +38,9 @@ private func buy(_ symbol: String, _ price: String) -> String {
     #expect(waiting.calls.map(\.symbol) == ["SCO"])
 }
 
-@Test func aBuyHeldBecauseTheMarketMovedWaitsWithOnlyThatCall() throws {
+@Test func aBuyHeldForApprovalWaitsWithOnlyThatCall() throws {
     let traded = try post(
-        decision: "trade", status: "done", outcomes: ["order_linked", "price_moved"],
+        decision: "trade", status: "done", outcomes: ["order_linked", "approval_required"],
         instructions: [buy("ABC", "25"), buy("DEF", "40")])
 
     let waiting = try #require(WaitingCall(traded))
@@ -57,12 +57,17 @@ private func buy(_ symbol: String, _ price: String) -> String {
     #expect(waiting.awaitsApproval)
 }
 
-@Test func aCallHeldForAnotherReasonIsCopiedNotApproved() throws {
-    let moved = try post(decision: "trade", status: "done", outcomes: ["price_moved"], instructions: [buy("ABC", "25")])
+@Test func aPostLeftForReviewIsCopiedNotApproved() throws {
     let review = try post(decision: "review", status: "review_required", outcomes: [], suggested: [buy("SCO", "20")])
 
-    #expect(try #require(WaitingCall(moved)).awaitsApproval == false)
     #expect(try #require(WaitingCall(review)).awaitsApproval == false)
+}
+
+@Test func aSkipThatIsNoLongerAHoldDoesNotWait() throws {
+    // `price_moved` was a hold until the market-move check was removed; old history must not wait.
+    let old = try post(decision: "trade", status: "done", outcomes: ["price_moved"], instructions: [buy("ABC", "25")])
+
+    #expect(WaitingCall(old) == nil)
 }
 
 @Test(arguments: ["order_linked", "insufficient_cash"])

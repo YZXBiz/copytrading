@@ -109,9 +109,6 @@ public struct TradingAccountPolicy: Codable, Equatable, Sendable {
     public var maxAboveSignalPct = "0"
     /// How far below the guru's sell price an exit may fill: every sell is a limit order.
     public var maxBelowSignalPct = "1"
-    /// How far the market may be from the guru's price, up or down, before a buy waits for the
-    /// owner (ADR-0007).
-    public var maxPriceMovePct = "5"
 
     public init() {}
 
@@ -130,7 +127,6 @@ public struct TradingAccountPolicy: Codable, Equatable, Sendable {
         case approveOrders = "approve_orders"
         case maxAboveSignalPct = "max_above_signal_pct"
         case maxBelowSignalPct = "max_below_signal_pct"
-        case maxPriceMovePct = "max_price_move_pct"
     }
 }
 
@@ -458,7 +454,7 @@ public struct TradingNotificationConfiguration: Codable, Equatable, Sendable {
 /// Saved to application support. This type deliberately contains no credentials.
 public struct TradingConfiguration: Codable, Equatable, Sendable {
     /// Matches the engine's CONFIGURATION_VERSION; older saved files are rejected, never migrated.
-    public static let currentVersion = 5
+    public static let currentVersion = 6
     public var version = TradingConfiguration.currentVersion
     public var source: TradingSourceConfiguration
     public var provider: TradingProviderConfiguration

@@ -1,4 +1,4 @@
-"""The copy rules of ADR-0007 at the account: how far the market may have moved, a guru whose
+"""The copy rules of ADR-0007 at the account: a buy is bounded by its limit alone, a guru whose
 sells refer to the whole position, and a trim the maximum per order makes."""
 
 import datetime as dt
@@ -15,9 +15,6 @@ from copytrading_engine.shared.signals import StockSignal
 
 from .builders import NOW, deliver, event
 from .fakes import FakeBroker, MemoryRepository
-
-# 08:00 in New York: before the open, when extended hours apply.
-PREMARKET = dt.datetime(2026, 1, 5, 13, tzinfo=dt.UTC)
 
 
 class QuotingBroker(FakeBroker):
@@ -44,56 +41,19 @@ def _outcome(engine: CopyEngine, message_id: str = "1") -> object:
     return engine.ledger.message(f"discord:demo:{message_id}").parts[0]
 
 
-# --- How far the market may have moved from the guru's $25 --------------------------------------
+# --- A buy is bounded by its limit, not by how far the market has moved --------------------------
 
 
-@pytest.mark.parametrize(
-    ("ask", "at", "moved"),
-    [
-        pytest.param("26.24", NOW, False, id="4.96%-above"),
-        pytest.param("26.26", NOW, True, id="5.04%-above"),
-        pytest.param("23.74", NOW, True, id="5.04%-below"),
-        pytest.param("26.26", PREMARKET, True, id="the-same-limit-before-the-open"),
-    ],
-)
-def test_a_buy_waits_when_the_market_is_too_far_from_the_gurus_price(ask, at, moved):
-    broker = QuotingBroker(ask, quoted_at=at)
-    engine = _engine(broker)
-
-    deliver(engine, event(timestamp=at), at)
-
-    if moved:
-        assert _outcome(engine) == Skipped(reason="price_moved")
-        assert broker.calls == 0
-    else:
-        assert broker.calls == 1
-
-
-def test_without_a_fresh_quote_the_limit_alone_bounds_the_buy():
-    broker = QuotingBroker("40", quoted_at=NOW - dt.timedelta(minutes=5))
+@pytest.mark.parametrize("ask", ["40", "10"], ids=["far-above", "far-below"])
+def test_a_buy_goes_out_at_its_limit_however_far_the_market_has_moved(ask):
+    broker = QuotingBroker(ask)
     engine = _engine(broker)
 
     deliver(engine, event())
 
     [order] = engine.ledger.orders()
+    assert broker.calls == 1, "nothing holds a buy back because of the market's distance"
     assert order.limit_price == Decimal(25)
-
-
-def test_the_owner_copying_a_call_by_hand_is_not_held_by_the_market_check():
-    broker = QuotingBroker("40")
-    engine = _engine(broker)
-    deliver(engine, event())
-
-    decision = engine.decide(
-        engine.ledger.message("discord:demo:1").instructions[0],
-        "discord:demo:1",
-        "discord:demo",
-        NOW,
-        halted=False,
-        manual=True,
-    )
-
-    assert decision.reason != "price_moved"
 
 
 # --- A guru whose sells refer to the whole position ---------------------------------------------
@@ -187,10 +147,18 @@ def _correction(engine: CopyEngine, message_id: str = "1") -> ManualCorrectionRe
     )
 
 
-def test_a_buy_held_because_the_market_moved_can_be_copied_by_hand():
-    engine = _engine(QuotingBroker("40"))
+def _approving(broker: FakeBroker) -> CopyEngine:
+    engine = CopyEngine(
+        MemoryRepository(), broker, CopyConfig(sources=["discord:demo"], approve_orders=True)
+    )
+    engine.bind(NOW)
+    return engine
+
+
+def test_a_buy_held_for_approval_can_be_copied_by_hand():
+    engine = _approving(FakeBroker())
     deliver(engine, event())
-    assert _outcome(engine) == Skipped(reason="price_moved")
+    assert _outcome(engine) == Skipped(reason="approval_required")
 
     recorded = engine.ledger.record_manual_correction(_correction(engine))
 
@@ -210,7 +178,9 @@ def test_a_held_buy_alerts_that_it_waits_for_the_owner():
     from copytrading_engine.execution.presentation.notifications import execution_notification
 
     store = MemoryRepository()
-    engine = CopyEngine(store, QuotingBroker("40"), CopyConfig(sources=["discord:demo"]))
+    engine = CopyEngine(
+        store, FakeBroker(), CopyConfig(sources=["discord:demo"], approve_orders=True)
+    )
     engine.bind(NOW)
     deliver(engine, event())
     held = next(
@@ -221,7 +191,7 @@ def test_a_held_buy_alerts_that_it_waits_for_the_owner():
     )
 
     assert held.payload.annotations["summary"] == "ABC — waiting for you"
-    assert "copy or skip" in held.payload.annotations["evidence"]
+    assert "approve or skip" in held.payload.annotations["evidence"]
 
 
 def test_activity_shows_what_a_trimmed_buy_asked_for_and_which_limit_a_skip_hit():

@@ -669,7 +669,13 @@ def j20_toolbar(app: AppDriver) -> None:
 def j21_settings_pages(app: AppDriver) -> None:
     """Every Settings page opens from its own sidebar; back retraces them and close returns."""
     expected = {
-        "general": ("When CopyTrading Opens", "settings.asksForOwner", "settings.startsCopying"),
+        "general": (
+            "When CopyTrading Opens",
+            "settings.asksForOwner",
+            "settings.startsCopying",
+            "While Copying",
+            "settings.keepsMacAwake",
+        ),
         "appearance": (
             "settings.appearance.system",
             "settings.appearance.dark",
@@ -692,7 +698,7 @@ def j21_settings_pages(app: AppDriver) -> None:
 
 def j5_self_test(app: AppDriver) -> None:
     app.open_settings("engine")
-    app.click("system.runSelfTest")
+    app.click("system.runSelfTest", outcome_checked=True)
     snapshot = app.wait_for("Last result", timeout=120, name="self-test")
     result = snapshot.find("Last result")
     if result is None or ("Completed" not in result.text and "Delivered" not in result.text):
@@ -711,7 +717,6 @@ def j6_setup_editing(app: AppDriver) -> None:
         "Position limits (USD)",
         "Maximum per stock",
         "Maximum below signal price (%)",
-        "Market move allowed (%)",
         "Ask me before sending orders",
         "Remove Account",
     )
@@ -1039,6 +1044,7 @@ def j31_agent_approval(app: AppDriver) -> None:
     app.wait_for("Listening", timeout=30, name="agent-approval-access")
     _start_paper_setup(app, setup)
     before = _wait_for_account(app, "primary", timeout=180)
+    _wait_for_keep_awake(timeout=30)
     if before["recovery_preference"] != "manual":
         raise JourneyFailure(f"a new account starts with recovery {before['recovery_preference']}")
 
@@ -1067,6 +1073,19 @@ def j31_agent_approval(app: AppDriver) -> None:
     if after["entry_permission"] != before["entry_permission"]:
         raise JourneyFailure("a rejected resume still changed the account's entries")
     _agent_result(app, 0, "pause")
+
+
+def _wait_for_keep_awake(timeout: float) -> None:
+    """While copying, macOS must list CopyTrading as keeping the Mac awake (Settings → General)."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        assertions = subprocess.run(
+            ["pmset", "-g", "assertions"], capture_output=True, text=True, check=False
+        ).stdout
+        if "CopyTrading is copying trades" in assertions:
+            return
+        time.sleep(1)
+    raise JourneyFailure("copying did not keep the Mac awake: no CopyTrading sleep assertion")
 
 
 def _forget_test_keychain(state_root: Path) -> int:

@@ -134,7 +134,7 @@ class Rig:
         }
         return TradingConfiguration.model_validate(
             {
-                "version": 5,
+                "version": 6,
                 "source": {"channel_ids": list(self.channels.values())},
                 "provider": {"name": "deepseek", "model": "scripted-zhao"},
                 "accounts": [
