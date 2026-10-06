@@ -4,6 +4,7 @@ from typing import Literal, Self
 from pydantic import AwareDatetime, model_validator
 
 from copytrading_engine.execution.domain.values import (
+    BrokerAccountId,
     Identifier,
     Money,
     Positive,
@@ -14,7 +15,7 @@ from copytrading_engine.execution.domain.values import (
 
 
 class Account(Value):
-    id: Identifier
+    id: BrokerAccountId
     status: Identifier
     cash: Money
     buying_power: Money

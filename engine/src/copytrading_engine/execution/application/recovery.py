@@ -22,6 +22,7 @@ from copytrading_engine.execution.domain.recovery import (
     ReleaseEvidence,
 )
 from copytrading_engine.execution.domain.risk import account_exposure
+from copytrading_engine.execution.domain.values import BrokerAccountNumber
 
 
 class RecoveryApplication:
@@ -251,7 +252,9 @@ class RecoveryApplication:
         self._ledger.clear_late_order_incident(client_id, evidence)
         return evidence
 
-    def _verify_account(self, ledger_account_id: str | None, supplied_account_id: str) -> Account:
+    def _verify_account(
+        self, ledger_account_id: BrokerAccountNumber | None, supplied_account_id: str
+    ) -> Account:
         account = self._broker.account()
         if (
             ledger_account_id is None

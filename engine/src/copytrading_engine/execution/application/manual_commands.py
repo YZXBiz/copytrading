@@ -26,6 +26,7 @@ from copytrading_engine.execution.domain.order_lifecycle import OrderStatus
 from copytrading_engine.execution.domain.orders import OrderRecord
 from copytrading_engine.execution.domain.pricing import quote_problem
 from copytrading_engine.execution.domain.sessions import Session, trade_date
+from copytrading_engine.execution.domain.values import BrokerAccountNumber
 
 MANUAL_PREVIEW_TTL_SECONDS = 30
 log = logging.getLogger(__name__)
@@ -39,7 +40,7 @@ class ManualTradingApplication:
         engine: CopyEngine,
         *,
         local_account_id: str,
-        broker_account_id: str,
+        broker_account_id: BrokerAccountNumber,
         environment: Literal["paper", "live"],
         halted: Callable[[], bool],
         entry_block_reason: Callable[[], str | None],

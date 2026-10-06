@@ -7,9 +7,26 @@ func runTradingConfigurationPersistenceTests() throws {
     try activeStateRejectsBeforeWrites()
     try unsupportedVersionRejectsBeforeWrites()
     try olderVersionIsDiscardedNotMigrated()
+    try savedFileHasTheFieldsBackupsRead()
     try successfulReplacementChangesReference()
     try pendingActivationSurvivesStoreReopenAndFinalizesOnCommit()
     try pendingActivationSurvivesStoreReopenAndRollsBackOnlyOnRequest()
+}
+
+/// The engine's backup reads this file and refuses fields it does not know
+/// (`SAVED_CONFIGURATION_FIELDS` in `engine/src/copytrading_engine/backup/configuration.py`).
+private func savedFileHasTheFieldsBackupsRead() throws {
+    let file = temporaryTradingFile()
+    defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
+    let store = TradingConfigurationStore(url: file, secrets: MemorySecretRevisions())
+    let configuration = try tradingConfiguration(model: "fields")
+    try store.save(
+        configuration: configuration, revision: fakeEngineRevision(configuration), secrets: tradingCredentials(token: "fields"),
+        when: .paused)
+    let saved = try JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any] ?? [:]
+    try #require(
+        Set(saved.keys) == ["version", "configuration", "revision", "secretRevision"],
+        "the saved setup's fields changed; update the engine's backup reader too: \(saved.keys.sorted())")
 }
 
 private func olderVersionIsDiscardedNotMigrated() throws {

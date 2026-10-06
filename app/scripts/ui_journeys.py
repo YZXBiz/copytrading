@@ -8,6 +8,7 @@ It never touches the real installation, its configuration, or its Keychain items
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import select
@@ -31,6 +32,7 @@ RELEASE_APP = ROOT / "dist/CopyTrading.app"
 DEBUG_APP = ROOT / "dist/ui-test/CopyTrading Debug.app"
 APP_NAME = "CopyTrading Debug"
 BUNDLE_ID = "dev.copytrading.app.uitest"
+APP_LOG = ROOT / "dist/ui-test/app-stderr.log"
 
 
 ASSISTANT_ANSWER = "Copying is paused, so nothing is being copied right now."
@@ -218,22 +220,36 @@ def _command_name(args: tuple[str, ...]) -> str:
     return args[0]
 
 
+# Peekaboo reports these while it is still finding the app, before it acts, so a retry
+# cannot click or type twice.
+_BEFORE_ACTING = ("Application inventory was unavailable", "Application inventory did not complete")
+
+
 def peekaboo(*args: str, timeout: float = 60) -> dict[str, Any]:
-    result = subprocess.run(
-        ["peekaboo", *args, "--json"], capture_output=True, text=True, timeout=timeout, check=False
-    )
-    try:
-        payload = json.loads(result.stdout)
-    except json.JSONDecodeError as error:
-        raise JourneyFailure(
-            f"peekaboo {args[0]} returned no JSON: {result.stderr.strip()}"
-        ) from error
-    if not payload.get("success"):
+    for attempt in range(3):
+        result = subprocess.run(
+            ["peekaboo", *args, "--json"],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+        try:
+            payload = json.loads(result.stdout)
+        except json.JSONDecodeError as error:
+            raise JourneyFailure(
+                f"peekaboo {args[0]} returned no JSON: {result.stderr.strip()}"
+            ) from error
+        if payload.get("success"):
+            return payload.get("data") or {}
         message = (payload.get("error") or {}).get("message", "unknown error")
         if "GUI session is locked" in message:
             raise ScreenLocked("the Mac's screen is locked; unlock it and run the journeys again")
+        if attempt < 2 and any(marker in message for marker in _BEFORE_ACTING):
+            time.sleep(1.0)
+            continue
         raise JourneyFailure(f"peekaboo {_command_name(args)} failed: {message}")
-    return payload.get("data") or {}
+    raise AssertionError("unreachable")
 
 
 @dataclass
@@ -252,6 +268,14 @@ class AppDriver:
                 data = peekaboo(*args, timeout=90)
                 break
             except JourneyFailure as error:
+                if "reason=window minimized" in str(error) and attempt < 2:
+                    # Something outside the app hid its window (the app never minimizes itself):
+                    # put it back on screen and look again.
+                    with contextlib.suppress(JourneyFailure):
+                        peekaboo("window", "restore", "--app", APP_NAME)
+                    peekaboo("app", "switch", "--to", APP_NAME, "--foreground", "--verify")
+                    time.sleep(1)
+                    continue
                 # Navigation can race a capture in progress; Peekaboo asks for one fresh retry.
                 transient = ("inconsistent response", "AX tree incomplete")
                 if not any(text in str(error) for text in transient) or attempt == 2:
@@ -528,6 +552,9 @@ def launch(state_root: Path, *, quit_first: bool = True) -> None:
             "COPYTRADING_UI_TEST_UNLOCK=1",
             "--env",
             f"COPYTRADING_STATE_ROOT={state_root}",
+            # A debug build reports the errors behind a failed start or restore here.
+            "--stderr",
+            str(APP_LOG),
             str(DEBUG_APP),
         ],
         check=True,
@@ -1111,11 +1138,12 @@ def _check_every_cli_command(app: AppDriver, approved_id: str) -> None:
     if schema.returncode != 0 or {"request", "response"} - json.loads(schema.stdout).keys():
         raise JourneyFailure("`schema` did not print the contract's JSON Schema")
 
-    # Manual orders refer to a post's reading; unknown ones fail without asking the owner.
+    # Manual orders refer to a post's reading; unknown ones fail without asking the owner:
+    # a missing command is not found, and a missing correction makes the request invalid.
     _agent_result(app, 0, "manual", "list", "primary", "no-such-post")
     _expect_exit(app, 6, "manual", "show", "primary", "no-such-command")
     _expect_exit(
-        app, 6, "manual", "preview", "primary", "--correction", "none", "--instruction", "0"
+        app, 2, "manual", "preview", "primary", "--correction", "none", "--instruction", "0"
     )
     _expect_exit(app, 6, "manual", "confirm", "primary", "--preview", "none")
     _expect_exit(app, 2, "accounts", "recovery", "primary", "sometimes")
@@ -1134,6 +1162,57 @@ def _check_locked_app_still_pauses(app: AppDriver) -> None:
     _expect_exit(app, 0, "pause")
     app.click("app.unlock")
     app.wait_for("navigation.today", timeout=30)
+
+
+def _choose_in_file_panel(app: AppDriver, folder: Path, name: str | None = None) -> None:
+    """Answer the open or save panel the way a person does: Go to Folder, then confirm."""
+    time.sleep(1.5)
+    app.press("cmd+shift+g")
+    time.sleep(0.8)
+    peekaboo("type", str(folder), "--foreground", "--clear", "--accept-dispatched")
+    app.press("Return")
+    time.sleep(1.0)
+    if name is not None:
+        peekaboo("type", name, "--foreground", "--clear", "--accept-dispatched")
+        time.sleep(0.3)
+    app.press("Return")
+
+
+def j33_backup_and_restore(app: AppDriver) -> None:
+    """A connected account's records back up, preview, and restore through Settings → Backups.
+
+    Runs after J31, whose saved paper setup it backs up; the restored account comes back with
+    entries off and manual recovery, which is what a restore promises.
+    """
+    if app.state_root is None:
+        raise JourneySkipped("needs the run's state root")
+    _paper_setup()
+    folder = Path(tempfile.mkdtemp(prefix="copytrading-ui-backup.")).resolve()
+    archive = folder / "Journey-Backup.zip"
+    try:
+        app.open_settings("backups")
+        app.click("Create Backup…", real=True)
+        _choose_in_file_panel(app, folder, archive.name)
+        made = app.wait_for("Backup saved and checked", timeout=120, name="backup-created")
+        app.expect(made, "Last verified backup")
+        if not archive.is_file():
+            raise JourneyFailure("the backup said it was created but no file is there")
+
+        app.click("Restore from Backup…", real=True)
+        _choose_in_file_panel(app, archive)
+        preview = app.wait_for("Restore Preview", timeout=120, name="restore-preview")
+        app.expect(preview, "Same installation", "primary", "Restore This Backup")
+        app.click("Restore This Backup", outcome_checked=True)
+        done = app.wait_for("Restored into", timeout=240, name="restore-activated")
+        app.expect_absent(done, "Before it can restore")
+        account = _wait_for_account(app, "primary", timeout=180)
+        if (account["entry_permission"], account["recovery_preference"]) != ("disabled", "manual"):
+            raise JourneyFailure(f"the restored account came back as {account}")
+    except JourneyFailure:
+        app.press("escape")  # a file panel left open would keep the app from quitting
+        raise
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
 
 
 def _check_mcp_reads_the_running_setup(app: AppDriver) -> None:
@@ -1416,6 +1495,7 @@ JOURNEYS: list[tuple[str, Callable[[AppDriver], None]]] = [
     ("J17 crash recovery", j17_crash_recovery),
     # Last: starting copying saves a setup that the journeys above expect to be empty.
     ("J31 agent approval", j31_agent_approval),
+    ("J33 backup and restore", j33_backup_and_restore),
 ]
 
 
@@ -1424,15 +1504,36 @@ def main() -> int:
     parser.add_argument("--skip-build", action="store_true")
     parser.add_argument("--only", help="comma-separated journey IDs, e.g. J1,J5")
     parser.add_argument("--keep-state", action="store_true")
+    parser.add_argument(
+        "--reuse-state",
+        type=Path,
+        help="run on a state kept by --keep-state (for example after J31) instead of a fresh one; "
+        "it and its saved keys are kept for the next run",
+    )
+    parser.add_argument(
+        "--discard-state",
+        type=Path,
+        help="delete a kept state and the test keys it saved in the login Keychain, then exit",
+    )
     args = parser.parse_args()
 
+    if args.discard_state is not None:
+        if _forget_test_keychain(args.discard_state):
+            raise SystemExit("test keys remain in the login Keychain")
+        shutil.rmtree(args.discard_state, ignore_errors=True)
+        return 0
     if shutil.which("peekaboo") is None:
         raise SystemExit("install Peekaboo first: brew install steipete/tap/peekaboo")
     if not args.skip_build:
         build_debug_bundle()
 
     # The per-user temporary directory; /tmp is a symlink, which the app's state checks reject.
-    state_root = Path(tempfile.mkdtemp(prefix="copytrading-ui-journey."))
+    reusing = args.reuse_state is not None
+    if reusing and not args.reuse_state.is_dir():
+        raise SystemExit(f"no kept state at {args.reuse_state}")
+    state_root = (
+        args.reuse_state if reusing else Path(tempfile.mkdtemp(prefix="copytrading-ui-journey."))
+    )
     screenshots = ROOT / "dist/ui-test/screenshots"
     shutil.rmtree(screenshots, ignore_errors=True)
     screenshots.mkdir(parents=True)
@@ -1456,12 +1557,12 @@ def main() -> int:
             )
         )
         print(f"{runner.results[-1].status.upper():8} J16 clean quit {runner.results[-1].detail}")
-        if _forget_test_keychain(state_root):
+        if not reusing and not args.keep_state and _forget_test_keychain(state_root):
             runner.results.append(
                 Result("Keychain cleanup", "failed", "test keys remain in the login Keychain")
             )
             print(f"FAILED   Keychain cleanup {runner.results[-1].detail}")
-        if args.keep_state:
+        if args.keep_state or reusing:
             print(f"state kept at {state_root}")
         else:
             shutil.rmtree(state_root, ignore_errors=True)

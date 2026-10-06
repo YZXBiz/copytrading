@@ -10,6 +10,7 @@ from pathlib import Path
 from copytrading_engine.execution.application.reports import StoredReport
 from copytrading_engine.execution.domain.events import JournalEvent
 from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
+from copytrading_engine.execution.domain.values import BrokerAccountNumber
 from copytrading_engine.execution.presentation.notifications import execution_notification
 from copytrading_engine.shared.notification_models import NotificationIntent
 from copytrading_engine.shared.queue_snapshot import QueueSnapshot
@@ -120,7 +121,7 @@ class Store:
         self._usable = False
         self.close()
 
-    def bind_identity(self, account_id: str, environment: str) -> None:
+    def bind_identity(self, account_id: BrokerAccountNumber, environment: str) -> None:
         if not account_id or environment not in {"paper", "live"}:
             raise ValueError("Verified broker account and environment are required")
         self._require_usable()

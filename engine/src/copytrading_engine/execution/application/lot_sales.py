@@ -24,6 +24,7 @@ from copytrading_engine.execution.domain.lot_sales import (
 from copytrading_engine.execution.domain.manual_commands import ManualCheck
 from copytrading_engine.execution.domain.market import Quote
 from copytrading_engine.execution.domain.pricing import quote_problem
+from copytrading_engine.execution.domain.values import BrokerAccountNumber
 from copytrading_engine.shared.signals import Instruction
 
 LOT_SALE_PREVIEW_TTL_SECONDS = 30
@@ -42,7 +43,7 @@ class LotSaleApplication:
         engine: CopyEngine,
         *,
         local_account_id: str,
-        broker_account_id: str,
+        broker_account_id: BrokerAccountNumber,
         environment: Literal["paper", "live"],
         halted: Callable[[], bool],
         entry_block_reason: Callable[[], str | None],

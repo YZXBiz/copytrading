@@ -64,6 +64,7 @@ from copytrading_engine.execution.domain.recovery import (
 )
 from copytrading_engine.execution.domain.signals import CopyConfig
 from copytrading_engine.execution.domain.sizing import DestinationSignal
+from copytrading_engine.execution.domain.values import BrokerAccountNumber
 from copytrading_engine.execution.presentation.operator_views import (
     AccountEventPage,
     AccountOverview,
@@ -73,6 +74,10 @@ from copytrading_engine.execution.presentation.operator_views import (
     destination_views,
     event_page,
 )
+
+# A ledger not yet bound to a broker account matches no broker account, so manual orders and
+# lot sales refuse until the account has connected.
+_UNBOUND_LEDGER = BrokerAccountNumber("unbound")
 
 log = logging.getLogger(__name__)
 
@@ -360,7 +365,7 @@ class ExecutionResources:
         return ManualTradingApplication(
             self.engine,
             local_account_id=self.data_dir.name,
-            broker_account_id=snapshot.account_id or "unbound",
+            broker_account_id=snapshot.account_id or _UNBOUND_LEDGER,
             environment=snapshot.environment or "paper",
             halted=lambda: (
                 (self.data_dir / "HALT").exists() or self.engine.ledger.snapshot().buy_halted
@@ -376,7 +381,7 @@ class ExecutionResources:
         return LotSaleApplication(
             self.engine,
             local_account_id=self.data_dir.name,
-            broker_account_id=snapshot.account_id or "unbound",
+            broker_account_id=snapshot.account_id or _UNBOUND_LEDGER,
             environment=snapshot.environment or "paper",
             halted=lambda: (
                 (self.data_dir / "HALT").exists() or self.engine.ledger.snapshot().buy_halted

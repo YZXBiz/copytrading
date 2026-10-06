@@ -36,7 +36,7 @@ from copytrading_engine.execution.domain.recovery import (
     ReleaseEvidence,
 )
 from copytrading_engine.execution.domain.sizing import DestinationTerms
-from copytrading_engine.execution.domain.values import Identifier, Quantity, Value
+from copytrading_engine.execution.domain.values import BrokerAccountId, Identifier, Quantity, Value
 from copytrading_engine.shared.signals import StockSignal
 
 MessageStatus = Literal[
@@ -107,7 +107,7 @@ class MessageRecord(StockSignal):
 
 class LedgerSnapshot(Value):
     schema_version: Literal[9] = 9
-    account_id: Identifier | None = None
+    account_id: BrokerAccountId | None = None
     control: AccountControl = Field(default_factory=AccountControl)
     environment: Literal["paper", "live"] | None = None
     messages: dict[str, MessageRecord] = Field(default_factory=dict)

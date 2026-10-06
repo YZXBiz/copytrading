@@ -133,7 +133,7 @@ final class AppModel {
     var diagnosticsJournalMessage: String?
     var isLoadingDiagnostics = false
     var isRunningBackupRestore = false
-    var backupRestoreMessage: String?
+    var backupRestoreNote: BackupRestoreNote?
     var backupManifest: BackupManifestView?
     var restorePreview: RestorePreviewView?
     var pendingRestoreCandidate: PendingRestoreCandidateView?
@@ -241,31 +241,32 @@ final class AppModel {
 
     func createOperationalBackup(to destination: URL) async {
         guard !isRunningBackupRestore, !isInstallingUpdate, let engineActions else {
-            backupRestoreMessage = L10n.string(
-                "The engine isn't running. Start it in Settings → Engine. If another CopyTrading is open, quit it first.")
+            backupRestoreNote = .problem(
+                L10n.string(
+                    "The engine isn't running. Start it in Settings → Engine. If another CopyTrading is open, quit it first."))
             return
         }
         do {
             guard try tradingConfigurationStore?.pendingActivation() == nil else {
-                backupRestoreMessage = L10n.string("Resolve the pending trading activation before backing up.")
+                backupRestoreNote = .problem(L10n.string("Finish starting or stopping copying, then back up."))
                 return
             }
         } catch {
-            backupRestoreMessage = L10n.string("Trading configuration state could not be verified.")
+            backupRestoreNote = .problem(L10n.string("CopyTrading couldn't read your saved setup. Try again in a moment."))
             return
         }
         isRunningBackupRestore = true
-        backupRestoreMessage = L10n.string("Draining operational writers and verifying the backup…")
+        backupRestoreNote = .working(L10n.string("Pausing trading and checking the backup…"))
         defer { isRunningBackupRestore = false }
         do {
             backupManifest = try await engineActions.createBackup(destination: destination)
             tradingStatus = try? await engineActions.tradingStatus()
-            backupRestoreMessage = L10n.string("Verified backup created at %@. Trading remains paused.", destination.path)
+            backupRestoreNote = .done(
+                L10n.string("Backup saved and checked: %@. Copying stopped while it ran; choose Start Copying to carry on.", destination.path))
         } catch is CancellationError {
-            backupRestoreMessage = L10n.string(
-                "Backup request was cancelled; the engine completed or cleaned up its staged snapshot safely.")
+            backupRestoreNote = .problem(L10n.string("The backup was cancelled. Nothing was left half-written."))
         } catch {
-            backupRestoreMessage = Self.userMessage(for: error)
+            backupRestoreNote = .problem(Self.userMessage(for: error))
         }
     }
 
@@ -276,37 +277,35 @@ final class AppModel {
             restoreRecoveryMessage == nil,
             let engineActions
         else {
-            backupRestoreMessage = L10n.string(
-                "The engine isn't running. Start it in Settings → Engine. If another CopyTrading is open, quit it first.")
+            backupRestoreNote = .problem(
+                L10n.string(
+                    "The engine isn't running. Start it in Settings → Engine. If another CopyTrading is open, quit it first."))
             return
         }
         isRunningBackupRestore = true
-        backupRestoreMessage = L10n.string("Validating every archive member in isolated staging…")
+        backupRestoreNote = .working(L10n.string("Checking every file in the backup…"))
         defer { isRunningBackupRestore = false }
         do {
             let preview = try await engineActions.previewRestore(archive: archive)
             restorePreview = preview
             if preview.credentialReferences.isEmpty {
-                restoreCredentialStatus = L10n.string("No saved credential reference is included.")
+                restoreCredentialStatus = L10n.string("This backup doesn't need any saved keys.")
             } else if preview.matchesInstallation,
                 let tradingConfigurationStore,
                 try preview.credentialReferences.allSatisfy({
                     try tradingConfigurationStore.hasCredentialRevision($0)
                 })
             {
-                restoreCredentialStatus = L10n.string("Saved credential references exist in this installation.")
+                restoreCredentialStatus = L10n.string("The keys this backup needs are in this Mac's Keychain.")
             } else {
                 restoreCredentialStatus = L10n.string(
-                    "Credential references are unavailable here. Re-enter account credentials before activation.")
+                    "The keys this backup needs aren't on this Mac. Enter your account keys again before restoring.")
             }
-            backupRestoreMessage =
-                L10n.string(
-                    "Validated in isolated staging. Activation stays blocked until broker orders, fills, holdings, and uncertain client IDs reconcile. The original store remains intact."
-                )
+            backupRestoreNote = .done(L10n.string("The backup checks out. Review it below before restoring."))
         } catch {
             restorePreview = nil
             restoreCredentialStatus = nil
-            backupRestoreMessage = Self.userMessage(for: error)
+            backupRestoreNote = .problem(Self.userMessage(for: error))
         }
     }
 
@@ -316,25 +315,26 @@ final class AppModel {
             let currentActions = engineActions,
             let currentPaths = runtimePaths
         else {
-            backupRestoreMessage = L10n.string("Start the local engine and validate a same-installation restore before activation.")
+            backupRestoreNote = .problem(L10n.string("Start the engine and open a backup made on this Mac before restoring."))
             return
         }
         let preview = restorePreview
         if preview == nil && pendingRestoreCandidate == nil {
-            backupRestoreMessage = L10n.string("Validate a restore archive before activation.")
+            backupRestoreNote = .problem(L10n.string("Open a backup to restore first."))
             return
         }
         do {
             guard try tradingConfigurationStore?.pendingActivation() == nil else {
-                backupRestoreMessage = L10n.string("Resolve the pending trading activation before restoring.")
+                backupRestoreNote = .problem(L10n.string("Finish starting or stopping copying, then restore."))
                 return
             }
         } catch {
-            backupRestoreMessage = L10n.string("Trading configuration state could not be verified.")
+            backupRestoreNote = .problem(L10n.string("CopyTrading couldn't read your saved setup. Try again in a moment."))
             return
         }
         guard preview == nil || currentPaths.activeGenerationID != nil else {
-            backupRestoreMessage = L10n.string("The active operational generation could not be verified.")
+            backupRestoreNote = .problem(
+                L10n.string("CopyTrading couldn't confirm which copy of your data is in use. Restart it and try again."))
             return
         }
         let stablePaths = RuntimePaths(
@@ -358,7 +358,7 @@ final class AppModel {
         isRunningBackupRestore = true
         restorePreflightBlockers = []
         restoreRecoveryMessage = nil
-        backupRestoreMessage = L10n.string("Preparing and revalidating an isolated restore candidate…")
+        backupRestoreNote = .working(L10n.string("Preparing the restore and checking it again…"))
         engineGeneration.advance()
         statusTask?.cancel()
         statusTask = nil
@@ -382,24 +382,26 @@ final class AppModel {
             restorePreview = nil
             pendingRestoreCandidate = nil
             restoreCredentialStatus = nil
-            backupRestoreMessage = L10n.string(
-                "Restore activated in %@. Accounts remain disabled with manual recovery selected.", operationalStoragePath)
+            backupRestoreNote = .done(
+                L10n.string(
+                    "Restored into %@. Each account stays off, with manual recovery, until you turn it back on.",
+                    operationalStoragePath))
         } catch let error as RestoreActivationError {
             if case .preflightBlocked(let blockers) = error {
                 restorePreflightBlockers = blockers
-                backupRestoreMessage =
+                backupRestoreNote = .problem(
                     L10n.string(
-                        "Read-only broker preflight blocked activation: %@. The previous generation was restored.",
-                        Humanize.joined(blockers))
+                        "Your broker's records don't match the backup (%@), so nothing was restored. Your data is as it was.",
+                        Humanize.joined(blockers.map(Humanize.code))))
             } else if case .rollbackIncomplete = error {
-                restoreRecoveryMessage = error.localizedDescription
-                backupRestoreMessage = restoreRecoveryMessage
+                restoreRecoveryMessage = Self.userMessage(for: error)
+                backupRestoreNote = .problem(Self.userMessage(for: error))
                 runtimeState = .failed
             } else {
-                backupRestoreMessage = error.localizedDescription
+                backupRestoreNote = .problem(Self.userMessage(for: error))
             }
         } catch {
-            backupRestoreMessage = restoreRecoveryMessage ?? Self.userMessage(for: error)
+            backupRestoreNote = .problem(restoreRecoveryMessage ?? Self.userMessage(for: error))
         }
     }
 
@@ -410,7 +412,7 @@ final class AppModel {
             let paths = runtimePaths
         else { return }
         isRunningBackupRestore = true
-        backupRestoreMessage = L10n.string("Stopping restore recovery and returning to the previous generation…")
+        backupRestoreNote = .working(L10n.string("Undoing the restore…"))
         engineGeneration.advance()
         statusTask?.cancel()
         statusTask = nil
@@ -444,13 +446,11 @@ final class AppModel {
             )
             restoreRecoveryMessage = nil
             pendingRestoreCandidate = nil
-            backupRestoreMessage = L10n.string("Restore was rolled back. The previous generation is running.")
+            backupRestoreNote = .done(L10n.string("Restore undone. CopyTrading is back on your data from before."))
         } catch {
             restoreRecoveryMessage =
-                error is RestoreActivationError
-                ? error.localizedDescription
-                : RestoreActivationError.rollbackIncomplete.localizedDescription
-            backupRestoreMessage = restoreRecoveryMessage
+                Self.userMessage(for: error is RestoreActivationError ? error : RestoreActivationError.rollbackIncomplete)
+            backupRestoreNote = restoreRecoveryMessage.map(BackupRestoreNote.problem)
             runtimeState = .failed
         }
     }
@@ -980,10 +980,10 @@ final class AppModel {
                 restoreRecoveryMessage = nil
                 restoreCredentialStatus =
                     pendingRestoreCandidate.candidateValid
-                    ? "A gated restore candidate is available for recovery."
-                    : L10n.string("The restore candidate failed durable validation and can only be rolled back.")
-                backupRestoreMessage = L10n.string(
-                    "Restore recovery is gated. Continue reconciliation or roll back to the previous generation.")
+                    ? L10n.string("The half-finished restore can be resumed.")
+                    : L10n.string("The half-finished restore didn't pass its checks, so it can only be rolled back.")
+                backupRestoreNote = .problem(
+                    L10n.string("A restore is half-finished. Resume it, or roll back to your data from before."))
             } else {
                 restoreRecoveryMessage = nil
             }

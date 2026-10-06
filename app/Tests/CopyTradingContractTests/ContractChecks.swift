@@ -20,6 +20,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
     case settingsSaveFlow = "settings save and start flow"
     case orderApproval = "order approval"
     case keepAwake = "keep the Mac awake while copying"
+    case backupRestoreNotes = "backup and restore notes"
 
     var testDescription: String { rawValue }
 
@@ -42,6 +43,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
         case .settingsSaveFlow: try await TradingSettingsSaveTests.runSettingsSaveFlow()
         case .orderApproval: try await runOrderApprovalTests()
         case .keepAwake: try runKeepAwakeTests()
+        case .backupRestoreNotes: try await runBackupRestoreNoteTests()
         }
     }
 }
