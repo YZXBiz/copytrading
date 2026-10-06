@@ -1244,7 +1244,6 @@
 "the Alpaca API key and secret for “%@”" = "“%@”的 Alpaca API 密钥和密钥口令";
 "Backup saved and checked: %@. Copying stopped while it ran; choose Start Copying to carry on." = "备份已保存并检查完毕：%@。备份期间已停止跟单，选择“开始跟单”即可继续。";
 "Restored. Each account stays off, with manual recovery, until you turn it back on." = "已恢复。在你重新开启之前，每个账户都保持关闭，并使用手动恢复。";
-"Your broker's records don't match the backup (%@), so nothing was restored. Your data is as it was." = "券商的记录与备份不一致（%@），因此没有恢复任何内容，你的数据保持原样。";
 "Verified update staged at %@. The engine has not been stopped." = "已在 %@ 暂存经过验证的更新。引擎尚未停止。";
 "Update recovery is still pending: %@ Quit and reopen after the installation lock is released." = "更新恢复仍未完成：%@ 请在安装锁释放后退出并重新打开应用。";
 "%@ failed its connection check. Processing remains paused." = "%@ 的连接检查未通过。处理仍保持暂停。";
@@ -1602,3 +1601,12 @@
 
 "In stocks" = "股票持仓";
 "Start copying first. A call is copied by hand only while its account runs." = "请先开始跟单。只有账户在运行时，才能手动复制一条喊单。";
+
+"This backup can't be restored yet: %@. Your data is as it was." = "此备份暂时无法恢复：%@。你的数据保持原样。";
+"Alpaca's orders or holdings changed since the backup" = "备份之后 Alpaca 的订单或持仓发生了变化";
+"Alpaca could not be reached to check the backup" = "无法连接 Alpaca 来核对备份";
+"the backup's account doesn't match the keys on this Mac" = "备份中的账户与这台 Mac 上的密钥不一致";
+"a notification in the backup was never sent" = "备份中有一条通知从未发送";
+"posts in the backup were still being read" = "备份中仍有正在读取的喊单";
+"an account in the backup is incomplete" = "备份中的某个账户不完整";
+"the backup's files changed or failed their check" = "备份文件已更改或未通过检查";

@@ -772,6 +772,8 @@ def j37_everyday_buttons(app: AppDriver) -> None:
     app.click("settings.startEngine")
     app.wait_for("Local engine, Ready", timeout=90, name="engine-started-in-settings")
 
+    if app.state_root is not None and any(app.state_root.rglob("trading-configuration.json")):
+        return  # a kept setup (--reuse-state): the guide's steps are done, and nothing to tidy
     for row, (step, lands_on) in enumerate(
         (
             ("guide.openDiscord", "Channel IDs"),
@@ -1409,7 +1411,18 @@ def _latest_price(setup: dict[str, str], symbol: str) -> Decimal:
 def _post_test_call(setup: dict[str, str], text: str) -> None:
     """Post one call into the test channel as the test account, the way a guru would."""
     posted = subprocess.run(
-        [sys.executable, str(ROOT / "app/scripts/discord_test_post.py"), setup["channel"], text],
+        # The engine's environment has the Discord client the engine itself reads with.
+        [
+            "uv",
+            "run",
+            "--directory",
+            str(ROOT / "engine"),
+            "--frozen",
+            "python",
+            str(ROOT / "app/scripts/discord_test_post.py"),
+            setup["channel"],
+            text,
+        ],
         env={**os.environ, "COPYTRADING_TEST_DISCORD_TOKEN": setup["discord_token"]},
         capture_output=True,
         text=True,
@@ -1532,6 +1545,8 @@ def j36_approve_and_skip(app: AppDriver) -> None:
         _sell_lot(app, symbol, bought[0])
     finally:
         _set_ask_before_orders(app, False)
+        # Leave nothing that could copy the next post in the test channel by itself.
+        _agent_result(app, 0, "accounts", "pause", "primary")
 
 
 def j38_today_chart(app: AppDriver) -> None:
@@ -1950,9 +1965,13 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.discard_state is not None:
-        if _forget_test_keychain(args.discard_state):
+        target = args.discard_state.resolve()
+        temporary = Path(tempfile.gettempdir()).resolve()
+        if not (target.name.startswith("copytrading-ui-journey.") and target.parent == temporary):
+            raise SystemExit(f"not a journey state in {temporary}: {args.discard_state}")
+        if _forget_test_keychain(target):
             raise SystemExit("test keys remain in the login Keychain")
-        shutil.rmtree(args.discard_state, ignore_errors=True)
+        shutil.rmtree(target, ignore_errors=True)
         return 0
     if shutil.which("peekaboo") is None:
         raise SystemExit("install Peekaboo first: brew install steipete/tap/peekaboo")
@@ -1996,6 +2015,10 @@ def main() -> int:
             print(f"FAILED   Keychain cleanup {runner.results[-1].detail}")
         if args.keep_state or reusing:
             print(f"state kept at {state_root}")
+            print(
+                "  its test keys stay in the login Keychain until you run:\n"
+                f"  app/scripts/ui_journeys.py --discard-state {state_root}"
+            )
         else:
             shutil.rmtree(state_root, ignore_errors=True)
 

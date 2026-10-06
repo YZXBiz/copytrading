@@ -390,8 +390,8 @@ final class AppModel {
                 restorePreflightBlockers = blockers
                 backupRestoreNote = .problem(
                     L10n.string(
-                        "Your broker's records don't match the backup (%@), so nothing was restored. Your data is as it was.",
-                        Humanize.joined(blockers.map(Humanize.code))))
+                        "This backup can't be restored yet: %@. Your data is as it was.",
+                        Humanize.joined(blockers.map(RestoreBlocker.reason))))
             } else if case .rollbackIncomplete = error {
                 restoreRecoveryMessage = Self.userMessage(for: error)
                 backupRestoreNote = .problem(Self.userMessage(for: error))

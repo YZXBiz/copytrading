@@ -173,7 +173,7 @@ class ManualTradingApplication:
             fresh.reasons
             or saved.plan is None
             or fresh.plan is None
-            or not saved.plan.same_order_as(fresh.plan)
+            or not saved.plan.still_allowed_by(fresh.plan)
         ):
             return fresh.reasons[0] if fresh.reasons else "plan_changed"
         return None

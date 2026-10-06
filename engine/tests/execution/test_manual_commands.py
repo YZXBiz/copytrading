@@ -1000,3 +1000,15 @@ def test_an_account_named_apart_from_its_broker_number_copies_a_call_by_hand(tmp
 
     assert result.status != "rejected", result.reason
     assert broker.calls == 1
+
+
+def test_an_approved_buy_larger_than_todays_limits_allow_is_not_sent(tmp_path):
+    """A tick moves a buy's size a little; a real drop in what the limits allow stops it."""
+    _, _, _, app, correction = setup_manual(tmp_path)
+    approved = app.preview(preview_request(correction), NOW).plan
+    assert approved is not None
+    tick = approved.model_copy(update={"qty": approved.qty * Decimal("0.99")})
+    smaller = approved.model_copy(update={"qty": approved.qty * Decimal("0.6")})
+
+    assert approved.still_allowed_by(tick)
+    assert not approved.still_allowed_by(smaller)

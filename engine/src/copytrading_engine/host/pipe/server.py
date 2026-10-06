@@ -192,9 +192,13 @@ class PipeServer:
         except InvalidCommand:
             code = "invalid_request"
         except ValueError as exc:
-            # Refusals are fixed sentences; recording them makes a failed request explainable.
+            # Only sentences written for the owner are recorded; other messages may carry input.
+            owner_facing = isinstance(exc, OwnerFacingError | BackupManifestError)
             log.warning(
-                "request_refused operation=%s reason=%s", type(request).__name__, str(exc)[:160]
+                "request_refused operation=%s error=%s reason=%s",
+                type(request).__name__,
+                type(exc).__name__,
+                str(exc)[:160] if owner_facing else "",
             )
             if isinstance(
                 request,

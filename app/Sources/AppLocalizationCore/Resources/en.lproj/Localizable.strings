@@ -1244,7 +1244,6 @@
 "the Alpaca API key and secret for “%@”" = "the Alpaca API key and secret for “%@”";
 "Backup saved and checked: %@. Copying stopped while it ran; choose Start Copying to carry on." = "Backup saved and checked: %@. Copying stopped while it ran; choose Start Copying to carry on.";
 "Restored. Each account stays off, with manual recovery, until you turn it back on." = "Restored. Each account stays off, with manual recovery, until you turn it back on.";
-"Your broker's records don't match the backup (%@), so nothing was restored. Your data is as it was." = "Your broker's records don't match the backup (%@), so nothing was restored. Your data is as it was.";
 "Verified update staged at %@. The engine has not been stopped." = "Verified update staged at %@. The engine has not been stopped.";
 "Update recovery is still pending: %@ Quit and reopen after the installation lock is released." = "Update recovery is still pending: %@ Quit and reopen after the installation lock is released.";
 "%@ failed its connection check. Processing remains paused." = "%@ failed its connection check. Processing remains paused.";
@@ -1602,3 +1601,12 @@
 
 "In stocks" = "In stocks";
 "Start copying first. A call is copied by hand only while its account runs." = "Start copying first. A call is copied by hand only while its account runs.";
+
+"This backup can't be restored yet: %@. Your data is as it was." = "This backup can't be restored yet: %@. Your data is as it was.";
+"Alpaca's orders or holdings changed since the backup" = "Alpaca's orders or holdings changed since the backup";
+"Alpaca could not be reached to check the backup" = "Alpaca could not be reached to check the backup";
+"the backup's account doesn't match the keys on this Mac" = "the backup's account doesn't match the keys on this Mac";
+"a notification in the backup was never sent" = "a notification in the backup was never sent";
+"posts in the backup were still being read" = "posts in the backup were still being read";
+"an account in the backup is incomplete" = "an account in the backup is incomplete";
+"the backup's files changed or failed their check" = "the backup's files changed or failed their check";

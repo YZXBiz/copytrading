@@ -100,8 +100,6 @@ class Owner:
             unresolved_incidents=(),
             ownership_incidents=(),
             pending_orders=0,
-            pending_reports=0,
-            oldest_report_at=None,
             balance=None,
         )
 
