@@ -1045,6 +1045,7 @@ def j31_agent_approval(app: AppDriver) -> None:
     _start_paper_setup(app, setup)
     before = _wait_for_account(app, "primary", timeout=180)
     _wait_for_keep_awake(timeout=30)
+    _check_mcp_reads_the_running_setup(app)
     if before["recovery_preference"] != "manual":
         raise JourneyFailure(f"a new account starts with recovery {before['recovery_preference']}")
 
@@ -1073,6 +1074,74 @@ def j31_agent_approval(app: AppDriver) -> None:
     if after["entry_permission"] != before["entry_permission"]:
         raise JourneyFailure("a rejected resume still changed the account's entries")
     _agent_result(app, 0, "pause")
+
+
+def _check_mcp_reads_the_running_setup(app: AppDriver) -> None:
+    """`copytrading mcp` answers an MCP client with the same setup the window shows."""
+    assert app.state_root is not None
+    server = subprocess.Popen(
+        [str(DEBUG_APP / "Contents/Helpers/copytrading"), "mcp"],
+        env={
+            "PATH": "/usr/bin:/bin",
+            "HOME": str(Path.home()),
+            "COPYTRADING_STATE_ROOT": str(app.state_root),
+        },
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+    )
+    assert server.stdin is not None
+    assert server.stdout is not None
+    output = server.stdout
+    replies: dict[int, dict[str, Any]] = {}
+
+    def send(message: dict[str, Any]) -> None:
+        assert server.stdin is not None
+        server.stdin.write(json.dumps(message) + "\n")
+        server.stdin.flush()
+
+    def reply(request_id: int, method: str, params: dict[str, Any]) -> dict[str, Any]:
+        send({"jsonrpc": "2.0", "id": request_id, "method": method, "params": params})
+        deadline = time.monotonic() + 30
+        while request_id not in replies:
+            if time.monotonic() > deadline:
+                raise JourneyFailure(f"MCP {method} got no reply")
+            line = output.readline()
+            if not line:
+                raise JourneyFailure(f"MCP server exited during {method}")
+            message = json.loads(line)
+            if "id" in message:
+                replies[message["id"]] = message
+        answer = replies[request_id]
+        if "error" in answer:
+            raise JourneyFailure(f"MCP {method} failed: {answer['error']}")
+        return answer["result"]
+
+    try:
+        reply(
+            1,
+            "initialize",
+            {
+                "protocolVersion": "2025-06-18",
+                "capabilities": {},
+                "clientInfo": {"name": "ui-journeys", "version": "1"},
+            },
+        )
+        send({"jsonrpc": "2.0", "method": "notifications/initialized"})
+        tools = {tool["name"] for tool in reply(2, "tools/list", {})["tools"]}
+        missing = {"get_status", "list_accounts", "list_activity", "pause_processing"} - tools
+        if missing:
+            raise JourneyFailure(f"the MCP server lacks {sorted(missing)}")
+        status = reply(3, "tools/call", {"name": "get_status", "arguments": {}})
+        accounts = reply(4, "tools/call", {"name": "list_accounts", "arguments": {}})
+        if status.get("isError") or accounts.get("isError"):
+            raise JourneyFailure(f"an MCP read failed: {status} {accounts}")
+        if "primary" not in json.dumps(accounts):
+            raise JourneyFailure("MCP list_accounts did not include the account the window shows")
+    finally:
+        server.terminate()
+        server.wait(timeout=10)
 
 
 def _wait_for_keep_awake(timeout: float) -> None:

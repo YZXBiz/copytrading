@@ -51,8 +51,14 @@ struct SidebarRow: View {
         .buttonStyle(QuietPressButtonStyle())
         .onHover { isHovering = $0 }
         .accessibilityIdentifier(identifier)
-        .accessibilityLabel(badge > 0 ? L10n.string("%@, %lld waiting", title, Int64(badge)) : L10n.string(title))
-        .accessibilityValue(progress.map { L10n.string("%@ done", $0.formatted(.percent.precision(.fractionLength(0)))) } ?? "")
+        // The label names the row; what changes (waiting items, setup progress) is its value.
+        .accessibilityLabel(L10n.string(title))
+        .accessibilityValue(accessibilityState)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var accessibilityState: String {
+        if badge > 0 { return L10n.string("%lld waiting", Int64(badge)) }
+        return progress.map { L10n.string("%@ done", $0.formatted(.percent.precision(.fractionLength(0)))) } ?? ""
     }
 }

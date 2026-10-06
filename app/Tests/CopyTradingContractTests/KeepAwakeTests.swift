@@ -1,3 +1,4 @@
+import CopyTradingTestSupport
 import DesktopCore
 import Foundation
 import Testing
@@ -37,10 +38,5 @@ func runKeepAwakeTests() throws {
 }
 
 private func status(_ state: TradingRunState) throws -> TradingStatus {
-    let json = """
-        {"state":"\(state.rawValue)","configured_accounts":1,"active_accounts":1,
-         "source_connected":true,"model_ready":true,"pending_source":0,
-         "pending_signals":0,"processed_signals":0,"error_code":null,"accounts":[]}
-        """
-    return try JSONDecoder().decode(TradingStatus.self, from: Data(json.utf8))
+    try TradingStatusBuilder(state).connected().build()
 }

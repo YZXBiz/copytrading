@@ -46,7 +46,6 @@
 "%@, %@" = "%@, %@";
 "%@, %@ copied" = "%@, %@ copied";
 "%@, %@, %@" = "%@, %@, %@";
-"%@, %lld waiting" = "%@, %lld waiting";
 "%@, and %@" = "%@, and %@";
 "%@, and more" = "%@, and more";
 "%@, no calls yet." = "%@, no calls yet.";
@@ -1368,7 +1367,6 @@
 "Some checks need attention. Review them, fix the setup, then start again." = "Some checks need attention. Review them, fix the setup, then start again.";
 "Start copying" = "Start copying";
 "Step %@" = "Step %@";
-"Step %@, done" = "Step %@, done";
 "The traders you follow show here once you add them in Connections: the channel they post in, how to read their calls, and the account that copies them." = "The traders you follow show here once you add them in Connections: the channel they post in, how to read their calls, and the account that copies them.";
 "Their channel, how to read their calls, and the account that copies them." = "Their channel, how to read their calls, and the account that copies them.";
 "Where orders go. Start with paper: pretend money at real prices." = "Where orders go. Start with paper: pretend money at real prices.";
@@ -1568,3 +1566,4 @@
 "While Copying" = "While Copying";
 "Keep this Mac awake" = "Keep this Mac awake";
 "So no post is missed. The screen can still turn off and lock. Closing a MacBook's lid still puts it to sleep unless it's plugged in with a display connected." = "So no post is missed. The screen can still turn off and lock. Closing a MacBook's lid still puts it to sleep unless it's plugged in with a display connected.";
+"%lld waiting" = "%lld waiting";

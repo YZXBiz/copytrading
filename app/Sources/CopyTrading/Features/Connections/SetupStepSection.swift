@@ -62,6 +62,7 @@ struct SetupStepSection<Content: View>: View {
         }
         .frame(width: 22, height: 22)
         .accessibilityElement()
-        .accessibilityLabel(isDone ? L10n.string("Step %@, done", number.formatted()) : L10n.string("Step %@", number.formatted()))
+        .accessibilityLabel(L10n.string("Step %@", number.formatted()))
+        .accessibilityValue(isDone ? L10n.string("Done") : "")
     }
 }

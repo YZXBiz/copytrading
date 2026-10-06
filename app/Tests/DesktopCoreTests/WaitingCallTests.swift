@@ -1,33 +1,22 @@
+import CopyTradingTestSupport
 import DesktopCore
 import Foundation
 import Testing
 
 /// A post as the engine reports it: one account's outcome, and the calls it read or suggests.
 private func post(
-    decision: String, status: String, outcomes: [String], instructions: [String] = [],
-    suggested: [String] = [], at sourceAt: String = "2026-10-05T14:30:00Z"
+    decision: String, status: String, outcomes: [String], instructions: [[String: Any]] = [],
+    suggested: [[String: Any]] = [], at sourceAt: String = "2026-10-05T14:30:00Z"
 ) throws -> SourceActivity {
-    let json = """
-        {"sequence": 1, "source_id": "discord:1:2", "source_revision": 1,
-         "source_at": "\(sourceAt)", "captured_at": "\(sourceAt)", "text": "sco 20",
-         "capture_status": "delivered", "parse_status": "complete", "delivery_status": "delivered",
-         "decision": "\(decision)", "parser_reason": "conditional", "parser_profile": "stock-reading-v3",
-         "interpreted_by": "deepseek-flash", "instructions": [\(instructions.joined(separator: ","))],
-         "suggested": [\(suggested.joined(separator: ","))],
-         "source_event": {"event_type": "discord_message", "content": "sco 20", "embeds": [],
-           "attachments": [], "attachments_omitted": 0, "capture_status": "complete", "payload_bytes": 6},
-         "destinations": [{"account_id": "paper", "environment": "paper", "status": "\(status)",
-           "instruction_outcomes": [\(outcomes.map { "\"\($0)\"" }.joined(separator: ","))], "limits_hit": [],
-           "orders": []}]}
-        """
-    return try JSONDecoder().decode(SourceActivity.self, from: Data(json.utf8))
+    try SourceActivityBuilder()
+        .text("sco 20").posted(at: sourceAt).decision(decision, reason: "conditional")
+        .calls(instructions).suggested(suggested)
+        .destination("paper", status: status, outcomes: outcomes)
+        .build()
 }
 
-private func buy(_ symbol: String, _ price: String) -> String {
-    """
-    {"action": "buy", "symbol": "\(symbol)", "price": "\(price)", "entry_price": null,
-     "fraction": null, "exit_basis": null, "whole_position": false}
-    """
+private func buy(_ symbol: String, _ price: String) -> [String: Any] {
+    SourceActivityBuilder.buy(symbol, price)
 }
 
 @Test func aPostTheReaderLeftForTheOwnerWaitsWithItsSuggestedCalls() throws {

@@ -46,7 +46,6 @@
 "%@, %@" = "%@，%@";
 "%@, %@ copied" = "已跟单 %@，数量 %@";
 "%@, %@, %@" = "%@、%@、%@";
-"%@, %lld waiting" = "%@，%lld项待处理";
 "%@, and %@" = "%@ 和 %@";
 "%@, and more" = "%@ 等";
 "%@, no calls yet." = "已发布 %@，但暂无交易信号。";
@@ -1368,7 +1367,6 @@
 "Some checks need attention. Review them, fix the setup, then start again." = "部分检查需要处理。请查看结果、修正设置后再开始。";
 "Start copying" = "开始跟单";
 "Step %@" = "第 %@ 步";
-"Step %@, done" = "第 %@ 步，已完成";
 "The traders you follow show here once you add them in Connections: the channel they post in, how to read their calls, and the account that copies them." = "在“连接”里添加后，你跟随的交易者会显示在这里：他们发帖的频道、如何解读其信号，以及跟单的账户。";
 "Their channel, how to read their calls, and the account that copies them." = "他们的频道、如何解读其信号，以及跟单的账户。";
 "Where orders go. Start with paper: pretend money at real prices." = "订单下到这里。建议先用模拟盘：虚拟资金，真实价格。";
@@ -1568,3 +1566,4 @@
 "While Copying" = "跟单时";
 "Keep this Mac awake" = "让这台 Mac 保持唤醒";
 "So no post is missed. The screen can still turn off and lock. Closing a MacBook's lid still puts it to sleep unless it's plugged in with a display connected." = "这样不会漏掉任何帖子。屏幕仍会关闭和锁定。合上 MacBook 的盖子仍会让它睡眠，除非接着电源并连接了显示器。";
+"%lld waiting" = "%lld项待处理";

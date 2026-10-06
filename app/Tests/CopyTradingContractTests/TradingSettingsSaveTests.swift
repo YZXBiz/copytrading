@@ -1,3 +1,4 @@
+import CopyTradingTestSupport
 import DesktopCore
 import Darwin
 import Foundation
@@ -122,22 +123,11 @@ struct TradingSettingsSaveTests {
     }
 
     private static func status(_ state: TradingRunState) throws -> TradingStatus {
-        let json = """
-            {"state":"\(state.rawValue)","configured_accounts":0,"active_accounts":0,
-             "source_connected":false,"model_ready":false,"pending_source":0,
-             "pending_signals":0,"processed_signals":0,"error_code":null,"accounts":[]}
-            """
-        return try JSONDecoder().decode(TradingStatus.self, from: Data(json.utf8))
+        try TradingStatusBuilder(state).build()
     }
 
     private static func status(_ state: TradingRunState, errorCode: String?) throws -> TradingStatus {
-        let code = errorCode.map { "\"\($0)\"" } ?? "null"
-        let json = """
-            {"state":"\(state.rawValue)","configured_accounts":1,"active_accounts":1,
-             "source_connected":true,"model_ready":true,"pending_source":0,
-             "pending_signals":0,"processed_signals":0,"error_code":\(code),"accounts":[]}
-            """
-        return try JSONDecoder().decode(TradingStatus.self, from: Data(json.utf8))
+        try TradingStatusBuilder(state).connected().error(errorCode).build()
     }
 
     private static func checkCopyingSummary() throws {
