@@ -17,7 +17,7 @@ from copytrading_engine.backup.configuration import (
     validate_activation_json,
 )
 from copytrading_engine.backup.databases import (
-    account_identity,
+    account_environment,
     require_manual_disabled_account,
     validate_sqlite,
 )
@@ -99,9 +99,8 @@ def stage_restore(
                         schema_catalog,
                         snapshot_schema,
                     )
-                    if ACCOUNT_DATABASE.fullmatch(member.path):
-                        account_id, environment = account_identity(target)
-                        ledger_environments[account_id] = environment
+                    if account_match := ACCOUNT_DATABASE.fullmatch(member.path):
+                        ledger_environments[account_match.group(1)] = account_environment(target)
                 elif member.path == "trading-configuration.json":
                     identities = read_configuration_identities(target.read_bytes())
                     configured_environments = {
@@ -516,9 +515,8 @@ def verify_staged_tree(
             )
             if actual_schema != member.schema_version:
                 raise BackupManifestError("restore member schema changed after validation")
-            if ACCOUNT_DATABASE.fullmatch(member.path):
-                account_id, environment = account_identity(path)
-                account_environments[account_id] = environment
+            if account_match := ACCOUNT_DATABASE.fullmatch(member.path):
+                account_environments[account_match.group(1)] = account_environment(path)
         elif member.path == "trading-configuration.json":
             identities = read_configuration_identities(path.read_bytes())
             configured_environments = {
@@ -549,7 +547,7 @@ def validate_candidate_generation(
         recorded_size, recorded_digest = candidate_hashes[member.path]
         if path.stat().st_size != recorded_size or sha256_file(path) != recorded_digest:
             raise BackupManifestError("restore candidate member changed after preparation")
-        if ACCOUNT_DATABASE.fullmatch(member.path):
+        if account_match := ACCOUNT_DATABASE.fullmatch(member.path):
             actual_schema = validate_sqlite(
                 path,
                 member.path,
@@ -559,9 +557,8 @@ def validate_candidate_generation(
             )
             if actual_schema != member.schema_version:
                 raise BackupManifestError("restore account schema changed during preparation")
-            account_id, environment = account_identity(path)
             require_manual_disabled_account(path)
-            account_environments[account_id] = environment
+            account_environments[account_match.group(1)] = account_environment(path)
         else:
             if recorded_size != member.size or recorded_digest != member.sha256:
                 raise BackupManifestError("restore member changed during candidate preparation")

@@ -53,7 +53,8 @@ public final class ManualReviewFeatureModel {
         using operations: (any ManualReviewOperations)?
     ) async {
         guard let operations, let generation = privateAccessGeneration else { return }
-        guard source.decision == "review", source.sourceID == request.sourceID,
+        // A post flagged for review, or a call held until the owner approves it (ADR-0008).
+        guard source.decision == "review" || WaitingCall(source) != nil, source.sourceID == request.sourceID,
             source.captureStatus == "delivered"
         else {
             errors[request.correctionID] = "This source is not an available reviewed message."
@@ -79,17 +80,23 @@ public final class ManualReviewFeatureModel {
         do {
             let outcome = try await operations.saveManualCorrection(request)
             guard isCurrent(generation) else { return }
-            guard outcome.correction.correctionID == request.correctionID,
-                outcome.correction.sourceID == request.sourceID,
-                outcome.correction.selectedAccountIDs == request.selectedAccountIDs,
-                outcome.correction.actor == request.actor,
-                outcome.correction.reason == request.reason,
-                outcome.correction.instructions == request.instructions,
-                outcome.correction.sourceRevision == source.sourceRevision,
-                outcome.correction.sourceAt == source.sourceAt,
-                outcome.correction.sourceText == source.text,
-                outcome.correction.acceptedInterpretation.decision == "review"
-            else {
+            let saved = outcome.correction
+            let differences = [
+                ("correction", saved.correctionID == request.correctionID),
+                ("source", saved.sourceID == request.sourceID),
+                ("accounts", saved.selectedAccountIDs == request.selectedAccountIDs),
+                ("actor", saved.actor == request.actor),
+                ("reason", saved.reason == request.reason),
+                ("instructions", saved.instructions == request.instructions),
+                ("source revision", saved.sourceRevision == source.sourceRevision),
+                ("source time", saved.sourceAt == source.sourceAt),
+                ("source text", saved.sourceText == source.text),
+                ("decision", saved.acceptedInterpretation.decision == source.decision),
+            ].filter { !$0.1 }.map(\.0)
+            guard differences.isEmpty else {
+                #if DEBUG
+                    FileHandle.standardError.write(Data("saved correction differs in: \(differences)\n".utf8))
+                #endif
                 errors[request.correctionID] = "The engine returned a different correction."
                 return
             }

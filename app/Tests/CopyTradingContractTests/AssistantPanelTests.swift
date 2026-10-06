@@ -158,7 +158,7 @@ private func inSimplifiedChineseTheAssistantAsksAndShowsItsWorkInChinese() throw
     for (engine, shown) in [
         ("Looked at your accounts", "已查看你的账户"),
         ("Read paper-main's history", "已读取 paper-main 的账户历史记录"),
-        ("Asked you to approve paper-main's recovery change", "已请你批准更改 paper-main 的恢复方式"),
+        ("Asked you to approve paper-main's after-restart setting", "已请你批准 paper-main 的重启后设置"),
         ("Added up Zhao's calls", "已统计 Zhao 的交易信号"),
         ("Couldn't pause new entries for paper-main", "未能暂停 paper-main 的新开仓"),
         ("Couldn't ask you to approve resuming paper-main", "未能发起恢复 paper-main 开仓的批准请求"),

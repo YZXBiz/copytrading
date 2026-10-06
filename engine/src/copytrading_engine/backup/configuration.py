@@ -25,12 +25,23 @@ def read_installation_id(data_dir: Path) -> str:
     return canonical
 
 
+# The fields the app's TradingConfigurationStore writes; its persistence test pins the same set.
+SAVED_CONFIGURATION_FIELDS = frozenset(
+    {"version", "configuration", "revision", "secretRevision", "pendingActivation"}
+)
+
+
 def read_configuration_identities(content: bytes) -> tuple[str, ...]:
     raw = json_object(content)
-    if set(raw) - {"version", "configuration", "secretRevision", "pendingActivation"}:
+    if set(raw) - SAVED_CONFIGURATION_FIELDS:
         raise BackupManifestError("saved configuration has unsupported fields")
     if type(raw.get("version")) is not int or raw.get("version") != 1:
         raise BackupManifestError("saved configuration schema is unsupported")
+    revision = raw.get("revision")
+    if revision is not None and (
+        not isinstance(revision, str) or not re.fullmatch(r"[0-9a-f]{64}", revision)
+    ):
+        raise BackupManifestError("saved configuration revision is invalid")
     if raw.get("pendingActivation") is not None:
         raise BackupManifestError("saved configuration activation is incomplete")
     configuration = raw.get("configuration")

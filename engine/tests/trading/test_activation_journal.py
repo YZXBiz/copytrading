@@ -90,3 +90,18 @@ def test_ready_commit_identity_survives_stop_and_engine_reopen(tmp_path):
     assert status.phase == "stopped"
     assert status.committed_revision == revision
     assert status.committed_activation_id == activation_id
+
+
+def test_opening_a_journal_leaves_its_file_alone(tmp_path):
+    """A restored copy is checked byte for byte, so merely starting on it must not rewrite it."""
+    activation_id = str(uuid4())
+    path = tmp_path / "trading-activation.json"
+    journal = TradingActivationJournal(path)
+    journal.begin(activation_id, "c" * 64)
+    journal.mark_ready(activation_id)
+    saved = path.read_bytes()
+
+    reopened = TradingActivationJournal(path)
+
+    assert path.read_bytes() == saved
+    assert reopened.status(activation_id, "paused").phase == "stopped"

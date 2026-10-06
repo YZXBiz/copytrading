@@ -10,6 +10,7 @@ import sys
 import threading
 from contextlib import closing, contextmanager
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from pydantic import SecretStr
@@ -26,6 +27,13 @@ from copytrading_engine.shared.signals import StockSignal
 
 from .builders import NOW, destination_signal, event, receive
 from .fakes import FakeBroker
+
+
+def _journaled(store):
+    """Everything the store journaled, oldest first."""
+    return tuple(
+        SimpleNamespace(id=seq, event=event) for seq, event in reversed(store.event_page(None, 100))
+    )
 
 
 def _store(path):
@@ -51,7 +59,7 @@ def test_snapshot_journal_and_notification_survive_reopen(tmp_path):
     receive(engine, signal, NOW)
     engine.process(NOW)
     snapshot = store.load()
-    reports = store.pending_reports()
+    reports = _journaled(store)
     notifications = store.pending_notifications()
     assert snapshot.messages["discord:demo:1"].id == signal.id
     assert snapshot.messages["discord:demo:1"].cash_anchor is not None
@@ -63,11 +71,9 @@ def test_snapshot_journal_and_notification_survive_reopen(tmp_path):
 
     reopened = _store(path)
     assert reopened.load() == snapshot
-    assert reopened.pending_reports() == reports
+    assert _journaled(reopened) == reports
     assert reopened.pending_notifications() == notifications
-    reopened.confirm_report(reports[0].id)
     reopened.confirm_notification(notifications[0][0])
-    assert len(reopened.pending_reports()) == len(reports) - 1
     assert len(reopened.pending_notifications()) == len(notifications) - 1
     reopened.close()
 
@@ -114,7 +120,7 @@ def test_destination_terms_commit_before_ack_and_survive_restart(tmp_path):
     assert any(
         report.event.payload.kind == "message"
         and report.event.payload.destination == accepted.terms
-        for report in store.pending_reports()
+        for report in _journaled(store)
     )
     assert broker.calls == 0
     store.close()
@@ -152,7 +158,7 @@ def test_a_call_with_no_size_for_an_account_set_to_wait_is_a_durable_review(tmp_
     assert any(
         report.event.payload.kind == "message"
         and report.event.payload.review_reason == "missing_source_fraction"
-        for report in store.pending_reports()
+        for report in _journaled(store)
     )
     engine.process(NOW)
     assert broker.calls == 0
@@ -184,7 +190,7 @@ def test_durable_submit_intent_precedes_broker_post(tmp_path):
                 any(
                     report.event.payload.kind == "submit_started"
                     and report.event.payload.client_id == request.client_order_id
-                    for report in store.pending_reports()
+                    for report in _journaled(store)
                 ),
             )
         )
@@ -224,7 +230,7 @@ def test_cash_anchor_commit_failure_leaves_no_order_and_reopens_cleanly(tmp_path
     assert broker.calls == 1
     assert reopened.load().messages["discord:demo:1"].cash_anchor is not None
     assert any(
-        report.event.payload.kind == "cash_anchor_recorded" for report in reopened.pending_reports()
+        report.event.payload.kind == "cash_anchor_recorded" for report in _journaled(reopened)
     )
     reopened.close()
 
@@ -269,7 +275,7 @@ def test_failure_before_commit_rolls_back_all_three_records(tmp_path, monkeypatc
     engine = CopyEngine(store, FakeBroker(), CopyConfig(sources=("discord:demo",)))
     engine.bind(NOW)
     before = store.load()
-    reports_before = store.pending_reports()
+    reports_before = _journaled(store)
     notices_before = store.pending_notifications()
 
     def fail_notification(*_):
@@ -282,7 +288,7 @@ def test_failure_before_commit_rolls_back_all_three_records(tmp_path, monkeypatc
     with pytest.raises(RuntimeError, match="notification failure"):
         receive(engine, StockSignal.model_validate(event()), NOW)
     assert store.load() == before
-    assert store.pending_reports() == reports_before
+    assert _journaled(store) == reports_before
     assert store.pending_notifications() == notices_before
     store.close()
 
@@ -342,7 +348,6 @@ async def test_owner_binds_only_on_explicit_open_and_replays_receive(tmp_path):
         observation = await owner.observation()
         assert len(observation.ledger.messages) == 1
         assert observation.ledger.account_id == "paper-demo"
-        assert observation.report_queue.count == 3  # inventory, enable, and received signal
         with pytest.raises(ValueError, match="reused with different content"):
             await owner.receive(
                 destination_signal(signal.model_copy(update={"text": "changed"})), NOW
@@ -496,6 +501,6 @@ def test_rejected_signal_is_durable_without_notification(tmp_path):
     engine.ledger.record(
         JournalEvent(at=NOW, payload=SignalRejected(payload_hash="a" * 64, reason="bad source"))
     )
-    assert len(store.pending_reports()) == 2
+    assert len(_journaled(store)) == 2
     assert not store.pending_notifications()
     store.close()

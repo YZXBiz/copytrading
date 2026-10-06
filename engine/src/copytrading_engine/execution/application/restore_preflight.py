@@ -138,7 +138,6 @@ class RestoreCandidatePreflight:
                     blockers.add(RestorePreflightBlocker.ACCOUNT_OUTBOX_PENDING)
                 if (
                     credential is None
-                    or account.snapshot.account_id != account.account_id
                     or account.snapshot.environment != manifest_accounts.get(account.account_id)
                     or account.snapshot.environment != credential.environment
                     or account.snapshot.control.entry_permission != "disabled"

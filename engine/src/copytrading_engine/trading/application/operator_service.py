@@ -120,8 +120,6 @@ class OperatorQueryService:
                 unresolved_incidents=(),
                 ownership_incidents=(),
                 pending_orders=None,
-                pending_reports=None,
-                oldest_report_at=None,
                 balance=None,
             ), unavailable
 
@@ -282,8 +280,6 @@ class OperatorQueryService:
         try:
             database = self._access.manual_command_ledger_path(request.account_id)
             _, snapshot, _ = await self._access.retained_account(database, timeout=3)
-            if snapshot.account_id != request.account_id:
-                raise ValueError("Retained manual account identity mismatch")
             return manual_command_page_from_snapshot(
                 snapshot,
                 account_id=request.account_id,

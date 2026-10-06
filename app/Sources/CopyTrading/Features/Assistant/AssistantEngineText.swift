@@ -6,9 +6,9 @@ enum AssistantEngineText {
     /// "Couldn't …" line.
     static let templates = [
         "Couldn't read %@'s history", "Couldn't pause new entries for %@",
-        "Couldn't ask you to approve resuming %@", "Couldn't ask you to approve %@'s recovery change",
+        "Couldn't ask you to approve resuming %@", "Couldn't ask you to approve %@'s after-restart setting",
         "Read %@'s history", "Paused new entries for %@", "Asked you to approve resuming %@",
-        "Asked you to approve %@'s recovery change", "Added up %@'s calls",
+        "Asked you to approve %@'s after-restart setting", "Added up %@'s calls",
     ]
 
     /// The engine starts every step line for a refused request with "Couldn't".

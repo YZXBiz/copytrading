@@ -16,7 +16,6 @@ from copytrading_engine.execution.domain.lot_sales import (
 from copytrading_engine.execution.domain.market import Quote
 from copytrading_engine.execution.domain.signals import CopyConfig
 from copytrading_engine.execution.presentation.operator_views import account_overview
-from copytrading_engine.shared.queue_snapshot import QueueSnapshot
 from copytrading_engine.shared.signals import StockSignal
 
 from .builders import NOW, event, receive
@@ -110,7 +109,6 @@ def test_selling_a_whole_lot_sells_its_remaining_shares_with_a_limit_and_closes_
     overview = account_overview(
         snapshot,
         None,
-        QueueSnapshot(0, None, 0),
         local_account_id="paper-demo",
         active_configuration=True,
         readiness="ready",
@@ -229,3 +227,17 @@ def test_a_lot_sale_survives_a_restart_without_a_second_order(tmp_path):
     assert restored.ledger.snapshot().lots[lot_id].remaining_qty == 0
     reopened.close()
     original.close()
+
+
+def test_prices_moving_between_review_and_sell_do_not_block_the_sale(tmp_path):
+    """A person takes seconds to press Sell, and the market ticks meanwhile."""
+    _, broker, app, lot_id, lot = owned_lot(tmp_path)
+    app.preview(preview_request(lot_id, lot.remaining_qty), NOW)
+    broker.bid -= Decimal("0.01")
+    broker.account_data = {**broker.account_data, "equity": "5003.17", "cash": "4999.10"}
+    calls = broker.calls
+
+    result = app.confirm(confirmation(), NOW + dt.timedelta(seconds=6))
+
+    assert result.status != "rejected", result.reason
+    assert broker.calls > calls

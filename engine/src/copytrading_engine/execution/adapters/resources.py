@@ -30,7 +30,6 @@ from copytrading_engine.execution.application.ports import (
     ExecutionObserver,
 )
 from copytrading_engine.execution.application.recovery import RecoveryApplication
-from copytrading_engine.execution.application.reports import StoredReport
 from copytrading_engine.execution.domain.events import JournalEvent, SignalRejected
 from copytrading_engine.execution.domain.lifecycle import (
     AccountControlCommand,
@@ -64,6 +63,7 @@ from copytrading_engine.execution.domain.recovery import (
 )
 from copytrading_engine.execution.domain.signals import CopyConfig
 from copytrading_engine.execution.domain.sizing import DestinationSignal
+from copytrading_engine.execution.domain.values import BrokerAccountNumber
 from copytrading_engine.execution.presentation.operator_views import (
     AccountEventPage,
     AccountOverview,
@@ -73,6 +73,10 @@ from copytrading_engine.execution.presentation.operator_views import (
     destination_views,
     event_page,
 )
+
+# A ledger not yet bound to a broker account matches no broker account, so manual orders and
+# lot sales refuse until the account has connected.
+_UNBOUND_LEDGER = BrokerAccountNumber("unbound")
 
 log = logging.getLogger(__name__)
 
@@ -175,7 +179,6 @@ class ExecutionResources:
         return account_overview(
             self.engine.ledger.snapshot(),
             self.last_inspection,
-            self.store.report_snapshot(),
             local_account_id=self.data_dir.name,
             active_configuration=True,
             readiness=self.account_status().readiness,
@@ -268,7 +271,6 @@ class ExecutionResources:
             ledger=deepcopy(self.engine.ledger.snapshot()),
             total_cost_exposure_usd=self.engine.ledger.exposure(),
             position_audit=deepcopy(self.position_audit),
-            report_queue=deepcopy(self.store.report_snapshot()),
         )
 
     def cycle(
@@ -305,12 +307,6 @@ class ExecutionResources:
                 payload=SignalRejected(payload_hash=payload_hash, reason=reason),
             )
         )
-
-    def pending_reports(self) -> tuple[StoredReport, ...]:
-        return deepcopy(self.store.pending_reports())
-
-    def confirm_report(self, event_id: int) -> None:
-        self.store.confirm_report(event_id)
 
     def pending_notifications(self) -> tuple[tuple[int, str, str, dict[str, object]], ...]:
         return deepcopy(self.store.pending_notifications())
@@ -360,7 +356,7 @@ class ExecutionResources:
         return ManualTradingApplication(
             self.engine,
             local_account_id=self.data_dir.name,
-            broker_account_id=snapshot.account_id or "unbound",
+            broker_account_id=snapshot.account_id or _UNBOUND_LEDGER,
             environment=snapshot.environment or "paper",
             halted=lambda: (
                 (self.data_dir / "HALT").exists() or self.engine.ledger.snapshot().buy_halted
@@ -376,7 +372,7 @@ class ExecutionResources:
         return LotSaleApplication(
             self.engine,
             local_account_id=self.data_dir.name,
-            broker_account_id=snapshot.account_id or "unbound",
+            broker_account_id=snapshot.account_id or _UNBOUND_LEDGER,
             environment=snapshot.environment or "paper",
             halted=lambda: (
                 (self.data_dir / "HALT").exists() or self.engine.ledger.snapshot().buy_halted

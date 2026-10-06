@@ -4,6 +4,7 @@ from typing import Literal, Self
 from pydantic import AwareDatetime, model_validator
 
 from copytrading_engine.execution.domain.values import (
+    BrokerAccountId,
     Identifier,
     Money,
     Positive,
@@ -14,7 +15,7 @@ from copytrading_engine.execution.domain.values import (
 
 
 class Account(Value):
-    id: Identifier
+    id: BrokerAccountId
     status: Identifier
     cash: Money
     buying_power: Money
@@ -29,6 +30,13 @@ class Account(Value):
     def active(self) -> bool:
         return self.status == "ACTIVE" and not (
             self.trading_blocked or self.account_blocked or self.trade_suspended_by_user
+        )
+
+    def standing(self) -> dict[str, object]:
+        """Whether and how this account may trade. Balances move with every tick, so a review
+        that compares accounts must not include them."""
+        return self.model_dump(
+            mode="json", exclude={"cash", "buying_power", "equity", "last_equity"}
         )
 
 
@@ -49,6 +57,10 @@ class Position(Value):
     market_value: Money | None = None
     currency: str | None = None
     asset_class: str | None = None
+
+    def holding(self) -> dict[str, object]:
+        """What is held, without its market value, which moves with every tick."""
+        return self.model_dump(mode="json", exclude={"market_value"})
 
 
 class CalendarDay(Value):

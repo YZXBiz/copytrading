@@ -7,12 +7,11 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
-from copytrading_engine.execution.application.reports import StoredReport
 from copytrading_engine.execution.domain.events import JournalEvent
 from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
+from copytrading_engine.execution.domain.values import BrokerAccountNumber
 from copytrading_engine.execution.presentation.notifications import execution_notification
 from copytrading_engine.shared.notification_models import NotificationIntent
-from copytrading_engine.shared.queue_snapshot import QueueSnapshot
 from copytrading_engine.shared.sqlite import SchemaComponent, ensure_schema
 
 EXECUTION_SCHEMA = SchemaComponent(
@@ -120,7 +119,7 @@ class Store:
         self._usable = False
         self.close()
 
-    def bind_identity(self, account_id: str, environment: str) -> None:
+    def bind_identity(self, account_id: BrokerAccountNumber, environment: str) -> None:
         if not account_id or environment not in {"paper", "live"}:
             raise ValueError("Verified broker account and environment are required")
         self._require_usable()
@@ -197,15 +196,6 @@ class Store:
             ),
         )
 
-    def pending_reports(self) -> tuple[StoredReport, ...]:
-        self._require_usable()
-        rows = self.db.execute(
-            "SELECT id, event FROM journal WHERE published=0 ORDER BY id LIMIT 100"
-        ).fetchall()
-        return tuple(
-            StoredReport(id=id_, event=JournalEvent.model_validate_json(raw)) for id_, raw in rows
-        )
-
     def event_page(
         self, before_seq: int | None, limit: int
     ) -> tuple[tuple[int, JournalEvent], ...]:
@@ -217,24 +207,6 @@ class Store:
             (before_seq, before_seq, limit),
         ).fetchall()
         return tuple((seq, JournalEvent.model_validate_json(raw)) for seq, raw in rows)
-
-    def report_snapshot(self) -> QueueSnapshot:
-        self._require_usable()
-        row = self.db.execute(
-            "SELECT count(*), min(enqueued_at), "
-            "sum(CASE WHEN enqueued_at IS NULL THEN 1 ELSE 0 END) "
-            "FROM journal WHERE published=0"
-        ).fetchone()
-        if row is None:
-            raise RuntimeError("Execution report queue observation failed")
-        count, oldest, unknown = row
-        return QueueSnapshot(
-            count, dt.datetime.fromisoformat(oldest) if oldest else None, unknown or 0
-        )
-
-    def confirm_report(self, event_id: int) -> None:
-        with self._transaction():
-            self.db.execute("UPDATE journal SET published=1 WHERE id=?", (event_id,))
 
     def pending_notifications(self) -> tuple[tuple[int, str, str, dict[str, object]], ...]:
         self._require_usable()

@@ -1,6 +1,7 @@
 """Validated order terms and records."""
 
 import datetime as dt
+from decimal import Decimal
 from typing import Literal, Self
 
 from pydantic import AwareDatetime, Field, model_validator
@@ -46,6 +47,13 @@ class OrderRequest(OrderTerms):
         return self
 
 
+_SIZE_TOLERANCE = Decimal("1.02")
+# Fields a fresh quote recomputes; see OrderPlan.same_order_as.
+_PRICED = frozenset(
+    {"limit_price", "source_price", "entry_price", "qty", "requested_usd", "budget_usd"}
+)
+
+
 class OrderPlan(OrderTerms):
     symbol: Identifier
     qty: Positive
@@ -59,6 +67,18 @@ class OrderPlan(OrderTerms):
     # What the call asked for, and what the maximum per order allowed of it (ADR-0007).
     requested_usd: Positive | None = None
     budget_usd: Positive | None = None
+
+    def still_allowed_by(self, fresh: OrderPlan) -> bool:
+        """The approved order may still go out: the same order, and no larger than what the
+        account's limits allow now. A price tick moves a buy's size a little, so a size within
+        2% of today's passes; a real drop, such as buying power falling, does not."""
+        return self.same_order_as(fresh) and self.qty <= fresh.qty * _SIZE_TOLERANCE
+
+    def same_order_as(self, other: OrderPlan) -> bool:
+        """The same order apart from prices, which a fresh quote recomputes every time. The
+        owner approves a plan and that plan is sent; prices that tick meanwhile do not change
+        which order it is."""
+        return self.model_dump(exclude=set(_PRICED)) == other.model_dump(exclude=set(_PRICED))
 
     @model_validator(mode="after")
     def valid_plan(self) -> Self:

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import re
 import sqlite3
 from contextlib import closing
@@ -113,25 +112,9 @@ def _read_account(path: Path) -> tuple[LedgerSnapshot, bool]:
         if row is None or not isinstance(row[0], str):
             raise sqlite3.DatabaseError("account snapshot is unavailable")
         snapshot = decode_ledger_snapshot(row[0])
-        pending_reports = connection.execute(
-            "SELECT event FROM journal WHERE published=0 ORDER BY id"
-        ).fetchall()
+        # A notification the owner has not been sent yet would be sent again after a restore.
         pending_notifications = _has_pending(
             connection,
             "SELECT EXISTS(SELECT 1 FROM notifications WHERE delivered_at IS NULL)",
         )
-
-    # Candidate preparation appends exactly one local audit event to disable
-    # entries and select manual recovery; archived delivery must never replay.
-    restore_audit_only = len(pending_reports) == 1 and _is_restore_manual_event(
-        pending_reports[0][0]
-    )
-    return snapshot, bool((pending_reports and not restore_audit_only) or pending_notifications)
-
-
-def _is_restore_manual_event(raw: str) -> bool:
-    try:
-        event = json.loads(raw)
-        return event["payload"]["result"]["command"]["action"] == "restore_manual"
-    except KeyError, TypeError, ValueError:
-        return False
+    return snapshot, pending_notifications

@@ -8,6 +8,8 @@ It never touches the real installation, its configuration, or its Keychain items
 from __future__ import annotations
 
 import argparse
+import contextlib
+import datetime as dt
 import json
 import os
 import select
@@ -17,13 +19,17 @@ import sys
 import tempfile
 import threading
 import time
+import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from decimal import Decimal
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from types import TracebackType
 from typing import Any
+from zoneinfo import ZoneInfo
 
+from local_signing import local_identity
 from swift_paths import swift_bin_path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -31,6 +37,8 @@ RELEASE_APP = ROOT / "dist/CopyTrading.app"
 DEBUG_APP = ROOT / "dist/ui-test/CopyTrading Debug.app"
 APP_NAME = "CopyTrading Debug"
 BUNDLE_ID = "dev.copytrading.app.uitest"
+APP_LOG = ROOT / "dist/ui-test/app-stderr.log"
+APPEARANCE_KEY = "appearance"  # AppAppearance.storageKey in the app
 
 
 ASSISTANT_ANSWER = "Copying is paused, so nothing is being copied right now."
@@ -218,22 +226,36 @@ def _command_name(args: tuple[str, ...]) -> str:
     return args[0]
 
 
+# Peekaboo reports these while it is still finding the app, before it acts, so a retry
+# cannot click or type twice.
+_BEFORE_ACTING = ("Application inventory was unavailable", "Application inventory did not complete")
+
+
 def peekaboo(*args: str, timeout: float = 60) -> dict[str, Any]:
-    result = subprocess.run(
-        ["peekaboo", *args, "--json"], capture_output=True, text=True, timeout=timeout, check=False
-    )
-    try:
-        payload = json.loads(result.stdout)
-    except json.JSONDecodeError as error:
-        raise JourneyFailure(
-            f"peekaboo {args[0]} returned no JSON: {result.stderr.strip()}"
-        ) from error
-    if not payload.get("success"):
+    for attempt in range(3):
+        result = subprocess.run(
+            ["peekaboo", *args, "--json"],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+        try:
+            payload = json.loads(result.stdout)
+        except json.JSONDecodeError as error:
+            raise JourneyFailure(
+                f"peekaboo {args[0]} returned no JSON: {result.stderr.strip()}"
+            ) from error
+        if payload.get("success"):
+            return payload.get("data") or {}
         message = (payload.get("error") or {}).get("message", "unknown error")
         if "GUI session is locked" in message:
             raise ScreenLocked("the Mac's screen is locked; unlock it and run the journeys again")
+        if attempt < 2 and any(marker in message for marker in _BEFORE_ACTING):
+            time.sleep(1.0)
+            continue
         raise JourneyFailure(f"peekaboo {_command_name(args)} failed: {message}")
-    return payload.get("data") or {}
+    raise AssertionError("unreachable")
 
 
 @dataclass
@@ -252,6 +274,14 @@ class AppDriver:
                 data = peekaboo(*args, timeout=90)
                 break
             except JourneyFailure as error:
+                if "reason=window minimized" in str(error) and attempt < 2:
+                    # Something outside the app hid its window (the app never minimizes itself):
+                    # put it back on screen and look again.
+                    with contextlib.suppress(JourneyFailure):
+                        peekaboo("window", "restore", "--app", APP_NAME)
+                    peekaboo("app", "switch", "--to", APP_NAME, "--foreground", "--verify")
+                    time.sleep(1)
+                    continue
                 # Navigation can race a capture in progress; Peekaboo asks for one fresh retry.
                 transient = ("inconsistent response", "AX tree incomplete")
                 if not any(text in str(error) for text in transient) or attempt == 2:
@@ -410,6 +440,49 @@ end tell
             raise JourneyFailure(f"no text field labeled {into!r}; fields on screen: {labels}")
         return element, snapshot
 
+    def press_action(self, text: str) -> None:
+        """Press a control through Accessibility alone, which works while it is scrolled out of
+        view; a pointer click needs it on screen."""
+        snapshot = self.see()
+        element = snapshot.find(text)
+        if element is None:
+            raise JourneyFailure(f"no element matching {text!r}")
+        peekaboo(
+            "click",
+            "--on",
+            element.id,
+            "--snapshot",
+            snapshot.id,
+            "--app",
+            APP_NAME,
+            "--input-strategy",
+            "actionOnly",
+        )
+        time.sleep(0.6)
+
+    def scroll_down(self, within: str, *, ticks: int = 10) -> None:
+        """Scroll the area that holds a visible element, to reach what sits below it."""
+        peekaboo("app", "switch", "--to", APP_NAME, "--foreground", "--verify")
+        time.sleep(0.5)
+        snapshot = self.see()
+        element = snapshot.find(within)
+        if element is None:
+            raise JourneyFailure(f"no element matching {within!r} to scroll from")
+        peekaboo(
+            "scroll",
+            "--direction",
+            "down",
+            "--amount",
+            str(ticks),
+            "--on",
+            element.id,
+            "--snapshot",
+            snapshot.id,
+            # SwiftUI scroll views have no Accessibility scroll action; use real wheel events.
+            "--foreground",
+        )
+        time.sleep(0.6)
+
     def press(self, keys: str) -> None:
         """Send a key chord to the focused element; Peekaboo refuses `--app` for raw chords."""
         peekaboo("app", "switch", "--to", APP_NAME, "--foreground", "--verify")
@@ -514,7 +587,22 @@ def build_debug_bundle() -> None:
         subprocess.run(
             ["/usr/libexec/PlistBuddy", "-c", f"Set :{key} {value}", str(info)], check=True
         )
-    subprocess.run(["codesign", "--force", "--deep", "-s", "-", str(DEBUG_APP)], check=True)
+    # The owner's Apple Development identity keeps Keychain trust across rebuilds, so a state
+    # kept with --keep-state can be reused without macOS asking for the saved keys again.
+    identity = local_identity() or "-"
+    subprocess.run(
+        [
+            "codesign",
+            "--force",
+            "--deep",
+            "--sign",
+            identity,
+            "--identifier",
+            BUNDLE_ID,
+            str(DEBUG_APP),
+        ],
+        check=True,
+    )
 
 
 def launch(state_root: Path, *, quit_first: bool = True) -> None:
@@ -528,6 +616,9 @@ def launch(state_root: Path, *, quit_first: bool = True) -> None:
             "COPYTRADING_UI_TEST_UNLOCK=1",
             "--env",
             f"COPYTRADING_STATE_ROOT={state_root}",
+            # A debug build reports the errors behind a failed start or restore here.
+            "--stderr",
+            str(APP_LOG),
             str(DEBUG_APP),
         ],
         check=True,
@@ -621,6 +712,93 @@ def j1_launch_and_unlock(app: AppDriver) -> None:
 def j2_engine_starts(app: AppDriver) -> None:
     app.open_settings("engine")
     app.wait_for("Local engine, Ready", timeout=90, name="engine-ready")
+
+
+def _saved_appearance() -> str | None:
+    """The appearance the debug app saved, as SwiftUI's AppStorage keeps it."""
+    read = subprocess.run(
+        ["defaults", "read", BUNDLE_ID, APPEARANCE_KEY], capture_output=True, text=True, check=False
+    )
+    return read.stdout.strip() or None
+
+
+def j37_everyday_buttons(app: AppDriver) -> None:
+    """Buttons that do not trade do their job: Run Self-Test fills the log, Search narrows it,
+    Save log… writes it to disk, Appearance switches, Settings stops and starts the engine, and
+    each Getting Started step opens the part of Connections it names."""
+    diagnostics = app.open_screen("diagnostics")
+    app.expect(diagnostics, "diagnostics.runSelfTest")
+    app.click("diagnostics.runSelfTest")
+    app.wait_for("Self-test completed", timeout=60, name="self-test-logged")
+    app.type("completed", into="Search")
+    narrowed = app.see("diagnostics-search")
+    app.expect(narrowed, "Self-test completed")
+    app.expect_absent(narrowed, "Self-test captured")
+    app.type("", into="Search")
+    app.click("diagnostics.refresh")
+    app.wait_for("Self-test captured", timeout=30)
+
+    folder = Path(tempfile.mkdtemp(prefix="copytrading-ui-log.")).resolve()
+    try:
+        app.open_settings("logs")
+        app.click("settings.support.saveLog", real=True)
+        _choose_in_file_panel(app, folder, "journey-log.jsonl")
+        saved = folder / "journey-log.jsonl"
+        deadline = time.monotonic() + 30
+        while not saved.is_file():
+            if time.monotonic() > deadline:
+                app.see("log-not-saved")
+                raise JourneyFailure("Save log… did not write the log")
+            time.sleep(1)
+        records = [json.loads(line) for line in saved.read_text().splitlines() if line.strip()]
+        if not records:
+            raise JourneyFailure("Save log… wrote an empty log")
+    except JourneyFailure:
+        app.press("escape")  # a save panel left open would keep the app from quitting
+        raise
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+    app.open_settings("appearance")
+    for choice in ("dark", "system"):
+        app.click(f"settings.appearance.{choice}")
+        time.sleep(1)
+        if _saved_appearance() != choice:
+            raise JourneyFailure(f"choosing {choice} did not save it ({_saved_appearance()!r})")
+
+    app.open_settings("engine")
+    app.click("settings.stopEngine")
+    app.wait_for("settings.startEngine", timeout=60, name="engine-stopped-in-settings")
+    app.click("settings.startEngine")
+    app.wait_for("Local engine, Ready", timeout=90, name="engine-started-in-settings")
+
+    if app.state_root is not None and any(app.state_root.rglob("trading-configuration.json")):
+        return  # a kept setup (--reuse-state): the guide's steps are done, and nothing to tidy
+    for row, (step, lands_on) in enumerate(
+        (
+            ("guide.openDiscord", "Channel IDs"),
+            ("guide.openInterpreter", "connections.provider.deepseek"),
+            ("guide.openAccounts", "Alpaca keys"),
+            ("guide.openPeople", "Where they post"),
+        )
+    ):
+        app.open_screen("gettingStarted")
+        app.click(f"guide.step.{row}")  # a checklist row opens to show what it offers
+        app.click(step)
+        app.wait_for(lands_on, timeout=15, name=f"guide-{step.split('.')[-1]}")
+        for close in ("connections.close", "Done"):
+            if app.see().find(close) is not None:
+                app.click(close)
+                break
+    # Leave the setup as found, so later journeys start from nothing saved.
+    app.open_screen("connections")
+    for row, remove in (
+        ("connections.guru", "Remove Guru"),
+        ("connections.account.primary", "Remove Account"),
+    ):
+        if app.see().find(row) is not None:
+            app.click(row)
+            app.click(remove)
 
 
 def j3_first_run_guidance(app: AppDriver) -> None:
@@ -1014,7 +1192,7 @@ def _agent_result(app: AppDriver, expected_exit: int, *arguments: str) -> dict[s
     if completed.returncode != expected_exit:
         raise JourneyFailure(
             f"`copytrading {' '.join(arguments)}` exited {completed.returncode}, "
-            f"expected {expected_exit}: {completed.stderr.strip()[:200]}"
+            f"expected {expected_exit}: {(completed.stderr or completed.stdout).strip()[:300]}"
         )
     return json.loads(completed.stdout)["ok"]
 
@@ -1057,7 +1235,7 @@ def j31_agent_approval(app: AppDriver) -> None:
 
     # Approving: the change waits for the owner, then runs exactly once.
     asked = _agent_result(app, 10, "accounts", "recovery", "primary", "automatic")
-    sheet = app.wait_for("Set recovery in primary", timeout=30, name="approval-sheet")
+    sheet = app.wait_for("In primary, after a restart", timeout=30, name="approval-sheet")
     app.expect(sheet, "An agent is asking for approval", "Reject", "Approve…")
     if _wait_for_account(app, "primary", timeout=5)["recovery_preference"] != "manual":
         raise JourneyFailure("the recovery change ran before the owner approved it")
@@ -1079,7 +1257,405 @@ def j31_agent_approval(app: AppDriver) -> None:
     after = _wait_for_account(app, "primary", timeout=5)
     if after["entry_permission"] != before["entry_permission"]:
         raise JourneyFailure("a rejected resume still changed the account's entries")
+    _check_every_cli_command(app, asked["proposal_id"])
     _agent_result(app, 0, "pause")
+    _check_locked_app_still_pauses(app)
+
+
+def _expect_exit(app: AppDriver, expected: int, *arguments: str) -> None:
+    completed = _agent_command(app, *arguments)
+    if completed.returncode != expected:
+        raise JourneyFailure(
+            f"`copytrading {' '.join(arguments)}` exited {completed.returncode}, "
+            f"expected {expected}: {(completed.stderr or completed.stdout).strip()[:300]}"
+        )
+
+
+def _check_every_cli_command(app: AppDriver, approved_id: str) -> None:
+    """Every `copytrading` command answers the running setup, in text and in JSON."""
+    accounts = _agent_result(app, 0, "accounts")
+    if [item["account_id"] for item in accounts["items"]] != ["primary"]:
+        raise JourneyFailure(f"`accounts` listed {accounts['items']}")
+    _expect_exit(app, 0, "accounts")
+    _agent_result(app, 0, "activity")
+    _expect_exit(app, 0, "activity")
+    events = _agent_result(app, 0, "events", "primary")
+    if not events["items"]:
+        raise JourneyFailure("`events primary` lost the approved recovery change")
+    _expect_exit(app, 0, "events", "primary")
+    if _agent_result(app, 0, "proposals", "show", approved_id)["state"] != "succeeded":
+        raise JourneyFailure("`proposals show` disagrees with the approved request")
+    schema = _agent_command(app, "schema")
+    if schema.returncode != 0 or {"request", "response"} - json.loads(schema.stdout).keys():
+        raise JourneyFailure("`schema` did not print the contract's JSON Schema")
+
+    # Manual orders refer to a post's reading; unknown ones fail without asking the owner:
+    # a missing command is not found, and a missing correction makes the request invalid.
+    _agent_result(app, 0, "manual", "list", "primary", "no-such-post")
+    _expect_exit(app, 6, "manual", "show", "primary", "no-such-command")
+    _expect_exit(
+        app, 2, "manual", "preview", "primary", "--correction", "none", "--instruction", "0"
+    )
+    _expect_exit(app, 6, "manual", "confirm", "primary", "--preview", "none")
+    _expect_exit(app, 2, "accounts", "recovery", "primary", "sometimes")
+
+    # Pausing an account is safer, so it runs at once without asking.
+    _agent_result(app, 0, "accounts", "pause", "primary")
+    if _wait_for_account(app, "primary", timeout=5)["entry_permission"] != "paused":
+        raise JourneyFailure("`accounts pause` did not pause the account's entries")
+
+
+def _check_locked_app_still_pauses(app: AppDriver) -> None:
+    """A locked app refuses reads but still lets an agent pause."""
+    app.click("Lock")
+    app.wait_for("CopyTrading is locked", timeout=20)
+    _expect_exit(app, 4, "status")
+    _expect_exit(app, 0, "pause")
+    app.click("app.unlock")
+    app.wait_for("navigation.today", timeout=30)
+
+
+def _choose_in_file_panel(app: AppDriver, folder: Path, name: str | None = None) -> None:
+    """Answer the open or save panel the way a person does: Go to Folder, then confirm."""
+    time.sleep(1.5)
+    app.press("cmd+shift+g")
+    time.sleep(0.8)
+    peekaboo("type", str(folder), "--foreground", "--clear", "--accept-dispatched")
+    app.press("Return")
+    time.sleep(1.0)
+    if name is not None:
+        peekaboo("type", name, "--foreground", "--clear", "--accept-dispatched")
+        time.sleep(0.3)
+    app.press("Return")
+
+
+def j33_backup_and_restore(app: AppDriver) -> None:
+    """A connected account's records back up, preview, and restore through Settings → Backups.
+
+    Runs after J31, whose saved paper setup it backs up; the restored account comes back with
+    entries off and manual recovery, which is what a restore promises.
+    """
+    if app.state_root is None:
+        raise JourneySkipped("needs the run's state root")
+    _paper_setup()
+    folder = Path(tempfile.mkdtemp(prefix="copytrading-ui-backup.")).resolve()
+    archive = folder / "Journey-Backup.zip"
+    try:
+        app.open_settings("backups")
+        app.click("Create Backup…", real=True)
+        _choose_in_file_panel(app, folder, archive.name)
+        made = app.wait_for("Backup saved and checked", timeout=120, name="backup-created")
+        app.expect(made, "Last verified backup")
+        if not archive.is_file():
+            raise JourneyFailure("the backup said it was created but no file is there")
+
+        app.click("Restore from Backup…", real=True)
+        _choose_in_file_panel(app, archive)
+        preview = app.wait_for("Restore Preview", timeout=120, name="restore-preview")
+        app.expect(preview, "Same installation", "primary", "Restore This Backup")
+        app.click("Restore This Backup", outcome_checked=True)
+        done = app.wait_for("Restored.", timeout=240, name="restore-activated")
+        app.expect_absent(done, "Before it can restore")
+        # A restore leaves copying paused, so read the account rather than wait for processing.
+        accounts = _agent_result(app, 0, "accounts")["items"]
+        restored = next((a for a in accounts if a["account_id"] == "primary"), None)
+        if restored is None or (restored["entry_permission"], restored["recovery_preference"]) != (
+            "disabled",
+            "manual",
+        ):
+            raise JourneyFailure(f"the restored account came back as {restored}")
+    except JourneyFailure:
+        app.press("escape")  # a file panel left open would keep the app from quitting
+        raise
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+
+TEST_SYMBOLS = (
+    "SOFI",
+    "NIO",
+    "PLUG",
+    "LCID",
+    "AAL",
+    "SNAP",
+    "RIG",
+    "GRAB",
+    "HOOD",
+    "RIVN",
+    "PFE",
+    "KGC",
+    "VALE",
+    "NOK",
+    "MARA",
+    "RIOT",
+    "CLSK",
+    "BTG",
+    "AMC",
+    "T",
+)
+
+
+def _latest_price(setup: dict[str, str], symbol: str) -> Decimal:
+    """The last trade on Alpaca's data feed, read with the paper keys."""
+    request = urllib.request.Request(
+        f"https://data.alpaca.markets/v2/stocks/{symbol}/trades/latest",
+        headers={
+            "APCA-API-KEY-ID": setup["alpaca_key"],
+            "APCA-API-SECRET-KEY": setup["alpaca_secret"],
+        },
+    )
+    with urllib.request.urlopen(request, timeout=20) as response:
+        return Decimal(str(json.load(response)["trade"]["p"]))
+
+
+def _post_test_call(setup: dict[str, str], text: str) -> None:
+    """Post one call into the test channel as the test account, the way a guru would."""
+    posted = subprocess.run(
+        # The engine's environment has the Discord client the engine itself reads with.
+        [
+            "uv",
+            "run",
+            "--directory",
+            str(ROOT / "engine"),
+            "--frozen",
+            "python",
+            str(ROOT / "app/scripts/discord_test_post.py"),
+            setup["channel"],
+            text,
+        ],
+        env={**os.environ, "COPYTRADING_TEST_DISCORD_TOKEN": setup["discord_token"]},
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    if posted.returncode != 0:
+        raise JourneyFailure(f"the test post failed: {posted.stderr.strip()[-300:]}")
+
+
+def _copying_with_entries(app: AppDriver) -> None:
+    """Copying on, automatic recovery, and entries on, asking the owner where the app asks."""
+    # Copying is paused after a restore; start it again from the toolbar.
+    app.open_screen("today")
+    app.click("toolbar.copying")
+    _wait_for_account(app, "primary", timeout=180)
+
+    # A restored account waits for the owner to choose automatic recovery again.
+    if _wait_for_account(app, "primary", timeout=10)["recovery_preference"] != "automatic":
+        asked = _agent_result(app, 10, "accounts", "recovery", "primary", "automatic")
+        app.wait_for("In primary, after a restart", timeout=30, name="recovery-sheet")
+        app.click("Approve…", outcome_checked=True)
+        done = _agent_result(app, 0, "proposals", "wait", asked["proposal_id"], "--timeout", "60")
+        if done["state"] != "succeeded":
+            raise JourneyFailure(f"setting automatic recovery ended {done['state']}")
+
+    # Entries start off after setup and after a restore; turning them on asks the owner.
+    if _wait_for_account(app, "primary", timeout=10)["entry_permission"] != "enabled":
+        resume = _agent_result(app, 10, "accounts", "resume", "primary")
+        app.wait_for("Resume new entries in primary", timeout=30, name="resume-sheet")
+        app.click("Approve…", outcome_checked=True)
+        done = _agent_result(app, 0, "proposals", "wait", resume["proposal_id"], "--timeout", "60")
+        if done["state"] != "succeeded":
+            raise JourneyFailure(f"resuming entries ended {done['state']}")
+
+
+def _trading_hours() -> bool:
+    """Regular hours, a little inside the bell. Copying, previews, and sales check the quote's
+    age, and the free IEX feed goes quiet outside regular hours, so quotes read as stale."""
+    now = dt.datetime.now(ZoneInfo("America/New_York"))
+    return now.weekday() < 5 and dt.time(9, 35) <= now.time() <= dt.time(15, 50)
+
+
+def _set_ask_before_orders(app: AppDriver, on: bool) -> None:
+    """Flip "Ask me before sending orders" in the account sheet and apply it with Start Copying.
+
+    A saved setup changes only while copying is paused ("Pause copying to save these changes")."""
+    toolbar = app.see().find("toolbar.copying")
+    if toolbar is not None and "Pause" in toolbar.label:
+        app.click("toolbar.copying")
+        app.wait_for("Start Copying", timeout=60)
+    app.open_screen("connections")
+    app.click("connections.account.primary")
+    switch = app.see().find("Ask me before sending orders", role="checkbox")
+    if switch is None:
+        raise JourneyFailure("the account sheet has no 'Ask me before sending orders' switch")
+    if (switch.value == "1") != on:
+        app.click("Ask me before sending orders", role="checkbox")
+    app.click("Done")
+    start = app.see().find("setup.startCopying")
+    if start is not None and start.enabled:
+        app.click("setup.startCopying")
+    else:
+        toolbar = app.see().find("toolbar.copying")
+        if toolbar is not None and "Start" in toolbar.label:
+            app.click("toolbar.copying")
+    _wait_for_account(app, "primary", timeout=180)
+
+
+def _post_and_wait_for_hold(app: AppDriver, setup: dict[str, str], symbol: str) -> None:
+    price = (_latest_price(setup, symbol) * Decimal("1.004")).quantize(Decimal("0.01"))
+    _post_test_call(setup, f"Bought {symbol} at {price}")
+    app.open_screen("activity")
+    app.click("Waiting for You")
+    app.wait_for("activity.copy", timeout=240, name=f"held-{symbol.lower()}")
+
+
+def j36_approve_and_skip(app: AppDriver) -> None:
+    """With "Ask me before sending orders" on, a real call waits in Activity: Skip drops it, and
+    Approve… copies it into Alpaca paper through the review sheet. The lot is then sold.
+
+    Needs a saved paper setup (after J31, or --reuse-state) and Alpaca's trading hours.
+    """
+    if app.state_root is None:
+        raise JourneySkipped("needs the run's state root")
+    setup = _paper_setup()
+    if not _trading_hours():
+        raise JourneySkipped("the market is not in regular hours")
+    _copying_with_entries(app)
+    _set_ask_before_orders(app, True)
+    unused = _unposted_symbols(app)
+    if len(unused) < 2:
+        raise JourneySkipped("no unused test symbols left today")
+    try:
+        # Skip: the call leaves the waiting list and nothing is bought.
+        _post_and_wait_for_hold(app, setup, unused[0])
+        app.click("activity.skip")
+        app.wait_gone("activity.copy", timeout=30)
+        if _lots(app, unused[0]):
+            raise JourneyFailure("a skipped call still bought shares")
+
+        # Approve: review the held call, preview it, and confirm one order.
+        symbol = unused[1]
+        _post_and_wait_for_hold(app, setup, symbol)
+        app.click("activity.copy")
+        app.wait_for("Save Correction", timeout=30, name="approval-sheet")
+        app.click("Save Correction")
+        app.wait_for("Preview Orders", timeout=60, name="approval-saved")
+        app.click("Preview Orders")
+        app.wait_for("Review 1 Ready Order…", timeout=60, name="approval-preview")
+        app.click("Review 1 Ready Order…")
+        app.click("Confirm 1 order(s)", outcome_checked=True)
+        deadline = time.monotonic() + 180
+        while not (bought := [lot for lot in _lots(app, symbol) if _open(lot)]):
+            if time.monotonic() > deadline:
+                app.see("timeout-approved-order")
+                raise JourneyFailure(f"the approved call did not buy {symbol} on Alpaca paper")
+            time.sleep(5)
+        app.click("Close")
+        _sell_lot(app, symbol, bought[0])
+    finally:
+        _set_ask_before_orders(app, False)
+        # Leave nothing that could copy the next post in the test channel by itself.
+        _agent_result(app, 0, "accounts", "pause", "primary")
+
+
+def j38_today_chart(app: AppDriver) -> None:
+    """With a saved setup, Today's chart opens its day picker and its range details, and the
+    toolbar opens and closes the assistant. Run after J31, or with --reuse-state."""
+    if app.state_root is None:
+        raise JourneySkipped("needs the run's state root")
+    _paper_setup()
+    today = app.open_screen("today")
+    if today.find("today.day") is None:
+        raise JourneySkipped("needs a saved setup with an equity chart")
+    app.click("today.day")
+    picker = app.wait_for("Chart day", timeout=15, name="chart-day-picker")
+    app.expect(picker, "Done")
+    app.click("Done")
+    app.wait_gone("Done", timeout=10)  # the button itself is labelled "Chart day, …"
+    app.click("today.rangeDetails")
+    app.expect(app.wait_for("High", timeout=15, name="range-details"), "Low")
+    app.click("toolbar.assistant")
+    app.wait_for("assistant.panel", timeout=15, name="assistant-open")
+    app.click("toolbar.assistant")
+    app.wait_gone("assistant.panel", timeout=15)
+
+
+def j35_copy_and_sell(app: AppDriver) -> None:
+    """A real call in the test channel is held for approval, approved into Alpaca paper, and the
+    lot it bought is sold from Accounts.
+
+    Needs a saved paper setup (run after J31, or with --reuse-state) and an open market. It posts
+    one short call in the test channel and trades one share on Alpaca paper.
+    """
+    if app.state_root is None:
+        raise JourneySkipped("needs the run's state root")
+    setup = _paper_setup()
+    if not _trading_hours():
+        raise JourneySkipped("the market is not in regular hours")
+
+    _copying_with_entries(app)
+
+    # A lot an earlier run bought and never sold is sold first, so a rerun does not buy again.
+    held = [(s, lot) for s in TEST_SYMBOLS for lot in _lots(app, s) if _open(lot)]
+    if held:
+        symbol, lot = held[0]
+    else:
+        # A call identical to an earlier one is skipped as a repeat, so each run picks the
+        # first cheap symbol the account has not bought today.
+        unposted = _unposted_symbols(app)
+        if not unposted:
+            raise JourneySkipped("every test symbol was already posted today")
+        symbol = unposted[0]
+        # Quote a little above the last trade so the copied limit order fills on paper, as a
+        # real guru's buy usually does; a limit exactly at the last price can time out.
+        price = (_latest_price(setup, symbol) * Decimal("1.004")).quantize(Decimal("0.01"))
+        _post_test_call(setup, f"Bought {symbol} at {price}")
+        deadline = time.monotonic() + 240
+        while not (bought := [lot for lot in _lots(app, symbol) if _open(lot)]):
+            if time.monotonic() > deadline:
+                app.open_screen("activity")
+                app.see("timeout-copied-call")
+                raise JourneyFailure(f"the posted call did not buy {symbol} on Alpaca paper")
+            time.sleep(5)
+        lot = bought[0]
+
+    _sell_lot(app, symbol, lot)
+    _agent_result(app, 0, "accounts", "pause", "primary")
+
+
+def _sell_lot(app: AppDriver, symbol: str, lot: dict[str, Any]) -> None:
+    """Sell one lot from Accounts: review first, then sell, and wait for the fill."""
+    app.open_screen("accounts")
+    app.click(f"accounts.position.{symbol}")
+    app.click(f"accounts.lot.sell.{lot['lot_id']}")
+    app.click("lotSale.review.button")
+    app.wait_for("lotSale.sell", timeout=60, name="lot-sale-review")
+    app.click("lotSale.sell", outcome_checked=True)
+    app.wait_for("lotSale.outcome", timeout=60, name="lot-sale-sent")
+    deadline = time.monotonic() + 120
+    while any(left["lot_id"] == lot["lot_id"] and _open(left) for left in _lots(app, symbol)):
+        if time.monotonic() > deadline:
+            raise JourneyFailure("the lot sale did not fill on Alpaca paper within two minutes")
+        time.sleep(5)
+    app.click("Done")
+
+
+def _unposted_symbols(app: AppDriver) -> list[str]:
+    """Test symbols with no call in the channel yet: a second identical call is a repeat."""
+    posts = " ".join(
+        str(item.get("untrusted_source_text") or "")
+        for item in _agent_result(app, 0, "activity", "--limit", "100")["items"]
+    )
+    return [symbol for symbol in TEST_SYMBOLS if f"Bought {symbol} " not in posts]
+
+
+def _open(lot: dict[str, Any]) -> bool:
+    return Decimal(str(lot["remaining_qty"])) > 0
+
+
+def _lots(app: AppDriver, symbol: str) -> list[dict[str, Any]]:
+    """The copier's lots of one symbol in the primary account, as the agent sees them."""
+    accounts = _agent_result(app, 0, "accounts")["items"]
+    primary = next((a for a in accounts if a["account_id"] == "primary"), None)
+    if primary is None:
+        return []
+    return [
+        lot
+        for position in primary["positions"]
+        if position["symbol"] == symbol
+        for lot in position["lots"]
+    ]
 
 
 def _check_mcp_reads_the_running_setup(app: AppDriver) -> None:
@@ -1339,6 +1915,7 @@ def j17_crash_recovery(app: AppDriver) -> None:
 JOURNEYS: list[tuple[str, Callable[[AppDriver], None]]] = [
     ("J1 launch and unlock", j1_launch_and_unlock),
     ("J2 engine starts", j2_engine_starts),
+    ("J37 everyday buttons", j37_everyday_buttons),
     ("J3 first-run guidance", j3_first_run_guidance),
     ("J4 every screen", j4_every_screen),
     ("J20 toolbar", j20_toolbar),
@@ -1362,6 +1939,10 @@ JOURNEYS: list[tuple[str, Callable[[AppDriver], None]]] = [
     ("J17 crash recovery", j17_crash_recovery),
     # Last: starting copying saves a setup that the journeys above expect to be empty.
     ("J31 agent approval", j31_agent_approval),
+    ("J33 backup and restore", j33_backup_and_restore),
+    ("J38 today chart", j38_today_chart),
+    ("J35 copy and sell", j35_copy_and_sell),
+    ("J36 approve and skip", j36_approve_and_skip),
 ]
 
 
@@ -1370,15 +1951,40 @@ def main() -> int:
     parser.add_argument("--skip-build", action="store_true")
     parser.add_argument("--only", help="comma-separated journey IDs, e.g. J1,J5")
     parser.add_argument("--keep-state", action="store_true")
+    parser.add_argument(
+        "--reuse-state",
+        type=Path,
+        help="run on a state kept by --keep-state (for example after J31) instead of a fresh one; "
+        "it and its saved keys are kept for the next run",
+    )
+    parser.add_argument(
+        "--discard-state",
+        type=Path,
+        help="delete a kept state and the test keys it saved in the login Keychain, then exit",
+    )
     args = parser.parse_args()
 
+    if args.discard_state is not None:
+        target = args.discard_state.resolve()
+        temporary = Path(tempfile.gettempdir()).resolve()
+        if not (target.name.startswith("copytrading-ui-journey.") and target.parent == temporary):
+            raise SystemExit(f"not a journey state in {temporary}: {args.discard_state}")
+        if _forget_test_keychain(target):
+            raise SystemExit("test keys remain in the login Keychain")
+        shutil.rmtree(target, ignore_errors=True)
+        return 0
     if shutil.which("peekaboo") is None:
         raise SystemExit("install Peekaboo first: brew install steipete/tap/peekaboo")
     if not args.skip_build:
         build_debug_bundle()
 
     # The per-user temporary directory; /tmp is a symlink, which the app's state checks reject.
-    state_root = Path(tempfile.mkdtemp(prefix="copytrading-ui-journey."))
+    reusing = args.reuse_state is not None
+    if reusing and not args.reuse_state.is_dir():
+        raise SystemExit(f"no kept state at {args.reuse_state}")
+    state_root = (
+        args.reuse_state if reusing else Path(tempfile.mkdtemp(prefix="copytrading-ui-journey."))
+    )
     screenshots = ROOT / "dist/ui-test/screenshots"
     shutil.rmtree(screenshots, ignore_errors=True)
     screenshots.mkdir(parents=True)
@@ -1402,13 +2008,17 @@ def main() -> int:
             )
         )
         print(f"{runner.results[-1].status.upper():8} J16 clean quit {runner.results[-1].detail}")
-        if _forget_test_keychain(state_root):
+        if not reusing and not args.keep_state and _forget_test_keychain(state_root):
             runner.results.append(
                 Result("Keychain cleanup", "failed", "test keys remain in the login Keychain")
             )
             print(f"FAILED   Keychain cleanup {runner.results[-1].detail}")
-        if args.keep_state:
+        if args.keep_state or reusing:
             print(f"state kept at {state_root}")
+            print(
+                "  its test keys stay in the login Keychain until you run:\n"
+                f"  app/scripts/ui_journeys.py --discard-state {state_root}"
+            )
         else:
             shutil.rmtree(state_root, ignore_errors=True)
 

@@ -1,0 +1,1 @@
+../../Sources/CopyTrading/Features/Settings/BackupRestoreNote.swift

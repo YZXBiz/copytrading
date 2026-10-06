@@ -39,7 +39,7 @@ struct AccountBalancePanel: View {
                     StatTile(title: "Buying power") {
                         MoneyText(value: Decimal(engine: balance.buyingPower) ?? 0, font: DesignTokens.bodyEmphasis)
                     }
-                    StatTile(title: "Copied exposure") {
+                    StatTile(title: "In stocks") {
                         MoneyText(value: Decimal(engine: account.totalExposureUSD) ?? 0, font: DesignTokens.bodyEmphasis)
                     }
                 }

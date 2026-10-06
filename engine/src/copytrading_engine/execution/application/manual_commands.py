@@ -26,6 +26,7 @@ from copytrading_engine.execution.domain.order_lifecycle import OrderStatus
 from copytrading_engine.execution.domain.orders import OrderRecord
 from copytrading_engine.execution.domain.pricing import quote_problem
 from copytrading_engine.execution.domain.sessions import Session, trade_date
+from copytrading_engine.execution.domain.values import BrokerAccountNumber
 
 MANUAL_PREVIEW_TTL_SECONDS = 30
 log = logging.getLogger(__name__)
@@ -39,7 +40,7 @@ class ManualTradingApplication:
         engine: CopyEngine,
         *,
         local_account_id: str,
-        broker_account_id: str,
+        broker_account_id: BrokerAccountNumber,
         environment: Literal["paper", "live"],
         halted: Callable[[], bool],
         entry_block_reason: Callable[[], str | None],
@@ -56,6 +57,8 @@ class ManualTradingApplication:
         self.stopping = stopping
 
     def record_correction(self, correction: ManualCorrectionRecord) -> ManualCorrectionRecord:
+        if self.local_account_id not in correction.selected_account_ids:
+            raise ValueError("Manual correction does not select this account")
         return self.engine.ledger.record_manual_correction(correction)
 
     def preview(self, request: ManualPreviewRequest, now: dt.datetime) -> ManualOrderPreview:
@@ -166,7 +169,12 @@ class ManualTradingApplication:
             return "configuration_changed"
         if saved.facts_sha256 != fresh.facts_sha256:
             return "account_facts_changed"
-        if saved.plan != fresh.plan or fresh.reasons:
+        if (
+            fresh.reasons
+            or saved.plan is None
+            or fresh.plan is None
+            or not saved.plan.still_allowed_by(fresh.plan)
+        ):
             return fresh.reasons[0] if fresh.reasons else "plan_changed"
         return None
 
@@ -331,8 +339,8 @@ class ManualTradingApplication:
         if reasons:
             plan = None
         facts = {
-            "account": account.model_dump(mode="json"),
-            "positions": [item.model_dump(mode="json") for item in self.engine.broker.positions()],
+            "account": account.standing(),
+            "positions": [item.holding() for item in self.engine.broker.positions()],
             "open_orders": [
                 item.model_dump(mode="json") for item in self.engine.broker.open_orders()
             ],
@@ -361,7 +369,6 @@ class ManualTradingApplication:
             }
             if quote is not None
             else None,
-            "plan": plan.model_dump(mode="json") if plan is not None else None,
             "reasons": sorted(set(reasons)),
         }
         return ManualOrderPreview(
@@ -423,9 +430,10 @@ def manual_command_page_from_snapshot(
     before_command_id: str | None = None,
     limit: int = 50,
 ) -> ManualCommandPage:
-    """Build a bounded source-scoped history page from one validated account snapshot."""
-    if snapshot.account_id != account_id:
-        raise ValueError("Manual command account identity mismatch")
+    """Build a bounded source-scoped history page from one validated account snapshot.
+
+    `account_id` is the app's name for the account; the snapshot records the broker's number.
+    """
     if type(limit) is not int or not 1 <= limit <= 100:
         raise ValueError("Manual command page limit must be between 1 and 100")
     commands = [

@@ -27,12 +27,10 @@ struct BackupsSettingsPage: View {
                     action: chooseRestoreArchive
                 )
                 .disabled(model.isRunningBackupRestore || model.pendingRestoreCandidate != nil)
-                if model.isRunningBackupRestore {
-                    SettingsNoteRow(text: model.backupRestoreMessage ?? "Working…", isWorking: true)
-                } else if let status = model.backupRestoreMessage {
-                    SettingsNoteRow(text: status, tone: status.contains("failed") || status.contains("could not") ? .caution : .neutral)
+                if let note = model.backupRestoreNote {
+                    SettingsNoteRow(text: note.text, tone: note.tone, isWorking: note.kind == .working)
                 }
-                if let recovery = model.restoreRecoveryMessage {
+                if let recovery = model.restoreRecoveryMessage, recovery != model.backupRestoreNote?.text {
                     SettingsNoteRow(text: recovery, tone: .caution)
                 }
                 if let manifest = model.backupManifest {

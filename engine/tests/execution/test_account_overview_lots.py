@@ -4,7 +4,6 @@ import datetime as dt
 from decimal import Decimal
 
 from copytrading_engine.execution.presentation.operator_views import account_overview
-from copytrading_engine.shared.queue_snapshot import QueueSnapshot
 
 from .builders import NOW, system_with_queued_buy
 
@@ -13,7 +12,6 @@ def _overview(engine):
     return account_overview(
         engine.ledger.snapshot(),
         None,
-        QueueSnapshot(0, None, 0),
         local_account_id="paper-demo",
         active_configuration=True,
         readiness="ready",

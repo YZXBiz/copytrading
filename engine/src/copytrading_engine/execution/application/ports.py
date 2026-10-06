@@ -23,7 +23,6 @@ from copytrading_engine.execution.domain.market import (
 )
 from copytrading_engine.execution.domain.orders import OrderRequest
 from copytrading_engine.execution.domain.positions import PositionAudit
-from copytrading_engine.shared.queue_snapshot import QueueSnapshot
 
 
 class Broker(Protocol):
@@ -180,7 +179,6 @@ class ExecutionObservation:
     ledger: LedgerSnapshot
     total_cost_exposure_usd: Decimal
     position_audit: PositionAudit | None
-    report_queue: QueueSnapshot
 
 
 @dataclass(frozen=True)

@@ -22,9 +22,9 @@ struct RestorePreviewRows: View {
         }
         SettingsNoteRow(
             text:
-                "This preview is not active and your current data is unchanged. Broker identity, orders, fills, holdings, and uncertain order IDs must reconcile before the restore can be activated.",
+                "Nothing has changed yet. Restoring first checks the backup against your broker's account, orders, and holdings, and stops if they don't match.",
             tone: .caution)
-        SettingsActionRow(title: L10n.string("Activate and Reconcile Restore"), action: activate)
+        SettingsActionRow(title: L10n.string("Restore This Backup"), action: activate)
             .disabled(!model.canActivateOperationalRestore)
     }
 

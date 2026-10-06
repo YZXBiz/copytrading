@@ -30,7 +30,6 @@ from copytrading_engine.execution.application.ports import (
     ExecutionObserver,
     NoOpObserver,
 )
-from copytrading_engine.execution.application.reports import StoredReport
 from copytrading_engine.execution.domain.lifecycle import (
     AccountControlCommand,
     AccountControlResult,
@@ -231,12 +230,6 @@ class ExecutionOwner:
 
     async def observation(self) -> ExecutionObservation:
         return await self._submit(lambda resource: resource.observation())
-
-    async def pending_reports(self) -> tuple[StoredReport, ...]:
-        return await self._submit(lambda resource: resource.pending_reports())
-
-    async def confirm_report(self, event_id: int) -> None:
-        await self._submit(lambda resource: resource.confirm_report(event_id))
 
     async def pending_notifications(self) -> tuple[tuple[int, str, str, dict[str, object]], ...]:
         return await self._submit(lambda resource: resource.pending_notifications())

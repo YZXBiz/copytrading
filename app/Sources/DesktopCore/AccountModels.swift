@@ -202,8 +202,6 @@ public struct AccountOverview: Codable, Equatable, Identifiable, Sendable {
     public let unresolvedIncidents: [String]
     public let ownershipIncidents: [OwnershipIncidentView]
     public let pendingOrders: Int?
-    public let pendingReports: Int?
-    public let oldestReportAt: String?
     public let balance: AccountBalance?
 
     public var id: String { accountID }
@@ -226,8 +224,6 @@ public struct AccountOverview: Codable, Equatable, Identifiable, Sendable {
         case unresolvedIncidents = "unresolved_incidents"
         case ownershipIncidents = "ownership_incidents"
         case pendingOrders = "pending_orders"
-        case pendingReports = "pending_reports"
-        case oldestReportAt = "oldest_report_at"
         case balance
     }
 }

@@ -48,11 +48,14 @@ class TradingActivationJournal:
     def __init__(self, path: Path) -> None:
         self._path = path
         self._record = self._read()
+        # A new process has no running activation, so a saved "starting" or "ready" one ended
+        # with the last process. Only the in-memory view says so: opening must not write,
+        # because a restored copy is checked byte for byte before it is used.
         if self._record is not None and self._record.phase in {"starting", "ready"}:
             next_phase: ActivationPhase = (
                 "interrupted" if self._record.phase == "starting" else "stopped"
             )
-            self._replace(self._record.model_copy(update={"phase": next_phase}))
+            self._record = self._record.model_copy(update={"phase": next_phase})
 
     @property
     def record(self) -> ActivationRecord | None:

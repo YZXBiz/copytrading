@@ -42,7 +42,7 @@ enum Reason {
         "account_blocked": "The broker blocked this account",
         "account_unavailable": "The account could not be reached",
         "account_risk_unavailable": "Risk could not be checked",
-        "recovery_pending": "The account is still recovering",
+        "recovery_pending": "Still checking the account after a restart",
         "outside_session": "The market was closed",
         "overnight_halted": "Overnight trading was halted",
         "overnight_not_supported": "Overnight trading is not supported",

@@ -48,25 +48,25 @@ public enum RestoreActivationError: Error, Equatable, LocalizedError, Sendable {
     public var errorDescription: String? {
         switch self {
         case .candidateUnavailable:
-            "The durable restore candidate could not be verified."
+            "CopyTrading couldn't find the restore it was preparing. Open the backup again."
         case .candidateConflict:
-            "A different restore candidate is already waiting for recovery."
+            "Another restore is half-finished. Resume it or roll it back first."
         case .candidateInvalid:
-            "The restore candidate failed its durable identity or content checks."
+            "The restored data didn't pass its checks, so nothing was restored."
         case .candidateStartFailed:
-            "The restore candidate could not start in the expected gated state."
+            "CopyTrading couldn't start on the restored data, so nothing was restored."
         case .credentialsUnavailable:
-            "Saved broker credentials for this restore are unavailable."
+            "The account keys this backup needs aren't on this Mac. Enter them again, then restore."
         case .previousGenerationChanged:
-            "The active operational generation changed before restore activation."
+            "Your data changed while restoring, so nothing was restored. Try again."
         case .previousEngineDrainUnconfirmed:
-            "The running engine did not confirm a clean stop, so restore activation was blocked."
-        case .preflightBlocked(let blockers):
-            "Read-only broker reconciliation blocked activation: \(blockers.joined(separator: ", "))."
+            "Trading didn't stop cleanly, so nothing was restored. Try again in a moment."
+        case .preflightBlocked:
+            "Your broker's records don't match the backup, so nothing was restored."
         case .completionUnconfirmed:
-            "The restore completion state could not be confirmed."
+            "CopyTrading couldn't confirm the restore finished. Quit and reopen it to check."
         case .rollbackIncomplete:
-            "Restore rollback is incomplete. The installation lock remains held while the app preserves durable state for recovery."
+            "The restore stopped partway and couldn't be undone by itself. Quit and reopen CopyTrading to resume it or roll it back."
         }
     }
 }
@@ -314,6 +314,9 @@ public struct RestoreActivationCoordinator: Sendable {
                 blockers: []
             )
         } catch {
+            #if DEBUG
+                FileHandle.standardError.write(Data("restore activation error: \(String(reflecting: error))\n".utf8))
+            #endif
             do {
                 if !gateCleared {
                     gateCleared = try !stablePaths.restoreManualDisabledGateIsPresent()
@@ -338,6 +341,9 @@ public struct RestoreActivationCoordinator: Sendable {
                     )
                 }
             } catch {
+                #if DEBUG
+                    FileHandle.standardError.write(Data("restore rollback error: \(String(reflecting: error))\n".utf8))
+                #endif
                 throw RestoreActivationError.rollbackIncomplete
             }
             throw error

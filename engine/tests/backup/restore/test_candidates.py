@@ -20,6 +20,12 @@ from copytrading_engine.backup.restore import candidates as candidates_module
 
 from ..builders import backup_service, execution_database_bytes, write_archive
 
+# Ledgers record the broker's account number; folders hold the app's name for the account.
+BROKER_ACCOUNT = "8f3c1a52-alpaca-paper-account"
+# What the app's TradingConfigurationStore writes beside the configuration itself.
+SAVED_REVISION = hashlib.sha256(b"saved configuration").hexdigest()
+SECRET_REVISION = "5d2c8e7a-9b41-4f3e-8a6d-2c1b0e9f7a35"
+
 
 def test_restore_candidate_uses_bounded_staging_id_and_preserves_preview(tmp_path):
     owner = tmp_path / "stable-owner"
@@ -69,6 +75,7 @@ def test_restore_candidate_uses_bounded_staging_id_and_preserves_preview(tmp_pat
 def test_restore_candidate_keeps_published_candidate_when_gate_persistence_raises_after_install(
     tmp_path, monkeypatch
 ):
+
     from copytrading_engine.backup.restore.gate import restore_manual_disabled
 
     owner = tmp_path / "stable-owner"
@@ -290,8 +297,8 @@ def test_gated_candidate_bootstrap_and_read_only_preflight_preserve_candidate_ha
                 "version": 7,
                 "accounts": [{"id": account_id, "environment": "paper", "policy": {}}],
             },
-            "secretRevision": None,
-            "pendingActivation": None,
+            "revision": SAVED_REVISION,
+            "secretRevision": SECRET_REVISION,
         }
     ).encode()
     archive = tmp_path / "backup.zip"
@@ -301,7 +308,7 @@ def test_gated_candidate_bootstrap_and_read_only_preflight_preserve_candidate_ha
             ("trading-configuration.json", configuration),
             (
                 f"accounts/{account_id}/execution.sqlite3",
-                execution_database_bytes(tmp_path / "execution.sqlite3", account_id, "paper"),
+                execution_database_bytes(tmp_path / "execution.sqlite3", BROKER_ACCOUNT, "paper"),
             ),
         ],
         installation_id=installation_id,
@@ -546,11 +553,13 @@ def test_restore_candidate_persists_each_account_disabled_manual_after_gate_clea
                 "version": 7,
                 "accounts": [{"id": account_id, "environment": "paper", "policy": {}}],
             },
-            "secretRevision": None,
-            "pendingActivation": None,
+            "revision": SAVED_REVISION,
+            "secretRevision": SECRET_REVISION,
         }
     ).encode()
-    account_database = execution_database_bytes(tmp_path / "execution.sqlite3", account_id, "paper")
+    account_database = execution_database_bytes(
+        tmp_path / "execution.sqlite3", BROKER_ACCOUNT, "paper"
+    )
     archive = tmp_path / "backup-with-account.zip"
     write_archive(
         archive,
@@ -659,11 +668,13 @@ def test_restore_candidate_preparation_failure_publishes_no_candidate_or_marker(
                 "version": 7,
                 "accounts": [{"id": account_id, "environment": "paper", "policy": {}}],
             },
-            "secretRevision": None,
-            "pendingActivation": None,
+            "revision": SAVED_REVISION,
+            "secretRevision": SECRET_REVISION,
         }
     ).encode()
-    account_database = execution_database_bytes(tmp_path / "execution.sqlite3", account_id, "paper")
+    account_database = execution_database_bytes(
+        tmp_path / "execution.sqlite3", BROKER_ACCOUNT, "paper"
+    )
     archive = tmp_path / "backup-with-account.zip"
     write_archive(
         archive,

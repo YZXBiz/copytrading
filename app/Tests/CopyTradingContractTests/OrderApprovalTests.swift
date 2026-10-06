@@ -1,3 +1,4 @@
+import CopyTradingTestSupport
 import DesktopCore
 import Foundation
 import Testing
@@ -8,6 +9,39 @@ import Testing
 func runOrderApprovalTests() async throws {
     try await touchIDIsAskedOnlyWhereOrdersNeedIt()
     try await aRefusedTouchIDSendsNothing()
+    try await anApprovedCallReachesTheEngine()
+}
+
+/// Every operation reports that the request got past the app to the engine.
+private struct ReachedEngine: ManualReviewOperations {
+    struct Reached: Error {}
+    func saveManualCorrection(_ correction: ManualCorrectionRequest) async throws -> ManualCorrectionOutcome { throw Reached() }
+    func previewManualOrder(_ preview: ManualPreviewRequest) async throws -> ManualOrderPreview { throw Reached() }
+    func confirmManualOrders(_ commands: [ManualConfirmationRequest]) async throws -> ManualCommandsOutcome { throw Reached() }
+    func manualCommandResult(accountID: String, commandID: String) async throws -> ManualCommandResult { throw Reached() }
+    func manualCommandPage(
+        accountID: String, sourceID: String, beforeCommandID: String?, limit: Int
+    ) async throws -> ManualCommandPage { throw Reached() }
+}
+
+/// Approve… on a call held for the owner sends its correction to the engine; the app used to
+/// refuse it as "not an available reviewed message", so no held call could ever be approved.
+@MainActor
+private func anApprovedCallReachesTheEngine() async throws {
+    let held = try SourceActivityBuilder()
+        .calls([SourceActivityBuilder.buy("ABC", "25")])
+        .destination("paper", status: "done", outcomes: ["approval_required"])
+        .build()
+    let feature = ManualReviewFeatureModel()
+    feature.authorizePrivateEvidence()
+    let request = ManualCorrectionRequest(
+        correctionID: "approve-1", sourceID: held.sourceID, selectedAccountIDs: ["paper"], actor: "owner",
+        reason: "Copied a call that was waiting for me",
+        instructions: [ManualInstruction(action: .buy, symbol: "ABC", price: "25")])
+    await feature.saveCorrection(source: held, request: request, using: ReachedEngine())
+    try #require(
+        feature.errors["approve-1"] != "This source is not an available reviewed message.",
+        "the app refused to send an approved call to the engine")
 }
 
 /// Approves every prompt, or only the first (opening the window) and refuses the rest.

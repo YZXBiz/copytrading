@@ -115,19 +115,22 @@ struct AccountHeaderPanel: View {
                 .help(L10n.string("Saving account command"))
         }
         Menu {
-            Picker(L10n.string("Recovery"), selection: recovery) {
+            Picker(L10n.string("After a restart"), selection: recovery) {
                 ForEach(RecoveryPreference.allCases, id: \.self) { preference in
-                    Text(recoveryTitle(preference)).tag(preference)
+                    Text(preference.title).tag(preference)
                 }
             }
             .pickerStyle(.inline)
             .labelsHidden()
         } label: {
-            Label(L10n.string("Recovery: %@", recoveryTitle(account.recoveryPreference)), systemImage: "arrow.triangle.2.circlepath")
+            Label(L10n.string("After a restart: %@", account.recoveryPreference.title), systemImage: "arrow.triangle.2.circlepath")
         }
         .fixedSize()
         .disabled(!canControl)
-        .help(L10n.string("Automatic recovery resumes entries after a restart once the account checks out; manual waits for you."))
+        .help(
+            L10n.string(
+                "After CopyTrading restarts, from a crash, a Mac restart, waking from sleep, or a restore, this account either waits for you before buying again or carries on by itself once Alpaca matches its records."
+            ))
         if entriesOff {
             Button(L10n.string(neverEnabled ? "Enable Entries" : "Resume Entries"), systemImage: "play.fill", action: toggleEntries)
                 .buttonStyle(.borderedProminent)
@@ -179,13 +182,6 @@ struct AccountHeaderPanel: View {
                 accountID: account.accountID, action: .setRecovery,
                 preference: preference, using: model.accountActions()
             )
-        }
-    }
-
-    @MainActor private func recoveryTitle(_ preference: RecoveryPreference) -> String {
-        switch preference {
-        case .manual: L10n.string("Manual")
-        case .automatic: L10n.string("Automatic")
         }
     }
 }
