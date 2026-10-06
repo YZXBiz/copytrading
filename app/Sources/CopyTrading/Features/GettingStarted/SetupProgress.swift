@@ -34,7 +34,7 @@ struct SetupProgress: Equatable {
         }
         let accountIDs = Set(draft.accountIDs)
         let readyGuru = draft.routes.contains { route in
-            !route.displayName.trimmed.isEmpty && !route.prefix.trimmed.isEmpty
+            !route.displayName.trimmed.isEmpty
                 && !draft.effectiveChannel(for: route).isEmpty
                 && route.connection.map { accountIDs.contains($0.accountID.trimmed) } == true
         }

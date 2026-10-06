@@ -36,7 +36,7 @@ async def test_slow_decoder_does_not_block_broker_reconciliation(tmp_path):
         channel_id="123",
         id="slow-model",
         timestamp=dt.datetime.now(dt.UTC),
-        text="ALERT: Bought AAPL at 200",
+        text="Bought AAPL at 200",
     )
 
     class SlowDecoder(Decoder):
@@ -93,7 +93,7 @@ async def test_failed_source_does_not_stop_broker_reconciliation(tmp_path):
         channel_id="123",
         id="source-failure",
         timestamp=dt.datetime.now(dt.UTC),
-        text="ALERT: Bought AAPL at 200",
+        text="Bought AAPL at 200",
     )
     runtime = TradingRuntime(
         tmp_path,
@@ -157,7 +157,7 @@ async def test_old_failed_account_deliveries_do_not_starve_later_healthy_route(t
                     channel_id=channel("second") if index < 100 else channel("first"),
                     id=f"message-{index:03d}",
                     timestamp=dt.datetime.now(dt.UTC),
-                    text="ALERT: Bought AAPL at 200",
+                    text="Bought AAPL at 200",
                 )
             )
     finally:
@@ -216,7 +216,7 @@ async def test_slow_account_open_does_not_block_healthy_account_or_capture(tmp_p
         channel_id=channel("second"),
         id="slow-account",
         timestamp=dt.datetime.now(dt.UTC),
-        text="ALERT: Bought AAPL at 200",
+        text="Bought AAPL at 200",
     )
 
     async def owner_factory(path, credentials, policy, environment):
@@ -309,8 +309,8 @@ async def test_post_that_fails_evidence_checks_goes_to_review_and_processing_con
             text=text,
         )
         for message_id, text in (
-            ("501", "ALERT: Sold AAPL at 210 from 200"),
-            ("502", "ALERT: Bought AAPL at 200"),
+            ("501", "Sold AAPL at 210 from 200"),
+            ("502", "Bought AAPL at 200"),
         )
     )
     opened: dict[str, Owner] = {}

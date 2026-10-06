@@ -515,7 +515,6 @@
 "Measure a move" = "衡量涨跌幅";
 "Message" = "消息";
 "Message **@userinfobot** to get your chat ID, and paste it into **Chat ID**." = "向 **@userinfobot** 发消息获取聊天 ID，并将其粘贴到 **聊天 ID**。";
-"Message prefix" = "消息前缀";
 "Mismatch" = "不一致";
 "Missing" = "缺失";
 "Mistral models" = "Mistral 模型";
@@ -599,7 +598,6 @@
 "One month" = "1个月";
 "One week" = "1周";
 "One year" = "1年";
-"Only messages starting with the prefix are read as calls." = "仅将以前缀开头的消息识别为交易信号。";
 "Only needed when several people post in the same channel." = "仅当同一频道有多人发帖时才需要。";
 "Only when every account is paper. Lock still locks." = "仅当所有账户都是模拟账户时生效。锁定功能仍然有效。";
 "Open %@ API keys" = "打开%@ API 密钥";
@@ -690,7 +688,7 @@
 "Range" = "时间范围";
 "Range details" = "范围详情";
 "Read" = "已读取";
-"Read %lld posts with %@. %@ Filled in the playbook, prefix, exit basis, and %@; review them before validating." = "读取完成：%lld条帖子，使用模型 %@。%@ 已填写操作指南、前缀、平仓依据和%@，请在验证前检查。";
+"Read %lld posts with %@. %@ Filled in the playbook, exit basis, and %@; review them before validating." = "读取完成：%lld条帖子，使用模型 %@。%@ 已填写操作指南、平仓依据和%@，请在验证前检查。";
 "Read accounts and activity again" = "重新读取账户和活动";
 "Read and pause" = "读取并暂停";
 "Read by" = "解读模型";

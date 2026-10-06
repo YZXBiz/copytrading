@@ -8,7 +8,6 @@ from typing import Literal
 
 @dataclass(frozen=True, slots=True)
 class Route:
-    prefix: str = ""
     playbook: str = ""
     guru_id: str | None = None
     profile_revision: str | None = None

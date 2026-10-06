@@ -78,7 +78,7 @@ async def test_a_post_for_an_account_that_failed_to_open_is_delivered_after_rest
         channel_id=channel("second"),
         id="456",
         timestamp=dt.datetime.now(dt.UTC),
-        text="ALERT: Bought AAPL at 200",
+        text="Bought AAPL at 200",
     )
     fail_once = {"second": 1}
     attempts: dict[str, int] = {}
@@ -156,7 +156,7 @@ async def test_a_channel_route_delivers_a_post_that_carries_its_author(tmp_path)
         id="456",
         author_id="999",
         timestamp=dt.datetime.now(dt.UTC),
-        text="ALERT: Bought AAPL at 200",
+        text="Bought AAPL at 200",
     )
     opened: dict[str, Owner] = {}
 
@@ -191,7 +191,7 @@ async def test_pending_signal_rejects_changed_destination_after_restart(tmp_path
         channel_id=channel("second"),
         id="pending",
         timestamp=dt.datetime.now(dt.UTC),
-        text="ALERT: Bought AAPL at 200",
+        text="Bought AAPL at 200",
     )
     opened: list[str] = []
 
@@ -240,7 +240,7 @@ async def test_pending_source_rejects_changed_destination(tmp_path):
                 channel_id="123",
                 id="captured",
                 timestamp=dt.datetime.now(dt.UTC),
-                text="ALERT: Bought AAPL at 200",
+                text="Bought AAPL at 200",
             )
         )
         changed = trading_configuration().model_dump(mode="json")
@@ -323,7 +323,7 @@ async def test_shutdown_waits_for_late_account_owner_close(tmp_path, caplog, lat
         channel_id="123",
         id="late-owner",
         timestamp=dt.datetime.now(dt.UTC),
-        text="ALERT: Bought AAPL at 200",
+        text="Bought AAPL at 200",
     )
 
     async def owner_factory(path, credentials, policy, environment):

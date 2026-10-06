@@ -30,7 +30,6 @@ def _configuration(*, notification: bool = False) -> TradingConfiguration:
         ProfileDraft(
             guru_id="stable-guru",
             display_name="Stable Guru",
-            prefix="ALERT:",
             playbook="",
             examples=(),
             exit_basis="original_position",
@@ -38,7 +37,7 @@ def _configuration(*, notification: bool = False) -> TradingConfiguration:
     )
     return TradingConfiguration.model_validate(
         {
-            "version": 6,
+            "version": 7,
             "source": {"channel_ids": ["123"]},
             "provider": {"name": "deepseek", "model": "test-model"},
             "accounts": [

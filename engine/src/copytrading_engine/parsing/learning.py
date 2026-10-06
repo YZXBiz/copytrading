@@ -32,7 +32,6 @@ or sixths at least 16 decimal places (1/6 is 0.1666666666666667), never shorter 
 Describe what to ignore in one line; never list individual commentary posts. Never repeat a
 line.
 
-prefix: a label that every trade post starts with, copied exactly, or null if there is none.
 exit_basis: original_position when exit fractions refer to the original position, otherwise
 remaining_position.
 examples: up to 5 posts copied EXACTLY (verbatim, whole post) that are each one clear completed
@@ -78,7 +77,6 @@ class PlaybookProposal(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    prefix: str | None = Field(default=None, max_length=128)
     exit_basis: Literal["original_position", "remaining_position"]
     playbook: str = Field(min_length=1, max_length=8_000)
     examples: tuple[LearnedExample, ...] = Field(default=(), max_length=12)

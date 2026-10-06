@@ -46,7 +46,6 @@ id = "zhao"
 name = "Zhao"
 channel = "123456789012345678"
 # author = "987654321098765432"   # needed when several traders share one channel
-prefix = "ALERT:"                 # only posts starting with this are read
 exits = "original_position"       # "sell 1/2" means half of the original buy, or use
                                   # "remaining_position" for half of what is left
 playbook = """

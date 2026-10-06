@@ -147,7 +147,7 @@ class NotificationConfiguration(BaseModel):
 class TradingConfiguration(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
 
-    version: Literal[6] = CONFIGURATION_VERSION
+    version: Literal[7] = CONFIGURATION_VERSION
     source: SourceConfiguration
     provider: ProviderConfiguration
     accounts: tuple[AccountConfiguration, ...] = Field(min_length=1)

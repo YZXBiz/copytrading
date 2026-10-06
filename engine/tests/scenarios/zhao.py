@@ -6,7 +6,6 @@ from copytrading_engine.shared.reading import Buy, PostReading, Sell
 
 from .. import readings
 
-PREFIX = "ZHAO:"
 # The app gives every guru an id of its own; the owner only ever sees the name.
 GURU_ID = "guru-2a3b4c5d"
 NAME = "Zhao"
@@ -63,7 +62,6 @@ class ZhaoReader:
     async def decode(self, text, route):
         if text == "Market commentary only. No trade action.":  # the runtime's readiness probe
             return readings.commentary()
-        assert route.prefix == PREFIX
         self.read.append(text)
         return self.readings[text]
 

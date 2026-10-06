@@ -68,7 +68,7 @@ struct PlaybookSection: View {
             ? L10n.string("1 example")
             : L10n.string("%lld examples", Int64(learned.examples.count))
         return L10n.string(
-            "Read %lld posts with %@. %@ Filled in the playbook, prefix, exit basis, and %@; review them before validating.",
+            "Read %lld posts with %@. %@ Filled in the playbook, exit basis, and %@; review them before validating.",
             Int64(learned.postsRead), learned.model, learned.summary, examples
         )
     }
@@ -81,7 +81,6 @@ struct PlaybookSection: View {
             do {
                 let result = try await learn(route)
                 route.playbook = result.playbook
-                if let prefix = result.prefix { route.prefix = prefix }
                 route.exitBasis = result.exitBasis
                 route.examples = result.examples.map(TradingProfileExampleDraft.init(example:))
                 learned = result

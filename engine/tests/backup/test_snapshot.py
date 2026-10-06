@@ -30,7 +30,7 @@ async def test_consistent_backup_waits_for_competing_writer_and_stages_isolated_
             {
                 "version": 1,
                 "configuration": {
-                    "version": 6,
+                    "version": 7,
                     "accounts": [{"id": "paper-main", "environment": "paper", "policy": {}}],
                 },
                 "secretRevision": str(uuid.uuid4()),

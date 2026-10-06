@@ -17,7 +17,7 @@ struct GuideFlowStages: View {
                         .foregroundStyle(Palette.tertiaryInk)
                 }
             }
-            Text("ALERT: Bought NVDA 1/6 at 121.38")
+            Text("Bought NVDA 1/6 at 121.38")
                 .font(DesignTokens.bodyText)
                 .foregroundStyle(Palette.ink)
                 .fixedSize(horizontal: false, vertical: true)

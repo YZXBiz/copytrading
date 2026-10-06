@@ -26,15 +26,14 @@ def _profiles_module():
     return importlib.import_module("copytrading_engine.trading.domain.profiles")
 
 
-def _draft(module, *, guru_id: str, prefix: str, symbol: str, exit_basis: str):
+def _draft(module, *, guru_id: str, symbol: str, exit_basis: str):
     return module.ProfileDraft(
         guru_id=guru_id,
         display_name=guru_id.title(),
-        prefix=prefix,
         playbook=f"Apple means {symbol}",
         examples=(
             module.ProfileExample(
-                message=f"{prefix} Bought Apple at 200 1/6",
+                message="Bought Apple at 200 1/6",
                 expected_action="buy",
                 expected_symbol=symbol,
                 expected_fraction=Decimal("1") / Decimal("6"),
@@ -50,7 +49,7 @@ def _mapped(route, name: str) -> str:
     return line.removeprefix(f"{name} means ")
 
 
-def _message(prefix: str, message_id: str) -> RawMessage:
+def _message(message_id: str) -> RawMessage:
     import datetime as dt
 
     return RawMessage(
@@ -60,7 +59,7 @@ def _message(prefix: str, message_id: str) -> RawMessage:
         channel_id="123",
         id=message_id,
         timestamp=dt.datetime(2026, 9, 26, tzinfo=dt.UTC),
-        text=f"{prefix} Bought Apple at 200 1/6",
+        text="Bought Apple at 200 1/6",
     )
 
 
@@ -71,7 +70,6 @@ def test_profile_revisions_are_immutable_and_content_addressed():
         _draft(
             module,
             guru_id="zhao",
-            prefix="ALERT:",
             symbol="AAPL",
             exit_basis="original_position",
         )
@@ -80,7 +78,6 @@ def test_profile_revisions_are_immutable_and_content_addressed():
         _draft(
             module,
             guru_id="zhao",
-            prefix="ALERT:",
             symbol="MSFT",
             exit_basis="original_position",
         )
@@ -101,7 +98,6 @@ def test_profile_examples_compare_expected_and_actual_without_execution():
         _draft(
             module,
             guru_id="example-guru",
-            prefix="ALERT:",
             symbol="AAPL",
             exit_basis="original_position",
         )
@@ -158,7 +154,6 @@ def test_profile_example_mismatch_requires_settings_correction_and_rerun():
     draft = _draft(
         module,
         guru_id="mismatch-guru",
-        prefix="ALERT:",
         symbol="AAPL",
         exit_basis="original_position",
     )
@@ -167,7 +162,7 @@ def test_profile_example_mismatch_requires_settings_correction_and_rerun():
             update={
                 "examples": (
                     module.ProfileExample(
-                        message="ALERT: Bought Apple at 200 1/3",
+                        message="Bought Apple at 200 1/3",
                         expected_action="buy",
                         expected_symbol="AAPL",
                         expected_fraction=Decimal("1") / Decimal("6"),
@@ -206,7 +201,6 @@ def test_ungrounded_example_interpretation_returns_review_and_never_activates():
         _draft(
             module,
             guru_id="ungrounded-example-guru",
-            prefix="ALERT:",
             symbol="AAPL",
             exit_basis="original_position",
         )
@@ -249,7 +243,6 @@ def test_matching_exit_example_preserves_position_sizing_review_without_blocking
         module.ProfileDraft(
             guru_id="exit-example-guru",
             display_name="Exit Example Guru",
-            prefix="TRADE:",
             playbook="Apple means AAPL",
             examples=(
                 module.ProfileExample(
@@ -293,11 +286,10 @@ def test_matching_exit_example_preserves_position_sizing_review_without_blocking
 
 
 @pytest.mark.parametrize(
-    ("guru_id", "prefix", "symbol", "basis", "connections", "expected_budgets"),
+    ("guru_id", "symbol", "basis", "connections", "expected_budgets"),
     [
         (
             "zhao",
-            "ALERT:",
             "AAPL",
             "original_position",
             (
@@ -309,7 +301,6 @@ def test_matching_exit_example_preserves_position_sizing_review_without_blocking
         ),
         (
             "other-guru",
-            "SIGNAL:",
             "MSFT",
             "remaining_position",
             (
@@ -321,14 +312,13 @@ def test_matching_exit_example_preserves_position_sizing_review_without_blocking
     ],
 )
 def test_historical_evaluation_keeps_guru_revision_and_destination_sizing_independent(
-    guru_id, prefix, symbol, basis, connections, expected_budgets
+    guru_id, symbol, basis, connections, expected_budgets
 ):
     module = _profiles_module()
     profile = module.ProfileBuilder().build(
         _draft(
             module,
             guru_id=guru_id,
-            prefix=prefix,
             symbol=symbol,
             exit_basis=basis,
         )
@@ -350,7 +340,7 @@ def test_historical_evaluation_keeps_guru_revision_and_destination_sizing_indepe
 
     service = module.ProfileEvaluationService(Decoder(), provider="deepseek", model="test-model")
     result = asyncio.run(
-        service.evaluate(_message(prefix, f"m-{guru_id}"), profile, destinations=connections)
+        service.evaluate(_message(f"m-{guru_id}"), profile, destinations=connections)
     )
 
     assert result.simulated is True
@@ -384,7 +374,7 @@ def test_historical_source_lookup_returns_only_the_immutable_historical_capture(
             author_id="456",
             id="1001",
             timestamp=source_time,
-            text="ALERT: Bought Apple at 200 1/6",
+            text="Bought Apple at 200 1/6",
         )
         await store.capture_recovery_page(123, [historic], [], 1001)
         live = RawMessage(
@@ -395,7 +385,7 @@ def test_historical_source_lookup_returns_only_the_immutable_historical_capture(
             author_id="456",
             id="1002",
             timestamp=dt.datetime.now(dt.UTC),
-            text="ALERT: Bought Apple at 200 1/6",
+            text="Bought Apple at 200 1/6",
         )
         await store.add(live)
         await store.close()
@@ -424,12 +414,11 @@ def test_runtime_historical_profile_action_does_not_open_execution_owners(tmp_pa
         _draft(
             module,
             guru_id="historic-guru",
-            prefix="ALERT:",
             symbol="AAPL",
             exit_basis="original_position",
         )
     )
-    source = _message("ALERT:", "1001").model_copy(
+    source = _message("1001").model_copy(
         update={"timestamp": dt.datetime.now(dt.UTC) - dt.timedelta(minutes=10)}
     )
     calls = []
@@ -498,7 +487,6 @@ def test_profile_schema_rejects_arbitrary_executable_convention_fields():
             {
                 "guru_id": "custom",
                 "display_name": "Custom",
-                "prefix": "ALERT:",
                 "playbook": "",
                 "examples": [],
                 "exit_basis": "original_position",

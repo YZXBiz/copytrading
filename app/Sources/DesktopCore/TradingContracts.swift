@@ -208,7 +208,6 @@ public enum TradingExitBasis: String, Codable, CaseIterable, Sendable {
 /// The longest playbook the engine accepts.
 public let tradingPlaybookMaxLength = 8_000
 
-/// An immutable, content-addressed profile for one guru: a prefix, a playbook, and checked examples.
 /// What a guru's sell refers to: the buy price it names, each buy its own lot, or the whole
 /// position, every buy of a stock one lot.
 public enum TradingSellsReferTo: String, Codable, CaseIterable, Sendable {
@@ -219,7 +218,6 @@ public enum TradingSellsReferTo: String, Codable, CaseIterable, Sendable {
 public struct TradingProfileRevision: Codable, Equatable, Identifiable, Sendable {
     public var guruID: String
     public var displayName: String
-    public var prefix: String
     public var playbook: String
     public var examples: [TradingProfileExample]
     public var exitBasis: TradingExitBasis
@@ -231,13 +229,12 @@ public struct TradingProfileRevision: Codable, Equatable, Identifiable, Sendable
     public var id: String { "\(guruID):\(profileRevision)" }
 
     public init(
-        guruID: String, displayName: String, prefix: String, playbook: String,
+        guruID: String, displayName: String, playbook: String,
         examples: [TradingProfileExample] = [], exitBasis: TradingExitBasis, batches: Int? = nil,
         sellsReferTo: TradingSellsReferTo = .buyPrice, profileRevision: String
     ) {
         self.guruID = guruID
         self.displayName = displayName
-        self.prefix = prefix
         self.playbook = playbook
         self.examples = examples
         self.exitBasis = exitBasis
@@ -249,7 +246,6 @@ public struct TradingProfileRevision: Codable, Equatable, Identifiable, Sendable
     enum CodingKeys: String, CodingKey {
         case guruID = "guru_id"
         case displayName = "display_name"
-        case prefix
         case playbook
         case examples
         case exitBasis = "exit_basis"
@@ -262,7 +258,6 @@ public struct TradingProfileRevision: Codable, Equatable, Identifiable, Sendable
 public struct TradingProfileDraft: Equatable, Sendable {
     public var guruID: String
     public var displayName: String
-    public var prefix: String
     public var playbook: String
     public var examples: [TradingProfileExample]
     public var exitBasis: TradingExitBasis
@@ -270,13 +265,12 @@ public struct TradingProfileDraft: Equatable, Sendable {
     public var sellsReferTo: TradingSellsReferTo
 
     public init(
-        guruID: String, displayName: String, prefix: String, playbook: String = "",
+        guruID: String, displayName: String, playbook: String = "",
         examples: [TradingProfileExample] = [], exitBasis: TradingExitBasis, batches: Int? = nil,
         sellsReferTo: TradingSellsReferTo = .buyPrice
     ) {
         self.guruID = guruID
         self.displayName = displayName
-        self.prefix = prefix
         self.playbook = playbook
         self.examples = examples
         self.exitBasis = exitBasis
@@ -300,12 +294,12 @@ public struct TradingProfileBuilder: Sendable {
             try build(
                 TradingProfileDraft(
                     guruID: "prepared-standard", displayName: "Standard stock alerts",
-                    prefix: "ALERT:", exitBasis: .originalPosition
+                    exitBasis: .originalPosition
                 )),
             try build(
                 TradingProfileDraft(
                     guruID: "prepared-remaining", displayName: "Remaining-position exits",
-                    prefix: "TRADE:", exitBasis: .remainingPosition
+                    exitBasis: .remainingPosition
                 )),
         ]
     }
@@ -318,8 +312,6 @@ public struct TradingProfileBuilder: Sendable {
         else { throw TradingProfileBuilderError.invalidIdentity }
         guard !draft.displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
             draft.displayName.count <= 100,
-            !draft.prefix.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-            draft.prefix.count <= 128,
             draft.playbook.count <= tradingPlaybookMaxLength,
             draft.examples.count <= 32,
             draft.batches.map({ (1...20).contains($0) }) ?? true
@@ -350,7 +342,6 @@ public struct TradingProfileBuilder: Sendable {
         let base: [String: Any] = [
             "guru_id": draft.guruID,
             "display_name": draft.displayName,
-            "prefix": draft.prefix,
             "playbook": draft.playbook,
             "examples": draft.examples.map { example in
                 [
@@ -367,7 +358,7 @@ public struct TradingProfileBuilder: Sendable {
         let data = try JSONSerialization.data(withJSONObject: base, options: [.sortedKeys, .withoutEscapingSlashes])
         let revision = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
         return TradingProfileRevision(
-            guruID: draft.guruID, displayName: draft.displayName, prefix: draft.prefix,
+            guruID: draft.guruID, displayName: draft.displayName,
             playbook: draft.playbook, examples: draft.examples, exitBasis: draft.exitBasis,
             batches: draft.batches, sellsReferTo: draft.sellsReferTo, profileRevision: revision
         )
@@ -454,7 +445,7 @@ public struct TradingNotificationConfiguration: Codable, Equatable, Sendable {
 /// Saved to application support. This type deliberately contains no credentials.
 public struct TradingConfiguration: Codable, Equatable, Sendable {
     /// Matches the engine's CONFIGURATION_VERSION; older saved files are rejected, never migrated.
-    public static let currentVersion = 6
+    public static let currentVersion = 7
     public var version = TradingConfiguration.currentVersion
     public var source: TradingSourceConfiguration
     public var provider: TradingProviderConfiguration
@@ -875,7 +866,6 @@ public struct GuruReplay: Codable, Equatable, Sendable {
 /// A draft for the owner to edit: only verbatim, valid example posts survive the engine's checks.
 public struct LearnedGuruPlaybook: Codable, Equatable, Sendable {
     public var postsRead: Int
-    public var prefix: String?
     public var exitBasis: TradingExitBasis
     public var playbook: String
     public var examples: [TradingProfileExample]
@@ -885,12 +875,11 @@ public struct LearnedGuruPlaybook: Codable, Equatable, Sendable {
     public var costNotice: String
 
     public init(
-        postsRead: Int, prefix: String?, exitBasis: TradingExitBasis, playbook: String,
+        postsRead: Int, exitBasis: TradingExitBasis, playbook: String,
         examples: [TradingProfileExample], summary: String, provider: String, model: String,
         costNotice: String
     ) {
         self.postsRead = postsRead
-        self.prefix = prefix
         self.exitBasis = exitBasis
         self.playbook = playbook
         self.examples = examples
@@ -902,7 +891,6 @@ public struct LearnedGuruPlaybook: Codable, Equatable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case postsRead = "posts_read"
-        case prefix
         case exitBasis = "exit_basis"
         case playbook, examples, summary, provider, model
         case costNotice = "cost_notice"

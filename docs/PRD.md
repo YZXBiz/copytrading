@@ -53,9 +53,9 @@ Onboarding inventories existing positions and open orders. It establishes extern
 
 ### Configure a guru and account destinations
 
-Users press Learn from Channel: the model reads the channel's recent posts and drafts a playbook (how this guru writes buys, trims, exits, and names), a prefix, an exit basis, and example posts with what they mean. Users edit the draft; Validate runs the examples through the reader, and a mismatch blocks activation. Adding a guru never needs a code change. Prose steers interpretation but never bypasses grounding: every price, ticker, and fraction must be complete tokens of the post, and a company name resolves to a ticker only when a playbook line states it (ADR-0006).
+Users press Learn from Channel: the model reads the channel's recent posts and drafts a playbook (how this guru writes buys, trims, exits, and names), an exit basis, and example posts with what they mean. Users edit the draft; Validate runs the examples through the reader, and a mismatch blocks activation. Adding a guru never needs a code change. Prose steers interpretation but never bypasses grounding: every price, ticker, and fraction must be complete tokens of the post, and a company name resolves to a ticker only when a playbook line states it (ADR-0006).
 
-A source profile owns interpretation: the playbook, prefix, examples, and exit basis. Each destination connection owns sizing. For example:
+A source profile owns interpretation: the playbook, examples, and exit basis. Each destination connection owns sizing. For example:
 
 | Connection | Policy | Source says `1/6` | Source says `1/3` |
 | --- | --- | --- | --- |

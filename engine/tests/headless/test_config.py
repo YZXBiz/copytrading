@@ -40,7 +40,7 @@ def test_the_template_init_writes_is_a_valid_setup(tmp_path):
     configuration = setup.configuration
     assert [account.id for account in configuration.accounts] == ["paper-main"]
     [profile] = configuration.profiles
-    assert (profile.guru_id, profile.display_name, profile.prefix) == ("zhao", "Zhao", "ALERT:")
+    assert (profile.guru_id, profile.display_name) == ("zhao", "Zhao")
     [route] = configuration.routes
     assert route.profile_revision == profile.profile_revision
     [connection] = route.connections

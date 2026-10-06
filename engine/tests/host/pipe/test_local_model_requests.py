@@ -8,7 +8,6 @@ from copytrading_engine.host.pipe.requests import REQUEST_ADAPTER
 PROFILE = {
     "guru_id": "zhao",
     "display_name": "Zhao",
-    "prefix": "ZHAO:",
     "playbook": "",
     "examples": [],
     "exit_basis": "original_position",

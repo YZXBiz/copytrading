@@ -146,7 +146,6 @@ def _configuration(*, approve_orders: bool = False) -> TradingConfiguration:
         ProfileDraft(
             guru_id="replay-guru",
             display_name="Replay Guru",
-            prefix="ALERT:",
             playbook="",
             examples=(),
             exit_basis="original_position",
@@ -155,7 +154,7 @@ def _configuration(*, approve_orders: bool = False) -> TradingConfiguration:
     )
     return TradingConfiguration.model_validate(
         {
-            "version": 6,
+            "version": 7,
             "source": {"channel_ids": [_CHANNEL]},
             "provider": {"name": "deepseek", "model": _DEEPSEEK_MODEL},
             "accounts": [

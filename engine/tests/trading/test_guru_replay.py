@@ -1,7 +1,5 @@
 """Replaying a guru's recent posts shows what each would have done, before they are switched on."""
 
-# ruff: noqa: RUF001 - the guru's real posts and prefix use a fullwidth colon
-
 from pathlib import Path
 from typing import cast
 
@@ -22,7 +20,6 @@ PROFILE = ProfileBuilder().build(
     ProfileDraft(
         guru_id="zhao",
         display_name="赵哥",
-        prefix="赵哥-股票：",
         playbook="",
         exit_basis="original_position",
         batches=3,
@@ -78,14 +75,13 @@ async def test_each_recent_post_says_what_it_would_have_done(tmp_path):
 
     replay = await _replay(
         tmp_path,
-        ("赵哥-股票：25加了一半abc", "赵哥-股票：今天大盘不错", "别人的帖子", "赵哥-股票：???"),
+        ("25加了一半abc", "今天大盘不错", "???"),
         reader,
     )
 
     assert [(post.decision, post.reason) for post in replay.posts] == [
         ("trade", "A current call"),
         ("ignore", "No trade action"),
-        ("ignore", "source_prefix_mismatch"),
         ("review", "invalid_model_output"),
     ]
     assert replay.posts[0].instructions[0].fraction == 0.5

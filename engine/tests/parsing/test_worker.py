@@ -216,15 +216,6 @@ async def test_retry_blocks_overtaking_within_source_but_not_other_channels():
     assert next_job.key == "discord:another:2"
 
 
-async def test_prefix_bypass_does_not_claim_provider_readiness():
-    box, decoder, worker = box_and_worker()
-    worker.routes = {"discord:demo:*": Route(prefix="ALERT:")}
-    await worker.process_next(NOW)
-    assert decoder.calls == 0
-    assert worker.model_ready is False
-    assert box.reservations == ()
-
-
 async def test_unknown_route_is_reviewed_without_model_or_request_budget_spend():
     box, decoder, worker = box_and_worker()
     worker.routes = {}
@@ -253,13 +244,11 @@ async def test_channel_profile_routes_resolve_by_author_and_keep_source_identity
         Decoder(),
         {
             "discord:demo:100": Route(
-                prefix="ALERT:",
                 guru_id="guru-a",
                 profile_revision=first_revision,
                 exit_basis="original_position",
             ),
             "discord:demo:200": Route(
-                prefix="SIGNAL:",
                 guru_id="guru-b",
                 profile_revision=second_revision,
                 exit_basis="remaining_position",
@@ -287,13 +276,11 @@ async def test_runtime_route_map_collision_is_reviewed_without_model_selection()
         decoder,
         {
             "discord:demo:*": Route(
-                prefix="ALERT:",
                 guru_id="guru-a",
                 profile_revision="a" * 64,
                 exit_basis="original_position",
             ),
             "discord:demo:200": Route(
-                prefix="SIGNAL:",
                 guru_id="guru-b",
                 profile_revision="b" * 64,
                 exit_basis="remaining_position",
@@ -307,10 +294,10 @@ async def test_runtime_route_map_collision_is_reviewed_without_model_selection()
     assert decoder.calls == 0
 
 
-@pytest.mark.parametrize("text", ["Outside configured prefix", "ALERT:"])
+@pytest.mark.parametrize("text", ["   ", "\n"])
 async def test_local_decision_cannot_exhaust_budget_for_next_real_request(text):
     box, decoder, worker = box_and_worker(daily_limit=1, text=text)
-    worker.routes = {"discord:demo:*": Route(prefix="ALERT:")}
+    worker.routes = {"discord:demo:*": Route()}
     message = box.inputs[0]
     await worker.process_next(NOW)
     assert decoder.calls == 0

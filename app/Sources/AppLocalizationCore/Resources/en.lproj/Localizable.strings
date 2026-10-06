@@ -515,7 +515,6 @@
 "Measure a move" = "Measure a move";
 "Message" = "Message";
 "Message **@userinfobot** to get your chat ID, and paste it into **Chat ID**." = "Message **@userinfobot** to get your chat ID, and paste it into **Chat ID**.";
-"Message prefix" = "Message prefix";
 "Mismatch" = "Mismatch";
 "Missing" = "Missing";
 "Mistral models" = "Mistral models";
@@ -599,7 +598,6 @@
 "One month" = "One month";
 "One week" = "One week";
 "One year" = "One year";
-"Only messages starting with the prefix are read as calls." = "Only messages starting with the prefix are read as calls.";
 "Only needed when several people post in the same channel." = "Only needed when several people post in the same channel.";
 "Only when every account is paper. Lock still locks." = "Only when every account is paper. Lock still locks.";
 "Open %@ API keys" = "Open %@ API keys";
@@ -690,7 +688,7 @@
 "Range" = "Range";
 "Range details" = "Range details";
 "Read" = "Read";
-"Read %lld posts with %@. %@ Filled in the playbook, prefix, exit basis, and %@; review them before validating." = "Read %lld posts with %@. %@ Filled in the playbook, prefix, exit basis, and %@; review them before validating.";
+"Read %lld posts with %@. %@ Filled in the playbook, exit basis, and %@; review them before validating." = "Read %lld posts with %@. %@ Filled in the playbook, exit basis, and %@; review them before validating.";
 "Read accounts and activity again" = "Read accounts and activity again";
 "Read and pause" = "Read and pause";
 "Read by" = "Read by";

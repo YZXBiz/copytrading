@@ -57,7 +57,7 @@ struct GuruCard: View {
     @ViewBuilder
     private var latestCall: some View {
         if let latest {
-            let preview = PeopleSourcePreview.text(for: latest, dropping: guru.prefix)
+            let preview = PeopleSourcePreview.text(for: latest)
             VStack(alignment: .leading, spacing: 8) {
                 Text(
                     preview.isEmpty

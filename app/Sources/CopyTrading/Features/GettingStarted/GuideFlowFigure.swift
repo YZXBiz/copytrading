@@ -12,7 +12,7 @@ struct GuideFlowFigure: View {
         GuideFigure(
             description: L10n.string(
                 "Example: %@ posts “%@”. CopyTrading reads it as %@, a sixth of a position, and the paper account fills %@.",
-                "Alex Chen", "ALERT: Bought NVDA 1/6 at 121.38", "buy NVDA at $121.38", "12 NVDA at $121.38"
+                "Alex Chen", "Bought NVDA 1/6 at 121.38", "buy NVDA at $121.38", "12 NVDA at $121.38"
             )
         ) {
             // The guide's page never gets narrower than three readable cards side by side.

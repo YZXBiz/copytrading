@@ -87,7 +87,6 @@ class _Guru(_Strict):
     name: str
     channel: str
     author: str | None = None
-    prefix: str
     exits: ExitBasis = "original_position"
     playbook: str = ""
     playbook_file: str | None = None
@@ -162,7 +161,6 @@ def load_setup(path: Path) -> ServerSetup:
                     ProfileDraft(
                         guru_id=guru.id,
                         display_name=guru.name,
-                        prefix=guru.prefix,
                         playbook=playbook,
                         examples=tuple(
                             ProfileExample(

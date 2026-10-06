@@ -34,7 +34,7 @@ struct TradingSettingsSaveTests {
 
         let profile = try TradingProfileBuilder().build(
             TradingProfileDraft(
-                guruID: "stable-guru", displayName: "Stable Guru", prefix: "Alert:",
+                guruID: "stable-guru", displayName: "Stable Guru",
                 exitBasis: .originalPosition
             ))
         let configuration = TradingConfiguration(
@@ -347,7 +347,7 @@ struct TradingSettingsSaveTests {
         )
         let originalProfile = try TradingProfileBuilder().build(
             TradingProfileDraft(
-                guruID: "prior-guru", displayName: "Prior Guru", prefix: "ALERT:",
+                guruID: "prior-guru", displayName: "Prior Guru",
                 exitBasis: .originalPosition
             ))
         let original = TradingConfiguration(
@@ -406,7 +406,7 @@ struct TradingSettingsSaveTests {
         )
         let profile = try TradingProfileBuilder().build(
             TradingProfileDraft(
-                guruID: "launch-guru", displayName: "Launch Guru", prefix: "ALERT:", exitBasis: .originalPosition
+                guruID: "launch-guru", displayName: "Launch Guru", exitBasis: .originalPosition
             ))
         let configuration = TradingConfiguration(
             source: TradingSourceConfiguration(channelIDs: ["123"], authorIDs: ["456"]),
@@ -479,7 +479,7 @@ struct TradingSettingsSaveTests {
         )
         let profile = try TradingProfileBuilder().build(
             TradingProfileDraft(
-                guruID: "resume-guru", displayName: "Resume Guru", prefix: "ALERT:",
+                guruID: "resume-guru", displayName: "Resume Guru",
                 exitBasis: .originalPosition
             ))
         let prior = TradingConfiguration(
@@ -673,7 +673,7 @@ struct TradingSettingsSaveTests {
             TradingProfileDraft(
                 guruID: "example-action-guru",
                 displayName: "Example Action Guru",
-                prefix: "ALERT:",
+
                 playbook: "Apple means AAPL",
                 examples: [
                     TradingProfileExample(
@@ -1366,7 +1366,7 @@ struct TradingSettingsSaveTests {
         )
         let profile = try TradingProfileBuilder().build(
             TradingProfileDraft(
-                guruID: "prior-guru", displayName: "Prior Guru", prefix: "ALERT:",
+                guruID: "prior-guru", displayName: "Prior Guru",
                 exitBasis: .originalPosition
             ))
         let original = TradingConfiguration(
@@ -2813,7 +2813,7 @@ private actor RecordingTradingStarter: TradingStarting {
             throw EngineContractError.remote(code: .invalidRequest, message: learningFailure)
         }
         return LearnedGuruPlaybook(
-            postsRead: 3, prefix: "赵哥-股票：", exitBasis: .originalPosition,
+            postsRead: 3, exitBasis: .originalPosition,
             playbook: "加了 means buy", examples: [], summary: "Buys lead with the price.",
             provider: learning.provider.name.rawValue, model: learning.provider.model,
             costNotice: "Provider charges may apply."

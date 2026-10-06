@@ -59,7 +59,7 @@ private func savedSetup(
     provider: TradingProviderConfiguration
 ) throws -> (configuration: TradingConfiguration, secrets: TradingSecrets) {
     let profile = try TradingProfileBuilder().build(
-        TradingProfileDraft(guruID: "alex", displayName: "Alex", prefix: "ALERT:", exitBasis: .originalPosition))
+        TradingProfileDraft(guruID: "alex", displayName: "Alex", exitBasis: .originalPosition))
     let configuration = TradingConfiguration(
         source: TradingSourceConfiguration(channelIDs: ["123"]),
         provider: provider,

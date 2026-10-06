@@ -1,4 +1,4 @@
-"""Guru profiles (prefix, learned playbook, checked examples) and read-only evaluation."""
+"""Guru profiles (learned playbook, checked examples) and read-only evaluation."""
 
 import datetime as dt
 import hashlib
@@ -52,7 +52,7 @@ PLAYBOOK_MAX_LENGTH = 8_000
 
 
 class ProfileDraft(BaseModel):
-    """What the owner saves for one guru: a prefix, a playbook prompt, and checked examples.
+    """What the owner saves for one guru: a playbook prompt and checked examples.
 
     The playbook is owner-written (usually edited from a learned draft) and reaches the model as
     trusted guidance. It never bypasses grounding: a ticker must appear in the post itself, or the
@@ -63,7 +63,6 @@ class ProfileDraft(BaseModel):
 
     guru_id: str = Field(pattern=r"^[a-zA-Z0-9_-]{1,64}$")
     display_name: str = Field(min_length=1, max_length=100)
-    prefix: str = Field(min_length=1, max_length=128)
     playbook: str = Field(max_length=PLAYBOOK_MAX_LENGTH)
     examples: tuple[ProfileExample, ...] = Field(default=(), max_length=32)
     exit_basis: ExitBasis
@@ -73,8 +72,8 @@ class ProfileDraft(BaseModel):
 
     @model_validator(mode="after")
     def validate_inputs(self) -> Self:
-        if not self.display_name.strip() or not self.prefix.strip():
-            raise ValueError("Profile name and message prefix are required")
+        if not self.display_name.strip():
+            raise ValueError("Profile name is required")
         for example in self.examples:
             if not example.message.strip():
                 raise ValueError("Profile examples cannot be blank")
@@ -111,7 +110,6 @@ class LearnedPlaybook(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     posts_read: int = Field(ge=0)
-    prefix: str | None
     exit_basis: ExitBasis
     playbook: str = Field(max_length=PLAYBOOK_MAX_LENGTH)
     examples: tuple[ProfileExample, ...] = ()
@@ -133,7 +131,6 @@ class ProfileRevision(BaseModel):
 
     guru_id: str = Field(pattern=r"^[a-zA-Z0-9_-]{1,64}$")
     display_name: str = Field(min_length=1, max_length=100)
-    prefix: str = Field(min_length=1, max_length=128)
     playbook: str = Field(max_length=PLAYBOOK_MAX_LENGTH)
     examples: tuple[ProfileExample, ...] = Field(default=(), max_length=32)
     exit_basis: ExitBasis
@@ -151,7 +148,6 @@ class ProfileRevision(BaseModel):
     def route(self) -> Route:
         """How the reader and its rules treat this guru's posts."""
         return Route(
-            prefix=self.prefix,
             playbook=self.playbook,
             guru_id=self.guru_id,
             profile_revision=self.profile_revision,
@@ -175,7 +171,6 @@ class ProfileBuilder:
                 ProfileDraft(
                     guru_id="prepared-standard",
                     display_name="Standard stock alerts",
-                    prefix="ALERT:",
                     playbook="",
                     examples=(),
                     exit_basis="original_position",
@@ -185,7 +180,6 @@ class ProfileBuilder:
                 ProfileDraft(
                     guru_id="prepared-remaining",
                     display_name="Remaining-position exits",
-                    prefix="TRADE:",
                     playbook="",
                     examples=(),
                     exit_basis="remaining_position",

@@ -5,6 +5,7 @@ User-visible changes for each release are recorded here. Every GitHub release's 
 ## Unreleased
 
 - **Keep this Mac awake while copying** (Settings → General, on by default). While copying is on, CopyTrading keeps the Mac from going to sleep on its own, so no post is missed; the screen can still turn off and lock. Closing a MacBook's lid still puts it to sleep unless it's plugged in with a display connected.
+- **Removed: the guru's message prefix.** Each channel carries one guru, so every post in it is read and a guru no longer needs a prefix; chatter is still read as talk and ignored. Learn no longer drafts one.
 - **Removed: Market move allowed.** A buy is no longer held when the price has moved away from the guru's price; Maximum above signal price still caps what you pay. Your saved setup is from an older version, so CopyTrading asks you to set up again.
 
 ## 0.1.0-alpha.2 — developer preview

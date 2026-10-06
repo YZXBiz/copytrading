@@ -1256,7 +1256,6 @@ final class AppModel {
             TradingProfileDraft(
                 guruID: route.guruID.trimmed,
                 displayName: route.displayName.trimmed.isEmpty ? route.guruID.trimmed : route.displayName.trimmed,
-                prefix: route.prefix.trimmed,
                 playbook: route.playbook.trimmedLines,
                 examples: [],
                 exitBasis: route.exitBasis,
@@ -1926,7 +1925,7 @@ final class AppModel {
             configuration.profiles.allSatisfy({ profile in
                 let draft = TradingProfileDraft(
                     guruID: profile.guruID, displayName: profile.displayName,
-                    prefix: profile.prefix, playbook: profile.playbook, examples: profile.examples,
+                    playbook: profile.playbook, examples: profile.examples,
                     exitBasis: profile.exitBasis, batches: profile.batches, sellsReferTo: profile.sellsReferTo
                 )
                 return (try? TradingProfileBuilder().build(draft)) == profile
