@@ -2,8 +2,11 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
-## Unreleased
+## 0.1.0-alpha.3 — developer preview
 
+Simpler setup, a Mac that stays awake while copying, and a guide that follows one post from Discord to your account.
+
+- **Getting Started follows a post from start to finish:** a guru posts, the AI reads it, your limits check it, the order goes to Alpaca, you see what happened, and the guru sells. Each step says what you control and what to keep in mind, then "Before you go" lists what to know first. Setup steps open their help only when you click them.
 - **Keep this Mac awake while copying** (Settings → General, on by default). While copying is on, CopyTrading keeps the Mac from going to sleep on its own, so no post is missed; the screen can still turn off and lock. Closing a MacBook's lid still puts it to sleep unless it's plugged in with a display connected.
 - **Removed: the guru's message prefix.** Each channel carries one guru, so every post in it is read and a guru no longer needs a prefix; chatter is still read as talk and ignored. Learn no longer drafts one.
 - **Removed: Market move allowed.** A buy is no longer held when the price has moved away from the guru's price; Maximum above signal price still caps what you pay. Your saved setup is from an older version, so CopyTrading asks you to set up again.
