@@ -90,7 +90,6 @@ class _Trading:
                 CapabilityCheck(name="model", state="ready", adapter="fake"),
                 CapabilityCheck(name="broker", state="ready", subject="paper", adapter="fake"),
             ),
-            release_gates=("public_discord_authorization_not_qualified",),
             cost_notice="test notice",
         )
 

@@ -217,7 +217,6 @@ async def test_validate_adds_candidate_credentials_while_retaining_active_creden
                 configuration_revision=config.revision(),
                 activatable=False,
                 checks=(),
-                release_gates=(),
                 cost_notice="synthetic test",
             )
 

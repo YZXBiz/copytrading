@@ -34,13 +34,9 @@ struct ExampleReviewSection: View {
                 }
             }
             if model.canAcknowledgeProfileExamples {
-                if model.profileExamplesAcknowledged {
-                    Label(L10n.string("You looked over these readings"), systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                } else {
-                    Button(L10n.string("These Readings Look Right"), systemImage: "checkmark", action: model.acknowledgeProfileExamples)
-                        .accessibilityHint(L10n.string("Confirms the examples were read the way you meant. It cannot override a mismatch."))
-                }
+                Text(L10n.string("Start Copying says these readings are what you meant."))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
             }
         } header: {
             Label(L10n.string("How the examples were read"), systemImage: "text.magnifyingglass")

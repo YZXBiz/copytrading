@@ -452,10 +452,9 @@ class ProfileEvaluationService:
                             budget_usd=None,
                             estimated_quantity=None,
                             exit_basis=instruction.exit_basis,
-                            reason="position_required_for_exit_sizing",
+                            reason="sells_from_holdings",
                         )
                     )
-                    review_reasons.append("position_required_for_exit_sizing")
         return ProfileEvaluation(
             message_identity=message.identity,
             guru_id=profile.guru_id,

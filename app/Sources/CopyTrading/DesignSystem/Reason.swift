@@ -87,7 +87,7 @@ enum Reason {
         "provider_timeout": "The model service didn't answer in time",
         "provider_unavailable": "The model service couldn't be reached",
         "broker_rejected": "The broker rejected the order",
-        "position_required_for_exit_sizing": "Nothing held to sell from",
+        "sells_from_holdings": "Sells from what the account holds",
         "unresolved_order_incident": "An earlier order needs your review",
         "unresolved_account_order": "An open order at the broker needs your review",
         "incomplete_account_orders": "The broker's order list was incomplete",

@@ -274,8 +274,8 @@ def test_matching_exit_example_preserves_position_sizing_review_without_blocking
     )
     comparison = review.examples[0]
     assert comparison.matches is True
-    assert comparison.actual.destinations[0].reason == "position_required_for_exit_sizing"
-    assert "position_required_for_exit_sizing" in review.review_reasons
+    assert comparison.actual.destinations[0].reason == "sells_from_holdings"
+    assert review.review_reasons == ()
     assert review.automatic_activation_allowed is True
 
 

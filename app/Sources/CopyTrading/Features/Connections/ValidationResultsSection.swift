@@ -33,9 +33,6 @@ struct ValidationResultsSection: View {
                 }
                 .accessibilityElement(children: .combine)
             }
-            ForEach(report.releaseGates, id: \.self) { gate in
-                Callout(L10n.string("Release gate: %@", Humanize.code(gate)), tone: .caution)
-            }
         } header: {
             HStack {
                 Label(L10n.string("Connection checks"), systemImage: "checklist")
@@ -59,7 +56,6 @@ struct ValidationResultsSection: View {
         case .ready: L10n.string("Ready")
         case .failed: L10n.string("Needs attention")
         case .notConfigured: L10n.string("Not configured")
-        case .unsupported: L10n.string("Unsupported")
         }
     }
 }

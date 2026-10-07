@@ -126,8 +126,16 @@ extension AppModel {
 
     /// The one Start Copying: a setup already checked starts; otherwise every connection and
     /// example is checked first, then copying starts if nothing needs the owner. Typed keys stay
-    /// in the draft, so a failed check never makes the owner type them again.
+    /// in the draft, so a failed check never makes the owner type them again. When only the
+    /// readings are left to look over, it shows them, and pressed beside them it approves them.
     func checkAndStartCopying() {
+        if awaitsExampleReview && checkedSetupSignature == setupDraft.signature {
+            guard isShowingSetupCheck else {
+                isShowingSetupCheck = true
+                return
+            }
+            acknowledgeProfileExamples()
+        }
         if canStartCopyingFromCheck {
             Task { await activateValidatedTradingSettings() }
             return

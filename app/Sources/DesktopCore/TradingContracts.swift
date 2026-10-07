@@ -676,7 +676,6 @@ public enum TradingCapabilityState: String, Codable, Sendable {
     case ready
     case failed
     case notConfigured = "not_configured"
-    case unsupported
 }
 
 public enum TradingCapabilityName: String, Codable, Sendable {
@@ -685,7 +684,6 @@ public enum TradingCapabilityName: String, Codable, Sendable {
     case broker
     case notification
     case configuration
-    case publicSourceAuthorization = "public_source_authorization"
 }
 
 /// Safe capability evidence. Engine responses never contain submitted credentials or raw errors.
@@ -733,17 +731,15 @@ public struct TradingCapabilityReport: Codable, Equatable, Sendable {
     public var configurationRevision: String
     public var activatable: Bool
     public var checks: [TradingCapabilityCheck]
-    public var releaseGates: [String]
     public var costNotice: String
 
     public init(
         configurationRevision: String, activatable: Bool,
-        checks: [TradingCapabilityCheck], releaseGates: [String], costNotice: String
+        checks: [TradingCapabilityCheck], costNotice: String
     ) {
         self.configurationRevision = configurationRevision
         self.activatable = activatable
         self.checks = checks
-        self.releaseGates = releaseGates
         self.costNotice = costNotice
     }
 
@@ -751,7 +747,6 @@ public struct TradingCapabilityReport: Codable, Equatable, Sendable {
         case configurationRevision = "configuration_revision"
         case activatable
         case checks
-        case releaseGates = "release_gates"
         case costNotice = "cost_notice"
     }
 }

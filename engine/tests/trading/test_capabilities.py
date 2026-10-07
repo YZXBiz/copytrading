@@ -164,11 +164,7 @@ def test_validation_requires_real_source_model_and_each_explicit_broker_environm
         ("broker", "paper-account", "paper"),
         ("broker", "live-account", "live"),
     }
-    assert any(
-        item.name == "public_source_authorization" and item.state == "unsupported"
-        for item in report.checks
-    )
-    assert "public_discord_authorization_not_qualified" in report.release_gates
+    assert {item.name for item in report.checks} == {"source", "model", "notification", "broker"}
     assert "private-source-token" not in report.model_dump_json()
     assert "private-model-key" not in report.model_dump_json()
     assert probes.calls.count(("broker", "paper-account")) == 1

@@ -218,7 +218,6 @@
 "Completed" = "已完成";
 "Confirm %lld order(s)" = "确认%lld笔订单";
 "Confirm manual orders?" = "确认手动订单？";
-"Confirms the examples were read the way you meant. It cannot override a mismatch." = "确认这些示例的解读符合你的预期。若内容不匹配，仍无法通过检查。";
 "Connect Discord" = "连接 Discord";
 "Connected" = "已连接";
 "Connected to the broker account" = "已连接到券商账户";
@@ -710,7 +709,6 @@
 "Reject" = "拒绝";
 "Rejected a post: %@" = "帖子已拒绝：%@";
 "Rejected by the broker" = "已被券商拒绝";
-"Release gate: %@" = "发布阻断项：%@";
 "remaining position" = "剩余仓位";
 "Remove" = "移除";
 "Remove Account" = "移除账户";
@@ -918,7 +916,6 @@
 "The setup checklist and how a day in CopyTrading goes." = "查看设置清单，了解在 CopyTrading 中的一天。";
 "The trader whose calls CopyTrading copies." = "CopyTrading 跟单的信号源（交易者）。";
 "The Way a Post Travels" = "帖子在 CopyTrading 中的处理过程";
-"These Readings Look Right" = "这些解读看起来正确";
 "These shares are no longer held" = "已不再持有这些股份";
 "Think of CopyTrading as a careful assistant for your trading Discord. It watches the **gurus** you choose, turns each call into an exact order, checks it against **limits you set**, and places it in your **paper** or **live** account — then shows you exactly what happened. Nothing is saved or traded until you choose Start Copying, and it checks everything first." = "把 CopyTrading 想成一位谨慎的交易助手。它会关注你选择的 **信号源**，把每条信号转换成明确订单，按你设定的 **限额** 检查，再下到你的 **模拟盘** 或 **实盘** 账户，之后让你查看每一步的结果。在你选择“开始跟单”之前，不会保存任何设置，也不会交易；开始前它会先检查一切。";
 "This post is older than what Activity has loaded" = "这条帖子早于 Activity 当前加载的内容";
@@ -958,7 +955,6 @@
 "Unnamed account" = "未命名账户";
 "Unnamed guru" = "未命名信号源";
 "Unresolved incidents: %@" = "尚未解决的持仓问题：%@";
-"Unsupported" = "暂不支持";
 "Unsure whether an order reached the broker" = "不确定订单是否已送达券商";
 "Up %@" = "上涨 %@";
 "updated" = "已更新";
@@ -993,7 +989,6 @@
 "Working" = "进行中";
 "Yes" = "是";
 "You" = "你";
-"You looked over these readings" = "你已检查这些解读";
 "You're copying %@ into %@." = "正在将 %@ 的交易信号跟单到 %@。";
 "You're set up. This page stays here as your guide." = "设置已完成。本页会一直保留，供你参考。";
 "Your account trades" = "账户执行交易";
@@ -1373,7 +1368,7 @@
 "The model service didn't answer in time" = "AI 模型服务未及时响应";
 "The model service couldn't be reached" = "无法连接 AI 模型服务";
 "The broker rejected the order" = "券商拒绝了这笔订单";
-"Nothing held to sell from" = "没有持仓可以卖";
+"Sells from what the account holds" = "从账户持仓中卖出";
 "An earlier order needs your review" = "之前的一笔订单需要你检查";
 "An open order at the broker needs your review" = "券商处有一笔未完成订单需要你检查";
 "The broker's order list was incomplete" = "券商返回的订单列表不完整";
@@ -1642,3 +1637,4 @@
 "The post repeats an earlier call of the guru's" = "这条帖子重复了信号源之前的一个信号";
 "A re-post of a call already copied" = "已跟过的信号被重新发了一遍";
 "%@ A re-post of an earlier call." = "%@（重复之前的信号）";
+"Start Copying says these readings are what you meant." = "Start Copying 即表示这些解读符合你的本意。";

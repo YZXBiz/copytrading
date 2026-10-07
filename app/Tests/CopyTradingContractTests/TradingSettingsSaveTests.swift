@@ -205,7 +205,6 @@ struct TradingSettingsSaveTests {
              "report":{"configuration_revision":"revision-1","activatable":true,
               "checks":[{"name":"source","state":"ready","subject":null,"environment":null,
                 "identity":"discord_user:123","adapter":"discord-py-self-user-token","reason_code":null}],
-              "release_gates":["public_discord_authorization_not_qualified"],
               "cost_notice":"Model check may incur a charge."},"activation_token":"single-use-grant"}}
             """.utf8)
         let validationTransport = AccountPageTransport(responseFixture: validationWire)
@@ -220,9 +219,6 @@ struct TradingSettingsSaveTests {
         try check(validationJSON["operation"] as? String == "validate_trading", "Wrong validation IPC operation")
         try check(validationJSON["secrets"] != nil, "Capability validation omitted draft credentials")
         try check(validation.activationToken == "single-use-grant", "Validation grant was not decoded")
-        try check(
-            validation.report.releaseGates == ["public_discord_authorization_not_qualified"],
-            "Source onboarding gate was lost")
         let responseText = String(decoding: validationWire, as: UTF8.self)
         try check(!responseText.contains(secrets.discordToken), "Validation report leaked a source token")
         try check(!responseText.contains(secrets.providerAPIKey), "Validation report leaked a provider key")
@@ -2602,7 +2598,6 @@ private actor RecordingTradingStarter: TradingStarting {
                                 identity: nil, adapter: "fake", reasonCode: "provider_unreachable"
                             )
                         ]),
-                releaseGates: ["public_discord_authorization_not_qualified"],
                 costNotice: "Test model validation cost notice"
             ),
             activationToken: validationActivatable ? "validation-grant" : nil

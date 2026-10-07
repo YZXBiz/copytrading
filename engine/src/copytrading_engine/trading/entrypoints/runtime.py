@@ -310,9 +310,7 @@ class TradingRuntime:
         return report.model_copy(
             update={
                 "activatable": report.activatable
-                and all(
-                    check.state in {"ready", "not_configured", "unsupported"} for check in failures
-                )
+                and all(check.state in {"ready", "not_configured"} for check in failures)
                 and not any(check.name == "configuration" for check in failures),
                 "checks": tuple(failures),
             }

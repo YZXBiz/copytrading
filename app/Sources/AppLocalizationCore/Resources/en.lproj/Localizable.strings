@@ -218,7 +218,6 @@
 "Completed" = "Completed";
 "Confirm %lld order(s)" = "Confirm %lld order(s)";
 "Confirm manual orders?" = "Confirm manual orders?";
-"Confirms the examples were read the way you meant. It cannot override a mismatch." = "Confirms the examples were read the way you meant. It cannot override a mismatch.";
 "Connect Discord" = "Connect Discord";
 "Connected" = "Connected";
 "Connected to the broker account" = "Connected to the broker account";
@@ -710,7 +709,6 @@
 "Reject" = "Reject";
 "Rejected a post: %@" = "Rejected a post: %@";
 "Rejected by the broker" = "Rejected by the broker";
-"Release gate: %@" = "Release gate: %@";
 "remaining position" = "remaining position";
 "Remove" = "Remove";
 "Remove Account" = "Remove Account";
@@ -918,7 +916,6 @@
 "The setup checklist and how a day in CopyTrading goes." = "The setup checklist and how a day in CopyTrading goes.";
 "The trader whose calls CopyTrading copies." = "The trader whose calls CopyTrading copies.";
 "The Way a Post Travels" = "The Way a Post Travels";
-"These Readings Look Right" = "These Readings Look Right";
 "These shares are no longer held" = "These shares are no longer held";
 "Think of CopyTrading as a careful assistant for your trading Discord. It watches the **gurus** you choose, turns each call into an exact order, checks it against **limits you set**, and places it in your **paper** or **live** account — then shows you exactly what happened. Nothing is saved or traded until you choose Start Copying, and it checks everything first." = "Think of CopyTrading as a careful assistant for your trading Discord. It watches the **gurus** you choose, turns each call into an exact order, checks it against **limits you set**, and places it in your **paper** or **live** account — then shows you exactly what happened. Nothing is saved or traded until you choose Start Copying, and it checks everything first.";
 "This post is older than what Activity has loaded" = "This post is older than what Activity has loaded";
@@ -958,7 +955,6 @@
 "Unnamed account" = "Unnamed account";
 "Unnamed guru" = "Unnamed guru";
 "Unresolved incidents: %@" = "Unresolved incidents: %@";
-"Unsupported" = "Unsupported";
 "Unsure whether an order reached the broker" = "Unsure whether an order reached the broker";
 "Up %@" = "Up %@";
 "updated" = "updated";
@@ -993,7 +989,6 @@
 "Working" = "Working";
 "Yes" = "Yes";
 "You" = "You";
-"You looked over these readings" = "You looked over these readings";
 "You're copying %@ into %@." = "You're copying %@ into %@.";
 "You're set up. This page stays here as your guide." = "You're set up. This page stays here as your guide.";
 "Your account trades" = "Your account trades";
@@ -1373,7 +1368,7 @@
 "The model service didn't answer in time" = "The model service didn't answer in time";
 "The model service couldn't be reached" = "The model service couldn't be reached";
 "The broker rejected the order" = "The broker rejected the order";
-"Nothing held to sell from" = "Nothing held to sell from";
+"Sells from what the account holds" = "Sells from what the account holds";
 "An earlier order needs your review" = "An earlier order needs your review";
 "An open order at the broker needs your review" = "An open order at the broker needs your review";
 "The broker's order list was incomplete" = "The broker's order list was incomplete";
@@ -1642,3 +1637,4 @@
 "The post repeats an earlier call of the guru's" = "The post repeats an earlier call of the guru's";
 "A re-post of a call already copied" = "A re-post of a call already copied";
 "%@ A re-post of an earlier call." = "%@ A re-post of an earlier call.";
+"Start Copying says these readings are what you meant." = "Start Copying says these readings are what you meant.";

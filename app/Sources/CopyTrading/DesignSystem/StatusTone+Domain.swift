@@ -26,7 +26,6 @@ extension StatusTone {
         case .ready: self = .positive
         case .failed: self = .critical
         case .notConfigured: self = .inactive
-        case .unsupported: self = .caution
         }
     }
 
