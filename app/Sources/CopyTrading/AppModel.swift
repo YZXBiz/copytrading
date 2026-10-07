@@ -681,11 +681,16 @@ final class AppModel {
             savedTradingConfiguration = savedTrading?.configuration
             hasTradingSecrets = savedTrading != nil
             syncSetupDraftWithSaved()
-            // A first launch opens on the guide; an engine restart later never moves the owner.
+            // A first launch walks the owner through setup on Connections, until they end the tour;
+            // an engine restart later never moves the owner.
             if !hasChosenFirstScreen {
                 hasChosenFirstScreen = true
                 if savedTrading == nil && selectedScreen == .today {
-                    selectedScreen = .gettingStarted
+                    if UserDefaults.standard.bool(forKey: Self.setupTourEndedKey) {
+                        selectedScreen = .gettingStarted
+                    } else {
+                        startSetupTour()
+                    }
                 }
             }
             let newJournal = CommandJournal(url: paths.applicationSupportDirectory.appending(path: "commands.json"))

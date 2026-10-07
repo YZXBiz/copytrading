@@ -180,9 +180,13 @@ extension AppModel {
         selectedScreen = .connections
     }
 
+    /// Ends the tour, and remembers it so a later launch doesn't start it again on its own.
     func endSetupTour() {
         isTouringSetup = false
+        UserDefaults.standard.set(true, forKey: Self.setupTourEndedKey)
     }
+
+    static let setupTourEndedKey = "setupTour.ended"
 
     /// Opens a connection's settings on Connections, with its first field ready for typing.
     func open(_ connection: ConnectionKind) {

@@ -30,6 +30,13 @@ struct SetupTourCard: View {
                 .font(.system(size: 21, design: .serif).italic())
                 .foregroundStyle(Palette.tertiaryInk)
                 .padding(.bottom, 10)
+            if stop == .discordRow && model.setupProgress.completed == 0 {
+                Text(L10n.string("Welcome. Five steps, about 10 minutes; nothing is saved or traded until the last one."))
+                    .font(.system(size: 13))
+                    .foregroundStyle(Palette.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.bottom, 6)
+            }
             Text(markdown(L10n.string(stop.detail)))
                 .font(.system(size: 13))
                 .lineSpacing(2.5)
