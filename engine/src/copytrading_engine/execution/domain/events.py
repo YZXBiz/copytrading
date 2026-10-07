@@ -81,7 +81,6 @@ class Message(EventPayloadValue):
     parser_profile: str
     instructions: tuple[Instruction, ...]
     destination: DestinationTerms
-    review_reason: Literal["missing_source_fraction"] | None = None
 
 
 class CashAnchorRecorded(EventPayloadValue):

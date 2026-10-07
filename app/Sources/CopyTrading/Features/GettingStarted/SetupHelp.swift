@@ -18,6 +18,19 @@ enum SetupHelp {
         )
     )
 
+    /// The same steps inside Getting Started, where the field is one click away in Connections.
+    static let channelIDInGuide = HelpArticle(
+        id: "discord.channel.guide",
+        title: "Find a channel ID",
+        steps: [
+            "In Discord, open **User Settings › Advanced** and turn on **Developer Mode**.",
+            "Right-click the channel your guru posts in and choose **Copy Channel ID**.",
+            "Click **Open Connections** below.",
+            "Under **Discord**, paste it into **Channel IDs**. Separate several channels with commas.",
+        ],
+        destination: channelID.destination
+    )
+
     static let userID = HelpArticle(
         id: "discord.user",
         title: "Find a guru's user ID",
@@ -124,7 +137,7 @@ enum SetupHelp {
         steps: [
             "In **Connections**, under **Gurus**, choose **Add a guru** and give them a name.",
             "Pick the channel they post in, then choose **Learn from Channel**. CopyTrading reads their recent posts and drafts how they write buys, sells, and tickers.",
-            "Read the playbook and fix anything that's off. Under **How they trade**, say what their sells refer to and whether they buy in batches; under **Copies into**, choose their account.",
+            "Read the playbook and fix anything that's off, such as how they count sells or what their trim words mean. Under **Copies into**, choose their account.",
         ]
     )
 
@@ -142,7 +155,7 @@ enum SetupHelp {
     @MainActor
     static func articles(for step: SetupStep, provider: TradingProviderName) -> [HelpArticle] {
         switch step {
-        case .discord: [channelID, discordToken]
+        case .discord: [channelIDInGuide, discordToken]
         case .interpreter: [interpreterKey(for: provider)]
         case .account: [alpacaPaperKeys]
         case .guru: [guru]

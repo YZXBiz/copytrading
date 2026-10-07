@@ -1607,3 +1607,15 @@
 "Counts as a re-post within" = "视为重复发布的时间";
 "Minutes" = "分钟";
 "minutes" = "分钟";
+"Click **Open Connections** below." = "点击下方的 **打开连接**。";
+"Under **Discord**, paste it into **Channel IDs**. Separate several channels with commas." = "在 **Discord** 下，将其粘贴到 **频道 ID** 中。多个频道 ID 之间用逗号分隔。";
+"Expected buy price" = "预期买入价";
+"Expected sell price" = "预期卖出价";
+"e.g. %@, optional" = "例如 %@，可留空";
+"Sells from the buy at" = "卖出的是这笔买入";
+"e.g. %@, or empty for every buy" = "例如 %@，留空表示所有买入";
+"Re-posted calls" = "重复发布的喊单";
+"When the guru posts the same call again." = "信号源再次发布同一条喊单时。";
+"None of your buys is at the buy price the guru named" = "你没有信号源所说价格的买入";
+"The sell doesn't say how much" = "这次卖出没有说卖多少";
+"Read the playbook and fix anything that's off, such as how they count sells or what their trim words mean. Under **Copies into**, choose their account." = "阅读 Playbook 并修正不对的地方，比如信号源如何计算卖出比例、减仓等词是什么意思。在 **跟单到** 下选择他们的账户。";

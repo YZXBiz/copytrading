@@ -78,7 +78,7 @@ async def transform(event: _RawMessage, route: Route, decoder: Decoder, model: s
         raise DecodeError(
             "evidence_validation_failed", retryable=False, issues=(exc.issue,)
         ) from None
-    decision, reason, calls = _act_on(reading, route)
+    decision, reason, calls = _act_on(reading)
     return outcome(
         event,
         decision,
@@ -89,7 +89,7 @@ async def transform(event: _RawMessage, route: Route, decoder: Decoder, model: s
         guru_id=route.guru_id,
         profile_revision=route.profile_revision,
         reading=reading,
-        suggested=suggested(reading, route) if decision == "review" else (),
+        suggested=suggested(reading) if decision == "review" else (),
     )
 
 
@@ -102,7 +102,7 @@ class _Wait(Exception):
 
 
 def _act_on(
-    reading: r.PostReading, route: Route
+    reading: r.PostReading,
 ) -> tuple[Literal["trade", "ignore", "review"], str, tuple[tuple[Instruction, Evidence], ...]]:
     """Act or ask (ADR-0007): a trade made or an instruction with every call placeable trades;
     conditionals, suggestions, and calls with no exact price or no named buy wait for the
@@ -116,20 +116,21 @@ def _act_on(
             return "review", reading.kind, ()
         case r.TradeMade() | r.Instruction():
             try:
-                calls = tuple(_placeable(call, route) for call in reading.calls)
+                calls = tuple(_placeable(call) for call in reading.calls)
             except _Wait as wait:
                 return "review", wait.reason, ()
             return "trade", reading.summary, calls
 
 
-def _placeable(call: r.Call, route: Route) -> tuple[Instruction, Evidence]:
-    """The engine's call for a stated one, under the guru's rules, with the post's words behind
-    each field. Raises _Wait when it cannot be placed without the owner."""
-    instruction = _instruction(call, route, owner=False)
+def _placeable(call: r.Call) -> tuple[Instruction, Evidence]:
+    """The engine's call for a stated one, with the post's words behind each field. Raises
+    _Wait when it cannot be placed without the owner."""
+    instruction = _instruction(call, owner=False)
     if isinstance(call, r.Buy):
-        fraction_words = call.size.words if isinstance(call.size, r.Fraction | r.Batch) else None
+        fraction_words = call.size.words if isinstance(call.size, r.Fraction) else None
         entry_words = None
     else:
+        assert not isinstance(call.share, r.NotGiven)  # _instruction waits on it
         fraction_words = call.share.words
         entry_words = (
             call.sell_from.words
@@ -148,7 +149,7 @@ def _placeable(call: r.Call, route: Route) -> tuple[Instruction, Evidence]:
     return instruction, evidence
 
 
-def suggested(reading: r.PostReading | None, route: Route) -> tuple[Instruction, ...]:
+def suggested(reading: r.PostReading | None) -> tuple[Instruction, ...]:
     """What Copy places for a post that waits for the owner (ADR-0007): each call the owner can
     copy as read, a range at its top and a batch the guru has no N for at the default share. A
     call with no price, or a sell that names no buy for a guru who names them, has nothing to
@@ -158,16 +159,18 @@ def suggested(reading: r.PostReading | None, route: Route) -> tuple[Instruction,
     calls = []
     for call in reading.calls:
         try:
-            calls.append(_instruction(call, route, owner=True))
+            calls.append(_instruction(call, owner=True))
         except _Wait:
             continue
     return tuple(calls)
 
 
-def _instruction(call: r.Call, route: Route, *, owner: bool) -> Instruction:
-    """One call as the engine places it. On its own (`owner=False`) the engine waits for the
-    owner on a range or a batch the guru has no N for; when the owner copies, a range buys at its
-    top and such a batch at the default share."""
+def _instruction(call: r.Call, *, owner: bool) -> Instruction:
+    """One call as the engine places it (ADR-0010). On its own (`owner=False`) the engine waits
+    for the owner on a range and on a sell that states no share; when the owner copies, a range
+    buys at its top. A buy with no size, a batch included, asks for the full position; a sell that
+    names a buy price sells from the buys at that price, and one that names none from every buy;
+    a share counts from what is left unless the post says the original buy."""
     match call.price:
         case r.Exact(value=price):
             pass
@@ -179,43 +182,17 @@ def _instruction(call: r.Call, route: Route, *, owner: bool) -> Instruction:
             raise _Wait("price_at_market")
         case _:
             raise _Wait("price_not_given")
-    whole_position = route.sells_refer_to == "whole_position"
     if isinstance(call, r.Buy):
-        match call.size:
-            case r.Fraction(value=fraction):
-                pass
-            case r.Batch() if route.batches is not None:
-                # Each batch is an equal share of the full position.
-                fraction = Decimal(1) / route.batches
-            case r.Batch() if not owner:
-                raise _Wait("batch_size_unknown")
-            case _:
-                fraction = None
-        return Instruction(
-            action="buy",
-            symbol=call.stock.ticker,
-            price=price,
-            fraction=fraction,
-            whole_position=whole_position,
-        )
-    # A guru whose sells refer to the whole position holds one lot per stock, so a named buy
-    # price only describes it.
-    if not whole_position and not isinstance(call.sell_from, r.Lot):
-        raise _Wait("sell_names_no_buy")
+        fraction = call.size.value if isinstance(call.size, r.Fraction) else None
+        return Instruction(action="buy", symbol=call.stock.ticker, price=price, fraction=fraction)
+    if isinstance(call.share, r.NotGiven):
+        raise _Wait("sell_share_not_given")
     share = Decimal(1) if isinstance(call.share, r.All) else call.share.value
-    entry_price = None
-    if not whole_position and isinstance(call.sell_from, r.Lot):
-        entry_price = call.sell_from.buy_price
     return Instruction(
         action="close" if share == 1 else "reduce",
         symbol=call.stock.ticker,
         price=price,
-        entry_price=entry_price,
+        entry_price=call.sell_from.buy_price if isinstance(call.sell_from, r.Lot) else None,
         fraction=share,
-        exit_basis=(
-            ("original_position" if call.counts_from == "original" else "remaining_position")
-            if call.counts_from
-            else route.exit_basis
-        ),
-        whole_position=whole_position,
+        exit_basis="original_position" if call.counts_from == "original" else "remaining_position",
     )

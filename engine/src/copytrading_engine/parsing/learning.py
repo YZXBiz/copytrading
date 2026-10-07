@@ -32,13 +32,18 @@ or sixths at least 16 decimal places (1/6 is 0.1666666666666667), never shorter 
 Describe what to ignore in one line; never list individual commentary posts. Never repeat a
 line.
 
-exit_basis: original_position when exit fractions refer to the original position, otherwise
-remaining_position.
+Also write the guru's habits the app needs, one line each, only when the posts show them:
+whether a sell fraction counts from the original buy ("Sell fractions count from the original
+buy") rather than from what is left, which is the default; what the guru's vague trim words
+mean, as "<words as written> means <size>" ("减仓 means 1/2"); and each batch word's size the
+same way ("第一批 means 1/3"). Write a size as a ratio such as 1/3, or half, or all. Never write
+a habit the posts do not show.
 examples: up to 5 posts copied EXACTLY (verbatim, whole post) that are each one clear completed
 trade whose post itself states the ticker and the price (skip posts with typos in numbers),
 with the action (buy, reduce, close),
-ticker, and fraction. A buy's fraction is null unless the post states one; a reduce's
-fraction is below 1; a close's is 1.
+ticker, fraction, the price in the post, and for a sell the buy price it names (null when it
+names none). A buy's fraction is null unless the post states one; a reduce's fraction is below
+1; a close's is 1.
 Write each fraction as a ratio like "1/6" or an exact decimal like "0.5".
 summary: one sentence for the owner about what you saw and anything you were unsure of.
 Keep the whole answer compact: no explanations outside these fields.
@@ -57,6 +62,8 @@ class LearnedExample(BaseModel):
     expected_symbol: str = Field(min_length=1, max_length=12)
     # A ratio such as "1/6" or a decimal; converted exactly when the draft is verified.
     expected_fraction: str | None = Field(default=None, max_length=40)
+    expected_price: Decimal | None = Field(default=None, gt=0, le=100000)
+    expected_buy_price: Decimal | None = Field(default=None, gt=0, le=100000)
 
     def exact_fraction(self) -> Decimal | None:
         """1/6 becomes Decimal(1) / Decimal(6); anything unreadable is None."""
@@ -77,7 +84,6 @@ class PlaybookProposal(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    exit_basis: Literal["original_position", "remaining_position"]
     playbook: str = Field(min_length=1, max_length=8_000)
     examples: tuple[LearnedExample, ...] = Field(default=(), max_length=12)
     summary: str = Field(min_length=1, max_length=600)

@@ -29,7 +29,6 @@ def destination_signal(
     signal: StockSignal,
     *,
     full_position_usd: str = "600",
-    default_fraction: str | None = "1",
     revision: str = "a" * 64,
     account_id: str = "paper-demo",
     repeat_window_minutes: int | None = 10,
@@ -41,7 +40,6 @@ def destination_signal(
                 {
                     "account_id": account_id,
                     "full_position_usd": full_position_usd,
-                    "default_fraction": default_fraction,
                 }
             ),
             environment="paper",

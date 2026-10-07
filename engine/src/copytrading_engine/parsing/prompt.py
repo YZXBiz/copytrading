@@ -17,9 +17,13 @@ Each call is a buy or a sell, with the stock and the price:
 - price is exact (one number), range (a zone, low and high), at_market (the post says now
   without a number), or not_given.
 - A buy's size is a fraction of a full position (6分之一 is 1/6, half is 1/2), a batch
-  (第二批 is batch 2), or not_given. Never infer a size.
-- A sell's share is a fraction or all. counts_from says whether the fraction is of the original
-  buy or of what is left, only when the post says so (剩下一半 is half of what is left).
+  (第二批 is batch 2), or not_given. Never infer a size. When the guru playbook gives the post's
+  own words a size ("第二批 means 1/3"), use that fraction with those words.
+- A sell's share is a fraction, all, or not_given when the post states no share (a vague trim
+  such as 减仓 or "took some off"); when the playbook gives those words a size ("减仓 means 1/2"),
+  use that fraction with those words. counts_from says whether the fraction is of the original
+  buy or of what is left, when the post says so (剩下一半 is half of what is left) or the
+  playbook says how this guru counts sells; otherwise leave it out (what is left).
   Selling the remaining half is share all, counts_from remaining.
 - A sell's sell_from is the lot it names by its buy price (出一半39.5的iren names 39.5), or
   not_said. Never reuse one number as both the current price and the buy price.

@@ -1607,3 +1607,15 @@
 "Counts as a re-post within" = "Counts as a re-post within";
 "Minutes" = "Minutes";
 "minutes" = "minutes";
+"Click **Open Connections** below." = "Click **Open Connections** below.";
+"Under **Discord**, paste it into **Channel IDs**. Separate several channels with commas." = "Under **Discord**, paste it into **Channel IDs**. Separate several channels with commas.";
+"Expected buy price" = "Expected buy price";
+"Expected sell price" = "Expected sell price";
+"e.g. %@, optional" = "e.g. %@, optional";
+"Sells from the buy at" = "Sells from the buy at";
+"e.g. %@, or empty for every buy" = "e.g. %@, or empty for every buy";
+"Re-posted calls" = "Re-posted calls";
+"When the guru posts the same call again." = "When the guru posts the same call again.";
+"None of your buys is at the buy price the guru named" = "None of your buys is at the buy price the guru named";
+"The sell doesn't say how much" = "The sell doesn't say how much";
+"Read the playbook and fix anything that's off, such as how they count sells or what their trim words mean. Under **Copies into**, choose their account." = "Read the playbook and fix anything that's off, such as how they count sells or what their trim words mean. Under **Copies into**, choose their account.";

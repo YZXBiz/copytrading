@@ -87,7 +87,8 @@ class All(_Part):
     words: Words
 
 
-type Share = Annotated[Fraction | All, Field(discriminator="kind")]
+# A vague trim ("trimmed", 减仓) states no share; it waits for the owner (ADR-0010).
+type Share = Annotated[Fraction | All | NotGiven, Field(discriminator="kind")]
 
 
 class Lot(_Part):

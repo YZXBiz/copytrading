@@ -46,24 +46,30 @@ id = "zhao"
 name = "Zhao"
 channel = "123456789012345678"
 # author = "987654321098765432"   # needed when several traders share one channel
-exits = "original_position"       # "sell 1/2" means half of the original buy, or use
-                                  # "remaining_position" for half of what is left
 playbook = """
 Buys look like "ALERT: Bought NVDA 1/6 at 121.38": the fraction is the share of a full position.
+Sell fractions count from what is left. 减仓 means 1/2
 """
 # playbook_file = "zhao-playbook.md"
 account = "paper-main"   # the one account this guru copies into; its max_symbol_usd is the
                          # guru's full position, so a 1/6 call buys a sixth of it
-# default_share = 1      # the share a call naming no size buys, or "wait" to ask you first
-# batches = 3            # how many batches make a full position, when the guru buys in batches
-# sells_refer_to = "buy_price"   # or "whole_position": every buy of a stock is one lot, and
-                                 # a sell that names no buy sells from it
+# A post with no size asks for the full position; max_order_usd trims it. A sell that names a
+# buy price sells from the buys at that price; one that names none sells from every buy.
 
   # Examples are read by the model during `check`; a different reading stops the start.
   [[gurus.examples]]
   message = "ALERT: Bought NVDA 1/6 at 121.38"
   action = "buy"           # buy, reduce, or close
   symbol = "NVDA"
+  price = 121.38           # the guru's price in the post
+
+  [[gurus.examples]]
+  message = "ALERT: Sold half of the 121.38 NVDA at 130.10"
+  action = "reduce"
+  symbol = "NVDA"
+  fraction = 0.5
+  price = 130.10
+  buy_price = 121.38       # the buy it sells from; leave out when the sell names none
 
 # Alerts for every order and problem: a Telegram chat, or a Discord channel (one, not both).
 # [telegram]

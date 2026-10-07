@@ -20,19 +20,14 @@ class Instruction(BaseModel):
     price: Decimal = Field(gt=0, le=100000)
     entry_price: Decimal | None = Field(default=None, gt=0, le=100000)
     fraction: Decimal | None = Field(default=None, gt=0, le=1, allow_inf_nan=False)
+    # An exit's share counts from what is left of the buys it sells from, unless the post or the
+    # playbook says the original buy (ADR-0010).
     exit_basis: Literal["original_position", "remaining_position"] | None = None
-    # For a guru whose sells refer to the whole position (ADR-0007): a buy joins the stock's open
-    # lot, and a sell sells from it, naming no buy price.
-    whole_position: bool = False
 
     @model_validator(mode="after")
     def validate_reference(self) -> Self:
-        if self.action != "buy" and self.entry_price is None and not self.whole_position:
-            raise PydanticCustomError(
-                "exit_missing_lot_reference", "An exit requires an explicit source entry reference"
-            )
-        if self.action != "buy" and self.entry_price is not None and self.whole_position:
-            raise ValueError("A whole-position exit names no buy price")
+        # An exit with no entry price sells from every open buy of the stock; with one, from the
+        # buys at exactly that price (ADR-0010).
         if self.action == "buy" and self.entry_price is not None:
             raise PydanticCustomError(
                 "entry_has_lot_reference", "An entry cannot reference an existing lot"
@@ -92,10 +87,4 @@ class StockSignal(BaseModel):
             for field in Instruction.model_fields:
                 if getattr(instruction, field) != getattr(evidence, field):
                     raise ValueError("Instruction differs from its validated evidence")
-            if (
-                self.guru_id is not None
-                and instruction.action != "buy"
-                and instruction.exit_basis is None
-            ):
-                raise ValueError("Profile exits require an explicit exit basis")
         return self

@@ -4,8 +4,9 @@ import Foundation
 /// owner copies it or skips it, through the end of its trading day.
 public struct WaitingCall: Equatable, Sendable {
     /// Skips that hold a call back for the owner rather than refuse it; the engine's
-    /// `HELD_FOR_OWNER`.
-    public static let heldForOwner: Set<String> = ["approval_required"]
+    /// `HELD_FOR_OWNER`: an account that approves every order, and a sell naming a buy price none
+    /// of its buys has (ADR-0010).
+    public static let heldForOwner: Set<String> = ["approval_required", "named_buy_not_held"]
 
     public let source: SourceActivity
     /// The accounts waiting on it.

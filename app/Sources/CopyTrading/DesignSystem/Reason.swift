@@ -103,6 +103,8 @@ enum Reason {
         "batch_size_unknown": "The post named a batch, not a size",
         "sell_names_no_buy": "The sell didn't say which buy it comes from",
         "approval_required": "You asked to approve every order for this account",
+        "named_buy_not_held": "None of your buys is at the buy price the guru named",
+        "sell_share_not_given": "The sell doesn't say how much",
         "approved_by_owner": "You approved this call",
         "waiting_expired": "Too late to copy: its trading day is over",
     ]

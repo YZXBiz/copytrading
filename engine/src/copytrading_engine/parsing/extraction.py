@@ -82,6 +82,31 @@ def playbook_maps(playbook: str, phrase: str, symbol: str) -> bool:
     return any(phrase in line and ticker.search(line) for line in playbook.splitlines())
 
 
+_PLAYBOOK_SIZE = re.compile(
+    r"^\s*(?P<words>.+?)\s+means\s+(?:sell\s+|buy\s+)?(?P<size>\d+/\d+|\d*\.\d+|half|all)\s*$",
+    re.IGNORECASE,
+)
+
+
+def playbook_size(playbook: str, words: str) -> Decimal | None:
+    """The size the owner's playbook gives a guru's own words, as in "减仓 means 1/2" or
+    "第二批 means 1/3" (ADR-0010); None when no line names these words."""
+    for line in playbook.splitlines():
+        match = _PLAYBOOK_SIZE.match(line)
+        if match is None or match.group("words").strip().strip('"“”') != words.strip():
+            continue
+        size = match.group("size").lower()
+        if size == "half":
+            return Decimal("0.5")
+        if size == "all":
+            return Decimal(1)
+        if "/" in size:
+            numerator, denominator = (Decimal(part) for part in size.split("/"))
+            return numerator / denominator if denominator else None
+        return Decimal(size)
+    return None
+
+
 MASS_MENTIONS = ("@everyone", "@here")
 
 
@@ -219,9 +244,9 @@ def _check_call(call: Call, text: str, route: Route, path: str) -> None:
     _check_stock(call.stock, text, route, f"{path}.stock")
     _check_price(call.price, text, f"{path}.price")
     if isinstance(call, Buy):
-        _check_size(call, text, f"{path}.size")
+        _check_size(call, text, route.playbook, f"{path}.size")
         return
-    _check_share(call, text, f"{path}.share")
+    _check_share(call, text, route.playbook, f"{path}.share")
     if isinstance(call.sell_from, Lot):
         _number(call.sell_from.buy_price, call.sell_from.words, text, f"{path}.sell_from")
         if isinstance(call.price, Exact) and call.price.value == call.sell_from.buy_price:
@@ -259,10 +284,12 @@ def _check_price(price: object, text: str, path: str) -> None:
         _words(price.words, text, path)
 
 
-def _check_size(buy: Buy, text: str, path: str) -> None:
+def _check_size(buy: Buy, text: str, playbook: str, path: str) -> None:
     size = buy.size
     if isinstance(size, Fraction):
-        if not allocation_is_grounded(size.value, size.words, text):
+        if not allocation_is_grounded(size.value, size.words, text) and not _playbook_sized(
+            size.value, size.words, text, playbook
+        ):
             raise GroundingError("fraction_not_grounded", path, "The size is not in the post")
     elif isinstance(size, Batch):
         _words(size.words, text, path)
@@ -277,12 +304,23 @@ def _check_size(buy: Buy, text: str, path: str) -> None:
         raise GroundingError("source_fraction_omitted", path, "The post states a size")
 
 
-def _check_share(sell: Sell, text: str, path: str) -> None:
+def _check_share(sell: Sell, text: str, playbook: str, path: str) -> None:
     share = sell.share
     if isinstance(share, All):
         _words(share.words, text, path)
-    elif not allocation_is_grounded(share.value, share.words, text):
+    elif isinstance(share, NotGiven):
+        if EXPLICIT_ALLOCATION.search(text):
+            raise GroundingError("source_fraction_omitted", path, "The post states a share")
+    elif not allocation_is_grounded(share.value, share.words, text) and not _playbook_sized(
+        share.value, share.words, text, playbook
+    ):
         raise GroundingError("fraction_not_grounded", path, "The share is not in the post")
+
+
+def _playbook_sized(value: Decimal, words: str, text: str, playbook: str) -> bool:
+    """The words are in the post and the owner's playbook gives them exactly this size."""
+    sized = playbook_size(playbook, words) if words and words in text else None
+    return sized is not None and same_fraction(sized, value)
 
 
 def _words(words: str, text: str, path: str) -> None:
