@@ -1,15 +1,12 @@
 import SwiftUI
 
 /// How a post becomes a trade, drawn: one soft path across faint chart paper through six stops,
-/// with the example call written under each. A dot carries the post along the path from the
-/// guru's channel to Activity; the last leg, the guru's sale, is dashed because it comes later.
+/// with the example call written under each. It never moves: a chevron on each leg says which way
+/// the post travels, and the last leg, the guru's sale, is dashed because it comes later.
 struct GuideJourneyDiagram: View {
     private let stops = GuideJourneyStop.all
     private let height: CGFloat = 210
     private let labelRow: CGFloat = 160
-    /// Seconds for the dot to travel from the post to Activity.
-    private let journeySeconds = 6.0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
 
     private var violet: Color { Color(red: 0.55, green: 0.42, blue: 0.95) }
@@ -28,7 +25,7 @@ struct GuideJourneyDiagram: View {
                     .font(.system(size: 10.5, design: .serif).italic())
                     .foregroundStyle(Palette.tertiaryInk)
                     .position(curve.point(onLeg: stops.count - 2, at: 0.45).applying(.init(translationX: 4, y: -18)))
-                traveler(curve)
+                chevrons(curve)
                 ForEach(Array(stops.enumerated()), id: \.offset) { index, stop in
                     node(stop).position(curve.point(index))
                     label(stop, number: index + 1)
@@ -71,28 +68,29 @@ struct GuideJourneyDiagram: View {
         }
     }
 
-    /// The post, travelling from the guru's channel to Activity and fading in and out at the ends.
-    /// With Reduce Motion it rests on the way to the AI.
-    private func traveler(_ curve: GuideJourneyCurve) -> some View {
-        TimelineView(.animation(minimumInterval: 1 / 20, paused: reduceMotion)) { timeline in
-            let legs = stops.count - 2
-            let progress =
-                reduceMotion
-                ? 0.15 : timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: journeySeconds) / journeySeconds
-            let along = progress * Double(legs)
-            let leg = min(Int(along), legs - 1)
-            Circle()
-                .fill(Palette.accent)
-                .frame(width: 8, height: 8)
-                .shadow(color: Palette.accent.opacity(0.6), radius: 6)
-                .opacity(reduceMotion ? 1 : min(1, min(progress, 1 - progress) * 12))
-                .position(curve.point(onLeg: leg, at: CGFloat(along - Double(leg))))
+    /// One chevron on the middle of each leg, turned along the path, in the leg's own color.
+    private func chevrons(_ curve: GuideJourneyCurve) -> some View {
+        ForEach(0..<(stops.count - 1), id: \.self) { index in
+            let isLater = index == stops.count - 2
+            GuideJourneyChevron()
+                .stroke(
+                    legColor(index).opacity(isLater ? 0.5 : 0.9),
+                    style: StrokeStyle(lineWidth: 1.8, lineCap: .round, lineJoin: .round)
+                )
+                .frame(width: 5, height: 9)
+                .rotationEffect(curve.direction(onLeg: index, at: 0.5))
+                .position(curve.point(onLeg: index, at: 0.5))
         }
+    }
+
+    /// The path's blue turning violet, sampled at the middle of a leg.
+    private func legColor(_ index: Int) -> Color {
+        let mix = (Double(index) + 0.5) / Double(stops.count - 1)
+        return Palette.accent.mix(with: violet, by: mix)
     }
 
     private func node(_ stop: GuideJourneyStop) -> some View {
         ZStack {
-            // Solid paper, not a material: a material re-blurs whatever moves behind it every frame.
             Circle().fill(Palette.page.opacity(0.92))
             Circle().strokeBorder(Palette.ink.opacity(0.08), lineWidth: 0.5)
             Image(systemName: stop.symbol)

@@ -19,8 +19,11 @@ struct SetupTourOverlay: View {
                 if let anchor = targets[stop.target] {
                     let hole = layer[anchor].insetBy(dx: -6, dy: -4)
                     let placement = place(around: hole, in: layer.size)
-                    // Inside a panel the hint sits under the field itself; the page gets the card.
-                    if !stop.isInPanel {
+                    // Inside a panel the field is outlined and its hint sits under it; the page gets
+                    // the card.
+                    if stop.isInPanel {
+                        SetupTourSpotlight(hole: hole, radius: 12, dims: false)
+                    } else {
                         SetupTourSpotlight(hole: hole)
                         SetupTourCard(stop: stop, caretEdge: placement.edge, caretOffset: placement.caret, model: model)
                             .onGeometryChange(for: CGFloat.self, of: \.size.height) { cardHeight = $0 }

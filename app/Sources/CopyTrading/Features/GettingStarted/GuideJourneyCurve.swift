@@ -1,4 +1,4 @@
-import CoreGraphics
+import SwiftUI
 
 /// Where the journey's stops sit in a diagram of a given width, and the soft curve between two of
 /// them: each leg leaves and arrives level, so the path reads as one gentle wave.
@@ -23,6 +23,16 @@ struct GuideJourneyCurve {
         let x = u * u * u * a.x + 3 * u * u * t * c1.x + 3 * u * t * t * c2.x + t * t * t * b.x
         let y = u * u * u * a.y + 3 * u * u * t * c1.y + 3 * u * t * t * c2.y + t * t * t * b.y
         return CGPoint(x: x, y: y)
+    }
+
+    /// Which way the path heads `fraction` of the way along the leg from stop `index`.
+    func direction(onLeg index: Int, at fraction: CGFloat) -> Angle {
+        let (a, c1, c2, b) = controls(index)
+        let t = fraction
+        let u = 1 - t
+        let dx = 3 * u * u * (c1.x - a.x) + 6 * u * t * (c2.x - c1.x) + 3 * t * t * (b.x - c2.x)
+        let dy = 3 * u * u * (c1.y - a.y) + 6 * u * t * (c2.y - c1.y) + 3 * t * t * (b.y - c2.y)
+        return .radians(atan2(dy, dx))
     }
 
     func controls(_ index: Int) -> (CGPoint, CGPoint, CGPoint, CGPoint) {

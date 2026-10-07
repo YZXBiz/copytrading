@@ -79,7 +79,7 @@ struct EquityPlot: View {
                 .foregroundStyle(lineTone)
                 .annotation(position: .overlay) {
                     if isLive && selection == .none {
-                        LivePulse(color: lineTone)
+                        LiveHalo(color: lineTone)
                     }
                 }
                 .accessibilityHidden(true)
