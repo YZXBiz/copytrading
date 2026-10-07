@@ -14,7 +14,7 @@ struct ActivityInvitation: View {
             ActivityInvitationFigure()
         } actions: {
             if model.savedTradingConfiguration == nil {
-                Button(L10n.string("Continue Getting Started"), action: openGuide)
+                Button(L10n.string("Continue Setup"), action: model.startSetupTour)
                     .buttonStyle(.borderedProminent)
                     .buttonBorderShape(.capsule)
                     .controlSize(.large)
@@ -30,10 +30,5 @@ struct ActivityInvitation: View {
             }
         }
         .frame(maxWidth: .infinity)
-    }
-
-    private func openGuide() {
-        model.guideAnchor = .setUp
-        model.selectedScreen = .gettingStarted
     }
 }
