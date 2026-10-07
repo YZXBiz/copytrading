@@ -1,13 +1,18 @@
 """Independent account reconciliation and durable signal intake supervisors."""
 
 import asyncio
+import dataclasses
 import datetime as dt
 import logging
 from collections.abc import Callable
 from contextlib import AbstractContextManager, nullcontext
 from typing import Protocol, runtime_checkable
 
-from copytrading_engine.execution.application.ports import AccountRuntimeView, ExecutionObservation
+from copytrading_engine.execution.application.ports import (
+    AccountRuntimeView,
+    BrokerError,
+    ExecutionObservation,
+)
 from copytrading_engine.execution.domain.lifecycle import (
     AccountControlCommand,
     AccountControlResult,
@@ -132,6 +137,11 @@ class WatchesOrders(Protocol):
 # happen, so the periodic check is only a safety net for balances and reconciliation; it stays
 # well inside Alpaca's per-account request limits with many accounts.
 STREAM_SAFETY_SECONDS = 30.0
+# While Alpaca cannot be reached the account keeps trying, first after a second and then twice as
+# long each time, up to a minute; a passing outage must not leave copying stopped until the owner
+# notices.
+UNREACHABLE_FIRST_RETRY_SECONDS = 1.0
+UNREACHABLE_RETRY_SECONDS = 60.0
 
 
 class AccountSupervisor:
@@ -142,14 +152,17 @@ class AccountSupervisor:
         poll_seconds: float,
         stop: asyncio.Event,
         on_change: Callable[[], None],
+        *,
+        open_failure: str = "account_unavailable",
     ) -> None:
+        """`open_failure` says why an account without an owner could not open."""
         self.id = account_id
         self.owner = owner
         self.poll_seconds = poll_seconds
         self.stop = stop
         self.on_change = on_change
         self.state: AccountRunState = "ready" if owner is not None else "failed"
-        self.error_code: str | None = None if owner is not None else "account_unavailable"
+        self.error_code: str | None = None if owner is not None else open_failure
         self._account_status = AccountStatus(self.id, self.state, self.error_code)
         self._task: asyncio.Task[None] | None = None
         # Set by an order update or a newly received call: the next cycle starts at once.
@@ -220,13 +233,30 @@ class AccountSupervisor:
 
     async def _reconcile(self) -> None:
         assert self.owner is not None
+        failures = 0
         while not self.stop.is_set() and self.state == "running":
             # Cleared before the cycle: a wake during it starts the next cycle at once.
             self._wake.clear()
             try:
                 observation = await self.owner.cycle(dt.datetime.now(dt.UTC), halted=False)
                 self._outstanding_work = observation.ledger.has_outstanding_work
+                if failures:
+                    failures = 0
+                    self._reached()
                 await self.refresh()
+            except BrokerError as exc:
+                if not exc.transient:
+                    self._fail(exc)
+                    return
+                failures += 1
+                self._unreachable(exc, failures)
+                await self._idle(
+                    min(
+                        UNREACHABLE_RETRY_SECONDS,
+                        UNREACHABLE_FIRST_RETRY_SECONDS * 2.0 ** (failures - 1),
+                    )
+                )
+                continue
             except Exception as exc:  # noqa: BLE001 - the supervisor records the account failure
                 self._fail(exc)
                 return
@@ -246,7 +276,7 @@ class AccountSupervisor:
             # Updates may have been missed while it was down: reconcile now, then check often.
             self._wake.set()
 
-    async def _idle(self) -> None:
+    async def _idle(self, seconds: float | None = None) -> None:
         """Wait for the periodic check, ended early by an order update, a new call, or Stop."""
         waits = {
             asyncio.ensure_future(self.stop.wait()),
@@ -254,11 +284,26 @@ class AccountSupervisor:
         }
         try:
             await asyncio.wait(
-                waits, timeout=self.check_seconds, return_when=asyncio.FIRST_COMPLETED
+                waits,
+                timeout=self.check_seconds if seconds is None else seconds,
+                return_when=asyncio.FIRST_COMPLETED,
             )
         finally:
             for wait in waits:
                 wait.cancel()
+
+    def _unreachable(self, exc: BrokerError, failures: int) -> None:
+        """Alpaca did not answer; the account stays running and tries again."""
+        if failures == 1:
+            log.warning("trading_account_unreachable id=%s status=%s", self.id, exc.status)
+        self.error_code = "broker_unreachable"
+        self._account_status = dataclasses.replace(self._account_status, error_code=self.error_code)
+        self.on_change()
+
+    def _reached(self) -> None:
+        log.info("trading_account_reached id=%s", self.id)
+        self.error_code = None
+        self._account_status = dataclasses.replace(self._account_status, error_code=None)
 
     def _fail(self, exc: Exception) -> None:
         if self.state == "failed":
@@ -270,7 +315,12 @@ class AccountSupervisor:
         self._account_status = AccountStatus(self.id, self.state, self.error_code)
         if self.owner is not None:
             self.owner.request_stop()
-        log.error("trading_account_failed id=%s type=%s", self.id, type(exc).__name__)
+        log.error(
+            "trading_account_failed id=%s type=%s status=%s",
+            self.id,
+            type(exc).__name__,
+            getattr(exc, "status", None),
+        )
         self.on_change()
 
     async def close(self) -> None:

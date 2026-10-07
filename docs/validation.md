@@ -32,9 +32,15 @@ one.
 - **Broker adapter:** submits a one-share nonmarketable limit order, finds it
   again by client ID, and cancels it, ending with no positions or open orders
   (`engine/tests/trading/test_paper_broker_probe.py`).
-- **Whole pipeline:** a real post goes through DeepSeek interpretation, routing,
-  and risk into Alpaca paper, and the orders it placed are cancelled
-  (`engine/tests/integration/test_paper_trade_end_to_end.py`).
+- **Whole pipeline:** 22 scenarios replay a guru's posts through DeepSeek
+  interpretation, routing, risk, and the ledger into Alpaca paper and check what
+  reached the account: full, partial, and added buys; partial and full sells at
+  the guru's price less the allowance; every limit (per order, per stock, account
+  total, entries per day, cash); approval, entries off, and exits not copied;
+  chatter, late posts, unknown tickers, and a post delivered twice; overnight
+  rules; orders placed outside the app; a restart that keeps the lot; and a burst
+  of posts. Each scenario starts with no open orders and no shares of its stocks,
+  and sells back what it bought (`engine/tests/integration/test_paper_scenarios.py`).
 - **The real window:** journey J31 in `make ui-journeys` sets up and starts copying
   against live Discord, DeepSeek, and Alpaca paper, then shows that an agent's
   request runs only after the owner approves it, once, and that a rejected one

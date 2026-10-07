@@ -41,6 +41,8 @@ enum Reason {
         "account_paused": "Entries are paused for this account",
         "account_blocked": "The broker blocked this account",
         "account_unavailable": "The account could not be reached",
+        "outside_open_orders": "Cancel the orders open at Alpaca first",
+        "broker_account_inactive": "Alpaca has not activated this account",
         "account_risk_unavailable": "Risk could not be checked",
         "recovery_pending": "Still checking the account after a restart",
         "outside_session": "The market was closed",

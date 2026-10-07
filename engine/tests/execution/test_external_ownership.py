@@ -14,6 +14,7 @@ from copytrading_engine.execution.adapters.alpaca.broker import AlpacaCredential
 from copytrading_engine.execution.adapters.owner import ExecutionOwner
 from copytrading_engine.execution.adapters.sqlite_ledger import Store
 from copytrading_engine.execution.application.engine import CopyEngine
+from copytrading_engine.execution.application.ports import AccountOpenRefused
 from copytrading_engine.execution.application.recovery import RecoveryApplication
 from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
 from copytrading_engine.execution.domain.lifecycle import AccountControlCommand
@@ -69,8 +70,9 @@ def test_initial_manual_open_order_prevents_inventory_commit():
         filled_avg_price=None,
         status="new",
     ).model_dump(mode="json")
-    with pytest.raises(RuntimeError, match="open orders"):
+    with pytest.raises(AccountOpenRefused) as refused:
         engine_with_wide_limits(store, broker).bind(NOW)
+    assert refused.value.reason == "outside_open_orders"
     assert store.load().account_id is None
     assert not store.events
 

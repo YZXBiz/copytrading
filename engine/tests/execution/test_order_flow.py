@@ -28,6 +28,18 @@ def test_buy_reduce_close_preserves_owned_lot(system):
     assert all(Decimal(lot.remaining_qty) == 0 for lot in store.load().lots.values())
 
 
+def test_a_symbol_alpaca_does_not_list_is_skipped_and_the_next_call_trades(system):
+    engine, broker, _ = system
+    broker.unknown_symbols.add("ABC")
+    deliver(engine, event())
+    assert engine.ledger.message("discord:demo:1").parts == (Skipped(reason="unsupported_asset"),)
+    assert not engine.ledger.orders()
+
+    broker.unknown_symbols.clear()
+    deliver(engine, event("2", price="25.10"))
+    assert broker.holdings["ABC"] > 0
+
+
 def test_remaining_basis_reduce_sells_part_of_what_is_left(system):
     """Selling half of what's left, after an earlier half, sells a quarter of the buy."""
     engine, broker, _ = system

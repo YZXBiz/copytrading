@@ -10,6 +10,7 @@ from typing import Literal
 
 from copytrading_engine.execution.application.ledger import TradingLedger
 from copytrading_engine.execution.application.ports import (
+    AccountOpenRefused,
     Broker,
     BrokerError,
     ExecutionObserver,
@@ -145,11 +146,13 @@ class CopyEngine:
     ) -> Account:
         account = account if account is not None else self.broker.account()
         if not account.active:
-            raise RuntimeError("Broker account is not active for trading")
+            raise AccountOpenRefused("broker_account_inactive")
         if self.ledger.account_id is not None and self.ledger.account_id != account.id:
             raise RuntimeError("Broker account identity changed")
         if not self.ledger.account_id and self.broker.open_orders():
-            raise RuntimeError("Unresolved broker open orders prevent initial inventory")
+            # The first connection records what the account already holds; an order placed
+            # outside CopyTrading could fill during that count, so the owner settles it first.
+            raise AccountOpenRefused("outside_open_orders")
         positions = self.broker.positions()
         self.ledger.bind(account.id, now, environment, positions)
         self._environment = environment
@@ -281,7 +284,13 @@ class CopyEngine:
         account_read = _BROKER_READS.submit(self.broker.account)
         positions_read = _BROKER_READS.submit(self.broker.positions)
         open_orders_read = _BROKER_READS.submit(self.broker.open_orders)
-        asset = asset_read.result()
+        try:
+            asset = asset_read.result()
+        except BrokerError as exc:
+            if exc.status != 404:
+                raise
+            # Alpaca lists no such stock: a typo, a delisted name, or a listing it does not carry.
+            return TradeDecision(None, "unsupported_asset")
         if asset.symbol != s.symbol:
             raise RuntimeError("Broker asset identity mismatch")
         if not asset.tradable or asset.asset_class != "us_equity" or asset.status != "active":

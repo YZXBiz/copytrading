@@ -9,11 +9,13 @@ struct AccountHeaderPanel: View {
 
     private var isPending: Bool { feature.pendingAccounts.contains(account.accountID) }
 
+    /// Readiness values for an account that is not running, so there is nothing to control.
+    private static let notRunning: Set<String> = [
+        "account_unavailable", "processing_stopped", "outside_open_orders", "broker_account_inactive",
+    ]
+
     private var canControl: Bool {
-        account.activeConfiguration
-            && account.readiness != "account_unavailable"
-            && account.readiness != "processing_stopped"
-            && !isPending
+        account.activeConfiguration && !Self.notRunning.contains(account.readiness) && !isPending
     }
 
     /// "disabled" is how every new account starts; "paused" is an owner pause. Both block entries.

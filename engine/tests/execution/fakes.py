@@ -43,6 +43,8 @@ class FakeBroker:
         self.timeout_after_accept = False
         self.auto_fill = True
         self.market_fill_price = "24.50"
+        # Symbols Alpaca does not list: asking for one answers 404.
+        self.unknown_symbols: set[str] = set()
         self.account_data = {
             "id": "paper-demo",
             "status": "ACTIVE",
@@ -60,6 +62,8 @@ class FakeBroker:
         return decode_account(self.account_data)
 
     def asset(self, symbol):
+        if symbol in self.unknown_symbols:
+            raise BrokerError(404)
         return decode_asset(
             {
                 "symbol": symbol,
