@@ -650,6 +650,7 @@ class TradingLedger:
             )
 
     def open_ownership_incidents(self, audit: PositionAudit, now: dt.datetime) -> None:
+        self._close_matched_incidents(audit, now)
         for comparison in audit.positions:
             if not comparison.mismatched or self.unresolved_ownership(comparison.symbol):
                 continue
@@ -676,6 +677,49 @@ class TradingLedger:
                     ownership_incidents=self._snapshot.ownership_incidents | {identity: incident}
                 ),
                 JournalEvent(at=now, payload=OwnershipIncidentOpened(incident=incident)),
+            )
+
+    def _close_matched_incidents(self, audit: PositionAudit, now: dt.datetime) -> None:
+        """A mismatch closes by itself once the broker holds exactly what the app expects again,
+        as when shares bought outside the app are sold again: nothing is left to allocate, and
+        an open incident would keep refusing every call for the stock."""
+        account_id = self.account_id
+        if account_id is None:
+            return
+        compared = {comparison.symbol: comparison for comparison in audit.positions}
+        for incident in tuple(self._snapshot.ownership_incidents.values()):
+            if incident.resolved:
+                continue
+            comparison = compared.get(incident.symbol)
+            if comparison is not None and comparison.actual != comparison.expected:
+                continue
+            if self.pending(incident.symbol) or any(
+                item.symbol == incident.symbol and item.unresolved
+                for item in self._snapshot.late_order_incidents.values()
+            ):
+                continue
+            broker_qty = comparison.actual if comparison is not None else Decimal(0)
+            lots = {
+                key: lot.remaining_qty
+                for key, lot in self._snapshot.lots.items()
+                if lot.symbol == incident.symbol
+            }
+            external_qty = broker_qty - sum(lots.values(), Decimal(0))
+            if external_qty < 0 or now <= incident.observed_at:
+                continue
+            self.resolve_ownership(
+                OwnershipResolutionRequest(
+                    resolution_id=f"matched-{incident.incident_id}",
+                    incident_id=incident.incident_id,
+                    account_id=account_id,
+                    symbol=incident.symbol,
+                    actor="copytrading",
+                    reason="broker_matches_again",
+                    broker_qty=broker_qty,
+                    external_qty=external_qty,
+                    lot_remaining=lots,
+                ),
+                now,
             )
 
     def resolve_ownership(

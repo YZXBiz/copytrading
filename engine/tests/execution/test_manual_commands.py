@@ -420,16 +420,13 @@ async def test_symbol_incident_blocks_only_affected_symbol_after_manual_resume(t
             NOW,
         )
 
-        # Open a durable AAPL incident, then restore broker positions so the
-        # current account-wide ownership comparison is clean.
+        # An AAPL share appears outside the app and stays: its incident is open while it lasts
+        # (one that matches again closes by itself).
         broker.holdings["AAPL"] = Decimal("1")
         await owner.cycle(NOW + dt.timedelta(seconds=1), halted=False)
-        broker.holdings.pop("AAPL")
         observation = await owner.cycle(NOW + dt.timedelta(seconds=2), halted=False)
         incidents = tuple(observation.ledger.ownership_incidents.values())
         assert any(incident.symbol == "AAPL" and not incident.resolved for incident in incidents)
-        assert observation.position_audit is not None
-        assert observation.position_audit.matched
 
         async def correction_for_symbol(symbol: str, identity: str) -> ManualCorrectionRecord:
             at = NOW + dt.timedelta(seconds=3)
