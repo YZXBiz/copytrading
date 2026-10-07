@@ -1,5 +1,6 @@
 """State ownership, atomic failures, and recovery through the real application port."""
 
+import datetime as dt
 import json
 from decimal import Decimal
 
@@ -117,6 +118,33 @@ def test_numerically_equivalent_repost_does_not_create_another_order():
     engine.process(NOW)
     assert broker.calls == 1
     assert engine.ledger.message("discord:demo:repost").parts == (Skipped(reason="duplicate"),)
+
+
+def test_with_the_repeat_check_off_an_identical_post_buys_again():
+    engine, broker, _ = system_with_queued_buy()
+    engine.process(NOW)
+    repost = StockSignal.model_validate(event(id="repost"))
+    receive(engine, repost, NOW, repeat_window_minutes=None)
+    engine.process(NOW)
+    assert broker.calls == 2
+    assert engine.ledger.message("discord:demo:repost").parts != (Skipped(reason="duplicate"),)
+
+
+@pytest.mark.parametrize(("window", "repeat"), [(10, False), (30, True)])
+def test_the_guru_window_decides_whether_a_later_identical_buy_is_a_repost(window, repeat):
+    engine, broker, _ = system_with_queued_buy()
+    engine.process(NOW)
+    later = NOW + dt.timedelta(minutes=20)
+    receive(
+        engine,
+        StockSignal.model_validate(event(id="later", timestamp=later)),
+        later,
+        repeat_window_minutes=window,
+    )
+    engine.process(later)
+    skipped = engine.ledger.message("discord:demo:later").parts == (Skipped(reason="duplicate"),)
+    assert skipped is repeat
+    assert broker.calls == (1 if repeat else 2)
 
 
 @pytest.mark.parametrize(

@@ -20,6 +20,11 @@ class RouteConnection(BaseModel):
     default_fraction: Decimal | None = Field(default=Decimal(1), gt=0, le=1, allow_inf_nan=False)
 
 
+# A guru re-posting a call within this many minutes is the same call (the default per guru).
+REPEAT_WINDOW_MINUTES = 10
+MAX_REPEAT_WINDOW_MINUTES = 1440
+
+
 class DestinationTerms(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", hide_input_in_errors=True)
 
@@ -28,6 +33,10 @@ class DestinationTerms(BaseModel):
     configuration_revision: str = Field(pattern=r"^[0-9a-f]{64}$")
     guru_id: str | None = Field(default=None, pattern=r"^[a-zA-Z0-9_-]{1,64}$")
     profile_revision: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    # The guru's repeat window; None copies every post, even an identical one.
+    repeat_window_minutes: int | None = Field(
+        default=REPEAT_WINDOW_MINUTES, ge=1, le=MAX_REPEAT_WINDOW_MINUTES
+    )
 
     @model_validator(mode="after")
     def validate_profile_reference(self) -> DestinationTerms:

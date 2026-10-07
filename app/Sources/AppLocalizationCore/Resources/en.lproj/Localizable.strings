@@ -1411,7 +1411,6 @@
 "“First batch”, “second batch”: each batch buys an equal part of the full position." = "“First batch”, “second batch”: each batch buys an equal part of the full position.";
 "%@ batches make a full position" = "%@ batches make a full position";
 "How they trade" = "How they trade";
-"Two things that differ from guru to guru." = "Two things that differ from guru to guru.";
 "%@ Agent access stays off until you choose again." = "%@ Agent access stays off until you choose again.";
 "%@ Fix it under Interpreter in Connections." = "%@ Fix it under Interpreter in Connections.";
 "“%@” needs a Discord channel." = "“%@” needs a Discord channel.";
@@ -1601,3 +1600,10 @@
 "A check reads the public list of releases. Nothing about your accounts or trading is sent." = "A check reads the public list of releases. Nothing about your accounts or trading is sent.";
 "Check for updates automatically" = "Check for updates automatically";
 "Once a day. You still choose when to install." = "Once a day. You still choose when to install.";
+"Three things that differ from guru to guru." = "Three things that differ from guru to guru.";
+"Skip re-posted calls" = "Skip re-posted calls";
+"Every post is copied, even one that repeats an earlier call." = "Every post is copied, even one that repeats an earlier call.";
+"The same call again (same stock, price, and size) counts once. A repeated sell counts once all day." = "The same call again (same stock, price, and size) counts once. A repeated sell counts once all day.";
+"Counts as a re-post within" = "Counts as a re-post within";
+"Minutes" = "Minutes";
+"minutes" = "minutes";

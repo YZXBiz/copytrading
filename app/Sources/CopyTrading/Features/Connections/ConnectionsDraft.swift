@@ -95,6 +95,7 @@ struct ConnectionsDraft {
                 exitBasis: profile?.exitBasis ?? .originalPosition,
                 batches: profile?.batches,
                 sellsReferTo: profile?.sellsReferTo ?? .buyPrice,
+                repeatWindowMinutes: route.repeatWindowMinutes,
                 examples: profile?.examples.map(TradingProfileExampleDraft.init(example:)) ?? [],
                 connection: route.connections.first.map { connection in
                     TradingConnectionDraft(
@@ -148,7 +149,8 @@ struct ConnectionsDraft {
                     authorID: route.authorID.trimmed.nilIfEmpty,
                     guruID: profile.guruID,
                     profileRevision: profile.profileRevision,
-                    connections: route.connection.map { [$0.terms(fullPositionUSD: fullPosition(for: $0))] } ?? []
+                    connections: route.connection.map { [$0.terms(fullPositionUSD: fullPosition(for: $0))] } ?? [],
+                    repeatWindowMinutes: route.repeatWindowMinutes
                 ))
         }
         let configuration = TradingConfiguration(

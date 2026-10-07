@@ -91,18 +91,21 @@ ZERO = Decimal(0)
 log = logging.getLogger(__name__)
 
 
-def _repeats(instruction: Instruction, at: dt.datetime, earlier: MessageRecord) -> bool:
-    """A guru re-posting a call is not a new call. A buy repeated within ten minutes is the same
-    buy; later it can be a real second buy at that price. A sell repeated the same trading day,
-    naming the same lot, price, and size, is always the same sell: done twice it would sell the
-    rest of the lot, as when a guru re-posts the day's calls in a recap."""
-    if instruction not in earlier.instructions:
+def _repeats(
+    instruction: Instruction, at: dt.datetime, earlier: MessageRecord, window_minutes: int | None
+) -> bool:
+    """A guru re-posting a call is not a new call, while the guru's repeat check is on. A buy
+    read the same way (stock, price, size) within the guru's window is the same buy; later it can
+    be a real second buy at that price. A sell repeated the same trading day, naming the same lot,
+    price, and size, is always the same sell: done twice it would sell the rest of the lot, as
+    when a guru re-posts the day's calls in a recap. With the check off, every post is copied."""
+    if window_minutes is None or instruction not in earlier.instructions:
         return False
     since = (at - earlier.timestamp).total_seconds()
     if since < 0:
         return False
     if instruction.action == "buy":
-        return since <= 600
+        return since <= window_minutes * 60
     return trade_date(at) == trade_date(earlier.timestamp)
 
 
@@ -833,7 +836,10 @@ class TradingLedger:
         parts = tuple(
             Skipped(reason="duplicate")
             if status == "queued"
-            and any(_repeats(instruction, signal.timestamp, m) for m in previous)
+            and any(
+                _repeats(instruction, signal.timestamp, m, destination.repeat_window_minutes)
+                for m in previous
+            )
             else Pending()
             for instruction in signal.instructions
         )
