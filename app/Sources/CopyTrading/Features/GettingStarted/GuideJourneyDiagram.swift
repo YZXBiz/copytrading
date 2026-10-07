@@ -74,7 +74,7 @@ struct GuideJourneyDiagram: View {
     /// The post, travelling from the guru's channel to Activity and fading in and out at the ends.
     /// With Reduce Motion it rests on the way to the AI.
     private func traveler(_ curve: GuideJourneyCurve) -> some View {
-        TimelineView(.animation(minimumInterval: 1 / 30, paused: reduceMotion)) { timeline in
+        TimelineView(.animation(minimumInterval: 1 / 20, paused: reduceMotion)) { timeline in
             let legs = stops.count - 2
             let progress =
                 reduceMotion
@@ -92,8 +92,8 @@ struct GuideJourneyDiagram: View {
 
     private func node(_ stop: GuideJourneyStop) -> some View {
         ZStack {
-            Circle().fill(.ultraThinMaterial)
-            Circle().fill(Palette.page.opacity(0.55))
+            // Solid paper, not a material: a material re-blurs whatever moves behind it every frame.
+            Circle().fill(Palette.page.opacity(0.92))
             Circle().strokeBorder(Palette.ink.opacity(0.08), lineWidth: 0.5)
             Image(systemName: stop.symbol)
                 .font(.system(size: 17, weight: .medium))
