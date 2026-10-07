@@ -630,6 +630,10 @@ def build_debug_bundle() -> None:
 def launch(state_root: Path, *, quit_first: bool = True) -> None:
     if quit_first:
         quit_app()
+    # Ending the setup tour is remembered per app; a run starts as a first launch would.
+    subprocess.run(
+        ["defaults", "delete", BUNDLE_ID, "setupTour.ended"], capture_output=True, check=False
+    )
     subprocess.run(
         [
             "open",
@@ -1290,6 +1294,51 @@ def j31_agent_approval(app: AppDriver) -> None:
     _check_every_cli_command(app, asked["proposal_id"])
     _agent_result(app, 0, "pause")
     _check_locked_app_still_pauses(app)
+
+
+def j39_setup_tour(app: AppDriver) -> None:
+    """A first launch opens into the setup tour, which follows the owner from the Discord row to
+    Start Copying: each stop points at the next thing to do and moves on once it is done.
+
+    Saves and starts a real paper setup, like J31, so run it alone on a fresh state:
+    `--only J39`. New accounts start with entries off, so nothing can be bought.
+    """
+    setup = _paper_setup()
+    first = app.wait_for("tour.card", timeout=30, name="tour-1-discord-row")
+    app.expect(first, "Connect Discord", "Welcome. Five steps", "tour.strip")
+    app.click("connections.discord")
+    time.sleep(0.8)
+    app.expect(app.wait_for("Paste the channel ID", timeout=10, name="tour-2-channel"), "tour.card")
+    app.type(setup["channel"], into="Channel IDs")
+    app.wait_for("Paste your Discord token", timeout=10, name="tour-3-token")
+    app.type(setup["discord_token"], into="Discord token")
+    app.connect()
+    app.wait_for("Pick an AI reader", timeout=20, name="tour-4-reader")
+    app.click("connections.provider.deepseek")
+    time.sleep(0.8)
+    app.wait_for("Paste the API key", timeout=10, name="tour-5-key")
+    app.type(setup["model"], into="Model")
+    app.type(setup["model_key"], into="API key")
+    app.connect()
+    app.wait_for("Add your broker", timeout=20, name="tour-6-broker")
+    app.click("connections.accounts.paper")
+    app.wait_for("Alpaca keys", timeout=15)
+    app.type(setup["alpaca_key"], into="Alpaca API key")
+    app.type(setup["alpaca_secret"], into="Alpaca API secret")
+    app.click("Done")
+    app.wait_gone("Alpaca keys", timeout=60)
+    app.wait_for("Add your guru", timeout=20, name="tour-7-guru")
+    app.click("connections.gurus.add")
+    app.type("Tour Guru", into="Name")
+    app.click("Done")
+    last = app.wait_for("Waiting for Start Copying", timeout=20, name="tour-8-start")
+    app.expect(last, "tour.card")
+    app.click("setup.startCopying")
+    # The card steps aside while the setup is checked and started, and the tour ends once it
+    # is saved.
+    app.wait_gone("tour.card", timeout=20)
+    app.wait_gone("tour.strip", timeout=180)
+    app.expect_absent(app.see("tour-done"), "Not copying")
 
 
 def _expect_exit(app: AppDriver, expected: int, *arguments: str) -> None:
@@ -2016,6 +2065,8 @@ JOURNEYS: list[tuple[str, Callable[[AppDriver], None]]] = [
     ("J38 today chart", j38_today_chart),
     ("J35 copy and sell", j35_copy_and_sell),
     ("J36 approve and skip", j36_approve_and_skip),
+    # Alone, on a fresh state: it saves and starts a setup from the first launch.
+    ("J39 setup tour", j39_setup_tour),
 ]
 
 

@@ -92,7 +92,9 @@ struct ConnectionsView: View {
                     .strokeBorder(contrast == .increased ? Palette.secondaryInk : Palette.hairline, lineWidth: 1 / displayScale)
             }
             .overlayPreferenceValue(SetupTourTargetKey.self) { targets in
-                if let tourStop {
+                // An account or guru sheet covers the page, and a check or start already answers
+                // the last stop; the tour waits behind them.
+                if let tourStop, model.setupEditor == nil, !model.isValidatingTrading, !model.isActivatingTrading {
                     SetupTourOverlay(stop: tourStop, targets: targets, model: model)
                 }
             }
@@ -123,9 +125,10 @@ struct ConnectionsView: View {
 
     private var progress: SetupProgress { model.setupProgress }
 
-    /// Where the setup tour points, while it runs and no account or guru sheet covers the page.
+    /// Where the setup tour points while it runs.
+    /// Nil once the setup is done; the tour then ends. An account or guru sheet only hides it.
     private var tourStop: SetupTourStop? {
-        guard model.isTouringSetup, model.setupEditor == nil else { return nil }
+        guard model.isTouringSetup else { return nil }
         let open: ConnectionKind? = if case .editor(let kind) = panel?.page { kind } else { nil }
         return SetupTourStop.current(progress: progress, channelsEntered: channelsEntered, panel: open)
     }
