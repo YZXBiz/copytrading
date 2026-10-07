@@ -26,7 +26,7 @@ def _profiles_module():
     return importlib.import_module("copytrading_engine.trading.domain.profiles")
 
 
-def _draft(module, *, guru_id: str, symbol: str, exit_basis: str):
+def _draft(module, *, guru_id: str, symbol: str):
     return module.ProfileDraft(
         guru_id=guru_id,
         display_name=guru_id.title(),
@@ -39,7 +39,6 @@ def _draft(module, *, guru_id: str, symbol: str, exit_basis: str):
                 expected_fraction=Decimal("1") / Decimal("6"),
             ),
         ),
-        exit_basis=exit_basis,
     )
 
 
@@ -71,7 +70,6 @@ def test_profile_revisions_are_immutable_and_content_addressed():
             module,
             guru_id="zhao",
             symbol="AAPL",
-            exit_basis="original_position",
         )
     )
     edited = builder.build(
@@ -79,7 +77,6 @@ def test_profile_revisions_are_immutable_and_content_addressed():
             module,
             guru_id="zhao",
             symbol="MSFT",
-            exit_basis="original_position",
         )
     )
 
@@ -99,7 +96,6 @@ def test_profile_examples_compare_expected_and_actual_without_execution():
             module,
             guru_id="example-guru",
             symbol="AAPL",
-            exit_basis="original_position",
         )
     )
 
@@ -155,7 +151,6 @@ def test_profile_example_mismatch_requires_settings_correction_and_rerun():
         module,
         guru_id="mismatch-guru",
         symbol="AAPL",
-        exit_basis="original_position",
     )
     profile = module.ProfileBuilder().build(
         draft.model_copy(
@@ -202,7 +197,6 @@ def test_ungrounded_example_interpretation_returns_review_and_never_activates():
             module,
             guru_id="ungrounded-example-guru",
             symbol="AAPL",
-            exit_basis="original_position",
         )
     )
 
@@ -250,9 +244,9 @@ def test_matching_exit_example_preserves_position_sizing_review_without_blocking
                     expected_action="reduce",
                     expected_symbol="AAPL",
                     expected_fraction=Decimal("0.5"),
+                    expected_buy_price=Decimal("150"),
                 ),
             ),
-            exit_basis="remaining_position",
         )
     )
 
@@ -286,12 +280,11 @@ def test_matching_exit_example_preserves_position_sizing_review_without_blocking
 
 
 @pytest.mark.parametrize(
-    ("guru_id", "symbol", "basis", "connections", "expected_budgets"),
+    ("guru_id", "symbol", "connections", "expected_budgets"),
     [
         (
             "zhao",
             "AAPL",
-            "original_position",
             (
                 RouteConnection(account_id="paper-500", full_position_usd="500"),
                 RouteConnection(account_id="paper-3000", full_position_usd="3000"),
@@ -302,7 +295,6 @@ def test_matching_exit_example_preserves_position_sizing_review_without_blocking
         (
             "other-guru",
             "MSFT",
-            "remaining_position",
             (
                 RouteConnection(account_id="paper-small", full_position_usd="125"),
                 RouteConnection(account_id="paper-large", full_position_usd="1200"),
@@ -312,7 +304,7 @@ def test_matching_exit_example_preserves_position_sizing_review_without_blocking
     ],
 )
 def test_historical_evaluation_keeps_guru_revision_and_destination_sizing_independent(
-    guru_id, symbol, basis, connections, expected_budgets
+    guru_id, symbol, connections, expected_budgets
 ):
     module = _profiles_module()
     profile = module.ProfileBuilder().build(
@@ -320,7 +312,6 @@ def test_historical_evaluation_keeps_guru_revision_and_destination_sizing_indepe
             module,
             guru_id=guru_id,
             symbol=symbol,
-            exit_basis=basis,
         )
     )
 
@@ -348,7 +339,6 @@ def test_historical_evaluation_keeps_guru_revision_and_destination_sizing_indepe
     assert "provider charges may apply" in result.cost_notice
     assert result.guru_id == guru_id
     assert result.profile_revision == profile.profile_revision
-    assert result.exit_basis == basis
     assert result.provider == "deepseek"
     assert result.model == "test-model"
     assert result.decision == "trade"
@@ -415,7 +405,6 @@ def test_runtime_historical_profile_action_does_not_open_execution_owners(tmp_pa
             module,
             guru_id="historic-guru",
             symbol="AAPL",
-            exit_basis="original_position",
         )
     )
     source = _message("1001").model_copy(
@@ -489,7 +478,6 @@ def test_profile_schema_rejects_arbitrary_executable_convention_fields():
                 "display_name": "Custom",
                 "playbook": "",
                 "examples": [],
-                "exit_basis": "original_position",
                 "python_code": "import os; os.system('anything')",
             }
         )

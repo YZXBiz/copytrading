@@ -40,16 +40,6 @@ async def test_a_call_with_no_size_buys_the_full_position(tmp_path):
         assert orders(activity, "paper")[0].quantity == 4
 
 
-async def test_an_account_set_to_wait_leaves_a_call_with_no_size_for_review(tmp_path):
-    accounts = {"paper": Account(cash="5000", default_share=None)}
-    async with Rig(tmp_path, accounts, {"NVDA": "125"}) as rig:
-        rig.reader.expect("买入 NVDA 125", buy("NVDA", "125"))
-        activity = await rig.post("买入 NVDA 125")
-        [destination] = activity.destinations
-        assert destination.status == "review_required"
-        assert rig.brokers["paper"].submitted() == []
-
-
 async def test_selling_part_of_a_lot_from_accounts_leaves_the_rest_for_zhao(tmp_path):
     async with Rig(tmp_path, {"paper": Account(cash="1000")}, {"NVDA": "125"}) as rig:
         broker = rig.brokers["paper"]

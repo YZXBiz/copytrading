@@ -1572,7 +1572,6 @@
 "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Pause Copying** stops everything at once." = "**它只跟单，不做判断**。不提供建议，也不设止损。每日亏损上限只停止买入，不停止卖出。**暂停跟单**会一次停止所有操作。";
 "Max per stock" = "单只股票上限";
 "Needs a name" = "缺少名称";
-
 "After a restart" = "重启后";
 "After a restart: %@" = "重启后：%@";
 "Wait for me" = "等我确认";
@@ -1583,10 +1582,8 @@
 "Restored from a backup; waits for you after a restart" = "已从备份恢复；重启后等你确认";
 "Asked you to approve %@'s after-restart setting" = "已请你批准 %@ 的重启后设置";
 "Couldn't ask you to approve %@'s after-restart setting" = "无法请你批准 %@ 的重启后设置";
-
 "In stocks" = "股票持仓";
 "Start copying first. A call is copied by hand only while its account runs." = "请先开始跟单。只有账户在运行时，才能手动复制一条喊单。";
-
 "This backup can't be restored yet: %@. Your data is as it was." = "此备份暂时无法恢复：%@。你的数据保持原样。";
 "Alpaca's orders or holdings changed since the backup" = "备份之后 Alpaca 的订单或持仓发生了变化";
 "Alpaca could not be reached to check the backup" = "无法连接 Alpaca 来核对备份";
@@ -1619,8 +1616,6 @@
 "None of your buys is at the buy price the guru named" = "你没有信号源所说价格的买入";
 "The sell doesn't say how much" = "这次卖出没有说卖多少";
 "Read the playbook and fix anything that's off, such as how they count sells or what their trim words mean. Under **Copies into**, choose their account." = "阅读 Playbook 并修正不对的地方，比如信号源如何计算卖出比例、减仓等词是什么意思。在 **跟单到** 下选择他们的账户。";
-
-/* Setup tour */
 "Paste the channel ID" = "粘贴频道 ID";
 "Paste your Discord token" = "粘贴 Discord 令牌";
 "Pick an AI reader" = "选一个 AI 模型";
@@ -1684,3 +1679,4 @@
 "Half at 6.40" = "一半于 6.40";
 "later" = "之后";
 "Welcome. Five steps, about 10 minutes; nothing is saved or traded until the last one." = "欢迎。五步，大约 10 分钟；到最后一步之前，不会保存任何设置，也不会交易。";
+"The playbook doesn't say how big a batch is" = "说明书没写一批有多大";

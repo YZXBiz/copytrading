@@ -21,8 +21,6 @@ PROFILE = ProfileBuilder().build(
         guru_id="zhao",
         display_name="赵哥",
         playbook="",
-        exit_basis="original_position",
-        batches=3,
     )
 )
 
@@ -85,8 +83,8 @@ async def test_each_recent_post_says_what_it_would_have_done(tmp_path):
         ("review", "invalid_model_output"),
     ]
     assert replay.posts[0].instructions[0].fraction == 0.5
-    # The draft's own rules read the posts, and the reader is closed afterwards.
-    assert {route.batches for route in reader.routes} == {3}
+    # The draft's own guru reads the posts, and the reader is closed afterwards.
+    assert {route.guru_id for route in reader.routes} == {"zhao"}
     assert reader.closed
 
 

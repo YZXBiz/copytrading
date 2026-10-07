@@ -163,6 +163,8 @@ def test_remaining_app_owned_lot_blocks_account_removal(tmp_path):
         original_qty=Decimal(1),
         remaining_qty=Decimal(1),
         average_price=Decimal("25"),
+        entry_remaining={order.client_id: Decimal(1)},
+        entry_prices={order.client_id: Decimal("25")},
     )
     save_snapshot(
         account_dir,

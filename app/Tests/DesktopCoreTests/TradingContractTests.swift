@@ -180,14 +180,12 @@ private struct SizingExamples: Decodable {
         let `case`: String
         let fullPositionUSD: String
         let fraction: Fraction?
-        let defaultFraction: String?
         let budgetUSD: String?
 
         enum CodingKeys: String, CodingKey {
             case `case`
             case fullPositionUSD = "full_position_usd"
             case fraction
-            case defaultFraction = "default_fraction"
             case budgetUSD = "budget_usd"
         }
     }
@@ -203,10 +201,7 @@ private func sizingMatchesTheEngineOnEverySharedExample() throws {
     ).examples
     try #require(!examples.isEmpty, "no shared sizing examples")
     for example in examples {
-        let connection = TradingRouteConnection(
-            accountID: "paper", fullPositionUSD: example.fullPositionUSD,
-            defaultFraction: example.defaultFraction
-        )
+        let connection = TradingRouteConnection(accountID: "paper", fullPositionUSD: example.fullPositionUSD)
         let source = example.fraction.map { Decimal($0.numerator) / Decimal($0.denominator) }
         let budget = connection.copiedBudgetUSD(sourceFraction: source)
         try #require(

@@ -1572,7 +1572,6 @@
 "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Pause Copying** stops everything at once." = "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Pause Copying** stops everything at once.";
 "Max per stock" = "Max per stock";
 "Needs a name" = "Needs a name";
-
 "After a restart" = "After a restart";
 "After a restart: %@" = "After a restart: %@";
 "Wait for me" = "Wait for me";
@@ -1583,10 +1582,8 @@
 "Restored from a backup; waits for you after a restart" = "Restored from a backup; waits for you after a restart";
 "Asked you to approve %@'s after-restart setting" = "Asked you to approve %@'s after-restart setting";
 "Couldn't ask you to approve %@'s after-restart setting" = "Couldn't ask you to approve %@'s after-restart setting";
-
 "In stocks" = "In stocks";
 "Start copying first. A call is copied by hand only while its account runs." = "Start copying first. A call is copied by hand only while its account runs.";
-
 "This backup can't be restored yet: %@. Your data is as it was." = "This backup can't be restored yet: %@. Your data is as it was.";
 "Alpaca's orders or holdings changed since the backup" = "Alpaca's orders or holdings changed since the backup";
 "Alpaca could not be reached to check the backup" = "Alpaca could not be reached to check the backup";
@@ -1619,8 +1616,6 @@
 "None of your buys is at the buy price the guru named" = "None of your buys is at the buy price the guru named";
 "The sell doesn't say how much" = "The sell doesn't say how much";
 "Read the playbook and fix anything that's off, such as how they count sells or what their trim words mean. Under **Copies into**, choose their account." = "Read the playbook and fix anything that's off, such as how they count sells or what their trim words mean. Under **Copies into**, choose their account.";
-
-/* Setup tour */
 "Paste the channel ID" = "Paste the channel ID";
 "Paste your Discord token" = "Paste your Discord token";
 "Pick an AI reader" = "Pick an AI reader";
@@ -1684,3 +1679,4 @@
 "Half at 6.40" = "Half at 6.40";
 "later" = "later";
 "Welcome. Five steps, about 10 minutes; nothing is saved or traded until the last one." = "Welcome. Five steps, about 10 minutes; nothing is saved or traded until the last one.";
+"The playbook doesn't say how big a batch is" = "The playbook doesn't say how big a batch is";

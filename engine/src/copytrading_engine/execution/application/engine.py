@@ -409,6 +409,8 @@ class CopyEngine:
                 from_entries = lot.entries_at(s.entry_price)
                 if not from_entries:
                     return TradeDecision(None, "named_buy_not_held")
+                # The order sells those buys, so it carries their price, as the post named it.
+                entry_price = s.entry_price
             held = lot.remaining_of(from_entries) if from_entries else lot.remaining_qty
             qty = held if chosen_qty is None else min(held, chosen_qty)
             if s.action == "reduce":

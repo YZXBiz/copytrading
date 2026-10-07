@@ -24,6 +24,7 @@ from copytrading_engine.shared.reading import (
     Buy,
     Conditional,
     Exact,
+    Fraction,
     NotGiven,
     Range,
     Stock,
@@ -204,15 +205,19 @@ SCO = Buy(
             "sco 20买第二批",
             trade(SCO.model_copy(update={"size": Batch(number=2, words="第二批")})),
             "review",
-            "batch_size_unknown",
-            id="a-batch",
+            "batch_size_not_given",
+            id="a-batch-the-playbook-gives-no-size",
         ),
         pytest.param(
-            "sco 20跑路了",
-            trade(sell("SCO", "20", bought_at=None, said="跑路了")),
+            "sco 20减仓",
+            trade(
+                sell("SCO", "20", bought_at=None, said="减仓").model_copy(
+                    update={"share": NotGiven()}
+                )
+            ),
             "review",
-            "sell_names_no_buy",
-            id="a-sell-naming-no-buy",
+            "sell_share_not_given",
+            id="a-sell-that-says-no-share",
         ),
     ],
 )
@@ -246,15 +251,9 @@ async def test_only_a_placeable_current_call_trades(post, reading, decision, rea
             "sco 20买第二批",
             trade(SCO.model_copy(update={"size": Batch(number=2, words="第二批")})),
             [("buy", "SCO", Decimal(20), None)],
-            id="a-batch-without-n-at-the-default-share",
+            id="a-batch-at-the-full-position-for-the-owner-to-size",
         ),
         pytest.param("买sco", trade(_no_price(SCO)), [], id="no-price-nothing-to-copy"),
-        pytest.param(
-            "sco 20跑路了",
-            trade(sell("SCO", "20", bought_at=None, said="跑路了")),
-            [],
-            id="a-sell-naming-no-buy-is-sold-from-accounts",
-        ),
         pytest.param("sco ???", Unclear(summary="Cannot tell"), [], id="unclear"),
     ],
 )
@@ -272,9 +271,10 @@ async def test_a_trade_suggests_nothing_because_it_already_trades():
 
 
 async def test_a_post_with_one_unplaceable_call_places_none_of_them():
-    reading = trade(buy("ABC", "25"), sell("SCO", "20", bought_at=None, said="跑路了"))
+    vague = sell("SCO", "20", bought_at=None, said="减仓").model_copy(update={"share": NotGiven()})
+    reading = trade(buy("ABC", "25"), vague)
 
-    result = await read("25加了abc sco 20跑路了", reading)
+    result = await read("25加了abc sco 20减仓", reading)
 
     assert (result.decision, result.instructions) == ("review", ())
 
@@ -293,10 +293,11 @@ async def test_every_post_in_the_channel_is_read_whole():
 # --- The guru's rules -------------------------------------------------------------------------
 
 
-async def test_a_batch_is_one_nth_of_the_full_position_when_the_guru_has_n_batches():
-    reading = trade(SCO.model_copy(update={"size": Batch(number=2, words="第二批")}))
+async def test_a_batch_the_playbook_sizes_trades_at_that_share():
+    """The playbook line "第二批 means 1/3" gives the batch its size (ADR-0010)."""
+    reading = trade(SCO.model_copy(update={"size": Fraction(value=Decimal(1) / 3, words="第二批")}))
 
-    result = await read("sco 20买第二批", reading, Route(batches=3))
+    result = await read("sco 20买第二批", reading, Route(playbook="第二批 means 1/3"))
 
     [instruction] = result.instructions
     assert result.decision == "trade"
@@ -305,37 +306,28 @@ async def test_a_batch_is_one_nth_of_the_full_position_when_the_guru_has_n_batch
 
 
 @pytest.mark.parametrize(
-    ("post", "call"),
+    ("post", "call", "entry_price"),
     [
         pytest.param(
             "sco 20跑路了",
             sell("SCO", "20", bought_at=None, said="跑路了"),
-            id="naming-no-buy",
+            None,
+            id="naming-no-buy-sells-every-buy",
         ),
         pytest.param(
             "sco 20出掉18的",
             sell("SCO", "20", bought_at="18"),
-            id="naming-a-buy-price",
+            Decimal(18),
+            id="naming-a-buy-price-sells-that-buy",
         ),
     ],
 )
-async def test_a_whole_position_gurus_sell_sells_from_the_whole_position(post, call):
-    result = await read(post, trade(call), Route(sells_refer_to="whole_position"))
+async def test_a_sell_sells_the_buy_it_names_or_every_buy(post, call, entry_price):
+    result = await read(post, trade(call))
 
     [instruction] = result.instructions
-    assert (instruction.action, instruction.entry_price, instruction.whole_position) == (
-        "close",
-        None,
-        True,
-    )
-
-
-async def test_a_whole_position_gurus_buy_joins_the_position():
-    result = await read(
-        "25加了abc", trade(buy("ABC", "25")), Route(sells_refer_to="whole_position")
-    )
-
-    assert result.instructions[0].whole_position is True
+    assert result.decision == "trade"
+    assert (instruction.action, instruction.entry_price) == ("close", entry_price)
 
 
 # --- Every value is the post's words ----------------------------------------------------------

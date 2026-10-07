@@ -46,8 +46,6 @@ class Account:
 
     cash: str
     full_position_usd: str = "500"
-    # The share a call that names no size buys; None waits for the owner.
-    default_share: str | None = "1"
     limits: dict = field(default_factory=dict)
 
     @property
@@ -126,14 +124,13 @@ class Rig:
                     display_name=NAME,
                     playbook="",
                     examples=(),
-                    exit_basis="original_position",
                 )
             )
             for name in self.accounts
         }
         return TradingConfiguration.model_validate(
             {
-                "version": 7,
+                "version": 8,
                 "source": {"channel_ids": list(self.channels.values())},
                 "provider": {"name": "deepseek", "model": "scripted-zhao"},
                 "accounts": [
@@ -151,7 +148,6 @@ class Rig:
                             {
                                 "account_id": name,
                                 "full_position_usd": account.policy["max_symbol_usd"],
-                                "default_fraction": account.default_share,
                             }
                         ],
                     }

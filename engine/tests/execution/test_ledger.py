@@ -92,7 +92,7 @@ def test_only_current_snapshot_format_is_accepted(snapshot):
 def test_snapshot_v9_is_the_only_supported_runtime_format():
     current = LedgerSnapshot()
 
-    assert current.schema_version == 9
+    assert current.schema_version == 10
     with pytest.raises(ValidationError):
         LedgerSnapshot.model_validate_json(json.dumps({"schema_version": 8}))
 

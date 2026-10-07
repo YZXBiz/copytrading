@@ -56,13 +56,12 @@ def test_a_buy_goes_out_at_its_limit_however_far_the_market_has_moved(ask):
     assert order.limit_price == Decimal(25)
 
 
-# --- A guru whose sells refer to the whole position ---------------------------------------------
+# --- A sell that names no buy sells from every buy (ADR-0010) ------------------------------------
 
 
 def _whole(message: dict) -> dict:
-    """A call from a guru whose every buy of a stock is one position."""
+    """A call that names no buy price: a sell then refers to every buy of the stock."""
     for item in (*message["instructions"], *message["evidence"]):
-        item["whole_position"] = True
         if item["action"] != "buy":
             item["entry_price"] = None
     for item in message["evidence"]:
@@ -102,7 +101,7 @@ def test_a_whole_position_sell_with_nothing_held_sells_nothing():
 
     deliver(engine, _whole(event("1", "close", "30")))
 
-    assert _outcome(engine) == Skipped(reason="missing_or_ambiguous_lot")
+    assert _outcome(engine) == Skipped(reason="lot_unavailable")
     assert broker.calls == 0
 
 

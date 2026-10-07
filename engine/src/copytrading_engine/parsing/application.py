@@ -150,10 +150,10 @@ def _placeable(call: r.Call) -> tuple[Instruction, Evidence]:
 
 
 def suggested(reading: r.PostReading | None) -> tuple[Instruction, ...]:
-    """What Copy places for a post that waits for the owner (ADR-0007): each call the owner can
-    copy as read, a range at its top and a batch the guru has no N for at the default share. A
-    call with no price, or a sell that names no buy for a guru who names them, has nothing to
-    copy; the owner enters it or sells the lot from Accounts."""
+    """What Copy places for a post that waits for the owner (ADR-0007, ADR-0010): each call the
+    owner can copy as read, a range at its top and a batch at the full position, trimmed by the
+    account's limits. A call with no price, or a sell that states no share, has nothing to copy;
+    the owner enters it or sells the lot from Accounts."""
     if not isinstance(reading, r.TradeMade | r.Instruction | r.Conditional | r.Suggestion):
         return ()
     calls = []
@@ -168,7 +168,8 @@ def suggested(reading: r.PostReading | None) -> tuple[Instruction, ...]:
 def _instruction(call: r.Call, *, owner: bool) -> Instruction:
     """One call as the engine places it (ADR-0010). On its own (`owner=False`) the engine waits
     for the owner on a range and on a sell that states no share; when the owner copies, a range
-    buys at its top. A buy with no size, a batch included, asks for the full position; a sell that
+    buys at its top. A buy with no size asks for the full position, and one whose size is a batch
+    the playbook gives no share waits; a sell that
     names a buy price sells from the buys at that price, and one that names none from every buy;
     a share counts from what is left unless the post says the original buy."""
     match call.price:
@@ -183,6 +184,10 @@ def _instruction(call: r.Call, *, owner: bool) -> Instruction:
         case _:
             raise _Wait("price_not_given")
     if isinstance(call, r.Buy):
+        # A batch the playbook gives no size waits like a vague trim: "the second batch" is a
+        # share of a position, not the whole of one. The owner copying it chooses the size.
+        if isinstance(call.size, r.Batch) and not owner:
+            raise _Wait("batch_size_not_given")
         fraction = call.size.value if isinstance(call.size, r.Fraction) else None
         return Instruction(action="buy", symbol=call.stock.ticker, price=price, fraction=fraction)
     if isinstance(call.share, r.NotGiven):

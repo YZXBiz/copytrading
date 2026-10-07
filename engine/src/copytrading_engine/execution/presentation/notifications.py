@@ -39,6 +39,7 @@ REASONS = {
     "missing_or_ambiguous_lot": "No unique copier-owned lot matches the quoted entry price",
     "named_buy_not_held": "None of your buys is at the buy price the guru named",
     "sell_share_not_given": "The sell doesn't say how much",
+    "batch_size_not_given": "The playbook doesn't say how big a batch is",
     "unsupported_asset": "The broker does not support trading this asset",
     "outside_session": "The broker session is not eligible for this order",
     "below_minimum_quantity": "The allowed size is below the asset's minimum quantity",

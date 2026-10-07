@@ -218,7 +218,10 @@ def late_sell_with_consumed_source_lot():
         close_at,
     )
     engine.process(close_at)
-    assert engine.ledger.lots()[0].remaining_qty == 0
+    # Both buys joined one lot (ADR-0010); the close named the first buy's price, so only that
+    # buy is sold out.
+    [lot] = [lot for lot in engine.ledger.lots() if lot.symbol == "ABC"]
+    assert lot.entry_remaining[first_lot_id] == 0
     assert engine.ledger.order(first_lot_id).filled_qty > 0
     return engine, broker, repository, late_order, late_broker_record
 

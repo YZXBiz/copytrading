@@ -52,7 +52,6 @@ class _Learner:
 
 def _proposal(**changes) -> PlaybookProposal:
     values = dict(
-        exit_basis="original_position",
         playbook="  加 means buy\nabc is a literal ticker  ",
         examples=(
             LearnedExample(message=POSTS[0], expected_action="buy", expected_symbol="ABC"),

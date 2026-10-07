@@ -105,6 +105,7 @@ enum Reason {
         "approval_required": "You asked to approve every order for this account",
         "named_buy_not_held": "None of your buys is at the buy price the guru named",
         "sell_share_not_given": "The sell doesn't say how much",
+        "batch_size_not_given": "The playbook doesn't say how big a batch is",
         "approved_by_owner": "You approved this call",
         "waiting_expired": "Too late to copy: its trading day is over",
     ]

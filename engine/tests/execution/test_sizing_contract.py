@@ -17,7 +17,6 @@ def test_the_engine_sizes_every_shared_example(example):
     connection = RouteConnection(
         account_id="paper",
         full_position_usd=Decimal(example["full_position_usd"]),
-        default_fraction=example["default_fraction"],
     )
     fraction = example["fraction"]
     source = (

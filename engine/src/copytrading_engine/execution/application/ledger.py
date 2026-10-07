@@ -1205,7 +1205,13 @@ class TradingLedger:
                 if order.lot_id is None:
                     raise RuntimeError("Sell order has no owned lot")
                 lot = lots[order.lot_id]
-                applied_delta = min(delta, lot.remaining_qty)
+                # A sell of named buys can take only what those buys hold; any more is set aside.
+                held = (
+                    lot.remaining_of(order.from_entries)
+                    if order.from_entries
+                    else lot.remaining_qty
+                )
+                applied_delta = min(delta, held)
                 unapplied_delta = delta - applied_delta
                 if unapplied_delta and not related_incident_ids:
                     raise RuntimeError("Sell fill exceeds the copier's owned lot")

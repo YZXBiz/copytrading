@@ -238,6 +238,8 @@ def test_restore_compares_fresh_order_price_for_an_open_owned_lot():
         original_qty=Decimal("1"),
         remaining_qty=Decimal("1"),
         average_price=Decimal("200"),
+        entry_remaining={client_id: Decimal("1")},
+        entry_prices={client_id: Decimal("200")},
     )
     snapshot = _snapshot().model_copy(
         update={"orders": {client_id: order}, "lots": {client_id: lot}}
@@ -346,6 +348,8 @@ def _joined_lot_case():
         remaining_qty=Decimal("2"),
         average_price=Decimal("201"),
         joined_entries=("second-buy",),
+        entry_remaining={"first-buy": Decimal("1"), "second-buy": Decimal("1")},
+        entry_prices={"first-buy": Decimal("200"), "second-buy": Decimal("200")},
     )
     snapshot = _snapshot().model_copy(update={"orders": orders, "lots": {"first-buy": lot}})
     return snapshot, broker_orders

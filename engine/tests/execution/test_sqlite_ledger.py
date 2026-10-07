@@ -139,38 +139,6 @@ def test_destination_terms_commit_before_ack_and_survive_restart(tmp_path):
     reopened.close()
 
 
-def test_a_call_with_no_size_for_an_account_set_to_wait_is_a_durable_review(tmp_path):
-    path = tmp_path / "execution.sqlite3"
-    store = _store(path)
-    broker = FakeBroker()
-    engine = CopyEngine(store, broker, CopyConfig(sources=["discord:demo"]))
-    engine.bind(NOW)
-    source = event()
-    source["instructions"][0]["fraction"] = None
-    source["evidence"][0]["fraction"] = None
-    signal = StockSignal.model_validate(source)
-    engine.receive(destination_signal(signal, full_position_usd="3000", default_fraction=None), NOW)
-    message = store.load().messages["discord:demo:1"]
-    assert message.status == "review_required"
-    assert message.review_reason == "missing_source_fraction"
-    assert message.evidence == signal.evidence
-    assert message.destination.connection.full_position_usd == 3000
-    assert any(
-        report.event.payload.kind == "message"
-        and report.event.payload.review_reason == "missing_source_fraction"
-        for report in _journaled(store)
-    )
-    engine.process(NOW)
-    assert broker.calls == 0
-    store.close()
-    reopened = _store(path)
-    recovered = reopened.load().messages["discord:demo:1"]
-    assert recovered.review_reason == "missing_source_fraction"
-    assert recovered.destination == message.destination
-    assert recovered.evidence == signal.evidence
-    reopened.close()
-
-
 def test_durable_submit_intent_precedes_broker_post(tmp_path):
     store = _store(tmp_path / "execution.sqlite3")
     broker = FakeBroker()

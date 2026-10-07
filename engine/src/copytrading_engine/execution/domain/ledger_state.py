@@ -529,10 +529,14 @@ class LedgerSnapshot(Value):
                 raise ValueError("Entry fills require an owned lot")
             if order.side == "sell":
                 lot = self.lots.get(order.lot_id or "")
-                if lot is None or (lot.symbol, lot.source_key, lot.entry_price) != (
-                    order.symbol,
-                    order.source_key,
-                    order.entry_price,
+                # A sell of named buys carries their price, and every one is in its lot; any
+                # other sell carries the lot's own (ADR-0010).
+                named = order.from_entries
+                if (
+                    lot is None
+                    or (lot.symbol, lot.source_key) != (order.symbol, order.source_key)
+                    or (not named and lot.entry_price != order.entry_price)
+                    or any(lot.entry_prices.get(entry) != order.entry_price for entry in named)
                 ):
                     raise ValueError("Sell order references an unknown or different lot")
         for key, lot in self.lots.items():

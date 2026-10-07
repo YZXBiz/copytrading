@@ -8,7 +8,6 @@
         "numerator": 1,
         "denominator": 6
       },
-      "default_fraction": "1",
       "budget_usd": "500.00"
     },
     {
@@ -18,7 +17,6 @@
         "numerator": 1,
         "denominator": 3
       },
-      "default_fraction": "1",
       "budget_usd": "1000.00"
     },
     {
@@ -28,7 +26,6 @@
         "numerator": 1,
         "denominator": 6
       },
-      "default_fraction": "1",
       "budget_usd": "166.66"
     },
     {
@@ -38,7 +35,6 @@
         "numerator": 1,
         "denominator": 2
       },
-      "default_fraction": "1",
       "budget_usd": "300.00"
     },
     {
@@ -48,7 +44,6 @@
         "numerator": 1,
         "denominator": 6
       },
-      "default_fraction": "1",
       "budget_usd": "125.00"
     },
     {
@@ -58,7 +53,6 @@
         "numerator": 1,
         "denominator": 3
       },
-      "default_fraction": "1",
       "budget_usd": "166.66"
     },
     {
@@ -68,7 +62,6 @@
         "numerator": 1,
         "denominator": 7
       },
-      "default_fraction": "1",
       "budget_usd": "14.28"
     },
     {
@@ -78,7 +71,6 @@
         "numerator": 2,
         "denominator": 3
       },
-      "default_fraction": "1",
       "budget_usd": "26.66"
     },
     {
@@ -88,29 +80,13 @@
         "numerator": 1,
         "denominator": 4
       },
-      "default_fraction": "1",
       "budget_usd": "308.64"
     },
     {
       "case": "no size buys the full position",
       "full_position_usd": "3000",
       "fraction": null,
-      "default_fraction": "1",
       "budget_usd": "3000.00"
-    },
-    {
-      "case": "no size buys a lowered default",
-      "full_position_usd": "3000",
-      "fraction": null,
-      "default_fraction": "0.5",
-      "budget_usd": "1500.00"
-    },
-    {
-      "case": "no size waits when set to wait",
-      "full_position_usd": "3000",
-      "fraction": null,
-      "default_fraction": null,
-      "budget_usd": null
     },
     {
       "case": "under a cent buys nothing",
@@ -119,7 +95,6 @@
         "numerator": 1,
         "denominator": 6
       },
-      "default_fraction": "1",
       "budget_usd": null
     }
   ]

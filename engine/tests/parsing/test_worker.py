@@ -246,12 +246,10 @@ async def test_channel_profile_routes_resolve_by_author_and_keep_source_identity
             "discord:demo:100": Route(
                 guru_id="guru-a",
                 profile_revision=first_revision,
-                exit_basis="original_position",
             ),
             "discord:demo:200": Route(
                 guru_id="guru-b",
                 profile_revision=second_revision,
-                exit_basis="remaining_position",
             ),
         },
         "test",
@@ -278,12 +276,10 @@ async def test_runtime_route_map_collision_is_reviewed_without_model_selection()
             "discord:demo:*": Route(
                 guru_id="guru-a",
                 profile_revision="a" * 64,
-                exit_basis="original_position",
             ),
             "discord:demo:200": Route(
                 guru_id="guru-b",
                 profile_revision="b" * 64,
-                exit_basis="remaining_position",
             ),
         },
         "test",
@@ -413,7 +409,6 @@ async def test_omitted_allocation_never_reaches_default_sized_destination_order(
                 connection=RouteConnection(
                     account_id="paper-demo",
                     full_position_usd="3000",
-                    default_fraction="1",
                 ),
                 environment="paper",
                 configuration_revision="a" * 64,

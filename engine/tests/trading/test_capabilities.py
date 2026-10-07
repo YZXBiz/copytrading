@@ -32,12 +32,11 @@ def _configuration(*, notification: bool = False) -> TradingConfiguration:
             display_name="Stable Guru",
             playbook="",
             examples=(),
-            exit_basis="original_position",
         )
     )
     return TradingConfiguration.model_validate(
         {
-            "version": 7,
+            "version": 8,
             "source": {"channel_ids": ["123"]},
             "provider": {"name": "deepseek", "model": "test-model"},
             "accounts": [

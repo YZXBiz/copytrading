@@ -143,6 +143,8 @@ def test_release_requires_zero_saved_fills_and_no_broker_id(activity):
                 original_qty=Decimal("1"),
                 remaining_qty=Decimal("1"),
                 average_price=uncertain.limit_price,
+                entry_remaining={uncertain.client_id: Decimal("1")},
+                entry_prices={uncertain.client_id: uncertain.entry_price},
             )
         }
     engine.ledger._snapshot = snapshot.model_copy(
@@ -227,13 +229,18 @@ def test_late_sell_overflow_is_quarantined_atomically_cumulatively_and_reloaded(
     assert snapshot.late_order_incidents[late_order.client_id].unresolved
     assert snapshot.entry_halted
     assert snapshot.buy_halted
-    assert snapshot.lots[late_order.lot_id].remaining_qty == 0
-    other_abc_lot = next(
-        lot
-        for lot_id, lot in snapshot.lots.items()
-        if lot.symbol == "ABC" and lot_id != late_order.lot_id
+    # Both ABC buys share one lot (ADR-0010): the sell named the first, which is sold out, and
+    # the overflow never reaches the other buy.
+    lot = snapshot.lots[late_order.lot_id]
+    named = late_order.from_entries
+    assert named
+    assert all(lot.entry_remaining[entry] == 0 for entry in named)
+    untouched = before.lots[late_order.lot_id].entry_remaining
+    assert all(
+        lot.entry_remaining[entry] == untouched[entry]
+        for entry in lot.entry_remaining
+        if entry not in named
     )
-    assert other_abc_lot.remaining_qty == other_abc_lot.original_qty
     assert all(lot.remaining_qty >= 0 for lot in snapshot.lots.values())
     report = repository.events[-1]
     assert isinstance(report.payload, LateOrderIncidentOpened)

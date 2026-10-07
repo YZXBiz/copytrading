@@ -11,7 +11,7 @@ async def test_selling_a_stock_never_bought_sends_nothing(tmp_path):
     async with Rig(tmp_path, {"paper": Account(cash="1000")}, {"TSLA": "250"}) as rig:
         rig.reader.expect("TSLA 200买的 250 清仓", close("TSLA", "250", bought_at="200"))
         activity = await rig.post("TSLA 200买的 250 清仓")
-        assert outcomes(activity, "paper") == ("missing_or_ambiguous_lot",)
+        assert outcomes(activity, "paper") == ("lot_unavailable",)
         assert rig.brokers["paper"].submitted() == []
 
 
@@ -53,7 +53,9 @@ async def test_shares_that_appear_unexplained_stop_buys_of_that_stock(tmp_path):
         assert overview.ownership_incidents
 
 
-async def test_two_buys_are_two_lots_and_a_sell_names_which_one(tmp_path):
+async def test_two_buys_join_one_lot_and_a_sell_names_which_buy(tmp_path):
+    """Every buy of a stock joins the guru's open lot, which keeps each buy's price (ADR-0010);
+    a sell that names a buy price sells only what that buy has left."""
     accounts = {"paper": Account(cash="2000", full_position_usd="1000")}
     async with Rig(tmp_path, accounts, {"NVDA": "125"}) as rig:
         broker = rig.brokers["paper"]
@@ -69,18 +71,15 @@ async def test_two_buys_are_two_lots_and_a_sell_names_which_one(tmp_path):
         await rig.post("买入 NVDA 125 一半")
         broker.move("NVDA", "100")
         await rig.post("加仓 NVDA 100 一半")
-        lots = await rig.lots("paper", "NVDA")
-        assert sorted((lot.average_price, lot.remaining_qty) for lot in lots) == [
-            (100, 5),
-            (125, 4),
-        ]
+        [lot] = await rig.lots("paper", "NVDA")
+        assert lot.remaining_qty == 9
 
         broker.move("NVDA", "110")
         sold = await rig.post("NVDA 100买的 110 清仓")
         [sale] = orders(sold, "paper")
         assert sale.quantity == 5
         [left] = await rig.lots("paper", "NVDA")
-        assert (left.average_price, left.remaining_qty) == (125, 4)
+        assert left.remaining_qty == 4
 
 
 async def test_exits_are_skipped_when_the_account_does_not_copy_them(tmp_path):

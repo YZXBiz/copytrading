@@ -296,7 +296,6 @@ async def test_preview_paths_register_provider_keys_before_decoder_factory(tmp_p
                     expected_symbol="AAPL",
                 ),
             ),
-            exit_basis="original_position",
         )
     )
     provider = ProviderConfiguration(name="anthropic", model="test-model")
