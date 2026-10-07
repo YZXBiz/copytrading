@@ -56,12 +56,15 @@ class AccountAccess:
         configuration: Callable[[], TradingConfiguration | None],
         runtime_state: Callable[[], str],
         evidence: OperatorEvidence,
+        account_error: Callable[[str], str | None] = lambda _: None,
     ) -> None:
+        """`account_error` is the last reason an account stopped, kept after its supervisor ends."""
         self.data_dir = data_dir
         self.supervisors = supervisors
         self.configuration = configuration
         self.runtime_state = runtime_state
         self.evidence = evidence
+        self.account_error = account_error
 
     @property
     def application_database(self) -> Path:

@@ -8,6 +8,7 @@ from pathlib import Path
 from copytrading_engine.execution.application.manual_commands import (
     manual_command_page_from_snapshot,
 )
+from copytrading_engine.execution.application.ports import ACCOUNT_OPEN_REFUSALS
 from copytrading_engine.execution.domain.manual_commands import (
     ManualCommandPage,
     ManualCommandPageRequest,
@@ -38,6 +39,16 @@ class OperatorQueryService:
 
     def __init__(self, access: AccountAccess) -> None:
         self._access = access
+
+    def _unavailable_readiness(self, account_id: str) -> str:
+        """Why an account is not running, when its owner can act on it; else just unavailable."""
+        supervisor = self._access.supervisors().get(account_id)
+        code = (
+            supervisor.error_code
+            if supervisor is not None
+            else self._access.account_error(account_id)
+        )
+        return code if code in ACCOUNT_OPEN_REFUSALS else "account_unavailable"
 
     async def account_overviews(
         self, before_account_id: str | None = None, limit: int = 50
@@ -91,7 +102,7 @@ class OperatorQueryService:
                     readiness = (
                         "processing_stopped"
                         if self._access.runtime_state() in {"paused", "pausing"}
-                        else "account_unavailable"
+                        else self._unavailable_readiness(account_id)
                     )
                     return overview.model_copy(
                         update={"active_configuration": True, "readiness": readiness}
@@ -109,7 +120,7 @@ class OperatorQueryService:
                 broker_identity="unverified",
                 entry_permission="unknown",
                 recovery_preference="manual",
-                readiness="account_unavailable",
+                readiness=self._unavailable_readiness(account_id),
                 account_risk_status="unavailable",
                 account_risk_reason="account_unavailable",
                 account_activity_status="unavailable",

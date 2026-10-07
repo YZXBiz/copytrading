@@ -887,6 +887,8 @@
 "That is more than this lot holds." = "数量超过了此批次的持有量。";
 "The account changed since you reviewed the sale" = "审核卖出后，账户状态已变化";
 "The account could not be reached" = "无法连接此账户";
+"Cancel the orders open at Alpaca first" = "请先取消 Alpaca 上未成交的订单";
+"Alpaca has not activated this account" = "Alpaca 尚未启用此账户";
 "The AI model that turns each post into an exact order." = "把每条帖子转换成明确订单的 AI 模型。";
 "The balance appears once copying is on and the broker has been read." = "开始跟单并读取券商账户后，余额才会显示。";
 "The biggest fall from a high to a later low in this window." = "此时间段内从高点到之后低点的最大跌幅。";

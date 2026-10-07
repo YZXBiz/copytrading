@@ -5,6 +5,7 @@ import datetime as dt
 import sqlite3
 from uuid import uuid4
 
+from copytrading_engine.execution.application.ports import AccountOpenRefused, BrokerError
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore
 from copytrading_engine.shared.raw_message import RawMessage
 from copytrading_engine.sources.sqlite import SQLiteSourceStore
@@ -12,6 +13,7 @@ from copytrading_engine.trading.adapters.routing import (
     RoutingRevision,
 )
 from copytrading_engine.trading.domain.config import TradingConfiguration
+from copytrading_engine.trading.entrypoints import runtime as runtime_module
 from copytrading_engine.trading.entrypoints.factories import TradingFactories
 from copytrading_engine.trading.entrypoints.runtime import TradingRuntime
 
@@ -339,3 +341,52 @@ async def test_post_that_fails_evidence_checks_goes_to_review_and_processing_con
         assert review.parser_reason == "evidence_validation_failed"
     finally:
         await runtime.shutdown()
+
+
+def _never_posts(source, channels, authors, stop, report_failure):
+    return Session(source, None)
+
+
+async def test_an_order_placed_outside_the_app_names_why_copying_could_not_start(tmp_path):
+    async def owner_factory(path, credentials, policy, environment):
+        raise AccountOpenRefused("outside_open_orders")
+
+    runtime = TradingRuntime(
+        tmp_path,
+        factories=TradingFactories(
+            owner=owner_factory,
+            decoder=lambda name, config: asyncio.sleep(0, result=Decoder()),
+            session=_never_posts,
+        ),
+    )
+    await runtime.start(trading_configuration("first"), trading_secrets_for("first"))
+    failed = await wait_for(runtime, lambda status: status.state == "failed")
+    assert failed.error_code == "outside_open_orders"
+    [account] = (await runtime.operator.account_overviews()).items
+    assert account.readiness == "outside_open_orders"
+    await runtime.shutdown()
+
+
+async def test_a_brief_alpaca_outage_while_an_account_opens_is_tried_again(tmp_path, monkeypatch):
+    monkeypatch.setattr(runtime_module, "OPEN_RETRY_SECONDS", (0.01, 0.01, 0.01))
+    answers = [BrokerError(503), BrokerError()]
+    opened: dict[str, Owner] = {}
+
+    async def owner_factory(path, credentials, policy, environment):
+        if answers:
+            raise answers.pop(0)
+        opened[path.name] = Owner(path, {}, {})
+        return opened[path.name]
+
+    runtime = TradingRuntime(
+        tmp_path,
+        factories=TradingFactories(
+            owner=owner_factory,
+            decoder=lambda name, config: asyncio.sleep(0, result=Decoder()),
+            session=_never_posts,
+        ),
+    )
+    await runtime.start(trading_configuration("first"), trading_secrets_for("first"))
+    await wait_for(runtime, lambda _: "first" in opened and opened["first"].cycles >= 1)
+    assert runtime.status().active_accounts == 1
+    await runtime.shutdown()

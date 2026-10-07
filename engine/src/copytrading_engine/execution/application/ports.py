@@ -7,7 +7,7 @@ from collections.abc import Mapping
 from contextlib import AbstractContextManager, nullcontext
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Protocol, runtime_checkable
+from typing import Literal, Protocol, get_args, runtime_checkable
 
 from copytrading_engine.execution.domain.events import JournalEvent
 from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
@@ -63,6 +63,26 @@ class BrokerError(Exception):
         self.status = status
         super().__init__(f"Alpaca HTTP {status}" if status else "Alpaca network error")
 
+    @property
+    def transient(self) -> bool:
+        """A failure that passes on its own: no connection, a timeout, a rate limit, or an
+        outage on Alpaca's side. Anything else (rejected keys, a refused request) needs a person.
+        """
+        return self.status is None or self.status in {408, 429} or self.status >= 500
+
+
+# Why a broker account cannot connect until its owner acts.
+type AccountOpenRefusal = Literal["outside_open_orders", "broker_account_inactive"]
+ACCOUNT_OPEN_REFUSALS: frozenset[str] = frozenset(get_args(AccountOpenRefusal.__value__))
+
+
+class AccountOpenRefused(RuntimeError):
+    """The broker account cannot be connected until its owner acts; `reason` says why."""
+
+    def __init__(self, reason: AccountOpenRefusal) -> None:
+        self.reason = reason
+        super().__init__(reason)
+
 
 class BrokerResponseError(BrokerError):
     """The broker response failed validation; its delivery outcome remains uncertain."""
@@ -70,6 +90,10 @@ class BrokerResponseError(BrokerError):
     def __init__(self) -> None:
         super().__init__()
         self.args = ("Alpaca response failed validation",)
+
+    @property
+    def transient(self) -> bool:
+        return False
 
 
 @dataclass(frozen=True, slots=True)

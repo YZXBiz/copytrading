@@ -13,6 +13,7 @@ from uuid import uuid4
 
 from copytrading_engine.backup.restore.gate import restore_manual_disabled
 from copytrading_engine.execution.adapters.alpaca.broker import AlpacaCredentials
+from copytrading_engine.execution.application.ports import AccountOpenRefused, BrokerError
 from copytrading_engine.execution.domain.pricing import EntryPricingPolicy
 from copytrading_engine.execution.domain.signals import CopyConfig
 from copytrading_engine.execution.domain.sizing import DestinationTerms
@@ -67,6 +68,10 @@ from copytrading_engine.trading.entrypoints.factories import (
 )
 
 log = logging.getLogger(__name__)
+
+# Waits between tries when Alpaca does not answer an account's first connection; they end well
+# inside the time an account has to open.
+OPEN_RETRY_SECONDS = (1.0, 2.0)
 
 
 class _ParserPublisher:
@@ -136,6 +141,9 @@ class TradingRuntime:
             configuration=lambda: self._configuration,
             runtime_state=lambda: self._status.state,
             evidence=evidence,
+            account_error=lambda account_id: next(
+                (item.error_code for item in self._status.accounts if item.id == account_id), None
+            ),
         )
         self.operator = OperatorQueryService(access)
         self.manual = ManualInterventionService(access)
@@ -151,6 +159,25 @@ class TradingRuntime:
 
     def status(self) -> TradingStatus:
         return self._status
+
+    async def _open_owner(
+        self,
+        account_id: str,
+        account_dir: Path,
+        credentials: AlpacaCredentials,
+        policy: CopyConfig,
+        environment: str,
+    ) -> AccountOwner:
+        """Open one account, trying again while Alpaca briefly cannot be reached."""
+        for delay in OPEN_RETRY_SECONDS:
+            try:
+                return await self._factories.owner(account_dir, credentials, policy, environment)
+            except BrokerError as exc:
+                if not exc.transient:
+                    raise
+                log.warning("trading_account_open_retry id=%s status=%s", account_id, exc.status)
+                await asyncio.sleep(delay)
+        return await self._factories.owner(account_dir, credentials, policy, environment)
 
     def _register_secrets(self, values: Collection[str]) -> None:
         if self._telemetry is not None:
@@ -410,7 +437,8 @@ class TradingRuntime:
                 broker = broker_secrets[account.id]
                 policy = _copy_policy(configuration, account.id)
                 opening[account.id] = asyncio.ensure_future(
-                    self._factories.owner(
+                    self._open_owner(
+                        account.id,
                         account_dir,
                         AlpacaCredentials(broker.key, broker.secret),
                         policy,
@@ -418,12 +446,20 @@ class TradingRuntime:
                     )
                 )
             done, _ = await asyncio.wait(opening.values(), timeout=self._owner_open_timeout_seconds)
+            refusals: list[str] = []
             for account in configuration.accounts:
                 task = opening[account.id]
                 owner: AccountOwner | None = None
+                open_failure = "account_unavailable"
                 if task in done:
                     try:
                         owner = task.result()
+                    except AccountOpenRefused as exc:
+                        log.warning(
+                            "trading_account_open_refused id=%s reason=%s", account.id, exc.reason
+                        )
+                        open_failure = exc.reason
+                        refusals.append(exc.reason)
                     except Exception as exc:  # noqa: BLE001 - one account's failure is reported per account
                         log.error(
                             "trading_account_open_failed id=%s type=%s",
@@ -440,9 +476,13 @@ class TradingRuntime:
                     account.policy.poll_seconds,
                     self._stop,
                     self._account_changed,
+                    open_failure=open_failure,
                 )
             self._account_changed()
             if not any(account.owner is not None for account in self._accounts.values()):
+                if len(refusals) == len(configuration.accounts) and len(set(refusals)) == 1:
+                    # Every account waits on the same thing its owner must settle first.
+                    stage = refusals[0]
                 raise RuntimeError("No configured account could open")
             stage = "source_unavailable"
             session = self._factories.session(

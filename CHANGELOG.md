@@ -2,6 +2,14 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
+## Unreleased
+
+Every copying rule run against DeepSeek and Alpaca paper, and three ways copying could stop now fixed.
+
+- **A ticker Alpaca does not list no longer stops copying.** A guru's typo or a delisted stock used to take the account offline until you restarted; the call is now skipped as a stock the broker does not support, and the next call trades.
+- **A brief Alpaca outage no longer stops copying.** A dropped connection, a rate limit, or an outage on Alpaca's side used to stop the account for good; it now tries again on its own, first after a second and then less often, also while Start Copying connects. Rejected keys still stop it, because only you can fix those.
+- **An order you placed on Alpaca yourself now says so.** The first time an account connects, CopyTrading records what it already holds, so an open order placed outside the app must be cancelled or filled first. Accounts and Start Copying now say "Cancel the orders open at Alpaca first" instead of "The account could not be reached".
+
 ## 0.1.0-alpha.5 — developer preview
 
 The first release delivered through Check for Updates…, to confirm that updating from 0.1.0-alpha.4 works end to end. The app is otherwise unchanged.

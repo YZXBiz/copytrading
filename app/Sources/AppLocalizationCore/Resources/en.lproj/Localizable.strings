@@ -887,6 +887,8 @@
 "That is more than this lot holds." = "That is more than this lot holds.";
 "The account changed since you reviewed the sale" = "The account changed since you reviewed the sale";
 "The account could not be reached" = "The account could not be reached";
+"Cancel the orders open at Alpaca first" = "Cancel the orders open at Alpaca first";
+"Alpaca has not activated this account" = "Alpaca has not activated this account";
 "The AI model that turns each post into an exact order." = "The AI model that turns each post into an exact order.";
 "The balance appears once copying is on and the broker has been read." = "The balance appears once copying is on and the broker has been read.";
 "The biggest fall from a high to a later low in this window." = "The biggest fall from a high to a later low in this window.";
