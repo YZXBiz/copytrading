@@ -84,7 +84,7 @@ def test_buys_at_different_prices_join_one_position_that_a_sell_naming_no_buy_se
     assert all(lot.remaining_qty == 0 for lot in engine.ledger.lots())
 
 
-def test_half_of_the_whole_position_sells_half_of_everything_bought():
+def test_half_naming_no_buy_sells_half_of_everything_bought():
     broker = FakeBroker()
     engine = _engine(broker)
     deliver(engine, _whole(event("1", price="25")))
@@ -95,7 +95,7 @@ def test_half_of_the_whole_position_sells_half_of_everything_bought():
     assert broker.holdings["ABC"] == Decimal("4.5")
 
 
-def test_a_whole_position_sell_with_nothing_held_sells_nothing():
+def test_a_sell_naming_no_buy_with_nothing_held_sells_nothing():
     broker = FakeBroker()
     engine = _engine(broker)
 

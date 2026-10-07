@@ -19,7 +19,7 @@ def _serialize_source_timestamp(value: datetime) -> str:
     return serialized
 
 
-# Why a post waits for the owner (ADR-0007), as the alert says it.
+# Why a post waits for the owner (ADR-0007, ADR-0010), as the alert says it.
 WAITING = {
     "conditional": "The guru would trade only if something happens",
     "suggestion": "The guru suggested it but didn't trade",
@@ -27,8 +27,8 @@ WAITING = {
     "price_range": "The guru gave a price range",
     "price_at_market": "The guru said to trade at the market price",
     "price_not_given": "The post gave no price",
-    "batch_size_unknown": "The post named a batch, not a size",
-    "sell_names_no_buy": "The sell didn't say which buy it comes from",
+    "sell_share_not_given": "The sell doesn't say how much",
+    "batch_size_not_given": "The playbook doesn't say how big a batch is",
 }
 
 
