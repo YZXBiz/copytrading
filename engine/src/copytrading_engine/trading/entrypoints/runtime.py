@@ -614,6 +614,7 @@ class TradingRuntime:
                         configuration_revision=configuration.revision(),
                         guru_id=route.guru_id,
                         profile_revision=route.profile_revision,
+                        repeat_window_minutes=route.repeat_window_minutes,
                     )
                     for connection in route.connections
                 )

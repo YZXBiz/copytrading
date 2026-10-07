@@ -389,12 +389,19 @@ public struct TradingRouteConfiguration: Codable, Equatable, Identifiable, Senda
     public var guruID: String
     public var profileRevision: String
     public var connections: [TradingRouteConnection]
+    /// The same call again within this many minutes is the guru re-posting it; nil copies every
+    /// post. A saved route without the key checks ten minutes, as the engine does.
+    public var repeatWindowMinutes: Int?
+
+    public static let defaultRepeatWindowMinutes = 10
+    public static let repeatWindowRange = 1...1440
 
     public var id: String { "\(source):\(channelID):\(authorID ?? "*"):\(guruID)" }
 
     public init(
         source: String = "discord", channelID: String, authorID: String? = nil,
-        guruID: String, profileRevision: String, connections: [TradingRouteConnection]
+        guruID: String, profileRevision: String, connections: [TradingRouteConnection],
+        repeatWindowMinutes: Int? = TradingRouteConfiguration.defaultRepeatWindowMinutes
     ) {
         self.source = source
         self.channelID = channelID
@@ -402,6 +409,34 @@ public struct TradingRouteConfiguration: Codable, Equatable, Identifiable, Senda
         self.guruID = guruID
         self.profileRevision = profileRevision
         self.connections = connections
+        self.repeatWindowMinutes = repeatWindowMinutes
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        source = try container.decode(String.self, forKey: .source)
+        channelID = try container.decode(String.self, forKey: .channelID)
+        authorID = try container.decodeIfPresent(String.self, forKey: .authorID)
+        guruID = try container.decode(String.self, forKey: .guruID)
+        profileRevision = try container.decode(String.self, forKey: .profileRevision)
+        connections = try container.decode([TradingRouteConnection].self, forKey: .connections)
+        // An absent key is the default; an explicit null is the owner turning the check off.
+        repeatWindowMinutes =
+            container.contains(.repeatWindowMinutes)
+            ? try container.decodeIfPresent(Int.self, forKey: .repeatWindowMinutes)
+            : Self.defaultRepeatWindowMinutes
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(source, forKey: .source)
+        try container.encode(channelID, forKey: .channelID)
+        try container.encodeIfPresent(authorID, forKey: .authorID)
+        try container.encode(guruID, forKey: .guruID)
+        try container.encode(profileRevision, forKey: .profileRevision)
+        try container.encode(connections, forKey: .connections)
+        // Always written, null when off: leaving it out would mean the default.
+        try container.encode(repeatWindowMinutes, forKey: .repeatWindowMinutes)
     }
 
     enum CodingKeys: String, CodingKey {
@@ -411,6 +446,7 @@ public struct TradingRouteConfiguration: Codable, Equatable, Identifiable, Senda
         case guruID = "guru_id"
         case profileRevision = "profile_revision"
         case connections
+        case repeatWindowMinutes = "repeat_window_minutes"
     }
 }
 

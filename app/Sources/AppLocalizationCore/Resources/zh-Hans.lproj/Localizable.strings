@@ -1411,7 +1411,6 @@
 "“First batch”, “second batch”: each batch buys an equal part of the full position." = "“第一批”“第二批”：每一批买满仓的一等份。";
 "%@ batches make a full position" = "%@ 批为满仓";
 "How they trade" = "交易习惯";
-"Two things that differ from guru to guru." = "每位信号源不一样的两件事。";
 "%@ Agent access stays off until you choose again." = "%@ 在你重新选择之前，智能体访问保持关闭。";
 "%@ Fix it under Interpreter in Connections." = "%@ 请在“连接”的“AI 模型”中修正。";
 "“%@” needs a Discord channel." = "“%@”需要一个 Discord 频道。";
@@ -1601,3 +1600,10 @@
 "A check reads the public list of releases. Nothing about your accounts or trading is sent." = "检查更新只会读取公开的版本列表，不会发送任何账户或交易信息。";
 "Check for updates automatically" = "自动检查更新";
 "Once a day. You still choose when to install." = "每天一次。何时安装仍由你决定。";
+"Three things that differ from guru to guru." = "每位信号源不一样的三件事。";
+"Skip re-posted calls" = "跳过重复发布的喊单";
+"Every post is copied, even one that repeats an earlier call." = "每条帖子都会跟单，即使重复了之前的喊单。";
+"The same call again (same stock, price, and size) counts once. A repeated sell counts once all day." = "同一条喊单（股票、价格、仓位都相同）再发一次只算一次。重复的卖出当天只算一次。";
+"Counts as a re-post within" = "视为重复发布的时间";
+"Minutes" = "分钟";
+"minutes" = "分钟";

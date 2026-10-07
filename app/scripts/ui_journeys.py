@@ -287,6 +287,8 @@ class AppDriver:
                 if not any(text in str(error) for text in transient) or attempt == 2:
                     raise
                 time.sleep(1)
+        if name is not None:
+            self._capture_sheets(f"{self.shot_count:02d}-{name}")
         elements = [
             Element(
                 id=str(raw.get("id", "")),
@@ -300,6 +302,26 @@ class AppDriver:
             for raw in data.get("ui_elements", [])
         ]
         return Snapshot(id=str(data.get("snapshot_id", "")), elements=elements)
+
+    def _capture_sheets(self, stem: str) -> None:
+        """A sheet is a window of its own, missing from the main window's capture: save each one
+        beside the screenshot, so the shot shows what the owner sees."""
+        with contextlib.suppress(JourneyFailure):
+            windows = peekaboo("window", "list", "--app", APP_NAME).get("windows", [])
+            for index, window in enumerate(windows[1:], start=1):
+                if window.get("window_id"):
+                    subprocess.run(
+                        [
+                            "/usr/sbin/screencapture",
+                            "-x",
+                            "-o",
+                            "-l",
+                            str(window["window_id"]),
+                            str(self.screenshots / f"{stem}-sheet{index}.png"),
+                        ],
+                        check=False,
+                        timeout=30,
+                    )
 
     def click(
         self,
@@ -921,9 +943,19 @@ def j6_setup_editing(app: AppDriver) -> None:
         "How they trade",
         "A sell refers to",
         "Buys in batches",
+        "Skip re-posted calls",
+        "Counts as a re-post within",
         "Copies into",
         "guru.sizingSummary",
     )
+    # The re-post check is on at ten minutes; off, every post is copied and the minutes go away.
+    app.click("Skip re-posted calls", role="checkbox")
+    app.wait_gone("Counts as a re-post within", timeout=10)
+    app.expect(
+        app.see("guru-reposts-off"), "Every post is copied, even one that repeats an earlier call."
+    )
+    app.click("Skip re-posted calls", role="checkbox")
+    app.wait_for("Counts as a re-post within", timeout=10, name="guru-reposts-on")
     app.click("Done")
     app.expect(app.see("guru-added"), "connections.guru", "Unnamed guru")
     # Unsaved accounts and gurus stay in Connections.

@@ -3,6 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
+from copytrading_engine.trading.domain.config import TradingConfiguration
 from copytrading_engine.trading.domain.profiles import ProfileBuilder, ProfileDraft
 
 
@@ -158,3 +159,28 @@ def test_one_guru_copies_into_one_account_at_its_maximum_per_stock(change, probl
 
     with pytest.raises(ValidationError, match=problem):
         TradingConfiguration.model_validate(raw)
+
+
+@pytest.mark.parametrize(("value", "expected"), [(None, None), (1, 1), (1440, 1440)])
+def test_a_guru_repeat_window_is_off_or_a_number_of_minutes(value, expected):
+    def routes(profiles):
+        return [_route(profiles[0], "paper-a", None) | {"repeat_window_minutes": value}]
+
+    [route] = TradingConfiguration.model_validate(_configuration(routes)).routes
+    assert route.repeat_window_minutes == expected
+
+
+def test_a_saved_route_without_a_repeat_window_checks_ten_minutes():
+    [route] = TradingConfiguration.model_validate(
+        _configuration(lambda profiles: [_route(profiles[0], "paper-a", None)])
+    ).routes
+    assert route.repeat_window_minutes == 10
+
+
+@pytest.mark.parametrize("value", [0, -5, 1441, "ten"])
+def test_a_repeat_window_outside_one_minute_to_a_day_is_refused(value):
+    def routes(profiles):
+        return [_route(profiles[0], "paper-a", None) | {"repeat_window_minutes": value}]
+
+    with pytest.raises(ValidationError):
+        TradingConfiguration.model_validate(_configuration(routes))

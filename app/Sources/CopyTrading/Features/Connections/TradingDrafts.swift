@@ -81,6 +81,8 @@ struct TradingRouteDraft: Identifiable {
     /// How many batches make the guru's full position; nil when the guru does not buy in batches.
     var batches: Int?
     var sellsReferTo: TradingSellsReferTo
+    /// Minutes within which the same call again is a re-post; nil copies every post.
+    var repeatWindowMinutes: Int?
     var examples: [TradingProfileExampleDraft]
     /// The one account this guru copies into, once the owner has chosen it.
     var connection: TradingConnectionDraft?
@@ -97,6 +99,7 @@ struct TradingRouteDraft: Identifiable {
         playbook: String = "",
         exitBasis: TradingExitBasis = .originalPosition,
         batches: Int? = nil, sellsReferTo: TradingSellsReferTo = .buyPrice,
+        repeatWindowMinutes: Int? = TradingRouteConfiguration.defaultRepeatWindowMinutes,
         examples: [TradingProfileExampleDraft] = [],
         connection: TradingConnectionDraft? = nil
     ) {
@@ -108,6 +111,7 @@ struct TradingRouteDraft: Identifiable {
         self.exitBasis = exitBasis
         self.batches = batches
         self.sellsReferTo = sellsReferTo
+        self.repeatWindowMinutes = repeatWindowMinutes
         self.examples = examples
         self.connection = connection
     }

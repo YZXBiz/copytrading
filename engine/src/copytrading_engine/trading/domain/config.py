@@ -7,7 +7,11 @@ from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, StrictBool, StrictInt, model_validator
 
-from copytrading_engine.execution.domain.sizing import RouteConnection
+from copytrading_engine.execution.domain.sizing import (
+    MAX_REPEAT_WINDOW_MINUTES,
+    REPEAT_WINDOW_MINUTES,
+    RouteConnection,
+)
 from copytrading_engine.shared.configuration_version import CONFIGURATION_VERSION
 from copytrading_engine.shared.model_providers import (
     LOCAL_PROVIDERS,
@@ -112,6 +116,11 @@ class RouteConfiguration(BaseModel):
     guru_id: str = Field(pattern=r"^[a-zA-Z0-9_-]{1,64}$")
     profile_revision: str = Field(pattern=r"^[0-9a-f]{64}$")
     connections: tuple[RouteConnection, ...] = Field(min_length=1)
+    # The same call again within this many minutes is the guru re-posting it, not a new trade;
+    # None turns the check off, so every post is copied.
+    repeat_window_minutes: int | None = Field(
+        default=REPEAT_WINDOW_MINUTES, ge=1, le=MAX_REPEAT_WINDOW_MINUTES
+    )
 
     @model_validator(mode="after")
     def validate_source_identity(self) -> Self:

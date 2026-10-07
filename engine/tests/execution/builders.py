@@ -32,6 +32,7 @@ def destination_signal(
     default_fraction: str | None = "1",
     revision: str = "a" * 64,
     account_id: str = "paper-demo",
+    repeat_window_minutes: int | None = 10,
 ) -> DestinationSignal:
     return DestinationSignal(
         signal=signal,
@@ -45,14 +46,27 @@ def destination_signal(
             ),
             environment="paper",
             configuration_revision=revision,
+            repeat_window_minutes=repeat_window_minutes,
         ),
     )
 
 
 def receive(
-    engine: CopyEngine, signal: StockSignal, now: dt.datetime, *, full_position_usd: str = "600"
+    engine: CopyEngine,
+    signal: StockSignal,
+    now: dt.datetime,
+    *,
+    full_position_usd: str = "600",
+    repeat_window_minutes: int | None = 10,
 ) -> None:
-    engine.receive(destination_signal(signal, full_position_usd=full_position_usd), now)
+    engine.receive(
+        destination_signal(
+            signal,
+            full_position_usd=full_position_usd,
+            repeat_window_minutes=repeat_window_minutes,
+        ),
+        now,
+    )
 
 
 def evidence(instruction):
