@@ -9,7 +9,7 @@ struct GuideDocument: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 34) {
-            GuideHeader(progress: model.setupProgress)
+            GuideHeader(progress: model.setupProgress, startTour: model.startSetupTour)
                 .id(GuideAnchor.top)
             GuideLeadBlock()
             GuideFlowFigure()

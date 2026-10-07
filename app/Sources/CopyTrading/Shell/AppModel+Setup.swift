@@ -173,6 +173,17 @@ extension AppModel {
         selectedScreen = .today
     }
 
+    /// Starts the setup tour on Connections, at the first thing still to do.
+    func startSetupTour() {
+        setupEditor = nil
+        isTouringSetup = true
+        selectedScreen = .connections
+    }
+
+    func endSetupTour() {
+        isTouringSetup = false
+    }
+
     /// Opens a connection's settings on Connections, with its first field ready for typing.
     func open(_ connection: ConnectionKind) {
         requestedConnection = connection

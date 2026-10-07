@@ -66,6 +66,7 @@ struct ConnectionsStartCard: View {
                 }
             }
             StartCopyingButton(model: model)
+                .setupTourTarget(.startCopying)
         }
         .controlSize(.large)
         .padding(16)

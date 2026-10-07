@@ -106,6 +106,7 @@ struct ConnectionEditor: View {
                     L10n.string("Channel IDs"), text: $model.setupDraft.channels,
                     prompt: Text(L10n.string("Comma-separated Discord channel IDs")))
             }
+            .setupTourTarget(.channelIDs)
             row("Allowed authors") {
                 TextField(
                     L10n.string("Allowed authors"), text: $model.setupDraft.authors,
@@ -114,6 +115,7 @@ struct ConnectionEditor: View {
             row("Discord token") {
                 SecureField(L10n.string("Discord token"), text: $model.setupDraft.discordToken, prompt: secretPrompt)
             }
+            .setupTourTarget(.discordToken)
         case .interpreter:
             row("Model") {
                 TextField(
@@ -128,6 +130,7 @@ struct ConnectionEditor: View {
             row("API key") {
                 SecureField(L10n.string("API key"), text: $model.setupDraft.providerAPIKey, prompt: modelKeyPrompt)
             }
+            .setupTourTarget(.interpreterKey)
         case .alerts where model.setupDraft.notificationService == .discord:
             row("Webhook URL") {
                 SecureField(

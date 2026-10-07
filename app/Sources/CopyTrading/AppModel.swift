@@ -508,6 +508,9 @@ final class AppModel {
     var copyingStartedAt: Date?
     /// A Getting Started section asked for from the Help menu; the guide clears it.
     var guideAnchor: GuideAnchor?
+    /// The setup tour is walking the owner through Connections. Where it points is read from the
+    /// setup itself (`SetupTourStop.current`), so this is the only state the tour keeps.
+    var isTouringSetup = false
     /// Bumped by Help ▸ Show Tips Again, so every tip gets a fresh identity and can show again.
     var tipGeneration = UserDefaults.standard.integer(forKey: AppModel.tipGenerationKey)
     @ObservationIgnored private var pendingTradingActivation: PendingTradingActivation?
