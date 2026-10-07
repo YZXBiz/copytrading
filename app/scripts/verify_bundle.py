@@ -21,6 +21,8 @@ _ABSOLUTE_TOOLS = re.compile(rb"(?:/opt/homebrew/bin/|/usr/local/bin/)(?:uv|brew
 _DEVELOPER_PATH = re.compile(rb"/Users/[^/\x00\s]+/[^\x00\s]+")
 # Debug builds can skip owner authentication for UI journeys; shipped binaries must not.
 _UI_TEST_UNLOCK = b"COPYTRADING_UI_TEST_UNLOCK"
+# Debug builds can fill Connections with the owner's test keys; shipped binaries must not.
+_DEV_PREFILL = b"COPYTRADING_DEV_PREFILL"
 _SECRET_SUFFIXES = {".key", ".p12", ".pfx"}
 _MACHO_MAGIC = {
     bytes.fromhex(value)
@@ -370,6 +372,8 @@ def verify(app: Path, *, inspect_macho: bool = True) -> list[str]:
             problems.append(f"absolute developer path: {path.relative_to(contents)}")
         if path == executable and _UI_TEST_UNLOCK in data:
             problems.append("debug-only authentication bypass in executable")
+        if path == executable and _DEV_PREFILL in data:
+            problems.append("debug-only setup prefill in executable")
         tool_pattern = _ABSOLUTE_TOOLS if path == executable else _TOOLS
         if tool_pattern.search(data):
             problems.append(f"developer tool required at launch: {path.relative_to(contents)}")

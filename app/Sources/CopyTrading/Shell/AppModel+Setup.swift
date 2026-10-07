@@ -168,6 +168,16 @@ extension AppModel {
         setupDraft = ConnectionsDraft()
         setupDraftSource = nil
         syncSetupDraftWithSaved()
+        prefillEmptySetup()
+    }
+
+    /// A debug build started by `make dev-app` begins an empty setup from the owner's test keys.
+    func prefillEmptySetup() {
+        #if DEBUG
+            if savedTradingConfiguration == nil, let prefill = DevPrefill.launch {
+                prefill.fill(&setupDraft)
+            }
+        #endif
     }
 
     /// A new setup was saved and copying started: show the owner where its results will appear.

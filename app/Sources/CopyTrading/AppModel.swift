@@ -681,6 +681,7 @@ final class AppModel {
             savedTradingConfiguration = savedTrading?.configuration
             hasTradingSecrets = savedTrading != nil
             syncSetupDraftWithSaved()
+            prefillEmptySetup()
             // A first launch walks the owner through setup on Connections, until they end the tour;
             // an engine restart later never moves the owner.
             if !hasChosenFirstScreen {

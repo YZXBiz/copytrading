@@ -179,6 +179,13 @@ def test_debug_authentication_bypass_fails(app: Path) -> None:
     assert "debug-only authentication bypass in executable" in problems
 
 
+def test_debug_setup_prefill_fails(app: Path) -> None:
+    executable = app / "Contents/MacOS/CopyTrading"
+    executable.write_bytes(b"COPYTRADING_DEV_PREFILL")
+    problems = verify_bundle.verify(app, inspect_macho=False)
+    assert "debug-only setup prefill in executable" in problems
+
+
 def test_world_readable_secret_fails(app: Path) -> None:
     key = app / "Contents/Resources/Runtime/account.key"
     key.write_text("private")

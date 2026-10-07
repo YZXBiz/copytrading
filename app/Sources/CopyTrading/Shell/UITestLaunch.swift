@@ -24,7 +24,7 @@
         }
 
         /// macOS reports /private/tmp as /tmp once symlinks resolve, so compare both spellings.
-        private static func isTemporary(_ path: String) -> Bool {
+        static func isTemporary(_ path: String) -> Bool {
             let candidates = spellings(of: path)
             let roots = spellings(of: NSTemporaryDirectory()).union(["/tmp", "/private/tmp"])
             return candidates.contains { candidate in
