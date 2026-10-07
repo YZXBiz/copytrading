@@ -24,7 +24,7 @@ struct SetupTourStrip: View {
                             .foregroundStyle(Palette.accent)
                     }
                     Text(L10n.string(step.shortTitle))
-                        .font(.system(size: 12, weight: step == current ? .semibold : .regular))
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(step == current ? Palette.accent : Palette.tertiaryInk)
                 }
             }

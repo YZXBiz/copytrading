@@ -19,12 +19,15 @@ struct SetupTourOverlay: View {
                 if let anchor = targets[stop.target] {
                     let hole = layer[anchor].insetBy(dx: -6, dy: -4)
                     let placement = place(around: hole, in: layer.size)
-                    SetupTourSpotlight(hole: hole, radius: stop.isInPanel ? 12 : 14, dims: !stop.isInPanel)
+                    // Inside a panel the hint sits under the field itself; the page gets the card.
                     if !stop.isInPanel {
+                        SetupTourSpotlight(hole: hole)
                         SetupTourCard(stop: stop, caretEdge: placement.edge, caretOffset: placement.caret, model: model)
                             .onGeometryChange(for: CGFloat.self, of: \.size.height) { cardHeight = $0 }
-                            .offset(x: placement.origin.x, y: placement.origin.y)
+                            // A new stop fades in as a new card; its words never morph from the last.
+                            .id(stop)
                             .transition(.opacity)
+                            .offset(x: placement.origin.x, y: placement.origin.y)
                     }
                 }
                 SetupTourStrip(current: stop.step, progress: model.setupProgress)
