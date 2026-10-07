@@ -275,17 +275,26 @@ class ManualTradingApplication:
             )
         )
 
-        related_action = any(
-            command.correction_id == correction.correction_id
-            and command.instruction_index == request.instruction_index
-            and command.state == "prepared"
-            and command.client_id is not None
-            and (
-                self.engine.ledger.order(command.client_id).pending
-                or self.engine.ledger.order(command.client_id).filled_qty > 0
-            )
-            for command in snapshot.manual_commands.values()
-        )
+        # A post is acted on by hand once per stock and side: a second approval, even through a
+        # new correction of the same post, must not buy again while the first order is open or
+        # has filled.
+        side = "buy" if instruction.action == "buy" else "sell"
+        related_action = False
+        for command in snapshot.manual_commands.values():
+            if (
+                command.source_id != correction.source_id
+                or command.state != "prepared"
+                or command.client_id is None
+            ):
+                continue
+            earlier = self.engine.ledger.order(command.client_id)
+            if (
+                earlier.symbol == instruction.symbol
+                and earlier.side == side
+                and (earlier.pending or earlier.filled_qty > 0)
+            ):
+                related_action = True
+                break
         if related_action:
             reasons.append("related_manual_action")
             checks.append(

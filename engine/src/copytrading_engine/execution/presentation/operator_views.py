@@ -11,7 +11,7 @@ from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
 from copytrading_engine.execution.domain.market import Account
 from copytrading_engine.execution.domain.orders import OwnedLot
 from copytrading_engine.execution.domain.ownership import OwnershipInspection
-from copytrading_engine.execution.domain.progress import Skipped
+from copytrading_engine.execution.domain.progress import InstructionProgress, Skipped
 from copytrading_engine.execution.domain.values import Money, Positive, Quantity, Value
 
 EXCERPT_LENGTH = 140
@@ -271,6 +271,12 @@ def destination_views(snapshot: LedgerSnapshot, source_ids: set[str]) -> dict[st
     if snapshot.account_id is None or snapshot.environment is None:
         return {}
     views: dict[str, DestinationView] = {}
+    # Posts the owner has acted on by hand: a call held for approval is then no longer waiting.
+    approved = {
+        command.source_id
+        for command in snapshot.manual_commands.values()
+        if command.state == "prepared"
+    }
     for message in snapshot.messages.values():
         source_id = f"{message.source}:{message.channel_id}:{message.id}"
         if source_id not in source_ids:
@@ -299,7 +305,7 @@ def destination_views(snapshot: LedgerSnapshot, source_ids: set[str]) -> dict[st
             environment=snapshot.environment,
             status=message.status,
             instruction_outcomes=tuple(
-                part.reason if part.kind == "skipped" else part.kind for part in message.parts
+                _outcome(part, approved=source_id in approved) for part in message.parts
             ),
             limits_hit=tuple(
                 LimitHit(part=index, **exposure.model_dump())
@@ -310,6 +316,14 @@ def destination_views(snapshot: LedgerSnapshot, source_ids: set[str]) -> dict[st
             orders=orders,
         )
     return views
+
+
+def _outcome(part: InstructionProgress, *, approved: bool) -> str:
+    if not isinstance(part, Skipped):
+        return part.kind
+    if part.reason == "approval_required" and approved:
+        return "approved_by_owner"
+    return part.reason
 
 
 def event_page(

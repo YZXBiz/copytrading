@@ -1521,6 +1521,7 @@
 "Ask me before sending orders" = "发送订单前先问我";
 "Nothing is sent by itself. Each order waits in Activity until you approve it with Touch ID." = "不会自动发送任何订单。每笔订单都会在“活动”里等你用Touch ID 批准。";
 "You asked to approve every order for this account" = "你设置了这个账户的每笔订单都要先经你批准";
+"You approved this call" = "你已批准这条喊单";
 "Nothing was sent: Touch ID was not confirmed." = "没有发送任何订单：Touch ID 未通过。";
 "send these orders" = "发送这些订单";
 "You can approve it until 20:00 New York time." = "纽约时间 20:00 前可以批准。";

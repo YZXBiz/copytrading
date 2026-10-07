@@ -817,3 +817,24 @@ async def test_owner_cancellation_waits_for_resolution_commit_and_reopens(tmp_pa
     reopened.bind_identity("paper-demo", "paper")
     assert reopened.load().ownership_resolutions["owner-resolution"].request == request
     reopened.close()
+
+
+def test_a_mismatch_stays_open_while_it_lasts_and_closes_once_the_broker_matches_again():
+    store = MemoryRepository()
+    broker = FakeBroker()
+    engine = engine_with_wide_limits(store, broker)
+    engine.bind(NOW)
+
+    # Shares bought outside the app after it connected: the stock is held back until it is clear.
+    broker.holdings["ABC"] = Decimal("3")
+    engine.reconcile(NOW + dt.timedelta(minutes=1))
+    engine.reconcile(NOW + dt.timedelta(minutes=2))
+    assert engine.ledger.unresolved_ownership("ABC")
+
+    # Sold again outside the app: nothing is left to allocate, so the incident closes by itself.
+    broker.holdings["ABC"] = Decimal("0")
+    engine.reconcile(NOW + dt.timedelta(minutes=3))
+    assert not engine.ledger.unresolved_ownership("ABC")
+    [resolution] = store.load().ownership_resolutions.values()
+    assert resolution.request.reason == "broker_matches_again"
+    assert resolution.request.external_qty == 0

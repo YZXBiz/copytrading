@@ -8,6 +8,8 @@ Every copying rule run against DeepSeek and Alpaca paper, and three ways copying
 
 - **A ticker Alpaca does not list no longer stops copying.** A guru's typo or a delisted stock used to take the account offline until you restarted; the call is now skipped as a stock the broker does not support, and the next call trades.
 - **A brief Alpaca outage no longer stops copying.** A dropped connection, a rate limit, or an outage on Alpaca's side used to stop the account for good; it now tries again on its own, first after a second and then less often, also while Start Copying connects. Rejected keys still stop it, because only you can fix those.
+- **A stock mismatch clears itself.** When shares you traded outside CopyTrading are gone again, the red "ownership mismatch" warning on Accounts now goes away by itself, and the stock is copied again. It used to stay until a restart, and every call for that stock was refused meanwhile.
+- **A call you approved is approved once.** An approved call used to stay under Waiting for You until 20:00, and approving it again bought again. It now leaves the list as soon as you approve it, and the engine refuses a second order for the same post and stock while the first is open or filled.
 - **An order you placed on Alpaca yourself now says so.** The first time an account connects, CopyTrading records what it already holds, so an open order placed outside the app must be cancelled or filled first. Accounts and Start Copying now say "Cancel the orders open at Alpaca first" instead of "The account could not be reached".
 
 ## 0.1.0-alpha.5 — developer preview

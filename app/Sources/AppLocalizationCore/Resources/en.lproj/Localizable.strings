@@ -1521,6 +1521,7 @@
 "Ask me before sending orders" = "Ask me before sending orders";
 "Nothing is sent by itself. Each order waits in Activity until you approve it with Touch ID." = "Nothing is sent by itself. Each order waits in Activity until you approve it with Touch ID.";
 "You asked to approve every order for this account" = "You asked to approve every order for this account";
+"You approved this call" = "You approved this call";
 "Nothing was sent: Touch ID was not confirmed." = "Nothing was sent: Touch ID was not confirmed.";
 "send these orders" = "send these orders";
 "You can approve it until 20:00 New York time." = "You can approve it until 20:00 New York time.";

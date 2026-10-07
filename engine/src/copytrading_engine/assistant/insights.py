@@ -14,7 +14,8 @@ from copytrading_engine.trading.presentation.operator_models import (
 )
 
 PAGE = 100
-FILLED = {"order_linked"}
+# An order went out: copied by itself, or approved by the owner from a held call.
+FILLED = {"order_linked", "approved_by_owner"}
 PENDING = "pending"
 
 

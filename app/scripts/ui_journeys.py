@@ -1392,6 +1392,26 @@ TEST_SYMBOLS = (
     "BTG",
     "AMC",
     "T",
+    "BAC",
+    "INTC",
+    "LYFT",
+    "CCL",
+    "ITUB",
+    "ABEV",
+    "BBD",
+    "KMI",
+    "HBAN",
+    "KEY",
+    "VZ",
+    "PCG",
+    "NU",
+    "CPNG",
+    "XPEV",
+    "CSCO",
+    "KO",
+    "PBR",
+    "ET",
+    "NCLH",
 )
 
 
@@ -1435,9 +1455,12 @@ def _post_test_call(setup: dict[str, str], text: str) -> None:
 
 def _copying_with_entries(app: AppDriver) -> None:
     """Copying on, automatic recovery, and entries on, asking the owner where the app asks."""
-    # Copying is paused after a restore; start it again from the toolbar.
+    # Copying is paused after a restore; start it again from the toolbar. The button toggles, so
+    # it is pressed only when it offers Start: an earlier journey may have left copying on.
     app.open_screen("today")
-    app.click("toolbar.copying")
+    toolbar = app.see().find("toolbar.copying")
+    if toolbar is not None and "Start" in toolbar.label:
+        app.click("toolbar.copying")
     _wait_for_account(app, "primary", timeout=180)
 
     # A restored account waits for the owner to choose automatic recovery again.
@@ -1542,6 +1565,24 @@ def j36_approve_and_skip(app: AppDriver) -> None:
                 raise JourneyFailure(f"the approved call did not buy {symbol} on Alpaca paper")
             time.sleep(5)
         app.click("Close")
+        # An approved call stops waiting: a second approval must not be offered.
+        approved = next(
+            item
+            for item in _agent_result(app, 0, "activity", "--limit", "20")["items"]
+            if f"Bought {symbol} " in str(item.get("untrusted_source_text") or "")
+        )
+        outcomes = {o for d in approved["destinations"] for o in d["instruction_outcomes"]}
+        if outcomes != {"approved_by_owner"}:
+            raise JourneyFailure(f"the approved call still reads {sorted(outcomes)}")
+        app.open_screen("activity")
+        app.click("Waiting for You")
+        deadline = time.monotonic() + 30
+        while app.see().find(f"Bought {symbol} ") is not None:
+            if time.monotonic() > deadline:
+                app.see(f"still-waiting-{symbol.lower()}")
+                raise JourneyFailure("the approved call is still listed under Waiting for You")
+            time.sleep(3)
+        app.see(f"approved-{symbol.lower()}")
         _sell_lot(app, symbol, bought[0])
     finally:
         _set_ask_before_orders(app, False)
@@ -1617,6 +1658,8 @@ def j35_copy_and_sell(app: AppDriver) -> None:
 def _sell_lot(app: AppDriver, symbol: str, lot: dict[str, Any]) -> None:
     """Sell one lot from Accounts: review first, then sell, and wait for the fill."""
     app.open_screen("accounts")
+    # A lot bought moments ago appears once Accounts next syncs with the broker.
+    app.wait_for(f"accounts.position.{symbol}", timeout=60, name="accounts-position")
     app.click(f"accounts.position.{symbol}")
     app.click(f"accounts.lot.sell.{lot['lot_id']}")
     app.click("lotSale.review.button")
