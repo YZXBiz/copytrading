@@ -16,22 +16,17 @@ struct SetupTourOverlay: View {
     var body: some View {
         GeometryReader { layer in
             ZStack(alignment: .topLeading) {
-                if let anchor = targets[stop.target] {
+                // Inside a panel the field draws its own card; the page gets the spotlight.
+                if !stop.isInPanel, let anchor = targets[stop.target] {
                     let hole = layer[anchor].insetBy(dx: -6, dy: -4)
                     let placement = place(around: hole, in: layer.size)
-                    // Inside a panel the field is outlined and its hint sits under it; the page gets
-                    // the card.
-                    if stop.isInPanel {
-                        SetupTourSpotlight(hole: hole, radius: 12, dims: false)
-                    } else {
-                        SetupTourSpotlight(hole: hole)
-                        SetupTourCard(stop: stop, caretEdge: placement.edge, caretOffset: placement.caret, model: model)
-                            .onGeometryChange(for: CGFloat.self, of: \.size.height) { cardHeight = $0 }
-                            // A new stop fades in as a new card; its words never morph from the last.
-                            .id(stop)
-                            .transition(.opacity)
-                            .offset(x: placement.origin.x, y: placement.origin.y)
-                    }
+                    SetupTourSpotlight(hole: hole)
+                    SetupTourCard(stop: stop, caretEdge: placement.edge, caretOffset: placement.caret, model: model)
+                        .onGeometryChange(for: CGFloat.self, of: \.size.height) { cardHeight = $0 }
+                        // A new stop fades in as a new card; its words never morph from the last.
+                        .id(stop)
+                        .transition(.opacity)
+                        .offset(x: placement.origin.x, y: placement.origin.y)
                 }
                 SetupTourStrip(current: stop.step, progress: model.setupProgress)
                     .frame(width: layer.size.width, height: layer.size.height, alignment: .bottom)

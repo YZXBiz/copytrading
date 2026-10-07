@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The setup tour inside a Connections panel: a soft box under the field it points at, in the
-/// panel's own flow, so it never covers the panel's buttons or a check's result.
+/// The setup tour inside a Connections panel: words under the field it points at, in the panel's
+/// own flow, so it never covers the panel's buttons or a check's result.
 struct SetupTourInlineHint: View {
     let stop: SetupTourStop
     @Bindable var model: AppModel
@@ -32,10 +32,8 @@ struct SetupTourInlineHint: View {
             .foregroundStyle(Palette.accent)
             .padding(.top, 2)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.accent.opacity(0.08), in: .rect(cornerRadius: 10, style: .continuous))
         .id(stop)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("tour.card")
