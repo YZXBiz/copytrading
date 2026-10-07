@@ -102,6 +102,8 @@ enum Reason {
         "named_buy_not_held": "None of your buys is at the buy price the guru named",
         "sell_share_not_given": "The sell doesn't say how much",
         "batch_size_not_given": "The playbook doesn't say how big a batch is",
+        "repeats_an_earlier_call": "The post repeats an earlier call of the guru's",
+        "repeats_a_recent_call": "A re-post of a call already copied",
         "approved_by_owner": "You approved this call",
         "waiting_expired": "Too late to copy: its trading day is over",
     ]

@@ -1639,3 +1639,6 @@
 "The playbook doesn't say how big a batch is" = "The playbook doesn't say how big a batch is";
 "Empty sells from every buy" = "Empty sells from every buy";
 "e.g. 1/6. Leave empty for the full position." = "e.g. 1/6. Leave empty for the full position.";
+"The post repeats an earlier call of the guru's" = "The post repeats an earlier call of the guru's";
+"A re-post of a call already copied" = "A re-post of a call already copied";
+"%@ A re-post of an earlier call." = "%@ A re-post of an earlier call.";

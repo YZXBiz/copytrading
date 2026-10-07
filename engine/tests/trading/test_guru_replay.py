@@ -40,7 +40,7 @@ class _Reader:
         self.closed = False
         self.routes = []
 
-    async def decode(self, text, route):
+    async def decode(self, text, route, recent=()):
         self.routes.append(route)
         if text.startswith("25加了"):
             return trade(buy("ABC", "25", fraction="0.5", fraction_said="一半"))

@@ -28,7 +28,8 @@ Waiting for You (`sell_names_no_buy`, `missing_or_ambiguous_lot`, `batch_size_un
      that trades only in whole shares, the remainder goes to the oldest buy.
    One sell is still one order against one lot.
 5. **Size.** A stated fraction is that share of the full position (the account's maximum per
-   stock). No size, including a batch, asks for the full position; the maximum per order trims it.
+   stock). No size asks for the full position; the maximum per order trims it. A batch the
+   playbook gives no size ("第二批 means 1/3") waits for the owner, like a vague trim.
 6. **Reposts.** With the guru's re-post check on, the same call within its window counts once, and
    so does a call the reader says repeats one within the window. A call the reader says repeats one
    outside the window waits for the owner. A repeated sell counts once all day. With the check off,
@@ -44,6 +45,8 @@ Waiting for You (`sell_names_no_buy`, `missing_or_ambiguous_lot`, `batch_size_un
   repeated on every later sell.
 
 ## Compliance
-The reader's output validator rejects words not in the post, a repeat of a call that is not
-listed, and a named buy price with no open call; a second failure waits for the owner. The ledger
+The reader's output validator rejects words not in the post and a repeat of a call that is not
+listed (or is another stock's); a second failure waits for the owner. A named buy price that no
+open call of that stock has is asked about once, then believed: the guru may hold buys from before
+CopyTrading started, and the account still waits for the owner when it holds no such buy. The ledger
 validates that a lot's remaining shares equal the sum of its buys' remaining shares.

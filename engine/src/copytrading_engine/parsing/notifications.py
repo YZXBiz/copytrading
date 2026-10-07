@@ -29,6 +29,7 @@ WAITING = {
     "price_not_given": "The post gave no price",
     "sell_share_not_given": "The sell doesn't say how much",
     "batch_size_not_given": "The playbook doesn't say how big a batch is",
+    "repeats_an_earlier_call": "The post repeats an earlier call of the guru's",
 }
 
 

@@ -4,8 +4,11 @@ import datetime as dt
 import hashlib
 import json
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 from uuid import uuid4
+
+from pydantic import TypeAdapter
 
 from copytrading_engine.parsing.contracts import (
     DestinationIdentity,
@@ -15,11 +18,12 @@ from copytrading_engine.parsing.contracts import (
     RequestReservation,
 )
 from copytrading_engine.parsing.diagnostics import ValidationIssue
+from copytrading_engine.parsing.history import PastCall
 from copytrading_engine.parsing.notifications import decision_notification
 from copytrading_engine.shared.notification_models import NotificationIntent, NotificationPayload
 from copytrading_engine.shared.queue_snapshot import QueueSnapshot
 from copytrading_engine.shared.raw_message import RawMessage
-from copytrading_engine.shared.signals import SourceIdentityConflict, StockSignal
+from copytrading_engine.shared.signals import Instruction, SourceIdentityConflict, StockSignal
 from copytrading_engine.shared.sqlite import SchemaComponent, SQLiteUnit, ensure_schema
 
 PARSER_SCHEMA = SchemaComponent(
@@ -78,6 +82,62 @@ CREATE TABLE IF NOT EXISTS parser_notifications (
 )
 
 
+# The owner's corrections of what a post said, which the reader's history prefers to its own
+# reading (ADR-0010). Its own component, so adding it leaves the parser's revision as it was.
+PARSER_CORRECTIONS_SCHEMA = SchemaComponent(
+    "parser_corrections",
+    1,
+    """
+CREATE TABLE IF NOT EXISTS parser_corrections (
+    message_id TEXT PRIMARY KEY REFERENCES parser_inbox(id),
+    instructions TEXT NOT NULL,
+    recorded_at TEXT NOT NULL
+);
+""",
+)
+
+# How many of a channel's latest posts the reader's history is replayed from.
+HISTORY_POSTS = 300
+
+_INSTRUCTIONS = TypeAdapter(tuple[Instruction, ...])
+
+
+def record_owner_correction(
+    database: Path, source_id: str, instructions: tuple[Instruction, ...], at: dt.datetime
+) -> None:
+    """Keep the owner's latest reading of a post, which the guru's history then uses."""
+    _aware(at)
+    with closing(sqlite3.connect(database, timeout=5, isolation_level=None)) as db:
+        ensure_schema(db, PARSER_CORRECTIONS_SCHEMA)
+        db.execute(
+            "INSERT INTO parser_corrections(message_id,instructions,recorded_at) VALUES (?,?,?) "
+            "ON CONFLICT(message_id) DO UPDATE SET "
+            "instructions=excluded.instructions,recorded_at=excluded.recorded_at",
+            (source_id, _INSTRUCTIONS.dump_json(instructions).decode(), at.isoformat()),
+        )
+
+
+def _past_calls(
+    rows: list[tuple[str, str, str | None]],
+) -> tuple[PastCall, ...]:
+    """The calls a channel's posts made: the owner's correction where there is one, otherwise
+    each post the engine traded."""
+    calls: list[PastCall] = []
+    for key, result, corrected in rows:
+        signal = StockSignal.model_validate_json(result)
+        if corrected is not None:
+            instructions = _INSTRUCTIONS.validate_json(corrected)
+        elif signal.decision == "trade":
+            instructions = signal.instructions
+        else:
+            continue
+        calls.extend(
+            PastCall(source_key=key, index=index, at=signal.timestamp, instruction=instruction)
+            for index, instruction in enumerate(instructions)
+        )
+    return tuple(calls)
+
+
 def _aware(now: dt.datetime) -> None:
     if now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("Parser time must be timezone-aware")
@@ -92,7 +152,10 @@ class SQLiteExtractionStore:
         unit = await SQLiteUnit.open(path)
         try:
             await unit.run(
-                lambda db: ensure_schema(db, PARSER_SCHEMA),
+                lambda db: (
+                    ensure_schema(db, PARSER_SCHEMA),
+                    ensure_schema(db, PARSER_CORRECTIONS_SCHEMA),
+                ),
                 write=True,
             )
         except BaseException:
@@ -328,6 +391,22 @@ class SQLiteExtractionStore:
             )
 
         await self._unit.run(save, write=True)
+
+    async def past_calls(self, channel_id: str, before: str) -> tuple[PastCall, ...]:
+        """The calls the channel's guru made before the post `before`, newest posts first."""
+
+        def read(db: sqlite3.Connection) -> tuple[PastCall, ...]:
+            rows = db.execute(
+                "SELECT inbox.id,inbox.result,correction.instructions FROM parser_inbox inbox "
+                "LEFT JOIN parser_corrections correction ON correction.message_id=inbox.id "
+                "WHERE inbox.channel_id=? AND inbox.result IS NOT NULL AND inbox.id<>? "
+                "AND inbox.seq<(SELECT seq FROM parser_inbox WHERE id=?) "
+                "ORDER BY inbox.seq DESC LIMIT ?",
+                (channel_id, before, before, HISTORY_POSTS),
+            ).fetchall()
+            return _past_calls(rows)
+
+        return await self._unit.run(read)
 
     async def diagnose(
         self,

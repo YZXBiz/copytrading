@@ -45,7 +45,7 @@ class FakeDecoder:
         self.calls = 0
         self.fail = fail
 
-    async def decode(self, text, route):
+    async def decode(self, text, route, recent=()):
         self.calls += 1
         if self.fail:
             raise DecodeError("provider_timeout", retryable=True)
@@ -101,7 +101,7 @@ async def test_parser_retry_attempts_bind_the_same_persisted_workflow_lineage():
         def __init__(self):
             self.seen = []
 
-        async def decode(self, text, route):
+        async def decode(self, text, route, recent=()):
             self.seen.append(current_workflow_attempt())
             raise DecodeError("provider_timeout", retryable=True)
 
@@ -193,7 +193,7 @@ async def test_permanent_provider_rejection_is_not_retried():
     box, _decoder, worker = box_and_worker()
 
     class Rejected:
-        async def decode(self, text, route):
+        async def decode(self, text, route, recent=()):
             raise DecodeError("provider_rejected", retryable=False)
 
     worker.decoder = Rejected()
@@ -234,7 +234,7 @@ async def test_channel_profile_routes_resolve_by_author_and_keep_source_identity
     observed = []
 
     class Decoder:
-        async def decode(self, text, route):
+        async def decode(self, text, route, recent=()):
             observed.append((route.guru_id, route.profile_revision))
             return commentary("Commentary")
 
@@ -311,7 +311,7 @@ async def test_schema_failure_records_typed_diagnostic_and_never_becomes_comment
     box, _, worker = box_and_worker()
 
     class Invalid:
-        async def decode(self, text, route):
+        async def decode(self, text, route, recent=()):
             raise DecodeError(
                 "invalid_model_output",
                 retryable=False,
@@ -347,7 +347,7 @@ async def test_omitted_allocation_never_reaches_default_sized_destination_order(
     text, action, symbol
 ):
     class OmittedFractionDecoder:
-        async def decode(self, text, route):
+        async def decode(self, text, route, recent=()):
             return trade(buy("ABC", "25", said=action, ticker_said=symbol))
 
     class ReviewRepository:

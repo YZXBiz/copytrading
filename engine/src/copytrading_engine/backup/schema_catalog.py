@@ -8,7 +8,7 @@ from copytrading_engine.control.sqlite import CONTROL_AUDIT_SCHEMA
 from copytrading_engine.execution.adapters.sqlite_ledger import EXECUTION_SCHEMA
 from copytrading_engine.host.installation import APPLICATION_DATABASE_VERSION, INSTALLATION_SCHEMA
 from copytrading_engine.host.self_test.store import SELF_TEST_SCHEMA
-from copytrading_engine.parsing.sqlite import PARSER_SCHEMA
+from copytrading_engine.parsing.sqlite import PARSER_CORRECTIONS_SCHEMA, PARSER_SCHEMA
 from copytrading_engine.shared.sqlite import SchemaComponent, ensure_schema
 from copytrading_engine.sources.sqlite import REJECTED_ATTACHMENT_SCHEMA, SOURCE_SCHEMA
 from copytrading_engine.trading.adapters.routing import ROUTING_SCHEMA
@@ -25,6 +25,7 @@ APPLICATION_COMPONENTS: tuple[SchemaComponent, ...] = (
     INSTALLATION_SCHEMA,
     SELF_TEST_SCHEMA,
     PARSER_SCHEMA,
+    PARSER_CORRECTIONS_SCHEMA,
     SOURCE_SCHEMA,
     REJECTED_ATTACHMENT_SCHEMA,
     ROUTING_SCHEMA,

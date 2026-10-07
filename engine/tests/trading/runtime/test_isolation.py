@@ -42,7 +42,7 @@ async def test_slow_decoder_does_not_block_broker_reconciliation(tmp_path):
     )
 
     class SlowDecoder(Decoder):
-        async def decode(self, text, route):
+        async def decode(self, text, route, recent=()):
             if text != "Market commentary only. No trade action.":
                 entered_decode.set()
                 await release_decode.wait()
@@ -265,7 +265,7 @@ async def test_slow_account_open_does_not_block_healthy_account_or_capture(tmp_p
 class _UngroundedThenBuyDecoder:
     """Reads the first post with a fraction the post never states, then a clean buy."""
 
-    async def decode(self, text, route):
+    async def decode(self, text, route, recent=()):
         if text == "Sold AAPL at 210 from 200":
             return trade(
                 sell(

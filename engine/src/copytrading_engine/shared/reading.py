@@ -128,12 +128,18 @@ class Stock(_Part):
     words: Words
 
 
+# A recent call of the guru's, as the reader was shown it: c1, c2, … (ADR-0010).
+type CallRef = Annotated[str, Field(pattern=r"^c[0-9]{1,4}$")]
+
+
 class Buy(_Part):
     action: Literal["buy"] = "buy"
     action_words: Words
     stock: Stock
     price: Price
     size: Size
+    # The recent call this one restates, when the post re-posts it rather than making a new one.
+    repeats: CallRef | None = None
 
 
 class Sell(_Part):
@@ -146,6 +152,7 @@ class Sell(_Part):
     # not say, which leaves it to the guru's playbook default.
     counts_from: Literal["original", "remaining"] | None = None
     sell_from: SellFrom
+    repeats: CallRef | None = None
 
 
 type Call = Annotated[Buy | Sell, Field(discriminator="action")]

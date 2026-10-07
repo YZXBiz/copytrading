@@ -1639,3 +1639,6 @@
 "The playbook doesn't say how big a batch is" = "说明书没写一批有多大";
 "Empty sells from every buy" = "留空则从每笔买入中卖出";
 "e.g. 1/6. Leave empty for the full position." = "例如 1/6。留空则买满一个完整仓位。";
+"The post repeats an earlier call of the guru's" = "这条帖子重复了信号源之前的一个信号";
+"A re-post of a call already copied" = "已跟过的信号被重新发了一遍";
+"%@ A re-post of an earlier call." = "%@（重复之前的信号）";

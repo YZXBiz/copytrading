@@ -5,6 +5,7 @@ from datetime import date, datetime
 from typing import Protocol
 
 from copytrading_engine.parsing.diagnostics import ValidationIssue
+from copytrading_engine.parsing.history import PastCall
 from copytrading_engine.shared.raw_message import RawMessage
 from copytrading_engine.shared.signals import StockSignal
 
@@ -55,6 +56,7 @@ class ExtractionStore(Protocol):
     async def next(self, now: datetime) -> ExtractionJob | None: ...
     async def reserve(self, request: RequestReservation) -> bool: ...
     async def finish(self, key: str, result: StockSignal) -> None: ...
+    async def past_calls(self, channel_id: str, before: str) -> tuple[PastCall, ...]: ...
     async def diagnose(
         self,
         key: str,

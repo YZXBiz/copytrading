@@ -124,11 +124,13 @@ public struct ReadBuy: Codable, Equatable, Sendable {
     public let stock: ReadStock
     public let price: ReadPrice
     public let size: ReadSize
+    /// The recent call of the guru's this one restates, as the reader named it (c1, c2, …).
+    public let repeats: String?
 
     enum CodingKeys: String, CodingKey {
         case action
         case actionWords = "action_words"
-        case stock, price, size
+        case stock, price, size, repeats
     }
 
     public init(from decoder: any Decoder) throws {
@@ -137,6 +139,7 @@ public struct ReadBuy: Codable, Equatable, Sendable {
         stock = try container.decode(ReadStock.self, forKey: .stock)
         price = try container.decode(ReadPrice.self, forKey: .price)
         size = try container.decode(ReadSize.self, forKey: .size)
+        repeats = try container.decodeIfPresent(String.self, forKey: .repeats)
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -146,6 +149,7 @@ public struct ReadBuy: Codable, Equatable, Sendable {
         try container.encode(stock, forKey: .stock)
         try container.encode(price, forKey: .price)
         try container.encode(size, forKey: .size)
+        try container.encode(repeats, forKey: .repeats)
     }
 }
 
@@ -157,11 +161,13 @@ public struct ReadSell: Codable, Equatable, Sendable {
     /// Whether a share counts from the original buy or what is left; nil when the post doesn't say.
     public let countsFrom: String?
     public let sellFrom: ReadSellFrom
+    /// The recent call of the guru's this one restates, as the reader named it (c1, c2, …).
+    public let repeats: String?
 
     enum CodingKeys: String, CodingKey {
         case action
         case actionWords = "action_words"
-        case stock, price, share
+        case stock, price, share, repeats
         case countsFrom = "counts_from"
         case sellFrom = "sell_from"
     }
@@ -174,6 +180,7 @@ public struct ReadSell: Codable, Equatable, Sendable {
         share = try container.decode(ReadShare.self, forKey: .share)
         countsFrom = try container.decodeIfPresent(String.self, forKey: .countsFrom)
         sellFrom = try container.decode(ReadSellFrom.self, forKey: .sellFrom)
+        repeats = try container.decodeIfPresent(String.self, forKey: .repeats)
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -185,6 +192,7 @@ public struct ReadSell: Codable, Equatable, Sendable {
         try container.encode(share, forKey: .share)
         try container.encode(countsFrom, forKey: .countsFrom)
         try container.encode(sellFrom, forKey: .sellFrom)
+        try container.encode(repeats, forKey: .repeats)
     }
 }
 

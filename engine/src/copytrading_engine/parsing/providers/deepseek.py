@@ -52,6 +52,7 @@ def build_decoder(config: ProviderConfig, client: AsyncOpenAI) -> PydanticAIDeco
     learner = Agent(
         model,
         output_type=PromptedOutput(PlaybookProposal),
+        name="playbook_learner",
         instructions=LEARN_INSTRUCTIONS,
         retries=1,
         model_settings={

@@ -1,5 +1,6 @@
 """Extraction use case, independent of model provider and message transport."""
 
+import datetime as dt
 from collections.abc import Sequence
 from decimal import Decimal
 from typing import Literal
@@ -13,6 +14,7 @@ from copytrading_engine.parsing.extraction import (
     check_reading,
     normalize,
 )
+from copytrading_engine.parsing.history import RecentCall
 from copytrading_engine.parsing.routes import Route
 from copytrading_engine.shared import reading as r
 from copytrading_engine.shared.signals import Evidence, Instruction, StockSignal
@@ -66,19 +68,33 @@ def without_model(event: _RawMessage, route: Route, model: str) -> StockSignal |
     return None
 
 
-async def transform(event: _RawMessage, route: Route, decoder: Decoder, model: str) -> StockSignal:
+async def transform(
+    event: _RawMessage,
+    route: Route,
+    decoder: Decoder,
+    model: str,
+    recent: tuple[RecentCall, ...] = (),
+) -> StockSignal:
     local = without_model(event, route, model)
     if local is not None:
         return local
     text = normalize(event.text).strip()
-    reading = await decoder.decode(text, route)
+    reading = await decoder.decode(text, route, recent)
     try:
         check_reading(reading, text, route)
     except GroundingError as exc:
         raise DecodeError(
             "evidence_validation_failed", retryable=False, issues=(exc.issue,)
         ) from None
-    decision, reason, calls = _act_on(reading)
+    acted, repeat = _without_repeats(reading, route, recent, event.timestamp)
+    if repeat is not None:
+        decision, reason, calls = (
+            repeat,
+            ("repeats_a_recent_call" if repeat == "ignore" else "repeats_an_earlier_call"),
+            (),
+        )
+    else:
+        decision, reason, calls = _act_on(acted)
     return outcome(
         event,
         decision,
@@ -91,6 +107,32 @@ async def transform(event: _RawMessage, route: Route, decoder: Decoder, model: s
         reading=reading,
         suggested=suggested(reading) if decision == "review" else (),
     )
+
+
+def _without_repeats(
+    reading: r.PostReading,
+    route: Route,
+    recent: tuple[RecentCall, ...],
+    at: dt.datetime,
+) -> tuple[r.PostReading, Literal["ignore", "review"] | None]:
+    """A call the reader says restates one of the guru's recent calls is not a new call while
+    the guru's repeat window is on (ADR-0010): within the window it is dropped, and a post that
+    only restates is ignored; a restatement after the window waits for the owner, who can tell a
+    reminder from a second buy. With the window off, every call is a new call."""
+    window = route.repeat_window_minutes
+    if window is None or not isinstance(reading, r.TradeMade | r.Instruction):
+        return reading, None
+    by_ref = {call.ref: call for call in recent}
+    kept = []
+    for call in reading.calls:
+        earlier = by_ref.get(call.repeats) if call.repeats is not None else None
+        if earlier is None:
+            kept.append(call)
+        elif (at - earlier.at).total_seconds() > window * 60:
+            return reading, "review"
+    if not kept:
+        return reading, "ignore"
+    return reading.model_copy(update={"calls": tuple(kept)}), None
 
 
 class _Wait(Exception):

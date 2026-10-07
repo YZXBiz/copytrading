@@ -102,7 +102,7 @@ def test_profile_examples_compare_expected_and_actual_without_execution():
     class Decoder:
         calls = 0
 
-        async def decode(self, text, route):
+        async def decode(self, text, route, recent=()):
             self.calls += 1
             return trade(
                 buy(
@@ -168,7 +168,7 @@ def test_profile_example_mismatch_requires_settings_correction_and_rerun():
     )
 
     class Decoder:
-        async def decode(self, text, route):
+        async def decode(self, text, route, recent=()):
             return trade(
                 buy(
                     _mapped(route, "Apple"),
@@ -201,7 +201,7 @@ def test_ungrounded_example_interpretation_returns_review_and_never_activates():
     )
 
     class Decoder:
-        async def decode(self, text, route):
+        async def decode(self, text, route, recent=()):
             return trade(
                 buy(
                     "MSFT",
@@ -251,7 +251,7 @@ def test_matching_exit_example_preserves_position_sizing_review_without_blocking
     )
 
     class Decoder:
-        async def decode(self, text, route):
+        async def decode(self, text, route, recent=()):
             return trade(
                 sell(
                     "AAPL",
@@ -316,7 +316,7 @@ def test_historical_evaluation_keeps_guru_revision_and_destination_sizing_indepe
     )
 
     class Decoder:
-        async def decode(self, text, route):
+        async def decode(self, text, route, recent=()):
             mapped_symbol = _mapped(route, "Apple")
             return trade(
                 buy(
@@ -413,7 +413,7 @@ def test_runtime_historical_profile_action_does_not_open_execution_owners(tmp_pa
     calls = []
 
     class Decoder:
-        async def decode(self, text, route):
+        async def decode(self, text, route, recent=()):
             return trade(
                 buy(
                     _mapped(route, "Apple"),

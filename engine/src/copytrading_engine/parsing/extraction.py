@@ -9,6 +9,7 @@ from typing import Protocol
 from pydantic import BaseModel, ConfigDict
 
 from copytrading_engine.parsing.diagnostics import ValidationIssue
+from copytrading_engine.parsing.history import RecentCall
 from copytrading_engine.parsing.routes import Route
 from copytrading_engine.shared.reading import (
     All,
@@ -30,7 +31,7 @@ from copytrading_engine.shared.reading import (
     TradeMade,
 )
 
-PROMPT_VERSION = "stock-reading-v3"
+PROMPT_VERSION = "stock-reading-v4"
 
 # Chinese characters and ASCII letters both count as Unicode word characters.
 # Match complete numeric tokens and bound English words by ASCII letters so
@@ -65,15 +66,18 @@ class ReadingOutput(BaseModel):
 
 @dataclass(frozen=True)
 class ReadingInput:
-    """The post as the checks see it, and its guru's route, so a failed check can go back to
-    the model with its reason."""
+    """The post as the checks see it, its guru's route, and the guru's recent calls, so a failed
+    check can go back to the model with its reason."""
 
     text: str
     route: Route
+    recent: tuple[RecentCall, ...] = ()
 
 
 class Decoder(Protocol):
-    async def decode(self, text: str, route: Route) -> PostReading: ...
+    async def decode(
+        self, text: str, route: Route, recent: tuple[RecentCall, ...] = ()
+    ) -> PostReading: ...
 
 
 def playbook_maps(playbook: str, phrase: str, symbol: str) -> bool:
@@ -337,3 +341,45 @@ def _number(value: Decimal, words: str, text: str, path: str) -> None:
             path,
             f"words must be only this number exactly as the post writes it, such as {value}",
         )
+
+
+def check_references(
+    reading: PostReading, recent: tuple[RecentCall, ...], *, retried: bool
+) -> str | None:
+    """What is wrong with how a reading names the guru's recent calls, if anything. A repeat
+    must name a listed call of the same stock. A sell naming a buy price none of the guru's open
+    buys of that stock has is asked about once: the guru may hold buys from before CopyTrading
+    started, so a second answer stands."""
+    if not isinstance(reading, TradeMade | Instruction | Conditional | Suggestion):
+        return None
+    by_ref = {call.ref: call for call in recent}
+    for index, call in enumerate(reading.calls):
+        if call.repeats is not None:
+            earlier = by_ref.get(call.repeats)
+            if earlier is None:
+                return (
+                    f"calls.{index}.repeats: {call.repeats} is not one of the listed calls; "
+                    "name a listed reference or leave repeats empty."
+                )
+            if earlier.symbol != call.stock.ticker:
+                return (
+                    f"calls.{index}.repeats: {call.repeats} is {earlier.symbol}, not "
+                    f"{call.stock.ticker}; a repeat restates a call of the same stock."
+                )
+        if retried or not isinstance(call, Sell) or not isinstance(call.sell_from, Lot):
+            continue
+        held = sorted(
+            {
+                listed.price
+                for listed in recent
+                if listed.open and listed.action == "buy" and listed.symbol == call.stock.ticker
+            }
+        )
+        if held and call.sell_from.buy_price not in held:
+            prices = ", ".join(str(price) for price in held)
+            return (
+                f"calls.{index}.sell_from: the guru's open {call.stock.ticker} buys are at "
+                f"{prices}, not {call.sell_from.buy_price}. Read the post again: name one of "
+                "those if the post means it, or keep the post's own price."
+            )
+    return None

@@ -33,6 +33,7 @@ private func readAsSaysEachCallInPlainWords() throws {
             "Buy CBRS between $160 and $179.",
             "Buy SCO at $20, batch 1.",
             "Buy SCO at the market price.",
+            "Buy SOUN at $5.85, a sixth of a full position. A re-post of an earlier call.",
             "TSLA 373 is still resistance today",
             "The reader couldn't tell what this post means.",
         ], "Read as lines changed: \(lines)")

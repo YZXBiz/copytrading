@@ -21,8 +21,9 @@ from copytrading_engine.execution.presentation.operator_views import (
     account_overview,
     event_page,
 )
+from copytrading_engine.parsing.sqlite import record_owner_correction
 from copytrading_engine.shared.raw_message import RawMessage
-from copytrading_engine.shared.signals import StockSignal
+from copytrading_engine.shared.signals import Instruction, StockSignal
 from copytrading_engine.trading.presentation.operator_models import (
     RejectedSourceActivity,
     SourceActivity,
@@ -410,6 +411,15 @@ class SQLiteOperatorEvidence:
 
     def manual_source_evidence(self, database: Path, source_id: str) -> ManualSourceEvidence:
         return manual_source_evidence(database, source_id)
+
+    def record_owner_correction(
+        self,
+        database: Path,
+        source_id: str,
+        instructions: tuple[Instruction, ...],
+        at: dt.datetime,
+    ) -> None:
+        record_owner_correction(database, source_id, instructions, at)
 
     def historical_source_message(self, database: Path, source_id: str) -> RawMessage:
         return historical_source_message(database, source_id)
