@@ -1668,3 +1668,5 @@
 "Then click the blue button below; CopyTrading tries the key. It stays in this Mac's Keychain." = "Then click the blue button below; CopyTrading tries the key. It stays in this Mac's Keychain.";
 "In Discord, right-click the channel › **Copy Channel ID**. Missing? Turn on **Developer Mode** in Discord's Advanced settings." = "In Discord, right-click the channel › **Copy Channel ID**. Missing? Turn on **Developer Mode** in Discord's Advanced settings.";
 "Continue Setup" = "Continue Setup";
+"Another copy of CopyTrading is open and has the engine. Quit it, then start the engine here." = "Another copy of CopyTrading is open and has the engine. Quit it, then start the engine here.";
+"Quit the Other Copy" = "Quit the Other Copy";
