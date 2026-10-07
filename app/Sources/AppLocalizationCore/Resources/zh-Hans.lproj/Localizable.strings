@@ -1670,3 +1670,16 @@
 "Continue Setup" = "继续设置";
 "Another copy of CopyTrading is open and has the engine. Quit it, then start the engine here." = "另一个 CopyTrading 正在运行并占用了引擎。退出它，然后在这里启动引擎。";
 "Quit the Other Copy" = "退出另一个";
+"Guru posts" = "信号源发帖";
+"AI reads" = "AI 解读";
+"Limits check" = "限额检查";
+"Order fills" = "订单成交";
+"You see it" = "你会看到";
+"Guru sells" = "信号源卖出";
+"1/6 SOUN at 5.85" = "1/6 SOUN 于 5.85";
+"Buy SOUN $5.85" = "买入 SOUN $5.85";
+"1/6 of $2,000" = "$2,000 的 1/6";
+"56 at $5.85" = "56 股 $5.85";
+"In Activity" = "在活动中";
+"Half at 6.40" = "一半于 6.40";
+"later" = "之后";
