@@ -22,6 +22,10 @@ struct ActivityCardOutcome {
     let tone: StatusTone
     let accounts: [Account]
 
+    /// Outcomes that are not a skip: an order went out, the part is still working, or the owner
+    /// approved a held call by hand.
+    static let carriedOn: Set<String> = ["order_linked", "pending", "approved_by_owner"]
+
     init(_ source: SourceActivity, skipped: Bool, now: Date = .now) {
         let waiting = WaitingCall(source)
         let open = waiting.map { !skipped && !$0.hasExpired(at: now) } ?? false
@@ -35,7 +39,7 @@ struct ActivityCardOutcome {
         let orders = source.destinations.flatMap(\.orders).map { DestinationOutcome.order($0, count: 1) }
         let trimmed = source.destinations.flatMap(\.orders).contains(where: Self.wasTrimmed)
         let anySkip = source.destinations.contains { destination in
-            destination.instructionOutcomes.contains { !["order_linked", "pending"].contains($0) }
+            destination.instructionOutcomes.contains { !Self.carriedOn.contains($0) }
                 || ["stale", "out_of_order"].contains(destination.status)
         }
         if source.decision == "ignore" {
@@ -77,7 +81,7 @@ struct ActivityCardOutcome {
                     : nil)
         }
         for (part, outcome) in destination.instructionOutcomes.enumerated()
-        where !["order_linked", "pending"].contains(outcome) && !WaitingCall.heldForOwner.contains(outcome) {
+        where !Self.carriedOn.contains(outcome) && !WaitingCall.heldForOwner.contains(outcome) {
             let selling = source.instructions.indices.contains(part) && source.instructions[part].action != "buy"
             let limit = destination.limitsHit.first { $0.part == part }
             lines.append(

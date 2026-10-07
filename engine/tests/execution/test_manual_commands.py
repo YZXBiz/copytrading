@@ -23,7 +23,9 @@ from copytrading_engine.execution.domain.manual_commands import (
     ManualPreviewRequest,
 )
 from copytrading_engine.execution.domain.market import Quote
+from copytrading_engine.execution.domain.progress import Skipped
 from copytrading_engine.execution.domain.signals import CopyConfig
+from copytrading_engine.execution.presentation.operator_views import destination_views
 from copytrading_engine.host.installation import Installation
 from copytrading_engine.host.pipe.server import PipeServer
 from copytrading_engine.host.pipe.services import TradingServices
@@ -1012,3 +1014,49 @@ def test_an_approved_buy_larger_than_todays_limits_allow_is_not_sent(tmp_path):
 
     assert approved.still_allowed_by(tick)
     assert not approved.still_allowed_by(smaller)
+
+
+def test_a_post_approved_again_through_a_new_correction_does_not_buy_twice(tmp_path):
+    engine, broker, _, app, correction = setup_manual(tmp_path)
+    app.preview(preview_request(correction, "approve-once"), NOW)
+    first = app.confirm(
+        confirmation_request("approve-once", "approve-once-command"),
+        NOW + dt.timedelta(seconds=1),
+    )
+    assert first.status in {"accepted", "filled"}
+    again = correction.model_copy(update={"correction_id": "correction-2", "revision": 2})
+    engine.ledger.record_manual_correction(again)
+
+    second = app.preview(preview_request(again, "approve-twice"), NOW + dt.timedelta(seconds=2))
+
+    assert second.plan is None
+    assert "related_manual_action" in second.reasons
+    assert broker.calls == 1
+
+
+def test_a_held_post_the_owner_approved_no_longer_waits(tmp_path):
+    engine, _, _, app, correction = setup_manual(tmp_path)
+    source_id = correction.source_id
+    snapshot = engine.ledger.snapshot()
+    key = next(key for key, message in snapshot.messages.items() if message.id in source_id)
+    held = snapshot.model_copy(
+        update={
+            "messages": snapshot.messages
+            | {
+                key: snapshot.messages[key].model_copy(
+                    update={"parts": (Skipped(reason="approval_required"),)}
+                )
+            }
+        }
+    )
+    [waiting] = destination_views(held, {source_id}).values()
+    assert waiting.instruction_outcomes == ("approval_required",)
+
+    app.preview(preview_request(correction, "approve-held"), NOW)
+    app.confirm(
+        confirmation_request("approve-held", "approve-held-command"),
+        NOW + dt.timedelta(seconds=1),
+    )
+    approved = held.model_copy(update={"manual_commands": engine.ledger.snapshot().manual_commands})
+    [done] = destination_views(approved, {source_id}).values()
+    assert done.instruction_outcomes == ("approved_by_owner",)
