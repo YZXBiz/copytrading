@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The guide's white page: title with the setup tour's button, lead, the opening figure, how a
+/// The guide's white page: title with the setup tour's button, how a
 /// post becomes a trade, what to know before copying, shortcuts, and where to get help.
 struct GuideDocument: View {
     @Bindable var model: AppModel
@@ -10,10 +10,8 @@ struct GuideDocument: View {
         VStack(alignment: .leading, spacing: 34) {
             GuideHeader(progress: model.setupProgress, startTour: model.startSetupTour)
                 .id(GuideAnchor.top)
-            GuideLeadBlock()
-            GuideFlowFigure()
             GuideSection("How a post becomes a trade") {
-                GuideJourneySection()
+                GuideJourneySection(open: { model.selectedScreen = $0 })
             }
             GuideSection("Before you go") {
                 GuideBeforeYouGoSection()

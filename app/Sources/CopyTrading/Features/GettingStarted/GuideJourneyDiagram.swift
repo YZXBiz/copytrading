@@ -1,13 +1,19 @@
 import SwiftUI
 
 /// How a post becomes a trade, drawn: one soft path across faint chart paper through six stops,
-/// with the example call written under each. It never moves: a chevron on each leg says which way
-/// the post travels, and the last leg, the guru's sale, is dashed because it comes later.
+/// with the example call written under each. A chevron on each leg says which way the post
+/// travels, and the last leg, the guru's sale, is dashed because it comes later. Each stop is a
+/// button that chooses the card shown under the diagram; the chosen one is filled. A glowing dot
+/// runs the path once when the diagram appears and again to each stop chosen, then rests: nothing
+/// redraws between trips.
 struct GuideJourneyDiagram: View {
+    @Binding var selection: Int
     private let stops = GuideJourneyStop.all
     private let height: CGFloat = 210
     private let labelRow: CGFloat = 160
+    @State private var trip: GuideJourneyTrip?
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var violet: Color { Color(red: 0.55, green: 0.42, blue: 0.95) }
 
@@ -26,20 +32,61 @@ struct GuideJourneyDiagram: View {
                     .foregroundStyle(Palette.tertiaryInk)
                     .position(curve.point(onLeg: stops.count - 2, at: 0.45).applying(.init(translationX: 4, y: -18)))
                 chevrons(curve)
+                if let trip {
+                    traveler(trip, on: curve)
+                }
                 ForEach(Array(stops.enumerated()), id: \.offset) { index, stop in
-                    node(stop).position(curve.point(index))
-                    label(stop, number: index + 1)
+                    let isSelected = index == selection
+                    node(stop, isSelected: isSelected).position(curve.point(index))
+                    label(stop, number: index + 1, isSelected: isSelected)
                         .frame(width: geometry.size.width / CGFloat(stops.count))
                         .position(x: curve.point(index).x, y: labelRow)
+                    Button {
+                        selection = index
+                    } label: {
+                        Color.clear
+                            .frame(width: geometry.size.width / CGFloat(stops.count), height: height)
+                            .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                    .position(x: curve.point(index).x, y: height / 2)
+                    .accessibilityLabel("\(index + 1). \(L10n.string(stop.title)): \(L10n.string(stop.example))")
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
+                    .accessibilityIdentifier("guide.journey.stop.\(index + 1)")
                 }
             }
         }
         .frame(height: height)
-        .accessibilityElement(children: .ignore)
+        .onAppear { travel(from: 0, to: stops.count - 2) }
+        .onChange(of: selection) { old, new in travel(from: new > old ? old : 0, to: new) }
+        .task(id: trip) {
+            guard let trip else { return }
+            try? await Task.sleep(for: .seconds(trip.seconds))
+            if self.trip == trip { self.trip = nil }
+        }
+        .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.string("How a post becomes a trade"))
-        .accessibilityValue(
-            stops.enumerated().map { "\($0.offset + 1). \(L10n.string($0.element.title)): \(L10n.string($0.element.example))" }
-                .joined(separator: ". "))
+    }
+
+    private func travel(from: Int, to: Int) {
+        guard !reduceMotion, from != to else { return }
+        trip = GuideJourneyTrip(from: from, to: to)
+    }
+
+    /// The post on its way, fading in as it leaves and out as it arrives under the stop's circle.
+    private func traveler(_ trip: GuideJourneyTrip, on curve: GuideJourneyCurve) -> some View {
+        TimelineView(.animation) { timeline in
+            let along = trip.position(at: timeline.date)
+            let leg = min(max(Int(along), 0), stops.count - 2)
+            let progress = trip.progress(at: timeline.date)
+            Circle()
+                .fill(Palette.accent)
+                .frame(width: 8, height: 8)
+                .shadow(color: Palette.accent.opacity(0.6), radius: 6)
+                .opacity(min(1, min(progress, 1 - progress) * 10))
+                .position(curve.point(onLeg: leg, at: CGFloat(along - Double(leg))))
+        }
+        .allowsHitTesting(false)
     }
 
     private func glow(width: CGFloat) -> some View {
@@ -89,19 +136,21 @@ struct GuideJourneyDiagram: View {
         return Palette.accent.mix(with: violet, by: mix)
     }
 
-    private func node(_ stop: GuideJourneyStop) -> some View {
+    private func node(_ stop: GuideJourneyStop, isSelected: Bool) -> some View {
         ZStack {
-            Circle().fill(Palette.page.opacity(0.92))
-            Circle().strokeBorder(Palette.ink.opacity(0.08), lineWidth: 0.5)
+            Circle().fill(isSelected ? Palette.accent : Palette.page.opacity(0.92))
+            Circle().strokeBorder(Palette.ink.opacity(isSelected ? 0 : 0.08), lineWidth: 0.5)
             Image(systemName: stop.symbol)
                 .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(Palette.accent)
+                .foregroundStyle(isSelected ? Color.white : Palette.accent)
         }
         .frame(width: 48, height: 48)
-        .shadow(color: Palette.accent.opacity(0.12), radius: 12, y: 6)
+        .padding(4)
+        .overlay(Circle().strokeBorder(Palette.accent.opacity(isSelected ? 0.25 : 0), lineWidth: 3))
+        .shadow(color: Palette.accent.opacity(isSelected ? 0.3 : 0.12), radius: 12, y: 6)
     }
 
-    private func label(_ stop: GuideJourneyStop, number: Int) -> some View {
+    private func label(_ stop: GuideJourneyStop, number: Int, isSelected: Bool) -> some View {
         VStack(spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(number.formatted())
@@ -109,7 +158,7 @@ struct GuideJourneyDiagram: View {
                     .foregroundStyle(Palette.accent)
                 Text(L10n.string(stop.title))
                     .font(.system(size: 14, weight: .medium, design: .serif))
-                    .foregroundStyle(Palette.ink)
+                    .foregroundStyle(isSelected ? Palette.ink : Palette.secondaryInk)
                     .lineLimit(1)
             }
             Text(L10n.string(stop.example))
