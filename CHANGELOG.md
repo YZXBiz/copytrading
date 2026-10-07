@@ -2,9 +2,9 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
-## Unreleased
+## 0.1.0-alpha.6 — developer preview
 
-Every copying rule run against DeepSeek and Alpaca paper, and three ways copying could stop now fixed.
+Every copying rule run against DeepSeek and Alpaca paper, in regular hours and overnight; the ways copying could stop or buy twice are fixed, and skipping re-posted calls is now your choice per guru.
 
 - **A ticker Alpaca does not list no longer stops copying.** A guru's typo or a delisted stock used to take the account offline until you restarted; the call is now skipped as a stock the broker does not support, and the next call trades.
 - **A brief Alpaca outage no longer stops copying.** A dropped connection, a rate limit, or an outage on Alpaca's side used to stop the account for good; it now tries again on its own, first after a second and then less often, also while Start Copying connects. Rejected keys still stop it, because only you can fix those.
