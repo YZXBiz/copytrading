@@ -1680,3 +1680,5 @@
 "later" = "之后";
 "Welcome. Five steps, about 10 minutes; nothing is saved or traded until the last one." = "欢迎。五步，大约 10 分钟；到最后一步之前，不会保存任何设置，也不会交易。";
 "The playbook doesn't say how big a batch is" = "说明书没写一批有多大";
+"Empty sells from every buy" = "留空则从每笔买入中卖出";
+"e.g. 1/6. Leave empty for the full position." = "例如 1/6。留空则买满一个完整仓位。";

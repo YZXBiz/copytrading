@@ -58,7 +58,7 @@ public struct SourceActivityBuilder {
     public static func buy(_ symbol: String, _ price: String, fraction: String? = nil) -> [String: Any] {
         [
             "action": "buy", "symbol": symbol, "price": price, "entry_price": NSNull(),
-            "fraction": fraction ?? NSNull(), "exit_basis": NSNull(), "whole_position": false,
+            "fraction": fraction ?? NSNull(), "exit_basis": NSNull(),
         ]
     }
 

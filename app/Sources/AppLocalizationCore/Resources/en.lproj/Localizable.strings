@@ -1680,3 +1680,5 @@
 "later" = "later";
 "Welcome. Five steps, about 10 minutes; nothing is saved or traded until the last one." = "Welcome. Five steps, about 10 minutes; nothing is saved or traded until the last one.";
 "The playbook doesn't say how big a batch is" = "The playbook doesn't say how big a batch is";
+"Empty sells from every buy" = "Empty sells from every buy";
+"e.g. 1/6. Leave empty for the full position." = "e.g. 1/6. Leave empty for the full position.";

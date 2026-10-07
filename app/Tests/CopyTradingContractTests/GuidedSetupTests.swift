@@ -140,7 +140,7 @@ private func unsavedChangesFollowTheSavedSetup() throws {
     try verifyGuide(model.hasUnsavedSetupChanges && model.hasSetupToStart, "A first edit did not show the start card")
 
     let profile = try TradingProfileBuilder().build(
-        TradingProfileDraft(guruID: "alex", displayName: "Alex", exitBasis: .originalPosition))
+        TradingProfileDraft(guruID: "alex", displayName: "Alex"))
     let account = TradingAccountConfiguration(id: "paper", environment: .paper)
     let saved = TradingConfiguration(
         source: TradingSourceConfiguration(channelIDs: ["123"]),
@@ -152,7 +152,7 @@ private func unsavedChangesFollowTheSavedSetup() throws {
                 channelID: "123", authorID: nil, guruID: "alex", profileRevision: profile.profileRevision,
                 connections: [
                     TradingRouteConnection(
-                        accountID: "paper", fullPositionUSD: account.policy.maxSymbolUSD, defaultFraction: nil)
+                        accountID: "paper", fullPositionUSD: account.policy.maxSymbolUSD)
                 ])
         ]
     )

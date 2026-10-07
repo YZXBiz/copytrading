@@ -397,7 +397,8 @@ public struct RejectedSourceActivity: Codable, Equatable, Identifiable, Sendable
     }
 }
 
-/// One call as the engine places it, before any account sizing.
+/// One call as the engine places it, before any account sizing. A sell with no entry price sells
+/// from every buy of the stock (ADR-0010).
 public struct SourceInstruction: Codable, Equatable, Sendable {
     public let action: String
     public let symbol: String
@@ -405,15 +406,11 @@ public struct SourceInstruction: Codable, Equatable, Sendable {
     public let entryPrice: String?
     public let fraction: String?
     public let exitBasis: String?
-    /// For a guru whose sells refer to the whole position: a buy joins the stock's one lot, and a
-    /// sell sells from it.
-    public let wholePosition: Bool
 
     enum CodingKeys: String, CodingKey {
         case action, symbol, price, fraction
         case entryPrice = "entry_price"
         case exitBasis = "exit_basis"
-        case wholePosition = "whole_position"
     }
 }
 

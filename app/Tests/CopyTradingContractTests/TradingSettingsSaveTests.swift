@@ -34,8 +34,7 @@ struct TradingSettingsSaveTests {
 
         let profile = try TradingProfileBuilder().build(
             TradingProfileDraft(
-                guruID: "stable-guru", displayName: "Stable Guru",
-                exitBasis: .originalPosition
+                guruID: "stable-guru", displayName: "Stable Guru"
             ))
         let configuration = TradingConfiguration(
             source: TradingSourceConfiguration(channelIDs: ["123"]),
@@ -48,7 +47,7 @@ struct TradingSettingsSaveTests {
                     profileRevision: profile.profileRevision,
                     connections: [
                         TradingRouteConnection(
-                            accountID: "paper", fullPositionUSD: "600", defaultFraction: "0.5"
+                            accountID: "paper", fullPositionUSD: "600"
                         )
                     ]
                 )
@@ -347,8 +346,7 @@ struct TradingSettingsSaveTests {
         )
         let originalProfile = try TradingProfileBuilder().build(
             TradingProfileDraft(
-                guruID: "prior-guru", displayName: "Prior Guru",
-                exitBasis: .originalPosition
+                guruID: "prior-guru", displayName: "Prior Guru"
             ))
         let original = TradingConfiguration(
             source: TradingSourceConfiguration(channelIDs: ["123"], authorIDs: ["456"]),
@@ -406,7 +404,7 @@ struct TradingSettingsSaveTests {
         )
         let profile = try TradingProfileBuilder().build(
             TradingProfileDraft(
-                guruID: "launch-guru", displayName: "Launch Guru", exitBasis: .originalPosition
+                guruID: "launch-guru", displayName: "Launch Guru"
             ))
         let configuration = TradingConfiguration(
             source: TradingSourceConfiguration(channelIDs: ["123"], authorIDs: ["456"]),
@@ -479,8 +477,7 @@ struct TradingSettingsSaveTests {
         )
         let profile = try TradingProfileBuilder().build(
             TradingProfileDraft(
-                guruID: "resume-guru", displayName: "Resume Guru",
-                exitBasis: .originalPosition
+                guruID: "resume-guru", displayName: "Resume Guru"
             ))
         let prior = TradingConfiguration(
             source: TradingSourceConfiguration(channelIDs: ["123"]),
@@ -682,8 +679,7 @@ struct TradingSettingsSaveTests {
                         expectedSymbol: "AAPL",
                         expectedFraction: "0.5"
                     )
-                ],
-                exitBasis: .originalPosition
+                ]
             ))
         let configuration = TradingConfiguration(
             source: TradingSourceConfiguration(channelIDs: ["123"]),
@@ -1366,8 +1362,7 @@ struct TradingSettingsSaveTests {
         )
         let profile = try TradingProfileBuilder().build(
             TradingProfileDraft(
-                guruID: "prior-guru", displayName: "Prior Guru",
-                exitBasis: .originalPosition
+                guruID: "prior-guru", displayName: "Prior Guru"
             ))
         let original = TradingConfiguration(
             source: TradingSourceConfiguration(channelIDs: ["123"], authorIDs: ["456"]),
@@ -2717,7 +2712,6 @@ private actor RecordingTradingStarter: TradingStarting {
             messageIdentity: evaluation.sourceID,
             guruID: evaluation.profile.guruID,
             profileRevision: evaluation.profile.profileRevision,
-            exitBasis: evaluation.profile.exitBasis,
             provider: evaluation.provider.name.rawValue,
             model: evaluation.provider.model,
             decision: "trade",
@@ -2768,7 +2762,6 @@ private actor RecordingTradingStarter: TradingStarting {
                 messageIdentity: "profile_example:\(request.profile.profileRevision):\(index)",
                 guruID: request.profile.guruID,
                 profileRevision: request.profile.profileRevision,
-                exitBasis: request.profile.exitBasis,
                 provider: request.provider.name.rawValue,
                 model: request.provider.model,
                 decision: "trade",
@@ -2813,7 +2806,7 @@ private actor RecordingTradingStarter: TradingStarting {
             throw EngineContractError.remote(code: .invalidRequest, message: learningFailure)
         }
         return LearnedGuruPlaybook(
-            postsRead: 3, exitBasis: .originalPosition,
+            postsRead: 3,
             playbook: "加了 means buy", examples: [], summary: "Buys lead with the price.",
             provider: learning.provider.name.rawValue, model: learning.provider.model,
             costNotice: "Provider charges may apply."

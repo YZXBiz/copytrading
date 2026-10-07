@@ -6,12 +6,11 @@ struct ManualInstructionDraft: Identifiable {
     var action: ManualInstructionAction = .buy
     var symbol = ""
     var price = ""
+    /// A sell's buy price; empty sells from every buy of the stock (ADR-0010).
     var entryPrice = ""
-    /// A buy's share of the full position (empty buys the default share), or the share of a lot
-    /// to sell.
+    /// A buy's share of the full position (empty buys the full position), or the share to sell.
     var fraction = ""
     var exitBasis: String?
-    var wholePosition = false
 
     init() {}
 
@@ -23,12 +22,10 @@ struct ManualInstructionDraft: Identifiable {
         entryPrice = call.entryPrice ?? ""
         fraction = call.fraction ?? ""
         exitBasis = call.exitBasis
-        wholePosition = call.wholePosition
     }
 
     var isValid: Bool {
         !symbol.trimmed.isEmpty && !price.trimmed.isEmpty
-            && (action == .buy || wholePosition || !entryPrice.trimmed.isEmpty)
             && (action != .reduce || !fraction.trimmed.isEmpty)
     }
 
@@ -37,10 +34,9 @@ struct ManualInstructionDraft: Identifiable {
             action: action,
             symbol: symbol.trimmed.uppercased(),
             price: price.trimmed,
-            entryPrice: action == .buy || wholePosition ? nil : entryPrice.trimmed,
+            entryPrice: action == .buy ? nil : entryPrice.trimmed.nilIfEmpty,
             fraction: action == .close ? "1" : fraction.trimmed.nilIfEmpty,
-            exitBasis: action == .buy ? nil : exitBasis,
-            wholePosition: wholePosition
+            exitBasis: action == .buy ? nil : exitBasis
         )
     }
 }
