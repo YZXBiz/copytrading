@@ -511,6 +511,9 @@ final class AppModel {
     /// The setup tour is walking the owner through Connections. Where it points is read from the
     /// setup itself (`SetupTourStop.current`), so this is the only state the tour keeps.
     var isTouringSetup = false
+    /// Where the running tour points, published by Connections so a panel can show the stop's
+    /// hint under its own field.
+    var setupTourStop: SetupTourStop?
     /// Bumped by Help ▸ Show Tips Again, so every tip gets a fresh identity and can show again.
     var tipGeneration = UserDefaults.standard.integer(forKey: AppModel.tipGenerationKey)
     @ObservationIgnored private var pendingTradingActivation: PendingTradingActivation?

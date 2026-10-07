@@ -95,6 +95,7 @@ struct ConnectionEditor: View {
         }
         .animation(reduceMotion ? nil : .smooth(duration: 0.2), value: model.setupDraft.provider.acceptsBaseURL)
         .animation(reduceMotion ? nil : .smooth(duration: 0.2), value: failedCheck)
+        .animation(reduceMotion ? nil : .smooth(duration: 0.3), value: model.setupTourStop)
     }
 
     @ViewBuilder
@@ -107,6 +108,7 @@ struct ConnectionEditor: View {
                     prompt: Text(L10n.string("Comma-separated Discord channel IDs")))
             }
             .setupTourTarget(.channelIDs)
+            tourHint(.channelIDs)
             row("Allowed authors") {
                 TextField(
                     L10n.string("Allowed authors"), text: $model.setupDraft.authors,
@@ -116,6 +118,7 @@ struct ConnectionEditor: View {
                 SecureField(L10n.string("Discord token"), text: $model.setupDraft.discordToken, prompt: secretPrompt)
             }
             .setupTourTarget(.discordToken)
+            tourHint(.discordToken)
         case .interpreter:
             row("Model") {
                 TextField(
@@ -131,6 +134,7 @@ struct ConnectionEditor: View {
                 SecureField(L10n.string("API key"), text: $model.setupDraft.providerAPIKey, prompt: modelKeyPrompt)
             }
             .setupTourTarget(.interpreterKey)
+            tourHint(.interpreterKey)
         case .alerts where model.setupDraft.notificationService == .discord:
             row("Webhook URL") {
                 SecureField(
@@ -147,6 +151,15 @@ struct ConnectionEditor: View {
                 SecureField(
                     L10n.string("Bot token"), text: $model.setupDraft.notificationToken, prompt: alertSecretPrompt(otherwise: "Required"))
             }
+        }
+    }
+
+    /// The setup tour's hint for `stop`, under its field while the tour points there.
+    @ViewBuilder
+    private func tourHint(_ stop: SetupTourStop) -> some View {
+        if model.setupTourStop == stop {
+            SetupTourInlineHint(stop: stop, model: model)
+                .transition(.opacity.combined(with: .move(edge: .top)))
         }
     }
 

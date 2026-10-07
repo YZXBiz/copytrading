@@ -14,11 +14,11 @@ enum SetupTourStop: Int, CaseIterable, Identifiable {
     var id: Int { rawValue }
 
     /// The stop for a setup this far along, with this Connections panel open; nil once copying
-    /// has started.
-    static func current(progress: SetupProgress, draft: ConnectionsDraft, panel: ConnectionKind?) -> SetupTourStop? {
+    /// has started. `channelsEntered`: a channel is in and the typing has paused, so the tour
+    /// doesn't jump away on the first digit.
+    static func current(progress: SetupProgress, channelsEntered: Bool, panel: ConnectionKind?) -> SetupTourStop? {
         if panel == .discord {
-            // A Discord channel ID has 17 to 20 digits, so a half-typed one doesn't move on.
-            return draft.sourceChannelIDs.contains { $0.count >= 17 } ? .discordToken : .channelIDs
+            return channelsEntered ? .discordToken : .channelIDs
         }
         if !progress.isDone(.discord) { return .discordRow }
         if panel == .interpreter { return .interpreterKey }
@@ -71,7 +71,7 @@ enum SetupTourStop: Int, CaseIterable, Identifiable {
         switch self {
         case .discordRow: "where your guru posts"
         case .channelIDs: "of your guru's channel"
-        case .discordToken, .interpreterKey: "then click Connect"
+        case .discordToken, .interpreterKey: "and connect it"
         case .interpreterServices: "it reads every post"
         case .accounts: "start with paper money"
         case .gurus: "and the account they fill"
@@ -81,14 +81,14 @@ enum SetupTourStop: Int, CaseIterable, Identifiable {
 
     var detail: String {
         switch self {
-        case .discordRow: "Click **Connect**. You'll paste the guru's channel ID and your Discord token next."
+        case .discordRow: "Open the Discord row. You'll paste the guru's channel ID and your Discord token there."
         case .channelIDs:
-            "In Discord, right-click the channel and choose **Copy Channel ID**. No such item? Turn on **Developer Mode** in Discord's Advanced settings."
-        case .discordToken: "**Step by step** above shows where Discord keeps it. It stays in this Mac's Keychain."
-        case .interpreterServices: "Click **Connect** next to a service you have a key for. DeepSeek costs the least."
-        case .interpreterKey: "Connect tries the key right away. It stays in this Mac's Keychain."
-        case .accounts: "Click **Connect** on the paper account and paste its two Alpaca keys."
-        case .gurus: "Click **Add**, name them, and choose the account that copies them."
+            "In Discord, right-click the channel › **Copy Channel ID**. Missing? Turn on **Developer Mode** in Discord's Advanced settings."
+        case .discordToken: "Then click the blue button below; CopyTrading checks it with Discord. **Help** shows where to find it."
+        case .interpreterServices: "Pick a service you have a key for. DeepSeek costs the least."
+        case .interpreterKey: "Then click the blue button below; CopyTrading tries the key. It stays in this Mac's Keychain."
+        case .accounts: "Open the paper account and paste its two Alpaca keys. **Help** shows where Alpaca keeps them."
+        case .gurus: "Give them a name and choose the account that copies them."
         case .startCopying: "Click **Start Copying**. Each connection is tested and your examples are read before anything is saved."
         }
     }
@@ -96,13 +96,26 @@ enum SetupTourStop: Int, CaseIterable, Identifiable {
     /// What moves the tour on, shown under the instruction.
     var waiting: String {
         switch self {
-        case .discordRow, .discordToken, .interpreterKey: "Waiting for Connect"
+        case .discordRow: "Waiting for you to open it"
+        case .discordToken, .interpreterKey: "Moves on once it connects"
         case .channelIDs: "Moves on once an ID is in"
         case .interpreterServices: "Waiting for you to pick one"
         case .accounts: "Waiting for the account's keys"
         case .gurus: "Waiting for a guru"
         case .startCopying: "Waiting for Start Copying"
         }
+    }
+
+    /// A stop inside a Connections panel: its hint sits in the panel under the field, not in a
+    /// card over it.
+    var isInPanel: Bool {
+        self == .channelIDs || self == .discordToken || self == .interpreterKey
+    }
+
+    /// A key field's card sits above it, so the check's result and the button under the field
+    /// stay in view; the channel field's card sits below, over fields not needed yet.
+    var prefersAbove: Bool {
+        self == .discordToken || self == .interpreterKey
     }
 
     /// Rows are pointed at near their trailing action; fields near where typing starts.

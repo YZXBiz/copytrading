@@ -14,6 +14,8 @@ struct ConnectionsView: View {
     /// so a sheet closed without typing anything leaves the interpreter as it was.
     @State private var beforeConnect: (draft: ConnectionsDraft, picked: Int)?
     @AppStorage("connections.ideasHidden") private var ideasHidden = false
+    /// A channel ID is in and typing has paused for a moment; the setup tour moves on from it.
+    @State private var channelsEntered = false
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorSchemeContrast) private var contrast
@@ -94,7 +96,14 @@ struct ConnectionsView: View {
                     SetupTourOverlay(stop: tourStop, targets: targets, model: model)
                 }
             }
+            .task(id: model.setupDraft.channels) {
+                channelsEntered = false
+                guard !model.setupDraft.sourceChannelIDs.isEmpty else { return }
+                guard (try? await Task.sleep(for: .seconds(1))) != nil else { return }
+                channelsEntered = true
+            }
             .onChange(of: tourStop, initial: true) { _, stop in
+                model.setupTourStop = stop
                 guard model.isTouringSetup else { return }
                 guard let stop else { return model.endSetupTour() }
                 // Stops inside a panel are already in view; the page scrolls to the others.
@@ -118,7 +127,7 @@ struct ConnectionsView: View {
     private var tourStop: SetupTourStop? {
         guard model.isTouringSetup, model.setupEditor == nil else { return nil }
         let open: ConnectionKind? = if case .editor(let kind) = panel?.page { kind } else { nil }
-        return SetupTourStop.current(progress: progress, draft: model.setupDraft, panel: open)
+        return SetupTourStop.current(progress: progress, channelsEntered: channelsEntered, panel: open)
     }
 
     private var header: some View {

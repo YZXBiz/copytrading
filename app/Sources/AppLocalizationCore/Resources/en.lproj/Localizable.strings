@@ -1655,3 +1655,15 @@
 "Pick Up Where I Left Off" = "Pick Up Where I Left Off";
 "Shows you where on Connections" = "Shows you where on Connections";
 "Tour stop %lld of %lld" = "%lld of %lld";
+"and connect it" = "and connect it";
+"Open the Discord row. You'll paste the guru's channel ID and your Discord token there." = "Open the Discord row. You'll paste the guru's channel ID and your Discord token there.";
+"Then click the blue button under it, and CopyTrading checks the token with Discord. **Help** shows where Discord keeps it." = "Then click the blue button under it, and CopyTrading checks the token with Discord. **Help** shows where Discord keeps it.";
+"Pick a service you have a key for. DeepSeek costs the least." = "Pick a service you have a key for. DeepSeek costs the least.";
+"Then click the blue button under it, and CopyTrading tries the key. It stays in this Mac's Keychain." = "Then click the blue button under it, and CopyTrading tries the key. It stays in this Mac's Keychain.";
+"Open the paper account and paste its two Alpaca keys. **Help** shows where Alpaca keeps them." = "Open the paper account and paste its two Alpaca keys. **Help** shows where Alpaca keeps them.";
+"Give them a name and choose the account that copies them." = "Give them a name and choose the account that copies them.";
+"Waiting for you to open it" = "Waiting for you to open it";
+"Moves on once it connects" = "Moves on once it connects";
+"Then click the blue button below; CopyTrading checks it with Discord. **Help** shows where to find it." = "Then click the blue button below; CopyTrading checks it with Discord. **Help** shows where to find it.";
+"Then click the blue button below; CopyTrading tries the key. It stays in this Mac's Keychain." = "Then click the blue button below; CopyTrading tries the key. It stays in this Mac's Keychain.";
+"In Discord, right-click the channel › **Copy Channel ID**. Missing? Turn on **Developer Mode** in Discord's Advanced settings." = "In Discord, right-click the channel › **Copy Channel ID**. Missing? Turn on **Developer Mode** in Discord's Advanced settings.";

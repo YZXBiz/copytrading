@@ -1655,3 +1655,15 @@
 "Pick Up Where I Left Off" = "从上次停下的地方继续";
 "Shows you where on Connections" = "在连接页面指给你看";
 "Tour stop %lld of %lld" = "第 %lld / %lld 步";
+"and connect it" = "然后连接";
+"Open the Discord row. You'll paste the guru's channel ID and your Discord token there." = "打开 Discord 这一行，在里面粘贴信号源的频道 ID 和你的 Discord 令牌。";
+"Then click the blue button under it, and CopyTrading checks the token with Discord. **Help** shows where Discord keeps it." = "然后点击下方的蓝色按钮，CopyTrading 会向 Discord 核对令牌。**帮助** 告诉你在哪里找到它。";
+"Pick a service you have a key for. DeepSeek costs the least." = "选一个你有密钥的服务。DeepSeek 最便宜。";
+"Then click the blue button under it, and CopyTrading tries the key. It stays in this Mac's Keychain." = "然后点击下方的蓝色按钮，CopyTrading 会试用这个密钥。密钥只保存在这台 Mac 的钥匙串里。";
+"Open the paper account and paste its two Alpaca keys. **Help** shows where Alpaca keeps them." = "打开模拟账户，粘贴它的两个 Alpaca 密钥。**帮助** 告诉你在哪里找到它们。";
+"Give them a name and choose the account that copies them." = "填上名字，再选好跟单的账户。";
+"Waiting for you to open it" = "等你打开它";
+"Moves on once it connects" = "连接成功后自动继续";
+"Then click the blue button below; CopyTrading checks it with Discord. **Help** shows where to find it." = "然后点击下方的蓝色按钮，CopyTrading 会向 Discord 核对。**帮助** 告诉你在哪里找到它。";
+"Then click the blue button below; CopyTrading tries the key. It stays in this Mac's Keychain." = "然后点击下方的蓝色按钮，CopyTrading 会试用这个密钥。密钥只保存在这台 Mac 的钥匙串里。";
+"In Discord, right-click the channel › **Copy Channel ID**. Missing? Turn on **Developer Mode** in Discord's Advanced settings." = "在 Discord 中右键点击频道 › **复制频道 ID**。没有这一项？请在 Discord 高级设置中打开 **开发者模式**。";

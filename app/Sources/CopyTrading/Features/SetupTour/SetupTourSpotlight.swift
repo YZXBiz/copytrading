@@ -5,12 +5,14 @@ import SwiftUI
 struct SetupTourSpotlight: View {
     let hole: CGRect
     var radius: CGFloat = 14
+    /// False inside a panel, which has its own veil: only the ring is drawn.
+    var dims = true
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         ZStack {
             Rectangle()
-                .fill(Color(red: 0.07, green: 0.08, blue: 0.11).opacity(colorScheme == .dark ? 0.42 : 0.24))
+                .fill(Color(red: 0.07, green: 0.08, blue: 0.11).opacity(dims ? (colorScheme == .dark ? 0.42 : 0.24) : 0))
                 .mask {
                     Rectangle()
                         .overlay {

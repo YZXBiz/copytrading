@@ -4,8 +4,9 @@ import SwiftUI
 /// instruction, what moves it on, and the stop's help a click away.
 struct SetupTourCard: View {
     let stop: SetupTourStop
-    let caretX: CGFloat
-    let caretOnTop: Bool
+    /// The edge the caret sits on, and where along it.
+    let caretEdge: Edge
+    let caretOffset: CGFloat
     @Bindable var model: AppModel
     @State private var showsHelp = false
 
@@ -76,8 +77,8 @@ struct SetupTourCard: View {
         .padding(.top, 18)
         .padding(.bottom, 14)
         .frame(width: Self.width, alignment: .leading)
-        .background(SetupTourBubble(caretX: caretX, caretOnTop: caretOnTop).fill(Palette.page))
-        .overlay(SetupTourBubble(caretX: caretX, caretOnTop: caretOnTop).stroke(Palette.ink.opacity(0.06), lineWidth: 0.5))
+        .background(SetupTourBubble(edge: caretEdge, offset: caretOffset).fill(Palette.page))
+        .overlay(SetupTourBubble(edge: caretEdge, offset: caretOffset).stroke(Palette.ink.opacity(0.06), lineWidth: 0.5))
         .shadow(color: .black.opacity(0.08), radius: 2, y: 1)
         .shadow(color: .black.opacity(0.14), radius: 28, y: 14)
         .accessibilityElement(children: .contain)
