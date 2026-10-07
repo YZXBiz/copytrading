@@ -33,7 +33,8 @@ Every stated value has words: its exact substring of the provided message. A num
 are only that number. A ticker's words are the ticker as written (lowercase and attached to
 other words is fine; abc is ABC). A company name becomes a ticker only when the guru playbook
 states that mapping, and its words are the name as written. Never fill in a value the post
-does not state; use not_given or not_said. Use decimal strings. Keep the calls in order.
+does not state; use not_given or not_said. Use decimal strings; a fraction may be written
+as a ratio, such as "1/6". Keep the calls in order.
 Write summary as one plain sentence of what the post says, in the post's own language.
 Never output account sizing, broker calls, or credentials.
 """

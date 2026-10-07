@@ -19,7 +19,7 @@ from copytrading_engine.shared.model_providers import ProviderConfig
 from ..diagnostics.telemetry.builders import journal_events, journal_sink
 
 
-async def test_native_output_uses_provider_schema_and_no_tools():
+async def test_anthropic_reads_with_the_schema_in_its_instructions_and_no_tools():
     requests = []
     payload = {"reading": {"kind": "commentary", "summary": "Commentary"}}
 
@@ -52,8 +52,11 @@ async def test_native_output_uses_provider_schema_and_no_tools():
         result = await decoder.decode("Market commentary", Route(playbook="苹果 means AAPL"))
         assert result.kind == "commentary"
         assert len(requests) == 1
-        assert requests[0]["output_config"]["format"]["type"] == "json_schema"
+        # Anthropic compiles a strict output schema into a grammar too large for the reading, so
+        # the schema rides in the instructions and the answer is validated like any other.
+        assert "output_config" not in requests[0]
         assert not requests[0].get("tools")
+        assert "schema" in json.dumps(requests[0]["system"]).lower()
         assert "account" not in requests[0]["messages"][0]["content"][0].get("text", "").lower()
         # The playbook is trusted guidance: it rides in the system prompt, never in the post.
         assert "苹果 means AAPL" in json.dumps(requests[0]["system"], ensure_ascii=False)
@@ -306,7 +309,7 @@ async def test_anthropic_provider_transport_captures_sdk_wire_request_and_respon
             result = await decoder.decode("Commentary " + secret, Route())
         assert result.kind == "commentary"
         assert len(request_bodies) == 1
-        assert "output_config" in request_bodies[0]
+        assert "output_config" not in request_bodies[0]
         assert sink.flush(timeout_seconds=5)
         assert [event.capture_kind for event in journal_events(tmp_path / "diagnostics")] == [
             "model_request",
