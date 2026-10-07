@@ -2,6 +2,10 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
+## 0.1.0-alpha.5 — developer preview
+
+The first release delivered through Check for Updates…, to confirm that updating from 0.1.0-alpha.4 works end to end. The app is otherwise unchanged.
+
 ## 0.1.0-alpha.4 — developer preview
 
 Every button tested against the real app and Alpaca paper, and the ones that did not work now do.
