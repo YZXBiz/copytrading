@@ -165,8 +165,15 @@ class TradingConfiguration(BaseModel):
     notification: NotificationConfiguration | None = None
 
     def revision(self) -> str:
-        canonical = json.dumps(self.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
-        return hashlib.sha256(canonical.encode()).hexdigest()
+        return _fingerprint(self.model_dump(mode="json"))
+
+    def routing_revision(self) -> str:
+        """The revision without account limits: where posts go, not how much each order spends.
+        Queued work stays bound to it, so changing a limit while copying strands nothing."""
+        return _fingerprint(self.without_limits())
+
+    def without_limits(self) -> dict[str, object]:
+        return self.model_dump(mode="json", exclude={"accounts": {"__all__": {"policy"}}})
 
     @model_validator(mode="after")
     def validate_references(self) -> Self:
@@ -294,3 +301,8 @@ class NotificationCheck(BaseModel):
 
 
 type ConnectionCheck = SourceCheck | ModelCheck | BrokerCheck | NotificationCheck
+
+
+def _fingerprint(value: object) -> str:
+    canonical = json.dumps(value, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode()).hexdigest()

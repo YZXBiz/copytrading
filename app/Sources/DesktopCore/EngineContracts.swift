@@ -287,6 +287,8 @@ public enum EngineResult: Equatable, Sendable {
     case tradingActivation(TradingActivationStatus)
     case tradingValidation(TradingValidation)
     case connectionCheck(TradingCapabilityCheck)
+    /// The engine's revision of a setup whose changed account limits copying now uses.
+    case accountLimits(revision: String)
     case accountControl(AccountControlResult)
     case ownershipResolution(OwnershipResolution)
     case accounts(AccountOverviewPage)
@@ -422,6 +424,7 @@ public struct EngineSuccess: Decodable, Equatable, Sendable {
         case accountID = "account_id"
         case history
         case turnID = "turn_id"
+        case revision
         case cancelled
     }
 
@@ -446,6 +449,8 @@ public struct EngineSuccess: Decodable, Equatable, Sendable {
                 ))
         case "connection_check":
             result = .connectionCheck(try container.decode(TradingCapabilityCheck.self, forKey: .check))
+        case "account_limits":
+            result = .accountLimits(revision: try container.decode(String.self, forKey: .revision))
         case "account_control":
             result = .accountControl(try container.decode(AccountControlResult.self, forKey: .control))
         case "ownership_resolution":
@@ -562,6 +567,7 @@ enum EngineOperation: Sendable {
         TradingConfiguration, TradingSecrets, validationToken: String, activationID: String
     )
     case pauseTrading
+    case updateAccountLimits(TradingConfiguration)
     case createBackup(String)
     case previewRestore(String)
     case prepareRestoreCandidate(String)
@@ -689,6 +695,9 @@ struct EngineRequest: Encodable, Sendable {
             try container.encode(activationID, forKey: .activationID)
         case .pauseTrading:
             try container.encode("pause_trading", forKey: .operation)
+        case .updateAccountLimits(let configuration):
+            try container.encode("update_account_limits", forKey: .operation)
+            try container.encode(configuration, forKey: .configuration)
         case .createBackup(let destination):
             try container.encode("create_backup", forKey: .operation)
             try container.encode(destination, forKey: .destination)

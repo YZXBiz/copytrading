@@ -426,3 +426,50 @@ async def test_a_buy_during_automatic_recovery_trades_once_the_checks_pass(tmp_p
         assert broker.calls == 1
     finally:
         await owner.close()
+
+
+async def test_changed_limits_size_the_next_order_and_are_journaled(tmp_path, monkeypatch):
+    datetime_type = dt.datetime
+
+    class FixedDateTime(datetime_type):
+        @classmethod
+        def now(cls, tz=None):
+            fixed = cls(2026, 1, 5, 15, 0, tzinfo=dt.UTC)
+            return fixed if tz is None else fixed.astimezone(tz)
+
+    monkeypatch.setattr(dt, "datetime", FixedDateTime)
+    now = FixedDateTime(2026, 1, 5, 15, 0, tzinfo=dt.UTC)
+    broker = FakeBroker()
+    owner = await _open(tmp_path, broker)
+    try:
+        await owner.recover_account(now)
+        await owner.control_account(_command("enable-1", "resume"), now)
+        bigger = CopyConfig(sources=("discord:demo",), max_order_usd=Decimal("300"))
+        [change] = await owner.update_config(bigger, now)
+        assert (change.setting, change.before, change.after) == ("max_order_usd", "100", "300")
+        assert await owner.update_config(bigger, now) == ()
+        buy = StockSignal.model_validate(event("bigger", price="25", timestamp=now))
+        # A sixth of $3,000 asks for $500: the new $300 cap trims it, where $100 did before.
+        signal = destination_signal(buy, account_id="paper", full_position_usd="3000")
+        await owner.receive(signal, now)
+        await owner.cycle(now, halted=False)
+        [order] = broker.orders.values()
+        assert Decimal(order["qty"]) * Decimal(order["limit_price"]) == Decimal("300")
+        with pytest.raises(ValueError, match="sources"):
+            await owner.update_config(CopyConfig(sources=("discord:other",)), now)
+    finally:
+        await owner.close()
+
+    owner = await _open(tmp_path, broker)
+    try:
+        page = await owner.event_page(None, 50)
+        [changed] = [item for item in page.items if item.kind == "limits_changed"]
+        assert [(item.setting, item.before, item.after) for item in changed.changes] == [
+            ("max_order_usd", "100", "300")
+        ]
+        feed = await owner.feed_page(None, 50)
+        [row] = [item for item in feed.items if item.kind == "limits_changed"]
+        assert row.source == "you"
+        assert row.changes == changed.changes
+    finally:
+        await owner.close()

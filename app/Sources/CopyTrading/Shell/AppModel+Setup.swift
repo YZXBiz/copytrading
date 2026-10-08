@@ -15,10 +15,19 @@ extension AppModel {
         return edited != saved
     }
 
+    /// Limits are all the draft changes, so they save when the account sheet closes and never
+    /// wait on Apply Changes; once a save is refused they wait like any other change.
+    var hasOnlyLimitChanges: Bool {
+        guard !limitsSaveRefused, !setupDraft.hasTypedSecrets, let saved = savedTradingConfiguration,
+            let edited = try? setupDraft.submission().0
+        else { return false }
+        return edited.limitOnlyChanges(from: saved) != nil
+    }
+
     /// Connections shows its start card while there is something to set up, check, or start.
     var hasSetupToStart: Bool {
         savedTradingConfiguration == nil
-            || hasUnsavedSetupChanges || isValidatingTrading || isActivatingTrading || tradingValidation != nil
+            || (hasUnsavedSetupChanges && !hasOnlyLimitChanges) || isValidatingTrading || isActivatingTrading || tradingValidation != nil
             || !profileExampleReviews.isEmpty
     }
 
@@ -70,6 +79,7 @@ extension AppModel {
     func syncSetupDraftWithSaved() {
         guard let saved = savedTradingConfiguration, saved != setupDraftSource else { return }
         setupEditor = nil
+        limitsSaveRefused = false
         setupDraft.load(saved)
         setupDraft.clearSecrets()
         setupDraftSource = saved

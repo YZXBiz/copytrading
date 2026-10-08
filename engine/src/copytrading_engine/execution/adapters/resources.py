@@ -30,7 +30,12 @@ from copytrading_engine.execution.application.ports import (
     ExecutionObserver,
 )
 from copytrading_engine.execution.application.recovery import RecoveryApplication
-from copytrading_engine.execution.domain.events import JournalEvent, SignalRejected
+from copytrading_engine.execution.domain.events import (
+    JournalEvent,
+    LimitChange,
+    LimitsChanged,
+    SignalRejected,
+)
 from copytrading_engine.execution.domain.lifecycle import (
     AccountControlCommand,
     AccountControlResult,
@@ -285,6 +290,22 @@ class ExecutionResources:
         elif command.action == "resume":
             self._recovery_ready = True
         return result
+
+    def update_config(self, config: CopyConfig, now: dt.datetime) -> tuple[LimitChange, ...]:
+        """Copy with new limits from the next cycle on, and journal what changed."""
+        before, after = _flat_limits(self.engine.config), _flat_limits(config)
+        changes = tuple(
+            LimitChange(setting=name, before=_text(before[name]), after=_text(value))
+            for name, value in after.items()
+            if before[name] != value
+        )
+        if config.sources != self.engine.config.sources:
+            raise ValueError("A limits update cannot change the account's sources")
+        if not changes:
+            return ()
+        self.engine.ledger.record(JournalEvent(at=now, payload=LimitsChanged(changes=changes)))
+        self.engine.config = config
+        return changes
 
     def observation(self) -> ExecutionObservation:
         return ExecutionObservation(
@@ -547,3 +568,14 @@ def build_resources(
     except BaseException:
         stack.close()
         raise
+
+
+def _flat_limits(config: CopyConfig) -> dict[str, object]:
+    """Every limit by its account policy name, the entry pricing ones included."""
+    return (
+        config.model_dump(exclude={"sources", "entry_pricing"}) | config.entry_pricing.model_dump()
+    )
+
+
+def _text(value: object) -> str:
+    return str(value).lower() if isinstance(value, bool) else str(value)

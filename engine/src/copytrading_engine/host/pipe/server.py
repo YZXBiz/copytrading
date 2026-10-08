@@ -69,6 +69,7 @@ from copytrading_engine.host.pipe.requests import (
     StartTradingRequest,
     StopRequest,
     SubmitRequest,
+    UpdateAccountLimitsRequest,
     ValidateTradingRequest,
 )
 from copytrading_engine.host.pipe.responses import ErrorCode, reply, workflow_payload
@@ -253,6 +254,7 @@ class PipeServer:
                     StartTradingRequest,
                     ValidateTradingRequest,
                     CheckConnectionRequest,
+                    UpdateAccountLimitsRequest,
                     ControlAccountRequest,
                     ResolveOwnershipRequest,
                 ),
@@ -288,6 +290,7 @@ class PipeServer:
                     ValidateTradingRequest,
                     CheckConnectionRequest,
                     PauseTradingRequest,
+                    UpdateAccountLimitsRequest,
                     ControlAccountRequest,
                     ResolveOwnershipRequest,
                     GetAccountsRequest,

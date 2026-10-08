@@ -30,6 +30,7 @@ from copytrading_engine.execution.application.ports import (
     ExecutionObserver,
     NoOpObserver,
 )
+from copytrading_engine.execution.domain.events import LimitChange
 from copytrading_engine.execution.domain.lifecycle import (
     AccountControlCommand,
     AccountControlResult,
@@ -349,6 +350,10 @@ class ExecutionOwner:
         self, command: AccountControlCommand, now: dt.datetime
     ) -> AccountControlResult:
         return await self._submit(lambda resource: resource.control_account(command, now))
+
+    async def update_config(self, config: CopyConfig, now: dt.datetime) -> tuple[LimitChange, ...]:
+        """Swap the limits between two cycles: the worker runs one operation at a time."""
+        return await self._submit(lambda resource: resource.update_config(config, now))
 
     async def account_status(self) -> AccountRuntimeView:
         return await self._submit(lambda resource: resource.account_status())

@@ -557,7 +557,7 @@ public struct SourceActivityPage: Codable, Equatable, Sendable {
 public struct AccountFeedItem: Codable, Equatable, Identifiable, Sendable {
     public let sequence: Int
     public let at: String
-    /// bought, sold, cancelled, expired, rejected, paused, resumed, or settled.
+    /// bought, sold, cancelled, expired, rejected, paused, resumed, settled, or limits_changed.
     public let kind: String
     /// guru (a post was copied) or you (the owner did it).
     public let source: String
@@ -569,13 +569,28 @@ public struct AccountFeedItem: Codable, Equatable, Identifiable, Sendable {
     public let guruID: String?
     public let messageID: String?
     public let orderID: String?
+    /// The limits the owner changed, for a `limits_changed` row.
+    public let changes: [AccountLimitChange]
     public var id: Int { sequence }
 
     enum CodingKeys: String, CodingKey {
-        case sequence, at, kind, source, side, symbol, shares, price, amount
+        case sequence, at, kind, source, side, symbol, shares, price, amount, changes
         case guruID = "guru_id"
         case messageID = "message_id"
         case orderID = "order_id"
+    }
+}
+
+/// One limit the owner changed: its engine policy name, and its value before and after as text.
+public struct AccountLimitChange: Codable, Equatable, Sendable {
+    public let setting: String
+    public let before: String
+    public let after: String
+
+    public init(setting: String, before: String, after: String) {
+        self.setting = setting
+        self.before = before
+        self.after = after
     }
 }
 

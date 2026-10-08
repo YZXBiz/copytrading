@@ -8,6 +8,8 @@ from pydantic import AwareDatetime
 from copytrading_engine.execution.domain.events import (
     AccountControlChanged,
     JournalEvent,
+    LimitChange,
+    LimitsChanged,
     ManualSaleRecorded,
     OrderUpdate,
     OwnershipResolved,
@@ -16,7 +18,15 @@ from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
 from copytrading_engine.execution.domain.values import Value
 
 FeedKind = Literal[
-    "bought", "sold", "cancelled", "expired", "rejected", "paused", "resumed", "settled"
+    "bought",
+    "sold",
+    "cancelled",
+    "expired",
+    "rejected",
+    "paused",
+    "resumed",
+    "settled",
+    "limits_changed",
 ]
 # Who made it happen: a guru's post, or the owner (a sale in the app or at the broker, a reviewed
 # post, a pause, a settled holdings review).
@@ -40,6 +50,8 @@ class AccountFeedItem(Value):
     guru_id: str | None = None
     message_id: str | None = None
     order_id: str | None = None
+    # The limits the owner changed, for a limits_changed row.
+    changes: tuple[LimitChange, ...] = ()
 
 
 class AccountFeedPage(Value):
@@ -90,6 +102,10 @@ def _item(seq: int, event: JournalEvent, snapshot: LedgerSnapshot) -> AccountFee
                 source="you",
                 symbol=resolution.request.symbol,
                 shares=resolution.external_qty,
+            )
+        case LimitsChanged(changes=changes):
+            return AccountFeedItem(
+                sequence=seq, at=event.at, kind="limits_changed", source="you", changes=changes
             )
         case AccountControlChanged(result=result) if result.command.action in ("pause", "resume"):
             return AccountFeedItem(

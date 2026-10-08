@@ -305,7 +305,8 @@ WHERE (? IS NULL OR j.id < ?) AND (
                 = json_extract(j.event, '$.payload.client_id')
             AND json_extract(e.event, '$.payload.status')
                 IN ('filled','canceled','expired','rejected')))
-    OR json_extract(j.event, '$.payload.kind') IN ('manual_sale_recorded', 'ownership_resolved')
+    OR json_extract(j.event, '$.payload.kind')
+        IN ('manual_sale_recorded', 'ownership_resolved', 'limits_changed')
     OR (json_extract(j.event, '$.payload.kind') = 'account_control_changed'
         AND json_extract(j.event, '$.payload.result.command.action') IN ('pause', 'resume')))
 ORDER BY j.id DESC LIMIT ?

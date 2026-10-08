@@ -23,6 +23,8 @@ protocol TradingStarting: Sendable {
 
     func pauseTrading() async throws -> TradingStatus
 
+    func updateAccountLimits(configuration: TradingConfiguration) async throws -> String
+
     func evaluateHistoricalProfile(
         _ evaluation: HistoricalProfileEvaluationRequest
     ) async throws -> ProfileEvaluation
@@ -506,6 +508,10 @@ final class AppModel {
     var setupEditor: ConnectionsEditingTarget?
     /// The account sheet opens on Maximum above signal price, as Activity's suggestion asks.
     var editorFocusesEntryTolerance = false
+    /// Accounts whose new limits were just saved without a check, each until the owner edits again.
+    var limitsSavedAccountIDs: Set<String> = []
+    /// The engine refused the draft's limits, so they wait for the full check like other changes.
+    var limitsSaveRefused = false
     /// A connection the guide asked to open; Connections opens its panel and clears it.
     var requestedConnection: ConnectionKind?
     /// The guru People shows: an assistant link sets it to open that guru, and the assistant reads
@@ -1495,6 +1501,42 @@ final class AppModel {
             message = nil
         } catch {
             message = Self.userMessage(for: error)
+        }
+    }
+
+    /// When limits are all the draft changes, copying takes them now: no check, no Apply Changes,
+    /// no pause. The engine answers with the new setup's revision, which is saved with it, so the
+    /// next check and Start match the engine. Returns nil when the draft changes more than
+    /// limits, which wait for the full check; otherwise whether the limits were saved.
+    @discardableResult
+    func saveLimitOnlyChanges() async -> Bool? {
+        limitsSaveRefused = false
+        guard isTradingUnlocked, !setupDraft.hasTypedSecrets,
+            let saved = savedTradingConfiguration,
+            let edited = try? setupDraft.submission().0,
+            let changed = edited.limitOnlyChanges(from: saved),
+            let tradingConfigurationStore,
+            let control: (any TradingStarting) = tradingStarter ?? engineActions,
+            !isTradingCommandPending, !isValidatingTrading, !isActivatingTrading, pendingTradingActivation == nil,
+            (try? tradingConfigurationStore.pendingActivation()) == nil
+        else { return nil }
+        isTradingCommandPending = true
+        defer { isTradingCommandPending = false }
+        do {
+            try Self.validateTradingConfiguration(edited)
+            let revision = try await control.updateAccountLimits(configuration: edited)
+            try tradingConfigurationStore.saveLimits(configuration: edited, revision: revision)
+            savedTradingConfiguration = edited
+            setupDraftSource = edited
+            tradingValidation = nil
+            limitsSavedAccountIDs.formUnion(changed)
+            limitsSaveRefused = false
+            message = nil
+            return true
+        } catch {
+            limitsSaveRefused = true
+            message = Self.userMessage(for: error)
+            return false
         }
     }
 

@@ -14,8 +14,15 @@ struct AccountEditorSheet: View {
     var failedCheck: TradingCapabilityCheck?
     /// Checks the account's keys with Alpaca; nil when there are none to check yet.
     var check: () async -> TradingCapabilityCheck? = { nil }
+    /// Saves the account's limits at once when they are all that changed: nil when more changed,
+    /// otherwise whether they were saved.
+    var saveLimits: () async -> Bool? = { nil }
+    /// Why the limits weren't saved, when they weren't.
+    var limitsError: String?
     @Environment(\.dismiss) private var dismiss
     @State private var isChecking = false
+    /// nil until limits are saved or refused; then whether they were saved.
+    @State private var limitsSaved: Bool?
     @FocusState private var entryToleranceFocused: Bool
 
     private var hasSavedCredentials: Bool { savedAccountIDs.contains(account.name.trimmed) }
@@ -63,7 +70,7 @@ struct AccountEditorSheet: View {
                             help: [SetupHelp.alpacaKeys(for: account.environment)])
                     }
 
-                    Section(L10n.string("Position limits (USD)")) {
+                    Section {
                         textLimit(
                             "Maximum per order", hint: "The most one buy can spend. A bigger buy is made smaller.",
                             text: $account.policy.maxOrderUSD,
@@ -100,9 +107,13 @@ struct AccountEditorSheet: View {
                                 "The lowest a sell can go below the guru's price. A sell that can't fill by then is cancelled.",
                             text: $account.policy.maxBelowSignalPct,
                             example: LimitExamples.maxBelowSignal)
+                    } header: {
+                        Text(L10n.string("Position limits (USD)"))
+                    } footer: {
+                        limitsSavedNote
                     }
 
-                    Section(L10n.string("Timing")) {
+                    Section {
                         numberLimit(
                             "Entries per day", hint: "The most buys in one day. Sells don't count.",
                             value: $account.policy.maxEntriesPerDay,
@@ -117,6 +128,8 @@ struct AccountEditorSheet: View {
                             "Order timeout (seconds)", hint: "An order that hasn't filled by then is cancelled.",
                             value: $account.policy.orderTimeoutSeconds,
                             example: LimitExamples.orderTimeout(maxAboveSignalPct: account.policy.maxAboveSignalPct))
+                    } header: {
+                        Text(L10n.string("Timing"))
                     }
 
                     Section {
@@ -164,6 +177,9 @@ struct AccountEditorSheet: View {
                     }
                 }
                 .formStyle(.grouped)
+                // Return in a limit field saves it, as Done does.
+                .onSubmit(commitLimits)
+                .onChange(of: account.policy) { limitsSaved = nil }
                 .task {
                     guard focusesEntryTolerance else { return }
                     // After the sheet settles, so the scroll lands and the field takes focus.
@@ -188,6 +204,24 @@ struct AccountEditorSheet: View {
     }
 
     private static let entryToleranceRow = "maxAboveSignalPct"
+
+    /// Limits saved without a check say so where they were typed.
+    @ViewBuilder private var limitsSavedNote: some View {
+        switch limitsSaved {
+        case true?:
+            Label(L10n.string("Saved · applies to the next order"), systemImage: "checkmark.circle.fill")
+                .foregroundStyle(StatusTone.positive.color)
+                .accessibilityIdentifier("account.limitsSaved")
+        case false?:
+            Callout(limitsError ?? L10n.string("These limits weren't saved."), tone: .caution)
+        case nil:
+            EmptyView()
+        }
+    }
+
+    private func commitLimits() {
+        Task { limitsSaved = await saveLimits() }
+    }
 
     private func textLimit(
         _ title: String, hint: String, text: Binding<String>, example: String, focus: FocusState<Bool>.Binding? = nil
@@ -225,12 +259,24 @@ struct AccountEditorSheet: View {
     }
 
     /// Done checks the keys with Alpaca first, and keeps the sheet open when Alpaca says no.
+    /// Changed limits, when they are all that changed, are saved then and copied with at once;
+    /// the sheet stays open when they can't be.
     private func finish() {
+        // Limits refused once close on a second Done and wait for the full check.
+        if limitsSaved == false {
+            dismiss()
+            return
+        }
         Task {
             isChecking = true
             let result = await check()
+            guard result?.state != .failed else {
+                isChecking = false
+                return
+            }
+            limitsSaved = await saveLimits()
             isChecking = false
-            if result?.state != .failed { dismiss() }
+            if limitsSaved != false { dismiss() }
         }
     }
 

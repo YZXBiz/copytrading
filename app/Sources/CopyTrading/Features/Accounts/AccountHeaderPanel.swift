@@ -96,6 +96,10 @@ struct AccountHeaderPanel: View {
                     Pill(text: entryState.text, symbol: entryState.tone.symbol, tint: entryState.tone.color)
                     if let pendingNote {
                         Pill(text: pendingNote, symbol: "pencil.circle.fill", tint: .orange)
+                    } else if model.limitsSavedAccountIDs.contains(account.accountID) {
+                        Pill(
+                            text: L10n.string("Saved · applies to the next order"), symbol: StatusTone.positive.symbol,
+                            tint: StatusTone.positive.color)
                     }
                     Text(L10n.string("Alpaca"))
                         .font(.caption)
@@ -109,7 +113,7 @@ struct AccountHeaderPanel: View {
 
     /// An account the unsaved setup removes or changes says so beside its state.
     @MainActor private var pendingNote: String? {
-        guard model.hasUnsavedSetupChanges else { return nil }
+        guard model.hasUnsavedSetupChanges, !model.hasOnlyLimitChanges else { return nil }
         guard let draft = model.setupDraft.accounts.first(where: { $0.name.trimmed == account.accountID }) else {
             return L10n.string("Removed — not saved yet")
         }

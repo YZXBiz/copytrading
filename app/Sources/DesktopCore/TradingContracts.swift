@@ -490,6 +490,27 @@ public struct TradingConfiguration: Codable, Equatable, Sendable {
     }
 }
 
+extension TradingConfiguration {
+    /// This setup with `other`'s account limits, account by account; an account `other` doesn't
+    /// have keeps its own.
+    public func withPolicies(of other: TradingConfiguration) -> TradingConfiguration {
+        var copy = self
+        for index in copy.accounts.indices {
+            if let policy = other.accounts.first(where: { $0.id == copy.accounts[index].id })?.policy {
+                copy.accounts[index].policy = policy
+            }
+        }
+        return copy
+    }
+
+    /// The accounts whose limits differ from `saved` when limits are all that differ, which copying
+    /// takes without a pause; nil when anything else changed, or nothing did.
+    public func limitOnlyChanges(from saved: TradingConfiguration) -> [String]? {
+        guard self != saved, withPolicies(of: saved) == saved else { return nil }
+        return zip(accounts, saved.accounts).filter { $0.policy != $1.policy }.map(\.0.id)
+    }
+}
+
 public struct TradingBrokerCredentials: Codable, Equatable, Sendable {
     public var accountID: String
     public var key: String
