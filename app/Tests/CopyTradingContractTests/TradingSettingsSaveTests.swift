@@ -456,7 +456,7 @@ struct TradingSettingsSaveTests {
         await model.pauseTrading()
         await starter.setValidationActivatable(true)
         try await Task.sleep(for: .milliseconds(500))
-        try check(model.tradingStatus?.state == .paused, "A retry restarted copying after the owner paused")
+        try check([.pausing, .paused].contains(model.tradingStatus?.state), "A retry restarted copying after the owner paused")
         let validations = await starter.validationCallCount()
         try check(validations == 1, "A pause must end the launch retries, saw \(validations) checks")
         print("CopyTradingContractTests: pausing ended the launch start retries")
@@ -2746,11 +2746,11 @@ private actor RecordingTradingStarter: TradingStarting {
         return status
     }
 
+    /// Like the engine: the answer says pausing, and the next status read says paused.
     func pauseTrading() async throws -> TradingStatus {
         operationEvents.append("pause")
-        let status = try TradingStatusBuilder(.paused).build()
-        latestTradingStatus = status
-        return status
+        latestTradingStatus = try TradingStatusBuilder(.paused).build()
+        return try TradingStatusBuilder(.pausing).build()
     }
 
     func tradingActivation(activationID: String) async throws -> TradingActivationStatus {

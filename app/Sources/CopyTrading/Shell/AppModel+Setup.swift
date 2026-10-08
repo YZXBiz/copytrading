@@ -180,13 +180,26 @@ extension AppModel {
         Task { [weak self] in
             guard let self else { return }
             await self.pauseTrading()
-            guard self.tradingStatus?.state == .paused else {
+            guard await self.waitUntilPaused() else {
                 self.isPausedToApplyChanges = false
+                self.message = L10n.string("Copying didn't pause, so your changes weren't applied. Try again.")
                 return
             }
             await self.checkThenStart(submission.0, enteredSecrets: submission.1)
             await self.resumeSavedSetupIfPausedForChanges()
         }
+    }
+
+    /// Pausing answers "pausing" while open orders and the source wind down; wait for paused.
+    private func waitUntilPaused() async -> Bool {
+        guard let control = connectionChecker else { return false }
+        for _ in 0..<120 {
+            if tradingStatus?.state == .paused { return true }
+            guard [.pausing, .running, .degraded].contains(tradingStatus?.state) else { return false }
+            try? await Task.sleep(for: .milliseconds(500))
+            if let status = try? await control.tradingStatus() { tradingStatus = status }
+        }
+        return tradingStatus?.state == .paused
     }
 
     /// Copying paused only to apply changes that did not start: the saved setup copies again,
