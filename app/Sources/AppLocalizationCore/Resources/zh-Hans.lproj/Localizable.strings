@@ -39,7 +39,6 @@
 "%@ · %@ on this Mac" = "%@ · %@（保存在此 Mac）";
 "%@ · as of %@" = "%@ · 截至 %@";
 "%@ · channel %@ · %@" = "信号源 %@ · 频道 %@ · %@";
-"%@ · entries %@" = "%@ · 开仓 %@";
 "%@ · instruction %lld" = "账户 %@ · 指令%lld";
 "%@ → %@ · %@" = "%@ 至 %@ · %@";
 "%@, %@" = "%@，%@";
@@ -308,7 +307,6 @@
 "e.g. NVDA" = "例如 NVDA";
 "Each account's change" = "各账户净值变动";
 "Each guru's channel, how to read their calls, and the account that copies them." = "每位信号源的频道、如何解读其信号，以及跟单的账户。";
-"Each selected account is checked independently for permission, recovery, risk, activity, and ownership." = "将分别检查每个所选账户的权限、恢复状态、风险、活动和持仓归属。";
 "Earlier buy" = "更早的买入";
 "Earlier message" = "较早的消息";
 "Earlier outcomes" = "先前结果";
@@ -648,7 +646,6 @@
 "Preview Orders" = "预览订单";
 "Previews read fresh market and account state. They never place or cancel an order." = "预览会读取最新的市场和账户状态，但绝不会提交或取消订单。";
 "Previous commands" = "先前操作";
-"Price quoted in the message" = "消息中提到的价格";
 "Prices are checked again the moment you press Sell. If anything changed, nothing is sent." = "点击“卖出”时会再次检查价格。只要价格发生变化，就不会提交订单。";
 "Problems" = "问题";
 "Processed" = "已处理";
@@ -723,7 +720,6 @@
 "Resume Restore" = "继续恢复";
 "Resume with a read-only broker check, or roll back to the previous generation." = "可先通过只读券商检查后继续恢复，或回滚到上一版本。";
 "Retry Pending Self-Test" = "重试待处理的自检";
-"Retry Saving Correction" = "重试保存更正";
 "Review" = "审核";
 "Review %@…" = "审核 %@…";
 "Review Again" = "重新审核";
@@ -748,7 +744,6 @@
 "Same installation" = "同一安装实例";
 "Save" = "保存";
 "Save a guru and start copying before evaluating older posts." = "先保存信号源并开始跟单，再评估较早的帖子。";
-"Save Correction" = "保存更正";
 "Save Log…" = "保存日志…";
 "Saved" = "已保存";
 "Saved guru" = "已保存的信号源";
@@ -823,7 +818,6 @@
 "Source activity error: %@" = "来源活动错误：%@";
 "Source fraction: %@ · evidence %@" = "来源比例：%@ · 证据 %@";
 "Source post" = "来源帖子";
-"Source price" = "信号价格";
 "Start" = "开始";
 "Start Copying" = "开始跟单";
 "Start copying automatically" = "自动开始跟单";
@@ -1703,3 +1697,11 @@
 "%@ your time (%@ New York)" = "你的时间 %@（纽约时间 %@）";
 "Also copy calls before and after regular hours, %@, with limit orders." = "在常规交易时段前后也复制（%@），使用限价单。";
 "Also copy calls overnight, %@. Needs extended hours on." = "夜间也复制（%@）。需要开启盘前盘后交易。";
+"Price in the post" = "帖子里的价格";
+"The guru's price" = "导师给出的价格";
+"Save and Preview Order" = "保存并预览订单";
+"Save and Preview Orders" = "保存并预览订单";
+"Try Again" = "重试";
+"CopyTrading's engine isn't running, so this can't be saved or placed yet." = "CopyTrading 的引擎没有运行，暂时无法保存或下单。";
+"Before anything is placed, CopyTrading checks each account's limits and what it holds." = "下单前，CopyTrading 会检查每个账户的限额和持仓。";
+"Not copying right now" = "目前未在跟单";
