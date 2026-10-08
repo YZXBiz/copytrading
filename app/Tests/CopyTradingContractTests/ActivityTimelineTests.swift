@@ -66,11 +66,11 @@ private func theTimelineShowsEveryStepWithItsGap() throws {
     try #require(read.duration.map(PostTimeline.duration) == "3.2 s", "read took \(read.duration ?? -1)")
     let sent = timeline.phases[2]
     try #require(
-        sent.detail == "0.995024 PM, limit $201.00 · accepted by Alpaca in 0.12 s", "sent detail \(sent.detail ?? "nil")")
+        sent.detail == "$200 of PM · ≈1 share · limit $201.00 · accepted by Alpaca in 0.12 s", "sent detail \(sent.detail ?? "nil")")
     try #require(sent.waits == ["Held 18 s waiting for you to resume"], "sent waits \(sent.waits)")
     let ended = timeline.phases[3]
     try #require(ended.waits == ["Waited 1 min 2 s for a fill"], "ended waits \(ended.waits)")
-    try #require(ended.detail == nil, "the full reason belongs on the card, not the timeline")
+    try #require(ended.detail == nil, "the full reason belongs in the order's facts, not the timeline")
     try #require(ended.caution, "an unfilled order reads as a caution")
     try #require(
         !timeline.phases.compactMap(\.duration).contains { $0 < PostTimeline.measurable }, "no phase may show a zero gap")
@@ -102,7 +102,11 @@ private func aFilledBuyEndsFilledWithItsTimeToFill() throws {
         .build()
     let timeline = PostTimeline(source)
     try #require(timeline.phases.map(\.title) == ["Received", "Read", "Sent", "Filled"], "phases \(timeline.phases.map(\.title))")
-    try #require(timeline.phases[3].detail == "0.995024 PM at $200.82", "fill detail \(timeline.phases[3].detail ?? "nil")")
+    try #require(
+        timeline.phases[3].detail == "$199.82 of PM · ≈1 share at $200.82", "fill detail \(timeline.phases[3].detail ?? "nil")")
+    try #require(
+        timeline.phases[2].detail == "$200 of PM · ≈1 share · limit $201.00 · accepted by Alpaca in 0.09 s",
+        "sent detail \(timeline.phases[2].detail ?? "nil")")
     try #require(timeline.phases[2].waits.isEmpty && !timeline.phases[3].caution)
     try #require(timeline.toFill.map(PostTimeline.duration) == "4.8 s", "post to fill \(timeline.toFill ?? -1)")
 }
@@ -116,9 +120,17 @@ private func anUnfilledBuySaysWhyItWasCancelled() throws {
         + "Raise Maximum above signal price in the account's limits to let buys fill nearby."
     let sentence = CancelReasonText.sentence(try #require(source.destinations.first?.orders.first))
     try #require(sentence == expected, "reason was \(sentence ?? "nil")")
-    let line = try #require(ActivityCardOutcome(source, skipped: false).accounts.first?.lines.first)
-    try #require(line.why?.hasPrefix(expected) == true, "the card said \(line.why ?? "nil")")
-    try #require(line.why?.hasSuffix("Your max per order cut it to $200.") == true, "the trim note went missing")
+    // The card leads with the takeaway and the numbers; the full sentence stays in Technical details.
+    let result = try #require(ActivityCardOutcome(source, skipped: false).accounts.first?.results.first)
+    try #require(result.headline == "Not bought: the price ran above your limit", "headline was \(result.headline)")
+    try #require(
+        result.facts
+            == [
+                .init(label: "Your limit", value: "$201.00"), .init(label: "Market", value: "$208.86"),
+                .init(label: "Waited", value: "1 min 2 s"), .init(label: "Order (max per order)", value: "$200 of $600"),
+            ],
+        "facts were \(result.facts)")
+    try #require(result.note == nil && result.suggestion == .allowAboveGuru, "result was \(result)")
 }
 
 @MainActor

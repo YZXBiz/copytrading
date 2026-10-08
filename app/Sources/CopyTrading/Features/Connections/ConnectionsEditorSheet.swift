@@ -15,6 +15,7 @@ struct ConnectionsEditorSheet: View {
                     account: $model.setupDraft.accounts[index],
                     savedAccountIDs: model.savedKeyAccountIDs,
                     remove: { removeAccount(id) },
+                    focusesEntryTolerance: model.editorFocusesEntryTolerance,
                     failedCheck: failedCheck(.account(model.setupDraft.accounts[index].name.trimmed)),
                     check: { [model] in
                         guard let account = model.setupDraft.accounts.first(where: { $0.id == id }) else { return nil }
@@ -24,6 +25,7 @@ struct ConnectionsEditorSheet: View {
                 .onChange(of: model.setupDraft.accounts[index].name) { oldName, newName in
                     model.renameAccountReferences(from: oldName.trimmed, to: newName.trimmed)
                 }
+                .onDisappear { model.editorFocusesEntryTolerance = false }
             }
         case .route(let id):
             if let index = model.setupDraft.routes.firstIndex(where: { $0.id == id }) {

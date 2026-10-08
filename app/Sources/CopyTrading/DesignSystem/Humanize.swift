@@ -110,6 +110,43 @@ enum Humanize {
         return decimal.formatted(.currency(code: "USD").precision(.fractionLength(whole ? 0 : 2)))
     }
 
+    /// A share count as a person reads it: whole shares when within a hundredth of one ("1 share",
+    /// "≈1 share"), otherwise to three decimals at most ("2.985 shares"). "≈" marks a rounded count.
+    @MainActor
+    static func shares(_ value: Decimal) -> String {
+        L10n.string(isOne(value) ? "%@ share" : "%@ shares", shareCount(value))
+    }
+
+    /// The count alone, rounded as `shares` rounds it: "≈1", "2.985", "0".
+    @MainActor
+    static func shareCount(_ value: Decimal) -> String {
+        var source = value
+        var whole = Decimal()
+        NSDecimalRound(&whole, &source, 0, .plain)
+        var shown = whole
+        if abs(NSDecimalNumber(decimal: value - whole).doubleValue) >= 0.01 {
+            NSDecimalRound(&shown, &source, 3, .plain)
+        }
+        let text = shown.formatted(.number.precision(.fractionLength(0...3)))
+        return shown == value ? text : L10n.string("≈%@", text)
+    }
+
+    /// "0 of ≈1 share", "5 of 12 shares": part of an amount of shares, as filled of an order.
+    @MainActor
+    static func shares(_ part: Decimal, of quantity: Decimal) -> String {
+        L10n.string(isOne(quantity) ? "%@ of %@ share" : "%@ of %@ shares", shareCount(part), shareCount(quantity))
+    }
+
+    /// An amount of a stock, dollar first: "$200 of PM".
+    @MainActor
+    static func amount(_ dollars: String, of symbol: String) -> String {
+        L10n.string("%@ of %@ stock", dollars, symbol)
+    }
+
+    private static func isOne(_ value: Decimal) -> Bool {
+        abs(NSDecimalNumber(decimal: value).doubleValue - 1) < 0.01
+    }
+
     static func bytes(_ value: Int64) -> String {
         value.formatted(.byteCount(style: .file))
     }

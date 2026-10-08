@@ -120,11 +120,15 @@ private func aTrimmedBuyIsTradedSmallerAndSaysByHowMuch() throws {
     let outcome = ActivityCardOutcome(source, skipped: false)
 
     try #require(outcome.title == "Traded smaller", "badge was \(outcome.title)")
-    let line = try #require(outcome.accounts.first?.lines.first)
-    try #require(line.what == "Bought 42 SOUN at $5.85", "what was \(line.what)")
+    let result = try #require(outcome.accounts.first?.results.first)
+    try #require(result.headline == "Bought $245.70 of SOUN", "headline was \(result.headline)")
     try #require(
-        line.why == "The call was for $333.33. Your max per order cut it to $250.",
-        "why was \(line.why ?? "nil")")
+        result.facts
+            == [
+                .init(label: "Price", value: "$5.85"), .init(label: "Shares", value: "42 shares"),
+                .init(label: "Order (max per order)", value: "$250 of $333.33"),
+            ],
+        "facts were \(result.facts)")
 }
 
 @MainActor
@@ -140,14 +144,15 @@ private func aSkipNamesTheLimitWithItsNumbers() throws {
 
     try #require(outcome.title == "Skipped", "badge was \(outcome.title)")
     try #require(
-        outcome.accounts.first?.lines
+        outcome.accounts.first?.results
             == [
                 .init(
-                    what: "Not bought",
-                    why:
-                        "zhao-paper already has $1,900 of SOUN. Buying $333.33 more would go over its $2,000 limit for one stock."
-                )
-            ], "lines were \(outcome.accounts.first?.lines ?? [])")
+                    headline: "Not bought: over your SOUN limit",
+                    facts: [
+                        .init(label: "Holding SOUN", value: "$1,900"), .init(label: "This buy", value: "$333.33"),
+                        .init(label: "Limit", value: "$2,000"),
+                    ])
+            ], "results were \(outcome.accounts.first?.results ?? [])")
 }
 
 @MainActor
@@ -160,15 +165,15 @@ private func aCallHeldForApprovalAsksToBeApproved() throws {
     let late = ActivityCardOutcome(source, skipped: false, now: nextDay)
 
     try #require(open.title == "Waiting for you", "badge was \(open.title)")
-    try #require(open.accounts.first?.lines.first?.what == "Waiting for your approval", "lines were \(open.accounts.first?.lines ?? [])")
+    let waiting = try #require(open.accounts.first?.results.first)
+    try #require(waiting.headline == "Waiting for your approval", "headline was \(waiting.headline)")
     try #require(
-        plain(open.accounts.first?.lines.first?.why)
-            == "You asked to approve every order for this account. Approve it by 5:00 PM PT today, when trading ends.",
-        "lines were \(open.accounts.first?.lines ?? [])")
+        waiting.facts.map { [$0.label, plain($0.value)] } == [["Approve by", "5:00 PM PT today"]],
+        "facts were \(waiting.facts)")
     try #require(open.accounts.first?.waits == true, "the account did not wait")
     try #require(
-        late.accounts.first?.lines.first?.what == "Not sent",
-        "an expired approval read \(late.accounts.first?.lines.first?.what ?? "nil")")
+        late.accounts.first?.results.first?.headline == "Not sent",
+        "an expired approval read \(late.accounts.first?.results.first?.headline ?? "nil")")
 }
 
 @MainActor
@@ -185,21 +190,21 @@ private func aBuyHeldForAResumeAsksToResumeByItsDeadline() throws {
     try #require(waiting.title == "Waiting for you", "badge was \(waiting.title)")
     let account = try #require(waiting.accounts.first)
     try #require(account.awaitsResume, "the account did not ask for a resume")
-    let line = try #require(account.lines.first)
-    try #require(line.what == "Waiting for you to resume entries in zhao-paper", "what was \(line.what)")
-    try #require(line.why?.hasPrefix("Resume by ") == true, "why was \(line.why ?? "nil")")
+    let result = try #require(account.results.first)
+    try #require(result.headline == "Waiting for you to resume entries", "headline was \(result.headline)")
+    try #require(result.facts.first?.label == "Resume by", "facts were \(result.facts)")
     let late = ActivityCardOutcome(source, skipped: false, resume: resume, now: posted.addingTimeInterval(300))
     try #require(
-        late.accounts.first?.lines.first?.why?.hasPrefix("Resume now") == true,
-        "a late resume read \(late.accounts.first?.lines.first?.why ?? "nil")")
+        late.accounts.first?.results.first?.note?.hasPrefix("Resume now") == true,
+        "a late resume read \(late.accounts.first?.results.first?.note ?? "nil")")
 
     // Without a waiting account, or once an order went out, nothing asks for a resume.
     let ready = ActivityCardOutcome(
         source, skipped: false, resume: ResumeWait(source, waiting: [], signalAge: { _ in 120 }))
     try #require(ready.accounts.first?.awaitsResume == false, "a ready account asked for a resume")
     try #require(
-        ready.accounts.first?.lines.first?.what == "Waiting to be sized and sent",
-        "a ready account read \(ready.accounts.first?.lines.first?.what ?? "nil")")
+        ready.accounts.first?.results.first?.headline == "Waiting to be sized and sent",
+        "a ready account read \(ready.accounts.first?.results.first?.headline ?? "nil")")
     let skippedBuy = try soun().destination("zhao-paper", status: "done", outcomes: ["stale_waiting_for_resume"]).build()
     try #require(
         ResumeWait(skippedBuy, waiting: ["zhao-paper"], signalAge: { _ in 120 }).deadlines.isEmpty,

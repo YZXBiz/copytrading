@@ -2,18 +2,35 @@ import DesktopCore
 import Foundation
 
 /// How a post ended (ADR-0007), for the Activity card: one badge (Traded, Traded smaller, Waiting
-/// for you, Skipped, Ignored), and for each account what it did and why, in plain words.
+/// for you, Skipped, Ignored), and for each account the takeaway first: one line saying what
+/// happened, a few facts behind it, and at most one thing to do about it.
 @MainActor
 struct ActivityCardOutcome {
-    struct Line: Equatable {
-        let what: String
-        let why: String?
+    /// A number behind the takeaway, its label above its value: "Your limit" "$201.00".
+    struct Fact: Equatable {
+        let label: String
+        let value: String
+    }
+
+    /// The one change the card offers, never made without the owner.
+    enum Suggestion: Equatable {
+        /// Let buys pay a little above the guru's price: the account's limit sat at 0%.
+        case allowAboveGuru
+    }
+
+    /// One thing the account did with the post: usually one order, or why there was none.
+    struct Result: Equatable {
+        let headline: String
+        var facts: [Fact] = []
+        /// One short sentence under the facts, only when the headline and facts leave a question.
+        var note: String?
+        var suggestion: Suggestion?
     }
 
     struct Account: Equatable, Identifiable {
         let id: String
         let environment: String
-        let lines: [Line]
+        let results: [Result]
         /// The account waits for the owner to copy or skip the post.
         let waits: Bool
         /// The account holds the post's buy until the owner resumes its entries after a restart.
@@ -40,7 +57,7 @@ struct ActivityCardOutcome {
             let resumeBy = resume.deadlines[destination.accountID]
             var account = Account(
                 id: destination.accountID, environment: destination.environment,
-                lines: Self.lines(
+                results: Self.results(
                     for: destination, in: source, waits: waits, open: open, skipped: skipped, resumeBy: resumeBy,
                     now: now, deadline: deadline),
                 waits: waits && open)
@@ -83,86 +100,180 @@ struct ActivityCardOutcome {
         return allowed < asked
     }
 
-    private static func lines(
+    private static func results(
         for destination: DestinationActivity, in source: SourceActivity, waits: Bool, open: Bool, skipped: Bool,
         resumeBy: Date?, now: Date, deadline: String
-    ) -> [Line] {
-        var lines = destination.orders.map { order in
-            Line(
-                what: DestinationOutcome.order(order, count: 1).detail,
-                // Why it ended unfilled comes first: it is what the owner opens the card to learn.
-                why: [
-                    CancelReasonText.sentence(order),
-                    wasTrimmed(order)
-                        ? L10n.string(
-                            "The call was for %@. Your max per order cut it to %@.",
-                            Humanize.dollars(order.requestedUSD), Humanize.dollars(order.budgetUSD))
-                        : nil,
-                ].compactMap(\.self).joined(separator: " ").nilIfEmpty)
-        }
+    ) -> [Result] {
+        var results = destination.orders.map(orderResult)
         for (part, outcome) in destination.instructionOutcomes.enumerated()
-        // A call waiting for the owner says why once, in its own block below; not as "Not bought" too.
+        // A call waiting for the owner says why once, in its own result below; not as "Not bought" too.
         where !Self.carriedOn.contains(outcome) && !WaitingCall.heldForOwner.contains(outcome)
             && !(waits && outcome == "review_required")
         {
             let selling = source.instructions.indices.contains(part) && source.instructions[part].action != "buy"
-            let limit = destination.limitsHit.first { $0.part == part }
-            lines.append(
-                Line(
-                    what: L10n.string(selling ? "Not sold" : "Not bought"),
-                    why: limit.map { limitSentence($0, account: destination.accountID, in: source, part: part) }
-                        ?? Reason.text(outcome)))
+            if let limit = destination.limitsHit.first(where: { $0.part == part }) {
+                results.append(limitResult(limit, selling: selling, in: source, part: part))
+            } else {
+                results.append(Result(headline: L10n.string(selling ? "Not sold" : "Not bought"), note: Reason.text(outcome)))
+            }
         }
         if waits {
-            let reason =
-                source.decision == "review"
-                ? Reason.text(source.parserReason)
-                : Reason.text(destination.instructionOutcomes.first { WaitingCall.heldForOwner.contains($0) })
-            // An account that asked to approve every order is asked to approve, not to copy.
-            let approving = destination.instructionOutcomes.contains("approval_required") && source.decision != "review"
-            let when =
-                skipped
-                ? L10n.string("You skipped this call.")
-                : open
-                    ? L10n.string(
-                        approving ? "Approve it by %@, when trading ends." : "Copy it from here by %@, when trading ends.",
-                        deadline)
-                    : L10n.string(
-                        approving ? "Too late to approve: its trading day is over." : "Too late to copy: its trading day is over.")
-            let what =
-                approving
-                ? L10n.string(open ? "Waiting for your approval" : "Not sent")
-                : L10n.string(open ? "Not copied yet" : "Not copied")
-            lines.append(Line(what: what, why: L10n.sentences([L10n.sentence(reason), when])))
-        } else if ["stale", "out_of_order"].contains(destination.status), lines.isEmpty {
-            lines.append(Line(what: L10n.string("Not copied"), why: Reason.text(destination.status)))
+            results.append(waitingResult(destination, in: source, open: open, skipped: skipped, deadline: deadline))
+        } else if ["stale", "out_of_order"].contains(destination.status), results.isEmpty {
+            results.append(Result(headline: L10n.string("Not copied"), note: Reason.text(destination.status)))
         }
-        if lines.isEmpty, let resumeBy {
+        if results.isEmpty, let resumeBy {
             // Entries wait for the owner after a restart; the buy waits with them while it is fresh.
             // A two-minute window: to the second, with the zone.
             let time = "\(resumeBy.formatted(AppTime.style(.dateTime.hour().minute().second()))) \(AppTime.shortName())"
-            lines.append(
-                Line(
-                    what: L10n.string("Waiting for you to resume entries in %@", destination.accountID),
-                    why: resumeBy > now
-                        ? L10n.string("Resume by %@ to copy it.", time)
-                        : L10n.string("Resume now: after %@ it is too old to copy.", time)))
+            results.append(
+                resumeBy > now
+                    ? Result(
+                        headline: L10n.string("Waiting for you to resume entries"),
+                        facts: [Fact(label: L10n.string("Resume by"), value: time)])
+                    : Result(
+                        headline: L10n.string("Waiting for you to resume entries"),
+                        note: L10n.string("Resume now: after %@ it is too old to copy.", time)))
         }
-        if lines.isEmpty {
-            lines.append(Line(what: DestinationOutcome(destination).detail, why: nil))
+        if results.isEmpty {
+            results.append(Result(headline: DestinationOutcome(destination).detail))
         }
-        return lines
+        return results
     }
 
-    private static func limitSentence(_ limit: LimitHit, account: String, in source: SourceActivity, part: Int) -> String {
-        if limit.scope == "symbol" {
-            let symbol = source.instructions.indices.contains(part) ? source.instructions[part].symbol : ""
-            return L10n.string(
-                "%@ already has %@ of %@. Buying %@ more would go over its %@ limit for one stock.", account,
-                Humanize.dollars(limit.current), symbol, Humanize.dollars(limit.proposed), Humanize.dollars(limit.limit))
+    /// One order, takeaway first: what it bought, or why it bought nothing, with the numbers that
+    /// decided it.
+    static func orderResult(_ order: OrderActivity) -> Result {
+        let buying = order.side != "sell"
+        let limit = money(order.limitPrice)
+        let planned = OrderAmount.planned(order) ?? order.symbol
+        var facts: [Fact] = []
+        let headline: String
+        var suggestion: Suggestion?
+        switch DestinationOutcome.order(order, count: 1) {
+        case .filled:
+            headline = L10n.string(buying ? "Bought %@" : "Sold %@", OrderAmount.filled(order) ?? planned)
+            facts.append(Fact(label: L10n.string("Price"), value: money(order.averageFillPrice) ?? "—"))
+            facts.append(Fact(label: L10n.string("Shares"), value: Humanize.shares(Decimal(engine: order.filledQuantity) ?? 0)))
+        case .partlyFilled:
+            headline = L10n.string(
+                order.status == "partially_filled" ? "Partly filled: %@ so far" : "Partly filled: %@, the rest cancelled",
+                OrderAmount.filled(order) ?? planned)
+            facts.append(
+                Fact(
+                    label: L10n.string("Filled"),
+                    value: Humanize.shares(
+                        Decimal(engine: order.filledQuantity) ?? 0, of: Decimal(engine: order.quantity) ?? 0)))
+            facts.append(Fact(label: L10n.string("Price"), value: money(order.averageFillPrice) ?? "—"))
+        case .working:
+            headline = L10n.string(buying ? "Buying %@" : "Selling %@", planned)
+            if let limit { facts.append(Fact(label: L10n.string("Your limit"), value: limit)) }
+        case .failed:
+            headline = L10n.string(buying ? "Not bought: Alpaca rejected it" : "Not sold: Alpaca rejected it")
+        case .needsReview:
+            headline = L10n.string("Waiting for Alpaca to confirm")
+        default:
+            let market = money(buying ? order.quoteAsk : order.quoteBid)
+            headline = L10n.string(buying ? "Not bought: %@" : "Not sold: %@", cancelReason(order))
+            if let limit { facts.append(Fact(label: L10n.string("Your limit"), value: limit)) }
+            if let market { facts.append(Fact(label: L10n.string("Market"), value: market)) }
+            if let waited = CancelReasonText.waitedSeconds(order), order.cancelReason == "timeout" {
+                facts.append(Fact(label: L10n.string("Waited"), value: PostTimeline.duration(waited)))
+            }
+            if buying, order.cancelReason == "timeout", Decimal(engine: order.entryTolerancePct) == 0 {
+                suggestion = .allowAboveGuru
+            }
         }
-        return L10n.string(
-            "%@ already holds %@ in total. Buying %@ more would go over its %@ total limit.", account,
-            Humanize.dollars(limit.current), Humanize.dollars(limit.proposed), Humanize.dollars(limit.limit))
+        if let budget = Decimal(engine: order.budgetUSD) {
+            facts.append(
+                wasTrimmed(order)
+                    ? Fact(
+                        label: L10n.string("Order (max per order)"),
+                        value: L10n.string(
+                            "%@ of %@", Humanize.dollars(order.budgetUSD), Humanize.dollars(order.requestedUSD)))
+                    : Fact(label: L10n.string("Order"), value: OrderAmount.dollars(budget)))
+        }
+        return Result(headline: headline, facts: Array(facts.prefix(4)), suggestion: suggestion)
+    }
+
+    /// Why an order ended unfilled, in a few words after "Not bought:".
+    private static func cancelReason(_ order: OrderActivity) -> String {
+        switch order.cancelReason {
+        case "timeout":
+            let buying = order.side != "sell"
+            guard let limit = Decimal(engine: order.limitPrice),
+                let market = Decimal(engine: buying ? order.quoteAsk : order.quoteBid)
+            else { return L10n.string("not filled in time") }
+            if buying, market > limit { return L10n.string("the price ran above your limit") }
+            if !buying, market < limit { return L10n.string("the price fell below your limit") }
+            return L10n.string("not filled in time")
+        case "replaced_by_sell": return L10n.string("the guru sold it first")
+        case "copying_stopped": return L10n.string("copying stopped")
+        case "cancelled_at_broker": return L10n.string("cancelled at Alpaca")
+        case "rejected": return L10n.string("Alpaca rejected it")
+        default:
+            return L10n.string(order.status == "expired" ? "the trading day ended" : "cancelled before it filled")
+        }
+    }
+
+    private static func waitingResult(
+        _ destination: DestinationActivity, in source: SourceActivity, open: Bool, skipped: Bool, deadline: String
+    ) -> Result {
+        let code =
+            source.decision == "review"
+            ? source.parserReason
+            : destination.instructionOutcomes.first { WaitingCall.heldForOwner.contains($0) }
+        // An account that asked to approve every order is asked to approve, not to copy.
+        let approving = destination.instructionOutcomes.contains("approval_required") && source.decision != "review"
+        if skipped {
+            return Result(headline: L10n.string("Not copied"), note: L10n.string("You skipped this call."))
+        }
+        guard open else {
+            return Result(
+                headline: L10n.string(approving ? "Not sent" : "Not copied"),
+                note: L10n.string(
+                    approving ? "Too late to approve: its trading day is over." : "Too late to copy: its trading day is over."))
+        }
+        let short = approving ? nil : code.flatMap { waitingReasons[$0] }.map { L10n.string($0) }
+        return Result(
+            headline: approving
+                ? L10n.string("Waiting for your approval")
+                : short.map { L10n.string("Waiting for you: %@", $0) } ?? L10n.string("Waiting for you"),
+            facts: [Fact(label: L10n.string(approving ? "Approve by" : "Copy by"), value: deadline)],
+            note: short == nil ? L10n.sentence(Reason.text(code)) : nil)
+    }
+
+    /// Why a call waits, in a few words after "Waiting for you:".
+    private static let waitingReasons: [String: String] = [
+        "repeats_an_earlier_call": "repeats an earlier call",
+        "conditional": "the trade has a condition",
+        "suggestion": "a suggestion, not a trade",
+        "unclear": "the post is unclear",
+        "price_range": "the guru gave a price range",
+        "price_at_market": "a buy at the market price",
+        "price_not_given": "no price given",
+        "named_buy_not_held": "no buy at the guru's price",
+        "sell_share_not_given": "the sell gives no size",
+        "batch_size_not_given": "no batch size given",
+    ]
+
+    private static func limitResult(_ limit: LimitHit, selling: Bool, in source: SourceActivity, part: Int) -> Result {
+        let symbol = source.instructions.indices.contains(part) ? source.instructions[part].symbol : ""
+        let over =
+            limit.scope == "symbol"
+            ? L10n.string("over your %@ limit", symbol) : L10n.string("over your total limit")
+        return Result(
+            headline: L10n.string(selling ? "Not sold: %@" : "Not bought: %@", over),
+            facts: [
+                Fact(
+                    label: L10n.string(limit.scope == "symbol" ? "Holding %@" : "Holding in total", symbol),
+                    value: Humanize.dollars(limit.current)),
+                Fact(label: L10n.string("This buy"), value: Humanize.dollars(limit.proposed)),
+                Fact(label: L10n.string("Limit"), value: Humanize.dollars(limit.limit)),
+            ])
+    }
+
+    private static func money(_ value: String?) -> String? {
+        Decimal(engine: value)?.formatted(.currency(code: "USD"))
     }
 }

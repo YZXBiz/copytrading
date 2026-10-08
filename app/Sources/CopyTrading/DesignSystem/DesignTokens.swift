@@ -52,6 +52,19 @@ enum DesignTokens {
     static let panelTitle = Font.system(.title, weight: .semibold).scaled(by: 27.0 / 22)
     static let cardTitle = Font.system(.title3, weight: .semibold).scaled(by: 19.0 / 15)
 
+    // Activity's one scale: the takeaway, the guru's words, prose, then labels and IDs. A row never
+    // mixes two of these; numbers use monospaced digits wherever they line up.
+    static let activityHeadline = Font.system(.body, weight: .semibold).scaled(by: 17.0 / 13)
+    static let activityOutcome = Font.system(.body, weight: .semibold).scaled(by: 15.0 / 13)
+    static let activityQuote = Font.system(.body).scaled(by: 15.0 / 13)
+    static let activityBody = Font.system(.body)
+    static let activityValue = Font.system(.body, weight: .medium)
+    static let activityMeta = Font.system(.caption).scaled(by: 12.0 / 10)
+    static let activitySection = Font.system(.caption, weight: .semibold).scaled(by: 11.0 / 10)
+    static let activityIdentifier = Font.system(.caption, design: .monospaced).scaled(by: 12.0 / 10)
+    /// The label column of Technical details' key/value rows.
+    static let factLabelWidth: CGFloat = 116
+
     /// The guide's page inset, wider than a working surface's so the text has margins like a page.
     static let documentInset: CGFloat = 44
 }

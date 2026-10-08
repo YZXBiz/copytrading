@@ -71,7 +71,7 @@ enum CancelReasonText {
     }
 
     @MainActor
-    private static func waitedSeconds(_ order: OrderActivity) -> TimeInterval? {
+    static func waitedSeconds(_ order: OrderActivity) -> TimeInterval? {
         guard let start = Humanize.date(order.submittedAt ?? order.createdAt), let end = Humanize.date(order.endedAt) else {
             return nil
         }

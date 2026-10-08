@@ -504,6 +504,8 @@ final class AppModel {
     var setupDraftSource: TradingConfiguration?
     /// The account or guru being edited, shown as one sheet over whichever screen asked for it.
     var setupEditor: ConnectionsEditingTarget?
+    /// The account sheet opens on Maximum above signal price, as Activity's suggestion asks.
+    var editorFocusesEntryTolerance = false
     /// A connection the guide asked to open; Connections opens its panel and clears it.
     var requestedConnection: ConnectionKind?
     /// A guru an assistant link asked to open; People opens their sheet and clears it.

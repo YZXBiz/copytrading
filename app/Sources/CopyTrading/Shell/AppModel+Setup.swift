@@ -106,8 +106,9 @@ extension AppModel {
         setupEditor = .route(route.id)
     }
 
-    func editAccount(named accountID: String) {
+    func editAccount(named accountID: String, focusingEntryTolerance: Bool = false) {
         guard let account = setupDraft.accounts.first(where: { $0.name.trimmed == accountID }) else { return }
+        editorFocusesEntryTolerance = focusingEntryTolerance
         setupEditor = .account(account.id)
     }
 

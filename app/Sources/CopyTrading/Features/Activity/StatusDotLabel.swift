@@ -4,15 +4,16 @@ import SwiftUI
 struct StatusDotLabel: View {
     let text: String
     let tone: StatusTone
+    var font: Font = DesignTokens.activityBody.weight(.medium)
 
     var body: some View {
         HStack(spacing: 6) {
             Circle()
                 .fill(tone.color)
-                .frame(width: 7, height: 7)
+                .frame(width: 6, height: 6)
                 .accessibilityHidden(true)
             Text(text)
-                .font(DesignTokens.caption.weight(.medium))
+                .font(font)
                 .foregroundStyle(tone.color)
                 .lineLimit(1)
         }

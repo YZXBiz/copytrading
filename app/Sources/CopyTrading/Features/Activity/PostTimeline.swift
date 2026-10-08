@@ -92,15 +92,13 @@ struct PostTimeline {
         if let sent {
             let sized = step("sized")
             let order = (sentStep?.clientID ?? sized?.clientID).flatMap { orders[$0] }
-            let quantity = Decimal(engine: sized?.quantity ?? order?.quantity).map { $0.formatted() }
+            let quantity = Decimal(engine: sized?.quantity ?? order?.quantity)
             let limit = Decimal(engine: sized?.price ?? order?.limitPrice)?.formatted(.currency(code: "USD"))
             var parts: [String] = []
-            if let quantity {
-                let symbol = order?.symbol ?? ""
-                parts.append(
-                    limit.map { L10n.string("%@ %@, limit %@", quantity, symbol, $0) }
-                        ?? [quantity, symbol].joined(separator: " "))
-            }
+            // Dollar first, then the shares it came to: "$200 of PM · ≈1 share · limit $201.00".
+            if let order, let amount = OrderAmount.planned(order) { parts.append(amount) }
+            if let quantity { parts.append(Humanize.shares(quantity)) }
+            if let limit { parts.append(L10n.string("limit %@", limit)) }
             if let accepted = date(step("accepted")), accepted.timeIntervalSince(sent) >= measurable {
                 parts.append(L10n.string("accepted by Alpaca in %@", duration(accepted.timeIntervalSince(sent))))
             }
@@ -114,9 +112,18 @@ struct PostTimeline {
         var waits: [String] = sent == nil ? (holdWait.map { [$0] } ?? []) : []
         switch end.step {
         case "filled", "partially_filled":
-            let quantity = Decimal(engine: end.quantity).map { $0.formatted() }
-            let price = Decimal(engine: end.price)?.formatted(.currency(code: "USD"))
-            let detail = quantity.map { qty in price.map { L10n.string("%@ %@ at %@", qty, order?.symbol ?? "", $0) } ?? qty }
+            let quantity = Decimal(engine: end.quantity)
+            let price = Decimal(engine: end.price)
+            var parts: [String] = []
+            if let quantity, let price {
+                parts.append(Humanize.amount(Humanize.usd(quantity * price), of: order?.symbol ?? ""))
+            }
+            if let quantity {
+                parts.append(
+                    price.map { L10n.string("%@ at %@", Humanize.shares(quantity), Humanize.usd($0)) }
+                        ?? Humanize.shares(quantity))
+            }
+            let detail = parts.joined(separator: " · ").nilIfEmpty
             add(named(L10n.string(end.step == "filled" ? "Filled" : "Partly filled")), endedAt, start, detail, waits, false)
         case "cancelled", "expired":
             if let sent { waits.append(L10n.string("Waited %@ for a fill", duration(endedAt.timeIntervalSince(sent)))) }

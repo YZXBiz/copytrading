@@ -1,8 +1,8 @@
 import DesktopCore
 import SwiftUI
 
-/// Everything about one order a trader would look up: how it went out, at what limit, what the
-/// market offered then, the broker's IDs, and how it ended.
+/// Everything about one order a trader would look up, as a key/value table: its type, size, how
+/// much filled, its limit, what the market offered then, how it ended, and the broker's IDs.
 struct OrderFactsView: View {
     let order: OrderActivity
     let account: String
@@ -11,10 +11,11 @@ struct OrderFactsView: View {
         Decimal(engine: value)?.formatted(.currency(code: "USD"))
     }
 
+    /// "Limit buy · day".
     private var kind: String {
-        let side = L10n.string(order.side == "sell" ? "Sell" : "Buy")
-        let type = L10n.string(order.orderType == "market" ? "market order" : "limit order")
-        return L10n.string("%@ %@ %@, good for the day", side, order.symbol, type)
+        let side = L10n.string(order.side == "sell" ? "sell" : "buy")
+        let type = L10n.string(order.orderType == "market" ? "Market %@" : "Limit %@", side)
+        return L10n.string("%@ · day", type)
     }
 
     private var session: String? {
@@ -26,22 +27,30 @@ struct OrderFactsView: View {
         }
     }
 
+    /// "$200 of PM", or "$200 of PM · cut from $600" when the max per order trimmed it.
+    private var size: String? {
+        guard let planned = OrderAmount.planned(order) else { return nil }
+        return ActivityCardOutcome.wasTrimmed(order)
+            ? L10n.string("%@ · cut from %@", planned, Humanize.dollars(order.requestedUSD)) : planned
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(L10n.string("Order in %@", account))
-                .font(DesignTokens.caption.weight(.medium))
-                .foregroundStyle(Palette.secondaryInk)
-            TechnicalFactRow(label: "Order") { Text(kind) }
+            TechnicalSectionTitle(text: L10n.string("Order in %@", account))
+            TechnicalFactRow(label: "Type") { Text(kind) }
             if let session {
                 TechnicalFactRow(label: "Session") { Text(session) }
             }
-            TechnicalFactRow(label: "Shares") {
-                Text(L10n.string("%@ filled of %@", order.filledQuantity, order.quantity)).monospacedDigit()
+            if let size {
+                TechnicalFactRow(label: "Size") { Text(size) }
+            }
+            TechnicalFactRow(label: "Filled") {
+                Text(Humanize.shares(Decimal(engine: order.filledQuantity) ?? 0, of: Decimal(engine: order.quantity) ?? 0))
             }
             if let limit = money(order.limitPrice) {
                 TechnicalFactRow(label: "Limit") {
-                    if let guru = money(order.sourcePrice), let tolerance = Decimal(engine: order.entryTolerancePct) {
-                        Text(L10n.string("%@ (guru's price %@, up to %@%% above)", limit, guru, tolerance.formatted()))
+                    if let tolerance = Decimal(engine: order.entryTolerancePct), order.side != "sell" {
+                        Text(L10n.string("%@ · %@%% above the guru", limit, tolerance.formatted()))
                     } else {
                         Text(limit)
                     }
@@ -49,12 +58,11 @@ struct OrderFactsView: View {
             }
             if money(order.quoteBid) != nil || money(order.quoteAsk) != nil {
                 TechnicalFactRow(label: "Market then") {
-                    Text(L10n.string("bid %@ · ask %@", money(order.quoteBid) ?? "—", money(order.quoteAsk) ?? "—"))
-                        .monospacedDigit()
+                    Text(L10n.string("Bid %@ · Ask %@", money(order.quoteBid) ?? "—", money(order.quoteAsk) ?? "—"))
                 }
             }
             if let fill = money(order.averageFillPrice) {
-                TechnicalFactRow(label: "Average fill") { Text(fill).monospacedDigit() }
+                TechnicalFactRow(label: "Average fill") { Text(fill) }
             }
             if let why = CancelReasonText.sentence(order) {
                 TechnicalFactRow(label: "Why it ended") {

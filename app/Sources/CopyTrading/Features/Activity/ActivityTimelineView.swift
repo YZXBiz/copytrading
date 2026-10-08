@@ -40,6 +40,6 @@ struct ActivityTimelineView: View {
                 .foregroundStyle(Palette.ink)
                 .fontWeight(.medium)
         }
-        .font(DesignTokens.caption)
+        .font(DesignTokens.activityMeta)
     }
 }

@@ -8,154 +8,170 @@ struct AccountEditorSheet: View {
     /// Accounts whose broker keys are already in the Keychain; a blank field keeps those.
     let savedAccountIDs: Set<String>
     let remove: () -> Void
+    /// Opens on Maximum above signal price, scrolled to it with the field focused.
+    var focusesEntryTolerance = false
     /// The account's latest check, when it failed and its keys are unchanged since.
     var failedCheck: TradingCapabilityCheck?
     /// Checks the account's keys with Alpaca; nil when there are none to check yet.
     var check: () async -> TradingCapabilityCheck? = { nil }
     @Environment(\.dismiss) private var dismiss
     @State private var isChecking = false
+    @FocusState private var entryToleranceFocused: Bool
 
     private var hasSavedCredentials: Bool { savedAccountIDs.contains(account.name.trimmed) }
 
     var body: some View {
         NavigationStack {
-            Form {
-                SheetTitle(
-                    kind: L10n.string("Alpaca account"),
-                    name: account.name.trimmed.isEmpty ? L10n.string("New") : account.name.trimmed)
-                Section {
-                    TextField(L10n.string("Name"), text: $account.name, prompt: Text(L10n.string("e.g. %@", "primary")))
-                        .accessibilityLabel(L10n.string("Account name"))
-                    Picker(L10n.string("Environment"), selection: $account.environment) {
-                        ForEach(TradingEnvironment.allCases, id: \.self) { environment in
-                            Text(environmentTitle(environment)).tag(environment)
+            ScrollViewReader { proxy in
+                Form {
+                    SheetTitle(
+                        kind: L10n.string("Alpaca account"),
+                        name: account.name.trimmed.isEmpty ? L10n.string("New") : account.name.trimmed)
+                    Section {
+                        TextField(L10n.string("Name"), text: $account.name, prompt: Text(L10n.string("e.g. %@", "primary")))
+                            .accessibilityLabel(L10n.string("Account name"))
+                        Picker(L10n.string("Environment"), selection: $account.environment) {
+                            ForEach(TradingEnvironment.allCases, id: \.self) { environment in
+                                Text(environmentTitle(environment)).tag(environment)
+                            }
                         }
+                        .pickerStyle(.segmented)
+                        if account.environment == .live {
+                            Callout(L10n.string("Live accounts place real orders with real money."), tone: .caution)
+                        }
+                    } header: {
+                        SetupSectionHeader(title: "Account", detail: "Letters, digits, “-” and “_”. Paper trades pretend money.")
                     }
-                    .pickerStyle(.segmented)
-                    if account.environment == .live {
-                        Callout(L10n.string("Live accounts place real orders with real money."), tone: .caution)
+
+                    Section {
+                        SecureField(
+                            L10n.string("API key"), text: $account.key,
+                            prompt: Text(L10n.string(hasSavedCredentials ? "Leave blank to keep the saved key" : "Required"))
+                        )
+                        .accessibilityLabel(L10n.string("Alpaca API key"))
+                        SecureField(
+                            L10n.string("API secret"), text: $account.secret,
+                            prompt: Text(L10n.string(hasSavedCredentials ? "Leave blank to keep the saved secret" : "Required"))
+                        )
+                        .accessibilityLabel(L10n.string("Alpaca API secret"))
+                        if let failedCheck {
+                            ConnectionCheckCallout(check: failedCheck)
+                        }
+                    } header: {
+                        SetupSectionHeader(
+                            title: "Alpaca keys", detail: "Kept in your Mac's Keychain, never in the setup file.",
+                            help: [SetupHelp.alpacaKeys(for: account.environment)])
                     }
-                } header: {
-                    SetupSectionHeader(title: "Account", detail: "Letters, digits, “-” and “_”. Paper trades pretend money.")
-                }
 
-                Section {
-                    SecureField(
-                        L10n.string("API key"), text: $account.key,
-                        prompt: Text(L10n.string(hasSavedCredentials ? "Leave blank to keep the saved key" : "Required"))
-                    )
-                    .accessibilityLabel(L10n.string("Alpaca API key"))
-                    SecureField(
-                        L10n.string("API secret"), text: $account.secret,
-                        prompt: Text(L10n.string(hasSavedCredentials ? "Leave blank to keep the saved secret" : "Required"))
-                    )
-                    .accessibilityLabel(L10n.string("Alpaca API secret"))
-                    if let failedCheck {
-                        ConnectionCheckCallout(check: failedCheck)
+                    Section(L10n.string("Position limits (USD)")) {
+                        textLimit(
+                            "Maximum per order", hint: "The most one buy can spend. A bigger buy is made smaller.",
+                            text: $account.policy.maxOrderUSD,
+                            example: LimitExamples.maxOrder)
+                        textLimit(
+                            "Maximum per stock",
+                            hint:
+                                "The most this account can hold in one stock, including shares you bought yourself. It's also the guru's full position. A buy that would go over is skipped.",
+                            text: $account.policy.maxSymbolUSD,
+                            example: LimitExamples.maxSymbol)
+                        textLimit(
+                            "Maximum total exposure",
+                            hint:
+                                "The most this account can hold in all stocks, including your own. A buy that would go over is skipped.",
+                            text: $account.policy.maxTotalUSD,
+                            example: LimitExamples.maxTotal)
+                        textLimit(
+                            "Daily loss cap",
+                            hint: "If the account is down this much today, it stops buying until tomorrow. It still sells.",
+                            text: $account.policy.dailyLossCapUSD,
+                            example: LimitExamples.dailyLossCap)
+                        textLimit(
+                            "Maximum above signal price (%)",
+                            hint:
+                                "The most a buy can pay above the guru's price. 0 means never more than the guru paid.",
+                            text: $account.policy.maxAboveSignalPct,
+                            example: LimitExamples.maxAboveSignal,
+                            focus: $entryToleranceFocused
+                        )
+                        .id(Self.entryToleranceRow)
+                        textLimit(
+                            "Maximum below signal price (%)",
+                            hint:
+                                "The lowest a sell can go below the guru's price. A sell that can't fill by then is cancelled.",
+                            text: $account.policy.maxBelowSignalPct,
+                            example: LimitExamples.maxBelowSignal)
                     }
-                } header: {
-                    SetupSectionHeader(
-                        title: "Alpaca keys", detail: "Kept in your Mac's Keychain, never in the setup file.",
-                        help: [SetupHelp.alpacaKeys(for: account.environment)])
-                }
 
-                Section(L10n.string("Position limits (USD)")) {
-                    textLimit(
-                        "Maximum per order", hint: "The most one buy can spend. A bigger buy is made smaller.",
-                        text: $account.policy.maxOrderUSD,
-                        example: LimitExamples.maxOrder)
-                    textLimit(
-                        "Maximum per stock",
-                        hint:
-                            "The most this account can hold in one stock, including shares you bought yourself. It's also the guru's full position. A buy that would go over is skipped.",
-                        text: $account.policy.maxSymbolUSD,
-                        example: LimitExamples.maxSymbol)
-                    textLimit(
-                        "Maximum total exposure",
-                        hint:
-                            "The most this account can hold in all stocks, including your own. A buy that would go over is skipped.",
-                        text: $account.policy.maxTotalUSD,
-                        example: LimitExamples.maxTotal)
-                    textLimit(
-                        "Daily loss cap",
-                        hint: "If the account is down this much today, it stops buying until tomorrow. It still sells.",
-                        text: $account.policy.dailyLossCapUSD,
-                        example: LimitExamples.dailyLossCap)
-                    textLimit(
-                        "Maximum above signal price (%)",
-                        hint:
-                            "The most a buy can pay above the guru's price. 0 means never more than the guru paid.",
-                        text: $account.policy.maxAboveSignalPct,
-                        example: LimitExamples.maxAboveSignal)
-                    textLimit(
-                        "Maximum below signal price (%)",
-                        hint:
-                            "The lowest a sell can go below the guru's price. A sell that can't fill by then is cancelled.",
-                        text: $account.policy.maxBelowSignalPct,
-                        example: LimitExamples.maxBelowSignal)
-                }
-
-                Section(L10n.string("Timing")) {
-                    numberLimit(
-                        "Entries per day", hint: "The most buys in one day. Sells don't count.",
-                        value: $account.policy.maxEntriesPerDay,
-                        example: LimitExamples.entriesPerDay)
-                    numberLimit(
-                        "Maximum signal age (seconds)",
-                        hint: "If a post takes longer than this to arrive, it isn't copied. You can still copy it yourself in Activity.",
-                        value: $account.policy.maxSignalAgeSeconds,
-                        example: LimitExamples.maxSignalAge)
-                    numberLimit(
-                        "Order timeout (seconds)", hint: "An order that hasn't filled by then is cancelled.",
-                        value: $account.policy.orderTimeoutSeconds,
-                        example: LimitExamples.orderTimeout(maxAboveSignalPct: account.policy.maxAboveSignalPct))
-                }
-
-                Section {
-                    behavior(
-                        "Trade in extended hours",
-                        hint: L10n.string(
-                            "Also copy calls before and after regular hours, %@, with limit orders.",
-                            MarketHoursText.hours([((4, 0), (9, 30)), ((16, 0), (20, 0))])),
-                        isOn: $account.policy.extendedHours
-                    )
-                    // Overnight runs only with extended hours, so turning those off ends it too.
-                    .onChange(of: account.policy.extendedHours) { _, on in
-                        if !on { account.policy.overnight = false }
+                    Section(L10n.string("Timing")) {
+                        numberLimit(
+                            "Entries per day", hint: "The most buys in one day. Sells don't count.",
+                            value: $account.policy.maxEntriesPerDay,
+                            example: LimitExamples.entriesPerDay)
+                        numberLimit(
+                            "Maximum signal age (seconds)",
+                            hint:
+                                "If a post takes longer than this to arrive, it isn't copied. You can still copy it yourself in Activity.",
+                            value: $account.policy.maxSignalAgeSeconds,
+                            example: LimitExamples.maxSignalAge)
+                        numberLimit(
+                            "Order timeout (seconds)", hint: "An order that hasn't filled by then is cancelled.",
+                            value: $account.policy.orderTimeoutSeconds,
+                            example: LimitExamples.orderTimeout(maxAboveSignalPct: account.policy.maxAboveSignalPct))
                     }
-                    behavior(
-                        "Trade overnight",
-                        hint: L10n.string(
-                            "Also copy calls overnight, %@. Needs extended hours on.", MarketHoursText.hours([((20, 0), (4, 0))])),
-                        isOn: $account.policy.overnight
-                    )
-                    .onChange(of: account.policy.overnight) { _, on in
-                        if on { account.policy.extendedHours = true }
-                    }
-                    behavior(
-                        "Copy exits", hint: "Sell when the guru sells. Off means you sell copied shares yourself.",
-                        isOn: $account.policy.copyExits)
-                    behavior(
-                        "Ask me before sending orders",
-                        hint: "Nothing is sent by itself. Each order waits in Activity until you approve it with Touch ID.",
-                        isOn: $account.policy.approveOrders)
-                } header: {
-                    Text(L10n.string("Behavior"))
-                } footer: {
-                    Text(
-                        L10n.string(
-                            "CopyTrading only sells shares it bought from a guru's call. Stocks you bought yourself are never sold, even when the guru sells the same stock."
-                        ))
-                }
 
-                Section {
-                    Button(L10n.string("Remove Account"), role: .destructive, action: removeAccount)
-                        .buttonStyle(.borderless)
-                } footer: {
-                    Text(L10n.string("Removing takes effect when the setup is checked and copying starts."))
+                    Section {
+                        behavior(
+                            "Trade in extended hours",
+                            hint: L10n.string(
+                                "Also copy calls before and after regular hours, %@, with limit orders.",
+                                MarketHoursText.hours([((4, 0), (9, 30)), ((16, 0), (20, 0))])),
+                            isOn: $account.policy.extendedHours
+                        )
+                        // Overnight runs only with extended hours, so turning those off ends it too.
+                        .onChange(of: account.policy.extendedHours) { _, on in
+                            if !on { account.policy.overnight = false }
+                        }
+                        behavior(
+                            "Trade overnight",
+                            hint: L10n.string(
+                                "Also copy calls overnight, %@. Needs extended hours on.", MarketHoursText.hours([((20, 0), (4, 0))])),
+                            isOn: $account.policy.overnight
+                        )
+                        .onChange(of: account.policy.overnight) { _, on in
+                            if on { account.policy.extendedHours = true }
+                        }
+                        behavior(
+                            "Copy exits", hint: "Sell when the guru sells. Off means you sell copied shares yourself.",
+                            isOn: $account.policy.copyExits)
+                        behavior(
+                            "Ask me before sending orders",
+                            hint: "Nothing is sent by itself. Each order waits in Activity until you approve it with Touch ID.",
+                            isOn: $account.policy.approveOrders)
+                    } header: {
+                        Text(L10n.string("Behavior"))
+                    } footer: {
+                        Text(
+                            L10n.string(
+                                "CopyTrading only sells shares it bought from a guru's call. Stocks you bought yourself are never sold, even when the guru sells the same stock."
+                            ))
+                    }
+
+                    Section {
+                        Button(L10n.string("Remove Account"), role: .destructive, action: removeAccount)
+                            .buttonStyle(.borderless)
+                    } footer: {
+                        Text(L10n.string("Removing takes effect when the setup is checked and copying starts."))
+                    }
+                }
+                .formStyle(.grouped)
+                .task {
+                    guard focusesEntryTolerance else { return }
+                    // After the sheet settles, so the scroll lands and the field takes focus.
+                    try? await Task.sleep(for: .milliseconds(250))
+                    withAnimation { proxy.scrollTo(Self.entryToleranceRow, anchor: .center) }
+                    entryToleranceFocused = true
                 }
             }
-            .formStyle(.grouped)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     if isChecking {
@@ -171,9 +187,17 @@ struct AccountEditorSheet: View {
         .frame(minWidth: 520, idealWidth: 560, minHeight: 620, idealHeight: 700)
     }
 
-    private func textLimit(_ title: String, hint: String, text: Binding<String>, example: String) -> some View {
+    private static let entryToleranceRow = "maxAboveSignalPct"
+
+    private func textLimit(
+        _ title: String, hint: String, text: Binding<String>, example: String, focus: FocusState<Bool>.Binding? = nil
+    ) -> some View {
         PolicyField(title: L10n.string(title), hint: L10n.string(hint), example: example) {
-            TextField(L10n.string(title), text: text)
+            if let focus {
+                TextField(L10n.string(title), text: text).focused(focus)
+            } else {
+                TextField(L10n.string(title), text: text)
+            }
         }
     }
 

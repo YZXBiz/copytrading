@@ -26,32 +26,33 @@ struct ActivityTimelineRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(phase.title)
-                        .font(DesignTokens.bodyText)
+                        .font(DesignTokens.activityBody)
                         .foregroundStyle(phase.caution ? .orange : Palette.ink)
                     Spacer(minLength: 8)
                     if let duration = phase.duration {
                         Text(PostTimeline.duration(duration))
-                            .font(DesignTokens.caption.monospacedDigit())
+                            .font(DesignTokens.activityMeta.monospacedDigit())
                             .foregroundStyle(Palette.tertiaryInk)
                     }
                     Text(phase.at.formatted(AppTime.style(.dateTime.hour().minute().second())))
-                        .font(DesignTokens.caption.monospacedDigit())
+                        .font(DesignTokens.activityMeta.monospacedDigit())
                         .foregroundStyle(Palette.secondaryInk)
                 }
                 if let detail = phase.detail {
                     Text(detail)
-                        .font(DesignTokens.caption)
+                        .font(DesignTokens.activityMeta)
                         .foregroundStyle(Palette.secondaryInk)
+                        .monospacedDigit()
                         .textSelection(.enabled)
                 }
                 ForEach(phase.waits, id: \.self) { wait in
                     Label(wait, systemImage: "hourglass")
-                        .font(DesignTokens.caption)
+                        .font(DesignTokens.activityMeta)
                         .foregroundStyle(.orange)
                 }
                 if let progress {
                     PostProgressLabel(progress: progress)
-                        .font(DesignTokens.caption.weight(.medium))
+                        .font(DesignTokens.activityMeta.weight(.medium))
                         .padding(.top, 2)
                 }
             }

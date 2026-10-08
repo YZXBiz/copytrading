@@ -13,6 +13,8 @@ struct ActivityDetailView: View {
     /// Copies the calls a post waits on, through the review sheet's preview and confirmation.
     let copy: (WaitingCall) -> Void
     let evaluate: () -> Void
+    /// Opens an account's limits on Maximum above signal price; the card never changes it itself.
+    var editLimits: (String) -> Void = { _ in }
     /// Opens Accounts at an account whose holdings hold this call back.
     var reviewHoldings: (String) -> Void = { _ in }
     /// Accounts that hold this post's buy until the owner resumes their entries after a restart.
@@ -54,15 +56,15 @@ struct ActivityDetailView: View {
                 header(outcome)
                 if let progress = PostProgress(item, context: progressContext, resume: resume) {
                     PostProgressLabel(progress: progress)
-                        .font(DesignTokens.caption.weight(.medium))
-                        .padding(.top, 14)
+                        .font(DesignTokens.activityMeta.weight(.medium))
+                        .padding(.top, 12)
                 }
-                quote.padding(.top, 20)
-                readAs.padding(.top, 22)
+                quote.padding(.top, 16)
+                readAs.padding(.top, 24)
             }
-            .padding(.horizontal, 28)
-            .padding(.top, 24)
-            .padding(.bottom, 22)
+            .padding(.horizontal, 24)
+            .padding(.top, 20)
+            .padding(.bottom, 24)
             if item.decision != "ignore" {
                 hairline
                 accounts(outcome)
@@ -76,15 +78,14 @@ struct ActivityDetailView: View {
         }
     }
 
-    /// The guru's own words, set off like a quotation so they never read as the app's.
+    /// The guru's own words on a quiet tinted block, so they never read as the app's.
     private var quote: some View {
-        HStack(alignment: .top, spacing: 14) {
-            RoundedRectangle(cornerRadius: 1.25)
-                .fill(Palette.accent.opacity(0.55))
-                .frame(width: 2.5)
-            ActivitySourceContentView(item: item, citedWords: item.reading?.citedWords ?? [])
-        }
-        .fixedSize(horizontal: false, vertical: true)
+        ActivitySourceContentView(item: item, citedWords: item.reading?.citedWords ?? [])
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Palette.group, in: .rect(cornerRadius: DesignTokens.calloutCornerRadius))
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     private var hairline: some View {
@@ -101,21 +102,21 @@ struct ActivityDetailView: View {
             VStack(alignment: .leading, spacing: 8) {
                 author
                 StatusDotLabel(text: outcome.title, tone: outcome.tone)
-                    .padding(.leading, 36)
+                    .padding(.leading, 30)
             }
         }
     }
 
     private var author: some View {
-        HStack(spacing: 10) {
-            GuruMonogram(name: guruName ?? "?", size: 26)
+        HStack(spacing: 8) {
+            GuruMonogram(name: guruName ?? "?", size: 22)
             Text(guruName ?? L10n.string("Unknown guru"))
-                .font(.system(size: 14, weight: .semibold))
+                .font(DesignTokens.activityBody.weight(.semibold))
                 .foregroundStyle(Palette.ink)
                 .lineLimit(1)
             Text(Humanize.postTime(item.sourceAt))
-                .font(DesignTokens.caption)
-                .foregroundStyle(Palette.tertiaryInk)
+                .font(DesignTokens.activityBody)
+                .foregroundStyle(Palette.secondaryInk)
                 .monospacedDigit()
                 .lineLimit(1)
         }
@@ -123,13 +124,14 @@ struct ActivityDetailView: View {
 
     private func label(_ text: String) -> some View {
         Text(text)
-            .font(DesignTokens.caption.weight(.medium))
-            .foregroundStyle(Palette.tertiaryInk)
+            .font(DesignTokens.activityMeta)
+            .foregroundStyle(Palette.secondaryInk)
     }
 
-    /// How the reader read the post: its kind, one line per call, and the facts behind them.
+    /// How the reader read the post: one headline per call, what the call leaves out, then what
+    /// kind of post it was and who read it.
     private var readAs: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 4) {
             if let reading = item.reading {
                 if reading.calls.isEmpty {
                     readLine(ReadAsText.lines(reading).first ?? "")
@@ -137,54 +139,56 @@ struct ActivityDetailView: View {
                 } else {
                     ForEach(Array(reading.calls.enumerated()), id: \.offset) { index, call in
                         let headline = ReadAsText.headline(call)
-                        VStack(alignment: .leading, spacing: 3) {
+                        VStack(alignment: .leading, spacing: 4) {
                             readLine(headline.title)
-                            if let detail = headline.detail {
-                                Text(detail)
-                                    .font(.system(size: 17))
-                                    .foregroundStyle(Palette.secondaryInk)
-                                    .monospacedDigit()
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            subline(
+                            detailLine(
                                 [
-                                    index == 0 ? ReadAsText.kind(reading) : nil, ReadAsText.note(call),
+                                    headline.detail, ReadAsText.note(call),
                                     ReadAsText.isRepost(call) ? L10n.string("a re-post of an earlier call") : nil,
-                                    index == 0 ? readBy : nil,
                                 ]
-                                .compactMap(\.self)
-                            )
-                            .padding(.top, 5)
+                                .compactMap(\.self))
                         }
-                        .padding(.top, index == 0 ? 0 : 14)
+                        .padding(.top, index == 0 ? 0 : 12)
                     }
+                    subline([ReadAsText.kind(reading), readBy].compactMap(\.self)).padding(.top, 4)
                 }
             } else {
                 label(L10n.string("Read as"))
                 Text(item.headline)
-                    .font(DesignTokens.bodyText)
+                    .font(DesignTokens.activityBody)
                     .foregroundStyle(Palette.ink)
                     .fixedSize(horizontal: false, vertical: true)
                 if let reason = Reason.parserMessage(item.parserReason, needsReview: item.needsManualReview) {
                     Text(reason)
-                        .font(DesignTokens.bodyText)
+                        .font(DesignTokens.activityBody)
                         .foregroundStyle(Palette.secondaryInk)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
             if WaitingCall(item) == nil, item.needsManualReview || item.isHistorical {
-                actions.padding(.top, 4)
+                actions.padding(.top, 8)
             }
         }
     }
 
     private func readLine(_ text: String) -> some View {
         Text(text)
-            .font(DesignTokens.cardTitle)
-            .tracking(-0.3)
+            .font(DesignTokens.activityHeadline)
             .foregroundStyle(Palette.ink)
             .monospacedDigit()
             .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// What the call leaves out or adds, in one line under its headline: "No size given · full position".
+    @ViewBuilder
+    private func detailLine(_ parts: [String]) -> some View {
+        if !parts.isEmpty {
+            Text(capitalized(parts.joined(separator: " · ")))
+                .font(DesignTokens.activityBody)
+                .foregroundStyle(Palette.secondaryInk)
+                .monospacedDigit()
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     /// Who read the post, under the first call.
@@ -194,16 +198,19 @@ struct ActivityDetailView: View {
 
     /// The reading's quiet facts on one line: what kind of post it was, what the sentence leaves out.
     private func subline(_ parts: [String]) -> some View {
-        let line = parts.joined(separator: " · ")
-        return Text(line.prefix(1).uppercased() + line.dropFirst())
-            .font(DesignTokens.caption)
+        Text(capitalized(parts.joined(separator: " · ")))
+            .font(DesignTokens.activityMeta)
             .foregroundStyle(Palette.tertiaryInk)
             .fixedSize(horizontal: false, vertical: true)
     }
 
-    /// What each account did with the post, and why, with Copy and Skip where one waits. Each
-    /// account is its own row, led by its name and Paper/Live badge, so it is never unclear whose
-    /// result this is.
+    private func capitalized(_ line: String) -> String {
+        line.prefix(1).uppercased() + line.dropFirst()
+    }
+
+    /// What each account did with the post, takeaway first, with Copy and Skip where one waits.
+    /// Each account is its own block, led by its name and Paper/Live, so whose result it is is
+    /// never unclear.
     @ViewBuilder
     private func accounts(_ outcome: ActivityCardOutcome) -> some View {
         let shown = outcome.accounts.filter { accountID == nil || $0.id == accountID }
@@ -217,79 +224,91 @@ struct ActivityDetailView: View {
                         ? L10n.string("No account has acted on this post yet.")
                         : L10n.string("No account was asked to act on this post.")
                 )
-                .font(DesignTokens.bodyText)
+                .font(DesignTokens.activityBody)
                 .foregroundStyle(Palette.secondaryInk)
-                .padding(22)
+                .padding(24)
             }
             ForEach(Array(shown.enumerated()), id: \.element.id) { index, account in
                 if index > 0 {
-                    Rectangle().fill(Palette.hairline.opacity(0.6)).frame(height: 1).padding(.leading, 140)
+                    Rectangle().fill(Palette.hairline.opacity(0.6)).frame(height: 1).padding(.horizontal, 24)
                 }
                 accountRow(account, showsStatus: shown.count > 1)
-                    .padding(.horizontal, 28)
-                    .padding(.vertical, 16)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 20)
             }
         }
     }
 
-    /// One account's result as a ledger row: whose it is on the left, what happened in the middle,
-    /// and its own status on the right when the card covers several accounts.
+    /// One account's result: whose it is, then for each order the takeaway in one bold line, the
+    /// numbers behind it, and at most one thing to do.
     private func accountRow(_ account: ActivityCardOutcome.Account, showsStatus: Bool) -> some View {
         let environment = TradingEnvironment(rawValue: account.environment) ?? .paper
         let status = item.destinations.first { $0.accountID == account.id }.map(DestinationOutcome.init)
-        return HStack(alignment: .firstTextBaseline, spacing: 0) {
-            VStack(alignment: .leading, spacing: 3) {
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
                 Text(account.id)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Palette.ink)
+                    .foregroundStyle(Palette.secondaryInk)
+                    .fontWeight(.medium)
                     .lineLimit(1)
                 Text(L10n.string(environment == .live ? "Live" : "Paper"))
-                    .font(DesignTokens.caption.weight(.medium))
                     .foregroundStyle(environment == .live ? Color.orange : Palette.tertiaryInk)
-            }
-            .frame(width: 112, alignment: .leading)
-            VStack(alignment: .leading, spacing: 4) {
-                ForEach(Array(account.lines.enumerated()), id: \.offset) { _, line in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(line.what)
-                            .font(DesignTokens.bodyText)
-                            .foregroundStyle(Palette.ink)
-                            .monospacedDigit()
-                        if let why = line.why {
-                            Text(why)
-                                .font(DesignTokens.caption)
-                                .foregroundStyle(Palette.secondaryInk)
-                                .monospacedDigit()
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                }
-                if account.waits, let waiting = WaitingCall(item) {
-                    waitingActions(waiting).padding(.top, 6)
-                }
-                if account.awaitsResume {
-                    Button(L10n.string("Resume Entries"), systemImage: "play.fill") { resumeEntries(account.id) }
-                        .buttonStyle(.borderedProminent)
-                        .buttonBorderShape(.capsule)
-                        .tint(.green)
-                        .padding(.top, 6)
-                        .accessibilityIdentifier("activity.resumeEntries")
-                        .accessibilityHint(L10n.string("Allows new entries in this account, so the held buy can be copied."))
-                }
-                if heldByHoldings(account.id) {
-                    Button(L10n.string("Review in Accounts")) { reviewHoldings(account.id) }
-                        .controlSize(.small)
-                        .padding(.top, 4)
-                        .accessibilityIdentifier("activity.reviewHoldings")
+                Spacer(minLength: 16)
+                if showsStatus, let status {
+                    StatusDotLabel(text: status.title, tone: status.tone, font: DesignTokens.activityMeta.weight(.medium))
                 }
             }
-            Spacer(minLength: 16)
-            if showsStatus, let status {
-                StatusDotLabel(text: status.title, tone: status.tone)
+            .font(DesignTokens.activityMeta)
+            ForEach(Array(account.results.enumerated()), id: \.offset) { _, result in
+                resultBlock(result, account: account.id)
+            }
+            if account.waits, let waiting = WaitingCall(item) {
+                waitingActions(waiting)
+            }
+            if account.awaitsResume {
+                Button(L10n.string("Resume Entries"), systemImage: "play.fill") { resumeEntries(account.id) }
+                    .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.capsule)
+                    .tint(.green)
+                    .accessibilityIdentifier("activity.resumeEntries")
+                    .accessibilityHint(L10n.string("Allows new entries in this account, so the held buy can be copied."))
+            }
+            if heldByHoldings(account.id) {
+                Button(L10n.string("Review in Accounts")) { reviewHoldings(account.id) }
+                    .buttonBorderShape(.capsule)
+                    .accessibilityIdentifier("activity.reviewHoldings")
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.string("Account %@", account.id))
+    }
+
+    private func resultBlock(_ result: ActivityCardOutcome.Result, account: String) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(result.headline)
+                .font(DesignTokens.activityOutcome)
+                .foregroundStyle(Palette.ink)
+                .monospacedDigit()
+                .fixedSize(horizontal: false, vertical: true)
+            if !result.facts.isEmpty {
+                ActivityFactChips(facts: result.facts)
+            }
+            if let note = result.note {
+                Text(note)
+                    .font(DesignTokens.activityBody)
+                    .foregroundStyle(Palette.secondaryInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if result.suggestion == .allowAboveGuru {
+                Button(L10n.string("Allow 1% above the guru's price"), systemImage: "slider.horizontal.3") { editLimits(account) }
+                    .buttonStyle(.bordered)
+                    .buttonBorderShape(.capsule)
+                    .tint(Palette.accent)
+                    .accessibilityIdentifier("activity.allowAboveGuru")
+                    .accessibilityHint(
+                        L10n.string("Opens this account's limits at Maximum above signal price. Nothing changes until you save."))
+            }
+        }
     }
 
     /// The account refused this call until its holdings are settled, which happens in Accounts.

@@ -11,7 +11,7 @@ struct ActivityTechnicalDetails: View {
             ActivityTechnicalDetailsContent(item: item)
         } label: {
             Label(L10n.string("Technical details"), systemImage: "wrench.and.screwdriver")
-                .font(DesignTokens.caption.weight(.medium))
+                .font(DesignTokens.activityBody.weight(.medium))
                 .foregroundStyle(Palette.secondaryInk)
         }
         .accessibilityIdentifier("activity.technicalDetails")

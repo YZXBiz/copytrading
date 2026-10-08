@@ -1,8 +1,8 @@
 import AppKit
 import SwiftUI
 
-/// A long Discord ID, shown whole in monospaced digits with a button that copies it. The button
-/// shows a check for a moment once the ID is on the clipboard.
+/// A long ID in small monospaced type, middle-truncated, with a button that copies it whole. The
+/// button shows a check for a moment once the ID is on the clipboard.
 struct CopyableIdentifierRow: View {
     let label: String
     let value: String
@@ -13,7 +13,8 @@ struct CopyableIdentifierRow: View {
         TechnicalFactRow(label: label) {
             HStack(spacing: 6) {
                 Text(value)
-                    .font(.system(.callout, design: .monospaced))
+                    .font(DesignTokens.activityIdentifier)
+                    .foregroundStyle(Palette.secondaryInk)
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .textSelection(.enabled)
@@ -23,6 +24,7 @@ struct CopyableIdentifierRow: View {
                 )
                 .labelStyle(.iconOnly)
                 .buttonStyle(.borderless)
+                .font(DesignTokens.activityMeta)
                 .foregroundStyle(copiedAt == nil ? Palette.tertiaryInk : Color.green)
                 .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
                 .help(L10n.string("Copy"))

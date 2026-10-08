@@ -6,7 +6,6 @@ struct ActivitySourceContentView: View {
     let item: SourceActivity
     /// The words the reader took each value from, marked where they appear (ADR-0007).
     var citedWords: [String] = []
-    @ScaledMetric(relativeTo: .body) private var readingBodySize = 18
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -27,9 +26,9 @@ struct ActivitySourceContentView: View {
                         options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
                     )) ?? AttributedString(said)
                 Text(marked(attributed))
-                    .font(.system(size: readingBodySize))
+                    .font(DesignTokens.activityQuote)
                     .foregroundStyle(Palette.ink)
-                    .lineSpacing(5)
+                    .lineSpacing(3)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityLabel(L10n.string("Original post: %@", said))

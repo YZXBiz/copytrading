@@ -106,6 +106,7 @@ struct ActivityView: View {
                         review: { selectedSheet = .manualReview(selectedItem, copying: nil) },
                         copy: { selectedSheet = .manualReview(selectedItem, copying: $0) },
                         evaluate: { selectedSheet = .historicalEvaluation(selectedItem) },
+                        editLimits: { model.editAccount(named: $0, focusingEntryTolerance: true) },
                         reviewHoldings: { accountID in
                             model.requestedAccountID = accountID
                             model.selectedScreen = .accounts

@@ -20,10 +20,8 @@ struct PositionLotRow: View {
     @MainActor private var shares: String {
         let remaining = Decimal(engine: lot.remainingQty) ?? 0
         let original = Decimal(engine: lot.originalQty) ?? remaining
-        guard original != remaining else {
-            return L10n.string("%@ %@", PositionRow.quantity(remaining), L10n.string(remaining == 1 ? "share" : "shares"))
-        }
-        return L10n.string("%@ of %@ shares", PositionRow.quantity(remaining), PositionRow.quantity(original))
+        guard original != remaining else { return Humanize.shares(remaining) }
+        return Humanize.shares(remaining, of: original)
     }
 
     var body: some View {

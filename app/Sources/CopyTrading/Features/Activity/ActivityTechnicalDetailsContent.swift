@@ -2,8 +2,8 @@ import DesktopCore
 import SwiftUI
 
 /// What Technical details shows when opened: the post's timed trip from Discord to the broker,
-/// each order's facts, who read it, and the Discord IDs to look it up by, on one quiet grey
-/// surface.
+/// each order's facts, who read it, and the Discord IDs to look it up by, on a surface that
+/// matches the card above.
 struct ActivityTechnicalDetailsContent: View {
     let item: SourceActivity
     @Environment(\.postProgressContext) private var progressContext
@@ -17,16 +17,18 @@ struct ActivityTechnicalDetailsContent: View {
     private var authorID: String? { item.authorID ?? item.sourceEvent.authorID }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            ActivityTimelineView(timeline: PostTimeline(item), progress: PostProgress(item, context: progressContext))
+        VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 8) {
+                TechnicalSectionTitle(text: L10n.string("Timeline"))
+                ActivityTimelineView(timeline: PostTimeline(item), progress: PostProgress(item, context: progressContext))
+            }
             ForEach(item.destinations) { destination in
                 ForEach(destination.orders) { order in
-                    Divider()
                     OrderFactsView(order: order, account: destination.accountID)
                 }
             }
-            Divider()
             VStack(alignment: .leading, spacing: 8) {
+                TechnicalSectionTitle(text: L10n.string("Reading"))
                 if let interpretedBy = item.interpretedBy {
                     TechnicalFactRow(label: "Read by") { Text(interpretedBy) }
                 }
@@ -38,23 +40,20 @@ struct ActivityTechnicalDetailsContent: View {
                 if item.profileRevision != nil {
                     TechnicalFactRow(label: "Guru version") {
                         Text(Humanize.revision(item.profileRevision))
-                            .font(.system(.callout, design: .monospaced))
+                            .font(DesignTokens.activityIdentifier)
+                            .foregroundStyle(Palette.secondaryInk)
                     }
                 }
                 if let parserNote {
                     TechnicalFactRow(label: "Model's note") {
                         Text(parserNote)
-                            .font(.system(.callout, design: .monospaced))
                             .textSelection(.enabled)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }
-            Divider()
             VStack(alignment: .leading, spacing: 8) {
-                Text(L10n.string("Discord IDs"))
-                    .font(DesignTokens.caption.weight(.medium))
-                    .foregroundStyle(Palette.secondaryInk)
+                TechnicalSectionTitle(text: L10n.string("Discord IDs"))
                 if let authorID {
                     CopyableIdentifierRow(label: "Author", value: authorID)
                 }
@@ -66,12 +65,16 @@ struct ActivityTechnicalDetailsContent: View {
                 }
             }
             Label(L10n.string("Orders follow the reading above, not the raw text of the post."), systemImage: "info.circle")
-                .font(DesignTokens.caption)
+                .font(DesignTokens.activityMeta)
                 .foregroundStyle(Palette.tertiaryInk)
         }
-        .padding(18)
+        .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.group, in: .rect(cornerRadius: DesignTokens.blockCornerRadius))
+        .background(Palette.page, in: .rect(cornerRadius: DesignTokens.readingCornerRadius))
+        .overlay {
+            RoundedRectangle(cornerRadius: DesignTokens.readingCornerRadius)
+                .strokeBorder(Palette.hairline.opacity(0.7), lineWidth: 1)
+        }
         .padding(.top, 10)
     }
 }
