@@ -74,6 +74,7 @@ struct MainSplitView: View {
         .sheet(item: pendingAgentProposal) { proposal in
             AgentProposalSheet(model: model, proposal: proposal)
         }
+        .environment(\.postProgressContext, progressContext)
         .task(id: refreshTrigger) {
             await liveRefresh()
         }
@@ -257,12 +258,29 @@ struct MainSplitView: View {
         Binding(get: { model.pendingAgentProposal }, set: { _ in })
     }
 
+    /// The saved setup's reader and order timeouts, for each post's live step.
+    private var progressContext: PostProgress.Context {
+        let setup = model.savedTradingConfiguration
+        return PostProgress.Context(
+            readerModel: setup?.provider.model,
+            orderTimeouts: Dictionary(
+                (setup?.accounts ?? []).map { ($0.id, TimeInterval($0.policy.orderTimeoutSeconds)) },
+                uniquingKeysWith: { first, _ in first }))
+    }
+
+    /// Everything every 15 s; while a post is in flight, its newest posts every second between.
     private func liveRefresh() async {
+        var lastFull = Date.distantPast
         while !Task.isCancelled {
-            await accountFeature.refresh(using: model.accountActions())
-            await accountFeature.refreshHistories(using: model.accountActions())
+            if Date.now.timeIntervalSince(lastFull) >= ActivityRefreshCadence.settled {
+                await accountFeature.refresh(using: model.accountActions())
+                await accountFeature.refreshHistories(using: model.accountActions())
+                lastFull = .now
+            } else {
+                await accountFeature.refreshActivity(using: model.accountActions())
+            }
             do {
-                try await Task.sleep(for: .seconds(15))
+                try await Task.sleep(for: .seconds(ActivityRefreshCadence.interval(for: accountFeature.activity)))
             } catch {
                 return
             }
