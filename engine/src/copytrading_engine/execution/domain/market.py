@@ -1,5 +1,5 @@
 import datetime as dt
-from typing import Literal, Self
+from typing import ClassVar, Literal, Self
 
 from pydantic import AwareDatetime, model_validator
 
@@ -52,15 +52,26 @@ class Asset(Value):
 
 
 class Position(Value):
+    """A broker position: what is held, and the broker's own valuation of it."""
+
     symbol: Identifier
     qty: Money
     market_value: Money | None = None
     currency: str | None = None
     asset_class: str | None = None
+    avg_entry_price: Money | None = None
+    current_price: Money | None = None
+    unrealized_pl: Money | None = None
+    unrealized_plpc: Money | None = None
+
+    #: The broker's valuation, which moves with every tick and every outside fill.
+    VALUATION: ClassVar[frozenset[str]] = frozenset(
+        {"market_value", "avg_entry_price", "current_price", "unrealized_pl", "unrealized_plpc"}
+    )
 
     def holding(self) -> dict[str, object]:
-        """What is held, without its market value, which moves with every tick."""
-        return self.model_dump(mode="json", exclude={"market_value"})
+        """What is held, without its valuation."""
+        return self.model_dump(mode="json", exclude=set(self.VALUATION))
 
 
 class CalendarDay(Value):

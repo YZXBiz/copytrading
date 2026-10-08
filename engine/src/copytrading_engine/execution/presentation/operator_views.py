@@ -8,7 +8,7 @@ from pydantic import AwareDatetime
 
 from copytrading_engine.execution.domain.events import AccountControlChanged, JournalEvent
 from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
-from copytrading_engine.execution.domain.market import Account
+from copytrading_engine.execution.domain.market import Account, Position
 from copytrading_engine.execution.domain.orders import OwnedLot
 from copytrading_engine.execution.domain.ownership import OwnershipInspection
 from copytrading_engine.execution.domain.progress import InstructionProgress, Skipped
@@ -29,14 +29,24 @@ class LotView(Value):
     original_qty: Quantity
     remaining_qty: Quantity
     average_price: Positive
+    #: The lot's remaining shares at the broker's current price, against what they cost.
+    unrealized_pl: Money | None = None
 
 
 class PositionView(Value):
+    """One symbol: the shares CopyTrading bought, the owner's own, and the broker's valuation of
+    the whole position. Prices are the broker's; missing when the broker was not read."""
+
     symbol: str
     owned_qty: Quantity
     external_qty: Quantity
     broker_qty: str | None = None
     lots: tuple[LotView, ...] = ()
+    avg_entry_price: Money | None = None
+    current_price: Money | None = None
+    market_value: Money | None = None
+    unrealized_pl: Money | None = None
+    unrealized_plpc: Money | None = None
 
 
 class OwnershipIncidentView(Value):
@@ -160,7 +170,9 @@ class AccountEventPage(Value):
     next_before_seq: int | None = None
 
 
-def _lot_view(key: str, lot: OwnedLot, snapshot: LedgerSnapshot) -> LotView:
+def _lot_view(
+    key: str, lot: OwnedLot, snapshot: LedgerSnapshot, current_price: Decimal | None
+) -> LotView:
     """A lot is keyed by the buy order that opened it, which names the post it came from."""
     order = snapshot.orders.get(key)
     message = snapshot.messages.get(order.message_id) if order is not None else None
@@ -174,6 +186,11 @@ def _lot_view(key: str, lot: OwnedLot, snapshot: LedgerSnapshot) -> LotView:
         original_qty=lot.original_qty,
         remaining_qty=lot.remaining_qty,
         average_price=lot.average_price,
+        unrealized_pl=(
+            ((current_price - lot.average_price) * lot.remaining_qty).quantize(Decimal("0.01"))
+            if current_price is not None
+            else None
+        ),
     )
 
 
@@ -201,13 +218,15 @@ def account_overview(
 ) -> AccountOverview:
     if snapshot.account_id is None or snapshot.environment is None:
         raise RuntimeError("Account evidence has no verified identity")
+    held = {item.symbol: item for item in inspection.broker_positions} if inspection else {}
     owned: dict[str, Decimal] = {}
     lots: dict[str, list[LotView]] = {}
     for key, lot in snapshot.lots.items():
         owned[lot.symbol] = owned.get(lot.symbol, Decimal(0)) + lot.remaining_qty
         if lot.remaining_qty > 0:
-            lots.setdefault(lot.symbol, []).append(_lot_view(key, lot, snapshot))
-    broker = {item.symbol: item.qty for item in inspection.broker_positions} if inspection else {}
+            price = held[lot.symbol].current_price if lot.symbol in held else None
+            lots.setdefault(lot.symbol, []).append(_lot_view(key, lot, snapshot, price))
+    broker = {symbol: item.qty for symbol, item in held.items()}
     symbols = sorted(set(owned) | set(snapshot.external_positions) | set(broker))
     positions = tuple(
         PositionView(
@@ -218,6 +237,7 @@ def account_overview(
             else Decimal(0),
             broker_qty=str(broker[symbol]) if symbol in broker else None,
             lots=tuple(sorted(lots.get(symbol, ()), key=_lot_order)),
+            **(held[symbol].model_dump(include=set(Position.VALUATION)) if symbol in held else {}),
         )
         for symbol in symbols
     )

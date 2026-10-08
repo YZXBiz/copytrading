@@ -21,9 +21,9 @@ struct PositionLotRow: View {
         let remaining = Decimal(engine: lot.remainingQty) ?? 0
         let original = Decimal(engine: lot.originalQty) ?? remaining
         guard original != remaining else {
-            return L10n.string("%@ %@", remaining.formatted(), L10n.string(remaining == 1 ? "share" : "shares"))
+            return L10n.string("%@ %@", PositionRow.quantity(remaining), L10n.string(remaining == 1 ? "share" : "shares"))
         }
-        return L10n.string("%@ of %@ shares", remaining.formatted(), original.formatted())
+        return L10n.string("%@ of %@ shares", PositionRow.quantity(remaining), PositionRow.quantity(original))
     }
 
     var body: some View {
@@ -58,6 +58,9 @@ struct PositionLotRow: View {
                     }
                     .font(DesignTokens.caption)
                     .foregroundStyle(Palette.tertiaryInk)
+                }
+                if let gain = lot.unrealizedPL.flatMap({ Decimal(engine: $0) }) {
+                    MoneyText(value: gain, style: .change, font: DesignTokens.caption)
                 }
             }
             Button(L10n.string("Open Post"), systemImage: "arrow.up.forward.square") {
