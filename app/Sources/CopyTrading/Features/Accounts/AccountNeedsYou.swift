@@ -9,7 +9,10 @@ struct AccountNeedsYou: View {
     let directory: GuruDirectory
     let skippedCalls: SkippedCalls
     let canCopy: Bool
+    let selectedPostID: SourceActivity.ID?
     let copy: (WaitingCall) -> Void
+    /// Opens the post beside the page.
+    let open: (WaitingCall) -> Void
 
     private var waiting: [WaitingCall] {
         let now = Date.now
@@ -36,6 +39,8 @@ struct AccountNeedsYou: View {
                             call: call,
                             guruName: directory.name(for: call.source.guruID),
                             canCopy: canCopy,
+                            isSelected: call.source.id == selectedPostID,
+                            open: { open(call) },
                             copy: { copy(call) },
                             skip: { skippedCalls.skip(call.source.sourceID) }
                         )

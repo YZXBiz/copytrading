@@ -1738,10 +1738,15 @@ struct TradingSettingsSaveTests {
             "The owner's sale lost what it sold"
         )
         try check(
-            feed.items[2].kind == "cancelled" && feed.items[2].side == "buy" && feed.items[2].guruID == "tradez",
+            feed.items[3].kind == "cancelled" && feed.items[3].side == "buy" && feed.items[3].guruID == "tradez",
             "A cancelled copy lost its side or guru"
         )
-        try check(feed.items[1].kind == "resumed" && feed.items[1].symbol == nil, "A control row drifted")
+        try check(
+            feed.items[1].kind == "limits_changed" && feed.items[1].source == "you"
+                && feed.items[1].changes == [AccountLimitChange(setting: "max_order_usd", before: "200", after: "500")],
+            "A limit change lost what changed"
+        )
+        try check(feed.items[2].kind == "resumed" && feed.items[2].symbol == nil, "A control row drifted")
         try check(feed.nextBeforeSeq == 26, "The feed's next page drifted")
         print("CopyTradingContractTests: account command and operator read wire fixtures decoded")
     }

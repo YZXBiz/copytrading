@@ -1,9 +1,9 @@
 import DesktopCore
 import SwiftUI
 
-/// The post chosen on a guru's page, beside the feed: the Activity card, with its review, copy and
+/// The post chosen on an account or guru page, beside it: the Activity card, with its review, copy and
 /// evaluation sheets.
-struct GuruPostDetail: View {
+struct PostDetailPane: View {
     let item: SourceActivity
     let model: AppModel
     let feature: AccountFeatureModel
@@ -24,7 +24,7 @@ struct GuruPostDetail: View {
                     .contentShape(.rect)
                     .keyboardShortcut(.cancelAction)
                     .help(L10n.string("Close"))
-                    .accessibilityIdentifier("guru.closePost")
+                    .accessibilityIdentifier("post.close")
             }
             .padding(.horizontal, 12)
             .padding(.top, 10)

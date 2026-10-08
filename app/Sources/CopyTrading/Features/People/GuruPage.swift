@@ -51,7 +51,7 @@ struct GuruPage: View {
                 Rectangle()
                     .fill(Palette.hairline)
                     .frame(width: 1)
-                GuruPostDetail(item: selectedItem, model: model, feature: feature, close: closePost)
+                PostDetailPane(item: selectedItem, model: model, feature: feature, close: closePost)
                     .frame(width: 460)
                     .transition(reduceMotion ? .opacity : .move(edge: .trailing).combined(with: .opacity))
             }

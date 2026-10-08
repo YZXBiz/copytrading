@@ -8,9 +8,11 @@ struct AccountPageContent: View {
     let policy: TradingAccountPolicy?
     let model: AppModel
     let feature: AccountFeatureModel
-    let activityState: ActivityScreenState
     let isSharingWidth: Bool
+    /// The post open beside the page, which its row shows as chosen.
+    let selectedPostID: SourceActivity.ID?
     @Binding var sheet: ActivitySheet?
+    let openPost: (SourceActivity.ID) -> Void
 
     private var hasWarnings: Bool {
         !account.ownershipIncidents.isEmpty || account.accountRiskReason != nil
@@ -44,12 +46,16 @@ struct AccountPageContent: View {
             directory: directory,
             skippedCalls: model.skippedCalls,
             canCopy: !feature.accounts.isEmpty,
-            copy: copy
+            selectedPostID: selectedPostID,
+            copy: copy,
+            open: { openPost($0.source.id) }
         )
         if !isSharingWidth {
-            AccountPositions(account: account, model: model, feature: feature, openPost: openPost)
+            AccountPositions(account: account, model: model, feature: feature) { openPost($0.id) }
         }
-        AccountFeedList(accountID: account.accountID, model: model, feature: feature)
+        AccountFeedList(
+            accountID: account.accountID, model: model, feature: feature, selectedPostID: selectedPostID,
+            openPost: openPost)
     }
 
     private func copy(_ call: WaitingCall) {
@@ -63,9 +69,5 @@ struct AccountPageContent: View {
     /// The account's sheet opens over this page; the changes apply as soon as they are saved.
     private func editLimits() {
         model.editAccount(named: account.accountID)
-    }
-
-    private func openPost(_ post: SourceActivity) {
-        activityState.focusActivity(post.id)
     }
 }

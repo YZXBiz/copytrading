@@ -7,6 +7,8 @@ struct AccountFeedList: View {
     let accountID: String
     let model: AppModel
     let feature: AccountFeatureModel
+    let selectedPostID: SourceActivity.ID?
+    let openPost: (SourceActivity.ID) -> Void
 
     private var items: [AccountFeedItem] { feature.feeds[accountID] ?? [] }
 
@@ -24,14 +26,18 @@ struct AccountFeedList: View {
                         .font(DesignTokens.caption)
                         .padding(.vertical, 8)
                 }
+                let directory = GuruDirectory(model.savedTradingConfiguration)
                 ForEach(items) { item in
-                    AccountFeedRow(item: item, directory: GuruDirectory(model.savedTradingConfiguration))
-                        .padding(.vertical, 10)
-                        .overlay(alignment: .bottom) {
-                            if item.id != items.last?.id {
-                                Hairline()
-                            }
+                    let post = post(for: item)
+                    AccountFeedRow(
+                        item: item, directory: directory, isSelected: post != nil && post?.id == selectedPostID,
+                        open: post.map { post in { openPost(post.id) } }
+                    )
+                    .overlay(alignment: .bottom) {
+                        if item.id != items.last?.id {
+                            Hairline()
                         }
+                    }
                 }
                 if feature.feedCursors[accountID] != nil {
                     Button(L10n.string("Show Older Activity"), action: loadMore)
@@ -46,6 +52,12 @@ struct AccountFeedList: View {
                 await feature.loadFeed(accountID: accountID, using: model.accountActions())
             }
         }
+    }
+
+    /// The guru post an order row came from, while Activity still holds it.
+    private func post(for item: AccountFeedItem) -> SourceActivity? {
+        guard let messageID = item.messageID else { return nil }
+        return feature.activity.first { $0.sourceID == messageID }
     }
 
     private func loadMore() {
