@@ -8,10 +8,6 @@ enum DesignTokens {
     static let todayTimelineMinWidth: CGFloat = 320
     static let todayLimitsWidth: CGFloat = 248
     static let workingSurfacePadding: CGFloat = 24
-    static let personCardMinWidth: CGFloat = 280
-    static let personCardMaxWidth: CGFloat = 340
-    static let personGallerySpacing: CGFloat = 18
-    static let peopleContentMaxWidth: CGFloat = 1_440
     static let accountsContentMaxWidth: CGFloat = 1_480
     /// Activity reads like a document inside the wider inspection lane.
     static let readingContentMaxWidth: CGFloat = 720
@@ -35,7 +31,6 @@ enum DesignTokens {
     static let settingsHeading = Font.system(.title3, weight: .semibold).scaled(by: 18.0 / 15)
     static let sectionTitle = Font.system(.body, design: .default, weight: .medium).scaled(by: 14.0 / 13)
     static let rowTitle = Font.system(.body, design: .default, weight: .medium).scaled(by: 14.0 / 13)
-    static let personTitle = Font.system(.title3, design: .default, weight: .semibold)
     static let bodyText = Font.system(.body, design: .default, weight: .regular).scaled(by: 14.0 / 13)
     static let bodyEmphasis = Font.system(.body, design: .default, weight: .medium).scaled(by: 14.0 / 13)
     static let caption = Font.system(.caption, design: .default).scaled(by: 12.0 / 10)

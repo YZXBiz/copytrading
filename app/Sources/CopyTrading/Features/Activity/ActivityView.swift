@@ -81,7 +81,7 @@ struct ActivityView: View {
             screenState.reconcileSelection(visibleIDs: visibleActivity.map(\.id))
         }
         .sheet(item: $selectedSheet, onDismiss: reviewFeature.clearPrivateEvidence) { selected in
-            sheet(for: selected)
+            ActivitySheetContent(selected: selected, model: model, feature: feature, reviewFeature: reviewFeature)
         }
     }
 
@@ -132,25 +132,6 @@ struct ActivityView: View {
                 }
             }
             .frame(minWidth: 350, maxWidth: .infinity, maxHeight: .infinity)
-        }
-    }
-
-    @ViewBuilder
-    private func sheet(for selected: ActivitySheet) -> some View {
-        switch selected {
-        case .manualReview(let source, let copying):
-            ManualReviewSheet(
-                source: source,
-                copying: copying,
-                accounts: feature.accounts,
-                operations: model.accountActions(),
-                feature: reviewFeature,
-                confirmOrders: { try await model.confirmOrders(for: $0, reason: L10n.string("send these orders")) },
-                engineStopped: model.runtimeState == .stopped || model.runtimeState == .failed,
-                startEngine: model.requestStart
-            )
-        case .historicalEvaluation(let source):
-            HistoricalProfileEvaluationSheet(source: source, model: model)
         }
     }
 

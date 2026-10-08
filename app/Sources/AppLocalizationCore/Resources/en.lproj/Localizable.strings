@@ -1895,3 +1895,11 @@
 "some shares" = "some shares";
 "Sold by you" = "Sold by you";
 "Open the post that bought these shares." = "Open the post that bought these shares.";
+"Posts today" = "Posts today";
+"Read in" = "Read in";
+"%@ avg" = "%@ avg";
+"Newest first" = "Newest first";
+"Yesterday" = "Yesterday";
+"No account acted on it" = "No account acted on it";
+"No posts from %@ yet. They show here as soon as CopyTrading reads one." = "No posts from %@ yet. They show here as soon as CopyTrading reads one.";
+"Edit %@" = "Edit %@";

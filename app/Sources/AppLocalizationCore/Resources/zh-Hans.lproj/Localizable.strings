@@ -1895,3 +1895,11 @@
 "some shares" = "若干股";
 "Sold by you" = "你卖出的";
 "Open the post that bought these shares." = "打开买入这些股票的帖子。";
+"Posts today" = "今日帖子";
+"Read in" = "解读用时";
+"%@ avg" = "平均 %@";
+"Newest first" = "最新在前";
+"Yesterday" = "昨天";
+"No account acted on it" = "没有账户处理";
+"No posts from %@ yet. They show here as soon as CopyTrading reads one." = "%@ 还没有帖子。CopyTrading 读到第一条后会显示在这里。";
+"Edit %@" = "编辑 %@";

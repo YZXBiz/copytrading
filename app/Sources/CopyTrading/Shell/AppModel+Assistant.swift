@@ -105,7 +105,7 @@ extension AppModel {
         }
     }
 
-    /// Opens what an answer points at: the post in Activity, the account in Accounts, or the guru's sheet in People.
+    /// Opens what an answer points at: the post in Activity, the account in Accounts, or the guru's page in People.
     func follow(_ link: AssistantLink, activity: [SourceActivity], focusPost: (SourceActivity.ID) -> Void) {
         switch link.kind {
         case "post":
@@ -115,7 +115,7 @@ extension AppModel {
             requestedAccountID = link.id
             selectedScreen = .accounts
         case "guru":
-            requestedGuruID = link.id
+            openGuruID = link.id
             selectedScreen = .people
         default:
             break

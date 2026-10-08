@@ -17,6 +17,7 @@ public struct SourceActivityBuilder {
     public init() {}
 
     public func text(_ text: String) -> Self { setting("text", text) }
+    public func guru(_ guruID: String) -> Self { setting("guru_id", guruID) }
     public func posted(at iso: String) -> Self { setting("source_at", iso).setting("captured_at", iso) }
     public func sequence(_ sequence: Int, sourceID: String) -> Self {
         setting("sequence", sequence).setting("source_id", sourceID)
