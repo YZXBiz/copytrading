@@ -57,6 +57,8 @@ struct ActivityTimelineRow: View {
             }
             .padding(.bottom, isLast ? 0 : 14)
         }
+        // The connector fills the row's own height, never extra height a container offers.
+        .fixedSize(horizontal: false, vertical: true)
         .accessibilityElement(children: .combine)
     }
 }
