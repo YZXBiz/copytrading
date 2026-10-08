@@ -1,8 +1,9 @@
 import DesktopCore
 import SwiftUI
 
-/// One symbol's shares. When CopyTrading bought some, a chevron opens the lots that make them up
-/// and the line under the symbol says how many posts they came from.
+/// One symbol the way a trader reads it: shares, what they cost, what they are worth now, and the
+/// gain or loss, from the broker's valuation. When CopyTrading bought some, a chevron opens the
+/// lots that make them up and the line under the symbol says how many posts they came from.
 struct PositionRow: View {
     /// How far lots and the symbol column sit in from the chevron's edge.
     static let lotInset: CGFloat = 22
@@ -56,30 +57,102 @@ struct PositionRow: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            cell(quantity(position.ownedQty))
-            cell(quantity(position.externalQty))
-            cell(position.brokerQty.map(quantity) ?? "—")
+            sharesCell
+            moneyCell(position.avgEntryPrice)
+            moneyCell(position.currentPrice)
+            moneyCell(position.marketValue)
+            gainCell
         }
         .padding(.vertical, 9)
         .contentShape(.rect)
     }
 
+    private var owned: Decimal { Decimal(engine: position.ownedQty) ?? 0 }
+    private var outside: Decimal { Decimal(engine: position.externalQty) ?? 0 }
+    /// The broker's count, which the valuation is for; the ledger's when the broker was not read.
+    private var shares: Decimal { position.brokerQty.flatMap { Decimal(engine: $0) } ?? owned + outside }
+
+    /// Shares at the broker; a note says how many CopyTrading copied and how many are the owner's
+    /// own, only when some are held outside it.
+    @MainActor private var sharesCell: some View {
+        VStack(alignment: .trailing, spacing: 1) {
+            Text(Self.quantity(shares))
+                .monospacedDigit()
+                .foregroundStyle(Palette.ink)
+            if outside > 0 {
+                Text(
+                    owned > 0
+                        ? L10n.string("%@ copied · %@ outside", Self.shortQuantity(owned), Self.shortQuantity(outside))
+                        : L10n.string("held outside")
+                )
+                .font(DesignTokens.caption)
+                .foregroundStyle(Palette.tertiaryInk)
+                .lineLimit(1)
+                .fixedSize()
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .trailing)
+    }
+
+    private func moneyCell(_ value: String?) -> some View {
+        Group {
+            if let amount = value.flatMap({ Decimal(engine: $0) }) {
+                MoneyText(value: amount)
+                    .foregroundStyle(Palette.ink)
+            } else {
+                Text(verbatim: "—").foregroundStyle(Palette.tertiaryInk)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .trailing)
+    }
+
+    /// Gain or loss in dollars, coloured by direction, with the percent under it.
+    @MainActor private var gainCell: some View {
+        VStack(alignment: .trailing, spacing: 1) {
+            if let gain = position.unrealizedPL.flatMap({ Decimal(engine: $0) }) {
+                MoneyText(value: gain, style: .change)
+                if let percent = position.unrealizedPLPercent.flatMap({ Decimal(engine: $0) }) {
+                    Text(percent, format: .percent.precision(.fractionLength(2)).sign(strategy: .always(includingZero: false)))
+                        .font(DesignTokens.caption)
+                        .monospacedDigit()
+                        .foregroundStyle(ChangeDirection(percent).color)
+                }
+            } else {
+                Text(verbatim: "—").foregroundStyle(Palette.tertiaryInk)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .trailing)
+    }
+
     @MainActor private var accessibilityText: String {
-        var parts = [L10n.string("%@, %@ copied", position.symbol, quantity(position.ownedQty))]
+        var parts = [L10n.string("%@, %@ shares", position.symbol, Self.quantity(shares))]
+        if owned > 0 { parts.append(L10n.string("%@ copied", Self.quantity(owned))) }
         if posts > 0 { parts.append(L10n.string("from %@", Humanize.count(posts, "post"))) }
-        parts.append(L10n.string("%@ held outside CopyTrading", quantity(position.externalQty)))
-        if let broker = position.brokerQty { parts.append(L10n.string("%@ at broker", quantity(broker))) }
+        if outside > 0 { parts.append(L10n.string("%@ held outside CopyTrading", Self.quantity(outside))) }
+        if let price = position.currentPrice.flatMap({ Decimal(engine: $0) }) {
+            parts.append(L10n.string("price %@", price.formatted(.currency(code: "USD"))))
+        }
+        if let gain = position.unrealizedPL.flatMap({ Decimal(engine: $0) }) {
+            parts.append(ChangeDirection(gain).spoken(gain))
+        }
         return Humanize.joined(parts)
     }
 
-    private func cell(_ text: String) -> some View {
-        Text(text)
-            .monospacedDigit()
-            .foregroundStyle(Palette.ink)
-            .frame(maxWidth: .infinity, alignment: .trailing)
+    /// Shares to at most four decimals: 2.8782, not 2.878194.
+    static func quantity(_ value: Decimal) -> String {
+        value.formatted(.number.precision(.fractionLength(0...4)))
     }
 
-    private func quantity(_ value: String) -> String {
-        Decimal(engine: value)?.formatted() ?? value
+    /// Shares in a note, to at most two decimals: 12.72.
+    static func shortQuantity(_ value: Decimal) -> String {
+        value.formatted(.number.precision(.fractionLength(0...2)))
+    }
+
+    /// Nothing copied, nothing outside, nothing at the broker: a symbol left over from an
+    /// earlier position, with nothing to show.
+    static func isEmpty(_ position: AccountPositionView) -> Bool {
+        position.lots.isEmpty && (Decimal(engine: position.ownedQty) ?? 0) == 0
+            && (Decimal(engine: position.externalQty) ?? 0) == 0
+            && (position.brokerQty.flatMap { Decimal(engine: $0) } ?? 0) == 0
     }
 }

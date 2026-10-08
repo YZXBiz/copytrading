@@ -15,7 +15,6 @@
 "%@ and %@" = "%@ and %@";
 "%@ and %lld more" = "%@ and %lld more";
 "%@ at %@" = "%@ at %@";
-"%@ at broker" = "%@ at broker";
 "%@ at up to %@" = "%@ at up to %@";
 "%@ copied" = "%@ copied";
 "%@ done" = "%@ done";
@@ -42,7 +41,6 @@
 "%@ · instruction %lld" = "%@ · instruction %lld";
 "%@ → %@ · %@" = "%@ → %@ · %@";
 "%@, %@" = "%@, %@";
-"%@, %@ copied" = "%@, %@ copied";
 "%@, %@, %@" = "%@, %@, %@";
 "%@, and %@" = "%@, and %@";
 "%@, and more" = "%@, and more";
@@ -1078,8 +1076,6 @@
 "Entries a day" = "Entries a day";
 "Exits" = "Exits";
 "Not copied" = "Not copied";
-"Held outside CopyTrading" = "Held outside CopyTrading";
-"At broker" = "At broker";
 "CopyTrading could not check this sale with the broker. Try again in a moment." = "CopyTrading could not check this sale with the broker. Try again in a moment.";
 "The sale was not sent: Touch ID was not confirmed." = "The sale was not sent: Touch ID was not confirmed.";
 "CopyTrading could not reach the engine. Your sale may not have been sent; check Accounts before trying again." = "CopyTrading could not reach the engine. Your sale may not have been sent; check Accounts before trying again.";
@@ -1718,3 +1714,11 @@
 "CopyTrading's engine isn't running, so this can't be saved or placed yet." = "CopyTrading's engine isn't running, so this can't be saved or placed yet.";
 "Before anything is placed, CopyTrading checks each account's limits and what it holds." = "Before anything is placed, CopyTrading checks each account's limits and what it holds.";
 "Not copying right now" = "Not copying right now";
+"Avg cost" = "Avg cost";
+"Price" = "Price";
+"Value" = "Value";
+"Gain/loss" = "Gain/loss";
+"%@ copied · %@ outside" = "%@ copied · %@ outside";
+"held outside" = "held outside";
+"%@, %@ shares" = "%@, %@ shares";
+"price %@" = "price %@";

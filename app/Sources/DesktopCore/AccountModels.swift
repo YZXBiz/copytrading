@@ -108,6 +108,13 @@ public struct AccountPositionView: Codable, Equatable, Identifiable, Sendable {
     public let brokerQty: String?
     /// What CopyTrading bought, oldest first, each with the post that bought it.
     public let lots: [AccountLotView]
+    /// The broker's valuation of the whole position; nil when the broker was not read.
+    public let avgEntryPrice: String?
+    public let currentPrice: String?
+    public let marketValue: String?
+    public let unrealizedPL: String?
+    /// The gain or loss as a fraction of cost: 0.04 is 4%.
+    public let unrealizedPLPercent: String?
     public var id: String { symbol }
 
     enum CodingKeys: String, CodingKey {
@@ -116,6 +123,11 @@ public struct AccountPositionView: Codable, Equatable, Identifiable, Sendable {
         case externalQty = "external_qty"
         case brokerQty = "broker_qty"
         case lots
+        case avgEntryPrice = "avg_entry_price"
+        case currentPrice = "current_price"
+        case marketValue = "market_value"
+        case unrealizedPL = "unrealized_pl"
+        case unrealizedPLPercent = "unrealized_plpc"
     }
 }
 
@@ -131,6 +143,8 @@ public struct AccountLotView: Codable, Equatable, Identifiable, Sendable {
     public let originalQty: String
     public let remainingQty: String
     public let averagePrice: String
+    /// The lot's remaining shares at the broker's current price, against what they cost.
+    public let unrealizedPL: String?
     public var id: String { lotID }
 
     enum CodingKeys: String, CodingKey {
@@ -143,6 +157,7 @@ public struct AccountLotView: Codable, Equatable, Identifiable, Sendable {
         case originalQty = "original_qty"
         case remainingQty = "remaining_qty"
         case averagePrice = "average_price"
+        case unrealizedPL = "unrealized_pl"
     }
 }
 

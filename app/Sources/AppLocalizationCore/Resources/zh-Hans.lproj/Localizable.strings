@@ -15,7 +15,6 @@
 "%@ and %@" = "%@ 和 %@";
 "%@ and %lld more" = "%@，另有%lld项";
 "%@ at %@" = "%@，成交价 %@";
-"%@ at broker" = "经纪商记录为 %@";
 "%@ at up to %@" = "%@，限价 %@";
 "%@ copied" = "已跟单%@条";
 "%@ done" = "%@ 已完成";
@@ -42,7 +41,6 @@
 "%@ · instruction %lld" = "账户 %@ · 指令%lld";
 "%@ → %@ · %@" = "%@ 至 %@ · %@";
 "%@, %@" = "%@，%@";
-"%@, %@ copied" = "已跟单 %@，数量 %@";
 "%@, %@, %@" = "%@、%@、%@";
 "%@, and %@" = "%@ 和 %@";
 "%@, and more" = "%@ 等";
@@ -1078,8 +1076,6 @@
 "Entries a day" = "每日买入次数";
 "Exits" = "卖出";
 "Not copied" = "不跟随";
-"Held outside CopyTrading" = "在 CopyTrading 之外持有";
-"At broker" = "券商处";
 "CopyTrading could not check this sale with the broker. Try again in a moment." = "CopyTrading 无法向券商核对这笔卖出。请稍后再试。";
 "The sale was not sent: Touch ID was not confirmed." = "卖出未发送：Touch ID 未通过确认。";
 "CopyTrading could not reach the engine. Your sale may not have been sent; check Accounts before trying again." = "CopyTrading 无法连接引擎。你的卖出可能没有发送，请先查看“账户”再重试。";
@@ -1718,3 +1714,11 @@
 "CopyTrading's engine isn't running, so this can't be saved or placed yet." = "CopyTrading 的引擎没有运行，暂时无法保存或下单。";
 "Before anything is placed, CopyTrading checks each account's limits and what it holds." = "下单前，CopyTrading 会检查每个账户的限额和持仓。";
 "Not copying right now" = "目前未在跟单";
+"Avg cost" = "平均成本";
+"Price" = "现价";
+"Value" = "市值";
+"Gain/loss" = "盈亏";
+"%@ copied · %@ outside" = "跟单 %@ · 外部 %@";
+"held outside" = "外部持有";
+"%@, %@ shares" = "%@，%@ 股";
+"price %@" = "现价 %@";

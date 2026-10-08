@@ -1,10 +1,11 @@
 import DesktopCore
 import SwiftUI
 
-/// Shares per symbol: what CopyTrading bought, what the owner holds outside it, and the broker's
-/// total. A position opens into its lots, each with the post that bought it.
+/// Positions the way a trader reads them: shares, average cost, current price, value, and gain or
+/// loss, from the broker's valuation. A position opens into its lots, each with the post that
+/// bought it and its own gain or loss.
 struct PositionsTable: View {
-    let positions: [AccountPositionView]
+    let allPositions: [AccountPositionView]
     let accountID: String
     let environment: TradingEnvironment
     let approvesOrders: Bool
@@ -16,6 +17,27 @@ struct PositionsTable: View {
     let confirmOwner: (String) async throws -> Void
     let saleFinished: () -> Void
     @State private var expanded: Set<String> = []
+
+    init(
+        positions: [AccountPositionView], accountID: String, environment: TradingEnvironment, approvesOrders: Bool,
+        gurus: GuruDirectory, activity: [SourceActivity], openPost: @escaping (SourceActivity) -> Void,
+        saleOperations: (any LotSaleOperations)?, confirmOwner: @escaping (String) async throws -> Void,
+        saleFinished: @escaping () -> Void
+    ) {
+        self.allPositions = positions
+        self.accountID = accountID
+        self.environment = environment
+        self.approvesOrders = approvesOrders
+        self.gurus = gurus
+        self.activity = activity
+        self.openPost = openPost
+        self.saleOperations = saleOperations
+        self.confirmOwner = confirmOwner
+        self.saleFinished = saleFinished
+    }
+
+    /// Positions with something in them; an emptied symbol has nothing to read.
+    private var positions: [AccountPositionView] { allPositions.filter { !PositionRow.isEmpty($0) } }
     @State private var selling: LotSaleTarget?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -85,7 +107,7 @@ struct PositionsTable: View {
             Text(L10n.string("Symbol"))
                 .padding(.leading, PositionRow.lotInset)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            ForEach(["Copied", "Held outside CopyTrading", "At broker"], id: \.self) { title in
+            ForEach(["Shares", "Avg cost", "Price", "Value", "Gain/loss"], id: \.self) { title in
                 Text(L10n.string(title))
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
