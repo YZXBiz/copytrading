@@ -50,7 +50,6 @@ struct SidebarEntityRow<Leading: View>: View {
         }
         .buttonStyle(QuietPressButtonStyle())
         .onHover { isHovering = $0 }
-        .accessibilityElement(children: .ignore)
         .accessibilityLabel(title)
         .accessibilityValue([detail, value].compactMap(\.self).joined(separator: ", "))
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)

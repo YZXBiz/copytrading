@@ -1295,6 +1295,7 @@ def j40_live_limits(app: AppDriver) -> None:
     target = "175" if app.field_value("Maximum per order") == "150" else "150"
     app.type(target, into="Maximum per order")
     app.click("Done")
+    app.open_screen("account.primary")
     app.wait_for("Saved · applies to the next order", timeout=30, name="limits-saved")
 
     deadline = time.monotonic() + 60

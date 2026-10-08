@@ -49,7 +49,6 @@ struct GuruFeedRow: View {
         }
         .onHover { isHovered = $0 }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: isHovered)
-        .accessibilityElement(children: .combine)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityHint(L10n.string("Open the original post, interpretation, and account results."))
     }

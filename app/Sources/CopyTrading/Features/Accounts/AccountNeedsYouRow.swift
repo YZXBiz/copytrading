@@ -49,7 +49,6 @@ struct AccountNeedsYouRow: View {
                 .contentShape(.rect)
             }
             .buttonStyle(QuietPressButtonStyle())
-            .accessibilityElement(children: .combine)
             .accessibilityAddTraits(isSelected ? .isSelected : [])
             .accessibilityHint(L10n.string("Open the original post, interpretation, and account results."))
             .accessibilityIdentifier("needsYou.open")
