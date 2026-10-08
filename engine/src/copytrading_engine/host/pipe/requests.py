@@ -210,8 +210,8 @@ class ReplayGuruPostsRequest(PipeRequest):
     destinations: list[RouteConnection] = Field(max_length=20)
 
 
-class GetAccountEventsRequest(PipeRequest):
-    operation: Literal["get_account_events"]
+class GetAccountFeedRequest(PipeRequest):
+    operation: Literal["get_account_feed"]
     account_id: str = Field(min_length=1, max_length=64)
     before_seq: StrictInt | None = Field(default=None, ge=1)
     limit: StrictInt = Field(default=50, ge=1, le=100)
@@ -344,7 +344,7 @@ RequestType = Annotated[
     | ReviewProfileExamplesRequest
     | LearnGuruPlaybookRequest
     | ReplayGuruPostsRequest
-    | GetAccountEventsRequest
+    | GetAccountFeedRequest
     | GetEquityHistoryRequest
     | SaveManualCorrectionRequest
     | PreviewManualOrderRequest

@@ -218,11 +218,11 @@ public actor EngineClient {
         return value
     }
 
-    public func accountEvents(
+    public func accountFeed(
         accountID: String, beforeSeq: Int? = nil, limit: Int = 50
-    ) async throws -> AccountEventPage {
-        let result = try await request(.accountEvents(accountID: accountID, beforeSeq: beforeSeq, limit: limit))
-        guard case .accountEvents(let page) = result else { throw EngineContractError.missingResult }
+    ) async throws -> AccountFeedPage {
+        let result = try await request(.accountFeed(accountID: accountID, beforeSeq: beforeSeq, limit: limit))
+        guard case .accountFeed(let page) = result else { throw EngineContractError.missingResult }
         return page
     }
 

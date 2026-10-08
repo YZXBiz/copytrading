@@ -295,7 +295,7 @@ public enum EngineResult: Equatable, Sendable {
     case profileExampleReview(ProfileExampleReview)
     case learnedPlaybook(LearnedGuruPlaybook)
     case guruReplay(GuruReplay)
-    case accountEvents(AccountEventPage)
+    case accountFeed(AccountFeedPage)
     case equityHistory(accountID: String, history: EquityHistory?)
     case manualCorrection(ManualCorrectionOutcome)
     case manualPreview(ManualOrderPreview)
@@ -397,7 +397,7 @@ public struct EngineSuccess: Decodable, Equatable, Sendable {
         case resolution
         case accounts
         case activity
-        case events
+        case feed
         case correction
         case preview
         case commands
@@ -466,8 +466,8 @@ public struct EngineSuccess: Decodable, Equatable, Sendable {
             )
         case "guru_replay":
             result = .guruReplay(try container.decode(GuruReplay.self, forKey: .replay))
-        case "account_events":
-            result = .accountEvents(try container.decode(AccountEventPage.self, forKey: .events))
+        case "account_feed":
+            result = .accountFeed(try container.decode(AccountFeedPage.self, forKey: .feed))
         case "equity_history":
             result = .equityHistory(
                 accountID: try container.decode(String.self, forKey: .accountID),
@@ -577,7 +577,7 @@ enum EngineOperation: Sendable {
     case reviewProfileExamples(ProfileExampleReviewRequest)
     case learnGuruPlaybook(GuruPlaybookLearningRequest)
     case replayGuruPosts(GuruReplayRequest)
-    case accountEvents(accountID: String, beforeSeq: Int?, limit: Int)
+    case accountFeed(accountID: String, beforeSeq: Int?, limit: Int)
     case equityHistory(accountID: String, window: EquityHistoryWindow)
     case saveManualCorrection(ManualCorrectionRequest)
     case previewManualOrder(ManualPreviewRequest)
@@ -755,8 +755,8 @@ struct EngineRequest: Encodable, Sendable {
             try container.encode(replay.providerAPIKey, forKey: .providerAPIKey)
             try container.encode(replay.profile, forKey: .profile)
             try container.encode(replay.destinations, forKey: .destinations)
-        case .accountEvents(let accountID, let beforeSeq, let limit):
-            try container.encode("get_account_events", forKey: .operation)
+        case .accountFeed(let accountID, let beforeSeq, let limit):
+            try container.encode("get_account_feed", forKey: .operation)
             try container.encode(accountID, forKey: .accountID)
             try container.encodeIfPresent(beforeSeq, forKey: .beforeSeq)
             try container.encode(limit, forKey: .limit)

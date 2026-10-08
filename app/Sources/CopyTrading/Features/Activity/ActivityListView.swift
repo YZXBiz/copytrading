@@ -5,6 +5,9 @@ import SwiftUI
 /// post on a pale blue pill with dark text. Up and down arrows move the selection.
 struct ActivityListView: View {
     let items: [SourceActivity]
+    /// Sales the owner made, listed among the posts by time; choosing one opens the post that
+    /// bought what it sold.
+    var sales: [(accountID: String, item: AccountFeedItem)] = []
     let directory: GuruDirectory
     /// Several accounts are in view, so each row names the ones a post reached.
     var showsAccounts = false
@@ -15,18 +18,22 @@ struct ActivityListView: View {
     @FocusState private var focused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hoveredID: SourceActivity.ID?
+    @State private var hoveredSaleID: String?
     @State private var listPosition = ScrollPosition(edge: .top)
 
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                    row(item)
-                    if index < items.count - 1 {
-                        let nextSelected = items[index + 1].id == selection
+                let entries = ActivityListEntry.merged(posts: items, sales: sales, hasMorePosts: hasMore)
+                ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+                    switch entry {
+                    case .post(let item): row(item)
+                    case .sale(let accountID, let sale): saleRow(accountID: accountID, sale)
+                    }
+                    if index < entries.count - 1 {
                         Divider()
                             .padding(.horizontal, 14)
-                            .opacity(item.id == selection || nextSelected ? 0 : 1)
+                            .opacity(isSelected(entry) || isSelected(entries[index + 1]) ? 0 : 1)
                     }
                 }
                 if hasMore {
@@ -90,6 +97,37 @@ struct ActivityListView: View {
         }
         .id(item.id)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private func isSelected(_ entry: ActivityListEntry) -> Bool {
+        if case .post(let item) = entry { return item.id == selection }
+        return false
+    }
+
+    private func saleRow(accountID: String, _ sale: AccountFeedItem) -> some View {
+        let entryID = ActivityListEntry.sale(accountID: accountID, sale).id
+        let post = items.first { post in
+            post.destinations.contains { $0.orders.contains { $0.clientID == sale.orderID } }
+        }
+        return Button {
+            if let post {
+                selection = post.id
+                focused = true
+            }
+        } label: {
+            ActivitySaleRow(accountID: accountID, item: sale, showsAccount: showsAccounts)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(hoveredSaleID == entryID ? Palette.hover : .clear, in: .rect(cornerRadius: 10))
+                .contentShape(.rect)
+        }
+        .buttonStyle(QuietPressButtonStyle())
+        .disabled(post == nil)
+        .onHover { isHovering in
+            hoveredSaleID = isHovering ? entryID : (hoveredSaleID == entryID ? nil : hoveredSaleID)
+        }
+        .accessibilityHint(post == nil ? "" : L10n.string("Open the post that bought these shares."))
     }
 
     private func move(by offset: Int) -> KeyPress.Result {

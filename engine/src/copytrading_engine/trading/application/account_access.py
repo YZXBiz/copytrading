@@ -9,6 +9,7 @@ from pathlib import Path
 
 from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
 from copytrading_engine.execution.domain.lifecycle import AccountOwnerClosed
+from copytrading_engine.execution.presentation.account_feed import AccountFeedPage
 from copytrading_engine.execution.presentation.operator_views import (
     AccountEventPage,
     AccountOverview,
@@ -86,6 +87,17 @@ class AccountAccess:
         return await asyncio.wait_for(
             asyncio.to_thread(
                 self.evidence.retained_account, database, before_seq=before_seq, limit=limit
+            ),
+            timeout=timeout,
+        )
+
+    async def retained_feed(
+        self, database: Path, *, before_seq: int | None, limit: int, timeout: float
+    ) -> AccountFeedPage:
+        """Read a retained account's feed off the event loop."""
+        return await asyncio.wait_for(
+            asyncio.to_thread(
+                self.evidence.retained_feed, database, before_seq=before_seq, limit=limit
             ),
             timeout=timeout,
         )

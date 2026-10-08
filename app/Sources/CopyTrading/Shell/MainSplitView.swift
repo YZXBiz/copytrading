@@ -275,6 +275,7 @@ struct MainSplitView: View {
             if Date.now.timeIntervalSince(lastFull) >= ActivityRefreshCadence.settled {
                 await accountFeature.refresh(using: model.accountActions())
                 await accountFeature.refreshHistories(using: model.accountActions())
+                await accountFeature.refreshFeeds(using: model.accountActions())
                 lastFull = .now
             } else {
                 await accountFeature.refreshActivity(using: model.accountActions())

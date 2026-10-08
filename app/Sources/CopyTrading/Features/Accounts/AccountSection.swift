@@ -64,7 +64,7 @@ struct AccountSection: View {
                 )
             }
             Divider()
-            AccountEventsDisclosure(accountID: account.accountID, model: model, feature: feature)
+            AccountFeedList(accountID: account.accountID, model: model, feature: feature)
         }
         .padding(surfacePadding)
         .background(Palette.page, in: .rect(cornerRadius: DesignTokens.readingCornerRadius))

@@ -32,8 +32,8 @@ from copytrading_engine.execution.domain.ownership import (
     OwnershipResolutionRequest,
 )
 from copytrading_engine.execution.domain.sizing import RouteConnection
+from copytrading_engine.execution.presentation.account_feed import AccountFeedPage
 from copytrading_engine.execution.presentation.operator_views import (
-    AccountEventPage,
     AccountOverviewPage,
 )
 from copytrading_engine.trading.adapters.activation import TradingActivationStatus
@@ -86,9 +86,9 @@ class OperatorReads(Protocol):
 
     async def source_activity(self, before_seq: int | None, limit: int) -> SourceActivityPage: ...
 
-    async def account_events(
+    async def account_feed(
         self, account_id: str, before_seq: int | None, limit: int
-    ) -> AccountEventPage: ...
+    ) -> AccountFeedPage: ...
 
     async def equity_history(
         self, account_id: str, window: HistoryWindow

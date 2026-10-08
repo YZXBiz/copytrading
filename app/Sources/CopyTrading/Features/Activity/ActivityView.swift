@@ -17,6 +17,12 @@ struct ActivityView: View {
         feature.activity.filter(screenState.includes)
     }
 
+    /// The owner's sales in the chosen account; the Needs you tab has none to show.
+    private var visibleSales: [(accountID: String, item: AccountFeedItem)] {
+        guard screenState.filter != .waiting else { return [] }
+        return feature.ownerSales.filter { screenState.accountID == nil || $0.accountID == screenState.accountID }
+    }
+
     private var selectedItem: SourceActivity? {
         visibleActivity.first { $0.id == screenState.selectedActivityID }
     }
@@ -84,6 +90,7 @@ struct ActivityView: View {
         HStack(spacing: 0) {
             ActivityListView(
                 items: visibleActivity,
+                sales: visibleSales,
                 directory: directory,
                 showsAccounts: feature.accounts.count > 1 && screenState.accountID == nil,
                 selection: $screenState.selectedActivityID,

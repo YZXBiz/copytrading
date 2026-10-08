@@ -38,6 +38,7 @@ from copytrading_engine.execution.domain.ownership import (
     OwnershipResolutionRequest,
 )
 from copytrading_engine.execution.domain.sizing import DestinationSignal, DestinationTerms
+from copytrading_engine.execution.presentation.account_feed import AccountFeedPage
 from copytrading_engine.execution.presentation.operator_views import (
     AccountEventPage,
     AccountOverview,
@@ -110,6 +111,8 @@ class AccountOwner(Protocol):
     async def destination_views(self, source_ids: set[str]) -> dict[str, DestinationView]: ...
 
     async def event_page(self, before_seq: int | None, limit: int) -> AccountEventPage: ...
+
+    async def feed_page(self, before_seq: int | None, limit: int) -> AccountFeedPage: ...
 
     async def equity_history(self, window: HistoryWindow, now: dt.datetime) -> EquityHistory: ...
 

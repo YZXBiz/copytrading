@@ -214,6 +214,12 @@ class Store:
         ).fetchall()
         return tuple((seq, JournalEvent.model_validate_json(raw)) for seq, raw in rows)
 
+    def feed_events(
+        self, before_seq: int | None, limit: int
+    ) -> tuple[tuple[int, JournalEvent], ...]:
+        self._require_usable()
+        return feed_events(self.db, before_seq, limit)
+
     def pending_notifications(self) -> tuple[tuple[int, str, str, dict[str, object]], ...]:
         self._require_usable()
         rows = self.db.execute(
@@ -283,3 +289,34 @@ def message_events(db: sqlite3.Connection, message_ids: set[str]) -> tuple[Journ
         if first <= event.at <= last
     )
     return events + changes
+
+
+# What the account feed shows: each order's first final update, a sale the owner made at the
+# broker, entries paused or resumed, and a holdings review the owner settled.
+_FEED_EVENTS = """
+SELECT j.id, j.event FROM journal j
+WHERE (? IS NULL OR j.id < ?) AND (
+    (json_extract(j.event, '$.payload.kind') = 'order_update'
+        AND json_extract(j.event, '$.payload.status') IN ('filled','canceled','expired','rejected')
+        AND NOT EXISTS (
+            SELECT 1 FROM journal e WHERE e.id < j.id
+            AND json_extract(e.event, '$.payload.kind') = 'order_update'
+            AND json_extract(e.event, '$.payload.client_id')
+                = json_extract(j.event, '$.payload.client_id')
+            AND json_extract(e.event, '$.payload.status')
+                IN ('filled','canceled','expired','rejected')))
+    OR json_extract(j.event, '$.payload.kind') IN ('manual_sale_recorded', 'ownership_resolved')
+    OR (json_extract(j.event, '$.payload.kind') = 'account_control_changed'
+        AND json_extract(j.event, '$.payload.result.command.action') IN ('pause', 'resume')))
+ORDER BY j.id DESC LIMIT ?
+"""
+
+
+def feed_events(
+    db: sqlite3.Connection, before_seq: int | None, limit: int
+) -> tuple[tuple[int, JournalEvent], ...]:
+    """The journal events the account feed turns into rows, newest first."""
+    if not 1 <= limit <= 100 or (before_seq is not None and before_seq < 1):
+        raise ValueError("Invalid account feed page")
+    rows = db.execute(_FEED_EVENTS, (before_seq, before_seq, limit)).fetchall()
+    return tuple((seq, JournalEvent.model_validate_json(raw)) for seq, raw in rows)

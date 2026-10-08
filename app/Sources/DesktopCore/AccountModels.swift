@@ -552,26 +552,36 @@ public struct SourceActivityPage: Codable, Equatable, Sendable {
     }
 }
 
-public struct AccountEvent: Codable, Equatable, Identifiable, Sendable {
+/// One row of an account's feed: an order that filled or ended, a sale the owner made, or a
+/// change the owner made to the account. Amounts are engine decimals.
+public struct AccountFeedItem: Codable, Equatable, Identifiable, Sendable {
     public let sequence: Int
     public let at: String
+    /// bought, sold, cancelled, expired, rejected, paused, resumed, or settled.
     public let kind: String
+    /// guru (a post was copied) or you (the owner did it).
+    public let source: String
+    public let side: String?
+    public let symbol: String?
+    public let shares: String?
+    public let price: String?
+    public let amount: String?
+    public let guruID: String?
     public let messageID: String?
     public let orderID: String?
-    public let reason: String?
-    public let status: String?
     public var id: Int { sequence }
 
     enum CodingKeys: String, CodingKey {
-        case sequence, at, kind, reason, status
+        case sequence, at, kind, source, side, symbol, shares, price, amount
+        case guruID = "guru_id"
         case messageID = "message_id"
         case orderID = "order_id"
     }
 }
 
-public struct AccountEventPage: Codable, Equatable, Sendable {
+public struct AccountFeedPage: Codable, Equatable, Sendable {
     public let accountID: String
-    public let items: [AccountEvent]
+    public let items: [AccountFeedItem]
     public let nextBeforeSeq: Int?
     enum CodingKeys: String, CodingKey {
         case accountID = "account_id"

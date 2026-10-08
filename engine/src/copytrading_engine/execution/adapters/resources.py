@@ -64,6 +64,7 @@ from copytrading_engine.execution.domain.recovery import (
 from copytrading_engine.execution.domain.signals import CopyConfig
 from copytrading_engine.execution.domain.sizing import DestinationSignal
 from copytrading_engine.execution.domain.values import BrokerAccountNumber
+from copytrading_engine.execution.presentation.account_feed import AccountFeedPage, account_feed
 from copytrading_engine.execution.presentation.operator_views import (
     AccountEventPage,
     AccountOverview,
@@ -208,6 +209,14 @@ class ExecutionResources:
 
     def event_page(self, before_seq: int | None, limit: int) -> AccountEventPage:
         return event_page(self.data_dir.name, self.store.event_page(before_seq, limit), limit)
+
+    def feed_page(self, before_seq: int | None, limit: int) -> AccountFeedPage:
+        return account_feed(
+            self.data_dir.name,
+            self.engine.ledger.snapshot(),
+            self.store.feed_events(before_seq, limit),
+            limit,
+        )
 
     def entry_block_reason(self) -> str | None:
         control = self.engine.ledger.snapshot().control
