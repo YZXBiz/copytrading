@@ -12,6 +12,30 @@ func runActivityCardTests() throws {
     try aTrimmedBuyIsTradedSmallerAndSaysByHowMuch()
     try aSkipNamesTheLimitWithItsNumbers()
     try aCallHeldForApprovalAsksToBeApproved()
+    try aDeadlineReadsOnTheOwnersClock()
+}
+
+private let losAngeles = TimeZone(identifier: "America/Los_Angeles")!
+private let english = Locale(identifier: "en_US")
+
+/// Times format with a narrow no-break space before AM/PM; compare them as people read them.
+private func plain(_ text: String?) -> String? {
+    text?.replacingOccurrences(of: "\u{202F}", with: " ")
+}
+
+/// A waiting call's deadline, 20:00 New York, in the owner's zone, said as today, tomorrow, or a day.
+@MainActor
+private func aDeadlineReadsOnTheOwnersClock() throws {
+    let deadline = WaitingCall.endOfTradingDay(of: try Date("2026-10-05T15:00:00Z", strategy: .iso8601))
+    let morning = try Date("2026-10-05T15:00:00Z", strategy: .iso8601)
+    let dayBefore = try Date("2026-10-04T20:00:00Z", strategy: .iso8601)
+    let daysBefore = try Date("2026-10-02T15:00:00Z", strategy: .iso8601)
+    let today = plain(TradingDeadlineText.text(deadline, now: morning, zone: losAngeles, locale: english))
+    try #require(today == "5:00 PM today", "the deadline read \(today ?? "nil")")
+    let tomorrow = plain(TradingDeadlineText.text(deadline, now: dayBefore, zone: losAngeles, locale: english))
+    try #require(tomorrow == "5:00 PM tomorrow", "the deadline read \(tomorrow ?? "nil")")
+    let later = plain(TradingDeadlineText.text(deadline, now: daysBefore, zone: losAngeles, locale: english))
+    try #require(later == "Mon 5:00 PM", "the deadline read \(later ?? "nil")")
 }
 
 private func readings() throws -> [PostReading] {
@@ -114,18 +138,15 @@ private func aCallHeldForApprovalAsksToBeApproved() throws {
     let sameDay = try Date("2026-10-05T15:00:00Z", strategy: .iso8601)
     let nextDay = try Date("2026-10-06T15:00:00Z", strategy: .iso8601)
 
-    let open = ActivityCardOutcome(source, skipped: false, now: sameDay)
+    let open = ActivityCardOutcome(source, skipped: false, now: sameDay, zone: losAngeles, locale: english)
     let late = ActivityCardOutcome(source, skipped: false, now: nextDay)
 
     try #require(open.title == "Waiting for you", "badge was \(open.title)")
+    try #require(open.accounts.first?.lines.first?.what == "Waiting for your approval", "lines were \(open.accounts.first?.lines ?? [])")
     try #require(
-        open.accounts.first?.lines
-            == [
-                .init(
-                    what: "Waiting for your approval",
-                    why:
-                        "You asked to approve every order for this account. You can approve it until 20:00 New York time.")
-            ], "lines were \(open.accounts.first?.lines ?? [])")
+        plain(open.accounts.first?.lines.first?.why)
+            == "You asked to approve every order for this account. Approve it by 5:00 PM today, when trading ends.",
+        "lines were \(open.accounts.first?.lines ?? [])")
     try #require(open.accounts.first?.waits == true, "the account did not wait")
     try #require(
         late.accounts.first?.lines.first?.what == "Not sent",

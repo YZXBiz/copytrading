@@ -72,6 +72,9 @@ func aCallTheAccountTradedOrRefusedDoesNotWait(outcome: String) throws {
     ("2026-10-06T14:00:00Z", true),  // the next morning
 ])
 func aWaitingCallExpiresWhenItsTradingDayEnds(now: String, expired: Bool) throws {
+    #expect(
+        WaitingCall.endOfTradingDay(of: try Date("2026-10-05T15:00:00Z", strategy: .iso8601))
+            == (try Date("2026-10-06T00:00:00Z", strategy: .iso8601)), "20:00 New York is midnight UTC in October")
     let waiting = try #require(
         WaitingCall(try post(decision: "review", status: "review_required", outcomes: [], suggested: [buy("SCO", "20")])))
 
