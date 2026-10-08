@@ -28,9 +28,13 @@ struct ActivityCardOutcome {
     /// approved a held call by hand.
     static let carriedOn: Set<String> = ["order_linked", "pending", "approved_by_owner"]
 
-    init(_ source: SourceActivity, skipped: Bool, resume: ResumeWait = .none, now: Date = .now) {
+    init(
+        _ source: SourceActivity, skipped: Bool, resume: ResumeWait = .none, now: Date = .now,
+        zone: TimeZone = .current, locale: Locale = .current
+    ) {
         let waiting = WaitingCall(source)
         let open = waiting.map { !skipped && !$0.hasExpired(at: now) } ?? false
+        let deadline = waiting?.deadline.map { TradingDeadlineText.text($0, now: now, zone: zone, locale: locale) } ?? ""
         accounts = source.destinations.map { destination in
             let waits = waiting?.accountIDs.contains(destination.accountID) == true
             let resumeBy = resume.deadlines[destination.accountID]
@@ -38,7 +42,7 @@ struct ActivityCardOutcome {
                 id: destination.accountID, environment: destination.environment,
                 lines: Self.lines(
                     for: destination, in: source, waits: waits, open: open, skipped: skipped, resumeBy: resumeBy,
-                    now: now),
+                    now: now, deadline: deadline),
                 waits: waits && open)
             account.awaitsResume = resumeBy != nil
             return account
@@ -78,7 +82,7 @@ struct ActivityCardOutcome {
 
     private static func lines(
         for destination: DestinationActivity, in source: SourceActivity, waits: Bool, open: Bool, skipped: Bool,
-        resumeBy: Date?, now: Date
+        resumeBy: Date?, now: Date, deadline: String
     ) -> [Line] {
         var lines = destination.orders.map { order in
             Line(
@@ -111,8 +115,8 @@ struct ActivityCardOutcome {
                 ? L10n.string("You skipped this call.")
                 : open
                     ? L10n.string(
-                        approving
-                            ? "You can approve it until 20:00 New York time." : "You can copy it until 20:00 New York time.")
+                        approving ? "Approve it by %@, when trading ends." : "Copy it from here by %@, when trading ends.",
+                        deadline)
                     : L10n.string(
                         approving ? "Too late to approve: its trading day is over." : "Too late to copy: its trading day is over.")
             let what =

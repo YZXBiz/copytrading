@@ -1348,8 +1348,6 @@
 "The sell didn't say which buy it comes from" = "卖出没有说明对应哪一笔买入";
 "this account" = "此账户";
 "%@ New York time" = "纽约时间 %@";
-"Also copy calls %@, with limit orders." = "也跟单%@ 的信号，使用限价单。";
-"Also copy calls %@. Needs extended hours on." = "也跟单%@ 的信号。需要先开启盘前盘后交易。";
 "No guru is set up for this poster" = "这个发帖人没有设置信号源";
 "The model's reading didn't match the post" = "模型的解读和帖子对不上";
 "The model's answer couldn't be read" = "无法读取 AI 模型的回答";
@@ -1399,7 +1397,6 @@
 "Not bought" = "没有买入";
 "Not copied yet" = "还没跟单";
 "The call was for %@. Your max per order cut it to %@." = "这条信号要买 %@，单笔上限把它减到 %@。";
-"You can copy it until 20:00 New York time." = "纽约时间 20:00 前可以跟单。";
 "%@ already has %@ of %@. Buying %@ more would go over its %@ limit for one stock." = "%@ 已有 %@ 的 %@。再买 %@ 会超过单只股票上限 %@。";
 "%@ already holds %@ in total. Buying %@ more would go over its %@ total limit." = "%@ 总共已持有 %@。再买 %@ 会超过总额上限 %@。";
 "Read as · %@" = "解读为 · %@";
@@ -1476,7 +1473,6 @@
 "You approved this call" = "你已批准这条喊单";
 "Nothing was sent: Touch ID was not confirmed." = "没有发送任何订单：Touch ID 未通过。";
 "send these orders" = "发送这些订单";
-"You can approve it until 20:00 New York time." = "纽约时间 20:00 前可以批准。";
 "Too late to approve: its trading day is over." = "已来不及批准：这条信号的交易日已经结束。";
 "Not sent" = "未发送";
 "Set to **60**. The guru buys NVDA at **$200.00**. With **Maximum above signal price** at **%@%%**, your buy fills at **%@ or less**. The price jumps to **%@** and stays there, so nothing fills. After **60 seconds** the order is cancelled, so it can't fill hours later." = "设为 **60**。信号源以 **$200.00** 买入 NVDA。**高于信号价格的最高幅度**为 **%@%%** 时，你的买单最高只以 **%@ 或更低** 成交。价格涨到 **%@** 并停在那里，所以不会成交。**60 秒**后订单会被取消，不会过几个小时才成交。";
@@ -1701,3 +1697,9 @@
 "Resume by %@ to copy it." = "在 %@ 前恢复即可跟单。";
 "Resume now: after %@ it is too old to copy." = "请立即恢复：%@ 之后就太旧，无法跟单。";
 "Allows new entries in this account, so the held buy can be copied." = "允许这个账户开新仓，暂缓的买入就能跟单。";
+"%@ tomorrow" = "明天 %@";
+"Approve it by %@, when trading ends." = "请在交易结束前（%@）批准。";
+"Copy it from here by %@, when trading ends." = "请在交易结束前（%@）在这里复制。";
+"%@ your time (%@ New York)" = "你的时间 %@（纽约时间 %@）";
+"Also copy calls before and after regular hours, %@, with limit orders." = "在常规交易时段前后也复制（%@），使用限价单。";
+"Also copy calls overnight, %@. Needs extended hours on." = "夜间也复制（%@）。需要开启盘前盘后交易。";

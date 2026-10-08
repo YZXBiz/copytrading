@@ -115,7 +115,7 @@ struct AccountEditorSheet: View {
                     behavior(
                         "Trade in extended hours",
                         hint: L10n.string(
-                            "Also copy calls %@, with limit orders.",
+                            "Also copy calls before and after regular hours, %@, with limit orders.",
                             MarketHoursText.hours([((4, 0), (9, 30)), ((16, 0), (20, 0))])),
                         isOn: $account.policy.extendedHours
                     )
@@ -126,7 +126,7 @@ struct AccountEditorSheet: View {
                     behavior(
                         "Trade overnight",
                         hint: L10n.string(
-                            "Also copy calls %@. Needs extended hours on.", MarketHoursText.hours([((20, 0), (4, 0))])),
+                            "Also copy calls overnight, %@. Needs extended hours on.", MarketHoursText.hours([((20, 0), (4, 0))])),
                         isOn: $account.policy.overnight
                     )
                     .onChange(of: account.policy.overnight) { _, on in

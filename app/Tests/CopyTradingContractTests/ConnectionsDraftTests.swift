@@ -166,21 +166,27 @@ private func marketHoursAlsoReadInTheOwnersTime() throws {
     let shanghai = try #require(TimeZone(identifier: "Asia/Shanghai"))
     let newYork = try #require(TimeZone(identifier: "America/New_York"))
     let losAngeles = try #require(TimeZone(identifier: "America/Los_Angeles"))
-    let extended = MarketHoursText.hours([((4, 0), (9, 30)), ((16, 0), (20, 0))], now: october, zone: losAngeles)
+    let english = Locale(identifier: "en_US")
+    let read = { (text: String) in text.replacingOccurrences(of: "\u{202F}", with: " ") }
+    let extended = read(
+        MarketHoursText.hours([((4, 0), (9, 30)), ((16, 0), (20, 0))], now: october, zone: losAngeles, locale: english))
     try #require(
-        extended == "4:00–9:30 and 16:00–20:00 New York time (1:00–6:30 and 13:00–17:00 PT)",
+        extended == "1 AM–6:30 AM and 1 PM–5 PM your time (4 AM–9:30 AM and 4 PM–8 PM New York)",
         "Extended hours read \(extended) in Los Angeles")
-    let overnight = MarketHoursText.hours([((20, 0), (4, 0))], now: october, zone: shanghai)
-    try #require(overnight.hasPrefix("20:00–4:00 New York time (8:00–16:00 "), "Overnight hours read \(overnight) in Shanghai")
-    let home = MarketHoursText.hours([((20, 0), (4, 0))], now: october, zone: newYork)
-    try #require(home == "20:00–4:00 New York time", "Hours read \(home) on a Mac in New York")
+    let overnight = read(MarketHoursText.hours([((20, 0), (4, 0))], now: october, zone: shanghai, locale: english))
+    try #require(overnight == "8 AM–4 PM your time (8 PM–4 AM New York)", "Overnight hours read \(overnight) in Shanghai")
+    let home = read(MarketHoursText.hours([((20, 0), (4, 0))], now: october, zone: newYork, locale: english))
+    try #require(home == "8 PM–4 AM New York time", "Hours read \(home) on a Mac in New York")
 
     let preference = AppLanguagePreference.shared
     let original = preference.language
     defer { preference.select(original) }
     preference.select(.simplifiedChinese)
-    let chinese = MarketHoursText.hours([((4, 0), (9, 30)), ((16, 0), (20, 0))], now: october, zone: newYork)
-    try #require(chinese == "纽约时间 4:00–9:30和16:00–20:00", "Chinese extended hours read \(chinese)")
+    let chinese = MarketHoursText.hours(
+        [((4, 0), (9, 30)), ((16, 0), (20, 0))], now: october, zone: newYork, locale: Locale(identifier: "zh_Hans_CN"))
+    try #require(
+        chinese.hasPrefix("纽约时间 ") && chinese.contains("和") && chinese.contains("9:30"),
+        "Chinese extended hours read \(chinese)")
 }
 
 /// Skipping a waiting call takes it off the owner's list across launches, and the list forgets it

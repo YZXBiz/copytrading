@@ -1348,8 +1348,6 @@
 "The sell didn't say which buy it comes from" = "The sell didn't say which buy it comes from";
 "this account" = "this account";
 "%@ New York time" = "%@ New York time";
-"Also copy calls %@, with limit orders." = "Also copy calls %@, with limit orders.";
-"Also copy calls %@. Needs extended hours on." = "Also copy calls %@. Needs extended hours on.";
 "No guru is set up for this poster" = "No guru is set up for this poster";
 "The model's reading didn't match the post" = "The model's reading didn't match the post";
 "The model's answer couldn't be read" = "The model's answer couldn't be read";
@@ -1399,7 +1397,6 @@
 "Not bought" = "Not bought";
 "Not copied yet" = "Not copied yet";
 "The call was for %@. Your max per order cut it to %@." = "The call was for %@. Your max per order cut it to %@.";
-"You can copy it until 20:00 New York time." = "You can copy it until 20:00 New York time.";
 "%@ already has %@ of %@. Buying %@ more would go over its %@ limit for one stock." = "%@ already has %@ of %@. Buying %@ more would go over its %@ limit for one stock.";
 "%@ already holds %@ in total. Buying %@ more would go over its %@ total limit." = "%@ already holds %@ in total. Buying %@ more would go over its %@ total limit.";
 "Read as · %@" = "Read as · %@";
@@ -1476,7 +1473,6 @@
 "You approved this call" = "You approved this call";
 "Nothing was sent: Touch ID was not confirmed." = "Nothing was sent: Touch ID was not confirmed.";
 "send these orders" = "send these orders";
-"You can approve it until 20:00 New York time." = "You can approve it until 20:00 New York time.";
 "Too late to approve: its trading day is over." = "Too late to approve: its trading day is over.";
 "Not sent" = "Not sent";
 "Set to **60**. The guru buys NVDA at **$200.00**. With **Maximum above signal price** at **%@%%**, your buy fills at **%@ or less**. The price jumps to **%@** and stays there, so nothing fills. After **60 seconds** the order is cancelled, so it can't fill hours later." = "Set to **60**. The guru buys NVDA at **$200.00**. With **Maximum above signal price** at **%@%%**, your buy fills at **%@ or less**. The price jumps to **%@** and stays there, so nothing fills. After **60 seconds** the order is cancelled, so it can't fill hours later.";
@@ -1701,3 +1697,9 @@
 "Resume by %@ to copy it." = "Resume by %@ to copy it.";
 "Resume now: after %@ it is too old to copy." = "Resume now: after %@ it is too old to copy.";
 "Allows new entries in this account, so the held buy can be copied." = "Allows new entries in this account, so the held buy can be copied.";
+"%@ tomorrow" = "%@ tomorrow";
+"Approve it by %@, when trading ends." = "Approve it by %@, when trading ends.";
+"Copy it from here by %@, when trading ends." = "Copy it from here by %@, when trading ends.";
+"%@ your time (%@ New York)" = "%@ your time (%@ New York)";
+"Also copy calls before and after regular hours, %@, with limit orders." = "Also copy calls before and after regular hours, %@, with limit orders.";
+"Also copy calls overnight, %@. Needs extended hours on." = "Also copy calls overnight, %@. Needs extended hours on.";
