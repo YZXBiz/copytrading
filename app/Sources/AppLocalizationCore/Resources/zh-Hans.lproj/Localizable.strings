@@ -1697,3 +1697,7 @@
 "Waited for you to resume entries after the restart, and got too old" = "重启后在等你恢复开仓，期间帖子已过期";
 "Still checking the account after a restart" = "重启后仍在检查账户";
 "Entries wait for you to resume them after the restart" = "重启后，开仓要等你恢复";
+"Waiting for you to resume entries in %@" = "等待你恢复 %@ 的开仓";
+"Resume by %@ to copy it." = "在 %@ 前恢复即可跟单。";
+"Resume now: after %@ it is too old to copy." = "请立即恢复：%@ 之后就太旧，无法跟单。";
+"Allows new entries in this account, so the held buy can be copied." = "允许这个账户开新仓，暂缓的买入就能跟单。";

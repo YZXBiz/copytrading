@@ -1843,6 +1843,15 @@ struct TradingSettingsSaveTests {
             "Lock retained the equity curve or its freshness"
         )
         print("CopyTradingContractTests: account pause failure, retry, resume, and status refresh passed")
+        // A held buy's Resume Entries runs the same resume as Accounts' button: one resume command.
+        let model = AppModel()
+        feature.authorizePrivateEvidence()
+        let before = await actions.recordedCommands().count
+        await model.resumeEntries(accountID: "paper", environment: .paper, feature: feature, using: actions)
+        let resumed = await actions.recordedCommands().dropFirst(before)
+        try check(
+            resumed.map(\.action) == [.resume] && resumed.first?.accountID == "paper",
+            "Resume Entries did not send one resume for paper: \(resumed.map(\.action))")
     }
 
     private static func checkAccountFeatureLockInterleavings() async throws {

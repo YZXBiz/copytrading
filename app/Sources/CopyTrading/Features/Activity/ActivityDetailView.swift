@@ -15,10 +15,14 @@ struct ActivityDetailView: View {
     let evaluate: () -> Void
     /// Opens Accounts at an account whose holdings hold this call back.
     var reviewHoldings: (String) -> Void = { _ in }
+    /// Accounts that hold this post's buy until the owner resumes their entries after a restart.
+    var resume: ResumeWait = .none
+    /// Resumes an account's entries, as Accounts' button does.
+    var resumeEntries: (String) -> Void = { _ in }
     @State private var readerPosition = ScrollPosition(edge: .top)
 
     private var outcome: ActivityCardOutcome {
-        ActivityCardOutcome(item, skipped: skippedCalls.contains(item.sourceID))
+        ActivityCardOutcome(item, skipped: skippedCalls.contains(item.sourceID), resume: resume)
     }
 
     var body: some View {
@@ -203,6 +207,15 @@ struct ActivityDetailView: View {
                     }
                     if account.waits, let waiting = WaitingCall(item) {
                         waitingActions(waiting).padding(.top, 6)
+                    }
+                    if account.awaitsResume {
+                        Button(L10n.string("Resume Entries"), systemImage: "play.fill") { resumeEntries(account.id) }
+                            .buttonStyle(.borderedProminent)
+                            .buttonBorderShape(.capsule)
+                            .tint(.green)
+                            .padding(.top, 6)
+                            .accessibilityIdentifier("activity.resumeEntries")
+                            .accessibilityHint(L10n.string("Allows new entries in this account, so the held buy can be copied."))
                     }
                     if heldByHoldings(account.id) {
                         Button(L10n.string("Review in Accounts")) { reviewHoldings(account.id) }

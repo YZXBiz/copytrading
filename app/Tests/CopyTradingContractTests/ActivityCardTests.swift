@@ -12,6 +12,7 @@ func runActivityCardTests() throws {
     try aTrimmedBuyIsTradedSmallerAndSaysByHowMuch()
     try aSkipNamesTheLimitWithItsNumbers()
     try aCallHeldForApprovalAsksToBeApproved()
+    try aBuyHeldForAResumeAsksToResumeByItsDeadline()
 }
 
 private func readings() throws -> [PostReading] {
@@ -130,4 +131,39 @@ private func aCallHeldForApprovalAsksToBeApproved() throws {
     try #require(
         late.accounts.first?.lines.first?.what == "Not sent",
         "an expired approval read \(late.accounts.first?.lines.first?.what ?? "nil")")
+}
+
+@MainActor
+private func aBuyHeldForAResumeAsksToResumeByItsDeadline() throws {
+    // Posted 14:30:00Z; entries wait for the owner's Resume after a restart.
+    let source = try soun().destination("zhao-paper", status: "pending", outcomes: ["pending"]).build()
+    let resume = ResumeWait(source, waiting: ["zhao-paper"], signalAge: { _ in 120 })
+    let posted = try Date("2026-10-05T14:30:00Z", strategy: .iso8601)
+
+    try #require(
+        resume.deadlines["zhao-paper"] == posted.addingTimeInterval(120),
+        "deadline was \(String(describing: resume.deadlines["zhao-paper"]))")
+    let waiting = ActivityCardOutcome(source, skipped: false, resume: resume, now: posted.addingTimeInterval(30))
+    try #require(waiting.title == "Waiting for you", "badge was \(waiting.title)")
+    let account = try #require(waiting.accounts.first)
+    try #require(account.awaitsResume, "the account did not ask for a resume")
+    let line = try #require(account.lines.first)
+    try #require(line.what == "Waiting for you to resume entries in zhao-paper", "what was \(line.what)")
+    try #require(line.why?.hasPrefix("Resume by ") == true, "why was \(line.why ?? "nil")")
+    let late = ActivityCardOutcome(source, skipped: false, resume: resume, now: posted.addingTimeInterval(300))
+    try #require(
+        late.accounts.first?.lines.first?.why?.hasPrefix("Resume now") == true,
+        "a late resume read \(late.accounts.first?.lines.first?.why ?? "nil")")
+
+    // Without a waiting account, or once an order went out, nothing asks for a resume.
+    let ready = ActivityCardOutcome(
+        source, skipped: false, resume: ResumeWait(source, waiting: [], signalAge: { _ in 120 }))
+    try #require(ready.accounts.first?.awaitsResume == false, "a ready account asked for a resume")
+    try #require(
+        ready.accounts.first?.lines.first?.what == "Waiting to be sized and sent",
+        "a ready account read \(ready.accounts.first?.lines.first?.what ?? "nil")")
+    let skippedBuy = try soun().destination("zhao-paper", status: "done", outcomes: ["stale_waiting_for_resume"]).build()
+    try #require(
+        ResumeWait(skippedBuy, waiting: ["zhao-paper"], signalAge: { _ in 120 }).deadlines.isEmpty,
+        "a buy already skipped as too old still asked for a resume")
 }

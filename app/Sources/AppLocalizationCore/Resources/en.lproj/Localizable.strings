@@ -1697,3 +1697,7 @@
 "Waited for you to resume entries after the restart, and got too old" = "Waited for you to resume entries after the restart, and got too old";
 "Still checking the account after a restart" = "Still checking the account after a restart";
 "Entries wait for you to resume them after the restart" = "Entries wait for you to resume them after the restart";
+"Waiting for you to resume entries in %@" = "Waiting for you to resume entries in %@";
+"Resume by %@ to copy it." = "Resume by %@ to copy it.";
+"Resume now: after %@ it is too old to copy." = "Resume now: after %@ it is too old to copy.";
+"Allows new entries in this account, so the held buy can be copied." = "Allows new entries in this account, so the held buy can be copied.";

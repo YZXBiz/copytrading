@@ -101,6 +101,13 @@ struct ActivityView: View {
                         reviewHoldings: { accountID in
                             model.requestedAccountID = accountID
                             model.selectedScreen = .accounts
+                        },
+                        resume: ResumeWait(
+                            selectedItem, waiting: ResumeWait.waitingAccounts(feature.accounts),
+                            signalAge: ResumeWait.signalAge(in: model.savedTradingConfiguration)),
+                        resumeEntries: { accountID in
+                            let environment = feature.accounts.first { $0.accountID == accountID }?.environment
+                            Task { await model.resumeEntries(accountID: accountID, environment: environment, feature: feature) }
                         }
                     )
                 } else {

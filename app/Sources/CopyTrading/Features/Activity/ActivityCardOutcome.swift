@@ -16,6 +16,8 @@ struct ActivityCardOutcome {
         let lines: [Line]
         /// The account waits for the owner to copy or skip the post.
         let waits: Bool
+        /// The account holds the post's buy until the owner resumes its entries after a restart.
+        var awaitsResume = false
     }
 
     let title: String
@@ -26,16 +28,22 @@ struct ActivityCardOutcome {
     /// approved a held call by hand.
     static let carriedOn: Set<String> = ["order_linked", "pending", "approved_by_owner"]
 
-    init(_ source: SourceActivity, skipped: Bool, now: Date = .now) {
+    init(_ source: SourceActivity, skipped: Bool, resume: ResumeWait = .none, now: Date = .now) {
         let waiting = WaitingCall(source)
         let open = waiting.map { !skipped && !$0.hasExpired(at: now) } ?? false
         accounts = source.destinations.map { destination in
             let waits = waiting?.accountIDs.contains(destination.accountID) == true
-            return Account(
+            let resumeBy = resume.deadlines[destination.accountID]
+            var account = Account(
                 id: destination.accountID, environment: destination.environment,
-                lines: Self.lines(for: destination, in: source, waits: waits, open: open, skipped: skipped),
+                lines: Self.lines(
+                    for: destination, in: source, waits: waits, open: open, skipped: skipped, resumeBy: resumeBy,
+                    now: now),
                 waits: waits && open)
+            account.awaitsResume = resumeBy != nil
+            return account
         }
+        let awaitsResume = accounts.contains(where: \.awaitsResume)
         let orders = source.destinations.flatMap(\.orders).map { DestinationOutcome.order($0, count: 1) }
         let trimmed = source.destinations.flatMap(\.orders).contains(where: Self.wasTrimmed)
         let anySkip = source.destinations.contains { destination in
@@ -44,7 +52,7 @@ struct ActivityCardOutcome {
         }
         if source.decision == "ignore" {
             (title, tone) = (L10n.string("Ignored"), .inactive)
-        } else if open {
+        } else if open || awaitsResume {
             (title, tone) = (L10n.string("Waiting for you"), .caution)
         } else if let unsettled = orders.first(where: { $0.tone != .positive }) {
             // An order still working, cancelled, or failed says so before the post counts as traded.
@@ -69,7 +77,8 @@ struct ActivityCardOutcome {
     }
 
     private static func lines(
-        for destination: DestinationActivity, in source: SourceActivity, waits: Bool, open: Bool, skipped: Bool
+        for destination: DestinationActivity, in source: SourceActivity, waits: Bool, open: Bool, skipped: Bool,
+        resumeBy: Date?, now: Date
     ) -> [Line] {
         var lines = destination.orders.map { order in
             Line(
@@ -113,6 +122,17 @@ struct ActivityCardOutcome {
             lines.append(Line(what: what, why: L10n.sentences([L10n.sentence(reason), when])))
         } else if ["stale", "out_of_order"].contains(destination.status), lines.isEmpty {
             lines.append(Line(what: L10n.string("Not copied"), why: Reason.text(destination.status)))
+        }
+        if lines.isEmpty, let resumeBy {
+            // Entries wait for the owner after a restart; the buy waits with them while it is fresh.
+            let time = resumeBy.formatted(
+                .dateTime.hour().minute().locale(AppLanguagePreference.shared.language.locale))
+            lines.append(
+                Line(
+                    what: L10n.string("Waiting for you to resume entries in %@", destination.accountID),
+                    why: resumeBy > now
+                        ? L10n.string("Resume by %@ to copy it.", time)
+                        : L10n.string("Resume now: after %@ it is too old to copy.", time)))
         }
         if lines.isEmpty {
             lines.append(Line(what: DestinationOutcome(destination).detail, why: nil))
