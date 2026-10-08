@@ -1376,24 +1376,106 @@ struct TradingSettingsSaveTests {
         try check(model.selectedScreen == .accounts, "Applying changes moved the owner off the screen they used")
         try check(model.message == "Your changes are saved, and copying uses them now.", "Applying changes did not say they took effect")
 
-        // A change whose check fails: copying runs the saved setup again once the results close.
+        // A change whose check fails: the saved setup copies again at once, and the results stay
+        // readable in Setup Check.
         model.setupDraft.accounts[0].policy.maxOrderUSD = "300"
         let failing = try model.setupDraft.submission().0
         await starter.setFailingConfiguration(failing)
         model.checkAndStartCopying()
+        for _ in 0..<4_000 where model.message != "Your changes weren't saved, so copying continues with the saved setup." {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        try check(model.tradingStatus?.state == .running, model.message ?? "The saved setup did not copy again")
+        try check(
+            model.isShowingSetupCheck && model.tradingValidation?.report.activatable == false, "The failed check's results were not shown")
+        try check(model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD == "200", "A failed change replaced the saved setup")
+        try check(!model.isPausedToApplyChanges, "A resumed setup still counted as paused for changes")
+        await starter.setFailingConfiguration(nil)
+        model.isShowingSetupCheck = false
+
+        // With an example to look over, the readings wait for the owner while copying keeps
+        // running; Start Copying beside them pauses, checks, and starts without reading again.
+        model.setupDraft.routes[0].examples = [
+            TradingProfileExampleDraft(message: "Bought AAPL at 200", expectedAction: .buy, expectedSymbol: "AAPL")
+        ]
+        let beforeReview = await starter.events().count
+        model.checkAndStartCopying()
         for _ in 0..<4_000 where !model.isShowingSetupCheck || model.isValidatingTrading {
             try await Task.sleep(for: .milliseconds(1))
         }
-        try check(model.tradingValidation?.report.activatable == false, "The failing check did not show its results")
-        try check(model.tradingStatus?.state == .paused, "Copying was not paused for the check")
-        model.isShowingSetupCheck = false
-        await model.resumeSavedSetupIfPausedForChanges()
-        try check(model.tradingStatus?.state == .running, model.message ?? "The saved setup did not copy again")
-        try check(model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD == "200", "A failed change replaced the saved setup")
+        let reviewing = Array(await starter.events()[beforeReview...])
+        try check(reviewing == ["review_examples"], "Reading the examples did more than read them: \(reviewing)")
+        try check(model.tradingStatus?.state == .running, "Copying paused while the readings waited for the owner")
+        model.checkAndStartCopying()
+        for _ in 0..<4_000 where model.isShowingSetupCheck || model.isActivatingTrading || model.isPausedToApplyChanges {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        let started = Array(await starter.events()[beforeReview...])
         try check(
-            model.message == "Your changes weren't saved, so copying continues with the saved setup.",
-            "Resuming did not say the changes weren't saved")
+            started == ["review_examples", "pause", "validate", "start"],
+            "Starting beside the readings did not pause, check, and start once: \(started)")
+        try check(model.tradingStatus?.state == .running, "Copying did not run again after the readings")
+
+        // Locking while the check runs: the apply stops and the saved setup copies again.
+        let savedBeforeLock = model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD
+        model.setupDraft.accounts[0].policy.maxOrderUSD = "250"
+        model.setupDraft.routes[0].examples = []
+        await starter.setValidationSuspended(true)
+        model.checkAndStartCopying()
+        for _ in 0..<4_000 where !(model.isValidatingTrading && model.tradingStatus?.state == .paused) {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        try check(model.isPausedToApplyChanges, "The apply did not pause before its check")
+        await starter.setValidationSuspended(false)
+        await model.lockAccess()
+        try check(model.tradingStatus?.state == .running, model.message ?? "Locking mid-apply left copying paused")
+        try check(
+            model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD == savedBeforeLock, "Locking mid-apply saved the change")
+        try check(!model.isPausedToApplyChanges, "Locking mid-apply left the apply pending")
         print("CopyTradingContractTests: Apply Changes while copying pauses, checks, and starts; a failed check resumes the saved setup")
+        try await checkLiveResumeAfterApplyAsksOnce(configuration: configuration, secrets: secrets)
+    }
+
+    /// A live account's new setup asks for Touch ID once; refusing it puts the saved setup back
+    /// without asking again.
+    private static func checkLiveResumeAfterApplyAsksOnce(
+        configuration: TradingConfiguration, secrets: TradingSecrets
+    ) async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(
+            path: "app-model-apply-live-\(UUID().uuidString)", directoryHint: .isDirectory
+        )
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var saved = configuration
+        saved.accounts[0].environment = .live
+        let store = TradingConfigurationStore(
+            url: directory.appending(path: "configuration.json"), secrets: TestSecretRevisions()
+        )
+        try store.save(configuration: saved, revision: fakeEngineRevision(saved), secrets: secrets, when: .paused)
+        let starter = RecordingTradingStarter()
+        let owner = OwnerAnswers(confirms: false)
+        let model = AppModel(tradingConfigurationStore: store, tradingStarter: starter, appUnlock: try await unlocked(by: owner))
+        model.isTradingUnlocked = true
+        model.savedTradingConfiguration = saved
+        model.hasTradingSecrets = true
+        model.tradingStatus = try status(.running)
+        model.setupDraft.load(saved)
+        model.setupDraft.accounts[0].policy.maxOrderUSD = "150"
+        try check(model.isCopyingSavedSetup && model.canCheckAndStart, "A live change while copying could not be applied")
+
+        model.checkAndStartCopying()
+        for _ in 0..<4_000 where await !starter.events().contains("pause") {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        for _ in 0..<4_000 where model.tradingStatus?.state != .running || model.isPausedToApplyChanges {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        let confirmations = await owner.confirmations
+        try check(confirmations == 1, "Applying a live change asked for Touch ID \(confirmations) times")
+        try check(model.tradingStatus?.state == .running, model.message ?? "Refusing Touch ID left copying paused")
+        try check(
+            model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD == saved.accounts[0].policy.maxOrderUSD,
+            "A refused live change was saved")
+        print("CopyTradingContractTests: a refused live change asks once and puts the saved setup back")
     }
 
     /// A discarded check must not leave its "validated" banner behind, and locking must drop
