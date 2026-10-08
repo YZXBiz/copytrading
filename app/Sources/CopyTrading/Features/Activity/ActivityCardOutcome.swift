@@ -101,7 +101,10 @@ struct ActivityCardOutcome {
                 ].compactMap(\.self).joined(separator: " ").nilIfEmpty)
         }
         for (part, outcome) in destination.instructionOutcomes.enumerated()
-        where !Self.carriedOn.contains(outcome) && !WaitingCall.heldForOwner.contains(outcome) {
+        // A call waiting for the owner says why once, in its own block below; not as "Not bought" too.
+        where !Self.carriedOn.contains(outcome) && !WaitingCall.heldForOwner.contains(outcome)
+            && !(waits && outcome == "review_required")
+        {
             let selling = source.instructions.indices.contains(part) && source.instructions[part].action != "buy"
             let limit = destination.limitsHit.first { $0.part == part }
             lines.append(
