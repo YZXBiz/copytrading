@@ -12,13 +12,24 @@ struct ToolbarStatus: View {
         HStack(spacing: 10) {
             Button(action: refresh) {
                 // Before setup there is nothing to be fresh about.
-                ViewThatFits(in: .horizontal) {
-                    freshness(compact: false)
-                    freshness(compact: true)
+                HStack(spacing: 5) {
+                    ViewThatFits(in: .horizontal) {
+                        freshness(compact: false)
+                        freshness(compact: true)
+                    }
+                    if model.savedTradingConfiguration != nil {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Palette.tertiaryInk)
+                    }
                 }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .contentShape(.capsule)
             }
             .buttonStyle(.plain)
-            .help(L10n.string("Read accounts and activity again"))
+            .background(Palette.group.opacity(0.6), in: .capsule)
+            .help(L10n.string("Refresh now"))
             .accessibilityIdentifier("toolbar.refresh")
             .keyboardShortcut("r", modifiers: .command)
         }

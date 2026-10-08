@@ -6,6 +6,8 @@ import SwiftUI
 struct ActivityListView: View {
     let items: [SourceActivity]
     let directory: GuruDirectory
+    /// Several accounts are in view, so each row names the ones a post reached.
+    var showsAccounts = false
     @Binding var selection: SourceActivity.ID?
     @Binding var filter: ActivityFilter
     let hasMore: Bool
@@ -68,16 +70,19 @@ struct ActivityListView: View {
             selection = item.id
             focused = true
         } label: {
-            ActivityInboxRow(item: item, guruName: directory.name(for: item.guruID), preview: directory.preview(of: item))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    isSelected ? Palette.selection : hoveredID == item.id ? Palette.hover : .clear,
-                    in: .rect(cornerRadius: 10)
-                )
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hoveredID == item.id)
-                .contentShape(.rect)
+            ActivityInboxRow(
+                item: item, guruName: directory.name(for: item.guruID), preview: directory.preview(of: item),
+                showsAccounts: showsAccounts
+            )
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                isSelected ? Palette.selection : hoveredID == item.id ? Palette.hover : .clear,
+                in: .rect(cornerRadius: 10)
+            )
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hoveredID == item.id)
+            .contentShape(.rect)
         }
         .buttonStyle(QuietPressButtonStyle())
         .onHover { isHovering in

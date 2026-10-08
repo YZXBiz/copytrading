@@ -15,6 +15,22 @@ func runActivityCardTests() throws {
     try aBuyHeldForAResumeAsksToResumeByItsDeadline()
     try aDeadlineReadsOnTheOwnersClock()
     try theTimeZoneSettingMovesADeadline()
+    try activityShowsOnlyTheChosenAccount()
+}
+
+/// Choosing an account keeps the posts that reached it; every account shows all posts.
+@MainActor
+private func activityShowsOnlyTheChosenAccount() throws {
+    let both = try soun().destination("primary", status: "done", outcomes: ["order_linked"])
+        .destination("ira", status: "done", outcomes: ["order_linked"]).build()
+    let iraOnly = try soun().destination("ira", status: "done", outcomes: ["order_linked"]).build()
+    let chatter = try soun().build()
+    let state = ActivityScreenState()
+    try #require([both, iraOnly, chatter].allSatisfy(state.includes), "every account hid a post")
+    state.accountID = "primary"
+    try #require(state.includes(both), "primary's post was hidden")
+    try #require(!state.includes(iraOnly), "ira's post showed under primary")
+    try #require(!state.includes(chatter), "a post no account acted on showed under primary")
 }
 
 private let losAngeles = TimeZone(identifier: "America/Los_Angeles")!
@@ -64,8 +80,8 @@ private func readAsSaysEachCallInPlainWords() throws {
             "The reader couldn't tell what this post means.",
         ], "Read as lines changed: \(lines)")
     try #require(
-        try ReadAsText.facts(readings()[3].calls[0]) == ["Buy", "CBRS", "$160–$179", "no size"],
-        "Read as facts changed")
+        try ReadAsText.note(readings()[3].calls[0]) == "no size given, so a full position",
+        "Read as note changed")
 }
 
 @MainActor

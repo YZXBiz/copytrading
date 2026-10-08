@@ -25,7 +25,7 @@ struct AccountSection: View {
             Divider()
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .top, spacing: 20) {
-                    AccountBalancePanel(account: account)
+                    AccountBalancePanel(account: account, model: model, feature: feature)
                         .frame(minWidth: balanceMinWidth, maxWidth: .infinity, alignment: .leading)
                     if let policy {
                         Divider()
@@ -34,7 +34,7 @@ struct AccountSection: View {
                     }
                 }
                 VStack(alignment: .leading, spacing: 20) {
-                    AccountBalancePanel(account: account)
+                    AccountBalancePanel(account: account, model: model, feature: feature)
                     if let policy {
                         Divider()
                         AccountLimitsPanel(account: account, policy: policy)
@@ -43,6 +43,13 @@ struct AccountSection: View {
             }
             Divider()
             PageSection("Positions", symbol: "square.stack.3d.up") {
+                if let observedAt = account.balance?.observedAt {
+                    AccountFreshness(
+                        observedAt: observedAt, isRefreshing: false,
+                        engineStopped: model.runtimeState == .stopped || model.runtimeState == .failed,
+                        refresh: {}, compact: true)
+                }
+            } content: {
                 PositionsTable(
                     positions: account.positions,
                     accountID: account.accountID,

@@ -19,6 +19,8 @@ struct ActivityDetailView: View {
     var resume: ResumeWait = .none
     /// Resumes an account's entries, as Accounts' button does.
     var resumeEntries: (String) -> Void = { _ in }
+    /// The one account Activity is showing, or every account.
+    var accountID: String?
     @State private var readerPosition = ScrollPosition(edge: .top)
 
     private var outcome: ActivityCardOutcome {
@@ -49,14 +51,13 @@ struct ActivityDetailView: View {
         return VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 16) {
                 header(outcome)
-                ActivitySourceContentView(item: item, citedWords: item.reading?.citedWords ?? [])
+                quote
+                readAs.padding(.top, 2)
             }
             .padding(22)
-            hairline
-            readAs.padding(22)
             if item.decision != "ignore" {
                 hairline
-                accounts(outcome).padding(22)
+                accounts(outcome)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -65,6 +66,17 @@ struct ActivityDetailView: View {
             RoundedRectangle(cornerRadius: DesignTokens.readingCornerRadius)
                 .strokeBorder(Palette.hairline.opacity(0.7), lineWidth: 1)
         }
+    }
+
+    /// The guru's own words, set off like a quotation so they never read as the app's.
+    private var quote: some View {
+        HStack(alignment: .top, spacing: 14) {
+            RoundedRectangle(cornerRadius: 1.5)
+                .fill(Palette.hairline)
+                .frame(width: 3)
+            ActivitySourceContentView(item: item, citedWords: item.reading?.citedWords ?? [])
+        }
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var hairline: some View {
@@ -112,16 +124,18 @@ struct ActivityDetailView: View {
     private var readAs: some View {
         VStack(alignment: .leading, spacing: 10) {
             if let reading = item.reading {
-                label(L10n.string("Read as · %@", ReadAsText.kind(reading)))
                 if reading.calls.isEmpty {
                     readLine(ReadAsText.lines(reading).first ?? "")
+                    subline([ReadAsText.kind(reading), readBy].compactMap(\.self))
                 } else {
                     ForEach(Array(reading.calls.enumerated()), id: \.offset) { index, call in
-                        VStack(alignment: .leading, spacing: 8) {
+                        VStack(alignment: .leading, spacing: 4) {
                             readLine(ReadAsText.line(call))
-                            facts(ReadAsText.facts(call))
+                            subline(
+                                [index == 0 ? ReadAsText.kind(reading) : nil, ReadAsText.note(call), index == 0 ? readBy : nil]
+                                    .compactMap(\.self))
                         }
-                        .padding(.top, index == 0 ? 0 : 6)
+                        .padding(.top, index == 0 ? 0 : 8)
                     }
                 }
             } else {
@@ -151,29 +165,31 @@ struct ActivityDetailView: View {
             .fixedSize(horizontal: false, vertical: true)
     }
 
-    private func facts(_ facts: [String]) -> some View {
-        HStack(spacing: 6) {
-            ForEach(facts, id: \.self) { fact in
-                Text(fact)
-                    .font(DesignTokens.caption)
-                    .monospacedDigit()
-                    .foregroundStyle(Palette.secondaryInk)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Palette.well, in: .rect(cornerRadius: 6))
-            }
-        }
+    /// Who read the post, under the first call.
+    private var readBy: String? {
+        item.interpretedBy.map { L10n.string("read by %@", $0) }
     }
 
-    /// What each account did with the post, and why, with Copy and Skip where one waits.
+    /// The reading's quiet facts on one line: what kind of post it was, what the sentence leaves out.
+    private func subline(_ parts: [String]) -> some View {
+        let line = parts.joined(separator: " · ")
+        return Text(line.prefix(1).uppercased() + line.dropFirst())
+            .font(DesignTokens.caption)
+            .foregroundStyle(Palette.secondaryInk)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// What each account did with the post, and why, with Copy and Skip where one waits. Each
+    /// account is its own row, led by its name and Paper/Live badge, so it is never unclear whose
+    /// result this is.
     @ViewBuilder
     private func accounts(_ outcome: ActivityCardOutcome) -> some View {
-        VStack(alignment: .leading, spacing: 18) {
-            if outcome.accounts.isEmpty {
+        let shown = outcome.accounts.filter { accountID == nil || $0.id == accountID }
+        VStack(alignment: .leading, spacing: 0) {
+            if shown.isEmpty {
                 // "Yet" only while the trade is still on its way to the accounts; once delivered with
                 // no account attached, none will act on it.
                 let onTheWay = item.decision == "trade" && item.deliveryStatus != "delivered"
-                label(L10n.string("Your account"))
                 Text(
                     onTheWay
                         ? L10n.string("No account has acted on this post yet.")
@@ -181,51 +197,77 @@ struct ActivityDetailView: View {
                 )
                 .font(DesignTokens.bodyText)
                 .foregroundStyle(Palette.secondaryInk)
+                .padding(22)
             }
-            ForEach(outcome.accounts) { account in
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 6) {
-                        label(L10n.string("Your account · %@", account.id))
-                        if let environment = TradingEnvironment(rawValue: account.environment), environment == .live {
-                            EnvironmentBadge(environment: environment)
-                        }
+            ForEach(Array(shown.enumerated()), id: \.element.id) { index, account in
+                if index > 0 {
+                    Rectangle().fill(Palette.hairline.opacity(0.6)).frame(height: 1).padding(.leading, 62)
+                }
+                accountRow(account)
+                    .padding(.horizontal, 22)
+                    .padding(.vertical, 16)
+            }
+        }
+    }
+
+    private func accountRow(_ account: ActivityCardOutcome.Account) -> some View {
+        let environment = TradingEnvironment(rawValue: account.environment) ?? .paper
+        let status = item.destinations.first { $0.accountID == account.id }.map(DestinationOutcome.init)
+        return HStack(alignment: .top, spacing: 14) {
+            Image(systemName: "building.columns.fill")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 26, height: 26)
+                .background(environment == .live ? Color.orange.gradient : Palette.accent.gradient, in: .rect(cornerRadius: 7))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text(account.id)
+                        .font(DesignTokens.bodyEmphasis)
+                        .foregroundStyle(Palette.ink)
+                    EnvironmentBadge(environment: environment)
+                    Spacer(minLength: 8)
+                    if let status {
+                        StatusBadge(status.title, tone: status.tone)
                     }
-                    ForEach(Array(account.lines.enumerated()), id: \.offset) { _, line in
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(line.what)
-                                .font(DesignTokens.bodyEmphasis.scaled(by: 15.0 / 14))
-                                .foregroundStyle(Palette.ink)
+                }
+                ForEach(Array(account.lines.enumerated()), id: \.offset) { _, line in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(line.what)
+                            .font(DesignTokens.bodyText)
+                            .foregroundStyle(Palette.ink)
+                            .monospacedDigit()
+                        if let why = line.why {
+                            Text(why)
+                                .font(DesignTokens.caption)
+                                .foregroundStyle(Palette.secondaryInk)
                                 .monospacedDigit()
-                            if let why = line.why {
-                                Text(why)
-                                    .font(DesignTokens.bodyText)
-                                    .foregroundStyle(Palette.secondaryInk)
-                                    .monospacedDigit()
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
-                    if account.waits, let waiting = WaitingCall(item) {
-                        waitingActions(waiting).padding(.top, 6)
-                    }
-                    if account.awaitsResume {
-                        Button(L10n.string("Resume Entries"), systemImage: "play.fill") { resumeEntries(account.id) }
-                            .buttonStyle(.borderedProminent)
-                            .buttonBorderShape(.capsule)
-                            .tint(.green)
-                            .padding(.top, 6)
-                            .accessibilityIdentifier("activity.resumeEntries")
-                            .accessibilityHint(L10n.string("Allows new entries in this account, so the held buy can be copied."))
-                    }
-                    if heldByHoldings(account.id) {
-                        Button(L10n.string("Review in Accounts")) { reviewHoldings(account.id) }
-                            .controlSize(.small)
-                            .padding(.top, 4)
-                            .accessibilityIdentifier("activity.reviewHoldings")
-                    }
+                }
+                if account.waits, let waiting = WaitingCall(item) {
+                    waitingActions(waiting).padding(.top, 6)
+                }
+                if account.awaitsResume {
+                    Button(L10n.string("Resume Entries"), systemImage: "play.fill") { resumeEntries(account.id) }
+                        .buttonStyle(.borderedProminent)
+                        .buttonBorderShape(.capsule)
+                        .tint(.green)
+                        .padding(.top, 6)
+                        .accessibilityIdentifier("activity.resumeEntries")
+                        .accessibilityHint(L10n.string("Allows new entries in this account, so the held buy can be copied."))
+                }
+                if heldByHoldings(account.id) {
+                    Button(L10n.string("Review in Accounts")) { reviewHoldings(account.id) }
+                        .controlSize(.small)
+                        .padding(.top, 4)
+                        .accessibilityIdentifier("activity.reviewHoldings")
                 }
             }
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(L10n.string("Account %@", account.id))
     }
 
     /// The account refused this call until its holdings are settled, which happens in Accounts.

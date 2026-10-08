@@ -1,28 +1,21 @@
 import DesktopCore
 import SwiftUI
 
-/// The broker's own numbers for the account, with the time they were read.
+/// The broker's own numbers for the account, with when they were read and a way to read them now.
 struct AccountBalancePanel: View {
     let account: AccountOverview
+    let model: AppModel
+    let feature: AccountFeatureModel
 
     var body: some View {
         PageSection("Balance", symbol: "dollarsign.circle") {
             if let balance = account.balance {
-                Text(
-                    L10n.string(
-                        "as of %@",
-                        Humanize.date(balance.observedAt)?.formatted(
-                            Date.FormatStyle(
-                                date: .omitted,
-                                time: .shortened,
-                                locale: AppTime.locale,
-                                timeZone: AppTime.zone
-                            )
-                        ) ?? "—"
-                    )
+                AccountFreshness(
+                    observedAt: balance.observedAt,
+                    isRefreshing: feature.isRefreshing,
+                    engineStopped: model.runtimeState == .stopped || model.runtimeState == .failed,
+                    refresh: { Task { await feature.refresh(using: model.accountActions()) } }
                 )
-                .font(DesignTokens.caption)
-                .foregroundStyle(.secondary)
             }
         } content: {
             if let balance = account.balance {
