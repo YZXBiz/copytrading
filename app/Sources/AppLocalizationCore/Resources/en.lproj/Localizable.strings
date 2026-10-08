@@ -1769,7 +1769,6 @@
 "Why it ended" = "Why it ended";
 "You resumed entries" = "You resumed entries";
 "Your buys pay at most %@%% above the guru's price." = "Your buys pay at most %@%% above the guru's price.";
-"Your buys pay at most the guru's price, so it waited for the price to come down." = "Your buys pay at most the guru's price, so it waited for the price to come down.";
 "bid %@ · ask %@" = "bid %@ · ask %@";
 "by %@" = "by %@";
 "limit order" = "limit order";
@@ -1791,3 +1790,4 @@
 "%lld accounts" = "%lld accounts";
 "%@ · %@ · %@" = "%@ · %@ · %@";
 "Partly traded" = "Partly traded";
+"Your buys pay at most the guru's price, not a cent above, so it waited for the price to come down. Raise Maximum above signal price in the account's limits to let buys fill nearby." = "Your buys pay at most the guru's price, not a cent above, so it waited for the price to come down. Raise Maximum above signal price in the account's limits to let buys fill nearby.";

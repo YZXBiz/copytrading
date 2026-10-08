@@ -451,6 +451,18 @@ def _timeline(
     return tuple(sorted(steps, key=lambda step: (step.at, order[step.step])))
 
 
+# Orders cancelled before the reason was recorded: a cancel of CopyTrading's own unfilled order this
+# long after it went out is read as the order timeout, by far the usual cause; newer orders say.
+_TIMEOUT_EVIDENCE_SECONDS = 30
+
+
+def _older_cancel_reason(submitted_at: object, cancelled_at: dt.datetime) -> str:
+    if isinstance(submitted_at, dt.datetime):
+        if (cancelled_at - submitted_at).total_seconds() >= _TIMEOUT_EVIDENCE_SECONDS:
+            return "timeout"
+    return "cancel_requested"
+
+
 def _order_detail(order_events: tuple[JournalEvent, ...]) -> dict[str, object]:
     """What the journal adds to an order: how it went out, the quote then, and how it ended."""
     detail: dict[str, object] = {}
@@ -470,7 +482,9 @@ def _order_detail(order_events: tuple[JournalEvent, ...]) -> dict[str, object]:
             case SubmissionQuote():
                 detail.update(quote_bid=payload.quote.bid, quote_ask=payload.quote.ask)
             case CancelRequested():
-                requested = payload.reason or "cancel_requested"
+                requested = payload.reason or _older_cancel_reason(
+                    detail.get("submitted_at"), event.at
+                )
             case OrderUpdate() if payload.status.value in _ENDED:
                 status = payload.status.value
                 detail["ended_at"] = event.at

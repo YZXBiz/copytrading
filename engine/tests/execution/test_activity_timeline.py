@@ -104,3 +104,12 @@ def test_without_journal_events_the_outcome_still_reads():
 
     assert destination.timeline == ()
     assert destination.orders
+
+
+def test_an_older_cancel_without_a_reason_reads_as_the_timeout_when_it_came_late():
+    from copytrading_engine.execution.presentation.operator_views import _older_cancel_reason
+
+    sent = NOW
+    assert _older_cancel_reason(sent, sent + dt.timedelta(seconds=63)) == "timeout"
+    assert _older_cancel_reason(sent, sent + dt.timedelta(seconds=5)) == "cancel_requested"
+    assert _older_cancel_reason(None, sent) == "cancel_requested"

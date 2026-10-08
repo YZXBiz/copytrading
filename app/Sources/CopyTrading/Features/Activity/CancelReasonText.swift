@@ -62,7 +62,7 @@ enum CancelReasonText {
         if buying, let tolerance = Decimal(engine: order.entryTolerancePct) {
             parts.append(
                 tolerance == 0
-                    ? L10n.string("Your buys pay at most the guru's price, so it waited for the price to come down.")
+                    ? L10n.string("Your buys pay at most the guru's price, not a cent above, so it waited for the price to come down. Raise Maximum above signal price in the account's limits to let buys fill nearby.")
                     : L10n.string("Your buys pay at most %@%% above the guru's price.", tolerance.formatted()))
         }
         return parts.joined(separator: " ")

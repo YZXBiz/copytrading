@@ -1769,7 +1769,6 @@
 "Why it ended" = "结束原因";
 "You resumed entries" = "你恢复了开仓";
 "Your buys pay at most %@%% above the guru's price." = "你的买单最多比导师价高出 %@%%。";
-"Your buys pay at most the guru's price, so it waited for the price to come down." = "你的买单最多按导师价成交，所以在等价格回落。";
 "bid %@ · ask %@" = "买价 %@ · 卖价 %@";
 "by %@" = "由 %@";
 "limit order" = "限价单";
@@ -1791,3 +1790,4 @@
 "%lld accounts" = "%lld 个账户";
 "%@ · %@ · %@" = "%@ · %@ · %@";
 "Partly traded" = "部分成交";
+"Your buys pay at most the guru's price, not a cent above, so it waited for the price to come down. Raise Maximum above signal price in the account's limits to let buys fill nearby." = "你的买入最多按导师的价格成交，一分钱都不多付，所以它一直在等价格回落。在账户限额里调高“高于信号价的上限”，买单就能在附近价位成交。";
