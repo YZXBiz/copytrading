@@ -1,7 +1,7 @@
 import DesktopCore
 import SwiftUI
 
-/// The post's trip in four timed phases on a rail: received, read, sent, and how it ended, with
+/// The post's trip in four timed phases, one hairline row each: received, read, sent, and how it ended, with
 /// a post in flight's live step under the phase it is past.
 struct ActivityTimelineView: View {
     let timeline: PostTimeline
@@ -9,15 +9,13 @@ struct ActivityTimelineView: View {
     var progress: PostProgress?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(timeline.phases) { phase in
-                    let isLast = phase.id == timeline.phases.last?.id
-                    ActivityTimelineRow(phase: phase, isLast: isLast, progress: isLast ? progress : nil)
-                }
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(timeline.phases) { phase in
+                ActivityTimelineRow(phase: phase, progress: phase.id == timeline.phases.last?.id ? progress : nil)
             }
             if timeline.toOrder != nil || timeline.toFill != nil {
-                HStack(spacing: 18) {
+                Hairline()
+                HStack(spacing: 28) {
                     if let toOrder = timeline.toOrder {
                         total(L10n.string("Post to order sent"), toOrder)
                     }
@@ -25,6 +23,7 @@ struct ActivityTimelineView: View {
                         total(L10n.string("Post to fill"), toFill)
                     }
                 }
+                .padding(.top, 12)
             }
         }
         .accessibilityElement(children: .contain)
@@ -32,14 +31,13 @@ struct ActivityTimelineView: View {
     }
 
     private func total(_ label: String, _ seconds: TimeInterval) -> some View {
-        HStack(spacing: 6) {
-            Text(label)
-                .foregroundStyle(Palette.secondaryInk)
+        VStack(alignment: .leading, spacing: 5) {
+            ActivityLabel(text: label)
             Text(PostTimeline.duration(seconds))
+                .font(DesignTokens.statValue)
                 .monospacedDigit()
                 .foregroundStyle(Palette.ink)
-                .fontWeight(.medium)
         }
-        .font(DesignTokens.activityMeta)
+        .accessibilityElement(children: .combine)
     }
 }

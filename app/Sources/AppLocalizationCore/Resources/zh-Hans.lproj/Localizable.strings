@@ -1940,3 +1940,17 @@
 
 "Draw It Again" = "再画一次";
 "avg" = "平均";
+
+"Waiting its turn…" = "排队等候中…";
+"Reading the post…" = "正在阅读帖子…";
+"Sizing the order…" = "正在计算下单金额…";
+"Held for you" = "等你处理";
+"Sending to Alpaca…" = "正在发送到 Alpaca…";
+"In line to be read · %@" = "排队等待阅读 · %@";
+"%@ is reading it · %@" = "%@ 正在阅读 · %@";
+"Reading it · %@" = "正在阅读 · %@";
+"Working out each account's share · %@" = "正在计算每个账户的份额 · %@";
+"%@ picks it up on its next cycle · %@" = "%@ 将在下一轮处理 · %@";
+"%@ holds new buys until you resume entries · %@" = "%@ 暂停新买入，等你恢复开仓 · %@";
+"%@ is waiting for a fill · %@ of %@" = "%@ 等待成交 · %@ / %@";
+"%@ is waiting for a fill · %@" = "%@ 等待成交 · %@";

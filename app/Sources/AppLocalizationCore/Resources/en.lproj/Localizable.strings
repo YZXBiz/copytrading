@@ -1940,3 +1940,17 @@
 
 "Draw It Again" = "Draw It Again";
 "avg" = "avg";
+
+"Waiting its turn…" = "Waiting its turn…";
+"Reading the post…" = "Reading the post…";
+"Sizing the order…" = "Sizing the order…";
+"Held for you" = "Held for you";
+"Sending to Alpaca…" = "Sending to Alpaca…";
+"In line to be read · %@" = "In line to be read · %@";
+"%@ is reading it · %@" = "%@ is reading it · %@";
+"Reading it · %@" = "Reading it · %@";
+"Working out each account's share · %@" = "Working out each account's share · %@";
+"%@ picks it up on its next cycle · %@" = "%@ picks it up on its next cycle · %@";
+"%@ holds new buys until you resume entries · %@" = "%@ holds new buys until you resume entries · %@";
+"%@ is waiting for a fill · %@ of %@" = "%@ is waiting for a fill · %@ of %@";
+"%@ is waiting for a fill · %@" = "%@ is waiting for a fill · %@";

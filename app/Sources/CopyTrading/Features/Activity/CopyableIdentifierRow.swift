@@ -25,7 +25,7 @@ struct CopyableIdentifierRow: View {
                 .labelStyle(.iconOnly)
                 .buttonStyle(.borderless)
                 .font(DesignTokens.activityMeta)
-                .foregroundStyle(copiedAt == nil ? Palette.tertiaryInk : Color.green)
+                .foregroundStyle(copiedAt == nil ? Palette.tertiaryInk : Palette.ink)
                 .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
                 .help(L10n.string("Copy"))
             }

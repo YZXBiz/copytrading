@@ -25,10 +25,10 @@ struct ActivitySourceContentView: View {
                         markdown: said,
                         options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
                     )) ?? AttributedString(said)
-                Text(marked(attributed))
-                    .font(DesignTokens.activityQuote)
+                Text(quoted(marked(attributed)))
+                    .font(DisplayFont.font(size: 24, relativeTo: .title2))
                     .foregroundStyle(Palette.ink)
-                    .lineSpacing(3)
+                    .lineSpacing(5)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityLabel(L10n.string("Original post: %@", said))
@@ -40,9 +40,7 @@ struct ActivitySourceContentView: View {
 
             if !item.sourceEvent.attachments.isEmpty || item.sourceEvent.attachmentsOmitted > 0 {
                 VStack(alignment: .leading, spacing: 9) {
-                    Text(L10n.string("Attachments"))
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Palette.secondaryInk)
+                    ActivityLabel(text: L10n.string("Attachments"))
                     ForEach(Array(item.sourceEvent.attachments.enumerated()), id: \.offset) { _, attachment in
                         ActivityAttachmentEvidenceView(attachment: attachment)
                     }
@@ -57,7 +55,12 @@ struct ActivitySourceContentView: View {
         .textSelection(.enabled)
     }
 
-    /// The post with each cited word underlined in the accent, quietly; words the post shows
+    /// The post between curly quotes, so it reads as the guru's line.
+    private func quoted(_ text: AttributedString) -> AttributedString {
+        AttributedString("\u{201C}") + text + AttributedString("\u{201D}")
+    }
+
+    /// The post with each cited word underlined in grey dots, quietly; words the post shows
     /// differently stay plain.
     private func marked(_ text: AttributedString) -> AttributedString {
         var text = text
@@ -67,7 +70,7 @@ struct ActivitySourceContentView: View {
                 text.startIndex, offsetBy: plain.distance(from: plain.startIndex, to: range.lowerBound))
             let end = text.characters.index(start, offsetBy: plain.distance(from: range.lowerBound, to: range.upperBound))
             text[start..<end].underlineStyle = Text.LineStyle(
-                pattern: .dot, color: Palette.accent.opacity(colorScheme == .dark ? 0.6 : 0.45))
+                pattern: .dot, color: Palette.tertiaryInk.opacity(colorScheme == .dark ? 0.8 : 0.6))
         }
         return text
     }

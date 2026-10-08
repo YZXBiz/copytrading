@@ -1,14 +1,13 @@
 import SwiftUI
 
-/// The name of one group in Technical details: "Timeline", "Order in primary", "Discord IDs".
+/// The name of one group in Technical details in tracked capitals: "TIMELINE", "ORDER IN PRIMARY",
+/// "DISCORD IDS".
 struct TechnicalSectionTitle: View {
     let text: String
 
     var body: some View {
-        Text(text)
-            .font(DesignTokens.activitySection)
-            .foregroundStyle(Palette.secondaryInk)
-            .padding(.bottom, 4)
+        ActivityLabel(text: text, color: Palette.secondaryInk)
+            .padding(.bottom, 8)
             .accessibilityAddTraits(.isHeader)
     }
 }

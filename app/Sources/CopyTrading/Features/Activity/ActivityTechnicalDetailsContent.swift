@@ -2,8 +2,8 @@ import DesktopCore
 import SwiftUI
 
 /// What Technical details shows when opened: the post's timed trip from Discord to the broker,
-/// each order's facts, who read it, and the Discord IDs to look it up by, on a surface that
-/// matches the card above.
+/// each order's facts, who read it, and the Discord IDs to look it up by, as hairline rows on the
+/// page with no frame.
 struct ActivityTechnicalDetailsContent: View {
     let item: SourceActivity
     @Environment(\.postProgressContext) private var progressContext
@@ -17,8 +17,8 @@ struct ActivityTechnicalDetailsContent: View {
     private var authorID: String? { item.authorID ?? item.sourceEvent.authorID }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 28) {
+            VStack(alignment: .leading, spacing: 0) {
                 TechnicalSectionTitle(text: L10n.string("Timeline"))
                 ActivityTimelineView(timeline: PostTimeline(item), progress: PostProgress(item, context: progressContext))
             }
@@ -27,7 +27,7 @@ struct ActivityTechnicalDetailsContent: View {
                     OrderFactsView(order: order, account: destination.accountID)
                 }
             }
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 0) {
                 TechnicalSectionTitle(text: L10n.string("Reading"))
                 if let interpretedBy = item.interpretedBy {
                     TechnicalFactRow(label: "Read by") { Text(interpretedBy) }
@@ -52,7 +52,7 @@ struct ActivityTechnicalDetailsContent: View {
                     }
                 }
             }
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 0) {
                 TechnicalSectionTitle(text: L10n.string("Discord IDs"))
                 if let authorID {
                     CopyableIdentifierRow(label: "Author", value: authorID)
@@ -64,17 +64,11 @@ struct ActivityTechnicalDetailsContent: View {
                     CopyableIdentifierRow(label: "Message", value: messageID)
                 }
             }
-            Label(L10n.string("Orders follow the reading above, not the raw text of the post."), systemImage: "info.circle")
+            Text(L10n.string("Orders follow the reading above, not the raw text of the post."))
                 .font(DesignTokens.activityMeta)
                 .foregroundStyle(Palette.tertiaryInk)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.page, in: .rect(cornerRadius: DesignTokens.readingCornerRadius))
-        .overlay {
-            RoundedRectangle(cornerRadius: DesignTokens.readingCornerRadius)
-                .strokeBorder(Palette.hairline.opacity(0.7), lineWidth: 1)
-        }
-        .padding(.top, 10)
     }
 }
