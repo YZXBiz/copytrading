@@ -532,6 +532,8 @@ final class AppModel {
     var validatedConfiguration: TradingConfiguration? { pendingTradingActivation?.configuration }
 
     @ObservationIgnored private var tradingValidationTask: Task<Void, Never>?
+    /// Applying changes while copying runs, from reading the examples to starting the new setup.
+    @ObservationIgnored var applyChangesTask: Task<Void, Never>?
     @ObservationIgnored private var startupIntent = AppStartupIntent()
     @ObservationIgnored private let appUnlock: AppUnlock
     @ObservationIgnored private let shutdownCoordinator = ShutdownCoordinator()
@@ -1090,37 +1092,47 @@ final class AppModel {
         }
     }
 
+    /// Checks the setup in two stages: how each guru's examples read, which needs no pause, then
+    /// every connection, which the engine runs only while copying is paused. `reviewOnly` stops
+    /// after the readings; `reviewed` skips them for readings the owner already looked over.
+    /// Returns whether every stage asked for passed with nothing left for the owner.
+    @discardableResult
     func validateTradingSettings(
-        _ configuration: TradingConfiguration, enteredSecrets: TradingSecrets
-    ) async {
+        _ configuration: TradingConfiguration, enteredSecrets: TradingSecrets,
+        reviewOnly: Bool = false, reviewed: [String: ProfileExampleReview]? = nil
+    ) async -> Bool {
         defer { checkOutcomeMessage = message }
         guard !isRunningBackupRestore else {
             message = L10n.string("Wait for the backup or restore to finish, then check the setup.")
-            return
+            return false
         }
         guard isTradingUnlocked else {
             message = L10n.string("Unlock CopyTrading first.")
-            return
+            return false
         }
         guard let tradingConfigurationStore else {
             message = L10n.string("CopyTrading is still starting. Check the setup again in a moment.")
-            return
+            return false
         }
-        guard tradingStatus?.state == .paused, !isTradingCommandPending else {
+        guard reviewOnly || tradingStatus?.state == .paused, !isTradingCommandPending else {
             message = L10n.string("Pause copying before checking the setup.")
-            return
+            return false
         }
         guard let validator: (any TradingStarting) = tradingStarter ?? engineActions else {
             message = L10n.string("CopyTrading is still starting. Check the setup again in a moment.")
-            return
+            return false
         }
-        guard !isValidatingTrading, !isActivatingTrading else { return }
+        guard !isValidatingTrading, !isActivatingTrading else { return false }
         isValidatingTrading = true
         tradingValidation = nil
-        profileExampleReviews = [:]
-        profileExamplesAcknowledged = false
+        if let reviewed {
+            profileExampleReviews = reviewed
+        } else {
+            profileExampleReviews = [:]
+            profileExamplesAcknowledged = false
+            isShowingSetupCheck = false
+        }
         pendingTradingActivation = nil
-        isShowingSetupCheck = false
         defer { isValidatingTrading = false }
         do {
             try Self.validateTradingConfiguration(configuration)
@@ -1170,8 +1182,8 @@ final class AppModel {
                 configuration.profiles.map { ($0.profileRevision, $0) },
                 uniquingKeysWith: { first, _ in first }
             )
-            var reviews: [String: ProfileExampleReview] = [:]
-            for route in configuration.routes {
+            var reviews = reviewed ?? [:]
+            for route in configuration.routes where reviewed == nil {
                 guard let profile = profilesByRevision[route.profileRevision] else {
                     throw TradingSettingsError.invalidConfiguration(
                         L10n.string(
@@ -1199,7 +1211,11 @@ final class AppModel {
                 message = L10n.string(
                     "An example was read differently from what you expected. Fix the playbook or the example, then check again.")
                 isShowingSetupCheck = true
-                return
+                return false
+            }
+            if reviewOnly {
+                message = nil
+                return true
             }
             let validation = try await validator.validateTrading(
                 configuration: configuration, secrets: secrets
@@ -1210,7 +1226,7 @@ final class AppModel {
             guard validation.report.activatable, let activationToken = validation.activationToken else {
                 message = L10n.string("Some connections need attention. Nothing was saved.")
                 isShowingSetupCheck = true
-                return
+                return false
             }
             pendingTradingActivation = PendingTradingActivation(
                 configuration: configuration,
@@ -1220,7 +1236,8 @@ final class AppModel {
             )
             // The changes bar says the check passed; the readings still need a look when present.
             message = nil
-            isShowingSetupCheck = !reviews.isEmpty
+            if reviewed == nil { isShowingSetupCheck = !reviews.isEmpty }
+            return true
         } catch {
             if error is CancellationError {
                 tradingValidation = nil
@@ -1228,6 +1245,7 @@ final class AppModel {
             } else {
                 message = Self.userMessage(for: error)
             }
+            return false
         }
     }
 
@@ -1249,8 +1267,11 @@ final class AppModel {
 
     /// Checks the setup, then starts it when everything passed and there is nothing to look
     /// over; otherwise shows what needs the owner.
-    func checkThenStart(_ configuration: TradingConfiguration, enteredSecrets: TradingSecrets) async {
-        await validateTradingSettings(configuration, enteredSecrets: enteredSecrets)
+    func checkThenStart(
+        _ configuration: TradingConfiguration, enteredSecrets: TradingSecrets,
+        reviewed: [String: ProfileExampleReview]? = nil
+    ) async {
+        await validateTradingSettings(configuration, enteredSecrets: enteredSecrets, reviewed: reviewed)
         guard !Task.isCancelled else { return }
         if canStartCopyingFromCheck {
             await activateValidatedTradingSettings()
@@ -1393,12 +1414,15 @@ final class AppModel {
         }
     }
 
-    func startTrading() async {
+    /// Starts the saved setup. `resumingSavedSetup` puts back a setup that was copying moments
+    /// ago, paused only to apply changes: the owner approved it already, so neither the unlock nor
+    /// a live account's Touch ID is asked for again.
+    func startTrading(resumingSavedSetup: Bool = false) async {
         guard !isRunningBackupRestore else {
             message = L10n.string("Wait for the backup or restore preview to finish before starting processing.")
             return
         }
-        guard isTradingUnlocked else {
+        guard isTradingUnlocked || resumingSavedSetup else {
             message = L10n.string("Unlock trading controls before starting processing.")
             return
         }
@@ -1420,7 +1444,9 @@ final class AppModel {
             guard let saved = try tradingConfigurationStore.load() else {
                 throw TradingSettingsError.missingCredentials("the saved credentials in Connections")
             }
-            guard await confirmLiveStart(saved.configuration) else { return }
+            if !resumingSavedSetup {
+                guard await confirmLiveStart(saved.configuration) else { return }
+            }
             let validation = try await starter.validateTrading(
                 configuration: saved.configuration, secrets: saved.secrets
             )
@@ -1512,6 +1538,10 @@ final class AppModel {
     @discardableResult
     func windowDidClose(_ sessionID: UUID) -> Task<Void, Never>? {
         guard windowSessionID == sessionID else { return nil }
+        // Changes still being applied stop here; the saved setup copies again below.
+        let applying = applyChangesTask
+        applyChangesTask = nil
+        applying?.cancel()
         windowSessionID = nil
         accessGeneration += 1
         isTradingUnlocked = false
@@ -1521,6 +1551,7 @@ final class AppModel {
         discardSetupWork()
         return Task { [weak self] in
             guard let self else { return }
+            await self.finishInterruptedApply(applying)
             await self.assistant.reset()
             await self.discardAgentProposals()
             await self.appUnlock.closeWindow(sessionID)
@@ -1653,6 +1684,10 @@ final class AppModel {
     }
 
     func lockAccess() async {
+        let applying = applyChangesTask
+        applyChangesTask = nil
+        applying?.cancel()
+        await finishInterruptedApply(applying)
         isTradingUnlocked = false
         isUnlockingTrading = false
         accessMessage = nil
