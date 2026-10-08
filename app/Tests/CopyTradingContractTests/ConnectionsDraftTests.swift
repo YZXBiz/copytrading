@@ -13,6 +13,24 @@ func runConnectionsDraftTests() throws {
     try marketHoursAlsoReadInTheOwnersTime()
     try skippedCallsAreKeptAWeek()
     try orderTimeoutExampleUsesTheAccountsTolerance()
+    try alertsSayWhatConnectStillNeeds()
+}
+
+/// An alerts sheet names what is missing instead of closing; a secret saved for the same service
+/// counts, since a blank field keeps it.
+@MainActor
+private func alertsSayWhatConnectStillNeeds() throws {
+    var draft = ConnectionsDraft()
+    draft.notificationService = .telegram
+    try #require(draft.missingForAlerts(savedSecret: false) != nil, "An empty Telegram sheet asked for nothing")
+    draft.notificationChatID = "12345"
+    try #require(draft.missingForAlerts(savedSecret: true) == nil, "A saved bot token was not counted")
+    try #require(draft.missingForAlerts(savedSecret: false) != nil, "A missing bot token was not named")
+    draft.notificationToken = "fake-bot-token"
+    try #require(draft.missingForAlerts(savedSecret: false) == nil, "A filled Telegram sheet still asked for more")
+    draft.notificationService = .discord
+    draft.notificationToken = ""
+    try #require(draft.missingForAlerts(savedSecret: false) != nil, "An empty webhook sheet asked for nothing")
 }
 
 @MainActor

@@ -14,6 +14,32 @@ func runSetupImportTests() throws {
     try aFileWithNothingRecognisableIsEmpty()
     try fieldsTheFileDoesNotNameKeepTheirValues()
     try theSummaryNeverShowsAValue()
+    try switchingServiceNeverKeepsTheLastServicesKey()
+    try severalKeysWithoutAServiceChooseNone()
+}
+
+/// A key typed for DeepSeek must never be sent to the service a file switches to.
+@MainActor
+private func switchingServiceNeverKeepsTheLastServicesKey() throws {
+    var draft = ConnectionsDraft()
+    draft.provider = .deepseek
+    draft.providerAPIKey = "typed-deepseek-key"
+    SetupImport(text: "Model service: Anthropic, model claude-sonnet-5-5").apply(to: &draft)
+    try #require(draft.provider == .anthropic, "The service line did not switch the service")
+    try #require(draft.providerAPIKey.isEmpty, "A switched service kept the last service's key")
+}
+
+/// Two services' keys and no service line: neither is chosen, and the summary says why.
+@MainActor
+private func severalKeysWithoutAServiceChooseNone() throws {
+    let setup = SetupImport(text: "DeepSeek API key: fake-deepseek\nAnthropic key: fake-anthropic")
+    var draft = ConnectionsDraft()
+    draft.provider = .openai
+    setup.apply(to: &draft)
+    try #require(draft.provider == .openai && draft.providerAPIKey.isEmpty, "Several keys still chose a service")
+    try #require(
+        setup.missing.contains(L10n.string("Several model keys: choose a service")),
+        "The summary did not say several keys need a service chosen")
 }
 
 /// The layout of the owner's own key file, with made-up values.

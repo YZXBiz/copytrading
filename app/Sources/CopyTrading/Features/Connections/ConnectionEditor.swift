@@ -13,6 +13,8 @@ struct ConnectionEditor: View {
     /// The field the cursor is in, by its label.
     @FocusState private var focused: String?
     @State private var isChecking = false
+    /// What an alerts sheet still needs before Connect can check it.
+    @State private var missingAlerts: String?
 
     private var subject: ConnectionCheckSubject { ConnectionCheckSubject(kind) }
 
@@ -57,6 +59,9 @@ struct ConnectionEditor: View {
             ConnectionGuideCard(article: guide)
             VStack(alignment: .leading, spacing: 14) {
                 fields
+            }
+            if let missingAlerts {
+                Callout(missingAlerts, tone: .caution)
             }
             if let failedCheck {
                 ConnectionCheckCallout(
@@ -199,6 +204,8 @@ struct ConnectionEditor: View {
     private func connect() {
         if kind == .alerts {
             let draft = model.setupDraft
+            missingAlerts = draft.missingForAlerts(savedSecret: alertSecretSaved)
+            guard missingAlerts == nil else { return }
             model.setupDraft.notificationsEnabled = !draft.notificationChatID.trimmed.isEmpty || !draft.notificationToken.isEmpty
         }
         Task {
@@ -207,6 +214,11 @@ struct ConnectionEditor: View {
             isChecking = false
             if check?.state != .failed { done() }
         }
+    }
+
+    /// The alerts service's secret is in the Keychain from a saved setup for the same service.
+    private var alertSecretSaved: Bool {
+        model.hasTradingSecrets && model.savedTradingConfiguration?.notification?.service == model.setupDraft.notificationService
     }
 
     /// Clears the chat and the bot token, which turns alerts off as the panel closes.

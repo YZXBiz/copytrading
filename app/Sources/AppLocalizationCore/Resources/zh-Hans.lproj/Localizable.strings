@@ -1666,3 +1666,8 @@
 "That file isn't a setup CopyTrading can read. Choose a small text file with your keys." = "CopyTrading 无法读取这个文件。请选择一个含有密钥的小文本文件。";
 "Nothing in that file looks like a setup: no Discord, model, or Alpaca lines." = "这个文件里没有设置内容：没有 Discord、模型或 Alpaca 的行。";
 "CopyTrading couldn't move the file to the Trash. Delete it yourself once you've started copying." = "CopyTrading 无法把文件移到废纸篓。开始跟单后请自行删除。";
+"Several model keys: choose a service" = "有多个模型密钥：请选择一个服务";
+"Paste the channel's webhook URL to connect." = "粘贴频道的 Webhook URL 后再连接。";
+"the chat ID" = "聊天 ID";
+"the bot token" = "机器人令牌";
+"Enter %@ to connect." = "填写%@后再连接。";

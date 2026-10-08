@@ -60,9 +60,36 @@ struct ConnectionStatus: Equatable {
         if route.connection.map({ accounts.contains($0.accountID.trimmed) }) != true {
             return .init(text: "Needs an account to copy into", tone: .caution)
         }
-        let isSaved = model.savedTradingConfiguration?.profiles.contains { $0.guruID == route.guruID.trimmed } == true
-        guard isSaved, !model.hasUnsavedSetupChanges else { return .init(text: "Not saved yet", tone: .inactive) }
+        guard isSaved(route, in: model) else { return .init(text: "Not saved yet", tone: .inactive) }
         return running(model) { _ in .init(text: "Copying", tone: .positive) } ?? .init(text: "Saved", tone: .inactive)
+    }
+
+    /// This guru reads and copies as saved: their route and profile match the saved ones, so an
+    /// edit elsewhere in the setup leaves them alone.
+    @MainActor
+    private static func isSaved(_ route: TradingRouteDraft, in model: AppModel) -> Bool {
+        let guruID = route.guruID.trimmed
+        guard let saved = model.savedTradingConfiguration, saved.profiles.contains(where: { $0.guruID == guruID }),
+            let draft = try? model.setupDraft.submission().0
+        else { return false }
+        return draft.routes.filter { $0.guruID == guruID } == saved.routes.filter { $0.guruID == guruID }
+            && draft.profiles.filter { $0.guruID == guruID } == saved.profiles.filter { $0.guruID == guruID }
+    }
+
+    /// The draft of this service differs from what copying runs: a new token or key, or other
+    /// settings. Its latest check then speaks for it, not the running engine.
+    @MainActor
+    private static func isEdited(_ subject: ConnectionCheckSubject, in model: AppModel) -> Bool {
+        guard let saved = model.savedTradingConfiguration else { return true }
+        let draft = model.setupDraft
+        switch subject {
+        case .discord:
+            return !draft.discordToken.isEmpty || (try? draft.submission().0.source) != saved.source
+        case .interpreter:
+            return !draft.providerAPIKey.isEmpty || draft.providerConfiguration != saved.provider
+        case .alerts, .account:
+            return false
+        }
     }
 
     /// The latest check of what is typed: checking, connected, or not.
@@ -80,6 +107,7 @@ struct ConnectionStatus: Equatable {
     private static func live(
         _ model: AppModel, _ subject: ConnectionCheckSubject, _ reading: (TradingStatus) -> ConnectionStatus
     ) -> ConnectionStatus? {
+        if isEdited(subject, in: model), let checked = checked(subject, in: model) { return checked }
         if let running = running(model, reading) { return running }
         if let checked = checked(subject, in: model) { return checked }
         guard model.savedTradingConfiguration != nil, model.tradingStatus != nil else { return nil }

@@ -1666,3 +1666,8 @@
 "That file isn't a setup CopyTrading can read. Choose a small text file with your keys." = "That file isn't a setup CopyTrading can read. Choose a small text file with your keys.";
 "Nothing in that file looks like a setup: no Discord, model, or Alpaca lines." = "Nothing in that file looks like a setup: no Discord, model, or Alpaca lines.";
 "CopyTrading couldn't move the file to the Trash. Delete it yourself once you've started copying." = "CopyTrading couldn't move the file to the Trash. Delete it yourself once you've started copying.";
+"Several model keys: choose a service" = "Several model keys: choose a service";
+"Paste the channel's webhook URL to connect." = "Paste the channel's webhook URL to connect.";
+"the chat ID" = "the chat ID";
+"the bot token" = "the bot token";
+"Enter %@ to connect." = "Enter %@ to connect.";
