@@ -20,7 +20,9 @@ enum DestinationOutcome: Equatable {
             return
         }
         if destination.status == "review_required" {
-            self = .needsReview(Reason.text(destination.status))
+            // Say why it waits ("The post repeats an earlier call of the guru's"), not that it waits.
+            let why = destination.instructionOutcomes.first { $0 != "review_required" && $0 != "pending" }
+            self = .needsReview(Reason.text(why ?? destination.status))
         } else if ["stale", "out_of_order", "ignored"].contains(destination.status) {
             self = .skipped(Reason.text(destination.status))
         } else if destination.status == "done" {
