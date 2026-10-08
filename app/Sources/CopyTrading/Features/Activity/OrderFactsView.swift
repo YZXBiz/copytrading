@@ -35,7 +35,7 @@ struct OrderFactsView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 0) {
             TechnicalSectionTitle(text: L10n.string("Order in %@", account))
             TechnicalFactRow(label: "Type") { Text(kind) }
             if let session {
