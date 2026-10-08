@@ -21,6 +21,7 @@ struct AccountEntryState: Equatable {
             case "enabled_waiting_for_session": (text, tone) = ("Taking entries at the open", .positive)
             case "manual_resume_required": (text, tone) = ("Waiting for you to resume", .caution)
             case "recovery_pending": (text, tone) = ("Checking the account", .neutral)
+            case "inactive_evidence", "processing_stopped": (text, tone) = ("Not copying right now", .inactive)
             default: (text, tone) = (Reason.text(account.readiness), .caution)
             }
         }

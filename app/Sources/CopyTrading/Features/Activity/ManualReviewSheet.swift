@@ -8,6 +8,9 @@ struct ManualReviewSheet: View {
     let feature: ManualReviewFeatureModel
     /// Asks for Touch ID when an order goes to a live account or one that asks to approve orders.
     let confirmOrders: (Set<String>) async throws -> Void
+    /// The engine isn't running, so nothing can be saved or placed until it starts.
+    let engineStopped: Bool
+    let startEngine: () -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var correctionID = UUID().uuidString.lowercased()
@@ -28,13 +31,17 @@ struct ManualReviewSheet: View {
         accounts: [AccountOverview],
         operations: (any ManualReviewOperations)?,
         feature: ManualReviewFeatureModel,
-        confirmOrders: @escaping (Set<String>) async throws -> Void
+        confirmOrders: @escaping (Set<String>) async throws -> Void,
+        engineStopped: Bool = false,
+        startEngine: @escaping () -> Void = {}
     ) {
         self.source = source
         self.accounts = accounts
         self.operations = operations
         self.feature = feature
         self.confirmOrders = confirmOrders
+        self.engineStopped = engineStopped
+        self.startEngine = startEngine
         let available = Set(accounts.map(\.accountID))
         let needsReview = Set(source.destinations.filter { $0.status == "review_required" }.map(\.accountID))
         _selectedAccountIDs = State(initialValue: available.intersection(copying.map { Set($0.accountIDs) } ?? needsReview))
@@ -45,6 +52,15 @@ struct ManualReviewSheet: View {
             }
             _reason = State(initialValue: L10n.string("Copied a call that was waiting for me"))
         }
+    }
+
+    /// The last save failed because the engine was gone, not because of the correction.
+    private var engineDisconnected: Bool {
+        guard let correctionRequest, let error = feature.errors[correctionRequest.correctionID] else { return false }
+        return [
+            EngineTransportError.disconnected.errorDescription, ProcessSupervisorError.missingEngineClient.errorDescription,
+        ]
+        .contains(error)
     }
 
     private var savedCorrection: ManualCorrectionRecord? {
@@ -113,13 +129,9 @@ struct ManualReviewSheet: View {
                                     Text(account.accountID)
                                     EnvironmentBadge(environment: account.environment)
                                 }
-                                Text(
-                                    L10n.string(
-                                        "%@ · entries %@", L10n.string(Humanize.code(account.readiness)),
-                                        L10n.string(Humanize.code(account.entryPermission)))
-                                )
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
+                                Text(L10n.string(AccountEntryState(account).text))
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
                             }
                         }
                         .compactSwitch()
@@ -131,7 +143,7 @@ struct ManualReviewSheet: View {
                 } footer: {
                     Text(
                         L10n.string(
-                            "Each selected account is checked independently for permission, recovery, risk, activity, and ownership."))
+                            "Before anything is placed, CopyTrading checks each account's limits and what it holds."))
                 }
 
                 Section(L10n.string("Correction")) {
@@ -160,8 +172,16 @@ struct ManualReviewSheet: View {
                     Button(L10n.string("Add Instruction"), systemImage: "plus") { instructions.append(ManualInstructionDraft()) }
                         .buttonStyle(.borderless)
                         .disabled(correctionRequest != nil || instructions.count >= 20)
+                    if engineStopped || engineDisconnected {
+                        HStack {
+                            Callout(
+                                L10n.string("CopyTrading's engine isn't running, so this can't be saved or placed yet."),
+                                tone: .caution)
+                            Button(L10n.string("Start Engine"), action: startEngine)
+                        }
+                    }
                     if correctionRequest == nil {
-                        Button(L10n.string("Save Correction")) {
+                        Button(L10n.string(selectedAccountIDs.count > 1 ? "Save and Preview Orders" : "Save and Preview Order")) {
                             guard canSave else { return }
                             let request = ManualCorrectionRequest(
                                 correctionID: correctionID,
@@ -172,12 +192,18 @@ struct ManualReviewSheet: View {
                                 instructions: instructions.map(\.value)
                             )
                             correctionRequest = request
-                            Task { await feature.saveCorrection(source: source, request: request, using: operations) }
+                            Task {
+                                await feature.saveCorrection(source: source, request: request, using: operations)
+                                // Saved: go straight on to what the order would be.
+                                if let saved = feature.corrections[request.correctionID]?.correction {
+                                    await makePreviews(for: saved)
+                                }
+                            }
                         }
                         .buttonStyle(.borderedProminent)
                         .disabled(!canSave || operations == nil)
                     } else if feature.canRetryCorrection(correctionID) {
-                        Button(L10n.string("Retry Saving Correction")) {
+                        Button(L10n.string("Try Again")) {
                             Task {
                                 await feature.retryCorrection(
                                     source: source, correctionID: correctionID, using: operations

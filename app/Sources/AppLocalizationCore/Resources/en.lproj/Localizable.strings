@@ -39,7 +39,6 @@
 "%@ · %@ on this Mac" = "%@ · %@ on this Mac";
 "%@ · as of %@" = "%@ · as of %@";
 "%@ · channel %@ · %@" = "%@ · channel %@ · %@";
-"%@ · entries %@" = "%@ · entries %@";
 "%@ · instruction %lld" = "%@ · instruction %lld";
 "%@ → %@ · %@" = "%@ → %@ · %@";
 "%@, %@" = "%@, %@";
@@ -308,7 +307,6 @@
 "e.g. NVDA" = "e.g. NVDA";
 "Each account's change" = "Each account's change";
 "Each guru's channel, how to read their calls, and the account that copies them." = "Each guru's channel, how to read their calls, and the account that copies them.";
-"Each selected account is checked independently for permission, recovery, risk, activity, and ownership." = "Each selected account is checked independently for permission, recovery, risk, activity, and ownership.";
 "Earlier buy" = "Earlier buy";
 "Earlier message" = "Earlier message";
 "Earlier outcomes" = "Earlier outcomes";
@@ -648,7 +646,6 @@
 "Preview Orders" = "Preview Orders";
 "Previews read fresh market and account state. They never place or cancel an order." = "Previews read fresh market and account state. They never place or cancel an order.";
 "Previous commands" = "Previous commands";
-"Price quoted in the message" = "Price quoted in the message";
 "Prices are checked again the moment you press Sell. If anything changed, nothing is sent." = "Prices are checked again the moment you press Sell. If anything changed, nothing is sent.";
 "Problems" = "Problems";
 "Processed" = "Processed";
@@ -723,7 +720,6 @@
 "Resume Restore" = "Resume Restore";
 "Resume with a read-only broker check, or roll back to the previous generation." = "Resume with a read-only broker check, or roll back to the previous generation.";
 "Retry Pending Self-Test" = "Retry Pending Self-Test";
-"Retry Saving Correction" = "Retry Saving Correction";
 "Review" = "Review";
 "Review %@…" = "Review %@…";
 "Review Again" = "Review Again";
@@ -748,7 +744,6 @@
 "Same installation" = "Same installation";
 "Save" = "Save";
 "Save a guru and start copying before evaluating older posts." = "Save a guru and start copying before evaluating older posts.";
-"Save Correction" = "Save Correction";
 "Save Log…" = "Save Log…";
 "Saved" = "Saved";
 "Saved guru" = "Saved guru";
@@ -823,7 +818,6 @@
 "Source activity error: %@" = "Source activity error: %@";
 "Source fraction: %@ · evidence %@" = "Source fraction: %@ · evidence %@";
 "Source post" = "Source post";
-"Source price" = "Source price";
 "Start" = "Start";
 "Start Copying" = "Start Copying";
 "Start copying automatically" = "Start copying automatically";
@@ -1716,3 +1710,11 @@
 "Automatic (%@)" = "Automatic (%@)";
 "New York (market time)" = "New York (market time)";
 "City or time zone" = "City or time zone";
+"Price in the post" = "Price in the post";
+"The guru's price" = "The guru's price";
+"Save and Preview Order" = "Save and Preview Order";
+"Save and Preview Orders" = "Save and Preview Orders";
+"Try Again" = "Try Again";
+"CopyTrading's engine isn't running, so this can't be saved or placed yet." = "CopyTrading's engine isn't running, so this can't be saved or placed yet.";
+"Before anything is placed, CopyTrading checks each account's limits and what it holds." = "Before anything is placed, CopyTrading checks each account's limits and what it holds.";
+"Not copying right now" = "Not copying right now";

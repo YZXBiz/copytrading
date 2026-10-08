@@ -16,8 +16,8 @@ struct ManualInstructionSection: View {
             }
             TextField(L10n.string("Symbol"), text: $instruction.symbol, prompt: Text(L10n.string("e.g. NVDA")))
                 .accessibilityLabel(L10n.string("Symbol"))
-            TextField(L10n.string("Source price"), text: $instruction.price, prompt: Text(L10n.string("Price quoted in the message")))
-                .accessibilityLabel(L10n.string("Source price"))
+            TextField(L10n.string("Price in the post"), text: $instruction.price, prompt: Text(L10n.string("The guru's price")))
+                .accessibilityLabel(L10n.string("Price in the post"))
             if instruction.action == .buy {
                 TextField(L10n.string("Size"), text: size, prompt: Text(L10n.string("e.g. 1/6. Leave empty for the full position.")))
                     .accessibilityLabel(L10n.string("Size"))

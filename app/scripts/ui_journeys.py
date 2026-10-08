@@ -1653,10 +1653,8 @@ def j36_approve_and_skip(app: AppDriver) -> None:
         symbol = unused[1]
         _post_and_wait_for_hold(app, setup, symbol)
         app.click("activity.copy")
-        app.wait_for("Save Correction", timeout=30, name="approval-sheet")
-        app.click("Save Correction")
-        app.wait_for("Preview Orders", timeout=60, name="approval-saved")
-        app.click("Preview Orders")
+        app.wait_for("Save and Preview Order", timeout=30, name="approval-sheet")
+        app.click("Save and Preview Order")
         app.wait_for("Review 1 Ready Order…", timeout=60, name="approval-preview")
         app.click("Review 1 Ready Order…")
         app.click("Confirm 1 order(s)", outcome_checked=True)

@@ -128,7 +128,9 @@ struct ActivityView: View {
                 accounts: feature.accounts,
                 operations: model.accountActions(),
                 feature: reviewFeature,
-                confirmOrders: { try await model.confirmOrders(for: $0, reason: L10n.string("send these orders")) }
+                confirmOrders: { try await model.confirmOrders(for: $0, reason: L10n.string("send these orders")) },
+                engineStopped: model.runtimeState == .stopped || model.runtimeState == .failed,
+                startEngine: model.requestStart
             )
         case .historicalEvaluation(let source):
             HistoricalProfileEvaluationSheet(source: source, model: model)
