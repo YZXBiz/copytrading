@@ -1238,6 +1238,30 @@ struct TradingSettingsSaveTests {
             "A failing check did not show on the Discord row")
         try check(!model.setupProgress.isDone(.discord), "A failed check still ticked the Discord step")
 
+        // While copying runs the saved setup, an edited token's failed check still speaks for its
+        // row, and an edit elsewhere leaves the guru saved.
+        model.savedTradingConfiguration = configuration
+        model.tradingStatus = try TradingStatusBuilder(.running).connected().build()
+        try check(
+            ConnectionStatus.discord(model)?.text == L10n.string("Couldn't connect"),
+            "A failed check of an edited token showed the running setup's Connected")
+        model.setupDraft.load(configuration)
+        model.setupDraft.clearSecrets()
+        try check(
+            ConnectionStatus.discord(model)?.text == L10n.string("Connected"),
+            "An unedited Discord row did not show the running engine's reading")
+        let route = model.setupDraft.routes[0]
+        try check(ConnectionStatus.guru(route, in: model).text == L10n.string("Copying"), "A saved guru did not read Copying")
+        model.setupDraft.accounts[0].policy.maxOrderUSD = "987"
+        try check(
+            ConnectionStatus.guru(route, in: model).text == L10n.string("Copying"),
+            "Changing an account's limit marked an unchanged guru as not saved")
+        model.setupDraft.routes[0].playbook += " Edited."
+        try check(
+            ConnectionStatus.guru(model.setupDraft.routes[0], in: model).text == L10n.string("Not saved yet"),
+            "Editing a guru's playbook did not mark that guru as not saved")
+        model.tradingStatus = try status(.paused)
+
         model.isTradingUnlocked = false
         let locked = await model.checkConnection(.discord)
         try check(locked == nil, "A locked app checked a connection")

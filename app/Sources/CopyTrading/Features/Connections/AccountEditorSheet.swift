@@ -117,12 +117,21 @@ struct AccountEditorSheet: View {
                         hint: L10n.string(
                             "Also copy calls %@, with limit orders.",
                             MarketHoursText.hours([((4, 0), (9, 30)), ((16, 0), (20, 0))])),
-                        isOn: $account.policy.extendedHours)
+                        isOn: $account.policy.extendedHours
+                    )
+                    // Overnight runs only with extended hours, so turning those off ends it too.
+                    .onChange(of: account.policy.extendedHours) { _, on in
+                        if !on { account.policy.overnight = false }
+                    }
                     behavior(
                         "Trade overnight",
                         hint: L10n.string(
                             "Also copy calls %@. Needs extended hours on.", MarketHoursText.hours([((20, 0), (4, 0))])),
-                        isOn: $account.policy.overnight)
+                        isOn: $account.policy.overnight
+                    )
+                    .onChange(of: account.policy.overnight) { _, on in
+                        if on { account.policy.extendedHours = true }
+                    }
                     behavior(
                         "Copy exits", hint: "Sell when the guru sells. Off means you sell copied shares yourself.",
                         isOn: $account.policy.copyExits)

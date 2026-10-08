@@ -1675,3 +1675,8 @@
 "Lock and discard your unsaved setup changes?" = "Lock and discard your unsaved setup changes?";
 "Discard and Lock" = "Discard and Lock";
 "What you typed in Connections is dropped, keys included. Your saved setup stays." = "What you typed in Connections is dropped, keys included. Your saved setup stays.";
+"Several model keys: choose a service" = "Several model keys: choose a service";
+"Paste the channel's webhook URL to connect." = "Paste the channel's webhook URL to connect.";
+"the chat ID" = "the chat ID";
+"the bot token" = "the bot token";
+"Enter %@ to connect." = "Enter %@ to connect.";

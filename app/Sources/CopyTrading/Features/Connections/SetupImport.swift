@@ -109,6 +109,8 @@ struct SetupImport: Equatable {
             if draft.provider != provider {
                 draft.provider = provider
                 draft.modelName = SetupHelp.prefilledModel(for: provider) ?? ""
+                // A key typed for the last service never goes to this one.
+                draft.providerAPIKey = ""
             }
             if let modelName { draft.modelName = modelName }
             if let key = providerKeys[provider] { draft.providerAPIKey = key }
@@ -161,7 +163,10 @@ struct SetupImport: Equatable {
         var lines: [String] = []
         if channels == nil { lines.append(L10n.string("Discord channels")) }
         if discordToken == nil { lines.append(L10n.string("Discord token")) }
-        if provider == nil { lines.append(L10n.string("A model service and its key")) }
+        if provider == nil {
+            lines.append(
+                L10n.string(providerKeys.count > 1 ? "Several model keys: choose a service" : "A model service and its key"))
+        }
         if alpacaKey == nil || alpacaSecret == nil { lines.append(L10n.string("Alpaca paper key and secret")) }
         if guruName == nil { lines.append(L10n.string("A guru: add one under Gurus")) }
         return lines

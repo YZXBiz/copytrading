@@ -1675,3 +1675,8 @@
 "Lock and discard your unsaved setup changes?" = "锁定并丢弃未保存的设置更改？";
 "Discard and Lock" = "丢弃并锁定";
 "What you typed in Connections is dropped, keys included. Your saved setup stays." = "你在“连接”中输入的内容会被丢弃，包括密钥。已保存的设置不受影响。";
+"Several model keys: choose a service" = "有多个模型密钥：请选择一个服务";
+"Paste the channel's webhook URL to connect." = "粘贴频道的 Webhook URL 后再连接。";
+"the chat ID" = "聊天 ID";
+"the bot token" = "机器人令牌";
+"Enter %@ to connect." = "填写%@后再连接。";
