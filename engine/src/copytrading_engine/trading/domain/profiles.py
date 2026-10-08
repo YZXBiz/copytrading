@@ -359,10 +359,7 @@ class ProfileExampleReviewService:
                 )
             )
 
-        cost_notice = (
-            f"Examples are interpreted by {self.provider} ({self.model}); "
-            "provider charges may apply."
-        )
+        cost_notice = "Each example is one request to your model service, which may charge for it."
         activation_allowed = all(comparison.matches for comparison in comparisons)
         return ProfileExampleReview(
             guru_id=profile.guru_id,

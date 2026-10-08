@@ -958,7 +958,6 @@
 "Use any OpenAI-compatible service" = "Use any OpenAI-compatible service";
 "Use the left and right arrow keys to read recorded points." = "Use the left and right arrow keys to read recorded points.";
 "Values redacted" = "Values redacted";
-"Verified as %@" = "Verified as %@";
 "Version on this Mac" = "Version on this Mac";
 "vs previous close" = "vs previous close";
 "Waiting" = "Waiting";
@@ -1637,3 +1636,8 @@
 "Step %lld of %lld" = "Step %lld of %lld";
 "Previous step" = "Previous step";
 "Next step" = "Next step";
+"Signed in to Discord" = "Signed in to Discord";
+"%@ answered as %@" = "%@ answered as %@";
+"Alpaca live account found" = "Alpaca live account found";
+"Alpaca paper account found" = "Alpaca paper account found";
+"Each example is one request to your model service, which may charge for it." = "Each example is one request to your model service, which may charge for it.";

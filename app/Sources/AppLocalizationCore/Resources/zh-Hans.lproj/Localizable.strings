@@ -958,7 +958,6 @@
 "Use any OpenAI-compatible service" = "使用任意兼容 OpenAI 的服务";
 "Use the left and right arrow keys to read recorded points." = "使用左右方向键浏览已记录的数据点。";
 "Values redacted" = "值已脱敏";
-"Verified as %@" = "已验证为 %@";
 "Version on this Mac" = "此 Mac 上的版本";
 "vs previous close" = "与前一收盘价相比";
 "Waiting" = "等待中";
@@ -1637,3 +1636,8 @@
 "Step %lld of %lld" = "第 %lld 步，共 %lld 步";
 "Previous step" = "上一步";
 "Next step" = "下一步";
+"Signed in to Discord" = "已登录 Discord";
+"%@ answered as %@" = "%@ 以 %@ 作答";
+"Alpaca live account found" = "找到 Alpaca 实盘账户";
+"Alpaca paper account found" = "找到 Alpaca 模拟账户";
+"Each example is one request to your model service, which may charge for it." = "每个示例都会向你的模型服务发送一次请求，可能产生费用。";

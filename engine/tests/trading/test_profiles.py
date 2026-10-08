@@ -133,7 +133,7 @@ def test_profile_examples_compare_expected_and_actual_without_execution():
     assert result.profile_revision == profile.profile_revision
     assert result.provider == "deepseek"
     assert result.model == "test-model"
-    assert "charges may apply" in result.cost_notice
+    assert "may charge" in result.cost_notice
     assert len(result.examples) == 1
     assert result.examples[0].matches is True
     assert result.examples[0].actual.instructions[0].symbol == "AAPL"
