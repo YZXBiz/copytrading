@@ -1,11 +1,10 @@
 import DesktopCore
 import SwiftUI
 
-/// One of a guru's posts: when it came, what they wrote, how it was read, and what each account
-/// did. Choosing it opens the post beside the feed.
+/// One of a guru's posts, like a line in a list of works: when it came, what they wrote, how it was
+/// read, and what each account did. Choosing it opens the post beside the feed.
 struct GuruFeedRow: View {
     let entry: GuruFeed.Entry
-    let showsDivider: Bool
     @Binding var selection: SourceActivity.ID?
     @State private var isHovered = false
     @ScaledMetric(relativeTo: .caption) private var timeWidth = 84
@@ -16,7 +15,7 @@ struct GuruFeedRow: View {
     var body: some View {
         Button(action: toggle) {
             ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: 16) {
+                HStack(alignment: .firstTextBaseline, spacing: 16) {
                     time
                     GuruFeedRowText(entry: entry)
                         .frame(minWidth: 220, alignment: .leading)
@@ -24,7 +23,7 @@ struct GuruFeedRow: View {
                     GuruAccountOutcomeList(outcomes: entry.accounts, alignment: .trailing)
                         .fixedSize()
                 }
-                HStack(alignment: .top, spacing: 16) {
+                HStack(alignment: .firstTextBaseline, spacing: 16) {
                     time
                     VStack(alignment: .leading, spacing: 10) {
                         GuruFeedRowText(entry: entry)
@@ -33,20 +32,12 @@ struct GuruFeedRow: View {
                     Spacer(minLength: 0)
                 }
             }
-            .padding(.vertical, 14)
+            .padding(.vertical, 18)
             .padding(.horizontal, 12)
-            .background(highlight, in: .rect(cornerRadius: 8))
+            .background(highlight)
             .contentShape(.rect)
         }
         .buttonStyle(QuietPressButtonStyle())
-        .overlay(alignment: .top) {
-            if showsDivider {
-                Rectangle()
-                    .fill(Palette.hairline)
-                    .frame(height: 1)
-                    .padding(.horizontal, 12)
-            }
-        }
         .onHover { isHovered = $0 }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: isHovered)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -54,17 +45,16 @@ struct GuruFeedRow: View {
     }
 
     private var time: some View {
-        Text(entry.item.sourceDate?.formatted(AppTime.style(.dateTime.hour().minute().second())) ?? "—")
+        Text(entry.item.sourceDate?.formatted(AppTime.style(.dateTime.hour().minute())) ?? "—")
             .font(DesignTokens.caption)
             .monospacedDigit()
             .foregroundStyle(Palette.tertiaryInk)
             .frame(width: timeWidth, alignment: .leading)
-            .padding(.top, 2)
     }
 
     private var highlight: Color {
-        if isSelected { return Palette.accent.opacity(0.08) }
-        return isHovered ? Palette.accent.opacity(0.035) : .clear
+        if isSelected { return Palette.ink.opacity(0.045) }
+        return isHovered ? Palette.ink.opacity(0.025) : .clear
     }
 
     private func toggle() {

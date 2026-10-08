@@ -35,14 +35,15 @@ struct GuruPage: View {
                         edit: edit)
                     if let feed {
                         GuruStatsStrip(stats: feed.stats)
-                            .padding(.top, 32)
+                            .padding(.top, 36)
                         GuruFeedList(days: feed.days, guruName: guru?.name ?? guruID, selection: $selectedID)
-                            .padding(.top, 40)
+                            .padding(.top, 56)
                     }
                 }
                 .frame(maxWidth: 880, alignment: .leading)
                 .padding(.horizontal, 40)
-                .padding(.vertical, 40)
+                .padding(.top, 28)
+                .padding(.bottom, 48)
                 .frame(maxWidth: .infinity)
             }
             .scrollContentBackground(.visible)

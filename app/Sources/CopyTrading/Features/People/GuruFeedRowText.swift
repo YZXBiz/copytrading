@@ -1,20 +1,23 @@
 import DesktopCore
 import SwiftUI
 
-/// A feed row's words: the guru's post in quotes, then how it was read in one line.
+/// A feed row's words: the guru's post in quotes, set large like a title in a list of works, then
+/// how it was read in one quiet line.
 struct GuruFeedRowText: View {
     let entry: GuruFeed.Entry
 
+    private static let quote = Font.system(.body).scaled(by: 17.0 / 13)
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(ActivitySourceText.formattedPreview(quoted))
-                .font(DesignTokens.bodyText)
+                .font(Self.quote)
                 .foregroundStyle(Palette.ink)
                 .lineLimit(3)
                 .multilineTextAlignment(.leading)
             Text(entry.readAs)
                 .font(DesignTokens.caption)
-                .foregroundStyle(Palette.secondaryInk)
+                .foregroundStyle(Palette.tertiaryInk)
                 .lineLimit(1)
         }
     }

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A day's heading in a guru's feed: TODAY, YESTERDAY, or the date, small and spaced.
+/// A day's heading in a guru's feed: TODAY, YESTERDAY, or the date, in small spaced capitals.
 struct GuruFeedDayLabel: View {
     let start: Date
 
@@ -12,10 +12,9 @@ struct GuruFeedDayLabel: View {
     }
 
     var body: some View {
-        Text(title)
-            .font(DesignTokens.activitySection)
-            .tracking(0.6)
-            .textCase(.uppercase)
+        Text(title.uppercased())
+            .font(DesignTokens.eyebrow)
+            .tracking(DesignTokens.eyebrowTracking)
             .foregroundStyle(Palette.tertiaryInk)
             .accessibilityAddTraits(.isHeader)
     }
