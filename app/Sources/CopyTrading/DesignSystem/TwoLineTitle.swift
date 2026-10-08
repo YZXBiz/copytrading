@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// A serif title in two parts: the lead, then an italic second line. Chinese has no italic and
-/// reads as one phrase, so there the two parts run together on a single line.
-struct SerifTitle: View {
+/// A title in two parts: the lead, then a quieter second line in regular weight and secondary ink.
+/// Chinese reads as one phrase, so there the two parts run together on a single line.
+struct TwoLineTitle: View {
     let lead: String
     let emphasis: String
     var alignment: HorizontalAlignment = .leading
@@ -15,7 +15,9 @@ struct SerifTitle: View {
                 Text(lead + emphasis)
             } else {
                 Text(lead)
-                Text(emphasis).italic()
+                Text(emphasis)
+                    .fontWeight(.regular)
+                    .foregroundStyle(Palette.secondaryInk)
             }
         }
         .accessibilityElement(children: .ignore)

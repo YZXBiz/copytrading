@@ -33,7 +33,7 @@ struct GuruCard: View {
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(guru.name)
-                        .font(DesignTokens.cardSerif.weight(.semibold))
+                        .font(DesignTokens.cardTitle.weight(.semibold))
                         .foregroundStyle(Palette.ink)
                         .lineLimit(1)
                     Text(lastPostText)
@@ -88,7 +88,7 @@ struct GuruCard: View {
             .shadow(color: .black.opacity(0.06), radius: 6, y: 2)
         } else {
             Text(L10n.string("Quiet so far. Their next post lands here."))
-                .font(.system(.body, design: .serif).italic().scaled(by: 16.0 / 13))
+                .font(.system(.body).scaled(by: 16.0 / 13))
                 .foregroundStyle(Palette.secondaryInk)
                 .fixedSize(horizontal: false, vertical: true)
         }

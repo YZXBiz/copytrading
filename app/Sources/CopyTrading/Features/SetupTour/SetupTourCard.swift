@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The tour's card: which stop of how many, a serif title with an italic second line, one
+/// The tour's card: which stop of how many, a title with a quieter second line, one
 /// instruction, what moves it on, and the stop's help a click away.
 struct SetupTourCard: View {
     let stop: SetupTourStop
@@ -23,11 +23,12 @@ struct SetupTourCard: View {
             .monospacedDigit()
             .padding(.bottom, 8)
             Text(L10n.string(stop.title))
-                .font(.system(size: 21, weight: .semibold, design: .serif))
+                .font(.system(size: 21, weight: .semibold))
                 .foregroundStyle(Palette.ink)
                 .accessibilityAddTraits(.isHeader)
             Text(L10n.string(stop.subtitle))
-                .font(.system(size: 21, design: .serif).italic())
+                .font(.system(size: 21))
+                .foregroundStyle(Palette.secondaryInk)
                 .foregroundStyle(Palette.tertiaryInk)
                 .padding(.bottom, 10)
             if stop == .discordRow && model.setupProgress.completed == 0 {

@@ -26,7 +26,7 @@ struct AssistantProposalCard: View {
                     .foregroundStyle(Palette.secondaryInk)
             }
             Text(question)
-                .font(DesignTokens.cardSerif)
+                .font(DesignTokens.cardTitle)
                 .foregroundStyle(Palette.ink)
                 .fixedSize(horizontal: false, vertical: true)
             if isWaiting {

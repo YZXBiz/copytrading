@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The chosen stop of a post's journey as a tinted page in a white frame: where it is on the
-/// path, its serif headline, one line on what happens, where to change it, and the one caution.
+/// path, its headline, one line on what happens, where to change it, and the one caution.
 struct GuideJourneyCard: View {
     let index: Int
     let open: (AppModel.Screen) -> Void
@@ -22,7 +22,7 @@ struct GuideJourneyCard: View {
                 stepper
             }
             Text(L10n.string(stop.headline))
-                .font(DesignTokens.cardSerif)
+                .font(DesignTokens.cardTitle)
                 .foregroundStyle(Palette.ink)
                 .accessibilityAddTraits(.isHeader)
                 .padding(.top, 2)

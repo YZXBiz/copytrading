@@ -11,7 +11,7 @@ struct SetupImportSheet: View {
         VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(L10n.string("Setup imported"))
-                    .font(.system(.title3, design: .serif, weight: .medium))
+                    .font(.system(.title3, weight: .semibold))
                     .foregroundStyle(Palette.ink)
                 Text(L10n.string("From %@. Nothing is saved until Connect and Start Copying check it.", result.fileURL.lastPathComponent))
                     .font(.callout)

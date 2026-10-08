@@ -159,7 +159,7 @@ struct ActivityDetailView: View {
 
     private func readLine(_ text: String) -> some View {
         Text(text)
-            .font(DesignTokens.cardSerif)
+            .font(DesignTokens.cardTitle)
             .foregroundStyle(Palette.ink)
             .monospacedDigit()
             .fixedSize(horizontal: false, vertical: true)
