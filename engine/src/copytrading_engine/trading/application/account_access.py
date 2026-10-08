@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
+from copytrading_engine.execution.domain.lifecycle import AccountOwnerClosed
 from copytrading_engine.execution.presentation.operator_views import (
     AccountEventPage,
     AccountOverview,
@@ -41,8 +42,11 @@ async def bounded_owner_read[T](operation: Awaitable[T]) -> T | OwnerUnavailable
         return OwnerUnavailable("timeout")
     try:
         return task.result()
+    except AccountOwnerClosed:
+        # Copying is pausing or stopped: the retained ledger answers; nothing went wrong.
+        return OwnerUnavailable("read_failed")
     except Exception as exc:  # noqa: BLE001 - one owner's failure is reported, not raised
-        log.warning("operator_account_read_failed type=%s", type(exc).__name__)
+        log.warning("operator_account_read_failed type=%s error=%s", type(exc).__name__, exc)
         return OwnerUnavailable("read_failed")
 
 

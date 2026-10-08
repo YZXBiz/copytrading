@@ -33,6 +33,7 @@ from copytrading_engine.execution.application.ports import (
 from copytrading_engine.execution.domain.lifecycle import (
     AccountControlCommand,
     AccountControlResult,
+    AccountOwnerClosed,
 )
 from copytrading_engine.execution.domain.lot_sales import (
     LotSaleConfirmation,
@@ -198,7 +199,7 @@ class ExecutionOwner:
     ) -> _ResultT:
         async with self._gate:
             if self._closing or self._closed or self._unusable or self._resource is None:
-                raise RuntimeError("Execution owner is closed or unusable")
+                raise AccountOwnerClosed("Execution owner is closed or unusable")
             future = self._executor.submit(operation, self._resource)
             result, cancelled, failure = await self._drain(future)
             if cancelled:

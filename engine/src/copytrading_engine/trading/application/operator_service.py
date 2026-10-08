@@ -93,7 +93,10 @@ class OperatorQueryService:
                     failure = "timeout"
                 except Exception as exc:  # noqa: BLE001 - one unreadable ledger must not hide others
                     log.warning(
-                        "retained_account_read_failed id=%s type=%s", account_id, type(exc).__name__
+                        "retained_account_read_failed id=%s type=%s error=%s",
+                        account_id,
+                        type(exc).__name__,
+                        exc,
                     )
                     failure = "read_failed"
                 else:
