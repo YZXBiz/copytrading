@@ -20,11 +20,14 @@ struct ConnectionsEditorSheet: View {
                     check: { [model] in
                         guard let account = model.setupDraft.accounts.first(where: { $0.id == id }) else { return nil }
                         return await model.checkConnection(.account(account.name.trimmed))
-                    }
+                    },
+                    saveLimits: { [model] in await model.saveLimitOnlyChanges() },
+                    limitsError: model.message
                 )
                 .onChange(of: model.setupDraft.accounts[index].name) { oldName, newName in
                     model.renameAccountReferences(from: oldName.trimmed, to: newName.trimmed)
                 }
+                .onAppear { model.limitsSavedAccountIDs.remove(model.setupDraft.accounts[index].name.trimmed) }
                 .onDisappear { model.editorFocusesEntryTolerance = false }
             }
         case .route(let id):

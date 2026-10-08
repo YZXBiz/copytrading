@@ -90,6 +90,13 @@ public actor EngineClient {
         return status
     }
 
+    /// Hands copying a setup that changes only account limits; returns the setup's revision.
+    public func updateAccountLimits(configuration: TradingConfiguration) async throws -> String {
+        let result = try await request(.updateAccountLimits(configuration))
+        guard case .accountLimits(let revision) = result else { throw EngineContractError.missingResult }
+        return revision
+    }
+
     public func createBackup(destination: URL) async throws -> BackupManifestView {
         let result = try await request(.createBackup(destination.path))
         guard case .backup(let manifest) = result else { throw EngineContractError.missingResult }

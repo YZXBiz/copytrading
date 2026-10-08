@@ -560,12 +560,27 @@ public struct AccountEvent: Codable, Equatable, Identifiable, Sendable {
     public let orderID: String?
     public let reason: String?
     public let status: String?
+    /// Limits the owner changed while copying, for a `limits_changed` event.
+    public let changes: [AccountLimitChange]
     public var id: Int { sequence }
 
     enum CodingKeys: String, CodingKey {
-        case sequence, at, kind, reason, status
+        case sequence, at, kind, reason, status, changes
         case messageID = "message_id"
         case orderID = "order_id"
+    }
+}
+
+/// One limit the owner changed: its engine policy name, and its value before and after as text.
+public struct AccountLimitChange: Codable, Equatable, Sendable {
+    public let setting: String
+    public let before: String
+    public let after: String
+
+    public init(setting: String, before: String, after: String) {
+        self.setting = setting
+        self.before = before
+        self.after = after
     }
 }
 

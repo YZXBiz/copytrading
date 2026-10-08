@@ -55,6 +55,11 @@ public struct EngineActions: Sendable {
         return try await client.pauseTrading()
     }
 
+    public func updateAccountLimits(configuration: TradingConfiguration) async throws -> String {
+        let client = try await supervisor.engineClient()
+        return try await client.updateAccountLimits(configuration: configuration)
+    }
+
     public func createBackup(destination: URL) async throws -> BackupManifestView {
         let client = try await supervisor.engineClient()
         return try await client.createBackup(destination: destination)

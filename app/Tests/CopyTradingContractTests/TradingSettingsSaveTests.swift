@@ -108,6 +108,7 @@ struct TradingSettingsSaveTests {
         try await checkDiscardedCheckAndLockedDraft(configuration: configuration, secrets: credentials)
         try await checkSetupCheckKeepsKeysAndFollowsEdits(configuration: configuration, secrets: credentials)
         try await checkApplyChangesWhileCopying(configuration: configuration, secrets: credentials)
+        try await checkLimitOnlyChangesApplyWithoutAPause(configuration: configuration, secrets: credentials)
         try await checkConnectionClientRequest(provider: configuration.provider)
         try await checkOneConnectionUsesSavedKeysAndFollowsEdits(configuration: configuration, secrets: credentials)
         try await checkConfigurationWriteFailureDoesNotStart()
@@ -1325,6 +1326,65 @@ struct TradingSettingsSaveTests {
 
     /// A limit changed while copying runs is applied in one press: copying pauses, the new setup
     /// is checked and starts. A change whose check fails leaves the saved setup copying again.
+    /// Limits alone go straight to the running engine: no check, no pause, no Apply Changes, and
+    /// the saved revision is the engine's, so the next Start matches it.
+    private static func checkLimitOnlyChangesApplyWithoutAPause(
+        configuration: TradingConfiguration, secrets: TradingSecrets
+    ) async throws {
+        print("CopyTradingContractTests: limits alone apply to running copying with no pause and no Apply Changes")
+        let directory = FileManager.default.temporaryDirectory.appending(
+            path: "app-model-live-limits-\(UUID().uuidString)", directoryHint: .isDirectory
+        )
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = TradingConfigurationStore(
+            url: directory.appending(path: "configuration.json"), secrets: TestSecretRevisions()
+        )
+        let starter = RecordingTradingStarter()
+        let model = AppModel(tradingConfigurationStore: store, tradingStarter: starter)
+        model.isTradingUnlocked = true
+        model.tradingStatus = try status(.paused)
+        await model.validateTradingSettings(configuration, enteredSecrets: secrets)
+        await model.activateValidatedTradingSettings()
+        try check(model.tradingStatus?.state == .running, model.message ?? "The first setup did not start")
+        model.syncSetupDraftWithSaved()
+
+        model.setupDraft.accounts[0].policy.maxOrderUSD = "500"
+        try check(model.hasOnlyLimitChanges, "A limit edit did not read as limits only")
+        try check(!model.hasSetupToStart, "A limit edit still asked for Apply Changes")
+        let before = await starter.events().count
+        let saved = await model.saveLimitOnlyChanges()
+        try check(saved == true, model.message ?? "The new limit was not saved")
+        let during = Array(await starter.events().dropFirst(before))
+        try check(during == ["update_limits"], "Saving limits did more than hand them over: \(during)")
+        try check(model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD == "500", "The saved setup kept the old limit")
+        try check(!model.hasUnsavedSetupChanges, "The saved limit still read as a change, with its pill")
+        try check(model.limitsSavedAccountIDs == ["paper"], "The account didn't say its limits were saved")
+        try check(model.tradingStatus?.state == .running, "Saving limits stopped copying")
+        guard let loaded = try store.load() else { throw ContractFailure("The saved setup is missing") }
+        try check(loaded.configuration.accounts[0].policy.maxOrderUSD == "500", "The limit was not written to disk")
+        try check(loaded.secrets == secrets, "Saving limits changed the saved keys")
+
+        // The engine and the app agree on the revision: pausing and resuming the saved setup
+        // commits it rather than rolling it back.
+        await model.pauseTrading()
+        model.tradingStatus = try status(.paused)
+        await model.startTrading(resumingSavedSetup: true)
+        try check(model.tradingStatus?.state == .running, model.message ?? "The saved setup didn't resume")
+        let unconfirmed = try store.pendingActivation()
+        try check(unconfirmed == nil, "Resuming left the activation unconfirmed")
+        try check(model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD == "500", "Resuming rolled the limit back")
+
+        // Anything beyond limits still waits for the full check.
+        model.setupDraft.modelName = "other-model"
+        model.setupDraft.accounts[0].policy.maxOrderUSD = "600"
+        let afterResume = await starter.events().count
+        let beyond = await model.saveLimitOnlyChanges()
+        try check(beyond == nil, "A change beyond limits skipped the check")
+        let afterBeyond = await starter.events().count
+        try check(afterBeyond == afterResume, "A change beyond limits reached the engine")
+        try check(model.hasSetupToStart && !model.hasOnlyLimitChanges, "A change beyond limits hid Apply Changes")
+    }
+
     private static func checkApplyChangesWhileCopying(
         configuration: TradingConfiguration, secrets: TradingSecrets
     ) async throws {
@@ -2948,6 +3008,12 @@ private actor RecordingTradingStarter: TradingStarting {
         let status = try JSONDecoder().decode(TradingStatus.self, from: Data(json.utf8))
         latestTradingStatus = status
         return status
+    }
+
+    func updateAccountLimits(configuration: TradingConfiguration) async throws -> String {
+        operationEvents.append("update_limits")
+        self.configuration = configuration
+        return fakeEngineRevision(configuration)
     }
 
     /// Like the engine: the answer says pausing, and the next status read says paused.
