@@ -57,11 +57,12 @@ private func theContextNamesWhatIsSelected() throws {
     model.selectedScreen = .activity
     let onActivity = model.assistantContext(selectedPost: post)
     try verifyPanel(
-        onActivity == AssistantAskContext(screen: "activity", selectedSourceID: "discord:calls:7"),
+        onActivity == AssistantAskContext(screen: "activity", selectedSourceID: "discord:calls:7", setup: model.assistantSetup),
         "Activity did not send its selected post: \(onActivity)")
     model.selectedScreen = .today
     let onToday = model.assistantContext(selectedPost: post)
-    try verifyPanel(onToday == AssistantAskContext(screen: "today"), "Today sent a post that is not on screen: \(onToday)")
+    try verifyPanel(
+        onToday == AssistantAskContext(screen: "today", setup: model.assistantSetup), "Today sent a post that is not on screen: \(onToday)")
     model.selectedScreen = .gettingStarted
     try verifyPanel(
         model.assistantContext(selectedPost: nil).screen == "gettingStarted", "The screen was not named as the engine expects")

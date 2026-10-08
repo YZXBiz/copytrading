@@ -7,7 +7,8 @@ from pydantic import SecretStr, ValidationError
 from pydantic_ai.messages import ModelRequest, ModelResponse, TextPart, ToolCallPart, UserPromptPart
 from pydantic_ai.models.function import FunctionModel
 
-from copytrading_engine.assistant.service import AskContext, AskGuru
+from copytrading_engine.assistant.agent import INSTRUCTIONS
+from copytrading_engine.assistant.service import AskContext, AskGuru, AskSetup, AskSetupAccount
 from copytrading_engine.trading.domain.config import ProviderConfiguration
 
 from .scripted import assistant, scripted, settle, streamed
@@ -58,6 +59,54 @@ async def test_the_prompt_carries_the_app_language_and_the_selection():
         "(Screen: activity; app language: zh-Hans; selected_source_id=discord:calls:7)\n"
         "Gurus: Zhao (guru-1a2b3c4d), Ana (guru-5e6f7a8b)"
     ]
+
+
+async def test_the_prompt_carries_the_setup_so_an_unstarted_account_is_not_called_missing():
+    prompts: list[str] = []
+
+    def reply(messages, info):
+        prompts.extend(
+            str(part.content)
+            for message in messages
+            if isinstance(message, ModelRequest)
+            for part in message.parts
+            if isinstance(part, UserPromptPart)
+        )
+        return ModelResponse(parts=[TextPart("primary is set up; press Start Copying.")])
+
+    svc, _, _ = assistant(streamed(reply))
+    setup = AskSetup(
+        saved=False,
+        copying=False,
+        unsaved_changes=True,
+        discord="connected",
+        interpreter="connected",
+        accounts=(AskSetupAccount(name="primary", environment="paper", state="connected"),),
+    )
+    question = "What's in my paper account?"
+    await settle(
+        svc, await svc.ask("c-1", question, AskContext(screen="today", setup=setup), PROVIDER, KEY)
+    )
+    assert prompts == [
+        f"{question}\n\n(Screen: today; app language: en)\n"
+        "Setup: not started yet (nothing saved), with changes not applied yet; Discord connected; "
+        "interpreter connected; accounts: primary (paper, connected)"
+    ]
+    assert "Never say there\n  are no accounts when the Setup line lists one." in INSTRUCTIONS
+
+
+def test_the_setup_never_takes_a_key():
+    with pytest.raises(ValidationError):
+        AskSetup.model_validate(
+            {
+                "saved": True,
+                "copying": True,
+                "unsaved_changes": False,
+                "discord": "connected",
+                "interpreter": "connected",
+                "provider_api_key": "sk-anything",
+            }
+        )
 
 
 async def test_a_gurus_record_is_named_as_the_owner_knows_them():

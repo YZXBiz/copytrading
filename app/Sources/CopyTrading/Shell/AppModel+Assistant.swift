@@ -49,7 +49,42 @@ extension AppModel {
             selectedSourceID: selectedScreen == .activity ? selectedPost?.sourceID : nil,
             selectedGuruID: selectedScreen == .people ? openGuruID : nil,
             language: AppLanguagePreference.shared.language.rawValue,
-            gurus: assistantGurus)
+            gurus: assistantGurus,
+            setup: assistantSetup)
+    }
+
+    /// Connections as the owner sees it, saved or not, without a single key: whether each part is
+    /// connected, filled in, missing, or failed its check.
+    var assistantSetup: AssistantSetup {
+        let progress = setupProgress
+        func state(_ status: ConnectionStatus?, done: Bool) -> AssistantSetup.State {
+            switch status?.tone {
+            case .positive: .connected
+            case .critical: .failed
+            case .caution: done ? .failed : .missing
+            default: done ? .filled : .missing
+            }
+        }
+        let accounts = setupDraft.accounts.compactMap { account -> AssistantSetup.Account? in
+            let name = account.name.trimmed
+            guard !name.isEmpty else { return nil }
+            let status = ConnectionStatus.account(account, in: self)
+            let accountState: AssistantSetup.State =
+                switch status.tone {
+                case .positive: .connected
+                case .critical: .failed
+                case .caution: .missing
+                default: .filled
+                }
+            return AssistantSetup.Account(name: String(name.prefix(64)), environment: account.environment, state: accountState)
+        }
+        return AssistantSetup(
+            saved: savedTradingConfiguration != nil,
+            copying: tradingStatus?.state == .running || tradingStatus?.state == .degraded,
+            unsavedChanges: hasUnsavedSetupChanges,
+            discord: state(ConnectionStatus.discord(self), done: progress.isDone(.discord)),
+            interpreter: state(ConnectionStatus.interpreter(self), done: progress.isDone(.interpreter)),
+            accounts: accounts)
     }
 
     /// Every guru by the name the owner gave them: the saved setup's, else the one being set up.

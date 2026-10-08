@@ -7,17 +7,30 @@ struct SettingsSummaryCard: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.colorSchemeContrast) private var contrast
 
+    private var engineStopped: Bool { model.runtimeState == .stopped || model.runtimeState == .failed }
+
+    /// Before a first start the card is about the setup; afterwards, about copying. A stopped
+    /// engine is said once, in the place it matters.
     private var state: (text: String, tone: StatusTone) {
-        if model.runtimeState == .stopped || model.runtimeState == .failed {
-            return (L10n.string("Engine stopped"), StatusTone(model.runtimeState))
+        guard model.savedTradingConfiguration != nil else {
+            return (L10n.string(model.setupProgress.completed == 0 ? "Not set up yet" : "Setting up"), .inactive)
         }
-        guard model.savedTradingConfiguration != nil else { return (L10n.string("Not set up yet"), .inactive) }
+        if engineStopped { return (L10n.string("Engine stopped"), StatusTone(model.runtimeState)) }
         return CopyingSummary.of(model.tradingStatus)
     }
 
     private var summary: String {
         guard let configuration = model.savedTradingConfiguration else {
-            return L10n.string("Getting Started takes about ten minutes. Everything stays on this Mac.")
+            let progress = model.setupProgress
+            var lines: [String] = []
+            if progress.completed == 0 {
+                lines.append(L10n.string("Getting Started takes about ten minutes. Everything stays on this Mac."))
+            } else {
+                lines.append(L10n.string("%lld of %lld steps done", Int64(progress.completed), Int64(progress.total)))
+                if let next = progress.next { lines.append(L10n.string("Next: %@.", L10n.string(next.title))) }
+            }
+            if engineStopped { lines.append(L10n.string("The engine is stopped; start it in Settings, Engine.")) }
+            return lines.joined(separator: "\n")
         }
         let gurus = Humanize.count(GuruDirectory(configuration).gurus.count, "guru")
         let accounts = Humanize.count(configuration.accounts.count, "account")

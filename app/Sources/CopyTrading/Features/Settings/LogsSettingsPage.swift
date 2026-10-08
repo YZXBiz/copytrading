@@ -53,7 +53,6 @@ struct LogsSettingsPage: View {
                         in: DiagnosticsSettings.minimumAgeDays...DiagnosticsSettings.maximumAgeDays
                     )
                     .labelsHidden()
-                    .accessibilityLabel(L10n.string("Keep logs for"))
                     .accessibilityValue(Humanize.count(ageDays, "day"))
                     .accessibilityIdentifier("settings.logs.ageDays")
                 }

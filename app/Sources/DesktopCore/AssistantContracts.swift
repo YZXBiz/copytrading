@@ -11,6 +11,52 @@ public struct AssistantGuru: Codable, Equatable, Sendable {
     }
 }
 
+/// What Connections holds, saved or not, so the assistant can tell an account that is set up but
+/// not started from no account at all. It never carries a key or a token.
+public struct AssistantSetup: Codable, Equatable, Sendable {
+    public enum State: String, Codable, Sendable {
+        case connected, filled, missing, failed
+    }
+
+    public struct Account: Codable, Equatable, Sendable {
+        public let name: String
+        public let environment: TradingEnvironment
+        public let state: State
+
+        public init(name: String, environment: TradingEnvironment, state: State) {
+            self.name = name
+            self.environment = environment
+            self.state = state
+        }
+    }
+
+    /// The engine reads at most this many accounts.
+    public static let maxAccounts = 20
+
+    public var saved: Bool
+    public var copying: Bool
+    public var unsavedChanges: Bool
+    public var discord: State
+    public var interpreter: State
+    public var accounts: [Account]
+
+    public init(
+        saved: Bool, copying: Bool, unsavedChanges: Bool, discord: State, interpreter: State, accounts: [Account]
+    ) {
+        self.saved = saved
+        self.copying = copying
+        self.unsavedChanges = unsavedChanges
+        self.discord = discord
+        self.interpreter = interpreter
+        self.accounts = Array(accounts.prefix(Self.maxAccounts))
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case saved, copying, discord, interpreter, accounts
+        case unsavedChanges = "unsaved_changes"
+    }
+}
+
 /// What the owner was looking at when they asked, so the assistant can resolve "this guru", the
 /// gurus by name, and the app's language (`en` or `zh-Hans`), which the answer falls back to.
 public struct AssistantAskContext: Codable, Equatable, Sendable {
@@ -23,10 +69,12 @@ public struct AssistantAskContext: Codable, Equatable, Sendable {
     public var selectedGuruID: String?
     public var language: String
     public var gurus: [AssistantGuru]
+    public var setup: AssistantSetup?
 
     public init(
         screen: String, selectedSourceID: String? = nil, selectedAccountID: String? = nil,
-        selectedGuruID: String? = nil, language: String = "en", gurus: [AssistantGuru] = []
+        selectedGuruID: String? = nil, language: String = "en", gurus: [AssistantGuru] = [],
+        setup: AssistantSetup? = nil
     ) {
         self.screen = screen
         self.selectedSourceID = selectedSourceID
@@ -34,6 +82,7 @@ public struct AssistantAskContext: Codable, Equatable, Sendable {
         self.selectedGuruID = selectedGuruID
         self.language = language
         self.gurus = Array(gurus.prefix(Self.maxGurus))
+        self.setup = setup
     }
 
     enum CodingKeys: String, CodingKey {
@@ -41,7 +90,7 @@ public struct AssistantAskContext: Codable, Equatable, Sendable {
         case selectedSourceID = "selected_source_id"
         case selectedAccountID = "selected_account_id"
         case selectedGuruID = "selected_guru_id"
-        case language, gurus
+        case language, gurus, setup
     }
 
     /// The engine's request shape names every selection, `null` when there is none.
@@ -53,6 +102,7 @@ public struct AssistantAskContext: Codable, Equatable, Sendable {
         try container.encode(selectedGuruID, forKey: .selectedGuruID)
         try container.encode(language, forKey: .language)
         try container.encode(gurus, forKey: .gurus)
+        try container.encode(setup, forKey: .setup)
     }
 }
 

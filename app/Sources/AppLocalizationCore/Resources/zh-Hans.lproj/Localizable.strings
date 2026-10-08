@@ -1689,3 +1689,7 @@
 "CopyTrading bought %@ %@ shares, and the broker holds %@. The missing shares were sold outside CopyTrading; the oldest buys are counted as sold first, and %@ is copied again." = "CopyTrading 买入了 %@ 股 %@，券商持有 %@。缺少的股票是在 CopyTrading 之外卖出的；最早的买入先算作卖出，%@ 会恢复跟单。";
 "%@ holdings need your review: CopyTrading counted %@, the broker holds %@. Calls for %@ wait until you settle it." = "%@ 的持仓需要你确认：CopyTrading 记录了 %@，券商持有 %@。确认之前，%@ 的喊单会先等待。";
 "Review in Accounts" = "在账户中确认";
+"Selected" = "已选择";
+"Not selected" = "未选择";
+"Setting up" = "正在设置";
+"The engine is stopped; start it in Settings, Engine." = "引擎已停止；请在“设置 › 引擎”中启动。";

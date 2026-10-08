@@ -1689,3 +1689,7 @@
 "CopyTrading bought %@ %@ shares, and the broker holds %@. The missing shares were sold outside CopyTrading; the oldest buys are counted as sold first, and %@ is copied again." = "CopyTrading bought %@ %@ shares, and the broker holds %@. The missing shares were sold outside CopyTrading; the oldest buys are counted as sold first, and %@ is copied again.";
 "%@ holdings need your review: CopyTrading counted %@, the broker holds %@. Calls for %@ wait until you settle it." = "%@ holdings need your review: CopyTrading counted %@, the broker holds %@. Calls for %@ wait until you settle it.";
 "Review in Accounts" = "Review in Accounts";
+"Selected" = "Selected";
+"Not selected" = "Not selected";
+"Setting up" = "Setting up";
+"The engine is stopped; start it in Settings, Engine." = "The engine is stopped; start it in Settings, Engine.";
