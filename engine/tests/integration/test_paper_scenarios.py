@@ -28,6 +28,7 @@ from .paper import (
     filled,
     flatten,
     guru_price,
+    guru_sell_price,
     open_orders,
     placed,
     quote,
@@ -99,13 +100,13 @@ async def test_a_full_position_buy_fills_at_most_one_percent_above_the_guru(tmp_
 
 
 async def test_partial_buys_join_one_lot_and_partial_sells_trim_it(tmp_path):
-    price = await guru_price(SYMBOL)
+    price, sale = await guru_price(SYMBOL), await guru_sell_price(SYMBOL)
     posts = (
         Post(f"Starter: bought 1/4 position {SYMBOL} at {price}"),
         # At another price: the same call within ten minutes is the guru re-posting it.
         Post(f"Adding another 1/4 position {SYMBOL} at {price + Decimal('0.02')}"),
-        Post(f"Sold half of my {SYMBOL} at {price}"),
-        Post(f"Out of the rest of {SYMBOL} at {price}"),
+        Post(f"Sold half of my {SYMBOL} at {sale}"),
+        Post(f"Out of the rest of {SYMBOL} at {sale}"),
     )
     async with Rig(tmp_path, posts) as rig:
         first = _one(await rig.post(0, until=filled))
@@ -120,7 +121,7 @@ async def test_partial_buys_join_one_lot_and_partial_sells_trim_it(tmp_path):
 
         half = _one(await rig.post(2, until=filled))
         assert half.side == "sell"
-        assert half.limit_price == (price * Decimal("0.99")).quantize(CENT, ROUND_UP)
+        assert half.limit_price == (sale * Decimal("0.99")).quantize(CENT, ROUND_UP)
         # Half, rounded down to the millionth of a share Alpaca takes: never more than half.
         assert half.quantity == (held / 2).quantize(Decimal("0.000001"), ROUND_DOWN), (half, held)
         assert await rig.owned(SYMBOL) == held - half.filled_quantity
@@ -265,7 +266,7 @@ async def test_an_order_placed_outside_while_copying_holds_new_buys(tmp_path):
         try:
             # The buy waits, unsent, while an order the app did not place is open; the account
             # says why.
-            activity, orders = await rig.post(0, until=lambda *_: False, seconds=20)
+            activity, orders = await rig.post(0, until=lambda *_: False, seconds=20, must=False)
             assert orders == [], orders
             assert _outcomes(activity) in {("pending",), ("unresolved_account_order",)}, activity
             account = await rig.account()
@@ -362,7 +363,7 @@ async def test_a_post_delivered_twice_trades_once(tmp_path):
     posts = (Post(text, message_id=message_id, at=at), Post(text, message_id=message_id, at=at))
     async with Rig(tmp_path, posts) as rig:
         await rig.post(0, until=placed)
-        await rig.post(1, until=lambda *_: False, seconds=10)
+        await rig.post(1, until=lambda *_: False, seconds=10, must=False)
         broker_orders = [
             order
             for order in (
@@ -405,7 +406,9 @@ async def test_a_restart_keeps_the_lot_and_the_guru_sell_closes_it(tmp_path):
     async with Rig(tmp_path, (Post(f"Bought {SYMBOL} at {price}"),)) as first:
         bought = _one(await first.post(0, until=filled))
         first.placed.clear()  # the second run owns the shares now
-    async with Rig(tmp_path, (Post(f"Sold all {SYMBOL} at {price}"),)) as second:
+    async with Rig(
+        tmp_path, (Post(f"Sold all {SYMBOL} at {await guru_sell_price(SYMBOL)}"),)
+    ) as second:
         assert await second.owned(SYMBOL) == bought.filled_quantity
         sold = _one(await second.post(0, until=filled))
         assert (sold.side, sold.quantity) == ("sell", bought.filled_quantity)

@@ -12,7 +12,7 @@ import time
 import uuid
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from decimal import ROUND_UP, Decimal
+from decimal import ROUND_DOWN, ROUND_UP, Decimal
 from pathlib import Path
 
 import httpx
@@ -269,23 +269,33 @@ class Rig:
         return next((item for item in page.items if item.text == self.posts[index].text), None)
 
     async def post(
-        self, index: int, *, until: Callable[..., bool] = decided, seconds: int = 180
+        self,
+        index: int,
+        *,
+        until: Callable[..., bool] = decided,
+        seconds: int = 180,
+        must: bool = True,
     ) -> tuple[object, list[OrderView]]:
         """Release post number `index`, then wait until `until(activity, orders)` holds."""
         self.gates[index].set()
-        return await self.wait(index, until=until, seconds=seconds)
+        return await self.wait(index, until=until, seconds=seconds, must=must)
 
     async def wait(
-        self, index: int, *, until: Callable[..., bool], seconds: int = 180
+        self, index: int, *, until: Callable[..., bool], seconds: int = 180, must: bool = True
     ) -> tuple[object, list[OrderView]]:
+        """Waits for `until`; a condition that never held fails the scenario, unless `must` is
+        off for a wait that only lets time pass."""
         activity, orders = None, []
         for _ in range(seconds):
             activity = await self.activity(index)
             orders = orders_of(activity)
             self.placed |= {order.client_id for order in orders}
             if until(activity, orders):
-                break
+                return activity, orders
             await asyncio.sleep(1)
+        assert not must, (
+            f"post {index} never reached {getattr(until, '__name__', 'its condition')}: {orders}"
+        )
         return activity, orders
 
     async def account(self) -> AccountOverview:
@@ -320,6 +330,14 @@ async def guru_price(symbol: str) -> Decimal:
     """A price the guru could have paid: the ask, so a 1% allowance fills."""
     _, ask = await quote(symbol)
     return ask.quantize(CENT, rounding=ROUND_UP)
+
+
+async def guru_sell_price(symbol: str) -> Decimal:
+    """A price the guru could have sold at: the bid, so a 1% allowance fills. Outside regular
+    hours the free feed's spread can be a tenth of the price, and a sale named at the ask would
+    rest above every bid; the engine rightly never sells more than 1% below the guru."""
+    bid, _ = await quote(symbol)
+    return bid.quantize(CENT, rounding=ROUND_DOWN)
 
 
 async def broker(method: str, path: str, **kwargs) -> httpx.Response:
