@@ -1703,3 +1703,8 @@
 "%@ your time (%@ New York)" = "%@ your time (%@ New York)";
 "Also copy calls before and after regular hours, %@, with limit orders." = "Also copy calls before and after regular hours, %@, with limit orders.";
 "Also copy calls overnight, %@. Needs extended hours on." = "Also copy calls overnight, %@. Needs extended hours on.";
+"CopyTrading %@ is ready to install." = "CopyTrading %@ is ready to install.";
+"Copying pauses while it installs and starts again when CopyTrading reopens." = "Copying pauses while it installs and starts again when CopyTrading reopens.";
+"Copying stops while it installs. Start it again when CopyTrading reopens." = "Copying stops while it installs. Start it again when CopyTrading reopens.";
+"Install Update…" = "Install Update…";
+"Later" = "Later";

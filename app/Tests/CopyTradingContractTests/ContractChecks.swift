@@ -23,6 +23,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
     case keepAwake = "keep the Mac awake while copying"
     case backupRestoreNotes = "backup and restore notes"
     case learnedExamples = "learned examples"
+    case updateOffer = "update offer banner"
 
     var testDescription: String { rawValue }
 
@@ -48,6 +49,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
         case .keepAwake: try runKeepAwakeTests()
         case .backupRestoreNotes: try await runBackupRestoreNoteTests()
         case .learnedExamples: try runLearnedExamplesTests()
+        case .updateOffer: try runUpdateOfferTests()
         }
     }
 }

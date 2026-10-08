@@ -1703,3 +1703,8 @@
 "%@ your time (%@ New York)" = "你的时间 %@（纽约时间 %@）";
 "Also copy calls before and after regular hours, %@, with limit orders." = "在常规交易时段前后也复制（%@），使用限价单。";
 "Also copy calls overnight, %@. Needs extended hours on." = "夜间也复制（%@）。需要开启盘前盘后交易。";
+"CopyTrading %@ is ready to install." = "CopyTrading %@ 已可安装。";
+"Copying pauses while it installs and starts again when CopyTrading reopens." = "安装期间跟单会暂停，CopyTrading 重新打开后自动继续。";
+"Copying stops while it installs. Start it again when CopyTrading reopens." = "安装期间跟单会停止。CopyTrading 重新打开后请重新开始。";
+"Install Update…" = "安装更新…";
+"Later" = "稍后";

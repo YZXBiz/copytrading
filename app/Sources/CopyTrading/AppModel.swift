@@ -1652,10 +1652,11 @@ final class AppModel {
     /// Starts copying once per launch when the owner asked for it, the setup is paper only,
     /// and the engine reports copying paused. Start runs the same checks as the toolbar button.
     func startCopyingOnLaunchIfWanted() async {
-        guard launchPreferences.startsCopying, !didStartCopyingOnLaunch, isTradingUnlocked,
+        guard wantsCopyingOnLaunch, !didStartCopyingOnLaunch, isTradingUnlocked,
             canStartCopyingOnLaunch, tradingStatus?.state == .paused
         else { return }
         didStartCopyingOnLaunch = true
+        UserDefaults.standard.removeObject(forKey: Self.resumesAfterUpdateKey)
         await startTrading()
         retryLaunchStartWhileHeldBack()
     }
@@ -1675,7 +1676,7 @@ final class AppModel {
     }
 
     private var isHeldBackAtLaunch: Bool {
-        launchPreferences.startsCopying && isTradingUnlocked && tradingStatus?.state == .paused
+        wantsCopyingOnLaunch && isTradingUnlocked && tradingStatus?.state == .paused
             && tradingValidation?.report.activatable == false
     }
 

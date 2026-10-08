@@ -46,6 +46,7 @@ struct MainSplitView: View {
             }
             VStack(spacing: 0) {
                 workspaceToolbar
+                UpdateAvailableBanner(model: model)
                 EngineStoppedBanner(model: model)
                 StatusBanner(model: model)
                 ScreenDetailView(model: model, accountFeature: accountFeature, activityState: activityState)

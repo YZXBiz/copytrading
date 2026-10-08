@@ -29,6 +29,7 @@ public struct CopyTradingScene: Scene {
                 .containerBackground(Palette.canvas, for: .window)
                 .task {
                     lifecycle.model = model
+                    updater.willRelaunch = { [model] in model.rememberCopyingForRelaunch() }
                     model.startIfNeeded()
                 }
         }
