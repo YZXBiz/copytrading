@@ -67,8 +67,7 @@ struct GuruPostDetail: View {
     }
 
     private func reviewHoldings(_ accountID: String) {
-        model.requestedAccountID = accountID
-        model.selectedScreen = .accounts
+        model.selectedScreen = .account(accountID)
     }
 
     private func resumeEntries(_ accountID: String) {

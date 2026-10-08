@@ -11,7 +11,7 @@ struct GuideDocument: View {
             GuideHeader(progress: model.setupProgress, startTour: model.startSetupTour)
                 .id(GuideAnchor.top)
             GuideSection("How a post becomes a trade") {
-                GuideJourneySection(open: { model.selectedScreen = $0 })
+                GuideJourneySection(open: { model.selectedScreen = $0 ?? model.homeScreen })
             }
             GuideSection("Before you go") {
                 GuideBeforeYouGoSection()

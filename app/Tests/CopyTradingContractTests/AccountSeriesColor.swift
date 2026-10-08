@@ -1,1 +1,0 @@
-../../Sources/CopyTrading/Features/Today/EquityChart/AccountSeriesColor.swift

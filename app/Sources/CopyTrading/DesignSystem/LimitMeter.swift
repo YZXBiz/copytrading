@@ -22,6 +22,7 @@ struct LimitMeter: View {
             HStack(alignment: .firstTextBaseline) {
                 Text(L10n.string(title))
                     .foregroundStyle(Palette.secondaryInk)
+                    .fixedSize()
                 Spacer(minLength: 8)
                 Text(
                     L10n.string(
@@ -30,10 +31,12 @@ struct LimitMeter: View {
                         limit.formatted(.currency(code: "USD").precision(.fractionLength(0)))
                     )
                 )
+                .fontWeight(.semibold)
                 .monospacedDigit()
-                .foregroundStyle(fraction >= 0.8 ? tint : Palette.tertiaryInk)
+                .foregroundStyle(fraction >= 0.8 ? tint : Palette.ink)
+                .fixedSize()
             }
-            .font(.callout)
+            .font(DesignTokens.caption)
             // A thin track that stays empty at zero, instead of a system bar with a stray dot.
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
@@ -43,7 +46,7 @@ struct LimitMeter: View {
                     }
                 }
             }
-            .frame(height: 5)
+            .frame(height: 4)
             .accessibilityHidden(true)
             if let note {
                 Text(note)

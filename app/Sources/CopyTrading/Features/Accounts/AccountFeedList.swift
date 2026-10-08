@@ -11,7 +11,8 @@ struct AccountFeedList: View {
     private var items: [AccountFeedItem] { feature.feeds[accountID] ?? [] }
 
     var body: some View {
-        PageSection("Recent activity", symbol: "clock.arrow.circlepath") {
+        VStack(alignment: .leading, spacing: 8) {
+            ListHeading("Activity")
             VStack(alignment: .leading, spacing: 0) {
                 if let error = feature.errors["feed:\(accountID)"] {
                     Callout(error, tone: .critical)
@@ -19,15 +20,16 @@ struct AccountFeedList: View {
                 }
                 if items.isEmpty {
                     Text(L10n.string("Nothing has been bought or sold in this account yet."))
-                        .foregroundStyle(Palette.secondaryInk)
-                        .font(.callout)
+                        .foregroundStyle(Palette.tertiaryInk)
+                        .font(DesignTokens.caption)
+                        .padding(.vertical, 8)
                 }
                 ForEach(items) { item in
                     AccountFeedRow(item: item, directory: GuruDirectory(model.savedTradingConfiguration))
-                        .padding(.vertical, 8)
+                        .padding(.vertical, 10)
                         .overlay(alignment: .bottom) {
                             if item.id != items.last?.id {
-                                Rectangle().fill(Palette.hairline).frame(height: 1)
+                                Hairline()
                             }
                         }
                 }

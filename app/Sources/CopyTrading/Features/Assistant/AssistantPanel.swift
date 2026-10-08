@@ -134,8 +134,8 @@ struct AssistantPanel: View {
 
     private var suggestions: [String] {
         let directory = GuruDirectory(model.savedTradingConfiguration)
-        let guru = directory.name(for: model.openGuruID) ?? directory.gurus.first?.name
-        return AssistantSuggestions.suggestions(for: model.selectedScreen, guru: guru)
+        let guru = directory.name(for: model.selectedScreen.guruID) ?? directory.gurus.first?.name
+        return AssistantSuggestions.suggestions(for: model.selectedScreen, guru: guru, hasSelectedPost: selectedPost != nil)
     }
 
     private var selectedPost: SourceActivity? {
@@ -156,8 +156,6 @@ struct AssistantPanel: View {
 
     private func follow(_ link: AssistantLink) {
         model.follow(link, activity: accountFeature.activity) { id in
-            // Activity reads the focus when it appears; when it is already showing, select the post now.
-            accountFeature.focusedActivityID = id
             activityState.focusActivity(id)
         }
     }

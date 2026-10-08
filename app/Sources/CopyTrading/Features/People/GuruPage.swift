@@ -59,8 +59,7 @@ struct GuruPage: View {
         .background(Palette.page)
         .animation(reduceMotion ? .easeOut(duration: 0.15) : .smooth(duration: 0.28), value: selectedItem == nil)
         .navigationTitle(guru?.name ?? L10n.string("People"))
-        .onChange(of: guruID, initial: true) { _, id in
-            model.openGuruID = id
+        .onChange(of: guruID, initial: true) {
             selectedID = nil
             reload()
         }

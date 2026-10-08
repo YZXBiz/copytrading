@@ -1,29 +1,29 @@
+import DesktopCore
 import SwiftUI
 
+/// The two things the owner works with, each account and each guru, above the pages that set
+/// them up. Before a setup is saved, only those pages show.
 struct SidebarView<Header: View>: View {
     @Bindable var model: AppModel
     let accountFeature: AccountFeatureModel
     @ViewBuilder let header: () -> Header
 
     var body: some View {
+        let configuration = model.savedTradingConfiguration
+        let gurus = GuruDirectory(configuration).gurus
         ScrollView {
             VStack(alignment: .leading, spacing: 2) {
-                ForEach(AppModel.ScreenSection.allCases) { section in
-                    // Groups are separated by a hairline rather than a heading.
-                    if section != AppModel.ScreenSection.allCases.first {
-                        Divider()
-                            .padding(.vertical, 8)
-                            .padding(.horizontal, 9)
+                if let accounts = configuration?.accounts, !accounts.isEmpty {
+                    SidebarGroupTitle(title: "Accounts")
+                    ForEach(accounts) { account in
+                        SidebarAccountRow(account: account, model: model, accountFeature: accountFeature)
                     }
-                    ForEach(section.screens) { screen in
-                        SidebarRow(
-                            title: screen.title,
-                            symbol: screen.symbol,
-                            identifier: "navigation.\(screen.rawValue)",
-                            isSelected: model.selectedScreen == screen,
-                            badge: badge(for: screen),
-                            progress: progress(for: screen)
-                        ) { model.selectedScreen = screen }
+                }
+                if !gurus.isEmpty {
+                    SidebarGroupTitle(title: "People")
+                        .padding(.top, 16)
+                    ForEach(gurus) { guru in
+                        SidebarGuruRow(guru: guru, model: model, accountFeature: accountFeature)
                     }
                 }
             }
@@ -42,17 +42,5 @@ struct SidebarView<Header: View>: View {
             SidebarStatusFooter(model: model)
         }
         .background { SidebarPanelBackground() }
-    }
-
-    /// Getting Started shows its ring only until the first setup is saved.
-    private func progress(for screen: AppModel.Screen) -> Double? {
-        guard screen == .gettingStarted, model.savedTradingConfiguration == nil else { return nil }
-        return model.setupProgress.fraction
-    }
-
-    /// Only posts that wait on the owner earn a count; nothing else competes for attention.
-    private func badge(for screen: AppModel.Screen) -> Int {
-        guard screen == .activity else { return 0 }
-        return accountFeature.activity.filter(\.needsManualReview).count
     }
 }

@@ -53,51 +53,12 @@ final class AppModel {
         case failed
     }
 
-    enum Screen: String, CaseIterable, Hashable, Identifiable {
-        case today
-        case activity
-        case people
-        case accounts
-        case connections
-        case gettingStarted
-        case diagnostics
-        case settings
-
-        var id: String { rawValue }
-
-        var title: String {
-            switch self {
-            case .today: "Today"
-            case .activity: "Activity"
-            case .people: "People"
-            case .accounts: "Accounts"
-            case .connections: "Connections"
-            case .gettingStarted: "Getting Started"
-            case .diagnostics: "Diagnostics"
-            case .settings: "Settings"
-            }
-        }
-
-        var symbol: String {
-            switch self {
-            case .today: "sun.max"
-            case .activity: "list.bullet.rectangle"
-            case .people: "person.2"
-            case .accounts: "building.columns"
-            case .connections: "cloud"
-            case .gettingStarted: "hand.wave"
-            case .diagnostics: "waveform.path.ecg"
-            case .settings: "gearshape"
-            }
-        }
-    }
-
-    var selectedScreen: Screen = .today
+    var selectedScreen: Screen = .gettingStarted
     /// The Settings page on show and the pages visited before it, newest last.
     var settingsPage: SettingsPage = .general
     var settingsTrail: [SettingsPage] = []
     /// Where closing Settings returns to.
-    var screenBeforeSettings: Screen = .today
+    var screenBeforeSettings: Screen = .gettingStarted
     var runtimeState: RuntimeState = .stopped {
         didSet { holdMacAwakeWhileCopying() }
     }
@@ -514,11 +475,6 @@ final class AppModel {
     var limitsSaveRefused = false
     /// A connection the guide asked to open; Connections opens its panel and clears it.
     var requestedConnection: ConnectionKind?
-    /// The guru People shows: an assistant link sets it to open that guru, and the assistant reads
-    /// it to know who "this guru" is.
-    var openGuruID: String?
-    /// An account an assistant link asked to show; Accounts scrolls to it and clears it.
-    var requestedAccountID: String?
     /// The draft as it stood when the current check began; Start Copying needs it unchanged.
     var checkedSetupSignature: SetupDraftSignature?
     /// Each connection's latest check, kept only while what it checked stays as typed.
@@ -708,12 +664,12 @@ final class AppModel {
             // an engine restart later never moves the owner.
             if !hasChosenFirstScreen {
                 hasChosenFirstScreen = true
-                if savedTrading == nil && selectedScreen == .today {
-                    if UserDefaults.standard.bool(forKey: Self.setupTourEndedKey) {
-                        selectedScreen = .gettingStarted
-                    } else {
+                if savedTrading == nil {
+                    if !UserDefaults.standard.bool(forKey: Self.setupTourEndedKey) {
                         startSetupTour()
                     }
+                } else {
+                    selectedScreen = homeScreen
                 }
             }
             let newJournal = CommandJournal(url: paths.applicationSupportDirectory.appending(path: "commands.json"))

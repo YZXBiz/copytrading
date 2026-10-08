@@ -45,9 +45,10 @@ extension AppModel {
     /// doesn't settle it.
     func assistantContext(selectedPost: SourceActivity?) -> AssistantAskContext {
         AssistantAskContext(
-            screen: selectedScreen.rawValue,
-            selectedSourceID: selectedScreen == .activity ? selectedPost?.sourceID : nil,
-            selectedGuruID: selectedScreen == .people ? openGuruID : nil,
+            screen: selectedScreen.assistantName,
+            selectedSourceID: selectedPost?.sourceID,
+            selectedAccountID: selectedScreen.accountID,
+            selectedGuruID: selectedScreen.guruID,
             language: AppLanguagePreference.shared.language.rawValue,
             gurus: assistantGurus,
             setup: assistantSetup)
@@ -105,18 +106,21 @@ extension AppModel {
         }
     }
 
-    /// Opens what an answer points at: the post in Activity, the account in Accounts, or the guru's page in People.
+    /// Opens what an answer points at: the post on the first account it reached, the account, or the guru.
     func follow(_ link: AssistantLink, activity: [SourceActivity], focusPost: (SourceActivity.ID) -> Void) {
         switch link.kind {
         case "post":
-            if let post = activity.first(where: { $0.sourceID == link.id }) { focusPost(post.id) }
-            selectedScreen = .activity
+            guard let post = activity.first(where: { $0.sourceID == link.id }) else { return }
+            focusPost(post.id)
+            if let accountID = post.destinations.first?.accountID {
+                selectedScreen = .account(accountID)
+            } else if let guruID = post.guruID {
+                selectedScreen = .guru(guruID)
+            }
         case "account":
-            requestedAccountID = link.id
-            selectedScreen = .accounts
+            selectedScreen = .account(link.id)
         case "guru":
-            openGuruID = link.id
-            selectedScreen = .people
+            selectedScreen = .guru(link.id)
         default:
             break
         }

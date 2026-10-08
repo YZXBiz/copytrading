@@ -1,8 +1,11 @@
 import SwiftUI
 
-/// Always-visible answer to "is it copying?" regardless of the selected screen.
+/// The pages that set things up, under a hairline, and the always-visible answer to "is it
+/// copying?", with Diagnostics one click from it.
 struct SidebarStatusFooter: View {
     let model: AppModel
+
+    private static let pages: [AppModel.Screen] = [.connections, .gettingStarted, .settings]
 
     @MainActor private var summary: (text: String, tone: StatusTone) {
         if model.runtimeState == .stopped || model.runtimeState == .failed {
@@ -20,41 +23,51 @@ struct SidebarStatusFooter: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Divider()
-            HStack(spacing: 14) {
-                ForEach(AppModel.sidebarFooterScreens) { screen in
-                    Button {
-                        model.selectedScreen = screen
-                    } label: {
-                        Image(systemName: screen.symbol)
-                            .symbolVariant(model.selectedScreen == screen ? .fill : .none)
-                            .foregroundStyle(model.selectedScreen == screen ? Palette.accent : .secondary)
-                    }
-                    .help(screen == .settings ? L10n.string("Settings (⌘,)") : L10n.string(screen.title))
-                    .accessibilityLabel(L10n.string(screen.title))
-                    .accessibilityIdentifier("navigation.\(screen.rawValue)")
-                }
-                Spacer(minLength: 4)
-                HStack(spacing: 5) {
-                    Circle()
-                        .fill(summary.tone.color)
-                        .frame(width: 7, height: 7)
-                        .accessibilityHidden(true)
-                    Text(summary.text)
-                        .lineLimit(1)
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .help(helpText)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(L10n.string("Status: %@", summary.text))
+        VStack(alignment: .leading, spacing: 2) {
+            Hairline()
+                .padding(.horizontal, 10)
+                .padding(.bottom, 8)
+            ForEach(Self.pages, id: \.self) { screen in
+                SidebarRow(
+                    title: screen.title,
+                    symbol: screen.symbol,
+                    identifier: screen.identifier,
+                    isSelected: model.selectedScreen == screen,
+                    progress: progress(for: screen)
+                ) { model.selectedScreen = screen }
             }
-            .buttonStyle(.borderless)
-            .font(.system(size: 16))
-            .foregroundStyle(.secondary)
+            .padding(.horizontal, 10)
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(summary.tone.color)
+                    .frame(width: 6, height: 6)
+                    .accessibilityHidden(true)
+                Text(summary.text)
+                    .lineLimit(1)
+                Spacer(minLength: 4)
+                Button(L10n.string("Diagnostics"), systemImage: AppModel.Screen.diagnostics.symbol) {
+                    model.selectedScreen = .diagnostics
+                }
+                .labelStyle(.iconOnly)
+                .buttonStyle(QuietPressButtonStyle())
+                .foregroundStyle(model.selectedScreen == .diagnostics ? Palette.accent : Palette.tertiaryInk)
+                .help(L10n.string("Diagnostics"))
+                .accessibilityIdentifier(AppModel.Screen.diagnostics.identifier)
+            }
+            .font(DesignTokens.sidebarDetail)
+            .foregroundStyle(Palette.tertiaryInk)
+            .help(helpText)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel(L10n.string("Status: %@", summary.text))
+            .padding(.horizontal, 20)
+            .padding(.top, 10)
+            .padding(.bottom, 14)
         }
-        .padding(.horizontal, 18)
-        .padding(.bottom, 12)
+    }
+
+    /// Getting Started shows its ring only until the first setup is saved.
+    private func progress(for screen: AppModel.Screen) -> Double? {
+        guard screen == .gettingStarted, model.savedTradingConfiguration == nil else { return nil }
+        return model.setupProgress.fraction
     }
 }

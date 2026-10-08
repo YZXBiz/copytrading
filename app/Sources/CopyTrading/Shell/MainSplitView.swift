@@ -186,7 +186,7 @@ struct MainSplitView: View {
             }
         } label: {
             Label(
-                L10n.string(isShowingSettings ? model.settingsPage.title : model.selectedScreen.title),
+                isShowingSettings ? L10n.string(model.settingsPage.title) : model.title(of: model.selectedScreen),
                 systemImage: isShowingSettings ? model.settingsPage.symbol : model.selectedScreen.symbol
             )
             .labelStyle(.titleAndIcon)
@@ -199,21 +199,9 @@ struct MainSplitView: View {
         .accessibilityIdentifier("toolbar.pages")
     }
 
-    @ViewBuilder
     private var screenMenuItems: some View {
-        ForEach(AppModel.ScreenSection.allCases) { section in
-            if section != AppModel.ScreenSection.allCases.first {
-                Divider()
-            }
-            ForEach(section.screens) { screen in
-                Button(L10n.string(screen.title), systemImage: screen == model.selectedScreen ? "checkmark" : screen.symbol) {
-                    model.selectedScreen = screen
-                }
-            }
-        }
-        Divider()
-        ForEach(AppModel.sidebarFooterScreens) { screen in
-            Button(L10n.string(screen.title), systemImage: screen == model.selectedScreen ? "checkmark" : screen.symbol) {
+        ForEach(model.navigableScreens, id: \.self) { screen in
+            Button(model.title(of: screen), systemImage: screen == model.selectedScreen ? "checkmark" : screen.symbol) {
                 model.selectedScreen = screen
             }
         }

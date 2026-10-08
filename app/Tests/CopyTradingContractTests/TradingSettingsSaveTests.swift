@@ -29,7 +29,6 @@ struct TradingSettingsSaveTests {
         model.tradingStatus = try status(.paused)
         try checkNavigationContract()
         try checkCopyingSummary()
-        try checkAccountLinesFoldAfterThree()
         try checkActivityScreenStateAndStatusPolicy()
 
         let profile = try TradingProfileBuilder().build(
@@ -155,48 +154,23 @@ struct TradingSettingsSaveTests {
         print("CopyTradingContractTests: an unchecked status is neutral while unavailable and queryable keep their tones")
     }
 
-    private static func accountHistory(_ equity: Double) throws -> EquityHistory {
-        let json = """
-            {"window":{"range":"month","day":null},"base_value":null,"points":[
-             {"at":"2026-09-01T20:00:00Z","equity":"\(equity)"},{"at":"2026-09-02T20:00:00Z","equity":"\(equity * 1.01)"}]}
-            """
-        return try JSONDecoder().decode(EquityHistory.self, from: Data(json.utf8))
-    }
-
-    private static func checkAccountLinesFoldAfterThree() throws {
-        let three = AccountSeries.make(from: try ["a": 300.0, "b": 200.0, "c": 100.0].map { ($0.key, try accountHistory($0.value)) })
-        try check(three.map(\.name) == ["a", "b", "c"], "Three accounts each keep their own line, largest first: \(three.map(\.name))")
-        let five = AccountSeries.make(
-            from: try ["a": 500.0, "b": 400.0, "c": 300.0, "d": 200.0, "e": 100.0].map { ($0.key, try accountHistory($0.value)) })
-        try check(
-            five.map(\.name) == ["a", "b", "c", "Other accounts"],
-            "Past three accounts the rest fold into one line: \(five.map(\.name))")
-        let other = five[3]
-        try check(
-            other.equity.points.last.map { abs($0.value - 303) < 1e-9 } == true,
-            "The folded line carries the combined equity of the accounts it holds")
-        print("CopyTradingContractTests: three accounts keep their own lines and the rest fold into Other accounts")
-    }
-
     private static func checkNavigationContract() throws {
-        let screens = AppModel.Screen.allCases
+        let pages = AppModel.Screen.pages
         try check(
-            screens.map(\.rawValue) == [
-                "today", "activity", "people", "accounts", "connections", "gettingStarted", "diagnostics", "settings",
+            pages.map(\.identifier) == [
+                "navigation.connections", "navigation.gettingStarted", "navigation.settings", "navigation.diagnostics",
             ],
-            "Native navigation lost a required operator screen"
-        )
+            "Native navigation lost a required operator page")
         try check(
-            screens.map(\.title) == [
-                "Today", "Activity", "People", "Accounts", "Connections", "Getting Started", "Diagnostics", "Settings",
-            ],
-            "Native navigation titles changed")
-        let reachable = AppModel.ScreenSection.allCases.flatMap(\.screens) + AppModel.sidebarFooterScreens
+            pages.map(\.title) == ["Connections", "Getting Started", "Settings", "Diagnostics"], "Native navigation titles changed")
         try check(
-            reachable.count == screens.count && Set(reachable) == Set(screens),
-            "The sidebar rows and footer icons must reach every screen exactly once"
-        )
-        print("CopyTradingContractTests: required operator screens are navigable")
+            AppModel.Screen.account("primary").identifier == "navigation.account.primary"
+                && AppModel.Screen.guru("guru-1a2b").identifier == "navigation.guru.guru-1a2b",
+            "Accounts and gurus lost their sidebar identifiers")
+        try check(
+            AppModel.Screen.account("primary").assistantName == "accounts" && AppModel.Screen.guru("g").assistantName == "people",
+            "The assistant no longer reads accounts and gurus as the engine names them")
+        print("CopyTradingContractTests: every account, guru, and operator page is navigable")
     }
 
     private static func checkValidationClientRequest(
@@ -1420,7 +1394,7 @@ struct TradingSettingsSaveTests {
 
         // A higher maximum per order, applied while copying runs.
         model.setupDraft.accounts[0].policy.maxOrderUSD = "200"
-        model.selectedScreen = .accounts
+        model.selectedScreen = .account("primary")
         try check(model.isCopyingSavedSetup && model.canCheckAndStart, "A change while copying could not be applied")
         let beforeApply = await starter.events().count
         model.checkAndStartCopying()
@@ -1445,7 +1419,7 @@ struct TradingSettingsSaveTests {
         try check(
             Array(applied[pause...]).contains("validate") && applied.last == "start", "Applying did not check and start after the pause")
         try check(!model.isPausedToApplyChanges, "A started change still counted as paused for it")
-        try check(model.selectedScreen == .accounts, "Applying changes moved the owner off the screen they used")
+        try check(model.selectedScreen == .account("primary"), "Applying changes moved the owner off the screen they used")
         try check(model.message == "Your changes are saved, and copying uses them now.", "Applying changes did not say they took effect")
 
         // A change whose check fails: the saved setup copies again at once, and the results stay

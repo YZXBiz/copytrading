@@ -4,7 +4,7 @@ import SwiftUI
 /// path, its headline, one line on what happens, where to change it, and the one caution.
 struct GuideJourneyCard: View {
     let index: Int
-    let open: (AppModel.Screen) -> Void
+    let open: (AppModel.Screen?) -> Void
     let select: (Int) -> Void
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.colorSchemeContrast) private var contrast
@@ -102,7 +102,7 @@ struct GuideJourneyCard: View {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(L10n.string(stop.setting))
                     .foregroundStyle(Palette.secondaryInk)
-                Text(L10n.string(stop.screen.title))
+                Text(L10n.string(stop.placeTitle))
                     .fontWeight(.medium)
                     .foregroundStyle(Palette.accent)
                 Image(systemName: "arrow.right")
@@ -114,8 +114,8 @@ struct GuideJourneyCard: View {
             .contentShape(.rect)
         }
         .buttonStyle(QuietPressButtonStyle())
-        .help(L10n.string(stop.screen.title))
-        .accessibilityLabel("\(L10n.string(stop.setting)), \(L10n.string(stop.screen.title))")
+        .help(L10n.string(stop.placeTitle))
+        .accessibilityLabel("\(L10n.string(stop.setting)), \(L10n.string(stop.placeTitle))")
         .accessibilityIdentifier("guide.journey.open")
     }
 

@@ -1,56 +1,28 @@
 import SwiftUI
 
+/// The selected screen, with the setup sheets every screen can raise.
 struct ScreenDetailView: View {
     @Bindable var model: AppModel
     let accountFeature: AccountFeatureModel
     let activityState: ActivityScreenState
+
     var body: some View {
         screen
-            .sheet(item: $model.setupEditor) { target in
-                ConnectionsEditorSheet(target: target, model: model)
-            }
-            .sheet(isPresented: $model.isShowingSetupCheck) {
-                SetupCheckSheet(model: model)
-            }
-            .sheet(item: $model.setupImportResult) { result in
-                SetupImportSheet(result: result, model: model)
-            }
-            .onChange(of: model.setupDraft.signature) {
-                model.setupDraftDidChange()
-            }
-    }
-
-    /// The guru People shows: the one last opened while they are still saved, else the first.
-    private var peopleGuruID: String? {
-        let gurus = GuruDirectory(model.savedTradingConfiguration).gurus
-        return gurus.first { $0.id == model.openGuruID }?.id ?? gurus.first?.id
-    }
-
-    private func openConnections() {
-        model.selectedScreen = .connections
+            .sheet(item: $model.setupEditor) { ConnectionsEditorSheet(target: $0, model: model) }
+            .sheet(isPresented: $model.isShowingSetupCheck) { SetupCheckSheet(model: model) }
+            .sheet(item: $model.setupImportResult) { SetupImportSheet(result: $0, model: model) }
+            .onChange(of: model.setupDraft.signature) { model.setupDraftDidChange() }
     }
 
     @ViewBuilder
     private var screen: some View {
         switch model.selectedScreen {
-        case .today:
-            TodayView(model: model, feature: accountFeature)
-        case .activity:
-            ActivityView(model: model, feature: accountFeature, screenState: activityState)
-        case .people:
-            if let guruID = peopleGuruID {
-                GuruPage(guruID: guruID, model: model, feature: accountFeature)
-            } else {
-                ScrollView {
-                    PeopleInvitation(
-                        hasUnsavedGurus: model.setupDraft.routes.contains { !$0.displayName.trimmed.isEmpty },
-                        openConnections: openConnections
-                    )
-                    .padding(DesignTokens.pagePadding)
-                }
-            }
-        case .accounts:
-            AccountsView(model: model, feature: accountFeature)
+        case .account(let id):
+            AccountPage(accountID: id, model: model, feature: accountFeature, activityState: activityState)
+                .id(id)
+        case .guru(let id):
+            GuruPage(guruID: id, model: model, feature: accountFeature)
+                .id(id)
         case .connections:
             ConnectionsView(model: model)
         case .gettingStarted:

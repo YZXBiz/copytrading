@@ -32,7 +32,7 @@ enum Palette {
     static let tertiaryInk = dynamic(light: rgb(0x5F6064), dark: rgb(0x8E8E93))
     /// Links, switches, and a screen's one primary action.
     static let accent = Color(red: 0.204, green: 0.471, blue: 0.965)
-    /// Something waiting for the owner: deeper than system yellow so a small mark reads on white.
+    /// What waits on the owner: a count beside a heading, a guru with calls to answer.
     static let amber = dynamic(light: rgb(0xB8860B), dark: rgb(0xF5C04A))
 
     private static func rgb(_ hex: Int) -> NSColor {
