@@ -131,7 +131,7 @@ private func linksOpenThePostAccountOrGuru() throws {
         model.selectedScreen == .accounts && model.requestedAccountID == "paper-main", "An account link did not open Accounts at it")
 
     model.follow(AssistantLink(kind: "guru", id: "zhao", title: "zhao"), activity: []) { _ in }
-    try verifyPanel(model.selectedScreen == .people && model.requestedGuruID == "zhao", "A guru link did not open their card")
+    try verifyPanel(model.selectedScreen == .people && model.openGuruID == "zhao", "A guru link did not open their page")
 
     model.follow(AssistantLink(kind: "elsewhere", id: "x", title: "x"), activity: []) { _ in }
     try verifyPanel(model.selectedScreen == .people, "An unknown link moved the window")

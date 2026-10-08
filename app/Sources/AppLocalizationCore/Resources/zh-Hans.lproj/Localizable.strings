@@ -1872,3 +1872,11 @@
 "Type" = "类型";
 "Market %@" = "市价%@";
 "Limit %@" = "限价%@";
+"Posts today" = "今日帖子";
+"Read in" = "解读用时";
+"%@ avg" = "平均 %@";
+"Newest first" = "最新在前";
+"Yesterday" = "昨天";
+"No account acted on it" = "没有账户处理";
+"No posts from %@ yet. They show here as soon as CopyTrading reads one." = "%@ 还没有帖子。CopyTrading 读到第一条后会显示在这里。";
+"Edit %@" = "编辑 %@";

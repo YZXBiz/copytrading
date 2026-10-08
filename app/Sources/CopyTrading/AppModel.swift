@@ -508,9 +508,8 @@ final class AppModel {
     var editorFocusesEntryTolerance = false
     /// A connection the guide asked to open; Connections opens its panel and clears it.
     var requestedConnection: ConnectionKind?
-    /// A guru an assistant link asked to open; People opens their sheet and clears it.
-    var requestedGuruID: String?
-    /// The guru whose sheet is open on People, so the assistant knows who "this guru" is.
+    /// The guru People shows: an assistant link sets it to open that guru, and the assistant reads
+    /// it to know who "this guru" is.
     var openGuruID: String?
     /// An account an assistant link asked to show; Accounts scrolls to it and clears it.
     var requestedAccountID: String?

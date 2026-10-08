@@ -26,6 +26,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
     case backupRestoreNotes = "backup and restore notes"
     case learnedExamples = "learned examples"
     case updateOffer = "update offer banner"
+    case guruFeed = "guru feed"
 
     var testDescription: String { rawValue }
 
@@ -54,6 +55,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
         case .backupRestoreNotes: try await runBackupRestoreNoteTests()
         case .learnedExamples: try runLearnedExamplesTests()
         case .updateOffer: try runUpdateOfferTests()
+        case .guruFeed: try runGuruFeedTests()
         }
     }
 }

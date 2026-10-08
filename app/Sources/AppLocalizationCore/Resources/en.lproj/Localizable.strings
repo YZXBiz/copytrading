@@ -1872,3 +1872,11 @@
 "Type" = "Type";
 "Market %@" = "Market %@";
 "Limit %@" = "Limit %@";
+"Posts today" = "Posts today";
+"Read in" = "Read in";
+"%@ avg" = "%@ avg";
+"Newest first" = "Newest first";
+"Yesterday" = "Yesterday";
+"No account acted on it" = "No account acted on it";
+"No posts from %@ yet. They show here as soon as CopyTrading reads one." = "No posts from %@ yet. They show here as soon as CopyTrading reads one.";
+"Edit %@" = "Edit %@";

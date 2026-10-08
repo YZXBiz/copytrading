@@ -1,1 +1,0 @@
-../../Sources/CopyTrading/Features/People/PeopleSourcePreview.swift

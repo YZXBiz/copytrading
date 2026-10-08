@@ -20,6 +20,16 @@ struct ScreenDetailView: View {
             }
     }
 
+    /// The guru People shows: the one last opened while they are still saved, else the first.
+    private var peopleGuruID: String? {
+        let gurus = GuruDirectory(model.savedTradingConfiguration).gurus
+        return gurus.first { $0.id == model.openGuruID }?.id ?? gurus.first?.id
+    }
+
+    private func openConnections() {
+        model.selectedScreen = .connections
+    }
+
     @ViewBuilder
     private var screen: some View {
         switch model.selectedScreen {
@@ -28,7 +38,17 @@ struct ScreenDetailView: View {
         case .activity:
             ActivityView(model: model, feature: accountFeature, screenState: activityState)
         case .people:
-            PeopleView(model: model, feature: accountFeature)
+            if let guruID = peopleGuruID {
+                GuruPage(guruID: guruID, model: model, feature: accountFeature)
+            } else {
+                ScrollView {
+                    PeopleInvitation(
+                        hasUnsavedGurus: model.setupDraft.routes.contains { !$0.displayName.trimmed.isEmpty },
+                        openConnections: openConnections
+                    )
+                    .padding(DesignTokens.pagePadding)
+                }
+            }
         case .accounts:
             AccountsView(model: model, feature: accountFeature)
         case .connections:
