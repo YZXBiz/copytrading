@@ -1,7 +1,7 @@
 import DesktopCore
 import SwiftUI
 
-/// What the account holds, under a heading that says when its prices were read.
+/// What the account holds. The balance above says when prices were read.
 struct AccountPositions: View {
     let account: AccountOverview
     let model: AppModel
@@ -9,15 +9,8 @@ struct AccountPositions: View {
     let openPost: (SourceActivity) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ListHeading("Positions") {
-                if let observedAt = account.balance?.observedAt {
-                    AccountFreshness(
-                        observedAt: observedAt, isRefreshing: false,
-                        engineStopped: model.runtimeState == .stopped || model.runtimeState == .failed,
-                        refresh: {}, compact: true)
-                }
-            }
+        VStack(alignment: .leading, spacing: 12) {
+            ListHeading("Positions")
             PositionsTable(
                 positions: account.positions,
                 accountID: account.accountID,

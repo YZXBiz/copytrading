@@ -29,10 +29,15 @@ enum DesignTokens {
     // New York, as the invitations are; everything people read and press stays in SF Pro.
     static let pageTitle = Font.system(.title2, weight: .semibold).scaled(by: 21.0 / 17)
     /// An account's or guru's page: the name, then the balance under it.
-    static let entityTitle = Font.system(.title2, weight: .semibold).scaled(by: 22.0 / 17)
-    static let balanceDisplay = Font.system(.largeTitle, weight: .semibold).scaled(by: 30.0 / 26)
+    /// An account or guru's name: large and regular, tracked tight, as on a studio site.
+    static let entityTitle = Font.system(.largeTitle, weight: .regular).scaled(by: 30.0 / 26)
+    static let entityTitleTracking: CGFloat = -0.9
+    /// The balance is the page's one big figure: light enough to read as type, not a badge.
+    static let balanceDisplay = Font.system(.largeTitle, weight: .regular).scaled(by: 52.0 / 26)
+    static let balanceTracking: CGFloat = -2
     static let statValue = Font.system(.body, weight: .semibold).scaled(by: 14.0 / 13)
-    static let listHeading = Font.system(.body, weight: .semibold).scaled(by: 15.0 / 13)
+    static let listHeading = Font.system(.title3, weight: .regular).scaled(by: 20.0 / 15)
+    static let listHeadingTracking: CGFloat = -0.4
     static let feedTitle = Font.system(.body, weight: .semibold)
     /// The sidebar's account and guru rows, and the small capitals over each group.
     static let sidebarTitle = Font.system(.body, weight: .medium)

@@ -79,16 +79,13 @@ struct PositionRow: View {
             Text(Self.quantity(shares))
                 .monospacedDigit()
                 .foregroundStyle(Palette.ink)
-            if outside > 0 {
-                Text(
-                    owned > 0
-                        ? L10n.string("%@ copied · %@ outside", Self.shortQuantity(owned), Self.shortQuantity(outside))
-                        : L10n.string("held outside")
-                )
-                .font(DesignTokens.caption)
-                .foregroundStyle(Palette.tertiaryInk)
-                .lineLimit(1)
-                .fixedSize()
+            // Only a mix needs saying; the limits strip already says what is held outside.
+            if outside > 0, owned > 0 {
+                Text(L10n.string("%@ copied · %@ outside", Self.shortQuantity(owned), Self.shortQuantity(outside)))
+                    .font(DesignTokens.caption)
+                    .foregroundStyle(Palette.tertiaryInk)
+                    .lineLimit(1)
+                    .fixedSize()
             }
         }
         .frame(maxWidth: .infinity, alignment: .trailing)

@@ -46,9 +46,10 @@ struct AccountNeedsYou: View {
                         )
                     }
                 }
+                .clipShape(.rect(cornerRadius: 18))
                 .overlay {
-                    RoundedRectangle(cornerRadius: DesignTokens.blockCornerRadius)
-                        .strokeBorder(Palette.amber.opacity(0.35))
+                    RoundedRectangle(cornerRadius: 18)
+                        .strokeBorder(Palette.hairline)
                         .accessibilityHidden(true)
                 }
             }

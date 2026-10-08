@@ -24,6 +24,7 @@ struct AccountPageWaiting: View {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text(accountID)
                     .font(DesignTokens.entityTitle)
+                    .tracking(DesignTokens.entityTitleTracking)
                     .foregroundStyle(Palette.ink)
                     .accessibilityAddTraits(.isHeader)
                 if let configuration {

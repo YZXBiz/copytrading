@@ -37,7 +37,8 @@ struct EquityReadout: View {
                 .fontWeight(.medium)
                 .foregroundStyle(Palette.ink)
             change(focused.value - stats.reference, fraction: fraction(of: focused.value - stats.reference))
-        } else {
+        } else if range != .day {
+            // A day's move already sits under the balance; longer windows say theirs here.
             change(stats.last.value - stats.reference, fraction: fraction(of: stats.last.value - stats.reference))
             Text(referenceName)
                 .foregroundStyle(Palette.tertiaryInk)

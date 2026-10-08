@@ -33,7 +33,6 @@ struct AccountNeedsYouRow: View {
         HStack(spacing: 12) {
             Button(action: open) {
                 HStack(spacing: 12) {
-                    ToneGlyph(symbol: "hourglass", tint: Palette.amber)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(title)
                             .font(DesignTokens.feedTitle)

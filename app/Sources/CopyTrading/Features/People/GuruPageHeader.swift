@@ -11,7 +11,8 @@ struct GuruPageHeader: View {
             GuruMonogram(name: name, size: 48)
             VStack(alignment: .leading, spacing: 4) {
                 Text(name)
-                    .font(DesignTokens.pageTitle)
+                    .font(DesignTokens.entityTitle)
+                    .tracking(DesignTokens.entityTitleTracking)
                     .foregroundStyle(Palette.ink)
                     .lineLimit(1)
                     .accessibilityAddTraits(.isHeader)

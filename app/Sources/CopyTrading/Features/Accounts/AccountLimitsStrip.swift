@@ -23,10 +23,10 @@ struct AccountLimitsStrip: View {
                 HStack(spacing: 24) { caps }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
         .overlay {
-            RoundedRectangle(cornerRadius: DesignTokens.blockCornerRadius)
+            RoundedRectangle(cornerRadius: 18)
                 .strokeBorder(Palette.hairline)
                 .accessibilityHidden(true)
         }
@@ -64,9 +64,7 @@ struct AccountLimitsStrip: View {
         }
         Spacer(minLength: 8)
         Button(L10n.string("Edit Limits"), action: editLimits)
-            .buttonStyle(.plain)
-            .font(DesignTokens.caption.weight(.semibold))
-            .foregroundStyle(Palette.accent)
+            .buttonStyle(PageButtonStyle())
             .accessibilityIdentifier("account.editLimits")
     }
 

@@ -13,6 +13,7 @@ struct AccountBalanceSummary: View {
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 6) {
                     MoneyText(value: Decimal(engine: balance.equity) ?? 0, font: DesignTokens.balanceDisplay)
+                        .tracking(DesignTokens.balanceTracking)
                         .foregroundStyle(Palette.ink)
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
                         MoneyText(

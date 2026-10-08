@@ -67,7 +67,7 @@ struct EquityPlot: View {
                     )
                     .foregroundStyle(lineTone.opacity(run.isExtended ? 0.45 : 1))
                     .interpolationMethod(.monotone)
-                    .lineStyle(StrokeStyle(lineWidth: contrast == .increased ? 2.75 : 2.25, lineCap: .round, lineJoin: .round))
+                    .lineStyle(StrokeStyle(lineWidth: contrast == .increased ? 2.25 : 1.75, lineCap: .round, lineJoin: .round))
                     .accessibilityLabel(EquityChartTime.point(point.at, in: range))
                     .accessibilityValue(point.value.formatted(.currency(code: "USD")))
                 }
@@ -117,12 +117,6 @@ struct EquityPlot: View {
                             .frame(minWidth: valueAxisWidth, alignment: .leading)
                     }
                 }
-            }
-        }
-        .chartPlotStyle { plot in
-            plot.background {
-                ChartPaperBackdrop(focus: UnitPoint(x: 0.85, y: 0.3), gridSpacing: 24, paper: false)
-                    .clipShape(.rect(cornerRadius: 10, style: .continuous))
             }
         }
         .chartOverlay { proxy in
@@ -193,7 +187,7 @@ struct EquityPlot: View {
 
     /// The day's color fading from the line to the floor of the plot.
     private var wash: LinearGradient {
-        let strong = contrast == .increased ? 0.3 : 0.2
+        let strong = contrast == .increased ? 0.14 : 0.07
         return LinearGradient(
             stops: [.init(color: lineTone.opacity(strong), location: 0), .init(color: lineTone.opacity(0), location: 0.8)],
             startPoint: .top, endPoint: .bottom)

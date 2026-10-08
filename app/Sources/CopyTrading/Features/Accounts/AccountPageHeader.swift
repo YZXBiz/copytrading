@@ -91,18 +91,28 @@ struct AccountPageHeader: View {
         return edited || !draft.key.isEmpty || !draft.secret.isEmpty ? L10n.string("Changed — not saved yet") : nil
     }
 
+    /// The name, large and plain, with its mode and entry state in one grey line under it. Only a
+    /// live account's mode carries colour, since it trades real money.
     private var identity: some View {
-        HStack(alignment: .center, spacing: 10) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(account.accountID)
                 .font(DesignTokens.entityTitle)
+                .tracking(DesignTokens.entityTitleTracking)
                 .foregroundStyle(Palette.ink)
                 .lineLimit(1)
                 .truncationMode(.middle)
                 .accessibilityAddTraits(.isHeader)
                 .help(L10n.string("Broker account %@", account.brokerIdentity))
-            AccountModeBadge(environment: account.environment)
-            StatusDotLabel(text: L10n.string(entryState.text), tone: entryState.tone, font: DesignTokens.caption.weight(.medium))
-                .padding(.leading, 6)
+            HStack(spacing: 6) {
+                Text(L10n.string(account.environment == .live ? "Live" : "Paper"))
+                    .foregroundStyle(account.environment == .live ? Color.orange : Palette.tertiaryInk)
+                Text(verbatim: "·")
+                    .foregroundStyle(Palette.tertiaryInk)
+                    .accessibilityHidden(true)
+                Text(L10n.string(entryState.text))
+                    .foregroundStyle(entryState.tone == .caution ? Palette.amber : Palette.tertiaryInk)
+            }
+            .font(DesignTokens.bodyText)
         }
         .fixedSize(horizontal: true, vertical: false)
     }
