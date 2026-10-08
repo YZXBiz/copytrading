@@ -18,8 +18,8 @@ FRACTIONS = st.fractions(min_value=Fraction(1, 1000), max_value=1, max_denominat
 )
 
 
-def _connection(amount: Decimal, default: Decimal | None = Decimal(1)) -> RouteConnection:
-    return RouteConnection(account_id="paper", full_position_usd=amount, default_fraction=default)
+def _connection(amount: Decimal) -> RouteConnection:
+    return RouteConnection(account_id="paper", full_position_usd=amount)
 
 
 @given(amount=AMOUNTS, fraction=FRACTIONS)
@@ -54,13 +54,10 @@ def test_a_larger_share_never_buys_less(amount, smaller, larger):
     assert low <= high
 
 
-@given(amount=AMOUNTS, default=FRACTIONS)
-def test_a_call_with_no_size_buys_only_the_default_share(amount, default):
-    with_default = _connection(amount, default)
+@given(amount=AMOUNTS)
+def test_a_call_with_no_size_buys_the_full_position(amount):
+    connection = _connection(amount)
 
-    assert requested_entry_budget(with_default, None) == requested_entry_budget(
-        with_default, default
+    assert requested_entry_budget(connection, None) == requested_entry_budget(
+        connection, Decimal(1)
     )
-    missing = requested_entry_budget(_connection(amount, None), None)
-    assert missing.budget is None
-    assert missing.reason == "missing_source_fraction_review"

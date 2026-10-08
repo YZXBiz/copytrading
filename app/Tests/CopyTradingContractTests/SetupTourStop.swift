@@ -1,0 +1,1 @@
+../../Sources/CopyTrading/Features/SetupTour/SetupTourStop.swift

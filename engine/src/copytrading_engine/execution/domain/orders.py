@@ -1,7 +1,7 @@
 """Validated order terms and records."""
 
 import datetime as dt
-from decimal import Decimal
+from decimal import ROUND_DOWN, Decimal
 from typing import Literal, Self
 
 from pydantic import AwareDatetime, Field, model_validator
@@ -62,8 +62,10 @@ class OrderPlan(OrderTerms):
     lot_id: Identifier | None
     entry_price: Positive
     session: Session
-    # A buy for a guru whose sells refer to the whole position joins this open lot.
+    # A buy joins the guru's open lot of the stock (ADR-0010).
     joins_lot: Identifier | None = None
+    # A sell takes from these buys in its lot, or from every buy when empty (ADR-0010).
+    from_entries: tuple[Identifier, ...] = ()
     # What the call asked for, and what the maximum per order allowed of it (ADR-0007).
     requested_usd: Positive | None = None
     budget_usd: Positive | None = None
@@ -88,6 +90,8 @@ class OrderPlan(OrderTerms):
             or self.budget_usd is not None
         ):
             raise ValueError("Only buys join a lot or carry a requested amount")
+        if self.side == "buy" and self.from_entries:
+            raise ValueError("Only sells take from buys")
         if self.session == Session.CLOSED:
             raise ValueError("Cannot prepare an order in a closed session")
         if self.type == "market" and self.session != Session.REGULAR:
@@ -139,23 +143,83 @@ class OrderRecord(OrderPlan):
         return is_terminal(self.status)
 
 
+# Shares are kept to the millionth, as Alpaca trades them.
+SHARE_STEP = Decimal("0.000001")
+
+
 class OwnedLot(Value):
+    """Every buy of one stock from one guru, as one position (ADR-0010). The lot keeps each buy's
+    remaining shares, so a sell can take from the buys at a named price, or from all of them."""
+
     symbol: Identifier
     entry_price: Positive
     source_key: Identifier
     original_qty: Positive
     remaining_qty: Quantity
     average_price: Positive
-    # Later buys at the guru's same price that joined this lot while it was open. The guru
-    # counts them as one position, so an exit naming that price sells from all of them.
+    # Later buys of the stock from the same guru, in the order they joined.
     joined_entries: tuple[Identifier, ...] = ()
+    # What is left of each buy, keyed by its order, oldest first; it adds up to remaining_qty.
+    entry_remaining: dict[Identifier, Quantity]
+    # The guru's price for each buy, so a sell naming a price finds its buys.
+    entry_prices: dict[Identifier, Positive]
 
     def entries(self, key: str) -> tuple[str, ...]:
         """Every buy order in this lot: the one that opened it, which keys it, then the rest."""
         return (key, *self.joined_entries)
 
+    def entries_at(self, price: Decimal) -> tuple[str, ...]:
+        """The buys the guru made at exactly this price that still hold shares."""
+        return tuple(
+            entry
+            for entry, entry_price in self.entry_prices.items()
+            if entry_price == price and self.entry_remaining.get(entry, Decimal(0)) > 0
+        )
+
+    def remaining_of(self, entries: tuple[str, ...]) -> Decimal:
+        return sum((self.entry_remaining[entry] for entry in entries), Decimal(0))
+
+    def reduced(self, qty: Decimal, entries: tuple[str, ...] | None = None) -> OwnedLot:
+        """The lot after selling `qty`, taken from `entries` (all buys when None) in proportion to
+        what each has left; the rounding remainder comes from the oldest of them."""
+        chosen = tuple(
+            entry
+            for entry in (entries or tuple(self.entry_remaining))
+            if self.entry_remaining.get(entry, Decimal(0)) > 0
+        )
+        available = self.remaining_of(chosen)
+        if qty > available:
+            raise ValueError("A sale cannot take more than the buys it sells from hold")
+        taken: dict[str, Decimal] = {}
+        for entry in chosen:
+            share = (qty * self.entry_remaining[entry] / available) if available else Decimal(0)
+            taken[entry] = share.quantize(SHARE_STEP, rounding=ROUND_DOWN)
+        leftover = qty - sum(taken.values(), Decimal(0))
+        for entry in chosen:
+            if leftover <= 0:
+                break
+            extra = min(leftover, self.entry_remaining[entry] - taken[entry])
+            taken[entry] += extra
+            leftover -= extra
+        return OwnedLot.model_validate(
+            self.model_dump()
+            | {
+                "remaining_qty": self.remaining_qty - qty,
+                "entry_remaining": {
+                    entry: left - taken.get(entry, Decimal(0))
+                    for entry, left in self.entry_remaining.items()
+                },
+            }
+        )
+
     @model_validator(mode="after")
     def valid_remaining(self) -> Self:
         if self.remaining_qty > self.original_qty:
             raise ValueError("Remaining shares exceed the original lot")
+        if sum(self.entry_remaining.values(), Decimal(0)) != self.remaining_qty:
+            raise ValueError("A lot's buys must add up to its remaining shares")
+        if set(self.entry_remaining) != set(self.entry_prices) or len(self.entry_remaining) != (
+            1 + len(self.joined_entries)
+        ):
+            raise ValueError("Every buy in a lot has its remaining shares and price")
         return self

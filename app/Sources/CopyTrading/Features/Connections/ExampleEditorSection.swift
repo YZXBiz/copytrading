@@ -41,6 +41,19 @@ struct ExampleEditorSection: View {
             TextField(L10n.string("Expected ticker"), text: $example.expectedSymbol)
             TextField(L10n.string("Expected size"), text: size, prompt: Text(L10n.string("e.g. 1/6, optional")))
                 .accessibilityLabel(L10n.string("Expected size"))
+            TextField(
+                example.expectedAction == .buy ? L10n.string("Expected buy price") : L10n.string("Expected sell price"),
+                text: $example.expectedPrice, prompt: Text(L10n.string("e.g. %@, optional", "39.5"))
+            )
+            .accessibilityLabel(
+                example.expectedAction == .buy ? L10n.string("Expected buy price") : L10n.string("Expected sell price"))
+            if example.expectedAction != .buy {
+                TextField(
+                    L10n.string("Sells from the buy at"), text: $example.expectedBuyPrice,
+                    prompt: Text(L10n.string("e.g. %@, or empty for every buy", "39.5"))
+                )
+                .accessibilityLabel(L10n.string("Sells from the buy at"))
+            }
         } header: {
             HStack {
                 Text(L10n.string("Example %lld", Int64(index + 1)))

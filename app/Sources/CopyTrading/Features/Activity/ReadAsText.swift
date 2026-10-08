@@ -25,19 +25,25 @@ enum ReadAsText {
         }
     }
 
+    /// One call in plain words, saying so when the reader took it for a re-post of an earlier call.
     static func line(_ call: ReadCall) -> String {
+        let said: String
+        let repeats: String?
         switch call {
         case .buy(let buy):
-            L10n.string("Buy %@ %@%@.", buy.stock.ticker, price(buy.price), size(buy.size))
+            said = L10n.string("Buy %@ %@%@.", buy.stock.ticker, price(buy.price), size(buy.size))
+            repeats = buy.repeats
         case .sell(let sell):
             if case .lot(let buyPrice, _) = sell.sellFrom {
-                L10n.string(
+                said = L10n.string(
                     "Sell %@ of the %@ bought at %@, %@.", share(sell.share), sell.stock.ticker,
                     Humanize.dollars(buyPrice), price(sell.price))
             } else {
-                L10n.string("Sell %@ of %@, %@.", share(sell.share), sell.stock.ticker, price(sell.price))
+                said = L10n.string("Sell %@ of %@, %@.", share(sell.share), sell.stock.ticker, price(sell.price))
             }
+            repeats = sell.repeats
         }
+        return repeats == nil ? said : L10n.string("%@ A re-post of an earlier call.", said)
     }
 
     static func facts(_ call: ReadCall) -> [String] {

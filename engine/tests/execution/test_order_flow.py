@@ -178,7 +178,8 @@ def test_the_same_sell_on_a_later_trading_day_is_a_new_sell(system):
     next_day = NOW + dt.timedelta(days=1)
     deliver(engine, event("3", "reduce", "27", "25", timestamp=next_day), next_day)
 
-    assert broker.holdings["ABC"] == 0
+    # Half of what is left each time (ADR-0010): 4, then 2, then 1.
+    assert broker.holdings["ABC"] == 1
 
 
 def test_a_buy_after_the_position_was_sold_opens_its_own_lot(system):

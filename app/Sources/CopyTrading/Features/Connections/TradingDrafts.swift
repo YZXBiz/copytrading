@@ -25,47 +25,46 @@ struct TradingProfileExampleDraft: Identifiable {
     var expectedAction: TradingInstructionAction
     var expectedSymbol: String
     var expectedFraction: String
+    /// The guru's price in the post, and for a sell the buy price it names; empty when unchecked.
+    var expectedPrice: String
+    var expectedBuyPrice: String
 
     init(
         message: String = "", expectedAction: TradingInstructionAction = .buy,
-        expectedSymbol: String = "AAPL", expectedFraction: String = ""
+        expectedSymbol: String = "AAPL", expectedFraction: String = "",
+        expectedPrice: String = "", expectedBuyPrice: String = ""
     ) {
         self.message = message
         self.expectedAction = expectedAction
         self.expectedSymbol = expectedSymbol
         self.expectedFraction = expectedFraction
+        self.expectedPrice = expectedPrice
+        self.expectedBuyPrice = expectedBuyPrice
     }
 
     init(example: TradingProfileExample) {
         self.init(
             message: example.message, expectedAction: example.expectedAction,
-            expectedSymbol: example.expectedSymbol, expectedFraction: example.expectedFraction ?? ""
+            expectedSymbol: example.expectedSymbol, expectedFraction: example.expectedFraction ?? "",
+            expectedPrice: example.expectedPrice ?? "", expectedBuyPrice: example.expectedBuyPrice ?? ""
         )
     }
 }
 
 /// The one account a guru copies into (ADR-0007). Its maximum per stock is the guru's full
-/// position, so the draft holds only the account and the share a call with no size buys.
+/// position; a call that names no size asks for all of it, trimmed by the maximum per order
+/// (ADR-0010).
 struct TradingConnectionDraft: Identifiable {
     let id = UUID()
     var accountID: String
-    var defaultFraction: String
-    var useDefaultFraction: Bool
 
-    /// A call that names no size buys the full position unless the owner lowers the default share
-    /// or turns it off, which leaves such a call for the owner.
-    init(accountID: String = "primary", defaultFraction: String? = "1") {
+    init(accountID: String = "primary") {
         self.accountID = accountID
-        self.defaultFraction = defaultFraction ?? "1"
-        self.useDefaultFraction = defaultFraction != nil
     }
 
     /// The saved connection: what the engine sizes from, and what the sizing example uses.
     func terms(fullPositionUSD: String) -> TradingRouteConnection {
-        TradingRouteConnection(
-            accountID: accountID.trimmed, fullPositionUSD: fullPositionUSD,
-            defaultFraction: useDefaultFraction ? defaultFraction.trimmed : nil
-        )
+        TradingRouteConnection(accountID: accountID.trimmed, fullPositionUSD: fullPositionUSD)
     }
 }
 
@@ -77,10 +76,6 @@ struct TradingRouteDraft: Identifiable {
     var displayName: String
     /// The owner's guidance for reading this guru, usually edited from a learned draft.
     var playbook: String
-    var exitBasis: TradingExitBasis
-    /// How many batches make the guru's full position; nil when the guru does not buy in batches.
-    var batches: Int?
-    var sellsReferTo: TradingSellsReferTo
     /// Minutes within which the same call again is a re-post; nil copies every post.
     var repeatWindowMinutes: Int?
     var examples: [TradingProfileExampleDraft]
@@ -97,8 +92,6 @@ struct TradingRouteDraft: Identifiable {
         channelID: String = "", authorID: String = "",
         guruID: String = TradingRouteDraft.newGuruID(), displayName: String = "",
         playbook: String = "",
-        exitBasis: TradingExitBasis = .originalPosition,
-        batches: Int? = nil, sellsReferTo: TradingSellsReferTo = .buyPrice,
         repeatWindowMinutes: Int? = TradingRouteConfiguration.defaultRepeatWindowMinutes,
         examples: [TradingProfileExampleDraft] = [],
         connection: TradingConnectionDraft? = nil
@@ -108,9 +101,6 @@ struct TradingRouteDraft: Identifiable {
         self.guruID = guruID
         self.displayName = displayName
         self.playbook = playbook
-        self.exitBasis = exitBasis
-        self.batches = batches
-        self.sellsReferTo = sellsReferTo
         self.repeatWindowMinutes = repeatWindowMinutes
         self.examples = examples
         self.connection = connection

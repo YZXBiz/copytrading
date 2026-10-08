@@ -10,7 +10,7 @@ struct ExampleComparisonRow: View {
                 "%@ %@ · fraction %@",
                 L10n.string(Humanize.code(instruction.action.rawValue)),
                 instruction.symbol,
-                instruction.fraction ?? L10n.string("none")
+                instruction.fraction.map(Humanize.fraction) ?? L10n.string("none")
             )
         }
         return L10n.string(
@@ -34,7 +34,7 @@ struct ExampleComparisonRow: View {
                         L10n.string(
                             "%@ %@ · fraction %@",
                             L10n.string(Humanize.code(example.expectedAction.rawValue)), example.expectedSymbol,
-                            example.expectedFraction ?? L10n.string("none")
+                            example.expectedFraction.map(Humanize.fraction) ?? L10n.string("none")
                         )
                     )
                 }
@@ -45,13 +45,13 @@ struct ExampleComparisonRow: View {
                 ForEach(example.actual.destinations, id: \.accountID) { destination in
                     GridRow {
                         Text(destination.accountID).foregroundStyle(.secondary)
-                        Text(destination.budgetUSD.map(Humanize.usd) ?? L10n.string(Humanize.code(destination.reason)))
+                        Text(destination.budgetUSD.map(Humanize.usd) ?? Reason.text(destination.reason))
                     }
                 }
             }
             .font(.callout)
             ForEach(example.reviewReasons, id: \.self) { reason in
-                Text(L10n.string(Humanize.code(reason)))
+                Text(Reason.text(reason))
                     .font(.callout)
                     .foregroundStyle(.orange)
             }

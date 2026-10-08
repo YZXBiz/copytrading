@@ -56,13 +56,12 @@ def test_a_buy_goes_out_at_its_limit_however_far_the_market_has_moved(ask):
     assert order.limit_price == Decimal(25)
 
 
-# --- A guru whose sells refer to the whole position ---------------------------------------------
+# --- A sell that names no buy sells from every buy (ADR-0010) ------------------------------------
 
 
 def _whole(message: dict) -> dict:
-    """A call from a guru whose every buy of a stock is one position."""
+    """A call that names no buy price: a sell then refers to every buy of the stock."""
     for item in (*message["instructions"], *message["evidence"]):
-        item["whole_position"] = True
         if item["action"] != "buy":
             item["entry_price"] = None
     for item in message["evidence"]:
@@ -85,7 +84,7 @@ def test_buys_at_different_prices_join_one_position_that_a_sell_naming_no_buy_se
     assert all(lot.remaining_qty == 0 for lot in engine.ledger.lots())
 
 
-def test_half_of_the_whole_position_sells_half_of_everything_bought():
+def test_half_naming_no_buy_sells_half_of_everything_bought():
     broker = FakeBroker()
     engine = _engine(broker)
     deliver(engine, _whole(event("1", price="25")))
@@ -96,13 +95,13 @@ def test_half_of_the_whole_position_sells_half_of_everything_bought():
     assert broker.holdings["ABC"] == Decimal("4.5")
 
 
-def test_a_whole_position_sell_with_nothing_held_sells_nothing():
+def test_a_sell_naming_no_buy_with_nothing_held_sells_nothing():
     broker = FakeBroker()
     engine = _engine(broker)
 
     deliver(engine, _whole(event("1", "close", "30")))
 
-    assert _outcome(engine) == Skipped(reason="missing_or_ambiguous_lot")
+    assert _outcome(engine) == Skipped(reason="lot_unavailable")
     assert broker.calls == 0
 
 

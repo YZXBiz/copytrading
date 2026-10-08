@@ -9,7 +9,7 @@ RUNTIME ?= dist/desktop-runtime/prepared
 RELEASE_RUNTIME ?= $(RUNTIME)
 RELEASE_OUTPUT ?= dist/releases/v$(RELEASE_VERSION)
 RELEASE_TAG ?= v$(RELEASE_VERSION)
-.PHONY: help doctor app dev check check-linux check-mutations desktop-build desktop-check desktop-tests desktop-smoke ui-journeys release dmg
+.PHONY: help doctor app dev dev-app check check-linux check-mutations desktop-build desktop-check desktop-tests desktop-smoke ui-journeys release dmg
 
 help:
 	@echo 'make doctor          Check this Mac can build and run CopyTrading'
@@ -23,6 +23,7 @@ help:
 	@echo 'make desktop-smoke   Smoke-test the built app'
 	@echo 'make lint-swift      Check Swift formatting (make format-swift fixes it)'
 	@echo 'make ui-journeys     Drive the real app window through docs/acceptance.md'
+	@echo 'make dev-app         Open a debug app on a first launch with Connections filled from test keys'
 	@echo 'make release RELEASE_VERSION=0.1.0-alpha.1  Build verified preview assets'
 	@echo 'make dmg RELEASE_VERSION=0.1.0-alpha.1      Wrap a built release in the drag-to-install DMG'
 	@echo 'make check-mutations Probe selected execution policy mutations'
@@ -69,6 +70,9 @@ desktop-smoke:
 
 ui-journeys: desktop-build
 	$(ENGINE_ENV) $(PYTHON) app/scripts/ui_journeys.py
+
+dev-app:
+	$(PYTHON) app/scripts/dev_app.py $(ARGS)
 
 release:
 	@if [ -z "$(RELEASE_VERSION)" ]; then echo 'set RELEASE_VERSION, for example 0.1.0-alpha.1' >&2; exit 2; fi

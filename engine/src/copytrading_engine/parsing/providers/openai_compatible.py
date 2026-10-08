@@ -118,6 +118,7 @@ def build_decoder(
     learner = Agent(
         model,
         output_type=PromptedOutput(PlaybookProposal),
+        name="playbook_learner",
         instructions=LEARN_INSTRUCTIONS,
         retries=1,
         # A long free-form draft can loop at temperature 0; a little temperature keeps it moving.

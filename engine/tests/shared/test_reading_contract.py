@@ -72,6 +72,12 @@ def examples() -> list:
             Buy(action_words="现价买", stock=sco, price=AtMarket(words="现价"), size=NotGiven()),
             summary="Buy SCO at the market",
         ),
+        trade(
+            buy("SOUN", "5.85", fraction=str(Decimal(1) / 6), fraction_said="6分之一").model_copy(
+                update={"repeats": "c2"}
+            ),
+            summary="Re-posts the SOUN buy",
+        ),
         Commentary(summary="TSLA 373 is still resistance today"),
         Unclear(summary="Cannot tell"),
     ]

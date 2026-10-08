@@ -9,7 +9,7 @@ private func readings() throws -> [PostReading] {
 @Test func everyReadingTheEngineWritesDecodesAndEncodesBack() throws {
     let decoded = try readings()
 
-    #expect(decoded.count == 8)
+    #expect(decoded.count == 9)
     let reencoded = try JSONDecoder().decode([PostReading].self, from: JSONEncoder().encode(decoded))
     #expect(reencoded == decoded)
 }

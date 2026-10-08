@@ -89,9 +89,7 @@ def test_external_only_holding_cannot_be_sold_by_app_exit():
         NOW,
     )
     engine.process(NOW)
-    assert engine.ledger.message("discord:demo:exit").parts == (
-        Skipped(reason="missing_or_ambiguous_lot"),
-    )
+    assert engine.ledger.message("discord:demo:exit").parts == (Skipped(reason="lot_unavailable"),)
     assert broker.calls == 0
 
 

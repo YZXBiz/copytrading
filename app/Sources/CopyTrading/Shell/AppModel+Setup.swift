@@ -126,8 +126,16 @@ extension AppModel {
 
     /// The one Start Copying: a setup already checked starts; otherwise every connection and
     /// example is checked first, then copying starts if nothing needs the owner. Typed keys stay
-    /// in the draft, so a failed check never makes the owner type them again.
+    /// in the draft, so a failed check never makes the owner type them again. When only the
+    /// readings are left to look over, it shows them, and pressed beside them it approves them.
     func checkAndStartCopying() {
+        if awaitsExampleReview && checkedSetupSignature == setupDraft.signature {
+            guard isShowingSetupCheck else {
+                isShowingSetupCheck = true
+                return
+            }
+            acknowledgeProfileExamples()
+        }
         if canStartCopyingFromCheck {
             Task { await activateValidatedTradingSettings() }
             return
@@ -160,6 +168,16 @@ extension AppModel {
         setupDraft = ConnectionsDraft()
         setupDraftSource = nil
         syncSetupDraftWithSaved()
+        prefillEmptySetup()
+    }
+
+    /// A debug build started by `make dev-app` begins an empty setup from the owner's test keys.
+    func prefillEmptySetup() {
+        #if DEBUG
+            if savedTradingConfiguration == nil, let prefill = DevPrefill.launch {
+                prefill.fill(&setupDraft)
+            }
+        #endif
     }
 
     /// A new setup was saved and copying started: show the owner where its results will appear.
@@ -172,6 +190,21 @@ extension AppModel {
         copyingStartedAt = .now
         selectedScreen = .today
     }
+
+    /// Starts the setup tour on Connections, at the first thing still to do.
+    func startSetupTour() {
+        setupEditor = nil
+        isTouringSetup = true
+        selectedScreen = .connections
+    }
+
+    /// Ends the tour, and remembers it so a later launch doesn't start it again on its own.
+    func endSetupTour() {
+        isTouringSetup = false
+        UserDefaults.standard.set(true, forKey: Self.setupTourEndedKey)
+    }
+
+    static let setupTourEndedKey = "setupTour.ended"
 
     /// Opens a connection's settings on Connections, with its first field ready for typing.
     func open(_ connection: ConnectionKind) {

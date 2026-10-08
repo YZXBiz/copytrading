@@ -44,7 +44,7 @@ async def test_runtime_registers_all_loaded_credentials_before_source_and_model_
     )
 
     class _EchoDecoder:
-        async def decode(self, text, route):
+        async def decode(self, text, route, recent=()):
             telemetry.record_payload(
                 capture_kind="model_response",
                 workflow_id=None,
@@ -119,7 +119,7 @@ async def test_redaction_registry_overflow_marks_gap_without_blocking_runtime(tm
     telemetry = TradingTelemetry(sink=sink)
 
     class _CaptureDecoder:
-        async def decode(self, text, route):
+        async def decode(self, text, route, recent=()):
             telemetry.record_payload(
                 capture_kind="model_response",
                 workflow_id=None,
@@ -217,7 +217,6 @@ async def test_validate_adds_candidate_credentials_while_retaining_active_creden
                 configuration_revision=config.revision(),
                 activatable=False,
                 checks=(),
-                release_gates=(),
                 cost_notice="synthetic test",
             )
 
@@ -296,7 +295,6 @@ async def test_preview_paths_register_provider_keys_before_decoder_factory(tmp_p
                     expected_symbol="AAPL",
                 ),
             ),
-            exit_basis="original_position",
         )
     )
     provider = ProviderConfiguration(name="anthropic", model="test-model")

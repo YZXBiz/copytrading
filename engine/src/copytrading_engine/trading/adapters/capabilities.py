@@ -33,10 +33,8 @@ from copytrading_engine.trading.domain.config import (
 
 log = logging.getLogger(__name__)
 
-type CapabilityState = Literal["ready", "failed", "not_configured", "unsupported"]
-type CapabilityName = Literal[
-    "source", "model", "broker", "notification", "configuration", "public_source_authorization"
-]
+type CapabilityState = Literal["ready", "failed", "not_configured"]
+type CapabilityName = Literal["source", "model", "broker", "notification", "configuration"]
 
 
 class CapabilityCheck(BaseModel):
@@ -61,7 +59,6 @@ class TradingCapabilityReport(BaseModel):
     configuration_revision: str
     activatable: bool
     checks: tuple[CapabilityCheck, ...]
-    release_gates: tuple[str, ...]
     cost_notice: str
 
 
@@ -191,22 +188,11 @@ class TradingCapabilityService:
                     )
                 )
         checks.extend(await asyncio.gather(*operations))
-        checks.append(
-            CapabilityCheck(
-                name="public_source_authorization",
-                state="unsupported",
-                identity=None,
-                adapter="discord-py-self-user-token",
-                reason_code="public_discord_authorization_not_qualified",
-            )
-        )
-        required = [check for check in checks if check.name != "public_source_authorization"]
-        activatable = all(check.state in {"ready", "not_configured"} for check in required)
+        activatable = all(check.state in {"ready", "not_configured"} for check in checks)
         return TradingCapabilityReport(
             configuration_revision=configuration.revision(),
             activatable=activatable,
             checks=tuple(checks),
-            release_gates=("public_discord_authorization_not_qualified",),
             cost_notice=(
                 "Model validation sends one short no-trade prompt to the configured provider; "
                 "provider charges may apply. Notification validation checks bot/chat access "

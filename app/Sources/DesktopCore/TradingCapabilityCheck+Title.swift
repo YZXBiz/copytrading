@@ -4,7 +4,6 @@ extension TradingCapabilityCheck {
         let label =
             switch name {
             case .source: "Discord source"
-            case .publicSourceAuthorization: "Public Discord authorization"
             case .model: "Model provider"
             case .broker: "Broker account"
             case .notification: "Notifications"

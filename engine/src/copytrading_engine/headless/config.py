@@ -28,11 +28,9 @@ from copytrading_engine.trading.domain.config import (
     TradingSecrets,
 )
 from copytrading_engine.trading.domain.profiles import (
-    ExitBasis,
     ProfileBuilder,
     ProfileDraft,
     ProfileExample,
-    SellsReferTo,
 )
 
 type AgentAccess = Literal["off", "read_pause", "propose"]
@@ -80,6 +78,8 @@ class _Example(_Strict):
     action: Literal["buy", "reduce", "close"]
     symbol: str
     fraction: Decimal | None = None
+    price: Decimal | None = None
+    buy_price: Decimal | None = None
 
 
 class _Guru(_Strict):
@@ -87,16 +87,11 @@ class _Guru(_Strict):
     name: str
     channel: str
     author: str | None = None
-    exits: ExitBasis = "original_position"
     playbook: str = ""
     playbook_file: str | None = None
     examples: tuple[_Example, ...] = ()
     # One guru copies into one account; that account's max_symbol_usd is the guru's full position.
     account: str
-    # The share a call that names no size buys, or "wait" to leave such a call for you.
-    default_share: Decimal | Literal["wait"] = Decimal(1)
-    batches: int | None = None
-    sells_refer_to: SellsReferTo = "buy_price"
 
 
 class _Telegram(_Strict):
@@ -168,12 +163,11 @@ def load_setup(path: Path) -> ServerSetup:
                                 expected_action=example.action,
                                 expected_symbol=example.symbol,
                                 expected_fraction=example.fraction,
+                                expected_price=example.price,
+                                expected_buy_price=example.buy_price,
                             )
                             for example in guru.examples
                         ),
-                        exit_basis=guru.exits,
-                        batches=guru.batches,
-                        sells_refer_to=guru.sells_refer_to,
                     )
                 )
             )
@@ -211,9 +205,6 @@ def load_setup(path: Path) -> ServerSetup:
                             full_position_usd=limits.get(
                                 guru.account, AccountPolicy()
                             ).max_symbol_usd,
-                            default_fraction=None
-                            if guru.default_share == "wait"
-                            else guru.default_share,
                         ),
                     ),
                 )

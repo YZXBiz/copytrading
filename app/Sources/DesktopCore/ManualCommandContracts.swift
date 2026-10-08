@@ -13,9 +13,6 @@ public struct ManualInstruction: Codable, Equatable, Sendable {
     public let entryPrice: String?
     public let fraction: String?
     public let exitBasis: String?
-    /// For a guru whose sells refer to the whole position: a buy joins the stock's one lot, and a
-    /// sell sells from it, naming no entry price.
-    public let wholePosition: Bool
 
     public init(
         action: ManualInstructionAction,
@@ -23,8 +20,7 @@ public struct ManualInstruction: Codable, Equatable, Sendable {
         price: String,
         entryPrice: String? = nil,
         fraction: String? = nil,
-        exitBasis: String? = nil,
-        wholePosition: Bool = false
+        exitBasis: String? = nil
     ) {
         self.action = action
         self.symbol = symbol
@@ -32,14 +28,12 @@ public struct ManualInstruction: Codable, Equatable, Sendable {
         self.entryPrice = entryPrice
         self.fraction = fraction
         self.exitBasis = exitBasis
-        self.wholePosition = wholePosition
     }
 
     enum CodingKeys: String, CodingKey {
         case action, symbol, price, fraction
         case entryPrice = "entry_price"
         case exitBasis = "exit_basis"
-        case wholePosition = "whole_position"
     }
 }
 

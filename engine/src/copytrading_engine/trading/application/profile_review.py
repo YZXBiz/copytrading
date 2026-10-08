@@ -236,13 +236,16 @@ def _verified_draft(
                     expected_action=item.expected_action,
                     expected_symbol=item.expected_symbol,
                     expected_fraction=item.exact_fraction(),
+                    expected_price=item.expected_price,
+                    expected_buy_price=item.expected_buy_price
+                    if item.expected_action != "buy"
+                    else None,
                 )
             )
         except ValidationError:
             continue
     return LearnedPlaybook(
         posts_read=len(posts),
-        exit_basis=proposal.exit_basis,
         playbook=proposal.playbook.strip(),
         examples=tuple(examples),
         summary=proposal.summary.strip(),

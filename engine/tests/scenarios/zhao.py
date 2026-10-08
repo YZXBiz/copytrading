@@ -59,7 +59,7 @@ class ZhaoReader:
     def expect(self, text: str, *calls: Buy | Sell) -> None:
         self.readings[text] = readings.trade(*calls) if calls else readings.commentary()
 
-    async def decode(self, text, route):
+    async def decode(self, text, route, recent=()):
         if text == "Market commentary only. No trade action.":  # the runtime's readiness probe
             return readings.commentary()
         self.read.append(text)

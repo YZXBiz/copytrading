@@ -81,7 +81,6 @@ struct HistoricalProfileEvaluationSheet: View {
                         {
                             LabeledContent(L10n.string("Guru"), value: profile.displayName)
                             LabeledContent(L10n.string("Guru version"), value: Humanize.revision(profile.profileRevision))
-                            LabeledContent(L10n.string("Exit fractions apply to"), value: exitBasisTitle(profile.exitBasis))
                             ForEach(selectedRoute.connections) { connection in
                                 LabeledContent(
                                     connection.accountID,

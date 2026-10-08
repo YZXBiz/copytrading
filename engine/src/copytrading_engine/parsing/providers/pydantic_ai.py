@@ -25,9 +25,15 @@ from copytrading_engine.parsing.extraction import (
     ReadingInput,
     ReadingOutput,
     check_reading,
+    check_references,
 )
+from copytrading_engine.parsing.history import RecentCall
 from copytrading_engine.parsing.learning import PlaybookProposal
-from copytrading_engine.parsing.prompt import INSTRUCTIONS, playbook_instructions
+from copytrading_engine.parsing.prompt import (
+    INSTRUCTIONS,
+    playbook_instructions,
+    recent_calls_instructions,
+)
 from copytrading_engine.parsing.routes import Route
 from copytrading_engine.shared.reading import PostReading
 
@@ -82,14 +88,15 @@ class PydanticAIDecoder:
         self.timeout = timeout
         self.connection_errors = connection_errors
 
-    async def decode(self, text: str, route: Route) -> PostReading:
+    async def decode(
+        self, text: str, route: Route, recent: tuple[RecentCall, ...] = ()
+    ) -> PostReading:
         async with _translated_errors(self.connection_errors):
             async with asyncio.timeout(self.timeout):
                 # A reading that fails a check goes back once with the reason, then to review.
                 result = await self.agent.run(
                     json.dumps({"message": text}, ensure_ascii=False),
-                    deps=ReadingInput(text=text, route=route),
-                    instructions=playbook_instructions(route.playbook),
+                    deps=ReadingInput(text=text, route=route, recent=recent),
                     usage_limits=UsageLimits(request_limit=2, output_tokens_limit=6000),
                 )
             return result.output.reading
@@ -138,25 +145,41 @@ def reading_agent(
     output_type: NativeOutput[ReadingOutput] | PromptedOutput[ReadingOutput],
     model_settings: ModelSettings,
 ) -> Agent[ReadingInput, ReadingOutput]:
-    """The reader every provider shares: one reading per post, held to the post's own words."""
+    """The reader every provider shares: one reading per post, held to the post's own words. Its
+    fixed instructions come first, then the guru's playbook, then the guru's recent calls, so a
+    provider can cache the part that does not change from post to post."""
     agent = Agent(
         model,
+        name="post_reader",
         output_type=output_type,
         instructions=INSTRUCTIONS,
         deps_type=ReadingInput,
         retries=1,
         model_settings=model_settings,
     )
+
+    @agent.instructions
+    def playbook(context: RunContext[ReadingInput]) -> str | None:
+        return playbook_instructions(context.deps.route.playbook)
+
+    @agent.instructions
+    def recent_calls(context: RunContext[ReadingInput]) -> str | None:
+        return recent_calls_instructions(context.deps.recent)
+
     agent.output_validator(_checked)
     return agent
 
 
 def _checked(context: RunContext[ReadingInput], output: ReadingOutput) -> ReadingOutput:
-    """Holds the model to the post's own words; a failure gives it one retry with the reason."""
+    """Holds the model to the post's own words and to the calls it was shown; a failure gives it
+    one retry with the reason."""
     try:
         check_reading(output.reading, context.deps.text, context.deps.route)
     except GroundingError as exc:
         raise ModelRetry(f"{exc.issue.path}: {exc}") from None
+    problem = check_references(output.reading, context.deps.recent, retried=context.retry > 0)
+    if problem is not None:
+        raise ModelRetry(problem)
     return output
 
 

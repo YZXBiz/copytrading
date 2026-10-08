@@ -630,6 +630,10 @@ def build_debug_bundle() -> None:
 def launch(state_root: Path, *, quit_first: bool = True) -> None:
     if quit_first:
         quit_app()
+    # Ending the setup tour is remembered per app; a run starts as a first launch would.
+    subprocess.run(
+        ["defaults", "delete", BUNDLE_ID, "setupTour.ended"], capture_output=True, check=False
+    )
     subprocess.run(
         [
             "open",
@@ -727,8 +731,12 @@ SCREENS = {
 def j1_launch_and_unlock(app: AppDriver) -> None:
     snapshot = app.wait_for("navigation.today", timeout=30, name="unlocked")
     app.expect(snapshot, *(f"navigation.{s}" for s in SCREENS))
-    # Nothing is saved on a fresh state root, so the app settles on the guide once it has loaded.
-    app.wait_for("About 10 minutes", timeout=60, name="opens-on-guide")
+    # Nothing is saved on a fresh state root, so a first launch opens into the setup tour. Ending
+    # it is remembered, so the journeys after this one start without it.
+    tour = app.wait_for("tour.card", timeout=60, name="opens-into-the-tour")
+    app.expect(tour, "Connect Discord", "Welcome. Five steps")
+    app.click("tour.end")
+    app.wait_gone("tour.card", timeout=10)
 
 
 def j2_engine_starts(app: AppDriver) -> None:
@@ -747,7 +755,7 @@ def _saved_appearance() -> str | None:
 def j37_everyday_buttons(app: AppDriver) -> None:
     """Buttons that do not trade do their job: Run Self-Test fills the log, Search narrows it,
     Save log… writes it to disk, Appearance switches, Settings stops and starts the engine, and
-    each Getting Started step opens the part of Connections it names."""
+    Getting Started's Show Me Around starts the setup tour on Connections."""
     diagnostics = app.open_screen("diagnostics")
     app.expect(diagnostics, "diagnostics.runSelfTest")
     app.click("diagnostics.runSelfTest")
@@ -795,46 +803,26 @@ def j37_everyday_buttons(app: AppDriver) -> None:
     app.wait_for("Local engine, Ready", timeout=90, name="engine-started-in-settings")
 
     if app.state_root is not None and any(app.state_root.rglob("trading-configuration.json")):
-        return  # a kept setup (--reuse-state): the guide's steps are done, and nothing to tidy
-    for row, (step, lands_on) in enumerate(
-        (
-            ("guide.openDiscord", "Channel IDs"),
-            ("guide.openInterpreter", "connections.provider.deepseek"),
-            ("guide.openAccounts", "Alpaca keys"),
-            ("guide.openPeople", "Where they post"),
-        )
-    ):
-        app.open_screen("gettingStarted")
-        app.click(f"guide.step.{row}")  # a checklist row opens to show what it offers
-        app.click(step)
-        app.wait_for(lands_on, timeout=15, name=f"guide-{step.split('.')[-1]}")
-        for close in ("connections.close", "Done"):
-            if app.see().find(close) is not None:
-                app.click(close)
-                break
-    # Leave the setup as found, so later journeys start from nothing saved.
-    app.open_screen("connections")
-    for row, remove in (
-        ("connections.guru", "Remove Guru"),
-        ("connections.account.primary", "Remove Account"),
-    ):
-        if app.see().find(row) is not None:
-            app.click(row)
-            app.click(remove)
+        return  # a kept setup (--reuse-state): there is nothing left to show around
+    app.open_screen("gettingStarted")
+    app.click("guide.tour")
+    app.wait_for("tour.card", timeout=15, name="guide-starts-the-tour")
+    app.click("tour.end")
+    app.wait_gone("tour.card", timeout=10)
 
 
 def j3_first_run_guidance(app: AppDriver) -> None:
-    """With nothing saved, the app opens on Getting Started; a step opens its help when clicked,
-    and the first step's button opens Connections."""
+    """With nothing saved, Getting Started offers the setup tour, which points at the Discord row
+    on Connections; Today offers to continue it."""
     guide = app.open_screen("gettingStarted")
     app.expect(
-        guide, "Status: Not set up yet", "guide.step.0", "0 of 5", "How a post becomes a trade"
+        guide, "Status: Not set up yet", "guide.tour", "0 of 5", "How a post becomes a trade"
     )
-    app.click("guide.step.0")
-    app.expect(app.see("guide-step-open"), "Find a channel ID")
-    app.click("guide.openDiscord")
-    connections = app.see("connections-from-guide")
-    app.expect(connections, "Discord", "Interpreter", "Alerts", "Channel IDs", "Step by step")
+    app.click("guide.tour")
+    tour = app.wait_for("tour.card", timeout=15, name="tour-from-guide")
+    app.expect(tour, "Connect Discord", "connections.discord", "tour.strip")
+    app.click("tour.end")
+    app.wait_gone("tour.card", timeout=10)
     today = app.open_screen("today")
     app.expect(today, "Your trading day, at a glance", "today.gettingStarted")
 
@@ -940,9 +928,7 @@ def j6_setup_editing(app: AppDriver) -> None:
         guru,
         "Where they post",
         "playbook.learn",
-        "How they trade",
-        "A sell refers to",
-        "Buys in batches",
+        "Re-posted calls",
         "Skip re-posted calls",
         "Counts as a re-post within",
         "Copies into",
@@ -1155,22 +1141,15 @@ def j22_setup_keeps_typing(app: AppDriver) -> None:
 
 
 def j25_getting_started(app: AppDriver) -> None:
-    """The guide ticks Connect Discord as soon as a channel and a token are typed."""
+    """Getting Started counts Connect Discord done as soon as a channel and a token are typed."""
     guide = app.open_screen("gettingStarted")
-    app.expect(guide, "Get set up", "How a post becomes a trade", "Before you go", "Shortcuts")
-    step = guide.find("guide.step.0")
-    if step is None or "To do" not in step.text:
-        raise JourneyFailure("Connect Discord was ticked before anything was typed")
+    app.expect(guide, "0 of 5", "How a post becomes a trade", "Before you go", "Shortcuts")
     app.open_screen("connections")
     app.open_connection("discord")
     app.type("123456789012345678", into="Channel IDs")
     app.type("ui-journey-placeholder", into="Discord token")
     app.click("connections.close")
-    ticked = app.open_screen("gettingStarted")
-    step = ticked.find("guide.step.0")
-    if step is None or "Done" not in step.text:
-        raise JourneyFailure("Connect Discord did not tick after a channel and token were typed")
-    app.expect(ticked, "1 of 5")
+    app.expect(app.open_screen("gettingStarted"), "1 of 5")
     _relock(app)
 
 
@@ -1292,6 +1271,51 @@ def j31_agent_approval(app: AppDriver) -> None:
     _check_every_cli_command(app, asked["proposal_id"])
     _agent_result(app, 0, "pause")
     _check_locked_app_still_pauses(app)
+
+
+def j39_setup_tour(app: AppDriver) -> None:
+    """A first launch opens into the setup tour, which follows the owner from the Discord row to
+    Start Copying: each stop points at the next thing to do and moves on once it is done.
+
+    Saves and starts a real paper setup, like J31, so run it alone on a fresh state:
+    `--only J39`. New accounts start with entries off, so nothing can be bought.
+    """
+    setup = _paper_setup()
+    first = app.wait_for("tour.card", timeout=30, name="tour-1-discord-row")
+    app.expect(first, "Connect Discord", "Welcome. Five steps", "tour.strip")
+    app.click("connections.discord")
+    time.sleep(0.8)
+    app.expect(app.wait_for("Paste the channel ID", timeout=10, name="tour-2-channel"), "tour.card")
+    app.type(setup["channel"], into="Channel IDs")
+    app.wait_for("Paste your Discord token", timeout=10, name="tour-3-token")
+    app.type(setup["discord_token"], into="Discord token")
+    app.connect()
+    app.wait_for("Pick an AI reader", timeout=20, name="tour-4-reader")
+    app.click("connections.provider.deepseek")
+    time.sleep(0.8)
+    app.wait_for("Paste the API key", timeout=10, name="tour-5-key")
+    app.type(setup["model"], into="Model")
+    app.type(setup["model_key"], into="API key")
+    app.connect()
+    app.wait_for("Add your broker", timeout=20, name="tour-6-broker")
+    app.click("connections.accounts.paper")
+    app.wait_for("Alpaca keys", timeout=15)
+    app.type(setup["alpaca_key"], into="Alpaca API key")
+    app.type(setup["alpaca_secret"], into="Alpaca API secret")
+    app.click("Done")
+    app.wait_gone("Alpaca keys", timeout=60)
+    app.wait_for("Add your guru", timeout=20, name="tour-7-guru")
+    app.click("connections.gurus.add")
+    app.type("Tour Guru", into="Name")
+    app.click("Done")
+    last = app.wait_for("Waiting for Start Copying", timeout=20, name="tour-8-start")
+    app.expect(last, "tour.card")
+    app.click("setup.startCopying")
+    # The card steps aside while the setup is checked and started, and the tour ends once it
+    # is saved.
+    app.wait_gone("tour.card", timeout=20)
+    app.wait_gone("tour.strip", timeout=180)
+    app.expect_absent(app.see("tour-done"), "Not copying")
 
 
 def _expect_exit(app: AppDriver, expected: int, *arguments: str) -> None:
@@ -2018,6 +2042,8 @@ JOURNEYS: list[tuple[str, Callable[[AppDriver], None]]] = [
     ("J38 today chart", j38_today_chart),
     ("J35 copy and sell", j35_copy_and_sell),
     ("J36 approve and skip", j36_approve_and_skip),
+    # Alone, on a fresh state: it saves and starts a setup from the first launch.
+    ("J39 setup tour", j39_setup_tour),
 ]
 
 

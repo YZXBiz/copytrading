@@ -9,7 +9,7 @@ from ...readings import buy, commentary, trade
 
 
 class Decoder:
-    async def decode(self, text, route):
+    async def decode(self, text, route, recent=()):
         if text == "Market commentary only. No trade action.":
             return commentary("No trade action")
         assert text == "Bought AAPL at 200"

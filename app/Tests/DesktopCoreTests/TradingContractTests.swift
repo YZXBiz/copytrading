@@ -6,10 +6,7 @@ func runTradingContractTests() throws {
     try capabilityChecksCarryAModelSuggestion()
     try alertsNameTheirService()
     let profile = try TradingProfileBuilder().build(
-        TradingProfileDraft(
-            guruID: "stable-guru", displayName: "Stable Guru",
-            exitBasis: .originalPosition
-        ))
+        TradingProfileDraft(guruID: "stable-guru", displayName: "Stable Guru"))
     let configuration = TradingConfiguration(
         source: TradingSourceConfiguration(channelIDs: ["123"], authorIDs: ["456"]),
         provider: TradingProviderConfiguration(name: .anthropic, model: "test-model"),
@@ -36,9 +33,9 @@ func runTradingContractTests() throws {
         !String(decoding: encoded, as: UTF8.self).contains("token"),
         "saved trading configuration unexpectedly contains a credential field"
     )
-    try #require(configuration.version == 7, "profile configuration did not use v7")
+    try #require(configuration.version == 8, "profile configuration did not use v8")
     try #require(
-        profile.profileRevision == "f9d0063f8729dadeb2d80ed607b2e38a9966fa8afdc40495f1b8f2b73a3cf74d",
+        profile.profileRevision == "18b62f43f483b96c21cad8e660f9e3c3ddb9022cf553cc28e0f94fe59fd0978e",
         "native content address differs from the engine profile builder")
     let exampleProfile = try TradingProfileBuilder().build(
         TradingProfileDraft(
@@ -48,49 +45,49 @@ func runTradingContractTests() throws {
                     message: "ALERT: Bought Apple at 200 1/6", expectedAction: .buy,
                     expectedSymbol: "AAPL", expectedFraction: "0.1666666666666666666666666667"
                 )
-            ],
-            exitBasis: .originalPosition
+            ]
         ))
     try #require(
-        exampleProfile.profileRevision == "265a667b20c8327f426a52011879bc1d38d91c89caf7b77ec80e998241e0b4b9",
+        exampleProfile.profileRevision == "18822e829e0eb1d1b9ee670308c46322be5f7bc7abd39af16bd908e4556c6370",
         "native profile examples do not use the engine canonical revision format")
     // A learned playbook is multi-line Chinese with quotes, tabs, and slashes: every one of those
     // must hash exactly as the engine hashes it, or activation would stall on a revision mismatch.
     let chineseProfile = try TradingProfileBuilder().build(
         TradingProfileDraft(
             guruID: "zhao", displayName: "赵哥",
-            playbook: "加了 means buy\n英伟达 means NVDA\n\"quoted\" words, a\ttab, and a / slash",
-            exitBasis: .remainingPosition
+            playbook: "加了 means buy\n英伟达 means NVDA\n\"quoted\" words, a\ttab, and a / slash"
         ))
     try #require(
-        chineseProfile.profileRevision == "12c1a3884b59797dc374cd45aa6063ed96eb7932ac7361f024b73ebcd20e2026",
+        chineseProfile.profileRevision == "9237ba49572b46c039bea7611f103607d059d3cadbf45393605f8c6ffa02a508",
         "a multi-line Chinese playbook does not hash to the engine's revision")
     do {
         _ = try TradingProfileBuilder().build(
             TradingProfileDraft(
                 guruID: "zhao", displayName: "Zhao",
-                playbook: String(repeating: "x", count: tradingPlaybookMaxLength + 1),
-                exitBasis: .originalPosition
+                playbook: String(repeating: "x", count: tradingPlaybookMaxLength + 1)
             ))
         throw VerificationFailure(description: "a playbook over the engine's limit was accepted")
     } catch TradingProfileBuilderError.invalidProfile {}
-    let rulesProfile = try TradingProfileBuilder().build(
+    // An example's expected prices are part of the guru's revision, hashed as the engine does.
+    let pricedProfile = try TradingProfileBuilder().build(
         TradingProfileDraft(
-            guruID: "analyst", displayName: "分析师", exitBasis: .originalPosition,
-            batches: 3, sellsReferTo: .wholePosition
+            guruID: "analyst", displayName: "分析师",
+            examples: [
+                TradingProfileExample(
+                    message: "出一半39.5的iren 现价42", expectedAction: .reduce, expectedSymbol: "IREN",
+                    expectedFraction: "0.5", expectedPrice: "42", expectedBuyPrice: "39.5")
+            ]
         ))
     try #require(
-        rulesProfile.profileRevision == "366a3a180b01e2d3235567697fc190275d90081609828e48b18ee713a86e52f4",
-        "a guru's batches and sell rule do not hash to the engine's revision")
+        pricedProfile.profileRevision == "ae9dafdbda8d0921acd90bfe7c635ee11bd95b1834b62d540eb6738bd06cc9a0",
+        "an example's expected prices do not hash to the engine's revision")
     try sizingMatchesTheEngineOnEverySharedExample()
     let prepared = try TradingProfileBuilder().preparedProfiles()
-    try #require(
-        prepared.map(\.exitBasis) == [.originalPosition, .remainingPosition],
-        "prepared profile conventions changed")
+    try #require(prepared.map(\.guruID) == ["prepared-standard"], "prepared profiles changed")
     let learned = Data(
         """
         {"version":1,"request_id":"learn-1","ok":{"type":"learned_playbook","playbook":{
-        "posts_read":80,"exit_basis":"original_position",
+        "posts_read":80,
         "playbook":"加了 means buy","examples":[{"message":"赵哥-股票： 25加了abc",
         "expected_action":"buy","expected_symbol":"ABC","expected_fraction":null}],
         "summary":"Buys lead with the price.","provider":"deepseek","model":"deepseek-flash",
@@ -180,14 +177,12 @@ private struct SizingExamples: Decodable {
         let `case`: String
         let fullPositionUSD: String
         let fraction: Fraction?
-        let defaultFraction: String?
         let budgetUSD: String?
 
         enum CodingKeys: String, CodingKey {
             case `case`
             case fullPositionUSD = "full_position_usd"
             case fraction
-            case defaultFraction = "default_fraction"
             case budgetUSD = "budget_usd"
         }
     }
@@ -203,10 +198,7 @@ private func sizingMatchesTheEngineOnEverySharedExample() throws {
     ).examples
     try #require(!examples.isEmpty, "no shared sizing examples")
     for example in examples {
-        let connection = TradingRouteConnection(
-            accountID: "paper", fullPositionUSD: example.fullPositionUSD,
-            defaultFraction: example.defaultFraction
-        )
+        let connection = TradingRouteConnection(accountID: "paper", fullPositionUSD: example.fullPositionUSD)
         let source = example.fraction.map { Decimal($0.numerator) / Decimal($0.denominator) }
         let budget = connection.copiedBudgetUSD(sourceFraction: source)
         try #require(

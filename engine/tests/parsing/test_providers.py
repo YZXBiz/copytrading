@@ -44,7 +44,7 @@ async def test_fake_provider_can_register_decode_and_close_without_worker_change
         def __init__(self):
             self.close_calls = 0
 
-        async def decode(self, text, route):
+        async def decode(self, text, route, recent=()):
             calls.append((text, route))
             return commentary("fake")
 
@@ -128,7 +128,7 @@ def test_prompt_bytes_match_the_pre_adapter_prompt():
 
     assert (
         hashlib.sha256(INSTRUCTIONS.encode()).hexdigest()
-        == "39cd43cb5a5eb1363f64cbe209a80282178df63812e53c120dbd078763fb920d"
+        == "6800492b8380b1f927996f629f58fafe42dace63b9b2df4fecdb92c587f255e5"
     )
 
 

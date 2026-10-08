@@ -294,7 +294,7 @@ def test_gated_candidate_bootstrap_and_read_only_preflight_preserve_candidate_ha
         {
             "version": 1,
             "configuration": {
-                "version": 7,
+                "version": 8,
                 "accounts": [{"id": account_id, "environment": "paper", "policy": {}}],
             },
             "revision": SAVED_REVISION,
@@ -550,7 +550,7 @@ def test_restore_candidate_persists_each_account_disabled_manual_after_gate_clea
         {
             "version": 1,
             "configuration": {
-                "version": 7,
+                "version": 8,
                 "accounts": [{"id": account_id, "environment": "paper", "policy": {}}],
             },
             "revision": SAVED_REVISION,
@@ -665,7 +665,7 @@ def test_restore_candidate_preparation_failure_publishes_no_candidate_or_marker(
         {
             "version": 1,
             "configuration": {
-                "version": 7,
+                "version": 8,
                 "accounts": [{"id": account_id, "environment": "paper", "policy": {}}],
             },
             "revision": SAVED_REVISION,

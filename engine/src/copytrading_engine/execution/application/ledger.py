@@ -217,8 +217,8 @@ class TradingLedger:
 
     def _entry_lot(self, lots: dict[str, OwnedLot], key: str, order: OrderRecord) -> str:
         """The lot a buy's fills belong to: the one it opened or already joined; else the open
-        lot it was planned to join; else an open lot from the same guru at the same price, which
-        the guru counts as one position; else its own."""
+        lot it was planned to join; else the guru's open lot of the stock (ADR-0010); else its
+        own."""
         for lot_key, lot in lots.items():
             if key in lot.entries(lot_key):
                 return lot_key
@@ -227,10 +227,9 @@ class TradingLedger:
             assert order.joins_lot is not None
             return order.joins_lot
         for lot_key, lot in lots.items():
-            if lot.remaining_qty > 0 and (lot.source_key, lot.symbol, lot.entry_price) == (
+            if lot.remaining_qty > 0 and (lot.source_key, lot.symbol) == (
                 order.source_key,
                 order.symbol,
-                order.entry_price,
             ):
                 return lot_key
         return key
@@ -242,18 +241,6 @@ class TradingLedger:
             (key, lot)
             for key, lot in self._snapshot.lots.items()
             if lot.source_key == source and lot.symbol == symbol and lot.remaining_qty > 0
-        )
-
-    def matching_lots(
-        self, source: str, symbol: str, entry_price: Decimal
-    ) -> tuple[tuple[str, OwnedLot], ...]:
-        return tuple(
-            (key, lot)
-            for key, lot in self._snapshot.lots.items()
-            if lot.source_key == source
-            and lot.symbol == symbol
-            and lot.entry_price == entry_price
-            and lot.remaining_qty > 0
         )
 
     def _commit(self, state: LedgerSnapshot, event: JournalEvent) -> None:
@@ -358,9 +345,7 @@ class TradingLedger:
         else:
             if lot is None or sale.order.filled_qty > lot.remaining_qty:
                 raise ValueError("Manual sale exceeds remaining owned lot shares")
-            updated = OwnedLot.model_validate(
-                lot.model_dump() | {"remaining_qty": lot.remaining_qty - sale.order.filled_qty}
-            )
+            updated = lot.reduced(sale.order.filled_qty)
             state = self._replace(
                 lots=self._snapshot.lots | {sale.lot_id: updated},
                 manual_sales=self._snapshot.manual_sales | {sale.order.id: sale},
@@ -757,7 +742,7 @@ class TradingLedger:
             if target > before.remaining_qty:
                 raise ValueError("Ownership resolution cannot invent app-owned shares")
             reductions[key] = before.remaining_qty - target
-            lots[key] = OwnedLot.model_validate(before.model_dump() | {"remaining_qty": target})
+            lots[key] = before.reduced(before.remaining_qty - target)
         allocation_revision = 1 + max(
             (
                 prior.allocation_revision
@@ -815,14 +800,6 @@ class TradingLedger:
             status = "ignored"
         else:
             status = "review_required"
-        review_reason: Literal["missing_source_fraction"] | None = None
-        if (
-            status == "queued"
-            and destination.connection.default_fraction is None
-            and any(item.action == "buy" and item.fraction is None for item in signal.instructions)
-        ):
-            status = "review_required"
-            review_reason = "missing_source_fraction"
         if status == "queued" and (age < -5 or age > max_age):
             status = "stale"
         previous = tuple(m for m in self._snapshot.messages.values() if m.source_key == source_key)
@@ -850,7 +827,6 @@ class TradingLedger:
                 "parts": parts,
                 "status": status,
                 "destination": destination,
-                "review_reason": review_reason,
             }
         )
         self._commit(
@@ -865,7 +841,6 @@ class TradingLedger:
                     parser_profile=signal.parser_profile,
                     instructions=signal.instructions,
                     destination=destination,
-                    review_reason=review_reason,
                 ),
             ),
         )
@@ -1207,6 +1182,10 @@ class TradingLedger:
                     (o.filled_qty * (o.filled_avg_price or ZERO) for o in filled.values()), ZERO
                 )
                 total = sum((o.filled_qty for o in filled.values()), ZERO) + update.filled_qty
+                entry_remaining = dict(lot.entry_remaining) if lot is not None else {}
+                entry_prices = dict(lot.entry_prices) if lot is not None else {}
+                entry_remaining[key] = entry_remaining.get(key, ZERO) + delta
+                entry_prices[key] = order.entry_price
                 updated_lot = OwnedLot(
                     symbol=order.symbol,
                     entry_price=lot.entry_price if lot is not None else order.entry_price,
@@ -1218,21 +1197,28 @@ class TradingLedger:
                     if filled
                     else average,
                     joined_entries=entries[1:],
+                    entry_remaining=entry_remaining,
+                    entry_prices=entry_prices,
                 )
                 lots = lots | {lot_key: updated_lot}
             else:
                 if order.lot_id is None:
                     raise RuntimeError("Sell order has no owned lot")
                 lot = lots[order.lot_id]
-                applied_delta = min(delta, lot.remaining_qty)
+                # A sell of named buys can take only what those buys hold; any more is set aside.
+                held = (
+                    lot.remaining_of(order.from_entries)
+                    if order.from_entries
+                    else lot.remaining_qty
+                )
+                applied_delta = min(delta, held)
                 unapplied_delta = delta - applied_delta
                 if unapplied_delta and not related_incident_ids:
                     raise RuntimeError("Sell fill exceeds the copier's owned lot")
                 if applied_delta:
+                    # Taken from the buys the sell named, in proportion to what each has left.
                     lots = lots | {
-                        order.lot_id: OwnedLot.model_validate(
-                            lot.model_dump() | {"remaining_qty": lot.remaining_qty - applied_delta}
-                        )
+                        order.lot_id: lot.reduced(applied_delta, order.from_entries or None)
                     }
                 if previous_quarantine is not None or unapplied_delta:
                     incident_client_ids = tuple(

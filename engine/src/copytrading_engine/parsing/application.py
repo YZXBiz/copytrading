@@ -1,5 +1,6 @@
 """Extraction use case, independent of model provider and message transport."""
 
+import datetime as dt
 from collections.abc import Sequence
 from decimal import Decimal
 from typing import Literal
@@ -13,6 +14,7 @@ from copytrading_engine.parsing.extraction import (
     check_reading,
     normalize,
 )
+from copytrading_engine.parsing.history import RecentCall
 from copytrading_engine.parsing.routes import Route
 from copytrading_engine.shared import reading as r
 from copytrading_engine.shared.signals import Evidence, Instruction, StockSignal
@@ -66,19 +68,33 @@ def without_model(event: _RawMessage, route: Route, model: str) -> StockSignal |
     return None
 
 
-async def transform(event: _RawMessage, route: Route, decoder: Decoder, model: str) -> StockSignal:
+async def transform(
+    event: _RawMessage,
+    route: Route,
+    decoder: Decoder,
+    model: str,
+    recent: tuple[RecentCall, ...] = (),
+) -> StockSignal:
     local = without_model(event, route, model)
     if local is not None:
         return local
     text = normalize(event.text).strip()
-    reading = await decoder.decode(text, route)
+    reading = await decoder.decode(text, route, recent)
     try:
         check_reading(reading, text, route)
     except GroundingError as exc:
         raise DecodeError(
             "evidence_validation_failed", retryable=False, issues=(exc.issue,)
         ) from None
-    decision, reason, calls = _act_on(reading, route)
+    acted, repeat = _without_repeats(reading, route, recent, event.timestamp)
+    if repeat is not None:
+        decision, reason, calls = (
+            repeat,
+            ("repeats_a_recent_call" if repeat == "ignore" else "repeats_an_earlier_call"),
+            (),
+        )
+    else:
+        decision, reason, calls = _act_on(acted)
     return outcome(
         event,
         decision,
@@ -89,8 +105,34 @@ async def transform(event: _RawMessage, route: Route, decoder: Decoder, model: s
         guru_id=route.guru_id,
         profile_revision=route.profile_revision,
         reading=reading,
-        suggested=suggested(reading, route) if decision == "review" else (),
+        suggested=suggested(reading) if decision == "review" else (),
     )
+
+
+def _without_repeats(
+    reading: r.PostReading,
+    route: Route,
+    recent: tuple[RecentCall, ...],
+    at: dt.datetime,
+) -> tuple[r.PostReading, Literal["ignore", "review"] | None]:
+    """A call the reader says restates one of the guru's recent calls is not a new call while
+    the guru's repeat window is on (ADR-0010): within the window it is dropped, and a post that
+    only restates is ignored; a restatement after the window waits for the owner, who can tell a
+    reminder from a second buy. With the window off, every call is a new call."""
+    window = route.repeat_window_minutes
+    if window is None or not isinstance(reading, r.TradeMade | r.Instruction):
+        return reading, None
+    by_ref = {call.ref: call for call in recent}
+    kept = []
+    for call in reading.calls:
+        earlier = by_ref.get(call.repeats) if call.repeats is not None else None
+        if earlier is None:
+            kept.append(call)
+        elif (at - earlier.at).total_seconds() > window * 60:
+            return reading, "review"
+    if not kept:
+        return reading, "ignore"
+    return reading.model_copy(update={"calls": tuple(kept)}), None
 
 
 class _Wait(Exception):
@@ -102,7 +144,7 @@ class _Wait(Exception):
 
 
 def _act_on(
-    reading: r.PostReading, route: Route
+    reading: r.PostReading,
 ) -> tuple[Literal["trade", "ignore", "review"], str, tuple[tuple[Instruction, Evidence], ...]]:
     """Act or ask (ADR-0007): a trade made or an instruction with every call placeable trades;
     conditionals, suggestions, and calls with no exact price or no named buy wait for the
@@ -116,20 +158,21 @@ def _act_on(
             return "review", reading.kind, ()
         case r.TradeMade() | r.Instruction():
             try:
-                calls = tuple(_placeable(call, route) for call in reading.calls)
+                calls = tuple(_placeable(call) for call in reading.calls)
             except _Wait as wait:
                 return "review", wait.reason, ()
             return "trade", reading.summary, calls
 
 
-def _placeable(call: r.Call, route: Route) -> tuple[Instruction, Evidence]:
-    """The engine's call for a stated one, under the guru's rules, with the post's words behind
-    each field. Raises _Wait when it cannot be placed without the owner."""
-    instruction = _instruction(call, route, owner=False)
+def _placeable(call: r.Call) -> tuple[Instruction, Evidence]:
+    """The engine's call for a stated one, with the post's words behind each field. Raises
+    _Wait when it cannot be placed without the owner."""
+    instruction = _instruction(call, owner=False)
     if isinstance(call, r.Buy):
-        fraction_words = call.size.words if isinstance(call.size, r.Fraction | r.Batch) else None
+        fraction_words = call.size.words if isinstance(call.size, r.Fraction) else None
         entry_words = None
     else:
+        assert not isinstance(call.share, r.NotGiven)  # _instruction waits on it
         fraction_words = call.share.words
         entry_words = (
             call.sell_from.words
@@ -148,26 +191,29 @@ def _placeable(call: r.Call, route: Route) -> tuple[Instruction, Evidence]:
     return instruction, evidence
 
 
-def suggested(reading: r.PostReading | None, route: Route) -> tuple[Instruction, ...]:
-    """What Copy places for a post that waits for the owner (ADR-0007): each call the owner can
-    copy as read, a range at its top and a batch the guru has no N for at the default share. A
-    call with no price, or a sell that names no buy for a guru who names them, has nothing to
-    copy; the owner enters it or sells the lot from Accounts."""
+def suggested(reading: r.PostReading | None) -> tuple[Instruction, ...]:
+    """What Copy places for a post that waits for the owner (ADR-0007, ADR-0010): each call the
+    owner can copy as read, a range at its top and a batch at the full position, trimmed by the
+    account's limits. A call with no price, or a sell that states no share, has nothing to copy;
+    the owner enters it or sells the lot from Accounts."""
     if not isinstance(reading, r.TradeMade | r.Instruction | r.Conditional | r.Suggestion):
         return ()
     calls = []
     for call in reading.calls:
         try:
-            calls.append(_instruction(call, route, owner=True))
+            calls.append(_instruction(call, owner=True))
         except _Wait:
             continue
     return tuple(calls)
 
 
-def _instruction(call: r.Call, route: Route, *, owner: bool) -> Instruction:
-    """One call as the engine places it. On its own (`owner=False`) the engine waits for the
-    owner on a range or a batch the guru has no N for; when the owner copies, a range buys at its
-    top and such a batch at the default share."""
+def _instruction(call: r.Call, *, owner: bool) -> Instruction:
+    """One call as the engine places it (ADR-0010). On its own (`owner=False`) the engine waits
+    for the owner on a range and on a sell that states no share; when the owner copies, a range
+    buys at its top. A buy with no size asks for the full position, and one whose size is a batch
+    the playbook gives no share waits; a sell that
+    names a buy price sells from the buys at that price, and one that names none from every buy;
+    a share counts from what is left unless the post says the original buy."""
     match call.price:
         case r.Exact(value=price):
             pass
@@ -179,43 +225,21 @@ def _instruction(call: r.Call, route: Route, *, owner: bool) -> Instruction:
             raise _Wait("price_at_market")
         case _:
             raise _Wait("price_not_given")
-    whole_position = route.sells_refer_to == "whole_position"
     if isinstance(call, r.Buy):
-        match call.size:
-            case r.Fraction(value=fraction):
-                pass
-            case r.Batch() if route.batches is not None:
-                # Each batch is an equal share of the full position.
-                fraction = Decimal(1) / route.batches
-            case r.Batch() if not owner:
-                raise _Wait("batch_size_unknown")
-            case _:
-                fraction = None
-        return Instruction(
-            action="buy",
-            symbol=call.stock.ticker,
-            price=price,
-            fraction=fraction,
-            whole_position=whole_position,
-        )
-    # A guru whose sells refer to the whole position holds one lot per stock, so a named buy
-    # price only describes it.
-    if not whole_position and not isinstance(call.sell_from, r.Lot):
-        raise _Wait("sell_names_no_buy")
+        # A batch the playbook gives no size waits like a vague trim: "the second batch" is a
+        # share of a position, not the whole of one. The owner copying it chooses the size.
+        if isinstance(call.size, r.Batch) and not owner:
+            raise _Wait("batch_size_not_given")
+        fraction = call.size.value if isinstance(call.size, r.Fraction) else None
+        return Instruction(action="buy", symbol=call.stock.ticker, price=price, fraction=fraction)
+    if isinstance(call.share, r.NotGiven):
+        raise _Wait("sell_share_not_given")
     share = Decimal(1) if isinstance(call.share, r.All) else call.share.value
-    entry_price = None
-    if not whole_position and isinstance(call.sell_from, r.Lot):
-        entry_price = call.sell_from.buy_price
     return Instruction(
         action="close" if share == 1 else "reduce",
         symbol=call.stock.ticker,
         price=price,
-        entry_price=entry_price,
+        entry_price=call.sell_from.buy_price if isinstance(call.sell_from, r.Lot) else None,
         fraction=share,
-        exit_basis=(
-            ("original_position" if call.counts_from == "original" else "remaining_position")
-            if call.counts_from
-            else route.exit_basis
-        ),
-        whole_position=whole_position,
+        exit_basis="original_position" if call.counts_from == "original" else "remaining_position",
     )

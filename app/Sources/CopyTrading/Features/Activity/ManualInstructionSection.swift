@@ -19,18 +19,14 @@ struct ManualInstructionSection: View {
             TextField(L10n.string("Source price"), text: $instruction.price, prompt: Text(L10n.string("Price quoted in the message")))
                 .accessibilityLabel(L10n.string("Source price"))
             if instruction.action == .buy {
-                TextField(L10n.string("Size"), text: size, prompt: Text(L10n.string("e.g. 1/6. Leave empty for the default.")))
+                TextField(L10n.string("Size"), text: size, prompt: Text(L10n.string("e.g. 1/6. Leave empty for the full position.")))
                     .accessibilityLabel(L10n.string("Size"))
             } else {
-                if instruction.wholePosition {
-                    LabeledContent(L10n.string("Sells from"), value: L10n.string("The whole position"))
-                } else {
-                    TextField(
-                        L10n.string("Owned entry price"), text: $instruction.entryPrice,
-                        prompt: Text(L10n.string("Entry price of the lot to exit"))
-                    )
-                    .accessibilityLabel(L10n.string("Owned entry price"))
-                }
+                TextField(
+                    L10n.string("Sells from the buy at"), text: $instruction.entryPrice,
+                    prompt: Text(L10n.string("Empty sells from every buy"))
+                )
+                .accessibilityLabel(L10n.string("Sells from the buy at"))
                 if instruction.action == .reduce {
                     TextField(L10n.string("Fraction to reduce"), text: $instruction.fraction, prompt: Text(L10n.string("0 to 1")))
                         .accessibilityLabel(L10n.string("Fraction to reduce"))

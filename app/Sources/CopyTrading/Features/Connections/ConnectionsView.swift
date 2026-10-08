@@ -14,6 +14,8 @@ struct ConnectionsView: View {
     /// so a sheet closed without typing anything leaves the interpreter as it was.
     @State private var beforeConnect: (draft: ConnectionsDraft, picked: Int)?
     @AppStorage("connections.ideasHidden") private var ideasHidden = false
+    /// A channel ID is in and typing has paused for a moment; the setup tour moves on from it.
+    @State private var channelsEntered = false
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorSchemeContrast) private var contrast
@@ -22,66 +24,94 @@ struct ConnectionsView: View {
     private var motion: Animation? { reduceMotion ? nil : .smooth(duration: 0.42, extraBounce: 0.04) }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                header
-                    .padding(.bottom, 30)
-                step(1, .discord) { section(.discord) }
-                step(2, .interpreter) { section(.interpreter) }
-                SetupStepSection(
-                    number: 3, isDone: progress.isDone(.account), title: L10n.string("Broker accounts"),
-                    subtitle: L10n.string("Where orders go. Start with paper: pretend money at real prices.")
-                ) { BrokerAccountsRows(model: model) }
-                .padding(.bottom, 36)
-                SetupStepSection(
-                    number: 4, isDone: progress.isDone(.guru), title: L10n.string("Gurus"),
-                    subtitle: L10n.string("Who you copy, and the account each one copies into.")
-                ) { GuruRows(model: model) }
-                .padding(.bottom, 36)
-                SetupStepSection(
-                    number: 5, isDone: model.setupDraft.notificationsEnabled, isOptional: true,
-                    title: ConnectionKind.alerts.title, subtitle: ConnectionKind.alerts.explanation
-                ) { section(.alerts) }
-                .padding(.bottom, 36)
-                if model.hasSetupToStart {
-                    ConnectionsStartCard(model: model)
-                        .padding(.bottom, 36)
-                        .transition(.opacity)
-                }
-                if !ideasHidden {
-                    ConnectionIdeasSection(provider: model.setupDraft.provider, hide: hideIdeas)
-                        .transition(.opacity)
-                }
-            }
-            .padding(.horizontal, 30)
-            .padding(.top, 14)
-            .padding(.bottom, 44)
-            .frame(maxWidth: 880, alignment: .leading)
-            .frame(maxWidth: .infinity)
-        }
-        .scrollEdgeEffectHidden(true, for: .top)
-        .background(Palette.panel)
-        .overlayPreferenceValue(ConnectionOriginKey.self) { origins in
-            GeometryReader { layer in
-                ZStack {
-                    if let panel {
-                        veil
+        ScrollViewReader { scroller in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    header
+                        .padding(.bottom, 30)
+                    step(1, .discord) { section(.discord) }
+                        .id(SetupTourTarget.discordRow)
+                    step(2, .interpreter) { section(.interpreter) }
+                        .id(SetupTourTarget.interpreterServices)
+                    SetupStepSection(
+                        number: 3, isDone: progress.isDone(.account), title: L10n.string("Broker accounts"),
+                        subtitle: L10n.string("Where orders go. Start with paper: pretend money at real prices.")
+                    ) { BrokerAccountsRows(model: model).setupTourTarget(.accounts) }
+                    .padding(.bottom, 36)
+                    .id(SetupTourTarget.accounts)
+                    SetupStepSection(
+                        number: 4, isDone: progress.isDone(.guru), title: L10n.string("Gurus"),
+                        subtitle: L10n.string("Who you copy, and the account each one copies into.")
+                    ) { GuruRows(model: model).setupTourTarget(.gurus) }
+                    .padding(.bottom, 36)
+                    .id(SetupTourTarget.gurus)
+                    SetupStepSection(
+                        number: 5, isDone: model.setupDraft.notificationsEnabled, isOptional: true,
+                        title: ConnectionKind.alerts.title, subtitle: ConnectionKind.alerts.explanation
+                    ) { section(.alerts) }
+                    .padding(.bottom, 36)
+                    if model.hasSetupToStart {
+                        ConnectionsStartCard(model: model)
+                            .id(SetupTourTarget.startCopying)
+                            .padding(.bottom, 36)
                             .transition(.opacity)
-                        ConnectionPanelContent(
-                            page: panel.page, model: model, close: close, cancel: cancel, connecting: isEditingFromProviderRow
-                        )
-                        .transition(
-                            ConnectionPanelTransition(
-                                origin: origins[panel.origin].map { layer[$0] }, layer: layer.size, reduceMotion: reduceMotion))
+                    }
+                    if !ideasHidden {
+                        ConnectionIdeasSection(provider: model.setupDraft.provider, hide: hideIdeas)
+                            .transition(.opacity)
                     }
                 }
-                .frame(width: layer.size.width, height: layer.size.height)
+                .padding(.horizontal, 30)
+                .padding(.top, 14)
+                .padding(.bottom, 44)
+                .frame(maxWidth: 880, alignment: .leading)
+                .frame(maxWidth: .infinity)
             }
-        }
-        .clipShape(.rect(cornerRadius: DesignTokens.panelCornerRadius, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: DesignTokens.panelCornerRadius, style: .continuous)
-                .strokeBorder(contrast == .increased ? Palette.secondaryInk : Palette.hairline, lineWidth: 1 / displayScale)
+            .scrollEdgeEffectHidden(true, for: .top)
+            .background(Palette.panel)
+            .overlayPreferenceValue(ConnectionOriginKey.self) { origins in
+                GeometryReader { layer in
+                    ZStack {
+                        if let panel {
+                            veil
+                                .transition(.opacity)
+                            ConnectionPanelContent(
+                                page: panel.page, model: model, close: close, cancel: cancel, connecting: isEditingFromProviderRow
+                            )
+                            .transition(
+                                ConnectionPanelTransition(
+                                    origin: origins[panel.origin].map { layer[$0] }, layer: layer.size, reduceMotion: reduceMotion))
+                        }
+                    }
+                    .frame(width: layer.size.width, height: layer.size.height)
+                }
+            }
+            .clipShape(.rect(cornerRadius: DesignTokens.panelCornerRadius, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: DesignTokens.panelCornerRadius, style: .continuous)
+                    .strokeBorder(contrast == .increased ? Palette.secondaryInk : Palette.hairline, lineWidth: 1 / displayScale)
+            }
+            .overlayPreferenceValue(SetupTourTargetKey.self) { targets in
+                // An account or guru sheet covers the page, and a check or start already answers
+                // the last stop; the tour waits behind them.
+                if let tourStop, model.setupEditor == nil, !model.isValidatingTrading, !model.isActivatingTrading {
+                    SetupTourOverlay(stop: tourStop, targets: targets, model: model)
+                }
+            }
+            .task(id: model.setupDraft.channels) {
+                channelsEntered = false
+                guard !model.setupDraft.sourceChannelIDs.isEmpty else { return }
+                guard (try? await Task.sleep(for: .seconds(1))) != nil else { return }
+                channelsEntered = true
+            }
+            .onChange(of: tourStop, initial: true) { _, stop in
+                model.setupTourStop = stop
+                guard model.isTouringSetup else { return }
+                guard let stop else { return model.endSetupTour() }
+                // Stops inside a panel are already in view; the page scrolls to the others.
+                guard panel == nil else { return }
+                withAnimation(motion) { scroller.scrollTo(stop.target, anchor: .center) }
+            }
         }
         .padding([.trailing, .bottom], 8)
         .onChange(of: model.requestedConnection, initial: true) { _, kind in
@@ -94,6 +124,14 @@ struct ConnectionsView: View {
     }
 
     private var progress: SetupProgress { model.setupProgress }
+
+    /// Where the setup tour points while it runs.
+    /// Nil once the setup is done; the tour then ends. An account or guru sheet only hides it.
+    private var tourStop: SetupTourStop? {
+        guard model.isTouringSetup else { return nil }
+        let open: ConnectionKind? = if case .editor(let kind) = panel?.page { kind } else { nil }
+        return SetupTourStop.current(progress: progress, channelsEntered: channelsEntered, panel: open)
+    }
 
     private var header: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -140,7 +178,9 @@ struct ConnectionsView: View {
                 switch kind {
                 case .discord:
                     serviceRow(
-                        kind, brand: "discord", summary: summary, title: L10n.string("Discord token and channels"))
+                        kind, brand: "discord", summary: summary, title: L10n.string("Discord token and channels")
+                    )
+                    .setupTourTarget(.discordRow)
                 case .alerts:
                     if let summary {
                         serviceRow(kind, brand: model.setupDraft.notificationService.brandIcon, summary: summary, title: summary.title)
@@ -176,6 +216,7 @@ struct ConnectionsView: View {
                     }
                 }
             }
+            .setupTourTarget(kind == .interpreter ? .interpreterServices : nil)
             if kind == .interpreter && (summary == nil || isEditingFromProviderRow) {
                 SettingsSection(dividerInset: 56) {
                     ForEach(ProviderGroup.ownModel.providers, id: \.self) { provider in

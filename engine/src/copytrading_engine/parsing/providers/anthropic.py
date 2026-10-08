@@ -1,10 +1,12 @@
-"""Anthropic's native structured-output adapter."""
+"""Anthropic's adapter. The reading's schema goes in the instructions and the answer is checked
+like any other: Anthropic compiles a strict output schema into a grammar, and the reading's is too
+large for it on every Claude model, and newer models refuse a forced tool call."""
 
 import logging
 
 import httpx2 as httpx
 from anthropic import APIConnectionError, AsyncAnthropic
-from pydantic_ai import Agent, NativeOutput
+from pydantic_ai import Agent, PromptedOutput
 from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.providers.anthropic import AnthropicProvider
 
@@ -39,12 +41,13 @@ def build_decoder(config: ProviderConfig, client: AsyncAnthropic) -> PydanticAID
     model = chat_model(config, client)
     agent = reading_agent(
         model,
-        NativeOutput(ReadingOutput),
+        PromptedOutput(ReadingOutput),
         {"temperature": 0, "max_tokens": 3000},
     )
     learner = Agent(
         model,
-        output_type=NativeOutput(PlaybookProposal),
+        output_type=PromptedOutput(PlaybookProposal),
+        name="playbook_learner",
         instructions=LEARN_INSTRUCTIONS,
         retries=1,
         model_settings={"temperature": 0, "max_tokens": 8000},

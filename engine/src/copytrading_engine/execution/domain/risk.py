@@ -66,10 +66,9 @@ def requested_entry_budget(
     connection: RouteConnection,
     source_fraction: Decimal | None,
 ) -> BudgetDecision:
-    """The call's share of the guru's full position, before account facts and limits."""
-    fraction = source_fraction if source_fraction is not None else connection.default_fraction
-    if fraction is None:
-        return BudgetDecision(None, "missing_source_fraction_review")
+    """The call's share of the guru's full position, before account facts and limits. A call
+    that states no size asks for the full position; the maximum per order trims it (ADR-0010)."""
+    fraction = source_fraction if source_fraction is not None else Decimal(1)
     if not fraction.is_finite() or not 0 < fraction <= 1:
         raise ValueError("Source fraction must be between zero and one")
     # A third is 0.333…3 in Decimal, so first settle the product's last digits (a third of $3000

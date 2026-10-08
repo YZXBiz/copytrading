@@ -169,13 +169,13 @@ def test_snapshot_rejects_order_without_explicit_type():
         LedgerSnapshot.model_validate_json(json.dumps(snapshot))
 
 
-def test_snapshot_accepts_only_schema_version_nine_and_requires_control():
-    assert LedgerSnapshot().schema_version == 9
-    for old_version in (2, 6, 7, 8):
+def test_snapshot_accepts_only_schema_version_ten_and_requires_control():
+    assert LedgerSnapshot().schema_version == 10
+    for old_version in (2, 6, 7, 8, 9):
         with pytest.raises(ValueError, match="Unsupported execution snapshot schema"):
             decode_ledger_snapshot(json.dumps({"schema_version": old_version}))
     with pytest.raises(ValueError, match="account control evidence"):
-        decode_ledger_snapshot(json.dumps({"schema_version": 9}))
+        decode_ledger_snapshot(json.dumps({"schema_version": 10}))
 
 
 def test_buy_order_requires_matching_durable_cash_anchor():

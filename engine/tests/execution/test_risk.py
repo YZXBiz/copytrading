@@ -132,18 +132,9 @@ def test_shares_round_down_so_six_sixths_never_pass_the_full_position():
 
 
 def test_the_requested_budget_needs_no_account_facts():
-    waits = FULL_3000.model_copy(update={"default_fraction": None})
-
     assert requested_entry_budget(FULL_3000, Decimal(1) / 6).budget == Decimal("500.00")
-    assert requested_entry_budget(waits, None).reason == "missing_source_fraction_review"
-
-
-def test_a_call_with_no_size_waits_when_its_default_share_is_wait():
-    waits = FULL_3000.model_copy(update={"default_fraction": None})
-
-    assert decide(ROOMY, connection=waits).reason == "missing_source_fraction_review"
-    lowered = FULL_3000.model_copy(update={"default_fraction": Decimal(1) / 6})
-    assert decide(ROOMY, connection=lowered).budget == Decimal("500.00")
+    # A call with no size asks for the full position (ADR-0010).
+    assert requested_entry_budget(FULL_3000, None).budget == Decimal("3000.00")
 
 
 def test_the_maximum_per_order_trims_a_buy_and_says_so():

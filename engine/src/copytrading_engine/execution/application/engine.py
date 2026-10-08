@@ -327,14 +327,14 @@ class CopyEngine:
         except ValueError:
             return TradeDecision(None, "account_risk_unavailable")
         joins_lot = None
+        from_entries: tuple[str, ...] = ()
         requested_usd = None
         budget_usd = None
         if s.action == "buy":
             limit_price = c.entry_pricing.limit_price(s.price)
-            if s.whole_position:
-                # Every buy of a stock joins the guru's one open lot of it.
-                open_lots = self.ledger.position_lots(source_key, s.symbol)
-                joins_lot = open_lots[0][0] if open_lots else None
+            # Every buy of a stock joins the guru's open lot of it (ADR-0010).
+            open_lots = self.ledger.position_lots(source_key, s.symbol)
+            joins_lot = open_lots[0][0] if open_lots else None
             anchor = None
             if not manual:
                 anchor = self.ledger.anchor_cash(
@@ -390,30 +390,44 @@ class CopyEngine:
             qty = (decision.budget / limit_price).quantize(STEP, rounding=ROUND_DOWN)
             entry_price = s.price
         else:
-            if s.entry_price is None and not s.whole_position:
-                raise ValueError("An exit requires its source entry price")
             if chosen_lot is not None:
                 lot = self.ledger.snapshot().lots.get(chosen_lot)
                 if lot is None or lot.symbol != s.symbol or lot.remaining_qty <= 0:
                     return TradeDecision(None, "lot_unavailable")
                 lot_id = chosen_lot
             else:
-                lots = (
-                    self.ledger.position_lots(source_key, s.symbol)
-                    if s.entry_price is None
-                    else self.ledger.matching_lots(source_key, s.symbol, s.entry_price)
-                )
+                lots = self.ledger.position_lots(source_key, s.symbol)
+                if not lots:
+                    return TradeDecision(None, "lot_unavailable")
                 if len(lots) != 1:
                     return TradeDecision(None, "missing_or_ambiguous_lot")
                 lot_id, lot = lots[0]
             entry_price = lot.entry_price
-            qty = lot.remaining_qty if chosen_qty is None else min(lot.remaining_qty, chosen_qty)
+            # A sell that names a buy price takes from the buys at exactly that price; one that
+            # names none takes from every buy (ADR-0010).
+            if s.entry_price is not None and chosen_lot is None:
+                from_entries = lot.entries_at(s.entry_price)
+                if not from_entries:
+                    return TradeDecision(None, "named_buy_not_held")
+                # The order sells those buys, so it carries their price, as the post named it.
+                entry_price = s.entry_price
+            held = lot.remaining_of(from_entries) if from_entries else lot.remaining_qty
+            qty = held if chosen_qty is None else min(held, chosen_qty)
             if s.action == "reduce":
                 assert s.fraction is not None
-                # "Sell half" is half of the original buy, unless the guru counts from what is left.
-                remaining = s.exit_basis == "remaining_position"
-                basis = lot.remaining_qty if remaining else lot.original_qty
-                qty = min(qty, basis * s.fraction)
+                # "Sell half" is half of what is left, unless the post or playbook says the
+                # original buy.
+                if s.exit_basis == "original_position":
+                    bought = sum(
+                        (
+                            self.ledger.order(entry).filled_qty
+                            for entry in (from_entries or lot.entries(lot_id))
+                        ),
+                        ZERO,
+                    )
+                    qty = min(qty, bought * s.fraction)
+                else:
+                    qty = min(qty, held * s.fraction)
             qty = qty.quantize(STEP, rounding=ROUND_DOWN)
             # An exit is a limit order too, no lower than the allowance under the guru's price.
             limit_price = c.entry_pricing.exit_limit_price(s.price)
@@ -461,6 +475,7 @@ class CopyEngine:
                 entry_price=entry_price,
                 session=session,
                 joins_lot=joins_lot,
+                from_entries=from_entries,
                 requested_usd=requested_usd,
                 budget_usd=budget_usd,
             ),

@@ -1,6 +1,7 @@
 """Explicit trading lifecycle and replay-safe local pipeline composition."""
 
 import asyncio
+import dataclasses
 import datetime as dt
 import logging
 import os
@@ -309,9 +310,7 @@ class TradingRuntime:
         return report.model_copy(
             update={
                 "activatable": report.activatable
-                and all(
-                    check.state in {"ready", "not_configured", "unsupported"} for check in failures
-                )
+                and all(check.state in {"ready", "not_configured"} for check in failures)
                 and not any(check.name == "configuration" for check in failures),
                 "checks": tuple(failures),
             }
@@ -410,7 +409,9 @@ class TradingRuntime:
                 key = route_key(
                     route_binding.source, route_binding.channel_id, route_binding.author_id
                 )
-                routes[key] = profile.route()
+                routes[key] = dataclasses.replace(
+                    profile.route(), repeat_window_minutes=route_binding.repeat_window_minutes
+                )
             worker = ParseWorker(
                 parser,
                 decoder,

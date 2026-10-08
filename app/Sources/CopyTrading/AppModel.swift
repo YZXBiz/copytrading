@@ -508,6 +508,12 @@ final class AppModel {
     var copyingStartedAt: Date?
     /// A Getting Started section asked for from the Help menu; the guide clears it.
     var guideAnchor: GuideAnchor?
+    /// The setup tour is walking the owner through Connections. Where it points is read from the
+    /// setup itself (`SetupTourStop.current`), so this is the only state the tour keeps.
+    var isTouringSetup = false
+    /// Where the running tour points, published by Connections so a panel can show the stop's
+    /// hint under its own field.
+    var setupTourStop: SetupTourStop?
     /// Bumped by Help ▸ Show Tips Again, so every tip gets a fresh identity and can show again.
     var tipGeneration = UserDefaults.standard.integer(forKey: AppModel.tipGenerationKey)
     @ObservationIgnored private var pendingTradingActivation: PendingTradingActivation?
@@ -675,11 +681,17 @@ final class AppModel {
             savedTradingConfiguration = savedTrading?.configuration
             hasTradingSecrets = savedTrading != nil
             syncSetupDraftWithSaved()
-            // A first launch opens on the guide; an engine restart later never moves the owner.
+            prefillEmptySetup()
+            // A first launch walks the owner through setup on Connections, until they end the tour;
+            // an engine restart later never moves the owner.
             if !hasChosenFirstScreen {
                 hasChosenFirstScreen = true
                 if savedTrading == nil && selectedScreen == .today {
-                    selectedScreen = .gettingStarted
+                    if UserDefaults.standard.bool(forKey: Self.setupTourEndedKey) {
+                        selectedScreen = .gettingStarted
+                    } else {
+                        startSetupTour()
+                    }
                 }
             }
             let newJournal = CommandJournal(url: paths.applicationSupportDirectory.appending(path: "commands.json"))
@@ -1052,10 +1064,7 @@ final class AppModel {
                 guruID: route.guruID.trimmed,
                 displayName: route.displayName.trimmed.isEmpty ? route.guruID.trimmed : route.displayName.trimmed,
                 playbook: route.playbook.trimmedLines,
-                examples: [],
-                exitBasis: route.exitBasis,
-                batches: route.batches,
-                sellsReferTo: route.sellsReferTo
+                examples: []
             ))
         do {
             return try await reading.engine.replayGuruPosts(
@@ -1722,8 +1731,7 @@ final class AppModel {
             configuration.profiles.allSatisfy({ profile in
                 let draft = TradingProfileDraft(
                     guruID: profile.guruID, displayName: profile.displayName,
-                    playbook: profile.playbook, examples: profile.examples,
-                    exitBasis: profile.exitBasis, batches: profile.batches, sellsReferTo: profile.sellsReferTo
+                    playbook: profile.playbook, examples: profile.examples
                 )
                 return (try? TradingProfileBuilder().build(draft)) == profile
             })
@@ -1756,11 +1764,6 @@ final class AppModel {
                 connection.fullPositionUSD == account.policy.maxSymbolUSD
             else {
                 throw fail(L10n.string("Set a max per stock for “%@”. It's %@'s full position.", account.id, name))
-            }
-            if let rawDefault = connection.defaultFraction {
-                guard let fraction = Decimal(string: rawDefault), fraction > 0, fraction <= 1 else {
-                    throw fail(L10n.string("“%@”: set a default size above 0, up to the full position.", name))
-                }
             }
             if let other = copiedInto[connection.accountID] {
                 throw fail(L10n.string("“%@” already copies “%@”. Each account copies one guru.", connection.accountID, other))
@@ -1822,11 +1825,24 @@ final class AppModel {
                 case let (expected?, actual?): abs(expected - actual) <= Self.fractionTolerance
                 default: false
                 }
+            // Same rules as the engine: a stated price must match, and a sell's buy price must
+            // match what the example names (none means every buy).
+            let priceMatches =
+                expected.expectedPrice.flatMap { Decimal(string: $0) }.map { expectedPrice in
+                    instruction.flatMap { Decimal(string: $0.price) } == expectedPrice
+                } ?? true
+            let checksBuyPrice = expected.expectedBuyPrice != nil || expected.expectedAction != .buy
+            let buyPriceMatches =
+                !checksBuyPrice
+                || instruction?.entryPrice.flatMap { Decimal(string: $0) }
+                    == expected.expectedBuyPrice.flatMap { Decimal(string: $0) }
             let matches =
                 actual.actual.decision == "trade"
                 && instruction?.action == expected.expectedAction
                 && instruction?.symbol == expected.expectedSymbol
                 && fractionMatches
+                && priceMatches
+                && buyPriceMatches
             guard actual.matches == matches else {
                 throw TradingSettingsError.invalidEvaluationResult
             }

@@ -95,24 +95,29 @@ struct ConnectionEditor: View {
         }
         .animation(reduceMotion ? nil : .smooth(duration: 0.2), value: model.setupDraft.provider.acceptsBaseURL)
         .animation(reduceMotion ? nil : .smooth(duration: 0.2), value: failedCheck)
+        .animation(reduceMotion ? nil : .smooth(duration: 0.3), value: model.setupTourStop)
     }
 
     @ViewBuilder
     private var fields: some View {
         switch kind {
         case .discord:
-            row("Channel IDs") {
-                TextField(
-                    L10n.string("Channel IDs"), text: $model.setupDraft.channels,
-                    prompt: Text(L10n.string("Comma-separated Discord channel IDs")))
+            toured(.channelIDs) {
+                row("Channel IDs") {
+                    TextField(
+                        L10n.string("Channel IDs"), text: $model.setupDraft.channels,
+                        prompt: Text(L10n.string("Comma-separated Discord channel IDs")))
+                }
             }
             row("Allowed authors") {
                 TextField(
                     L10n.string("Allowed authors"), text: $model.setupDraft.authors,
                     prompt: Text(L10n.string("Optional, comma-separated user IDs")))
             }
-            row("Discord token") {
-                SecureField(L10n.string("Discord token"), text: $model.setupDraft.discordToken, prompt: secretPrompt)
+            toured(.discordToken) {
+                row("Discord token") {
+                    SecureField(L10n.string("Discord token"), text: $model.setupDraft.discordToken, prompt: secretPrompt)
+                }
             }
         case .interpreter:
             row("Model") {
@@ -125,8 +130,10 @@ struct ConnectionEditor: View {
                     TextField(L10n.string("Base URL"), text: $model.setupDraft.providerBaseURL, prompt: baseURLPrompt)
                 }
             }
-            row("API key") {
-                SecureField(L10n.string("API key"), text: $model.setupDraft.providerAPIKey, prompt: modelKeyPrompt)
+            toured(.interpreterKey) {
+                row("API key") {
+                    SecureField(L10n.string("API key"), text: $model.setupDraft.providerAPIKey, prompt: modelKeyPrompt)
+                }
             }
         case .alerts where model.setupDraft.notificationService == .discord:
             row("Webhook URL") {
@@ -145,6 +152,28 @@ struct ConnectionEditor: View {
                     L10n.string("Bot token"), text: $model.setupDraft.notificationToken, prompt: alertSecretPrompt(otherwise: "Required"))
             }
         }
+    }
+
+    /// A field the setup tour can point at. While it does, the field and the tour's hint share
+    /// one outlined card inside the panel's column.
+    private func toured(_ stop: SetupTourStop, @ViewBuilder field: () -> some View) -> some View {
+        let active = model.setupTourStop == stop
+        return VStack(alignment: .leading, spacing: 12) {
+            field()
+            if active {
+                SetupTourInlineHint(stop: stop, model: model)
+                    .transition(.opacity)
+            }
+        }
+        .padding(active ? 12 : 0)
+        .background {
+            if active {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Palette.accent.opacity(0.07))
+                    .strokeBorder(Palette.accent.opacity(0.6), lineWidth: 1.5)
+            }
+        }
+        .setupTourTarget(stop.target)
     }
 
     /// One field's row: a click anywhere on it focuses the field, and VoiceOver hears its label.

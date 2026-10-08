@@ -92,16 +92,9 @@ struct ConnectionsDraft {
                 guruID: route.guruID,
                 displayName: profile?.displayName ?? route.guruID,
                 playbook: profile?.playbook ?? "",
-                exitBasis: profile?.exitBasis ?? .originalPosition,
-                batches: profile?.batches,
-                sellsReferTo: profile?.sellsReferTo ?? .buyPrice,
                 repeatWindowMinutes: route.repeatWindowMinutes,
                 examples: profile?.examples.map(TradingProfileExampleDraft.init(example:)) ?? [],
-                connection: route.connections.first.map { connection in
-                    TradingConnectionDraft(
-                        accountID: connection.accountID, defaultFraction: connection.defaultFraction
-                    )
-                }
+                connection: route.connections.first.map { TradingConnectionDraft(accountID: $0.accountID) }
             )
         }
         notificationsEnabled = saved.notification != nil
@@ -137,10 +130,7 @@ struct ConnectionsDraft {
                     guruID: route.guruID.trimmed,
                     displayName: route.displayName.trimmed,
                     playbook: route.playbook.trimmedLines,
-                    examples: route.examples.map(\.profileExample),
-                    exitBasis: route.exitBasis,
-                    batches: route.batches,
-                    sellsReferTo: route.sellsReferTo
+                    examples: route.examples.map(\.profileExample)
                 ))
             profileByRevision[profile.profileRevision] = profile
             convertedRoutes.append(
@@ -206,7 +196,10 @@ extension TradingProfileExampleDraft {
             message: message.trimmedLines,
             expectedAction: expectedAction,
             expectedSymbol: expectedSymbol.trimmed.uppercased(),
-            expectedFraction: expectedFraction.trimmed.nilIfEmpty
+            expectedFraction: expectedFraction.trimmed.nilIfEmpty,
+            expectedPrice: expectedPrice.trimmed.nilIfEmpty,
+            // A buy names no buy price to sell from.
+            expectedBuyPrice: expectedAction == .buy ? nil : expectedBuyPrice.trimmed.nilIfEmpty
         )
     }
 }

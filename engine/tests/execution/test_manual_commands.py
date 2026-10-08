@@ -771,7 +771,7 @@ def test_manual_exit_cannot_sell_external_only_shares(tmp_path):
     )
     preview = app.preview(preview_request(correction), NOW)
     assert preview.plan is None
-    assert "missing_or_ambiguous_lot" in preview.reasons
+    assert "lot_unavailable" in preview.reasons
     assert broker.calls == 0
 
 

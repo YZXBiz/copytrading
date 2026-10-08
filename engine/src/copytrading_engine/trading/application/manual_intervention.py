@@ -142,6 +142,14 @@ class ManualInterventionService:
                         "Start copying first. A call is copied by hand only while its account runs."
                     )
                 raise ValueError("Manual correction could not be recorded in any selected account")
+            # The guru's history reads the owner's call in place of the reader's (ADR-0010).
+            await asyncio.to_thread(
+                self._access.evidence.record_owner_correction,
+                source_database,
+                correction.source_id,
+                correction.instructions,
+                correction.recorded_at,
+            )
             return ManualCorrectionOutcome(correction=correction, accounts=tuple(accounts))
 
     async def preview_manual_order(self, request: ManualPreviewRequest) -> ManualOrderPreview:

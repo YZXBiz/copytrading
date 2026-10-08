@@ -63,8 +63,9 @@ class CashAnchor(Value):
     buying_power: Quantity
 
 
-# Skips that hold a call back for the owner rather than refuse it.
-HELD_FOR_OWNER = frozenset({"approval_required"})
+# Skips that hold a call back for the owner rather than refuse it: an account that approves every
+# order, and a sell naming a buy price none of its buys has (ADR-0010).
+HELD_FOR_OWNER = frozenset({"approval_required", "named_buy_not_held"})
 
 
 class MessageRecord(StockSignal):
@@ -73,7 +74,6 @@ class MessageRecord(StockSignal):
     destination: DestinationTerms
     parts: tuple[InstructionProgress, ...]
     status: MessageStatus
-    review_reason: Literal["missing_source_fraction"] | None = None
     cash_anchor: CashAnchor | None = None
 
     @model_validator(mode="after")
@@ -84,8 +84,6 @@ class MessageRecord(StockSignal):
             raise ValueError("Message source identity mismatch")
         if self.status == "done" and any(isinstance(part, Pending) for part in self.parts):
             raise ValueError("Completed message still has Pending instructions")
-        if self.review_reason is not None and self.status != "review_required":
-            raise ValueError("Destination review reason requires review status")
         return self
 
     @property
@@ -106,7 +104,7 @@ class MessageRecord(StockSignal):
 
 
 class LedgerSnapshot(Value):
-    schema_version: Literal[9] = 9
+    schema_version: Literal[10] = 10
     account_id: BrokerAccountId | None = None
     control: AccountControl = Field(default_factory=AccountControl)
     environment: Literal["paper", "live"] | None = None
@@ -531,20 +529,24 @@ class LedgerSnapshot(Value):
                 raise ValueError("Entry fills require an owned lot")
             if order.side == "sell":
                 lot = self.lots.get(order.lot_id or "")
-                if lot is None or (lot.symbol, lot.source_key, lot.entry_price) != (
-                    order.symbol,
-                    order.source_key,
-                    order.entry_price,
+                # A sell of named buys carries their price, and every one is in its lot; any
+                # other sell carries the lot's own (ADR-0010).
+                named = order.from_entries
+                if (
+                    lot is None
+                    or (lot.symbol, lot.source_key) != (order.symbol, order.source_key)
+                    or (not named and lot.entry_price != order.entry_price)
+                    or any(lot.entry_prices.get(entry) != order.entry_price for entry in named)
                 ):
                     raise ValueError("Sell order references an unknown or different lot")
         for key, lot in self.lots.items():
             entries = [self.orders.get(entry) for entry in lot.entries(key)]
-            # A buy that joined this lot for a whole-position guru may be at another price.
+            # Every buy of the stock from the guru joins one lot, at whatever price (ADR-0010).
             if any(
                 entry is None
                 or entry.side != "buy"
                 or (lot.symbol, lot.source_key) != (entry.symbol, entry.source_key)
-                or (lot.entry_price != entry.entry_price and entry.joins_lot != key)
+                or lot.entry_prices.get(entry.client_id) != entry.entry_price
                 for entry in entries
             ) or lot.original_qty != sum(
                 (entry.filled_qty for entry in entries if entry is not None), Decimal(0)

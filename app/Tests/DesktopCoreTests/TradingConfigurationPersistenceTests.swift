@@ -266,8 +266,7 @@ private func temporaryTradingFile() -> URL {
 private func tradingConfiguration(model: String) throws -> TradingConfiguration {
     let profile = try TradingProfileBuilder().build(
         TradingProfileDraft(
-            guruID: "test-guru", displayName: "Test Guru",
-            exitBasis: .originalPosition
+            guruID: "test-guru", displayName: "Test Guru"
         ))
     return TradingConfiguration(
         source: TradingSourceConfiguration(channelIDs: ["channel"]),

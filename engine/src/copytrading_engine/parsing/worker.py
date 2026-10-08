@@ -9,6 +9,7 @@ from copytrading_engine.parsing.application import outcome, transform, without_m
 from copytrading_engine.parsing.contracts import ExtractionStore, RequestReservation
 from copytrading_engine.parsing.contracts import RawMessage as _RawMessage
 from copytrading_engine.parsing.extraction import DecodeError, Decoder
+from copytrading_engine.parsing.history import recent_calls
 from copytrading_engine.parsing.readiness import ModelReadiness
 from copytrading_engine.parsing.retry_policy import next_retry_at
 from copytrading_engine.parsing.routes import Route, freeze_routes
@@ -106,8 +107,10 @@ class ParseWorker:
         self, key: str, raw: _RawMessage, route: Route, attempt: int, now: dt.datetime
     ) -> StockSignal | None:
         try:
+            # The guru's book as the reader sees it beside the post (ADR-0010).
+            recent = recent_calls(await self.store.past_calls(raw.channel_id, key))
             with self.observe(key):
-                result = await transform(raw, route, self.decoder, self.model)
+                result = await transform(raw, route, self.decoder, self.model, recent)
             self.model_health.record()
             return result
         except DecodeError as exc:

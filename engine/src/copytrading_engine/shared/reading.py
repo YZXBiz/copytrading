@@ -7,10 +7,11 @@ it, so a value without its evidence cannot exist. A field the post does not stat
 or `NotSaid`; nothing is filled in for the guru.
 """
 
+import re
 from decimal import Decimal
 from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
 Words = Annotated[str, Field(min_length=1, max_length=200)]
 """The post's exact words behind a value."""
@@ -61,11 +62,23 @@ class AtMarket(_Part):
 type Price = Annotated[Exact | Range | AtMarket | NotGiven, Field(discriminator="kind")]
 
 
+def _exact_fraction(value: object) -> object:
+    """A value written as a ratio, "1/6", is that exact fraction: a model may write it either way,
+    and a rounded decimal such as 0.1667 would no longer match the post's own 1/6."""
+    if isinstance(value, str) and (match := re.fullmatch(r"\s*(\d+)\s*/\s*(\d+)\s*", value)):
+        numerator, denominator = (int(group) for group in match.groups())
+        if denominator:
+            return Decimal(numerator) / Decimal(denominator)
+    return value
+
+
 class Fraction(_Part):
     """A share of a full position, as written: 6分之一, half, 1/3."""
 
     kind: Literal["fraction"] = "fraction"
-    value: Annotated[Decimal, Field(gt=0, le=1, allow_inf_nan=False)]
+    value: Annotated[
+        Decimal, BeforeValidator(_exact_fraction), Field(gt=0, le=1, allow_inf_nan=False)
+    ]
     words: Words
 
 
@@ -87,7 +100,8 @@ class All(_Part):
     words: Words
 
 
-type Share = Annotated[Fraction | All, Field(discriminator="kind")]
+# A vague trim ("trimmed", 减仓) states no share; it waits for the owner (ADR-0010).
+type Share = Annotated[Fraction | All | NotGiven, Field(discriminator="kind")]
 
 
 class Lot(_Part):
@@ -114,12 +128,18 @@ class Stock(_Part):
     words: Words
 
 
+# A recent call of the guru's, as the reader was shown it: c1, c2, … (ADR-0010).
+type CallRef = Annotated[str, Field(pattern=r"^c[0-9]{1,4}$")]
+
+
 class Buy(_Part):
     action: Literal["buy"] = "buy"
     action_words: Words
     stock: Stock
     price: Price
     size: Size
+    # The recent call this one restates, when the post re-posts it rather than making a new one.
+    repeats: CallRef | None = None
 
 
 class Sell(_Part):
@@ -132,6 +152,7 @@ class Sell(_Part):
     # not say, which leaves it to the guru's playbook default.
     counts_from: Literal["original", "remaining"] | None = None
     sell_from: SellFrom
+    repeats: CallRef | None = None
 
 
 type Call = Annotated[Buy | Sell, Field(discriminator="action")]

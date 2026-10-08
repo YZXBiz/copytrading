@@ -4,6 +4,8 @@ import SwiftUI
 /// the trailing edge.
 struct GuideHeader: View {
     let progress: SetupProgress
+    /// Starts the setup tour on Connections.
+    let startTour: () -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
@@ -19,6 +21,17 @@ struct GuideHeader: View {
                 )
                 .font(DesignTokens.bodyText)
                 .foregroundStyle(Palette.secondaryInk)
+                if !progress.isComplete {
+                    Button(
+                        L10n.string(progress.completed == 0 ? "Show Me Around" : "Pick Up Where I Left Off"),
+                        systemImage: "point.topleft.down.to.point.bottomright.curvepath", action: startTour
+                    )
+                    .buttonStyle(.borderedProminent)
+                    .buttonBorderShape(.capsule)
+                    .controlSize(.large)
+                    .padding(.top, 8)
+                    .accessibilityIdentifier("guide.tour")
+                }
             }
             Spacer(minLength: 16)
             HStack(spacing: 10) {

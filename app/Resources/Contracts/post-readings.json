@@ -25,7 +25,8 @@
           "kind": "lot",
           "buy_price": "39.5",
           "words": "39.5"
-        }
+        },
+        "repeats": null
       }
     ]
   },
@@ -49,7 +50,8 @@
           "kind": "fraction",
           "value": "0.1666666666666666666666666667",
           "words": "6分之一"
-        }
+        },
+        "repeats": null
       }
     ]
   },
@@ -76,7 +78,8 @@
         "counts_from": null,
         "sell_from": {
           "kind": "not_said"
-        }
+        },
+        "repeats": null
       }
     ]
   },
@@ -100,7 +103,8 @@
         },
         "size": {
           "kind": "not_given"
-        }
+        },
+        "repeats": null
       }
     ]
   },
@@ -125,7 +129,8 @@
           "kind": "batch",
           "number": 1,
           "words": "第一批"
-        }
+        },
+        "repeats": null
       }
     ]
   },
@@ -146,7 +151,33 @@
         },
         "size": {
           "kind": "not_given"
-        }
+        },
+        "repeats": null
+      }
+    ]
+  },
+  {
+    "kind": "trade_made",
+    "summary": "Re-posts the SOUN buy",
+    "calls": [
+      {
+        "action": "buy",
+        "action_words": "加了",
+        "stock": {
+          "ticker": "SOUN",
+          "words": "soun"
+        },
+        "price": {
+          "kind": "exact",
+          "value": "5.85",
+          "words": "5.85"
+        },
+        "size": {
+          "kind": "fraction",
+          "value": "0.1666666666666666666666666667",
+          "words": "6分之一"
+        },
+        "repeats": "c2"
       }
     ]
   },

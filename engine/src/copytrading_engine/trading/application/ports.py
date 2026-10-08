@@ -1,5 +1,6 @@
 """Ports the trading use cases need from retained operational evidence."""
 
+import datetime as dt
 from pathlib import Path
 from typing import Protocol
 
@@ -11,6 +12,7 @@ from copytrading_engine.execution.presentation.operator_views import (
     DestinationView,
 )
 from copytrading_engine.shared.raw_message import RawMessage
+from copytrading_engine.shared.signals import Instruction
 from copytrading_engine.trading.presentation.operator_models import SourceActivityPage
 
 
@@ -39,5 +41,13 @@ class OperatorEvidence(Protocol):
     ) -> tuple[AccountOverview, LedgerSnapshot, AccountEventPage]: ...
 
     def manual_source_evidence(self, database: Path, source_id: str) -> ManualSourceEvidence: ...
+
+    def record_owner_correction(
+        self,
+        database: Path,
+        source_id: str,
+        instructions: tuple[Instruction, ...],
+        at: dt.datetime,
+    ) -> None: ...
 
     def historical_source_message(self, database: Path, source_id: str) -> RawMessage: ...

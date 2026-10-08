@@ -10,7 +10,6 @@ PROFILE = {
     "display_name": "Zhao",
     "playbook": "",
     "examples": [],
-    "exit_basis": "original_position",
 }
 
 

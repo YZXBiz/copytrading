@@ -1,8 +1,8 @@
 import DesktopCore
 import SwiftUI
 
-/// The one account a guru copies into (ADR-0007), the share a call with no size buys, and what
-/// the guru's calls come to in that account.
+/// The one account a guru copies into (ADR-0007), and what the guru's calls come to in that
+/// account (ADR-0010).
 struct DestinationEditorSection: View {
     @Binding var connection: TradingConnectionDraft?
     /// Accounts no other guru copies into; each account copies one guru.
@@ -27,12 +27,6 @@ struct DestinationEditorSection: View {
                 }
             }
             if let draft = connection {
-                Toggle(L10n.string("If a post gives no size, buy this much"), isOn: useDefaultShare)
-                    .compactSwitch()
-                if draft.useDefaultFraction {
-                    TextField(L10n.string("Default share"), text: defaultShare, prompt: Text(L10n.string("e.g. %@", "1/6")))
-                        .accessibilityLabel(L10n.string("Default share"))
-                }
                 let summary = SizingSummary.text(draft, policy: policy)
                 Text((try? AttributedString(markdown: summary)) ?? AttributedString(summary))
                     .font(.callout)
@@ -65,24 +59,6 @@ struct DestinationEditorSection: View {
                     connection?.accountID = accountID
                 }
             }
-        )
-    }
-
-    private var useDefaultShare: Binding<Bool> {
-        Binding(
-            get: { connection?.useDefaultFraction ?? true },
-            set: { connection?.useDefaultFraction = $0 }
-        )
-    }
-
-    /// The default share as the guru would write it, "1/6", kept as the decimal the engine uses.
-    private var defaultShare: Binding<String> {
-        Binding(
-            get: {
-                let stored = connection?.defaultFraction.trimmed ?? ""
-                return Decimal(string: stored) == nil ? stored : Humanize.fraction(stored)
-            },
-            set: { connection?.defaultFraction = ExampleEditorSection.decimal(fromSize: $0) }
         )
     }
 }

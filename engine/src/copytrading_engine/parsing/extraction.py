@@ -9,6 +9,7 @@ from typing import Protocol
 from pydantic import BaseModel, ConfigDict
 
 from copytrading_engine.parsing.diagnostics import ValidationIssue
+from copytrading_engine.parsing.history import RecentCall
 from copytrading_engine.parsing.routes import Route
 from copytrading_engine.shared.reading import (
     All,
@@ -30,7 +31,7 @@ from copytrading_engine.shared.reading import (
     TradeMade,
 )
 
-PROMPT_VERSION = "stock-reading-v3"
+PROMPT_VERSION = "stock-reading-v4"
 
 # Chinese characters and ASCII letters both count as Unicode word characters.
 # Match complete numeric tokens and bound English words by ASCII letters so
@@ -65,21 +66,49 @@ class ReadingOutput(BaseModel):
 
 @dataclass(frozen=True)
 class ReadingInput:
-    """The post as the checks see it, and its guru's route, so a failed check can go back to
-    the model with its reason."""
+    """The post as the checks see it, its guru's route, and the guru's recent calls, so a failed
+    check can go back to the model with its reason."""
 
     text: str
     route: Route
+    recent: tuple[RecentCall, ...] = ()
 
 
 class Decoder(Protocol):
-    async def decode(self, text: str, route: Route) -> PostReading: ...
+    async def decode(
+        self, text: str, route: Route, recent: tuple[RecentCall, ...] = ()
+    ) -> PostReading: ...
 
 
 def playbook_maps(playbook: str, phrase: str, symbol: str) -> bool:
     """A name resolves to a ticker only when one playbook line states both."""
     ticker = re.compile(r"(?<![A-Za-z0-9])" + re.escape(symbol) + r"(?![A-Za-z0-9])")
     return any(phrase in line and ticker.search(line) for line in playbook.splitlines())
+
+
+_PLAYBOOK_SIZE = re.compile(
+    r"^\s*(?P<words>.+?)\s+means\s+(?:sell\s+|buy\s+)?(?P<size>\d+/\d+|\d*\.\d+|half|all)\s*$",
+    re.IGNORECASE,
+)
+
+
+def playbook_size(playbook: str, words: str) -> Decimal | None:
+    """The size the owner's playbook gives a guru's own words, as in "减仓 means 1/2" or
+    "第二批 means 1/3" (ADR-0010); None when no line names these words."""
+    for line in playbook.splitlines():
+        match = _PLAYBOOK_SIZE.match(line)
+        if match is None or match.group("words").strip().strip('"“”') != words.strip():
+            continue
+        size = match.group("size").lower()
+        if size == "half":
+            return Decimal("0.5")
+        if size == "all":
+            return Decimal(1)
+        if "/" in size:
+            numerator, denominator = (Decimal(part) for part in size.split("/"))
+            return numerator / denominator if denominator else None
+        return Decimal(size)
+    return None
 
 
 MASS_MENTIONS = ("@everyone", "@here")
@@ -219,9 +248,9 @@ def _check_call(call: Call, text: str, route: Route, path: str) -> None:
     _check_stock(call.stock, text, route, f"{path}.stock")
     _check_price(call.price, text, f"{path}.price")
     if isinstance(call, Buy):
-        _check_size(call, text, f"{path}.size")
+        _check_size(call, text, route.playbook, f"{path}.size")
         return
-    _check_share(call, text, f"{path}.share")
+    _check_share(call, text, route.playbook, f"{path}.share")
     if isinstance(call.sell_from, Lot):
         _number(call.sell_from.buy_price, call.sell_from.words, text, f"{path}.sell_from")
         if isinstance(call.price, Exact) and call.price.value == call.sell_from.buy_price:
@@ -259,10 +288,12 @@ def _check_price(price: object, text: str, path: str) -> None:
         _words(price.words, text, path)
 
 
-def _check_size(buy: Buy, text: str, path: str) -> None:
+def _check_size(buy: Buy, text: str, playbook: str, path: str) -> None:
     size = buy.size
     if isinstance(size, Fraction):
-        if not allocation_is_grounded(size.value, size.words, text):
+        if not allocation_is_grounded(size.value, size.words, text) and not _playbook_sized(
+            size.value, size.words, text, playbook
+        ):
             raise GroundingError("fraction_not_grounded", path, "The size is not in the post")
     elif isinstance(size, Batch):
         _words(size.words, text, path)
@@ -277,12 +308,23 @@ def _check_size(buy: Buy, text: str, path: str) -> None:
         raise GroundingError("source_fraction_omitted", path, "The post states a size")
 
 
-def _check_share(sell: Sell, text: str, path: str) -> None:
+def _check_share(sell: Sell, text: str, playbook: str, path: str) -> None:
     share = sell.share
     if isinstance(share, All):
         _words(share.words, text, path)
-    elif not allocation_is_grounded(share.value, share.words, text):
+    elif isinstance(share, NotGiven):
+        if EXPLICIT_ALLOCATION.search(text):
+            raise GroundingError("source_fraction_omitted", path, "The post states a share")
+    elif not allocation_is_grounded(share.value, share.words, text) and not _playbook_sized(
+        share.value, share.words, text, playbook
+    ):
         raise GroundingError("fraction_not_grounded", path, "The share is not in the post")
+
+
+def _playbook_sized(value: Decimal, words: str, text: str, playbook: str) -> bool:
+    """The words are in the post and the owner's playbook gives them exactly this size."""
+    sized = playbook_size(playbook, words) if words and words in text else None
+    return sized is not None and same_fraction(sized, value)
 
 
 def _words(words: str, text: str, path: str) -> None:
@@ -299,3 +341,45 @@ def _number(value: Decimal, words: str, text: str, path: str) -> None:
             path,
             f"words must be only this number exactly as the post writes it, such as {value}",
         )
+
+
+def check_references(
+    reading: PostReading, recent: tuple[RecentCall, ...], *, retried: bool
+) -> str | None:
+    """What is wrong with how a reading names the guru's recent calls, if anything. A repeat
+    must name a listed call of the same stock. A sell naming a buy price none of the guru's open
+    buys of that stock has is asked about once: the guru may hold buys from before CopyTrading
+    started, so a second answer stands."""
+    if not isinstance(reading, TradeMade | Instruction | Conditional | Suggestion):
+        return None
+    by_ref = {call.ref: call for call in recent}
+    for index, call in enumerate(reading.calls):
+        if call.repeats is not None:
+            earlier = by_ref.get(call.repeats)
+            if earlier is None:
+                return (
+                    f"calls.{index}.repeats: {call.repeats} is not one of the listed calls; "
+                    "name a listed reference or leave repeats empty."
+                )
+            if earlier.symbol != call.stock.ticker:
+                return (
+                    f"calls.{index}.repeats: {call.repeats} is {earlier.symbol}, not "
+                    f"{call.stock.ticker}; a repeat restates a call of the same stock."
+                )
+        if retried or not isinstance(call, Sell) or not isinstance(call.sell_from, Lot):
+            continue
+        held = sorted(
+            {
+                listed.price
+                for listed in recent
+                if listed.open and listed.action == "buy" and listed.symbol == call.stock.ticker
+            }
+        )
+        if held and call.sell_from.buy_price not in held:
+            prices = ", ".join(str(price) for price in held)
+            return (
+                f"calls.{index}.sell_from: the guru's open {call.stock.ticker} buys are at "
+                f"{prices}, not {call.sell_from.buy_price}. Read the post again: name one of "
+                "those if the post means it, or keep the post's own price."
+            )
+    return None

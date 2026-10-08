@@ -36,12 +36,11 @@ def _configuration():
             display_name="Stable Guru",
             playbook="",
             examples=(),
-            exit_basis="original_position",
         )
     )
     return TradingConfiguration.model_validate(
         {
-            "version": 7,
+            "version": 8,
             "source": {"channel_ids": ["123"]},
             "provider": {"name": "deepseek", "model": "test-model"},
             "accounts": [{"id": "paper", "environment": "paper"}],
@@ -91,7 +90,6 @@ class _Trading:
                 CapabilityCheck(name="model", state="ready", adapter="fake"),
                 CapabilityCheck(name="broker", state="ready", subject="paper", adapter="fake"),
             ),
-            release_gates=("public_discord_authorization_not_qualified",),
             cost_notice="test notice",
         )
 
@@ -147,7 +145,7 @@ class _Trading:
     async def replay_posts(
         self, channel_id, author_id, discord_token, provider, provider_api_key, profile
     ):
-        self.replays.append((channel_id, profile.guru_id, profile.batches))
+        self.replays.append((channel_id, profile.guru_id))
         return ProfileReplay(
             posts=(
                 ReplayedPost(
@@ -179,7 +177,6 @@ class _Trading:
             raise OwnerFacingError(self.learning_error)
         return LearnedPlaybook(
             posts_read=3,
-            exit_basis="original_position",
             playbook="加 means buy\n英伟达 means NVDA",
             summary="Buys are written price first.",
             provider=provider.name,
@@ -576,4 +573,4 @@ async def test_replay_pipe_reads_recent_posts_with_the_draft_and_never_echoes_to
     assert [post["decision"] for post in response["ok"]["replay"]["posts"]] == ["ignore"]
     assert "private-discord-token" not in raw
     assert "private-provider-key" not in raw
-    assert trading.replays == [("1517754775674949742", profile.guru_id, None)]
+    assert trading.replays == [("1517754775674949742", profile.guru_id)]

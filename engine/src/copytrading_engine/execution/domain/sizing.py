@@ -16,8 +16,6 @@ class RouteConnection(BaseModel):
 
     account_id: str = Field(pattern=r"^[a-zA-Z0-9_-]{1,64}$")
     full_position_usd: Decimal = Field(gt=0, decimal_places=2, allow_inf_nan=False)
-    # The share a call that names no size buys; None leaves such a call for the owner.
-    default_fraction: Decimal | None = Field(default=Decimal(1), gt=0, le=1, allow_inf_nan=False)
 
 
 # A guru re-posting a call within this many minutes is the same call (the default per guru).

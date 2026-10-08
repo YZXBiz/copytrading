@@ -11,6 +11,7 @@ from copytrading_engine.parsing.contracts import (
     RequestReservation,
 )
 from copytrading_engine.parsing.diagnostics import ValidationIssue
+from copytrading_engine.parsing.history import PastCall
 from copytrading_engine.shared.signals import SourceIdentityConflict, StockSignal
 
 
@@ -39,6 +40,19 @@ class InMemoryExtractionStore:
     @staticmethod
     def key_for(message: RawMessage) -> str:
         return f"{message.source}:{message.channel_id}:{message.id}"
+
+    async def past_calls(self, channel_id: str, before: str) -> tuple[PastCall, ...]:
+        """The calls this channel's traded posts made before `before`, as the SQLite store
+        reads them (owner corrections aside)."""
+        earlier = self._order[: self._order.index(before)] if before in self._order else []
+        return tuple(
+            PastCall(source_key=key, index=index, at=result.timestamp, instruction=instruction)
+            for key in earlier
+            if self._messages[key].channel_id == channel_id
+            and (result := self._results.get(key)) is not None
+            and result.decision == "trade"
+            for index, instruction in enumerate(result.instructions)
+        )
 
     @property
     def inputs(self) -> tuple[RawMessage, ...]:
@@ -126,6 +140,6 @@ class FakeDecoder:
         self.result = result
         self.calls = 0
 
-    async def decode(self, text, route):
+    async def decode(self, text, route, recent=()):
         self.calls += 1
         return self.result

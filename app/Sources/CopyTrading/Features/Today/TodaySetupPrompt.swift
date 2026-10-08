@@ -25,7 +25,7 @@ struct TodaySetupPrompt: View {
                             tone: progress.isDone(step) ? .positive : .inactive)
                     })
                 HStack(spacing: 14) {
-                    Button(L10n.string("Continue Getting Started"), action: openGuide)
+                    Button(L10n.string("Continue Setup"), action: model.startSetupTour)
                         .buttonStyle(.borderedProminent)
                         .buttonBorderShape(.capsule)
                         .controlSize(.large)
@@ -40,10 +40,5 @@ struct TodaySetupPrompt: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 28)
-    }
-
-    private func openGuide() {
-        model.guideAnchor = .setUp
-        model.selectedScreen = .gettingStarted
     }
 }

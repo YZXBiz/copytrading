@@ -4,7 +4,7 @@ import datetime as dt
 import hashlib
 import json
 from decimal import ROUND_DOWN, Decimal
-from typing import Annotated, Literal, Self
+from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -18,8 +18,6 @@ from copytrading_engine.shared.reading import PostReading
 from copytrading_engine.shared.signals import Instruction
 
 type ExitBasis = Literal["original_position", "remaining_position"]
-type SellsReferTo = Literal["buy_price", "whole_position"]
-Batches = Annotated[int, Field(ge=1, le=20)]
 PROFILE_EVALUATION_COST_NOTICE = (
     "Model calls use the configured provider; provider charges may apply."
 )
@@ -34,10 +32,15 @@ class ProfileExample(BaseModel):
     expected_action: Literal["buy", "reduce", "close"]
     expected_symbol: str = Field(pattern=r"^[A-Z]{1,5}(?:[.][A-Z])?$")
     expected_fraction: Decimal | None = Field(default=None, gt=0, le=1)
+    # The guru's price in the post, and for a sell the buy price it names (ADR-0010).
+    expected_price: Decimal | None = Field(default=None, gt=0, le=100000)
+    expected_buy_price: Decimal | None = Field(default=None, gt=0, le=100000)
 
     @model_validator(mode="after")
     def validate_expectation(self) -> Self:
         if self.expected_action == "buy":
+            if self.expected_buy_price is not None:
+                raise ValueError("A buy example names no buy price to sell from")
             return self
         if self.expected_fraction is None:
             raise ValueError("Exit examples require an explicit fraction")
@@ -65,10 +68,6 @@ class ProfileDraft(BaseModel):
     display_name: str = Field(min_length=1, max_length=100)
     playbook: str = Field(max_length=PLAYBOOK_MAX_LENGTH)
     examples: tuple[ProfileExample, ...] = Field(default=(), max_length=32)
-    exit_basis: ExitBasis
-    # How many batches make the guru's full position; None leaves a batch call for the owner.
-    batches: Batches | None = None
-    sells_refer_to: SellsReferTo = "buy_price"
 
     @model_validator(mode="after")
     def validate_inputs(self) -> Self:
@@ -110,7 +109,6 @@ class LearnedPlaybook(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     posts_read: int = Field(ge=0)
-    exit_basis: ExitBasis
     playbook: str = Field(max_length=PLAYBOOK_MAX_LENGTH)
     examples: tuple[ProfileExample, ...] = ()
     summary: str
@@ -133,9 +131,6 @@ class ProfileRevision(BaseModel):
     display_name: str = Field(min_length=1, max_length=100)
     playbook: str = Field(max_length=PLAYBOOK_MAX_LENGTH)
     examples: tuple[ProfileExample, ...] = Field(default=(), max_length=32)
-    exit_basis: ExitBasis
-    batches: Batches | None = None
-    sells_refer_to: SellsReferTo = "buy_price"
     profile_revision: str = Field(pattern=r"^[0-9a-f]{64}$")
 
     @model_validator(mode="after")
@@ -148,12 +143,7 @@ class ProfileRevision(BaseModel):
     def route(self) -> Route:
         """How the reader and its rules treat this guru's posts."""
         return Route(
-            playbook=self.playbook,
-            guru_id=self.guru_id,
-            profile_revision=self.profile_revision,
-            exit_basis=self.exit_basis,
-            batches=self.batches,
-            sells_refer_to=self.sells_refer_to,
+            playbook=self.playbook, guru_id=self.guru_id, profile_revision=self.profile_revision
         )
 
 
@@ -173,16 +163,6 @@ class ProfileBuilder:
                     display_name="Standard stock alerts",
                     playbook="",
                     examples=(),
-                    exit_basis="original_position",
-                )
-            ),
-            self.build(
-                ProfileDraft(
-                    guru_id="prepared-remaining",
-                    display_name="Remaining-position exits",
-                    playbook="",
-                    examples=(),
-                    exit_basis="remaining_position",
                 )
             ),
         )
@@ -195,6 +175,7 @@ class InstructionEvaluation(BaseModel):
     symbol: str
     price: Decimal
     fraction: Decimal | None
+    entry_price: Decimal | None
     exit_basis: ExitBasis | None
     action_evidence: str
     symbol_evidence: str
@@ -220,7 +201,6 @@ class ProfileEvaluation(BaseModel):
     message_identity: str
     guru_id: str
     profile_revision: str
-    exit_basis: ExitBasis | None
     provider: str
     model: str
     decision: Literal["trade", "ignore", "review"]
@@ -306,7 +286,6 @@ class ProfileExampleReviewService:
                     message_identity=message.identity,
                     guru_id=profile.guru_id,
                     profile_revision=profile.profile_revision,
-                    exit_basis=profile.exit_basis,
                     provider=self.provider,
                     model=self.model,
                     decision="review",
@@ -318,7 +297,7 @@ class ProfileExampleReviewService:
                             symbol=example.expected_symbol,
                             budget_usd=None,
                             estimated_quantity=None,
-                            exit_basis=profile.exit_basis,
+                            exit_basis=None,
                             reason="example_interpretation_failed",
                         )
                         for connection in destinations
@@ -335,7 +314,7 @@ class ProfileExampleReviewService:
                                 symbol=example.expected_symbol,
                                 budget_usd=None,
                                 estimated_quantity=None,
-                                exit_basis=profile.exit_basis,
+                                exit_basis=None,
                                 reason="example_requires_review",
                             )
                             for connection in destinations
@@ -355,6 +334,15 @@ class ProfileExampleReviewService:
                     reasons.append("example_symbol_mismatch")
                 if not same_fraction(instruction.fraction, example.expected_fraction):
                     reasons.append("example_fraction_mismatch")
+                if (
+                    example.expected_price is not None
+                    and instruction.price != example.expected_price
+                ):
+                    reasons.append("example_price_mismatch")
+                if (
+                    example.expected_buy_price is not None or instruction.action != "buy"
+                ) and instruction.entry_price != example.expected_buy_price:
+                    reasons.append("example_buy_price_mismatch")
             matches = not reasons
             if not matches:
                 all_reasons.extend(reasons)
@@ -371,10 +359,7 @@ class ProfileExampleReviewService:
                 )
             )
 
-        cost_notice = (
-            f"Examples are interpreted by {self.provider} ({self.model}); "
-            "provider charges may apply."
-        )
+        cost_notice = "Each example is one request to your model service, which may charge for it."
         activation_allowed = all(comparison.matches for comparison in comparisons)
         return ProfileExampleReview(
             guru_id=profile.guru_id,
@@ -417,6 +402,7 @@ class ProfileEvaluationService:
                 symbol=item.symbol,
                 price=item.price,
                 fraction=item.fraction,
+                entry_price=item.entry_price,
                 exit_basis=item.exit_basis,
                 action_evidence=item.action_evidence,
                 symbol_evidence=item.symbol_evidence,
@@ -463,15 +449,13 @@ class ProfileEvaluationService:
                             budget_usd=None,
                             estimated_quantity=None,
                             exit_basis=instruction.exit_basis,
-                            reason="position_required_for_exit_sizing",
+                            reason="sells_from_holdings",
                         )
                     )
-                    review_reasons.append("position_required_for_exit_sizing")
         return ProfileEvaluation(
             message_identity=message.identity,
             guru_id=profile.guru_id,
             profile_revision=profile.profile_revision,
-            exit_basis=profile.exit_basis,
             provider=self.provider,
             model=self.model,
             decision=signal.decision,

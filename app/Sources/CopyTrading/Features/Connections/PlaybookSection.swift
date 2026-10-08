@@ -81,7 +81,6 @@ struct PlaybookSection: View {
             do {
                 let result = try await learn(route)
                 route.playbook = result.playbook
-                route.exitBasis = result.exitBasis
                 route.examples = result.examples.map(TradingProfileExampleDraft.init(example:))
                 learned = result
             } catch {
