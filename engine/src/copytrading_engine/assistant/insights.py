@@ -7,7 +7,7 @@ from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict
 
-from copytrading_engine.execution.presentation.notifications import REASONS
+from copytrading_engine.assistant.wording import plain
 from copytrading_engine.trading.presentation.operator_models import (
     SourceActivity,
     SourceActivityPage,
@@ -57,7 +57,7 @@ def _reason(code: str) -> str:
         return "An order was placed."
     if code == PENDING:
         return "Still being processed."
-    return REASONS.get(code, code.replace("_", " "))
+    return plain(code) or code
 
 
 async def _items(operator: Operator, since: dt.datetime | None = None) -> list[SourceActivity]:

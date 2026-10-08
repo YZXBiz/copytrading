@@ -37,8 +37,8 @@ async def test_a_gurus_record_counts_calls_copied_and_why_the_rest_were_skipped(
         record = await tools.guru_record(GURU_ID)
 
     assert (record["posts"], record["calls"], record["copied"]) == (4, 3, 2)
-    assert record["skipped"] == {"insufficient_cash": 1}
-    assert record["guru_name"] == "Zhao"
+    assert record["skipped"] == {"Not enough cash": 1}
+    assert record["guru"] == "Zhao"
     assert [e.text for e in turn.events(0) if e.kind == "step"] == ["Added up Zhao's calls"]
     assert [e.link for e in turn.events(0) if e.link] == [
         AssistantLink(kind="guru", id=GURU_ID, title="Zhao")

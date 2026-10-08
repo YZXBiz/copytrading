@@ -32,6 +32,7 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "hypothesis>=6,<7",
+    "pydantic-evals>=2.49,<3",
     "pytest>=8",
     "pytest-asyncio>=1",
     "pytest-cov>=7",
