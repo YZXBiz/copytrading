@@ -281,13 +281,6 @@ class ExecutionResources:
         stopping: threading.Event,
     ) -> ExecutionObservation:
         self.engine.reconcile(now)
-        # The broker is read right after the ledger caught up with it, before this cycle places
-        # anything: an order that fills within the cycle shows at the broker and as copied
-        # together, on the next one, never as shares at the broker nobody copied.
-        self.position_audit = self.engine.audit_positions()
-        self.account = self.broker.account()
-        self.account_observed_at = now
-        self.last_inspection = self.inspect_ownership()
         self.engine.process(
             now,
             halted=halted,
@@ -296,6 +289,15 @@ class ExecutionResources:
             entry_block_reason=self.entry_block_reason,
             stopping=stopping.is_set,
         )
+        # Orders this cycle placed can fill before it ends: book those fills before the broker is
+        # read, so a buy shows as copied and a sale as gone in the same cycle, never as shares at
+        # the broker nobody copied or shares sold that still count. With nothing pending this
+        # costs no broker call.
+        self.engine.reconcile(now)
+        self.position_audit = self.engine.audit_positions()
+        self.account = self.broker.account()
+        self.account_observed_at = now
+        self.last_inspection = self.inspect_ownership()
         return self.observation()
 
     def receive(self, delivery: DestinationSignal, now: dt.datetime) -> None:
