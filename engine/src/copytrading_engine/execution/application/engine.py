@@ -123,6 +123,16 @@ class _SubmissionGuard:
         return None, current
 
 
+# Buys blocked only while an account recovers after a restart wait for it instead of being
+# skipped: the next cycle tries again, and the signal age still decides when a post is too old.
+RECOVERY_WAITS = frozenset({"recovery_pending", "manual_resume_required"})
+# What a held buy that aged out says instead of a bare "stale".
+_AGED_OUT_WAITING = {
+    "recovery_pending": "stale_during_recovery",
+    "manual_resume_required": "stale_waiting_for_resume",
+}
+
+
 class CopyEngine:
     def __init__(
         self,
@@ -533,8 +543,12 @@ class CopyEngine:
             market_session=self.market_session,
         )
         blocked, current = guard.check()
+        if self._held_for_recovery(instruction, blocked):
+            return
         if blocked is not None:
-            self.ledger.skip(message.key, index, blocked, current)
+            self.ledger.skip(
+                message.key, index, self._skip_reason(instruction, blocked, controls), current
+            )
             return
         with self.observer.span("risk_checks", message.key):
             decision = self.decide(
@@ -561,11 +575,30 @@ class CopyEngine:
             )
             return
         blocked, current = guard.check(decision.plan)
+        if self._held_for_recovery(instruction, blocked):
+            return
         if blocked is not None:
-            self.ledger.skip(message.key, index, blocked, current)
+            self.ledger.skip(
+                message.key, index, self._skip_reason(instruction, blocked, controls), current
+            )
             return
         order = self.ledger.prepare(decision.plan, message.key, index, current)
         self._submit_prepared_order(message.key, order, guard)
+
+    @staticmethod
+    def _held_for_recovery(instruction: Instruction, blocked: str | None) -> bool:
+        """A buy that only waits for the account's restart recovery stays pending."""
+        return instruction.action == "buy" and blocked in RECOVERY_WAITS
+
+    @staticmethod
+    def _skip_reason(instruction: Instruction, blocked: str, controls: _ProcessControls) -> str:
+        """A buy that aged out while its account recovered says why it waited, not just that it
+        is old."""
+        if instruction.action == "buy" and blocked == "stale":
+            waiting = controls.entry_block_reason()
+            if waiting in _AGED_OUT_WAITING:
+                return _AGED_OUT_WAITING[waiting]
+        return blocked
 
     def _submit_prepared_order(
         self,

@@ -1508,7 +1508,6 @@
 "Wait for me" = "Wait for me";
 "Carry on by itself" = "Carry on by itself";
 "After CopyTrading restarts, from a crash, a Mac restart, waking from sleep, or a restore, this account either waits for you before buying again or carries on by itself once Alpaca matches its records." = "After CopyTrading restarts, from a crash, a Mac restart, waking from sleep, or a restore, this account either waits for you before buying again or carries on by itself once Alpaca matches its records.";
-"Still checking the account after a restart" = "Still checking the account after a restart";
 "In %@, after a restart: %@" = "In %@, after a restart: %@";
 "Restored from a backup; waits for you after a restart" = "Restored from a backup; waits for you after a restart";
 "Asked you to approve %@'s after-restart setting" = "Asked you to approve %@'s after-restart setting";
@@ -1694,3 +1693,7 @@
 "Setting up" = "Setting up";
 "The engine is stopped; start it in Settings, Engine." = "The engine is stopped; start it in Settings, Engine.";
 "Applying your changes…" = "Applying your changes…";
+"Too old by the time the account's restart checks finished" = "Too old by the time the account's restart checks finished";
+"Waited for you to resume entries after the restart, and got too old" = "Waited for you to resume entries after the restart, and got too old";
+"Still checking the account after a restart" = "Still checking the account after a restart";
+"Entries wait for you to resume them after the restart" = "Entries wait for you to resume them after the restart";

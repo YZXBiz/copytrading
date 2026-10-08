@@ -115,6 +115,11 @@ def _reserve_identity(environment: Environment, account_id: str) -> Callable[[],
     return release
 
 
+# Entries the owner turned off or paused skip a buy at once. A restart's recovery only holds it:
+# each cycle tries again, and the signal-age check decides when a post is too old.
+_DELIBERATE_BLOCKS = frozenset({"account_paused", "account_disabled"})
+
+
 @dataclass
 class ExecutionResources:
     stack: ExitStack
@@ -209,7 +214,12 @@ class ExecutionResources:
         if control.entry_permission == "disabled":
             return "account_disabled"
         if not self.runtime_entries_ready:
-            return "recovery_pending"
+            # Manual recovery waits for the owner's Resume; automatic waits for the checks.
+            return (
+                "manual_resume_required"
+                if control.recovery_preference == "manual"
+                else "recovery_pending"
+            )
         return None
 
     def recover_account(self, now: dt.datetime) -> OwnershipInspection:
@@ -224,10 +234,11 @@ class ExecutionResources:
             and control.recovery_preference == "automatic"
             and self._inspection_ready(inspection)
         )
-        if not self.runtime_entries_ready:
-            self.engine.ledger.skip_unpermitted_buys(
-                now, self.entry_block_reason() or "recovery_pending"
-            )
+        # A deliberate pause or entries left off skip queued buys; recovery only holds them, and
+        # each cycle's signal-age check decides when one is too old.
+        reason = self.entry_block_reason()
+        if reason in _DELIBERATE_BLOCKS:
+            self.engine.ledger.skip_unpermitted_buys(now, reason)
         return inspection
 
     def _inspection_ready(self, inspection: OwnershipInspection) -> bool:
@@ -255,7 +266,6 @@ class ExecutionResources:
             self.account_observed_at = now
             if not self._inspection_ready(inspection):
                 raise RuntimeError("Account reconciliation or risk is unavailable")
-            self.engine.ledger.skip_unpermitted_buys(now, "recovery_pending")
         result = self.engine.ledger.account_control(
             command, now, local_account_id=self.data_dir.name
         )
@@ -302,7 +312,7 @@ class ExecutionResources:
 
     def receive(self, delivery: DestinationSignal, now: dt.datetime) -> None:
         self.engine.receive(delivery, now)
-        if (reason := self.entry_block_reason()) is not None:
+        if (reason := self.entry_block_reason()) in _DELIBERATE_BLOCKS:
             self.engine.ledger.skip_unpermitted_buys(now, reason)
 
     def record_rejection(self, payload_hash: str, reason: str, now: dt.datetime) -> None:

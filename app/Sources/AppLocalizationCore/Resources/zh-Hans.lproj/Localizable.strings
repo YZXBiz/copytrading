@@ -1508,7 +1508,6 @@
 "Wait for me" = "等我确认";
 "Carry on by itself" = "自动继续";
 "After CopyTrading restarts, from a crash, a Mac restart, waking from sleep, or a restore, this account either waits for you before buying again or carries on by itself once Alpaca matches its records." = "CopyTrading 重启后（崩溃、Mac 重启、从睡眠唤醒或恢复备份），此账户要么等你确认后再买入，要么在核对 Alpaca 记录一致后自动继续。";
-"Still checking the account after a restart" = "重启后仍在核对账户";
 "In %@, after a restart: %@" = "%@ 重启后：%@";
 "Restored from a backup; waits for you after a restart" = "已从备份恢复；重启后等你确认";
 "Asked you to approve %@'s after-restart setting" = "已请你批准 %@ 的重启后设置";
@@ -1694,3 +1693,7 @@
 "Setting up" = "正在设置";
 "The engine is stopped; start it in Settings, Engine." = "引擎已停止；请在“设置 › 引擎”中启动。";
 "Applying your changes…" = "正在应用你的更改…";
+"Too old by the time the account's restart checks finished" = "重启后的账户检查完成时，这条帖子已过期";
+"Waited for you to resume entries after the restart, and got too old" = "重启后在等你恢复开仓，期间帖子已过期";
+"Still checking the account after a restart" = "重启后仍在检查账户";
+"Entries wait for you to resume them after the restart" = "重启后，开仓要等你恢复";
