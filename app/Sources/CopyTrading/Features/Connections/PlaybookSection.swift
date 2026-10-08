@@ -7,6 +7,8 @@ struct PlaybookSection: View {
     let learn: (TradingRouteDraft) async throws -> LearnedGuruPlaybook
     @State private var isLearning = false
     @State private var learned: LearnedGuruPlaybook?
+    /// How many of the learned examples were new to this guru.
+    @State private var addedExamples = 0
     @State private var failure: String?
 
     var body: some View {
@@ -61,16 +63,21 @@ struct PlaybookSection: View {
         }
     }
 
+    /// What Learn did, truthfully: the playbook is drafted, and examples are named only when some
+    /// were added beside the owner's own.
     @MainActor
     private func learnedSummary(_ learned: LearnedGuruPlaybook) -> String {
-        let examples =
-            learned.examples.count == 1
-            ? L10n.string("1 example")
-            : L10n.string("%lld examples", Int64(learned.examples.count))
-        return L10n.string(
-            "Read %lld posts with %@. %@ Filled in the playbook, exit basis, and %@; review them before validating.",
-            Int64(learned.postsRead), learned.model, learned.summary, examples
-        )
+        var sentences = [
+            L10n.string("Read %lld posts with %@.", Int64(learned.postsRead), learned.model),
+            learned.summary,
+            L10n.string("The playbook is drafted; read it over before you start copying."),
+        ]
+        if addedExamples == 1 {
+            sentences.append(L10n.string("Added 1 example post below yours."))
+        } else if addedExamples > 1 {
+            sentences.append(L10n.string("Added %lld example posts below yours.", Int64(addedExamples)))
+        }
+        return L10n.sentences(sentences.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty })
     }
 
     private func start() {
@@ -81,7 +88,7 @@ struct PlaybookSection: View {
             do {
                 let result = try await learn(route)
                 route.playbook = result.playbook
-                route.examples = result.examples.map(TradingProfileExampleDraft.init(example:))
+                addedExamples = route.addLearnedExamples(result.examples)
                 learned = result
             } catch {
                 learned = nil

@@ -53,7 +53,6 @@
 "%@: %@ %@ %@ at %@" = "账户 %@：%@ %@ %@，价格 %@";
 "%@: %@." = "%@：%@。";
 "%@’s post" = "来自 %@ 的帖子";
-"%lld examples" = "%lld个示例";
 "%lld h ago" = "%lld小时前";
 "%lld min ago" = "%lld分钟前";
 "%lld more today in Activity" = "今天“活动”中还有%lld条";
@@ -64,7 +63,6 @@
 "%llds ago" = "%lld秒前";
 ", and %@ %@ waiting" = "，另有 %@%@项待处理";
 "0 to 1" = "0到1";
-"1 example" = "1个示例";
 "a" = "";
 "A backup holds your records, saved setup, captured posts, and attachments. Keys and disposable logs are left out." = "备份包含你的记录、已保存的设置、捕获的帖子和附件。密钥和可丢弃的日志不会包含在内。";
 "A bot messages you for every order and every problem, wherever you are." = "无论你身在何处，机器人都会为每笔订单和每个问题给你发消息。";
@@ -665,7 +663,6 @@
 "Range" = "时间范围";
 "Range details" = "范围详情";
 "Read" = "已读取";
-"Read %lld posts with %@. %@ Filled in the playbook, exit basis, and %@; review them before validating." = "读取完成：%lld条帖子，使用模型 %@。%@ 已填写操作指南、平仓依据和%@，请在验证前检查。";
 "Read accounts and activity again" = "重新读取账户和活动";
 "Read and pause" = "读取并暂停";
 "Read by" = "解读模型";
@@ -1680,3 +1677,8 @@
 "the chat ID" = "聊天 ID";
 "the bot token" = "机器人令牌";
 "Enter %@ to connect." = "填写%@后再连接。";
+"%@ into %@" = "%@ 买入 %@";
+"Read %lld posts with %@." = "读了 %lld 条帖子，使用 %@。";
+"The playbook is drafted; read it over before you start copying." = "策略手册已起草；开始跟单前请通读一遍。";
+"Added 1 example post below yours." = "在你的示例下方添加了 1 条示例帖子。";
+"Added %lld example posts below yours." = "在你的示例下方添加了 %lld 条示例帖子。";

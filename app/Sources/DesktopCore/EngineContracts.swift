@@ -754,6 +754,7 @@ struct EngineRequest: Encodable, Sendable {
             try container.encode(replay.provider, forKey: .provider)
             try container.encode(replay.providerAPIKey, forKey: .providerAPIKey)
             try container.encode(replay.profile, forKey: .profile)
+            try container.encode(replay.destinations, forKey: .destinations)
         case .accountEvents(let accountID, let beforeSeq, let limit):
             try container.encode("get_account_events", forKey: .operation)
             try container.encode(accountID, forKey: .accountID)

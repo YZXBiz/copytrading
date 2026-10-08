@@ -53,7 +53,6 @@
 "%@: %@ %@ %@ at %@" = "%@: %@ %@ %@ at %@";
 "%@: %@." = "%@: %@.";
 "%@’s post" = "%@’s post";
-"%lld examples" = "%lld examples";
 "%lld h ago" = "%lld h ago";
 "%lld min ago" = "%lld min ago";
 "%lld more today in Activity" = "%lld more today in Activity";
@@ -64,7 +63,6 @@
 "%llds ago" = "%llds ago";
 ", and %@ %@ waiting" = ", and %@ %@ waiting";
 "0 to 1" = "0 to 1";
-"1 example" = "1 example";
 "a" = "a";
 "A backup holds your records, saved setup, captured posts, and attachments. Keys and disposable logs are left out." = "A backup holds your records, saved setup, captured posts, and attachments. Keys and disposable logs are left out.";
 "A bot messages you for every order and every problem, wherever you are." = "A bot messages you for every order and every problem, wherever you are.";
@@ -665,7 +663,6 @@
 "Range" = "Range";
 "Range details" = "Range details";
 "Read" = "Read";
-"Read %lld posts with %@. %@ Filled in the playbook, exit basis, and %@; review them before validating." = "Read %lld posts with %@. %@ Filled in the playbook, exit basis, and %@; review them before validating.";
 "Read accounts and activity again" = "Read accounts and activity again";
 "Read and pause" = "Read and pause";
 "Read by" = "Read by";
@@ -1680,3 +1677,8 @@
 "the chat ID" = "the chat ID";
 "the bot token" = "the bot token";
 "Enter %@ to connect." = "Enter %@ to connect.";
+"%@ into %@" = "%@ into %@";
+"Read %lld posts with %@." = "Read %lld posts with %@.";
+"The playbook is drafted; read it over before you start copying." = "The playbook is drafted; read it over before you start copying.";
+"Added 1 example post below yours." = "Added 1 example post below yours.";
+"Added %lld example posts below yours." = "Added %lld example posts below yours.";
