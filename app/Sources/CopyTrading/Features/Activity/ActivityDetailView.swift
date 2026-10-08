@@ -13,6 +13,8 @@ struct ActivityDetailView: View {
     /// Copies the calls a post waits on, through the review sheet's preview and confirmation.
     let copy: (WaitingCall) -> Void
     let evaluate: () -> Void
+    /// Opens Accounts at an account whose holdings hold this call back.
+    var reviewHoldings: (String) -> Void = { _ in }
     @State private var readerPosition = ScrollPosition(edge: .top)
 
     private var outcome: ActivityCardOutcome {
@@ -202,9 +204,20 @@ struct ActivityDetailView: View {
                     if account.waits, let waiting = WaitingCall(item) {
                         waitingActions(waiting).padding(.top, 6)
                     }
+                    if heldByHoldings(account.id) {
+                        Button(L10n.string("Review in Accounts")) { reviewHoldings(account.id) }
+                            .controlSize(.small)
+                            .padding(.top, 4)
+                            .accessibilityIdentifier("activity.reviewHoldings")
+                    }
                 }
             }
         }
+    }
+
+    /// The account refused this call until its holdings are settled, which happens in Accounts.
+    private func heldByHoldings(_ accountID: String) -> Bool {
+        item.destinations.contains { $0.accountID == accountID && $0.instructionOutcomes.contains("ownership_incident") }
     }
 
     @ViewBuilder

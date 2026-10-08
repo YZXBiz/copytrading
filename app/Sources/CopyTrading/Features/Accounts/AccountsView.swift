@@ -56,7 +56,7 @@ struct AccountsView: View {
                 Callout(error, tone: .critical)
                     .accessibilityLabel(L10n.string("Account data error: %@", error))
             }
-            ForEach(feature.unavailableAccounts) { gap in
+            ForEach(feature.unavailable(in: model.savedTradingConfiguration)) { gap in
                 Callout(
                     L10n.string("Account %@ %@, so its data is not shown.", gap.accountID, gap.explanation),
                     tone: .caution

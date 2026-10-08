@@ -53,7 +53,7 @@ struct ActivityView: View {
                 .padding(.top, 8)
                 .padding(.bottom, 12)
                 Divider()
-                ActivityAlerts(feature: feature)
+                ActivityAlerts(feature: feature, setup: model.savedTradingConfiguration)
             }
         }
         .navigationTitle(L10n.string("Activity"))
@@ -97,7 +97,11 @@ struct ActivityView: View {
                         skippedCalls: model.skippedCalls,
                         review: { selectedSheet = .manualReview(selectedItem, copying: nil) },
                         copy: { selectedSheet = .manualReview(selectedItem, copying: $0) },
-                        evaluate: { selectedSheet = .historicalEvaluation(selectedItem) }
+                        evaluate: { selectedSheet = .historicalEvaluation(selectedItem) },
+                        reviewHoldings: { accountID in
+                            model.requestedAccountID = accountID
+                            model.selectedScreen = .accounts
+                        }
                     )
                 } else {
                     ActivityPlaceholderView(isRefreshing: feature.isRefreshing)

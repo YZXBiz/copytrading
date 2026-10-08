@@ -26,7 +26,6 @@
 "%@ of %@ copying" = "%@ of %@ copying";
 "%@ of %@ shares" = "%@ of %@ shares";
 "%@ omitted" = "%@ omitted";
-"%@ ownership mismatch: expected %@, broker reports %@ (%@, %@)." = "%@ ownership mismatch: expected %@, broker reports %@ (%@, %@).";
 "%@ post" = "%@ post";
 "%@ posts" = "%@ posts";
 "%@ shares left from %@%@, bought%@ in %@." = "%@ shares left from %@%@, bought%@ in %@.";
@@ -1666,3 +1665,11 @@
 "That file isn't a setup CopyTrading can read. Choose a small text file with your keys." = "That file isn't a setup CopyTrading can read. Choose a small text file with your keys.";
 "Nothing in that file looks like a setup: no Discord, model, or Alpaca lines." = "Nothing in that file looks like a setup: no Discord, model, or Alpaca lines.";
 "CopyTrading couldn't move the file to the Trash. Delete it yourself once you've started copying." = "CopyTrading couldn't move the file to the Trash. Delete it yourself once you've started copying.";
+"The holdings couldn't be settled: %@. Check the broker for open orders in %@, then try again." = "The holdings couldn't be settled: %@. Check the broker for open orders in %@, then try again.";
+"Clear the Old Count" = "Clear the Old Count";
+"Count %@ Shares as Yours" = "Count %@ Shares as Yours";
+"CopyTrading counted %@ %@ shares, and the broker holds %@. Every copied share is still there, so the broker's other shares count as yours, and %@ is copied again." = "CopyTrading counted %@ %@ shares, and the broker holds %@. Every copied share is still there, so the broker's other shares count as yours, and %@ is copied again.";
+"Treat %@ Copied Shares as Sold" = "Treat %@ Copied Shares as Sold";
+"CopyTrading bought %@ %@ shares, and the broker holds %@. The missing shares were sold outside CopyTrading; the oldest buys are counted as sold first, and %@ is copied again." = "CopyTrading bought %@ %@ shares, and the broker holds %@. The missing shares were sold outside CopyTrading; the oldest buys are counted as sold first, and %@ is copied again.";
+"%@ holdings need your review: CopyTrading counted %@, the broker holds %@. Calls for %@ wait until you settle it." = "%@ holdings need your review: CopyTrading counted %@, the broker holds %@. Calls for %@ wait until you settle it.";
+"Review in Accounts" = "Review in Accounts";
