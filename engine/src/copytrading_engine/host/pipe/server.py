@@ -268,10 +268,21 @@ class PipeServer:
             UnknownSchemaVersion,
         ):
             code = "unavailable"
-        except Exception:
+        except Exception as exc:
+            # One request's failure is answered, never fatal: a correction or a manual order that
+            # trips on bad local state must not take copying down with it. Messages may carry
+            # input, so only the type is recorded.
+            log.error(
+                "request_failed operation=%s error=%s", type(request).__name__, type(exc).__name__
+            )
             if not isinstance(
                 request,
                 (
+                    SaveManualCorrectionRequest,
+                    PreviewManualOrderRequest,
+                    ConfirmManualOrdersRequest,
+                    GetManualCommandRequest,
+                    ListManualCommandsRequest,
                     GetTradingStatusRequest,
                     StartTradingRequest,
                     ValidateTradingRequest,

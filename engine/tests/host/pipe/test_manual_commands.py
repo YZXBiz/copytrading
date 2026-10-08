@@ -155,3 +155,45 @@ async def test_private_pipe_lists_bounded_source_scoped_manual_command_history(s
         )
     )
     assert unavailable["error"]["code"] == "unavailable"
+
+
+async def test_a_correction_that_fails_unexpectedly_is_answered_not_fatal(store):
+    """A save that trips on bad local state used to re-raise out of the server and stop the
+    engine. It is answered as unavailable, and the server keeps serving."""
+
+    class _Broken(_ManualControl):
+        async def save_manual_correction(self, request):
+            raise RuntimeError("Manual correction revision evidence is unavailable")
+
+    server = PipeServer(
+        SelfTestService(store, SelfTestParser()),
+        EngineQueries(store, store.installation.instance_id),
+        services(_Broken()),
+    )
+    response = decode(
+        await server.handle_line(
+            request_line(
+                "save_manual_correction",
+                "request-broken",
+                correction={
+                    "correction_id": "correction-broken",
+                    "selected_account_ids": ["paper-local"],
+                    "source_id": "discord:demo:message-1",
+                    "actor": "operator",
+                    "reason": "The reviewed symbol is wrong",
+                    "instructions": [
+                        {
+                            "action": "buy",
+                            "symbol": "AAPL",
+                            "price": "200.00",
+                            "entry_price": None,
+                            "fraction": "0.25",
+                        }
+                    ],
+                },
+            )
+        )
+    )
+    assert response["error"]["code"] == "unavailable"
+    after = decode(await server.handle_line(request_line("get_status", "request-after")))
+    assert "ok" in after
