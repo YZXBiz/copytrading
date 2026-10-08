@@ -76,7 +76,7 @@ struct TodaySummary: View {
                 L10n.string(
                     "%@ · as of %@",
                     Humanize.count(balances.count, "account"),
-                    oldest.formatted(.dateTime.hour().minute().locale(AppLanguagePreference.shared.language.locale))
+                    oldest.formatted(AppTime.style(.dateTime.hour().minute()))
                 )
             )
             .font(DesignTokens.caption)

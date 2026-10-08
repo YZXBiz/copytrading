@@ -23,7 +23,8 @@ struct DiagnosticsEntryRow: View {
                             Date.FormatStyle(
                                 date: .omitted,
                                 time: .standard,
-                                locale: AppLanguagePreference.shared.language.locale
+                                locale: AppTime.locale,
+                                timeZone: AppTime.zone
                             )
                         )
                     )

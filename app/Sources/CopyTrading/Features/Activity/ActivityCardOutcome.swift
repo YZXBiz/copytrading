@@ -30,7 +30,7 @@ struct ActivityCardOutcome {
 
     init(
         _ source: SourceActivity, skipped: Bool, resume: ResumeWait = .none, now: Date = .now,
-        zone: TimeZone = .current, locale: Locale = .current
+        zone: TimeZone? = nil, locale: Locale? = nil
     ) {
         let waiting = WaitingCall(source)
         let open = waiting.map { !skipped && !$0.hasExpired(at: now) } ?? false
@@ -129,8 +129,8 @@ struct ActivityCardOutcome {
         }
         if lines.isEmpty, let resumeBy {
             // Entries wait for the owner after a restart; the buy waits with them while it is fresh.
-            let time = resumeBy.formatted(
-                .dateTime.hour().minute().locale(AppLanguagePreference.shared.language.locale))
+            // A two-minute window: to the second, with the zone.
+            let time = "\(resumeBy.formatted(AppTime.style(.dateTime.hour().minute().second()))) \(AppTime.shortName())"
             lines.append(
                 Line(
                     what: L10n.string("Waiting for you to resume entries in %@", destination.accountID),

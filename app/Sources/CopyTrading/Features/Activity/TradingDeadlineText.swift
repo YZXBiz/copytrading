@@ -1,14 +1,17 @@
 import Foundation
 
-/// When a waiting call can still be copied, on the owner's own clock: "5:00 PM today",
-/// "5:00 PM tomorrow", or "Fri 5:00 PM" further out.
+/// When a waiting call can still be copied, in the app's time zone, short name included:
+/// "5:00 PM PT today", "5:00 PM PT tomorrow", or "Fri 5:00 PM PT" further out.
 enum TradingDeadlineText {
     @MainActor
-    static func text(_ deadline: Date, now: Date, zone: TimeZone = .current, locale: Locale = .current) -> String {
+    static func text(_ deadline: Date, now: Date, zone: TimeZone? = nil, locale: Locale? = nil) -> String {
+        let zone = zone ?? AppTime.zone
+        let locale = locale ?? AppTime.locale
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = zone
-        let time = deadline.formatted(
+        let clock = deadline.formatted(
             Date.FormatStyle(date: .omitted, time: .shortened, locale: locale, calendar: calendar, timeZone: zone))
+        let time = "\(clock) \(AppTime.shortName(zone, locale: locale))"
         if calendar.isDate(deadline, inSameDayAs: now) {
             return L10n.string("%@ today", time)
         }

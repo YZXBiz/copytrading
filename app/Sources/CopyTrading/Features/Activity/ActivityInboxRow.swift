@@ -45,9 +45,9 @@ struct ActivityInboxRow: View {
     @MainActor private var timestamp: String {
         guard let date = item.sourceDate else { return "—" }
         return item.isToday
-            ? date.formatted(.dateTime.hour().minute().locale(AppLanguagePreference.shared.language.locale))
+            ? date.formatted(AppTime.style(.dateTime.hour().minute().second()))
             : date.formatted(
-                .dateTime.month(.abbreviated).day().locale(AppLanguagePreference.shared.language.locale)
+                AppTime.style(.dateTime.month(.abbreviated).day())
             )
     }
 }

@@ -85,7 +85,7 @@ extension SourceActivity {
         }
     }
 
-    var isToday: Bool { sourceDate.map(Calendar.current.isDateInToday) ?? false }
+    @MainActor var isToday: Bool { sourceDate.map(AppTime.calendar.isDateInToday) ?? false }
 
     @MainActor var outcomes: [(accountID: String, outcome: DestinationOutcome)] {
         destinations.map { ($0.accountID, DestinationOutcome($0)) }

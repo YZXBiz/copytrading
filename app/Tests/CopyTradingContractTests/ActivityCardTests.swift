@@ -14,6 +14,7 @@ func runActivityCardTests() throws {
     try aCallHeldForApprovalAsksToBeApproved()
     try aBuyHeldForAResumeAsksToResumeByItsDeadline()
     try aDeadlineReadsOnTheOwnersClock()
+    try theTimeZoneSettingMovesADeadline()
 }
 
 private let losAngeles = TimeZone(identifier: "America/Los_Angeles")!
@@ -32,11 +33,11 @@ private func aDeadlineReadsOnTheOwnersClock() throws {
     let dayBefore = try Date("2026-10-04T20:00:00Z", strategy: .iso8601)
     let daysBefore = try Date("2026-10-02T15:00:00Z", strategy: .iso8601)
     let today = plain(TradingDeadlineText.text(deadline, now: morning, zone: losAngeles, locale: english))
-    try #require(today == "5:00 PM today", "the deadline read \(today ?? "nil")")
+    try #require(today == "5:00 PM PT today", "the deadline read \(today ?? "nil")")
     let tomorrow = plain(TradingDeadlineText.text(deadline, now: dayBefore, zone: losAngeles, locale: english))
-    try #require(tomorrow == "5:00 PM tomorrow", "the deadline read \(tomorrow ?? "nil")")
+    try #require(tomorrow == "5:00 PM PT tomorrow", "the deadline read \(tomorrow ?? "nil")")
     let later = plain(TradingDeadlineText.text(deadline, now: daysBefore, zone: losAngeles, locale: english))
-    try #require(later == "Mon 5:00 PM", "the deadline read \(later ?? "nil")")
+    try #require(later == "Mon 5:00 PM PT", "the deadline read \(later ?? "nil")")
 }
 
 private func readings() throws -> [PostReading] {
@@ -146,7 +147,7 @@ private func aCallHeldForApprovalAsksToBeApproved() throws {
     try #require(open.accounts.first?.lines.first?.what == "Waiting for your approval", "lines were \(open.accounts.first?.lines ?? [])")
     try #require(
         plain(open.accounts.first?.lines.first?.why)
-            == "You asked to approve every order for this account. Approve it by 5:00 PM today, when trading ends.",
+            == "You asked to approve every order for this account. Approve it by 5:00 PM PT today, when trading ends.",
         "lines were \(open.accounts.first?.lines ?? [])")
     try #require(open.accounts.first?.waits == true, "the account did not wait")
     try #require(
@@ -187,4 +188,26 @@ private func aBuyHeldForAResumeAsksToResumeByItsDeadline() throws {
     try #require(
         ResumeWait(skippedBuy, waiting: ["zhao-paper"], signalAge: { _ in 120 }).deadlines.isEmpty,
         "a buy already skipped as too old still asked for a resume")
+}
+
+/// Settings' time zone is the one every time is shown in: switching it moves a deadline.
+@MainActor
+private func theTimeZoneSettingMovesADeadline() throws {
+    let preference = AppTimeZonePreference.shared
+    let before = preference.chosen
+    defer { preference.select(before) }
+    let deadline = WaitingCall.endOfTradingDay(of: try Date("2026-10-05T15:00:00Z", strategy: .iso8601))
+    let morning = try Date("2026-10-05T15:00:00Z", strategy: .iso8601)
+
+    preference.select(AppTimeZonePreference.newYork)
+    let newYork = plain(TradingDeadlineText.text(deadline, now: morning, locale: english))
+    try #require(newYork == "8:00 PM ET today", "in New York the deadline read \(newYork ?? "nil")")
+
+    preference.select("America/Los_Angeles")
+    let losAngelesText = plain(TradingDeadlineText.text(deadline, now: morning, locale: english))
+    try #require(losAngelesText == "5:00 PM PT today", "in Los Angeles the deadline read \(losAngelesText ?? "nil")")
+    try #require(!preference.isAutomatic, "a chosen zone still read as automatic")
+
+    preference.select(nil)
+    try #require(preference.isAutomatic && preference.zone == .autoupdatingCurrent, "Automatic did not follow the Mac")
 }

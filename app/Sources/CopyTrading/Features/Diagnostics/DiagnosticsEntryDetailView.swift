@@ -21,7 +21,8 @@ struct DiagnosticsEntryDetailView: View {
                             Date.FormatStyle(
                                 date: .abbreviated,
                                 time: .standard,
-                                locale: AppLanguagePreference.shared.language.locale
+                                locale: AppTime.locale,
+                                timeZone: AppTime.zone
                             )
                         )
                     )

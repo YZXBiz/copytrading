@@ -15,7 +15,8 @@ struct AccountBalancePanel: View {
                             Date.FormatStyle(
                                 date: .omitted,
                                 time: .shortened,
-                                locale: AppLanguagePreference.shared.language.locale
+                                locale: AppTime.locale,
+                                timeZone: AppTime.zone
                             )
                         ) ?? "—"
                     )

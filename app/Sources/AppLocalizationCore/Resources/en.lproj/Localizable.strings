@@ -1700,7 +1700,6 @@
 "%@ tomorrow" = "%@ tomorrow";
 "Approve it by %@, when trading ends." = "Approve it by %@, when trading ends.";
 "Copy it from here by %@, when trading ends." = "Copy it from here by %@, when trading ends.";
-"%@ your time (%@ New York)" = "%@ your time (%@ New York)";
 "Also copy calls before and after regular hours, %@, with limit orders." = "Also copy calls before and after regular hours, %@, with limit orders.";
 "Also copy calls overnight, %@. Needs extended hours on." = "Also copy calls overnight, %@. Needs extended hours on.";
 "CopyTrading %@ is ready to install." = "CopyTrading %@ is ready to install.";
@@ -1708,3 +1707,12 @@
 "Copying stops while it installs. Start it again when CopyTrading reopens." = "Copying stops while it installs. Start it again when CopyTrading reopens.";
 "Install Update…" = "Install Update…";
 "Later" = "Later";
+"%@ %@ (%@ New York)" = "%@ %@ (%@ New York)";
+"Time Zone" = "Time Zone";
+"Show times in" = "Show times in";
+"Post times, deadlines, and market hours use this zone." = "Post times, deadlines, and market hours use this zone.";
+"Choose Another Time Zone…" = "Choose Another Time Zone…";
+"Search every zone by city or name." = "Search every zone by city or name.";
+"Automatic (%@)" = "Automatic (%@)";
+"New York (market time)" = "New York (market time)";
+"City or time zone" = "City or time zone";
