@@ -84,7 +84,8 @@ private func anUnfilledBuySaysWhyItWasCancelled() throws {
     let source = try pm()
     let expected =
         "Not filled within 1 min 2 s at your limit of $201.00. PM was offered at $208.86 when it went out. "
-        + "Your buys pay at most the guru's price, so it waited for the price to come down."
+        + "Your buys pay at most the guru's price, not a cent above, so it waited for the price to come down. "
+        + "Raise Maximum above signal price in the account's limits to let buys fill nearby."
     let sentence = CancelReasonText.sentence(try #require(source.destinations.first?.orders.first))
     try #require(sentence == expected, "reason was \(sentence ?? "nil")")
     let line = try #require(ActivityCardOutcome(source, skipped: false).accounts.first?.lines.first)
