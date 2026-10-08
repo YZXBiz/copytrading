@@ -1645,3 +1645,4 @@
 "Your changes weren't saved, so copying continues with the saved setup." = "你的更改没有保存，跟单继续使用已保存的设置。";
 "Copying still uses the saved limits until you apply your changes." = "在你应用更改之前，跟单仍使用已保存的限额。";
 "Copying didn't pause, so your changes weren't applied. Try again." = "跟单没有暂停，所以你的更改没有应用。请再试一次。";
+"Your changes are saved, and copying uses them now." = "你的更改已保存，跟单现在使用它们。";

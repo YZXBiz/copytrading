@@ -250,12 +250,18 @@ extension AppModel {
     }
 
     /// A new setup was saved and copying started: show the owner where its results will appear.
+    /// Applied changes leave the owner where they made them, with a word that they took effect.
     func didStartCopyingNewSetup() {
+        let appliedChanges = isPausedToApplyChanges
         isPausedToApplyChanges = false
         checkedSetupSignature = nil
         isShowingSetupCheck = false
         profileExampleReviews = [:]
         profileExamplesAcknowledged = false
+        guard !appliedChanges else {
+            message = L10n.string("Your changes are saved, and copying uses them now.")
+            return
+        }
         message = nil
         copyingStartedAt = .now
         selectedScreen = .today

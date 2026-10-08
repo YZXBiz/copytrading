@@ -1645,3 +1645,4 @@
 "Your changes weren't saved, so copying continues with the saved setup." = "Your changes weren't saved, so copying continues with the saved setup.";
 "Copying still uses the saved limits until you apply your changes." = "Copying still uses the saved limits until you apply your changes.";
 "Copying didn't pause, so your changes weren't applied. Try again." = "Copying didn't pause, so your changes weren't applied. Try again.";
+"Your changes are saved, and copying uses them now." = "Your changes are saved, and copying uses them now.";

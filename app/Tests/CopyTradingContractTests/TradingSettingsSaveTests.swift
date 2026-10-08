@@ -1335,6 +1335,7 @@ struct TradingSettingsSaveTests {
 
         // A higher maximum per order, applied while copying runs.
         model.setupDraft.accounts[0].policy.maxOrderUSD = "200"
+        model.selectedScreen = .accounts
         try check(model.isCopyingSavedSetup && model.canCheckAndStart, "A change while copying could not be applied")
         model.checkAndStartCopying()
         for _ in 0..<4_000 where model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD != "200" {
@@ -1348,6 +1349,8 @@ struct TradingSettingsSaveTests {
         try check(
             Array(applied[pause...]).contains("validate") && applied.last == "start", "Applying did not check and start after the pause")
         try check(!model.isPausedToApplyChanges, "A started change still counted as paused for it")
+        try check(model.selectedScreen == .accounts, "Applying changes moved the owner off the screen they used")
+        try check(model.message == "Your changes are saved, and copying uses them now.", "Applying changes did not say they took effect")
 
         // A change whose check fails: copying runs the saved setup again once the results close.
         model.setupDraft.accounts[0].policy.maxOrderUSD = "300"
