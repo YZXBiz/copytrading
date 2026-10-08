@@ -242,7 +242,7 @@ def copy_ui_bundle(bin_dir: Path, resources: Path) -> Path:
     """Place the UI module's resource bundle, which carries the display font, beside the app's
     other resources, where Bundle.module finds it."""
     source = bin_dir / "CopyTrading_CopyTradingUI.bundle"
-    if not (source / "Fonts/JosefinSans.ttf").is_file():
+    if not (source / "Contents/Resources/Fonts/JosefinSans.ttf").is_file():
         raise ValueError("Swift build is missing the display font in the CopyTradingUI bundle")
     destination = resources / source.name
     shutil.copytree(source, destination)
