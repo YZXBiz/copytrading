@@ -1296,7 +1296,6 @@
 "Next: %@." = "Next: %@.";
 "%@ of 4 steps done" = "%@ of 4 steps done";
 "Optional" = "Optional";
-"Pause copying to save these changes." = "Pause copying to save these changes.";
 "Pretend money at real prices. Start here." = "Pretend money at real prices. Start here.";
 "Ready to start. Every connection is checked first." = "Ready to start. Every connection is checked first.";
 "Real money. Each order still stays inside your limits." = "Real money. Each order still stays inside your limits.";
@@ -1641,3 +1640,9 @@
 "Alpaca live account found" = "Alpaca live account found";
 "Alpaca paper account found" = "Alpaca paper account found";
 "Each example is one request to your model service, which may charge for it." = "Each example is one request to your model service, which may charge for it.";
+"Apply Changes" = "Apply Changes";
+"Apply Changes pauses copying for a moment, checks the new setup, and copies with it. Posts in between aren't missed." = "Apply Changes pauses copying for a moment, checks the new setup, and copies with it. Posts in between aren't missed.";
+"Your changes weren't saved, so copying continues with the saved setup." = "Your changes weren't saved, so copying continues with the saved setup.";
+"Copying still uses the saved limits until you apply your changes." = "Copying still uses the saved limits until you apply your changes.";
+"Copying didn't pause, so your changes weren't applied. Try again." = "Copying didn't pause, so your changes weren't applied. Try again.";
+"Your changes are saved, and copying uses them now." = "Your changes are saved, and copying uses them now.";

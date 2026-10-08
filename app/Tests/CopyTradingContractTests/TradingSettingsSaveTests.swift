@@ -107,6 +107,7 @@ struct TradingSettingsSaveTests {
         try await checkValidationCancellationDoesNotPersist(configuration: configuration, secrets: credentials)
         try await checkDiscardedCheckAndLockedDraft(configuration: configuration, secrets: credentials)
         try await checkSetupCheckKeepsKeysAndFollowsEdits(configuration: configuration, secrets: credentials)
+        try await checkApplyChangesWhileCopying(configuration: configuration, secrets: credentials)
         try await checkConnectionClientRequest(provider: configuration.provider)
         try await checkOneConnectionUsesSavedKeysAndFollowsEdits(configuration: configuration, secrets: credentials)
         try await checkConfigurationWriteFailureDoesNotStart()
@@ -455,7 +456,7 @@ struct TradingSettingsSaveTests {
         await model.pauseTrading()
         await starter.setValidationActivatable(true)
         try await Task.sleep(for: .milliseconds(500))
-        try check(model.tradingStatus?.state == .paused, "A retry restarted copying after the owner paused")
+        try check([.pausing, .paused].contains(model.tradingStatus?.state), "A retry restarted copying after the owner paused")
         let validations = await starter.validationCallCount()
         try check(validations == 1, "A pause must end the launch retries, saw \(validations) checks")
         print("CopyTradingContractTests: pausing ended the launch start retries")
@@ -1295,6 +1296,80 @@ struct TradingSettingsSaveTests {
         let afterPass = try store.load()
         try check(afterPass != nil, "A passing check did not write the setup")
         print("CopyTradingContractTests: Start Copying checks first, keeps typed keys, and starts once the check passes")
+    }
+
+    /// A limit changed while copying runs is applied in one press: copying pauses, the new setup
+    /// is checked and starts. A change whose check fails leaves the saved setup copying again.
+    private static func checkApplyChangesWhileCopying(
+        configuration: TradingConfiguration, secrets: TradingSecrets
+    ) async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(
+            path: "app-model-apply-changes-\(UUID().uuidString)", directoryHint: .isDirectory
+        )
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = TradingConfigurationStore(
+            url: directory.appending(path: "configuration.json"), secrets: TestSecretRevisions()
+        )
+        let starter = RecordingTradingStarter()
+        let model = AppModel(tradingConfigurationStore: store, tradingStarter: starter)
+        model.isTradingUnlocked = true
+        model.tradingStatus = try status(.paused)
+        model.setupDraft.load(configuration)
+        model.setupDraft.discordToken = secrets.discordToken
+        model.setupDraft.providerAPIKey = secrets.providerAPIKey
+        model.setupDraft.accounts[0].key = secrets.brokers[0].key
+        model.setupDraft.accounts[0].secret = secrets.brokers[0].secret
+        model.profileExamplesAcknowledged = true
+        model.checkAndStartCopying()
+        for _ in 0..<2_000 where model.savedTradingConfiguration == nil || model.isActivatingTrading {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        if model.isShowingSetupCheck {
+            model.checkAndStartCopying()
+            for _ in 0..<2_000 where model.tradingStatus?.state != .running || model.isActivatingTrading {
+                try await Task.sleep(for: .milliseconds(1))
+            }
+        }
+        try check(model.tradingStatus?.state == .running, model.message ?? "The first setup did not start")
+        try check(model.savedTradingConfiguration != nil, "The first setup was not saved")
+
+        // A higher maximum per order, applied while copying runs.
+        model.setupDraft.accounts[0].policy.maxOrderUSD = "200"
+        model.selectedScreen = .accounts
+        try check(model.isCopyingSavedSetup && model.canCheckAndStart, "A change while copying could not be applied")
+        model.checkAndStartCopying()
+        for _ in 0..<4_000 where model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD != "200" {
+            try await Task.sleep(for: .milliseconds(1))
+            if model.isShowingSetupCheck && model.awaitsExampleReview { model.checkAndStartCopying() }
+        }
+        try check(model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD == "200", "The new limit was not saved")
+        try check(model.tradingStatus?.state == .running, "Copying did not run again with the new limit")
+        let applied = await starter.events()
+        guard let pause = applied.lastIndex(of: "pause") else { throw ContractFailure("Applying did not pause copying first") }
+        try check(
+            Array(applied[pause...]).contains("validate") && applied.last == "start", "Applying did not check and start after the pause")
+        try check(!model.isPausedToApplyChanges, "A started change still counted as paused for it")
+        try check(model.selectedScreen == .accounts, "Applying changes moved the owner off the screen they used")
+        try check(model.message == "Your changes are saved, and copying uses them now.", "Applying changes did not say they took effect")
+
+        // A change whose check fails: copying runs the saved setup again once the results close.
+        model.setupDraft.accounts[0].policy.maxOrderUSD = "300"
+        let failing = try model.setupDraft.submission().0
+        await starter.setFailingConfiguration(failing)
+        model.checkAndStartCopying()
+        for _ in 0..<4_000 where !model.isShowingSetupCheck || model.isValidatingTrading {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        try check(model.tradingValidation?.report.activatable == false, "The failing check did not show its results")
+        try check(model.tradingStatus?.state == .paused, "Copying was not paused for the check")
+        model.isShowingSetupCheck = false
+        await model.resumeSavedSetupIfPausedForChanges()
+        try check(model.tradingStatus?.state == .running, model.message ?? "The saved setup did not copy again")
+        try check(model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD == "200", "A failed change replaced the saved setup")
+        try check(
+            model.message == "Your changes weren't saved, so copying continues with the saved setup.",
+            "Resuming did not say the changes weren't saved")
+        print("CopyTradingContractTests: Apply Changes while copying pauses, checks, and starts; a failed check resumes the saved setup")
     }
 
     /// A discarded check must not leave its "validated" banner behind, and locking must drop
@@ -2561,6 +2636,8 @@ private actor RecordingTradingStarter: TradingStarting {
     private var activation: TradingActivationStatus?
     private var latestTradingStatus: TradingStatus?
     private var validated: TradingConfiguration?
+    /// A setup whose check fails while every other one passes, like a mistyped limit or key.
+    private var failingConfiguration: TradingConfiguration?
 
     func tradingStatus() async throws -> TradingStatus {
         if let latestTradingStatus { return latestTradingStatus }
@@ -2580,6 +2657,7 @@ private actor RecordingTradingStarter: TradingStarting {
         validated = configuration
         validations += 1
         if validationSuspended { try await Task.sleep(for: .seconds(30)) }
+        let validationActivatable = validationActivatable && configuration != failingConfiguration
         return TradingValidation(
             report: TradingCapabilityReport(
                 configurationRevision: fakeEngineRevision(configuration),
@@ -2669,6 +2747,13 @@ private actor RecordingTradingStarter: TradingStarting {
         let status = try JSONDecoder().decode(TradingStatus.self, from: Data(json.utf8))
         latestTradingStatus = status
         return status
+    }
+
+    /// Like the engine: the answer says pausing, and the next status read says paused.
+    func pauseTrading() async throws -> TradingStatus {
+        operationEvents.append("pause")
+        latestTradingStatus = try TradingStatusBuilder(.paused).build()
+        return try TradingStatusBuilder(.pausing).build()
     }
 
     func tradingActivation(activationID: String) async throws -> TradingActivationStatus {
@@ -2820,6 +2905,7 @@ private actor RecordingTradingStarter: TradingStarting {
     func setStartFailure(_ value: Bool) { failStart = value }
     func setAcceptStartAndLoseResponse(_ value: Bool) { acceptStartAndLoseResponse = value }
     func setValidationActivatable(_ value: Bool) { validationActivatable = value }
+    func setFailingConfiguration(_ value: TradingConfiguration?) { failingConfiguration = value }
     func setConnectionCheckFails(_ value: Bool) { connectionCheckFails = value }
     func checkedConnections() -> [TradingConnectionCheck] { connectionChecks }
     func setValidationSuspended(_ value: Bool) { validationSuspended = value }

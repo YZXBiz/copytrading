@@ -21,6 +21,8 @@ protocol TradingStarting: Sendable {
 
     func tradingActivation(activationID: String) async throws -> TradingActivationStatus
 
+    func pauseTrading() async throws -> TradingStatus
+
     func evaluateHistoricalProfile(
         _ evaluation: HistoricalProfileEvaluationRequest
     ) async throws -> ProfileEvaluation
@@ -108,6 +110,9 @@ final class AppModel {
     var profileExamplesAcknowledged = false
     var isValidatingTrading = false
     var isActivatingTrading = false
+    /// Copying was paused only to apply setup changes; anything short of starting the new setup
+    /// resumes the saved one, so copying never stays paused by surprise.
+    var isPausedToApplyChanges = false
     var isTradingCommandPending = false
     var isTradingUnlocked = false
     var agentAccess: AgentAccessSetting = .off
@@ -1231,13 +1236,24 @@ final class AppModel {
     ) {
         tradingValidationTask?.cancel()
         tradingValidationTask = Task { [weak self] in
-            await self?.validateTradingSettings(configuration, enteredSecrets: enteredSecrets)
-            guard thenStart, !Task.isCancelled, let self else { return }
-            if self.canStartCopyingFromCheck {
-                await self.activateValidatedTradingSettings()
-            } else if self.tradingValidation != nil || !self.profileExampleReviews.isEmpty {
-                self.isShowingSetupCheck = true
+            guard let self else { return }
+            if thenStart {
+                await self.checkThenStart(configuration, enteredSecrets: enteredSecrets)
+            } else {
+                await self.validateTradingSettings(configuration, enteredSecrets: enteredSecrets)
             }
+        }
+    }
+
+    /// Checks the setup, then starts it when everything passed and there is nothing to look
+    /// over; otherwise shows what needs the owner.
+    func checkThenStart(_ configuration: TradingConfiguration, enteredSecrets: TradingSecrets) async {
+        await validateTradingSettings(configuration, enteredSecrets: enteredSecrets)
+        guard !Task.isCancelled else { return }
+        if canStartCopyingFromCheck {
+            await activateValidatedTradingSettings()
+        } else if tradingValidation != nil || !profileExampleReviews.isEmpty {
+            isShowingSetupCheck = true
         }
     }
 
@@ -1433,12 +1449,12 @@ final class AppModel {
 
     func pauseTrading() async {
         launchStartRetry?.cancel()
-        guard let engineActions else { return }
+        guard let control: (any TradingStarting) = tradingStarter ?? engineActions else { return }
         guard !isTradingCommandPending else { return }
         isTradingCommandPending = true
         defer { isTradingCommandPending = false }
         do {
-            tradingStatus = try await engineActions.pauseTrading()
+            tradingStatus = try await control.pauseTrading()
             message = nil
         } catch {
             message = Self.userMessage(for: error)

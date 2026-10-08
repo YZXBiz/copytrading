@@ -1273,6 +1273,54 @@ def j31_agent_approval(app: AppDriver) -> None:
     _check_locked_app_still_pauses(app)
 
 
+def j40_apply_changes(app: AppDriver) -> None:
+    """While copying runs, a limit changed in the account sheet reaches the running account in
+    one press: Apply Changes pauses copying, checks the new setup, and copies with it.
+
+    Needs the saved paper setup J31 leaves behind.
+    """
+    if app.state_root is None:
+        raise JourneySkipped("needs the run's state root")
+    _paper_setup()
+    app.open_screen("today")
+    toolbar = app.see().find("toolbar.copying")
+    if toolbar is not None and "Start" in toolbar.label:
+        app.click("toolbar.copying")
+    _wait_for_account(app, "primary", timeout=180)
+
+    app.open_screen("connections")
+    app.click("connections.account.primary")
+    target = "175" if app.field_value("Maximum per order") == "150" else "150"
+    app.type(target, into="Maximum per order")
+    app.click("Done")
+    pending = app.open_screen("accounts")
+    app.expect(pending, "Changed — not saved yet", "Apply Changes")
+    if app.see().find("toolbar.copying") is None:
+        raise JourneyFailure("the toolbar has no copying button")
+    app.click("Apply Changes")
+
+    deadline = time.monotonic() + 180
+    while True:
+        snapshot = app.see()
+        texts = " ".join(e.label + " " + e.value for e in snapshot.elements)
+        for problem in ("didn't pause", "weren't saved", "need attention"):
+            if problem in texts:
+                app.see("apply-changes-problem")
+                raise JourneyFailure(f"Apply Changes stopped: {problem}")
+        if "How the examples were read" in texts:
+            app.click("setup.startCopying")
+        toolbar = snapshot.find("toolbar.copying")
+        applied = f"${target}" in texts and "Changed — not saved yet" not in texts
+        if applied and toolbar is not None and "Pause" in toolbar.label:
+            break
+        if time.monotonic() > deadline:
+            app.see("timeout-apply-changes")
+            raise JourneyFailure("the new limit did not reach the running account")
+        time.sleep(2)
+    _wait_for_account(app, "primary", timeout=60)
+    app.see("apply-changes-done")
+
+
 def j39_setup_tour(app: AppDriver) -> None:
     """A first launch opens into the setup tour, which follows the owner from the Discord row to
     Start Copying: each stop points at the next thing to do and moves on once it is done.
@@ -1546,13 +1594,8 @@ def _trading_hours() -> bool:
 
 
 def _set_ask_before_orders(app: AppDriver, on: bool) -> None:
-    """Flip "Ask me before sending orders" in the account sheet and apply it with Start Copying.
-
-    A saved setup changes only while copying is paused ("Pause copying to save these changes")."""
-    toolbar = app.see().find("toolbar.copying")
-    if toolbar is not None and "Pause" in toolbar.label:
-        app.click("toolbar.copying")
-        app.wait_for("Start Copying", timeout=60)
+    """Flip "Ask me before sending orders" in the account sheet and apply it: Apply Changes while
+    copying pauses, checks, and copies with the new setup; Start Copying when paused."""
     app.open_screen("connections")
     app.click("connections.account.primary")
     switch = app.see().find("Ask me before sending orders", role="checkbox")
@@ -2038,6 +2081,7 @@ JOURNEYS: list[tuple[str, Callable[[AppDriver], None]]] = [
     ("J17 crash recovery", j17_crash_recovery),
     # Last: starting copying saves a setup that the journeys above expect to be empty.
     ("J31 agent approval", j31_agent_approval),
+    ("J40 apply changes while copying", j40_apply_changes),
     ("J33 backup and restore", j33_backup_and_restore),
     ("J38 today chart", j38_today_chart),
     ("J35 copy and sell", j35_copy_and_sell),

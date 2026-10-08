@@ -48,6 +48,19 @@ struct AccountHeaderPanel: View {
                 Callout(error, tone: .critical)
                     .accessibilityLabel(L10n.string("Account command error: %@", error))
             }
+            if pendingNote != nil {
+                // An edit is only in the setup until it is applied; say so where it was made.
+                HStack(spacing: 12) {
+                    Label(
+                        L10n.string("Copying still uses the saved limits until you apply your changes."), systemImage: "pencil.circle.fill"
+                    )
+                    .foregroundStyle(.secondary)
+                    Spacer(minLength: 12)
+                    StartCopyingButton(model: model)
+                        .controlSize(.small)
+                }
+                .font(.callout)
+            }
             if neverEnabled && account.activeConfiguration {
                 Label {
                     Text(

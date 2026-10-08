@@ -12,6 +12,10 @@ struct ScreenDetailView: View {
             .sheet(isPresented: $model.isShowingSetupCheck) {
                 SetupCheckSheet(model: model)
             }
+            .onChange(of: model.isShowingSetupCheck) { _, showing in
+                // Closing the readings without starting puts the saved setup back to work.
+                if !showing { Task { await model.resumeSavedSetupIfPausedForChanges() } }
+            }
             .onChange(of: model.setupDraft.signature) {
                 model.setupDraftDidChange()
             }
