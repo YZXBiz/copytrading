@@ -46,20 +46,16 @@ enum ReadAsText {
         return repeats == nil ? said : L10n.string("%@ A re-post of an earlier call.", said)
     }
 
-    static func facts(_ call: ReadCall) -> [String] {
+    /// What a call's sentence leaves implicit, said once under it: a buy with no size buys a full
+    /// position (trimmed by the account's limits), and a sell naming no buy sells from every buy.
+    static func note(_ call: ReadCall) -> String? {
         switch call {
         case .buy(let buy):
-            [L10n.string("Buy"), buy.stock.ticker, priceFact(buy.price), sizeFact(buy.size)]
+            if case .notGiven = buy.size { return L10n.string("no size given, so a full position") }
+            return nil
         case .sell(let sell):
-            [
-                L10n.string("Sell"), sell.stock.ticker, priceFact(sell.price), shareFact(sell.share),
-                {
-                    if case .lot(let buyPrice, _) = sell.sellFrom {
-                        return L10n.string("from the %@ buy", Humanize.dollars(buyPrice))
-                    }
-                    return L10n.string("no buy named")
-                }(),
-            ]
+            if case .lot = sell.sellFrom { return nil }
+            return L10n.string("from every buy of it")
         }
     }
 
@@ -99,27 +95,4 @@ enum ReadAsText {
         }
     }
 
-    private static func priceFact(_ price: ReadPrice) -> String {
-        switch price {
-        case .exact(let value, _): Humanize.dollars(value)
-        case .range(let low, let high, _, _): "\(Humanize.dollars(low))–\(Humanize.dollars(high))"
-        case .atMarket: L10n.string("market price")
-        case .notGiven: L10n.string("no price")
-        }
-    }
-
-    private static func sizeFact(_ size: ReadSize) -> String {
-        switch size {
-        case .fraction(let value, _): Humanize.fraction(value)
-        case .batch(let number, _): L10n.string("batch %lld", Int64(number))
-        case .notGiven: L10n.string("no size")
-        }
-    }
-
-    private static func shareFact(_ share: ReadShare) -> String {
-        switch share {
-        case .all: L10n.string("all")
-        case .fraction(let value, _): Humanize.fraction(value)
-        }
-    }
 }

@@ -1621,7 +1621,7 @@ def _post_and_wait_for_hold(app: AppDriver, setup: dict[str, str], symbol: str) 
     price = (_latest_price(setup, symbol) * Decimal("1.004")).quantize(Decimal("0.01"))
     _post_test_call(setup, f"Bought {symbol} at {price}")
     app.open_screen("activity")
-    app.click("Waiting for You")
+    app.click("Needs you")
     app.wait_for("activity.copy", timeout=240, name=f"held-{symbol.lower()}")
 
 
@@ -1675,7 +1675,7 @@ def j36_approve_and_skip(app: AppDriver) -> None:
         if outcomes != {"approved_by_owner"}:
             raise JourneyFailure(f"the approved call still reads {sorted(outcomes)}")
         app.open_screen("activity")
-        app.click("Waiting for You")
+        app.click("Needs you")
         deadline = time.monotonic() + 30
         while app.see().find(f"Bought {symbol} ") is not None:
             if time.monotonic() > deadline:

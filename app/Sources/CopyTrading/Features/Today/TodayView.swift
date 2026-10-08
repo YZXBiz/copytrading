@@ -69,6 +69,14 @@ struct TodayView: View {
         case 2: people = L10n.string("%@ and %@", names[0], names[1])
         default: people = L10n.string("%lld people", Int64(names.count))
         }
-        return L10n.string("%@ · %@", date, people)
+        // Whose money these numbers are: the one account by name, else how many are added up.
+        let accounts = model.savedTradingConfiguration?.accounts ?? []
+        guard !accounts.isEmpty else { return L10n.string("%@ · %@", date, people) }
+        let scope =
+            accounts.count == 1
+            ? L10n.string(
+                "%@ (%@)", accounts[0].id, L10n.string(accounts[0].environment == .live ? "Live" : "Paper"))
+            : L10n.string("%lld accounts", Int64(accounts.count))
+        return L10n.string("%@ · %@ · %@", date, people, scope)
     }
 }

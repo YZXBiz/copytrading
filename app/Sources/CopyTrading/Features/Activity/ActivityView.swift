@@ -9,7 +9,12 @@ struct ActivityView: View {
     @State private var selectedSheet: ActivitySheet?
 
     private var visibleActivity: [SourceActivity] {
-        feature.activity.filter { screenState.filter.includes($0, skipped: model.skippedCalls) }
+        feature.activity.filter { screenState.includes($0) && screenState.filter.includes($0, skipped: model.skippedCalls) }
+    }
+
+    /// Posts in the chosen account, before the tab narrows them; the tabs count these.
+    private var scopedActivity: [SourceActivity] {
+        feature.activity.filter(screenState.includes)
     }
 
     private var selectedItem: SourceActivity? {
@@ -39,14 +44,14 @@ struct ActivityView: View {
         .pageBar {
             VStack(spacing: 0) {
                 ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 24) {
-                        title
+                    HStack(alignment: .center, spacing: 24) {
+                        heading
                         Spacer(minLength: 12)
-                        filters
+                        controls
                     }
                     VStack(alignment: .leading, spacing: 10) {
-                        title
-                        filters
+                        heading
+                        controls
                     }
                 }
                 .padding(.horizontal, DesignTokens.pagePadding)
@@ -60,9 +65,11 @@ struct ActivityView: View {
         .task {
             prepareForDisplay()
         }
-        .onChange(of: screenState.filter) { _, filter in
-            screenState.applyFilter(
-                filter, visibleIDs: feature.activity.filter { filter.includes($0, skipped: model.skippedCalls) }.map(\.id))
+        .onChange(of: screenState.filter) { _, _ in
+            screenState.reconcileSelection(visibleIDs: visibleActivity.map(\.id))
+        }
+        .onChange(of: screenState.accountID) { _, _ in
+            screenState.reconcileSelection(visibleIDs: visibleActivity.map(\.id))
         }
         .onChange(of: feature.activity) {
             screenState.reconcileSelection(visibleIDs: visibleActivity.map(\.id))
@@ -78,6 +85,7 @@ struct ActivityView: View {
             ActivityListView(
                 items: visibleActivity,
                 directory: directory,
+                showsAccounts: feature.accounts.count > 1 && screenState.accountID == nil,
                 selection: $screenState.selectedActivityID,
                 filter: $screenState.filter,
                 hasMore: feature.nextActivityCursor != nil,
@@ -108,7 +116,8 @@ struct ActivityView: View {
                         resumeEntries: { accountID in
                             let environment = feature.accounts.first { $0.accountID == accountID }?.environment
                             Task { await model.resumeEntries(accountID: accountID, environment: environment, feature: feature) }
-                        }
+                        },
+                        accountID: screenState.accountID
                     )
                 } else {
                     ActivityPlaceholderView(isRefreshing: feature.isRefreshing)
@@ -137,20 +146,29 @@ struct ActivityView: View {
         }
     }
 
-    private var title: some View {
-        Text(L10n.string("Activity"))
-            .font(DesignTokens.pageTitle)
-            .foregroundStyle(Palette.ink)
-            .accessibilityAddTraits(.isHeader)
-            .frame(minHeight: 30)
+    /// The title and one line saying what this page is.
+    private var heading: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(L10n.string("Activity"))
+                .font(DesignTokens.pageTitle)
+                .foregroundStyle(Palette.ink)
+                .accessibilityAddTraits(.isHeader)
+            Text(L10n.string("Every post from your gurus, how it was read, and what each account did."))
+                .font(DesignTokens.caption)
+                .foregroundStyle(Palette.tertiaryInk)
+                .lineLimit(1)
+        }
     }
 
-    private var filters: some View {
-        ActivityFilterBar(
-            filter: filterBinding, activity: feature.activity, shown: visibleActivity.count,
-            hasMore: feature.nextActivityCursor != nil
-        )
-        .fixedSize(horizontal: true, vertical: false)
+    private var controls: some View {
+        HStack(spacing: 14) {
+            ActivityAccountScope(accounts: feature.accounts, accountID: $screenState.accountID)
+            ActivityFilterBar(
+                filter: filterBinding, activity: scopedActivity, shown: visibleActivity.count,
+                hasMore: feature.nextActivityCursor != nil
+            )
+            .fixedSize(horizontal: true, vertical: false)
+        }
     }
 
     private func loadMore() {
@@ -171,7 +189,8 @@ struct ActivityView: View {
             get: { screenState.filter },
             set: { chosen in
                 screenState.applyFilter(
-                    chosen, visibleIDs: feature.activity.filter { chosen.includes($0, skipped: model.skippedCalls) }.map(\.id))
+                    chosen,
+                    visibleIDs: scopedActivity.filter { chosen.includes($0, skipped: model.skippedCalls) }.map(\.id))
             }
         )
     }
