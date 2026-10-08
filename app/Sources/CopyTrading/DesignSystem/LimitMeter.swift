@@ -22,6 +22,7 @@ struct LimitMeter: View {
             HStack(alignment: .firstTextBaseline) {
                 Text(L10n.string(title))
                     .foregroundStyle(Palette.secondaryInk)
+                    .fixedSize()
                 Spacer(minLength: 8)
                 Text(
                     L10n.string(
@@ -33,6 +34,7 @@ struct LimitMeter: View {
                 .fontWeight(.semibold)
                 .monospacedDigit()
                 .foregroundStyle(fraction >= 0.8 ? tint : Palette.ink)
+                .fixedSize()
             }
             .font(DesignTokens.caption)
             // A thin track that stays empty at zero, instead of a system bar with a stray dot.

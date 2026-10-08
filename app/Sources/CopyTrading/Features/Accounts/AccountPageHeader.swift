@@ -115,12 +115,14 @@ struct AccountPageHeader: View {
                     .buttonStyle(PageButtonStyle(isProminent: true))
                     .disabled(!canControl)
                     .help(L10n.string("Allow new entry orders for this account."))
+                    .labelStyle(.titleOnly)
                     .accessibilityIdentifier("account.entries")
             } else {
                 Button(L10n.string("Pause Entries"), systemImage: "pause.fill", action: toggleEntries)
                     .buttonStyle(PageButtonStyle())
                     .disabled(!canControl)
                     .help(L10n.string("Stop new entry orders. Exits still follow the account policy."))
+                    .labelStyle(.titleOnly)
                     .accessibilityIdentifier("account.entries")
             }
             AccountPageMenu(account: account, canControl: canControl, isInSetup: isInSetup, model: model, feature: feature)

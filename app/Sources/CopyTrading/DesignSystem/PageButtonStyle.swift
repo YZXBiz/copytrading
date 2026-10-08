@@ -13,7 +13,6 @@ struct PageButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(DesignTokens.caption.weight(.semibold))
-            .labelStyle(.titleOnly)
             .foregroundStyle(isProminent ? Color.white : Palette.secondaryInk)
             .padding(.horizontal, horizontalPadding)
             .frame(minHeight: 26)
