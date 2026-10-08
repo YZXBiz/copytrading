@@ -34,6 +34,11 @@ public struct SourceActivityBuilder {
     public func read(started: String, finished: String, delivered: String) -> Self {
         setting("read_started_at", started).setting("read_at", finished).setting("delivered_at", delivered)
     }
+    /// A post the engine has not settled: its parse and delivery state, and when reading began.
+    public func inFlight(parse: String, delivery: String, readStarted: String? = nil, read: String? = nil) -> Self {
+        setting("parse_status", parse).setting("delivery_status", delivery)
+            .setting("read_started_at", readStarted ?? NSNull()).setting("read_at", read ?? NSNull())
+    }
     public func destination(
         _ account: String, status: String, outcomes: [String] = [], environment: String = "paper",
         limits: [[String: Any]] = [], orders: [[String: Any]] = [], timeline: [[String: Any]] = []

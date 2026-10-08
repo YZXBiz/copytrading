@@ -1,16 +1,19 @@
 import DesktopCore
 import SwiftUI
 
-/// The post's trip as a vertical list of timed steps: a dot and a rail, the step, its time to
-/// the second, and how long it took since the step before. A slow step says so in orange.
+/// The post's trip in four timed phases on a rail: received, read, sent, and how it ended, with
+/// a post in flight's live step under the phase it is past.
 struct ActivityTimelineView: View {
     let timeline: PostTimeline
+    /// The step a post in flight is on now, ticking under its latest phase.
+    var progress: PostProgress?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 0) {
-                ForEach(timeline.rows) { row in
-                    ActivityTimelineRow(row: row, isLast: row.id == timeline.rows.last?.id)
+                ForEach(timeline.phases) { phase in
+                    let isLast = phase.id == timeline.phases.last?.id
+                    ActivityTimelineRow(phase: phase, isLast: isLast, progress: isLast ? progress : nil)
                 }
             }
             if timeline.toOrder != nil || timeline.toFill != nil {

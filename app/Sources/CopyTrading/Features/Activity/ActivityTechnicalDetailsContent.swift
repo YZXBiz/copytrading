@@ -6,6 +6,7 @@ import SwiftUI
 /// surface.
 struct ActivityTechnicalDetailsContent: View {
     let item: SourceActivity
+    @Environment(\.postProgressContext) private var progressContext
 
     /// The model's raw note, only when the reading above did not already show it in full.
     private var parserNote: String? {
@@ -17,7 +18,7 @@ struct ActivityTechnicalDetailsContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            ActivityTimelineView(timeline: PostTimeline(item))
+            ActivityTimelineView(timeline: PostTimeline(item), progress: PostProgress(item, context: progressContext))
             ForEach(item.destinations) { destination in
                 ForEach(destination.orders) { order in
                     Divider()

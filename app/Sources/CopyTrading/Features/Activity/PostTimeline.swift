@@ -1,65 +1,66 @@
 import DesktopCore
 import Foundation
 
-/// A post's trip from Discord to the broker as timed steps: when it was posted, captured and
-/// read, when it reached each account, and what each account did with it, with the time each
-/// step took. A step that took long for no market reason is marked slow.
+/// A post's trip from Discord to the broker in four phases: received, read, sent, and how it
+/// ended. Each phase has one time and how long it took; the finer steps fold into one quiet line
+/// under it, and a wait (a hold for the owner, a fill that never came) stands out on its own.
 struct PostTimeline {
-    struct Row: Identifiable, Equatable {
+    struct Phase: Identifiable, Equatable {
         let id: Int
         let title: String
-        let detail: String?
         let at: Date
-        /// Time since the step before it; nil for the first.
-        let gap: TimeInterval?
-        let slow: Bool
-        /// Waiting on the owner or ended badly: the row reads in a warning colour.
+        /// How long this phase took since the one before; nil for the first.
+        let duration: TimeInterval?
+        /// The finer steps in one line: "deepseek-flash · 2.9 s".
+        let detail: String?
+        /// Waits that stand out: "Held 18 s waiting for you to resume".
+        let waits: [String]
+        /// Ended badly or waits on the owner: the phase reads in a warning colour.
         let caution: Bool
     }
 
-    /// Steps slower than this before the order goes out are marked.
-    static let slowSeconds: TimeInterval = 5
+    /// Gaps shorter than this are not worth a number.
+    static let measurable: TimeInterval = 0.01
 
-    let rows: [Row]
+    let phases: [Phase]
     /// From the post to the first order sent, and to the first fill.
     let toOrder: TimeInterval?
     let toFill: TimeInterval?
 
-    /// Steps that wait on the market, not on CopyTrading: never marked slow.
-    private static let marketSteps: Set<String> = [
-        "partially_filled", "filled", "cancel_requested", "cancelled", "expired", "rejected",
-    ]
-
     @MainActor
     init(_ item: SourceActivity) {
-        var rows: [Row] = []
-        func add(_ title: String, _ detail: String?, _ iso: String?, after previous: Date?, step: String, caution: Bool = false) {
-            guard let iso, let at = Humanize.date(iso) else { return }
-            let gap = previous.map { at.timeIntervalSince($0) }
-            let slow = (gap ?? 0) >= Self.slowSeconds && !Self.marketSteps.contains(step)
-            rows.append(Row(id: rows.count, title: title, detail: detail, at: at, gap: gap, slow: slow, caution: caution))
+        var phases: [Phase] = []
+        func add(_ title: String, at: Date, after previous: Date?, detail: String?, waits: [String] = [], caution: Bool = false) {
+            let duration = previous.map { at.timeIntervalSince($0) }.flatMap { $0 >= Self.measurable ? $0 : nil }
+            phases.append(
+                Phase(id: phases.count, title: title, at: at, duration: duration, detail: detail, waits: waits, caution: caution))
         }
-        add(L10n.string("Posted on Discord"), nil, item.sourceAt, after: nil, step: "posted")
-        add(L10n.string("Captured by CopyTrading"), nil, item.capturedAt, after: rows.last?.at, step: "captured")
-        add(L10n.string("Reading started"), nil, item.readStartedAt, after: rows.last?.at, step: "read_started")
-        add(
-            L10n.string("Read"), item.interpretedBy.map { L10n.string("by %@", $0) }, item.readAt,
-            after: rows.last?.at, step: "read")
-        add(L10n.string("Handed to your accounts"), nil, item.deliveredAt, after: rows.last?.at, step: "delivered")
-        let handedOff = rows.last?.at
+        let posted = Humanize.date(item.sourceAt)
+        let captured = Humanize.date(item.capturedAt)
+        if let received = posted ?? captured {
+            let gap = posted.flatMap { start in captured.map { $0.timeIntervalSince(start) } }
+            add(
+                L10n.string("Received"), at: received, after: nil,
+                detail: gap.flatMap { $0 >= Self.measurable ? L10n.string("Captured in %@", Self.duration($0)) : nil })
+        }
+        let readStarted = Humanize.date(item.readStartedAt)
+        let readAt = Humanize.date(item.readAt)
+        if let readAt {
+            let reading = readStarted.map { readAt.timeIntervalSince($0) }
+            let detail = [item.interpretedBy, reading.flatMap { $0 >= Self.measurable ? Self.duration($0) : nil }]
+                .compactMap(\.self).joined(separator: " · ")
+            var waits: [String] = []
+            if let readStarted, let since = captured ?? posted, readStarted.timeIntervalSince(since) >= 1 {
+                waits.append(L10n.string("Waited %@ before reading", Self.duration(readStarted.timeIntervalSince(since))))
+            }
+            add(L10n.string("Read"), at: readAt, after: captured ?? posted, detail: detail.nilIfEmpty, waits: waits)
+        }
+        let handedOff = Humanize.date(item.deliveredAt) ?? readAt
         let several = item.destinations.count > 1
         for destination in item.destinations {
-            var previous = handedOff
-            let orders = Dictionary(destination.orders.map { ($0.clientID, $0) }, uniquingKeysWith: { first, _ in first })
-            for step in destination.timeline {
-                let (title, detail, caution) = Self.words(step, order: step.clientID.flatMap { orders[$0] }, account: destination.accountID)
-                let prefixed = several ? L10n.string("%@ · %@", destination.accountID, title) : title
-                add(prefixed, detail, step.at, after: previous, step: step.step, caution: caution)
-                previous = rows.last?.at ?? previous
-            }
+            Self.addAccount(destination, after: handedOff, several: several, add: add)
         }
-        self.rows = rows
-        let posted = Humanize.date(item.sourceAt)
+        self.phases = phases
         let steps = item.destinations.flatMap(\.timeline)
         let sent = steps.filter { $0.step == "sent" }.compactMap { Humanize.date($0.at) }.min()
         let filled = steps.filter { ["filled", "partially_filled"].contains($0.step) }.compactMap { Humanize.date($0.at) }.min()
@@ -67,42 +68,82 @@ struct PostTimeline {
         toFill = posted.flatMap { start in filled.map { $0.timeIntervalSince(start) } }
     }
 
-    /// A step in the owner's words, with what it carried: the size and limit, the fill, the reason.
+    /// One account's Sent and Ended phases, with its hold and its fill wait folded in.
     @MainActor
-    private static func words(_ step: TimelineStep, order: OrderActivity?, account: String) -> (String, String?, Bool) {
-        let symbol = order?.symbol ?? ""
-        let quantity = Decimal(engine: step.quantity).map { $0.formatted() }
-        let price = Decimal(engine: step.price)?.formatted(.currency(code: "USD"))
-        switch step.step {
-        case "received":
-            return (L10n.string("Reached %@", account), nil, false)
-        case "held":
-            return (L10n.string("Held: waiting for you to resume entries"), nil, true)
-        case "resumed":
-            return (L10n.string("You resumed entries"), nil, false)
-        case "skipped":
-            return (L10n.string("Skipped"), step.reason.map { Reason.text($0) }, true)
-        case "sized":
-            let size = quantity.map { L10n.string("%@ %@", $0, symbol) }
-            let limit = price.map { L10n.string("limit %@", $0) }
-            return (L10n.string("Sized and checked"), [size, limit].compactMap(\.self).joined(separator: ", ").nilIfEmpty, false)
-        case "sent":
-            return (L10n.string("Sent to Alpaca"), nil, false)
-        case "accepted":
-            return (L10n.string("Alpaca accepted it"), nil, false)
-        case "partially_filled", "filled":
-            let detail = quantity.map { qty in price.map { L10n.string("%@ at %@", qty, $0) } ?? qty }
-            return (L10n.string(step.step == "filled" ? "Filled" : "Partly filled"), detail, false)
-        case "cancel_requested":
-            return (L10n.string("CopyTrading asked Alpaca to cancel"), CancelReasonText.short(step.reason), true)
-        case "cancelled":
-            return (L10n.string("Cancelled"), order.flatMap { CancelReasonText.sentence($0) }, true)
-        case "expired":
-            return (L10n.string("Expired when the trading day ended"), nil, true)
+    private static func addAccount(
+        _ destination: DestinationActivity, after handedOff: Date?, several: Bool,
+        add: (String, Date, Date?, String?, [String], Bool) -> Void
+    ) {
+        func step(_ name: String) -> TimelineStep? { destination.timeline.last { $0.step == name } }
+        func date(_ step: TimelineStep?) -> Date? { Humanize.date(step?.at) }
+        func named(_ title: String) -> String { several ? L10n.string("%@ · %@", destination.accountID, title) : title }
+        let orders = Dictionary(destination.orders.map { ($0.clientID, $0) }, uniquingKeysWith: { first, _ in first })
+
+        var holdWait: String?
+        if let held = date(step("held")) {
+            let released = date(step("resumed")) ?? date(step("skipped"))
+            if let released {
+                holdWait = L10n.string("Held %@ waiting for you to resume", duration(released.timeIntervalSince(held)))
+            }
+        }
+
+        let sentStep = step("sent")
+        let sent = date(sentStep)
+        if let sent {
+            let sized = step("sized")
+            let order = (sentStep?.clientID ?? sized?.clientID).flatMap { orders[$0] }
+            let quantity = Decimal(engine: sized?.quantity ?? order?.quantity).map { $0.formatted() }
+            let limit = Decimal(engine: sized?.price ?? order?.limitPrice)?.formatted(.currency(code: "USD"))
+            var parts: [String] = []
+            if let quantity {
+                let symbol = order?.symbol ?? ""
+                parts.append(
+                    limit.map { L10n.string("%@ %@, limit %@", quantity, symbol, $0) }
+                        ?? [quantity, symbol].joined(separator: " "))
+            }
+            if let accepted = date(step("accepted")), accepted.timeIntervalSince(sent) >= measurable {
+                parts.append(L10n.string("accepted by Alpaca in %@", duration(accepted.timeIntervalSince(sent))))
+            }
+            add(named(L10n.string("Sent")), sent, handedOff, parts.joined(separator: " · ").nilIfEmpty, holdWait.map { [$0] } ?? [], false)
+        }
+
+        let ends = ["filled", "partially_filled", "cancelled", "expired", "rejected", "skipped", "failed"]
+        guard let end = destination.timeline.last(where: { ends.contains($0.step) }), let endedAt = date(end) else { return }
+        let start = sent ?? handedOff
+        let order = end.clientID.flatMap { orders[$0] } ?? sentStep?.clientID.flatMap { orders[$0] }
+        var waits: [String] = sent == nil ? (holdWait.map { [$0] } ?? []) : []
+        switch end.step {
+        case "filled", "partially_filled":
+            let quantity = Decimal(engine: end.quantity).map { $0.formatted() }
+            let price = Decimal(engine: end.price)?.formatted(.currency(code: "USD"))
+            let detail = quantity.map { qty in price.map { L10n.string("%@ %@ at %@", qty, order?.symbol ?? "", $0) } ?? qty }
+            add(named(L10n.string(end.step == "filled" ? "Filled" : "Partly filled")), endedAt, start, detail, waits, false)
+        case "cancelled", "expired":
+            if let sent { waits.append(L10n.string("Waited %@ for a fill", duration(endedAt.timeIntervalSince(sent)))) }
+            let why = cancelPhrase(step("cancel_requested")?.reason ?? order?.cancelReason)
+            let title =
+                end.step == "expired"
+                ? L10n.string("Expired at the end of the trading day")
+                : why.map { L10n.string("Cancelled · %@", $0) } ?? L10n.string("Cancelled")
+            add(named(title), endedAt, start, nil, waits, true)
         case "rejected":
-            return (L10n.string("Rejected by Alpaca"), nil, true)
+            add(named(L10n.string("Rejected by Alpaca")), endedAt, start, nil, waits, true)
+        case "skipped":
+            add(named(L10n.string("Skipped")), endedAt, start, end.reason.map { Reason.text($0) }, waits, true)
         default:
-            return (L10n.string("Couldn't send it"), step.reason.map { Reason.text($0) }, true)
+            add(named(L10n.string("Couldn't send it")), endedAt, start, end.reason.map { Reason.text($0) }, waits, true)
+        }
+    }
+
+    /// Why CopyTrading cancelled, in a few words for the Ended phase; the card says it in full.
+    @MainActor
+    private static func cancelPhrase(_ reason: String?) -> String? {
+        switch reason {
+        case "timeout": L10n.string("not filled in time")
+        case "replaced_by_sell": L10n.string("the guru sold it first")
+        case "copying_stopped": L10n.string("copying stopped")
+        case "cancelled_at_broker": L10n.string("cancelled at Alpaca")
+        default: nil
         }
     }
 

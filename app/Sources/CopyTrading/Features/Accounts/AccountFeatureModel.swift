@@ -73,6 +73,28 @@ final class AccountFeatureModel {
         }
     }
 
+    /// Re-reads only the newest posts, for the fast tick while a post is in flight; older pages
+    /// already loaded stay.
+    func refreshActivity(using actions: (any AccountOperations)?) async {
+        guard let actions, let generation = privateAccessGeneration, !isRefreshing else { return }
+        do {
+            let page = try await actions.sourceActivity(beforeSeq: nil, limit: 25)
+            guard isCurrent(generation) else { return }
+            activity = Self.merged(page.items, into: activity)
+            errors.removeValue(forKey: "read")
+            lastUpdatedAt = .now
+        } catch {
+            guard isCurrent(generation) else { return }
+            errors["read"] = error.localizedDescription
+        }
+    }
+
+    /// The newest page in place of what it covers, followed by the older posts already loaded.
+    static func merged(_ newest: [SourceActivity], into current: [SourceActivity]) -> [SourceActivity] {
+        guard let oldest = newest.map(\.id).min() else { return current }
+        return newest + current.filter { $0.id < oldest }
+    }
+
     /// Reads each loaded account's equity curve; an account with no running owner has none.
     func refreshHistories(
         window: EquityHistoryWindow? = nil, using actions: (any AccountOperations)?

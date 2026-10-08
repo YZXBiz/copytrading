@@ -9,6 +9,7 @@ import Testing
 @MainActor
 func runActivityTimelineTests() throws {
     try theTimelineShowsEveryStepWithItsGap()
+    try aFilledBuyEndsFilledWithItsTimeToFill()
     try anUnfilledBuySaysWhyItWasCancelled()
     try otherCancelsNameTheirCause()
 }
@@ -58,25 +59,52 @@ private func pm() throws -> SourceActivity {
 @MainActor
 private func theTimelineShowsEveryStepWithItsGap() throws {
     let timeline = PostTimeline(try pm())
-    let titles = timeline.rows.map(\.title)
+    let titles = timeline.phases.map(\.title)
+    try #require(titles == ["Received", "Read", "Sent", "Cancelled · not filled in time"], "phases were \(titles)")
+    let read = timeline.phases[1]
+    try #require(read.detail == "deepseek-flash · 2.9 s", "read detail \(read.detail ?? "nil")")
+    try #require(read.duration.map(PostTimeline.duration) == "3.2 s", "read took \(read.duration ?? -1)")
+    let sent = timeline.phases[2]
     try #require(
-        titles == [
-            "Posted on Discord", "Captured by CopyTrading", "Reading started", "Read", "Handed to your accounts", "Reached primary",
-            "Held: waiting for you to resume entries", "You resumed entries", "Sized and checked", "Sent to Alpaca",
-            "Alpaca accepted it", "CopyTrading asked Alpaca to cancel", "Cancelled",
-        ], "steps were \(titles)")
-    let read = try #require(timeline.rows.first { $0.title == "Read" })
-    try #require(read.gap.map(PostTimeline.duration) == "2.9 s", "read took \(read.gap ?? -1)")
-    try #require(read.detail == "by deepseek-flash", "read detail \(read.detail ?? "nil")")
-    let resumed = try #require(timeline.rows.first { $0.title == "You resumed entries" })
-    try #require(resumed.slow, "an 18 s wait for the owner must read as slow")
-    let sized = try #require(timeline.rows.first { $0.title == "Sized and checked" })
-    try #require(sized.detail == "0.995024 PM, limit $201.00", "sized detail \(sized.detail ?? "nil")")
-    try #require(!sized.slow, "sizing 3 s after the resume is not slow")
-    let cancelled = try #require(timeline.rows.last)
-    try #require(!cancelled.slow, "a market wait is never marked slow")
+        sent.detail == "0.995024 PM, limit $201.00 · accepted by Alpaca in 0.12 s", "sent detail \(sent.detail ?? "nil")")
+    try #require(sent.waits == ["Held 18 s waiting for you to resume"], "sent waits \(sent.waits)")
+    let ended = timeline.phases[3]
+    try #require(ended.waits == ["Waited 1 min 2 s for a fill"], "ended waits \(ended.waits)")
+    try #require(ended.detail == nil, "the full reason belongs on the card, not the timeline")
+    try #require(ended.caution, "an unfilled order reads as a caution")
+    try #require(
+        !timeline.phases.compactMap(\.duration).contains { $0 < PostTimeline.measurable }, "no phase may show a zero gap")
+    try #require(timeline.phases[0].duration == nil, "the first phase has no time before it")
     try #require(timeline.toOrder.map(PostTimeline.duration) == "24 s", "post to order \(timeline.toOrder ?? -1)")
     try #require(timeline.toFill == nil, "an unfilled order has no time to fill")
+}
+
+@MainActor
+private func aFilledBuyEndsFilledWithItsTimeToFill() throws {
+    var order = pmOrder()
+    order["status"] = "filled"
+    order["filled_quantity"] = "0.995024"
+    order["average_fill_price"] = "200.82"
+    order["cancel_reason"] = NSNull()
+    let source = try SourceActivityBuilder()
+        .posted(at: "2026-10-08T17:02:40.113Z")
+        .read(started: "2026-10-08T17:02:40.436Z", finished: "2026-10-08T17:02:43.329Z", delivered: "2026-10-08T17:02:43.536Z")
+        .destination(
+            "primary", status: "done", outcomes: ["order_linked"], orders: [order],
+            timeline: [
+                step("received", "2026-10-08T17:02:43.536Z"),
+                step("sized", "2026-10-08T17:02:43.600Z", quantity: "0.995024", price: "201.00"),
+                step("sent", "2026-10-08T17:02:43.610Z"),
+                step("accepted", "2026-10-08T17:02:43.700Z"),
+                step("filled", "2026-10-08T17:02:44.900Z", quantity: "0.995024", price: "200.82"),
+            ]
+        )
+        .build()
+    let timeline = PostTimeline(source)
+    try #require(timeline.phases.map(\.title) == ["Received", "Read", "Sent", "Filled"], "phases \(timeline.phases.map(\.title))")
+    try #require(timeline.phases[3].detail == "0.995024 PM at $200.82", "fill detail \(timeline.phases[3].detail ?? "nil")")
+    try #require(timeline.phases[2].waits.isEmpty && !timeline.phases[3].caution)
+    try #require(timeline.toFill.map(PostTimeline.duration) == "4.8 s", "post to fill \(timeline.toFill ?? -1)")
 }
 
 @MainActor
