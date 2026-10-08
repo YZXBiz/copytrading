@@ -5,8 +5,9 @@ import json
 import uuid
 from collections.abc import Callable, Mapping
 
-from copytrading_engine.assistant import insights
+from copytrading_engine.assistant import insights, results
 from copytrading_engine.assistant.conversation import AssistantLink, Turn
+from copytrading_engine.assistant.wording import REFUSALS
 from copytrading_engine.control import wire
 from copytrading_engine.control.service import ControlContext, ControlService
 
@@ -46,8 +47,13 @@ REFUSED_STEP = {
 }
 
 
+def refused(code: str) -> dict:
+    """A refusal the model can explain: the code, and what it means in plain words."""
+    return {"refused": code, "why": REFUSALS.get(code, code.replace("_", " "))}
+
+
 # A turn the owner cancelled, or that was dropped, must never reach the engine.
-CANCELLED = {"refused": "cancelled"}
+CANCELLED = refused("cancelled")
 
 
 class AssistantTools:
@@ -67,6 +73,29 @@ class AssistantTools:
         self._engine_state = engine_state
         self._now = now
         self._guru_names = dict(guru_names or {})
+
+    @property
+    def guru_names(self) -> dict[str, str]:
+        return dict(self._guru_names)
+
+    def knows_guru(self, guru: str) -> bool:
+        """The guru is one the app named, by id or by name."""
+        guru_id, _ = self._guru(guru)
+        return guru_id in self._guru_names
+
+    async def account_ids(self) -> list[str]:
+        """The engine's accounts, read without a step line, to tell the model which ones exist."""
+        line = json.dumps(
+            {
+                "schema_version": wire.SCHEMA_VERSION,
+                "request_id": f"a-{uuid.uuid4().hex[:12]}",
+                "operation": "get_status",
+            }
+        )
+        response = await self._control.handle(line, CONTEXT, engine_state=self._engine_state())
+        if not isinstance(response.ok, wire.StatusView):
+            return []
+        return [account.account_id for account in response.ok.accounts]
 
     def _guru(self, guru: str) -> tuple[str, str]:
         """The guru's id and display name, whether the model passed the id or the name."""
@@ -92,10 +121,10 @@ class AssistantTools:
         response = await self._control.handle(line, CONTEXT, engine_state=self._engine_state())
         if response.error is not None:
             self._turn.add_step(REFUSED_STEP[operation].format(**values))
-            return {"refused": response.error.code}
+            return refused(response.error.code)
         assert response.ok is not None
         self._turn.add_step(STEP[operation].format(**values))
-        result = response.ok.model_dump(mode="json")
+        result = results.result(response.ok, self._guru_names)
         if isinstance(response.ok, wire.ProposalView):
             # The proposal card already names the account, so it carries no extra link.
             self._turn.add_proposal(response.ok.proposal_id)
@@ -140,7 +169,7 @@ class AssistantTools:
         record = await insights.guru_record(self._operator, guru_id, days, self._now())
         self._turn.add_step(STEP["guru_record"].format(guru=name))
         self._turn.add_link(AssistantLink(kind="guru", id=guru_id, title=name))
-        return record.model_dump(mode="json") | {"guru_name": name}
+        return results.guru_record(record, name) | {"guru_id": guru_id}
 
     async def explain_skip(self, source_id: str) -> dict:
         if self._turn.cancelled:
@@ -149,7 +178,7 @@ class AssistantTools:
             explanation = await insights.explain_skip(self._operator, source_id)
         except KeyError:
             self._turn.add_step(REFUSED_STEP["explain_skip"])
-            return {"refused": "not_found"}
+            return refused("not_found")
         self._turn.add_step(STEP["explain_skip"])
         self._turn.add_link(AssistantLink(kind="post", id=source_id, title="Open in Activity"))
-        return explanation.model_dump(mode="json")
+        return results.skip(explanation)
