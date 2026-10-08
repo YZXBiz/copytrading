@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// One step of the setup on Connections: a numbered badge that turns into a green check once the
-/// step is done, the step's name and what it is for, and its rows indented under the name.
+/// One step of the setup on Connections: a tracked number that turns into an ink check once the
+/// step is done, the step's name in the display face and what it is for, and its rows under it.
 struct SetupStepSection<Content: View>: View {
     let number: Int
     let isDone: Bool
@@ -15,52 +15,47 @@ struct SetupStepSection<Content: View>: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 badge
-                    .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 6 }
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(alignment: .firstTextBaseline, spacing: 12) {
                         Text(title)
                             .font(DesignTokens.settingsHeading)
+                            .tracking(DesignTokens.listHeadingTracking)
                             .foregroundStyle(Palette.ink)
                             .accessibilityAddTraits(.isHeader)
                         if isOptional {
-                            Text(L10n.string("Optional"))
-                                .font(DesignTokens.caption.weight(.medium))
-                                .foregroundStyle(Palette.tertiaryInk)
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 2)
-                                .background(Palette.well, in: .capsule)
+                            Eyebrow(L10n.string("Optional"))
                         }
                     }
                     Text(subtitle)
                         .font(.body)
-                        .foregroundStyle(Palette.secondaryInk)
+                        .foregroundStyle(Palette.tertiaryInk)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
             VStack(alignment: .leading, spacing: 10) {
                 content
             }
-            .padding(.leading, 32)
+            .padding(.leading, 36)
         }
         .animation(reduceMotion ? nil : .smooth(duration: 0.3), value: isDone)
     }
 
     private var badge: some View {
-        ZStack {
-            Circle()
-                .fill(isDone ? Color.green : Palette.ink.opacity(0.08))
+        ZStack(alignment: .leading) {
             if isDone {
                 Image(systemName: "checkmark")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(.white)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(Palette.ink)
                     .transition(.scale.combined(with: .opacity))
             } else {
-                Text(number.formatted())
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Palette.secondaryInk)
+                Text(String(format: "%02d", number))
+                    .font(DesignTokens.eyebrow)
+                    .tracking(DesignTokens.eyebrowTracking)
+                    .monospacedDigit()
+                    .foregroundStyle(Palette.tertiaryInk)
             }
         }
-        .frame(width: 22, height: 22)
+        .frame(width: 26, alignment: .leading)
         .accessibilityElement()
         .accessibilityLabel(L10n.string("Step %@", number.formatted()))
         .accessibilityValue(isDone ? L10n.string("Done") : "")

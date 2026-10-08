@@ -50,7 +50,7 @@ struct SidebarStatusFooter: View {
                 }
                 .labelStyle(.iconOnly)
                 .buttonStyle(QuietPressButtonStyle())
-                .foregroundStyle(model.selectedScreen == .diagnostics ? Palette.accent : Palette.tertiaryInk)
+                .foregroundStyle(model.selectedScreen == .diagnostics ? Palette.ink : Palette.tertiaryInk)
                 .help(L10n.string("Diagnostics"))
                 .accessibilityIdentifier(AppModel.Screen.diagnostics.identifier)
             }

@@ -1,15 +1,18 @@
 import SwiftUI
 
-/// The guide's white page: title with the setup tour's button, how a
-/// post becomes a trade, what to know before copying, shortcuts, and where to get help.
+/// The guide as one airy page: the hero with the walker and the setup steps, how a post becomes a
+/// trade, what to know before copying, shortcuts, and where to get help. Sections are set apart
+/// by space and hairlines, never boxes.
 struct GuideDocument: View {
     @Bindable var model: AppModel
-    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 34) {
-            GuideHeader(progress: model.setupProgress, startTour: model.startSetupTour)
-                .id(GuideAnchor.top)
+        VStack(alignment: .leading, spacing: 64) {
+            VStack(alignment: .leading, spacing: 40) {
+                GuideHeader(progress: model.setupProgress, startTour: model.startSetupTour)
+                GuideStepList(progress: model.setupProgress) { model.selectedScreen = .connections }
+            }
+            .id(GuideAnchor.top)
             GuideSection("How a post becomes a trade") {
                 GuideJourneySection(open: { model.selectedScreen = $0 ?? model.homeScreen })
             }
@@ -23,14 +26,8 @@ struct GuideDocument: View {
             GuideFooter(model: model)
         }
         .padding(.horizontal, DesignTokens.documentInset)
-        .padding(.vertical, 40)
-        .frame(maxWidth: DesignTokens.readingContentMaxWidth, alignment: .leading)
-        .background(Palette.page, in: .rect(cornerRadius: DesignTokens.readingCornerRadius))
-        .overlay {
-            RoundedRectangle(cornerRadius: DesignTokens.readingCornerRadius)
-                .strokeBorder(contrast == .increased ? Palette.secondaryInk : Palette.hairline.opacity(0.7), lineWidth: 1)
-                .allowsHitTesting(false)
-        }
-        .shadow(color: .black.opacity(0.035), radius: 6, y: 2)
+        .padding(.top, 36)
+        .padding(.bottom, 48)
+        .frame(maxWidth: 820, alignment: .leading)
     }
 }

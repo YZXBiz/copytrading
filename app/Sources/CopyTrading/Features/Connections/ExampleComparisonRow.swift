@@ -56,7 +56,6 @@ struct ExampleComparisonRow: View {
                     .foregroundStyle(.orange)
             }
         }
-        .padding(8)
-        .background(.background.secondary, in: .rect(cornerRadius: DesignTokens.calloutCornerRadius))
+        .padding(.vertical, 6)
     }
 }

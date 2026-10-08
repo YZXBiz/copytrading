@@ -14,7 +14,7 @@ struct DataFolderRow: View {
         HStack(spacing: 12) {
             Image(systemName: "folder.fill")
                 .font(.title2)
-                .foregroundStyle(Palette.accent.gradient)
+                .foregroundStyle(Palette.tertiaryInk)
                 .frame(width: 30)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
@@ -33,8 +33,7 @@ struct DataFolderRow: View {
             .accessibilityElement(children: .combine)
             .accessibilityLabel(L10n.string("CopyTrading data, %@", shortPath))
             Button(L10n.string("Show in Finder"), action: showInFinder)
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.capsule)
+                .buttonStyle(PageButtonStyle())
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)

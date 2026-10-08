@@ -1,48 +1,40 @@
 import DesktopCore
 import SwiftUI
 
-/// "Setup Tips", closing the Connections page: a heading with a
-/// dismiss button and the how-tos as cards, wide and narrow in turn. Narrow pages stack them.
+/// "Setup Tips", closing the Connections page: a heading with a dismiss button and the how-tos as
+/// numbered notes, two to a row, set apart by hairlines. Narrow pages stack them.
 struct ConnectionIdeasSection: View {
     let provider: TradingProviderName
     let hide: () -> Void
     @State private var isCompact = false
+
+    private var columns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 40, alignment: .top), count: isCompact ? 1 : 2)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             HStack(alignment: .firstTextBaseline) {
                 Text(L10n.string("Setup Tips"))
                     .font(DesignTokens.displayTitle)
+                    .tracking(DesignTokens.listHeadingTracking)
                     .foregroundStyle(Palette.ink)
                     .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 12)
-                Button(L10n.string("Hide Ideas"), systemImage: "xmark.circle.fill", action: hide)
+                Button(L10n.string("Hide Ideas"), systemImage: "xmark", action: hide)
                     .labelStyle(.iconOnly)
-                    .buttonStyle(.borderless)
-                    .font(.system(size: 18))
-                    .foregroundStyle(Palette.tertiaryInk.opacity(0.6))
+                    .buttonStyle(PageButtonStyle(horizontalPadding: 8))
                     .help(L10n.string("Hide Ideas"))
                     .accessibilityIdentifier("connections.hideIdeas")
             }
-            if isCompact {
-                ForEach(ConnectionIdea.allCases) { idea in
-                    ConnectionIdeaCard(idea: idea, provider: provider, isWide: true)
-                }
-            } else {
-                HStack(spacing: 18) {
-                    ConnectionIdeaCard(idea: .channelID, provider: provider, isWide: true)
-                    ConnectionIdeaCard(idea: .discordToken, provider: provider, isWide: false)
-                        .frame(width: 300)
-                }
-                HStack(spacing: 18) {
-                    ConnectionIdeaCard(idea: .interpreterKey, provider: provider, isWide: false)
-                        .frame(width: 300)
-                    ConnectionIdeaCard(idea: .telegram, provider: provider, isWide: true)
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 32) {
+                ForEach(Array(ConnectionIdea.allCases.enumerated()), id: \.element) { index, idea in
+                    ConnectionIdeaCard(idea: idea, number: index + 1, provider: provider)
                 }
             }
         }
         .onGeometryChange(for: Bool.self) {
-            $0.size.width < 780
+            $0.size.width < 640
         } action: {
             isCompact = $0
         }

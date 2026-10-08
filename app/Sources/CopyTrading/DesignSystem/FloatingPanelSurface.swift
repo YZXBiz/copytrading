@@ -27,7 +27,6 @@ struct FloatingPanelSurface<Content: View>: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(20)
-            .background { FloatingPanelHeaderBackdrop() }
 
             Rectangle()
                 .fill(contrast == .increased ? Palette.secondaryInk : Palette.hairline)

@@ -10,8 +10,10 @@ struct SetupTourInlineHint: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(L10n.string("Tour stop %lld of %lld", Int64(stop.rawValue + 1), Int64(SetupTourStop.allCases.count)))
-                .font(.caption.weight(.medium))
-                .foregroundStyle(Palette.accent)
+                .font(DesignTokens.eyebrow)
+                .tracking(DesignTokens.eyebrowTracking)
+                .textCase(.uppercase)
+                .foregroundStyle(Palette.tertiaryInk)
                 .monospacedDigit()
             Text(L10n.string(stop.title))
                 .font(.callout.weight(.semibold))
@@ -28,8 +30,8 @@ struct SetupTourInlineHint: View {
                     .accessibilityIdentifier("tour.end")
             }
             .buttonStyle(.borderless)
-            .font(.caption.weight(.medium))
-            .foregroundStyle(Palette.accent)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(Palette.ink)
             .padding(.top, 2)
         }
         .padding(.horizontal, 4)

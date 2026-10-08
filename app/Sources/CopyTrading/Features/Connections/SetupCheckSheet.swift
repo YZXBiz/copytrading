@@ -18,11 +18,8 @@ struct SetupCheckSheet: View {
                         useModel: { model.setupDraft.modelName = $0 })
                 }
                 if model.profileExampleReviews.isEmpty && model.tradingValidation == nil {
-                    ContentUnavailableView(
-                        L10n.string("No check results"),
-                        systemImage: "checklist",
-                        description: Text(L10n.string("Start Copying tests every connection and example first. The results appear here."))
-                    )
+                    InkEmptyState(
+                        message: L10n.string("Start Copying tests every connection and example first. The results appear here."))
                 }
             }
             .formStyle(.grouped)

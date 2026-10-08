@@ -1,11 +1,11 @@
 import SwiftUI
 
-/// A caution line: an orange circled mark before quiet words.
+/// A caution line: a grey circled mark before quiet words.
 struct GuideCautionLabelStyle: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
             configuration.icon
-                .foregroundStyle(.orange)
+                .foregroundStyle(Palette.tertiaryInk)
                 .accessibilityHidden(true)
             configuration.title
         }

@@ -6,7 +6,7 @@ struct GuideFooter: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Divider()
+            Hairline()
             HStack(spacing: 16) {
                 GuideFooterLinks(model: model)
             }

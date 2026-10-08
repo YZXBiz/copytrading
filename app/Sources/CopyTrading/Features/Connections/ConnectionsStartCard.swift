@@ -1,12 +1,11 @@
 import SwiftUI
 
-/// The foot of Connections while there is something to start: how far the setup has come, and
-/// the one Start Copying that checks every connection and starts. Results stay a click away.
+/// The foot of Connections while there is something to start, between hairlines: how far the
+/// setup has come, and the one Start Copying that checks every connection and starts. Results stay
+/// a click away.
 struct ConnectionsStartCard: View {
     @Bindable var model: AppModel
     @State private var confirmDiscard = false
-    @Environment(\.colorSchemeContrast) private var contrast
-    @Environment(\.displayScale) private var displayScale
 
     private var progress: SetupProgress { model.setupProgress }
 
@@ -33,14 +32,14 @@ struct ConnectionsStartCard: View {
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(headline)
-                    .font(DesignTokens.bodyText.weight(.semibold))
+                    .font(DesignTokens.cardTitle)
                     .foregroundStyle(Palette.ink)
                     .contentTransition(.opacity)
                     .accessibilityIdentifier("setup.status")
                 if let detail {
                     Text(detail)
                         .font(.body)
-                        .foregroundStyle(Palette.secondaryInk)
+                        .foregroundStyle(Palette.tertiaryInk)
                         .fixedSize(horizontal: false, vertical: true)
                         .contentTransition(.opacity)
                 }
@@ -68,13 +67,10 @@ struct ConnectionsStartCard: View {
             StartCopyingButton(model: model)
                 .setupTourTarget(.startCopying)
         }
-        .controlSize(.large)
-        .padding(16)
-        .background(Palette.page, in: .rect(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(contrast == .increased ? Palette.secondaryInk : Palette.hairline, lineWidth: 1 / displayScale)
-        }
+        .buttonStyle(PageButtonStyle())
+        .padding(.vertical, 20)
+        .overlay(alignment: .top) { Hairline() }
+        .overlay(alignment: .bottom) { Hairline() }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.string("Start copying"))
     }
