@@ -56,6 +56,19 @@ class AccountControlChanged(EventPayloadValue):
     result: AccountControlResult
 
 
+class LimitChange(Value):
+    """One account limit the owner changed while copying: its policy name, before and after."""
+
+    setting: Identifier
+    before: str
+    after: str
+
+
+class LimitsChanged(EventPayloadValue):
+    kind: Literal["limits_changed"] = "limits_changed"
+    changes: tuple[LimitChange, ...] = Field(min_length=1)
+
+
 class OwnershipIncidentOpened(EventPayloadValue):
     kind: Literal["ownership_incident_opened"] = "ownership_incident_opened"
     incident: OwnershipIncident
@@ -291,6 +304,7 @@ type EventPayload = Annotated[
     AccountBound
     | AccountInventoried
     | AccountControlChanged
+    | LimitsChanged
     | OwnershipIncidentOpened
     | OwnershipResolved
     | SignalRejected

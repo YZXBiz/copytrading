@@ -77,6 +77,7 @@ class _Trading:
         self.learning_error: str | None = None
         self.activation_id = None
         self.revision = None
+        self.limit_updates = []
 
     def status(self):
         return TradingStatus()
@@ -102,6 +103,12 @@ class _Trading:
         self.activation_id = activation_id
         self.revision = configuration.revision()
         return TradingStatus(state="starting", configured_accounts=1)
+
+    async def update_account_limits(self, configuration):
+        self.limit_updates.append(configuration)
+        if configuration.provider.model != "test-model":
+            raise ValueError("Only account limits can change while copying")
+        return configuration.revision()
 
     def activation_status(self, activation_id):
         return TradingActivationStatus(
@@ -585,3 +592,41 @@ async def test_replay_pipe_reads_recent_posts_with_the_draft_and_never_echoes_to
     assert "private-discord-token" not in raw
     assert "private-provider-key" not in raw
     assert trading.replays == [("1517754775674949742", profile.guru_id, ("paper-account",))]
+
+
+async def test_changed_limits_apply_through_the_pipe_and_a_bad_limit_is_refused(store: Path):
+    trading = _Trading()
+    server = PipeServer(
+        SelfTestService(store, SelfTestParser()),
+        EngineQueries(store, store.installation.instance_id),
+        services(trading),
+    )
+    configuration = _configuration().model_dump(mode="json")
+    configuration["accounts"][0]["policy"] = {"max_order_usd": "500"}
+
+    applied = json.loads(
+        await server.handle_line(
+            request_line("update_account_limits", "limits-1", configuration=configuration)
+        )
+    )
+
+    assert applied["ok"] == {
+        "type": "account_limits",
+        "revision": TradingConfiguration.model_validate(configuration).revision(),
+    }
+    configuration["accounts"][0]["policy"] = {"max_order_usd": "0"}
+    refused = json.loads(
+        await server.handle_line(
+            request_line("update_account_limits", "limits-2", configuration=configuration)
+        )
+    )
+    assert refused["error"]["code"] == "invalid_request"
+    configuration["accounts"][0]["policy"] = {"max_order_usd": "500"}
+    configuration["provider"]["model"] = "other-model"
+    beyond = json.loads(
+        await server.handle_line(
+            request_line("update_account_limits", "limits-3", configuration=configuration)
+        )
+    )
+    assert beyond["error"]["code"] == "invalid_request"
+    assert len(trading.limit_updates) == 2

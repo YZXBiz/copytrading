@@ -11,6 +11,8 @@ from copytrading_engine.execution.domain.events import (
     BrokerAcknowledged,
     CancelRequested,
     JournalEvent,
+    LimitChange,
+    LimitsChanged,
     Message,
     OrderPrepared,
     OrderUpdate,
@@ -219,6 +221,8 @@ class AccountEventView(Value):
     order_id: str | None = None
     reason: str | None = None
     status: str | None = None
+    # Limits the owner changed while copying, each with its value before and after.
+    changes: tuple[LimitChange, ...] = ()
 
 
 class AccountEventPage(Value):
@@ -598,6 +602,10 @@ def _event_view(seq: int, event: JournalEvent) -> AccountEventView:
             kind=payload.kind,
             reason=command.action,
             status=command.recovery_preference,
+        )
+    if isinstance(payload, LimitsChanged):
+        return AccountEventView(
+            sequence=seq, at=event.at, kind=payload.kind, changes=payload.changes
         )
     return AccountEventView(
         sequence=seq,

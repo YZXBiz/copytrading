@@ -95,6 +95,13 @@ class CheckConnectionRequest(PipeRequest):
     ]
 
 
+class UpdateAccountLimitsRequest(PipeRequest):
+    """The saved setup with changed account limits; copying takes them without a pause."""
+
+    operation: Literal["update_account_limits"]
+    configuration: TradingConfiguration
+
+
 class PauseTradingRequest(PipeRequest):
     operation: Literal["pause_trading"]
 
@@ -329,6 +336,7 @@ RequestType = Annotated[
     | ValidateTradingRequest
     | CheckConnectionRequest
     | PauseTradingRequest
+    | UpdateAccountLimitsRequest
     | CreateBackupRequest
     | PreviewRestoreRequest
     | PrepareRestoreCandidateRequest
