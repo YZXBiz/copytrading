@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.6/CopyTrading-0.1.0-alpha.6.dmg"><img src="https://img.shields.io/badge/Download_for_macOS-0.1.0--alpha.6-1d1d1f?style=for-the-badge&logo=apple&logoColor=white" alt="Download CopyTrading for macOS" height="36"></a>
+  <a href="https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.7/CopyTrading-0.1.0-alpha.7.dmg"><img src="https://img.shields.io/badge/Download_for_macOS-0.1.0--alpha.7-1d1d1f?style=for-the-badge&logo=apple&logoColor=white" alt="Download CopyTrading for macOS" height="36"></a>
 </p>
 
 <p align="center">
@@ -71,7 +71,7 @@ Works with a dozen hosted model services, local models through Ollama, or any Op
 
 You need an Apple silicon Mac running macOS 26 or later.
 
-1. **[Download CopyTrading for macOS](https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.6/CopyTrading-0.1.0-alpha.6.dmg)** (55 MB).
+1. **[Download CopyTrading for macOS](https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.7/CopyTrading-0.1.0-alpha.7.dmg)** (55 MB).
 2. Open the DMG and drag **CopyTrading** into **Applications**.
 3. Open CopyTrading. Preview builds are not yet notarized by Apple, so the first time macOS blocks it: go to **System Settings → Privacy & Security** and choose **Open Anyway**. You only do this once.
 

@@ -2,6 +2,30 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
+## 0.1.0-alpha.7 — developer preview
+
+Setup walks you through itself, the interpreter reads each post knowing what the guru already bought, and four per-guru switches are gone ([ADR-0010](docs/adr/0010-the-reader-reads-rules-pick-shares.md)).
+
+### Setup
+
+- **A first launch walks you through setup.** CopyTrading opens on Connections with a short tour: it points at the next thing to do, from the Discord row to its Channel IDs and token, an AI service and its key, a paper account, a guru, and Start Copying, and moves on by itself as each is done. Inside a connect sheet the field and its hint share one outlined card, so it never covers the sheet's buttons or a failed check. End Tour is remembered; Getting Started's **Show Me Around** starts it again.
+- **Getting Started is a guide, not a checklist.** It opens with Show Me Around, then draws how a post becomes a trade, one SOUN call from the guru's post to the sale: click a step for one card on what happens there and what you control, with a link to where you set it. Today and Activity's **Continue Setup** starts the tour.
+- **Less work in the background.** The engine heartbeat in Settings pauses while the window is in the background, and animations stop when they have shown their change, instead of running forever.
+- **Start Copying in Setup Check starts copying.** It used to check everything again and reopen the same sheet, until you found **These Readings Look Right** above the examples. Pressing Start Copying beside the readings now approves them, and Start Copying on Connections opens them for a look first. Fractions read as 1/6, a sell example no longer warns that nothing is held, and each connection check says what it found in words ("Signed in to Discord", "Alpaca paper account found") instead of the engine's raw IDs. A connect sheet reads **Connect** until its service has connected.
+- **No more "Public Discord authorization: Unsupported".** Connection checks showed this row and a "Release gate" warning on every check, though neither ever stopped a start; both are gone.
+- **An account left by an older version no longer blocks setup.** Connection checks said "Configuration: Couldn't check this connection" when an older version had left an empty account behind that the app doesn't show; it is now checked and set aside.
+- **Claude models connect again.** Connect for Anthropic said "The model answered, but couldn't read a test post" for every Claude model; Sonnet 5.5, Opus 5.5, and Haiku 4.5 now connect and read posts.
+- **Another copy of CopyTrading is named.** When an installed copy and another build both run, the second one's engine cannot start; the banner now says so and offers **Quit the Other Copy**, instead of "stopped because of an error".
+
+### How a post becomes an order
+
+- **The interpreter sees the guru's recent calls.** Beside each post it is shown every buy the guru still holds and the last ten closed calls (stock, price, and size only, never old posts), and your own corrections in place of its readings. So "sold half of the 39.5 IREN" sells from that buy, "out of IREN" sells from every IREN buy, and a re-post of a call already copied is recognised.
+- **Every buy of a stock joins one position**, which remembers each buy's price. A sell that names a buy price sells from the buys at that price; one that names none sells the same share of every buy. A named price you hold no buy at waits for you.
+- **Removed: four switches per guru**: what a sell refers to, buys in batches, the default share, and whether "half" counts from the first buy. Write the guru's habits in the playbook instead ("第二批 means 1/3"; "Sell fractions count from the original buy"); Learn drafts them. A post with no size buys the full position, trimmed by your maximum per order. A batch or a vague trim ("took some off") that the playbook gives no size waits for you. Your saved setup is from an older version, so CopyTrading asks you to set up again.
+- **Re-posted calls, read rather than matched.** With Skip re-posted calls on, a call the interpreter reads as restating one of the guru's within the time you set counts once; a restatement after that waits for you, and Activity's "Read as" says "A re-post of an earlier call". Turn the setting off to copy every post.
+- **Guru examples can state the price and the buy a sell comes from**, and the check compares them with what the interpreter reads.
+- **Copying a call by hand:** a sell may leave "Sells from the buy at" empty to sell from every buy.
+
 ## 0.1.0-alpha.6 — developer preview
 
 Every copying rule run against DeepSeek and Alpaca paper, in regular hours and overnight; the ways copying could stop or buy twice are fixed, and skipping re-posted calls is now your choice per guru.
