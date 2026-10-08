@@ -26,7 +26,6 @@
 "%@ of %@ copying" = "正在跟单%@/%@个账户";
 "%@ of %@ shares" = "%@ / %@股";
 "%@ omitted" = "已省略 %@";
-"%@ ownership mismatch: expected %@, broker reports %@ (%@, %@)." = "%@ 持仓不一致：预期 %@，券商报告 %@（%@，%@）。";
 "%@ post" = "%@条帖子";
 "%@ posts" = "%@条帖子";
 "%@ shares left from %@%@, bought%@ in %@." = "剩余%@股，来源 %@%@，买入价%@，账户 %@。";
@@ -1682,3 +1681,11 @@
 "The playbook is drafted; read it over before you start copying." = "策略手册已起草；开始跟单前请通读一遍。";
 "Added 1 example post below yours." = "在你的示例下方添加了 1 条示例帖子。";
 "Added %lld example posts below yours." = "在你的示例下方添加了 %lld 条示例帖子。";
+"The holdings couldn't be settled: %@. Check the broker for open orders in %@, then try again." = "持仓无法确认：%@。请检查券商里 %@ 的未成交订单，然后再试。";
+"Clear the Old Count" = "清除旧的计数";
+"Count %@ Shares as Yours" = "把 %@ 股算作你自己的";
+"CopyTrading counted %@ %@ shares, and the broker holds %@. Every copied share is still there, so the broker's other shares count as yours, and %@ is copied again." = "CopyTrading 记录了 %@ 股 %@，券商持有 %@。跟单买入的股票都还在，所以券商的其余股票算作你自己的，%@ 会恢复跟单。";
+"Treat %@ Copied Shares as Sold" = "把 %@ 股跟单股票视为已卖出";
+"CopyTrading bought %@ %@ shares, and the broker holds %@. The missing shares were sold outside CopyTrading; the oldest buys are counted as sold first, and %@ is copied again." = "CopyTrading 买入了 %@ 股 %@，券商持有 %@。缺少的股票是在 CopyTrading 之外卖出的；最早的买入先算作卖出，%@ 会恢复跟单。";
+"%@ holdings need your review: CopyTrading counted %@, the broker holds %@. Calls for %@ wait until you settle it." = "%@ 的持仓需要你确认：CopyTrading 记录了 %@，券商持有 %@。确认之前，%@ 的喊单会先等待。";
+"Review in Accounts" = "在账户中确认";

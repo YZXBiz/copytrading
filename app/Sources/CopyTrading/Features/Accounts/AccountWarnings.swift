@@ -3,6 +3,8 @@ import SwiftUI
 
 struct AccountWarnings: View {
     let account: AccountOverview
+    let model: AppModel
+    let feature: AccountFeatureModel
 
     var body: some View {
         if let reason = account.accountRiskReason {
@@ -12,14 +14,7 @@ struct AccountWarnings: View {
             Callout(L10n.string("Broker activity: %@", L10n.string(Humanize.code(reason))), tone: .caution)
         }
         ForEach(account.ownershipIncidents) { incident in
-            Callout(
-                L10n.string(
-                    "%@ ownership mismatch: expected %@, broker reports %@ (%@, %@).",
-                    incident.symbol, incident.expectedQty, incident.actualQty,
-                    L10n.string(Humanize.code(incident.cause).lowercased()), Humanize.timestamp(incident.observedAt)
-                ),
-                tone: .critical
-            )
+            OwnershipIncidentCallout(incident: incident, account: account, model: model, feature: feature)
         }
         let listed = Set(account.ownershipIncidents.map(\.incidentID))
         let unlisted = account.unresolvedIncidents.filter { !listed.contains($0) }

@@ -114,6 +114,7 @@ struct TradingSettingsSaveTests {
         try checkOperatorWireFixtures()
         try await checkAccountPageClientRequest()
         try await checkAccountFeatureActions()
+        try await checkOwnershipResolution(configuration: configuration)
         try await checkAccountFeatureLockInterleavings()
         try await checkManualReviewActionPath()
         try await checkManualCorrectionReplicaRepairPath()
@@ -1723,6 +1724,65 @@ struct TradingSettingsSaveTests {
         print("CopyTradingContractTests: account page request and cursor matched shared wire fixtures")
     }
 
+    /// A holdings question becomes one answer the owner confirms: copied shares the broker still
+    /// holds stay copied, the rest are the owner's, and a shortfall sells the oldest buys first.
+    private static func checkOwnershipResolution(configuration: TradingConfiguration) async throws {
+        func incident(_ symbol: String, expected: String, actual: String) throws -> OwnershipIncidentView {
+            let json =
+                #"{"incident_id":"position-\#(symbol)","symbol":"\#(symbol)","expected_qty":"\#(expected)","actual_qty":"\#(actual)","observed_at":"2026-10-08T05:48:00Z","cause":"position_mismatch"}"#
+            return try JSONDecoder().decode(OwnershipIncidentView.self, from: Data(json.utf8))
+        }
+        func position(_ symbol: String, broker: String?, lots: [(String, String)]) throws -> AccountPositionView {
+            let lotJSON = lots.map { #"{"lot_id":"\#($0.0)","original_qty":"\#($0.1)","remaining_qty":"\#($0.1)","average_price":"10"}"# }
+            let brokerJSON = broker.map { #""\#($0)""# } ?? "null"
+            let json =
+                #"{"symbol":"\#(symbol)","owned_qty":"0","external_qty":"0","broker_qty":\#(brokerJSON),"lots":[\#(lotJSON.joined(separator: ","))]}"#
+            return try JSONDecoder().decode(AccountPositionView.self, from: Data(json.utf8))
+        }
+
+        // The owner's own shares were sold outside, and nothing was copied: the old count clears.
+        let sold = OwnershipFix(
+            incident: try incident("F", expected: "1.54202", actual: "0"),
+            position: try position("F", broker: nil, lots: []), accountID: "paper")
+        try check(sold.title == "Clear the Old Count", "A sold-off outside holding offered \(sold.title)")
+        try check(
+            sold.request.brokerQty == "0" && sold.request.externalQty == "0" && sold.request.lotRemaining.isEmpty,
+            "Clearing an outside holding did not allocate the broker's zero")
+
+        // More shares at the broker than were copied: the extra are the owner's.
+        let extra = OwnershipFix(
+            incident: try incident("ABC", expected: "5", actual: "7"),
+            position: try position("ABC", broker: "7", lots: [("l1", "5")]), accountID: "paper")
+        try check(extra.title == "Count 2 Shares as Yours", "Extra broker shares offered \(extra.title)")
+        try check(extra.request.externalQty == "2" && extra.request.lotRemaining == ["l1": "5"], "Copied shares changed")
+
+        // Fewer than were copied: the oldest buys count as sold first.
+        let short = OwnershipFix(
+            incident: try incident("XYZ", expected: "5", actual: "4"),
+            position: try position("XYZ", broker: "4", lots: [("old", "3"), ("new", "2")]), accountID: "paper")
+        try check(short.title == "Treat 1 Copied Shares as Sold", "A shortfall offered \(short.title)")
+        try check(
+            short.request.externalQty == "0" && short.request.lotRemaining == ["old": "2", "new": "2"],
+            "A shortfall did not sell the oldest buy first: \(short.request.lotRemaining)")
+
+        let actions = RecordingAccountActions()
+        let feature = AccountFeatureModel()
+        feature.authorizePrivateEvidence()
+        await feature.refresh(using: actions)
+        await feature.resolveOwnership(sold, using: actions)
+        let sent = await actions.recordedResolutions()
+        try check(sent == [sold.request], "The owner's answer did not reach the engine")
+        try check(feature.errors["paper"] == nil, "A settled holding left an error")
+
+        // An unreadable account the saved setup doesn't copy into is from an earlier setup.
+        try check(feature.unavailable(in: nil).map(\.accountID) == ["archive"], "Unreadable accounts were dropped")
+        let copiesInto = Set(configuration.accounts.map(\.id))
+        try check(
+            feature.unavailable(in: configuration).allSatisfy { copiesInto.contains($0.accountID) },
+            "An earlier setup's unreadable account was still shown")
+        print("CopyTradingContractTests: holdings questions settle with one confirmed answer")
+    }
+
     private static func checkAccountFeatureActions() async throws {
         let actions = RecordingAccountActions()
         let feature = AccountFeatureModel()
@@ -2283,6 +2343,17 @@ private func checkLogSettingsPersistBeforeRuntime(_ stateRoot: URL) throws {
 
 private actor RecordingAccountActions: AccountOperations {
     private var commands: [AccountControlCommand] = []
+    private var resolutions: [OwnershipResolutionRequest] = []
+
+    func recordedResolutions() -> [OwnershipResolutionRequest] { resolutions }
+
+    func resolveOwnership(accountID: String, resolution: OwnershipResolutionRequest) throws -> OwnershipResolution {
+        resolutions.append(resolution)
+        let request = try JSONEncoder().encode(resolution)
+        let json =
+            #"{"request":\#(String(decoding: request, as: UTF8.self)),"checked_at":"2026-10-08T06:00:00Z","lot_reductions":{},"allocation_revision":1}"#
+        return try JSONDecoder().decode(OwnershipResolution.self, from: Data(json.utf8))
+    }
     private var permission = "disabled"
     private var windows: [EquityHistoryWindow] = []
     private var firstFailure: CheckedContinuation<Void, Never>?
@@ -2389,6 +2460,10 @@ private actor SuspendedAccountActions: AccountOperations {
     }
 
     func isSuspended(_ operation: String) -> Bool { activeOperation == operation }
+
+    func resolveOwnership(accountID: String, resolution: OwnershipResolutionRequest) throws -> OwnershipResolution {
+        throw ContractFailure("Ownership resolution is not part of the suspension checks")
+    }
 
     func suspendNext(_ operation: String) {
         suspendedOperation = operation

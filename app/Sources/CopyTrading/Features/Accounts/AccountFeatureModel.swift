@@ -8,6 +8,7 @@ protocol AccountOperations: Sendable {
     func accountEvents(accountID: String, beforeSeq: Int?, limit: Int) async throws -> AccountEventPage
     func controlAccount(_ command: AccountControlCommand) async throws -> AccountControlResult
     func equityHistory(accountID: String, window: EquityHistoryWindow) async throws -> EquityHistory?
+    func resolveOwnership(accountID: String, resolution: OwnershipResolutionRequest) async throws -> OwnershipResolution
 }
 
 extension EngineActions: AccountOperations {}
@@ -193,6 +194,33 @@ final class AccountFeatureModel {
             guard isCurrent(generation) else { return }
             errors[accountID] = error.localizedDescription
         }
+    }
+
+    /// Settles a holdings question the owner answered, then rereads the accounts so the warning
+    /// and the held-back entries clear together.
+    func resolveOwnership(_ fix: OwnershipFix, using actions: (any AccountOperations)?) async {
+        let accountID = fix.request.accountID
+        guard let actions, privateAccessGeneration != nil, !pendingAccounts.contains(accountID) else { return }
+        pendingAccounts.insert(accountID)
+        defer { pendingAccounts.remove(accountID) }
+        do {
+            _ = try await actions.resolveOwnership(accountID: accountID, resolution: fix.request)
+            errors.removeValue(forKey: accountID)
+        } catch {
+            errors[accountID] = L10n.string(
+                "The holdings couldn't be settled: %@. Check the broker for open orders in %@, then try again.",
+                error.localizedDescription, fix.request.symbol)
+            return
+        }
+        await refresh(using: actions)
+    }
+
+    /// Accounts the saved setup copies into that couldn't be read. One left by an earlier setup
+    /// isn't the owner's concern any more, so it isn't shown.
+    func unavailable(in setup: TradingConfiguration?) -> [AccountUnavailable] {
+        guard let setup else { return unavailableAccounts }
+        let ids = Set(setup.accounts.map(\.id))
+        return unavailableAccounts.filter { ids.contains($0.accountID) }
     }
 
     func loadEvents(accountID: String, more: Bool = false, using actions: (any AccountOperations)?) async {

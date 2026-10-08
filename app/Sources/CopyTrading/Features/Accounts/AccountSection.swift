@@ -20,7 +20,7 @@ struct AccountSection: View {
             if !account.ownershipIncidents.isEmpty || account.accountRiskReason != nil
                 || account.accountActivityReason != nil || !account.unresolvedIncidents.isEmpty
             {
-                AccountWarnings(account: account)
+                AccountWarnings(account: account, model: model, feature: feature)
             }
             Divider()
             ViewThatFits(in: .horizontal) {
