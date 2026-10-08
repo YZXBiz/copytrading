@@ -836,3 +836,35 @@ def test_a_mismatch_stays_open_while_it_lasts_and_closes_once_the_broker_matches
     [resolution] = store.load().ownership_resolutions.values()
     assert resolution.request.reason == "broker_matches_again"
     assert resolution.request.external_qty == 0
+
+
+def test_owner_selling_their_own_shares_of_a_stock_with_nothing_copied_closes_by_itself():
+    store = MemoryRepository()
+    broker = FakeBroker()
+    broker.holdings["ABC"] = Decimal("1.54202")
+    engine = engine_with_wide_limits(store, broker)
+    # Connected while the owner held ABC: those shares are the owner's own.
+    engine.bind(NOW)
+    assert engine.ledger.snapshot().external_positions["ABC"].qty == Decimal("1.54202")
+
+    # The owner sells them outside the app: the broker now holds fewer than the owner's count.
+    broker.holdings["ABC"] = Decimal("0")
+    engine.reconcile(NOW + dt.timedelta(minutes=1))
+    engine.reconcile(NOW + dt.timedelta(minutes=2))
+    engine.reconcile(NOW + dt.timedelta(minutes=3))
+
+    assert not engine.ledger.unresolved_ownership("ABC")
+    [resolution] = store.load().ownership_resolutions.values()
+    assert resolution.request.reason == "owner_sold_own_shares"
+    assert resolution.request.external_qty == 0
+    assert engine.ledger.snapshot().external_positions["ABC"].qty == 0
+
+
+def test_a_shortfall_beside_copied_shares_still_waits_for_the_owner():
+    _, broker, engine = mixed_account()
+    broker.holdings["ABC"] -= Decimal("10")
+    engine.reconcile(NOW + dt.timedelta(minutes=1))
+    engine.reconcile(NOW + dt.timedelta(minutes=2))
+    engine.reconcile(NOW + dt.timedelta(minutes=3))
+
+    assert engine.ledger.unresolved_ownership("ABC")

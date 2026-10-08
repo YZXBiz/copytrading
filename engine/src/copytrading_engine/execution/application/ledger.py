@@ -638,9 +638,14 @@ class TradingLedger:
             )
 
     def open_ownership_incidents(self, audit: PositionAudit, now: dt.datetime) -> None:
-        self._close_matched_incidents(audit, now)
+        # The audit predates what was just closed, so those stocks wait for the next one.
+        closed = self._close_matched_incidents(audit, now)
         for comparison in audit.positions:
-            if not comparison.mismatched or self.unresolved_ownership(comparison.symbol):
+            if (
+                not comparison.mismatched
+                or comparison.symbol in closed
+                or self.unresolved_ownership(comparison.symbol)
+            ):
                 continue
             revision = sum(
                 incident.symbol == comparison.symbol
@@ -667,19 +672,34 @@ class TradingLedger:
                 JournalEvent(at=now, payload=OwnershipIncidentOpened(incident=incident)),
             )
 
-    def _close_matched_incidents(self, audit: PositionAudit, now: dt.datetime) -> None:
-        """A mismatch closes by itself once the broker holds exactly what the app expects again,
-        as when shares bought outside the app are sold again: nothing is left to allocate, and
-        an open incident would keep refusing every call for the stock."""
+    def _close_matched_incidents(self, audit: PositionAudit, now: dt.datetime) -> set[str]:
+        """A mismatch closes by itself when nothing about it is ambiguous: the broker holds
+        exactly what the app expects again (shares bought outside were sold again), or the stock
+        has no copied shares left and the broker holds fewer than the owner's own count (the
+        owner sold their own shares). Either way nothing is left to allocate, and an open incident
+        would keep refusing every call for the stock. Shares that appear, or a shortfall beside
+        copied shares, still wait for the owner."""
         account_id = self.account_id
+        closed: set[str] = set()
         if account_id is None:
-            return
+            return closed
         compared = {comparison.symbol: comparison for comparison in audit.positions}
         for incident in tuple(self._snapshot.ownership_incidents.values()):
             if incident.resolved:
                 continue
+            lots = {
+                key: lot.remaining_qty
+                for key, lot in self._snapshot.lots.items()
+                if lot.symbol == incident.symbol
+            }
             comparison = compared.get(incident.symbol)
-            if comparison is not None and comparison.actual != comparison.expected:
+            matches = comparison is None or comparison.actual == comparison.expected
+            owner_sold_own = (
+                comparison is not None
+                and comparison.actual < comparison.expected
+                and not any(lots.values())
+            )
+            if not (matches or owner_sold_own):
                 continue
             if self.pending(incident.symbol) or any(
                 item.symbol == incident.symbol and item.unresolved
@@ -687,11 +707,6 @@ class TradingLedger:
             ):
                 continue
             broker_qty = comparison.actual if comparison is not None else Decimal(0)
-            lots = {
-                key: lot.remaining_qty
-                for key, lot in self._snapshot.lots.items()
-                if lot.symbol == incident.symbol
-            }
             external_qty = broker_qty - sum(lots.values(), Decimal(0))
             if external_qty < 0 or now <= incident.observed_at:
                 continue
@@ -702,13 +717,15 @@ class TradingLedger:
                     account_id=account_id,
                     symbol=incident.symbol,
                     actor="copytrading",
-                    reason="broker_matches_again",
+                    reason="broker_matches_again" if matches else "owner_sold_own_shares",
                     broker_qty=broker_qty,
                     external_qty=external_qty,
                     lot_remaining=lots,
                 ),
                 now,
             )
+            closed.add(incident.symbol)
+        return closed
 
     def resolve_ownership(
         self, request: OwnershipResolutionRequest, checked_at: dt.datetime
