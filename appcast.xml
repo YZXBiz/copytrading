@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+  <channel>
+    <title>CopyTrading</title>
+    <item>
+      <title>CopyTrading 0.1.0-alpha.8</title>
+      <pubDate>Thu, 08 Oct 2026 04:45:39 +0000</pubDate>
+      <sparkle:version>68</sparkle:version>
+      <sparkle:shortVersionString>0.1.0-alpha.8</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <sparkle:releaseNotesLink>https://github.com/YZXBiz/copytrading/releases/tag/v0.1.0-alpha.8</sparkle:releaseNotesLink>
+      <enclosure url="https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.8/CopyTrading-0.1.0-alpha.8.dmg" length="57276968" type="application/octet-stream" sparkle:edSignature="bnLybGG/go0eiNi5WdkXu7CB5ilnT/ZwvZ9PLYoQxtlaCa76PPCt95K2H5jtKfq275wxy2hKPATq+/KYj7dYAg==" />
+    </item>
+    <item>
+      <title>CopyTrading 0.1.0-alpha.7</title>
+      <pubDate>Thu, 08 Oct 2026 00:50:59 +0000</pubDate>
+      <sparkle:version>66</sparkle:version>
+      <sparkle:shortVersionString>0.1.0-alpha.7</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <sparkle:releaseNotesLink>https://github.com/YZXBiz/copytrading/releases/tag/v0.1.0-alpha.7</sparkle:releaseNotesLink>
+      <enclosure url="https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.7/CopyTrading-0.1.0-alpha.7.dmg" length="57264155" type="application/octet-stream" sparkle:edSignature="U54W8zcnkiLTRIxSJoiI5KZWNJJtpb9gU185ZxQ5m5oR65xM9uI/EwKQm2CjWVrLybcVgslelfB8fKuBzfUxCA==" />
+    </item>
+    <item>
+      <title>CopyTrading 0.1.0-alpha.6</title>
+      <pubDate>Wed, 07 Oct 2026 16:09:03 +0000</pubDate>
+      <sparkle:version>64</sparkle:version>
+      <sparkle:shortVersionString>0.1.0-alpha.6</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <sparkle:releaseNotesLink>https://github.com/YZXBiz/copytrading/releases/tag/v0.1.0-alpha.6</sparkle:releaseNotesLink>
+      <enclosure url="https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.6/CopyTrading-0.1.0-alpha.6.dmg" length="57190578" type="application/octet-stream" sparkle:edSignature="PcdSKHV3djq1bLGZd5tL+xZkGNwTOL/M+aONukh4N2Z035bPW6Fzdzp4Rurj9mfBFl/NyCRZWWPwVLUxAiArDw==" />
+    </item>
+    <item>
+      <title>CopyTrading 0.1.0-alpha.5</title>
+      <pubDate>Wed, 07 Oct 2026 03:30:43 +0000</pubDate>
+      <sparkle:version>60</sparkle:version>
+      <sparkle:shortVersionString>0.1.0-alpha.5</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <sparkle:releaseNotesLink>https://github.com/YZXBiz/copytrading/releases/tag/v0.1.0-alpha.5</sparkle:releaseNotesLink>
+      <enclosure url="https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.5/CopyTrading-0.1.0-alpha.5.dmg" length="57186346" type="application/octet-stream" sparkle:edSignature="MVUxMiGL/eJsJ5vdHD6566pMha1z0cnKBnfFU1OyggGmqluRRwjAeOkh2UBVHw06k3sjHqT22hQ+pVIBhwzODQ==" />
+    </item>
+    <item>
+      <title>CopyTrading 0.1.0-alpha.4</title>
+      <pubDate>Wed, 07 Oct 2026 00:06:37 +0000</pubDate>
+      <sparkle:version>59</sparkle:version>
+      <sparkle:shortVersionString>0.1.0-alpha.4</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <sparkle:releaseNotesLink>https://github.com/YZXBiz/copytrading/releases/tag/v0.1.0-alpha.4</sparkle:releaseNotesLink>
+      <enclosure url="https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.4/CopyTrading-0.1.0-alpha.4.dmg" length="57187622" type="application/octet-stream" sparkle:edSignature="YFo6t+tH8PvJK6wRyY5gbXbK4921BSf85fLncyjoPJD+aSdqMJHusktHybfGPQTBVnSPH9WxBv/feCExagoRCA==" />
+    </item>
+  </channel>
+</rss>
