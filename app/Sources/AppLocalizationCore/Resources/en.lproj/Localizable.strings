@@ -1791,3 +1791,9 @@
 "%@ · %@ · %@" = "%@ · %@ · %@";
 "Partly traded" = "Partly traded";
 "Your buys pay at most the guru's price, not a cent above, so it waited for the price to come down. Raise Maximum above signal price in the account's limits to let buys fill nearby." = "Your buys pay at most the guru's price, not a cent above, so it waited for the price to come down. Raise Maximum above signal price in the account's limits to let buys fill nearby.";
+"Buy %@ %@" = "Buy %@ %@";
+"%@ of a full position" = "%@ of a full position";
+"Batch %lld" = "Batch %lld";
+"Sell %@ of the %@ bought at %@" = "Sell %@ of the %@ bought at %@";
+"Sell %@ of %@" = "Sell %@ of %@";
+"a re-post of an earlier call" = "a re-post of an earlier call";

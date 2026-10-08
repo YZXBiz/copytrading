@@ -6,7 +6,7 @@ struct ActivitySourceContentView: View {
     let item: SourceActivity
     /// The words the reader took each value from, marked where they appear (ADR-0007).
     var citedWords: [String] = []
-    @ScaledMetric(relativeTo: .body) private var readingBodySize = 17
+    @ScaledMetric(relativeTo: .body) private var readingBodySize = 18
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -58,7 +58,8 @@ struct ActivitySourceContentView: View {
         .textSelection(.enabled)
     }
 
-    /// The post with each cited word softly marked; words the post shows differently stay plain.
+    /// The post with each cited word underlined in the accent, quietly; words the post shows
+    /// differently stay plain.
     private func marked(_ text: AttributedString) -> AttributedString {
         var text = text
         let plain = String(text.characters)
@@ -66,7 +67,8 @@ struct ActivitySourceContentView: View {
             let start = text.characters.index(
                 text.startIndex, offsetBy: plain.distance(from: plain.startIndex, to: range.lowerBound))
             let end = text.characters.index(start, offsetBy: plain.distance(from: range.lowerBound, to: range.upperBound))
-            text[start..<end].backgroundColor = Palette.accent.opacity(colorScheme == .dark ? 0.24 : 0.13)
+            text[start..<end].underlineStyle = Text.LineStyle(
+                pattern: .dot, color: Palette.accent.opacity(colorScheme == .dark ? 0.6 : 0.45))
         }
         return text
     }

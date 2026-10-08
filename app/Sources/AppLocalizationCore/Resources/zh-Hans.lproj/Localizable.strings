@@ -1791,3 +1791,9 @@
 "%@ · %@ · %@" = "%@ · %@ · %@";
 "Partly traded" = "部分成交";
 "Your buys pay at most the guru's price, not a cent above, so it waited for the price to come down. Raise Maximum above signal price in the account's limits to let buys fill nearby." = "你的买入最多按导师的价格成交，一分钱都不多付，所以它一直在等价格回落。在账户限额里调高“高于信号价的上限”，买单就能在附近价位成交。";
+"Buy %@ %@" = "买入 %@，%@";
+"%@ of a full position" = "满仓的%@";
+"Batch %lld" = "第 %lld 批";
+"Sell %@ of the %@ bought at %@" = "卖出%@：%@ 在 %@ 买入的那笔";
+"Sell %@ of %@" = "卖出%@：%@";
+"a re-post of an earlier call" = "重复之前的信号";

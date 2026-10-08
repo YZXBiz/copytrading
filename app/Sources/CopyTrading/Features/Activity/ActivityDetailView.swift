@@ -49,12 +49,14 @@ struct ActivityDetailView: View {
     private var card: some View {
         let outcome = outcome
         return VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 0) {
                 header(outcome)
-                quote
-                readAs.padding(.top, 2)
+                quote.padding(.top, 20)
+                readAs.padding(.top, 22)
             }
-            .padding(22)
+            .padding(.horizontal, 28)
+            .padding(.top, 24)
+            .padding(.bottom, 22)
             if item.decision != "ignore" {
                 hairline
                 accounts(outcome)
@@ -71,9 +73,9 @@ struct ActivityDetailView: View {
     /// The guru's own words, set off like a quotation so they never read as the app's.
     private var quote: some View {
         HStack(alignment: .top, spacing: 14) {
-            RoundedRectangle(cornerRadius: 1.5)
-                .fill(Palette.hairline)
-                .frame(width: 3)
+            RoundedRectangle(cornerRadius: 1.25)
+                .fill(Palette.accent.opacity(0.55))
+                .frame(width: 2.5)
             ActivitySourceContentView(item: item, citedWords: item.reading?.citedWords ?? [])
         }
         .fixedSize(horizontal: false, vertical: true)
@@ -88,29 +90,28 @@ struct ActivityDetailView: View {
             HStack(alignment: .center, spacing: 12) {
                 author
                 Spacer(minLength: 8)
-                StatusBadge(outcome.title, tone: outcome.tone)
+                StatusDotLabel(text: outcome.title, tone: outcome.tone)
             }
             VStack(alignment: .leading, spacing: 8) {
                 author
-                StatusBadge(outcome.title, tone: outcome.tone)
-                    .padding(.leading, 42)
+                StatusDotLabel(text: outcome.title, tone: outcome.tone)
+                    .padding(.leading, 36)
             }
         }
     }
 
     private var author: some View {
         HStack(spacing: 10) {
-            GuruMonogram(name: guruName ?? "?", size: 32)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(guruName ?? L10n.string("Unknown guru"))
-                    .font(DesignTokens.personTitle)
-                    .foregroundStyle(Palette.ink)
-                    .lineLimit(1)
-                Text(Humanize.postTime(item.sourceAt))
-                    .font(DesignTokens.caption)
-                    .foregroundStyle(Palette.tertiaryInk)
-                    .lineLimit(2)
-            }
+            GuruMonogram(name: guruName ?? "?", size: 26)
+            Text(guruName ?? L10n.string("Unknown guru"))
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Palette.ink)
+                .lineLimit(1)
+            Text(Humanize.postTime(item.sourceAt))
+                .font(DesignTokens.caption)
+                .foregroundStyle(Palette.tertiaryInk)
+                .monospacedDigit()
+                .lineLimit(1)
         }
     }
 
@@ -129,13 +130,27 @@ struct ActivityDetailView: View {
                     subline([ReadAsText.kind(reading), readBy].compactMap(\.self))
                 } else {
                     ForEach(Array(reading.calls.enumerated()), id: \.offset) { index, call in
-                        VStack(alignment: .leading, spacing: 4) {
-                            readLine(ReadAsText.line(call))
+                        let headline = ReadAsText.headline(call)
+                        VStack(alignment: .leading, spacing: 3) {
+                            readLine(headline.title)
+                            if let detail = headline.detail {
+                                Text(detail)
+                                    .font(.system(size: 17))
+                                    .foregroundStyle(Palette.secondaryInk)
+                                    .monospacedDigit()
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                             subline(
-                                [index == 0 ? ReadAsText.kind(reading) : nil, ReadAsText.note(call), index == 0 ? readBy : nil]
-                                    .compactMap(\.self))
+                                [
+                                    index == 0 ? ReadAsText.kind(reading) : nil, ReadAsText.note(call),
+                                    ReadAsText.isRepost(call) ? L10n.string("a re-post of an earlier call") : nil,
+                                    index == 0 ? readBy : nil,
+                                ]
+                                .compactMap(\.self)
+                            )
+                            .padding(.top, 5)
                         }
-                        .padding(.top, index == 0 ? 0 : 8)
+                        .padding(.top, index == 0 ? 0 : 14)
                     }
                 }
             } else {
@@ -159,7 +174,8 @@ struct ActivityDetailView: View {
 
     private func readLine(_ text: String) -> some View {
         Text(text)
-            .font(DesignTokens.cardSerif)
+            .font(.system(size: 21, weight: .semibold))
+            .tracking(-0.3)
             .foregroundStyle(Palette.ink)
             .monospacedDigit()
             .fixedSize(horizontal: false, vertical: true)
@@ -175,7 +191,7 @@ struct ActivityDetailView: View {
         let line = parts.joined(separator: " · ")
         return Text(line.prefix(1).uppercased() + line.dropFirst())
             .font(DesignTokens.caption)
-            .foregroundStyle(Palette.secondaryInk)
+            .foregroundStyle(Palette.tertiaryInk)
             .fixedSize(horizontal: false, vertical: true)
     }
 
@@ -201,36 +217,32 @@ struct ActivityDetailView: View {
             }
             ForEach(Array(shown.enumerated()), id: \.element.id) { index, account in
                 if index > 0 {
-                    Rectangle().fill(Palette.hairline.opacity(0.6)).frame(height: 1).padding(.leading, 62)
+                    Rectangle().fill(Palette.hairline.opacity(0.6)).frame(height: 1).padding(.leading, 140)
                 }
-                accountRow(account)
-                    .padding(.horizontal, 22)
+                accountRow(account, showsStatus: shown.count > 1)
+                    .padding(.horizontal, 28)
                     .padding(.vertical, 16)
             }
         }
     }
 
-    private func accountRow(_ account: ActivityCardOutcome.Account) -> some View {
+    /// One account's result as a ledger row: whose it is on the left, what happened in the middle,
+    /// and its own status on the right when the card covers several accounts.
+    private func accountRow(_ account: ActivityCardOutcome.Account, showsStatus: Bool) -> some View {
         let environment = TradingEnvironment(rawValue: account.environment) ?? .paper
         let status = item.destinations.first { $0.accountID == account.id }.map(DestinationOutcome.init)
-        return HStack(alignment: .top, spacing: 14) {
-            Image(systemName: "building.columns.fill")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 26, height: 26)
-                .background(environment == .live ? Color.orange.gradient : Palette.accent.gradient, in: .rect(cornerRadius: 7))
-                .accessibilityHidden(true)
+        return HStack(alignment: .firstTextBaseline, spacing: 0) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(account.id)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
+                    .lineLimit(1)
+                Text(L10n.string(environment == .live ? "Live" : "Paper"))
+                    .font(DesignTokens.caption.weight(.medium))
+                    .foregroundStyle(environment == .live ? Color.orange : Palette.tertiaryInk)
+            }
+            .frame(width: 112, alignment: .leading)
             VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Text(account.id)
-                        .font(DesignTokens.bodyEmphasis)
-                        .foregroundStyle(Palette.ink)
-                    EnvironmentBadge(environment: environment)
-                    Spacer(minLength: 8)
-                    if let status {
-                        StatusBadge(status.title, tone: status.tone)
-                    }
-                }
                 ForEach(Array(account.lines.enumerated()), id: \.offset) { _, line in
                     VStack(alignment: .leading, spacing: 2) {
                         Text(line.what)
@@ -264,6 +276,10 @@ struct ActivityDetailView: View {
                         .padding(.top, 4)
                         .accessibilityIdentifier("activity.reviewHoldings")
                 }
+            }
+            Spacer(minLength: 16)
+            if showsStatus, let status {
+                StatusDotLabel(text: status.title, tone: status.tone)
             }
         }
         .accessibilityElement(children: .contain)
@@ -307,8 +323,9 @@ struct ActivityDetailView: View {
             .accessibilityIdentifier("activity.copy")
             .accessibilityHint(L10n.string("Opens the call to check, then previews the order in each waiting account."))
             Button(L10n.string("Skip")) { skippedCalls.skip(item.sourceID) }
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.capsule)
+                .buttonStyle(.borderless)
+                .foregroundStyle(Palette.secondaryInk)
+                .padding(.horizontal, 6)
                 .accessibilityIdentifier("activity.skip")
         }
     }

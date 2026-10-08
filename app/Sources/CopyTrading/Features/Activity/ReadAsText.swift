@@ -46,6 +46,40 @@ enum ReadAsText {
         return repeats == nil ? said : L10n.string("%@ A re-post of an earlier call.", said)
     }
 
+    /// A call as the card's headline and the phrase under it: "Buy WMT at $110" and "A sixth of a
+    /// full position". The sentence `line` gives the same facts in one breath.
+    static func headline(_ call: ReadCall) -> (title: String, detail: String?) {
+        switch call {
+        case .buy(let buy):
+            let title = L10n.string("Buy %@ %@", buy.stock.ticker, price(buy.price))
+            switch buy.size {
+            case .fraction(let value, _): return (title, capitalized(L10n.string("%@ of a full position", portion(value))))
+            case .batch(let number, _): return (title, L10n.string("Batch %lld", Int64(number)))
+            case .notGiven: return (title, nil)
+            }
+        case .sell(let sell):
+            let title: String
+            if case .lot(let buyPrice, _) = sell.sellFrom {
+                title = L10n.string("Sell %@ of the %@ bought at %@", share(sell.share), sell.stock.ticker, Humanize.dollars(buyPrice))
+            } else {
+                title = L10n.string("Sell %@ of %@", share(sell.share), sell.stock.ticker)
+            }
+            return (title, capitalized(price(sell.price)))
+        }
+    }
+
+    /// The reader took the call for a re-post of one the guru already made.
+    static func isRepost(_ call: ReadCall) -> Bool {
+        switch call {
+        case .buy(let buy): buy.repeats != nil
+        case .sell(let sell): sell.repeats != nil
+        }
+    }
+
+    private static func capitalized(_ text: String) -> String {
+        text.prefix(1).uppercased() + text.dropFirst()
+    }
+
     /// What a call's sentence leaves implicit, said once under it: a buy with no size buys a full
     /// position (trimmed by the account's limits), and a sell naming no buy sells from every buy.
     static func note(_ call: ReadCall) -> String? {
