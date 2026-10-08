@@ -79,7 +79,7 @@ struct ManualReviewSheet: View {
                     Text(source.text)
                         .font(.title3)
                         .textSelection(.enabled)
-                    LabeledContent(L10n.string("Received"), value: Humanize.timestamp(source.sourceAt))
+                    LabeledContent(L10n.string("Received"), value: Humanize.postTime(source.sourceAt))
                     LabeledContent(
                         L10n.string("Why it needs review"),
                         value: Reason.parserMessage(source.parserReason, needsReview: true)
@@ -426,7 +426,7 @@ struct ManualReviewSheet: View {
                 } else {
                     Text(
                         L10n.string(
-                            "Posted %@ · %@ before this preview", Humanize.timestamp(preview.sourceAt),
+                            "Posted %@ · %@ before this preview", Humanize.postTime(preview.sourceAt),
                             Duration.seconds(preview.sourceAgeSeconds).formatted(
                                 .units(allowed: [.hours, .minutes, .seconds], width: .wide, maximumUnitCount: 2)))
                     )

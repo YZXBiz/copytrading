@@ -70,7 +70,7 @@ struct LotSaleSheet: View {
 
     @MainActor private var origin: String {
         let who = target.guruName.map { L10n.string("%@’s post", $0) } ?? L10n.string("a post")
-        let when = target.lot.postedAt.map { L10n.string(" on %@", Humanize.timestamp($0)) } ?? ""
+        let when = target.lot.postedAt.map { L10n.string(" on %@", Humanize.postTime($0)) } ?? ""
         let price = Decimal(engine: target.lot.averagePrice).map { L10n.string(" at %@", $0.formatted(.currency(code: "USD"))) } ?? ""
         return L10n.string("%@ shares left from %@%@, bought%@ in %@.", flow.remaining.formatted(), who, when, price, target.accountID)
     }

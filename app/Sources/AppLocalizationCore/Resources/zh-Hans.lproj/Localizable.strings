@@ -1700,6 +1700,14 @@
 "%@ tomorrow" = "明天 %@";
 "Approve it by %@, when trading ends." = "请在交易结束前（%@）批准。";
 "Copy it from here by %@, when trading ends." = "请在交易结束前（%@）在这里复制。";
-"%@ your time (%@ New York)" = "你的时间 %@（纽约时间 %@）";
 "Also copy calls before and after regular hours, %@, with limit orders." = "在常规交易时段前后也复制（%@），使用限价单。";
 "Also copy calls overnight, %@. Needs extended hours on." = "夜间也复制（%@）。需要开启盘前盘后交易。";
+"%@ %@ (%@ New York)" = "%@ %@（纽约时间 %@）";
+"Time Zone" = "时区";
+"Show times in" = "时间显示为";
+"Post times, deadlines, and market hours use this zone." = "帖子时间、截止时间和交易时段都使用这个时区。";
+"Choose Another Time Zone…" = "选择其他时区…";
+"Search every zone by city or name." = "按城市或名称搜索所有时区。";
+"Automatic (%@)" = "自动（%@）";
+"New York (market time)" = "纽约（市场时间）";
+"City or time zone" = "城市或时区";

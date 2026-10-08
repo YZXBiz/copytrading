@@ -171,10 +171,10 @@ private func marketHoursAlsoReadInTheOwnersTime() throws {
     let extended = read(
         MarketHoursText.hours([((4, 0), (9, 30)), ((16, 0), (20, 0))], now: october, zone: losAngeles, locale: english))
     try #require(
-        extended == "1 AM–6:30 AM and 1 PM–5 PM your time (4 AM–9:30 AM and 4 PM–8 PM New York)",
+        extended == "1 AM–6:30 AM and 1 PM–5 PM PT (4 AM–9:30 AM and 4 PM–8 PM New York)",
         "Extended hours read \(extended) in Los Angeles")
     let overnight = read(MarketHoursText.hours([((20, 0), (4, 0))], now: october, zone: shanghai, locale: english))
-    try #require(overnight == "8 AM–4 PM your time (8 PM–4 AM New York)", "Overnight hours read \(overnight) in Shanghai")
+    try #require(overnight == "8 AM–4 PM China mainland Time (8 PM–4 AM New York)", "Overnight hours read \(overnight) in Shanghai")
     let home = read(MarketHoursText.hours([((20, 0), (4, 0))], now: october, zone: newYork, locale: english))
     try #require(home == "8 PM–4 AM New York time", "Hours read \(home) on a Mac in New York")
 

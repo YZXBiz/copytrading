@@ -34,7 +34,7 @@ struct PositionLotRow: View {
                     Text(who)
                         .fontWeight(.medium)
                         .foregroundStyle(Palette.ink)
-                    Text(Humanize.timestamp(lot.postedAt ?? lot.boughtAt))
+                    Text(Humanize.postTime(lot.postedAt ?? lot.boughtAt))
                         .foregroundStyle(Palette.tertiaryInk)
                 }
                 if let excerpt = lot.excerpt {

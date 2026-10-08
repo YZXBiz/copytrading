@@ -11,6 +11,7 @@ struct GeneralSettingsPage: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 30) {
             LanguageSettingsSection()
+            TimeZoneSettingsSection()
             SettingsSection(title: "When CopyTrading Opens") {
                 SettingsToggleRow(
                     title: "Ask for Touch ID",

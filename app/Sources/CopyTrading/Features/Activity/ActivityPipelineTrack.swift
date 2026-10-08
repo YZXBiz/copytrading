@@ -11,7 +11,7 @@ struct ActivityPipelineTrack: View {
             ActivityPipelineStage(
                 title: L10n.string("Captured"), code: item.captureStatus,
                 detail: Humanize.date(item.capturedAt)?.formatted(
-                    .dateTime.hour().minute().second().locale(AppLanguagePreference.shared.language.locale)
+                    AppTime.style(.dateTime.hour().minute().second())
                 ))
             ActivityPipelineConnector(code: item.parseStatus)
             ActivityPipelineStage(title: L10n.string("Read"), code: item.parseStatus)

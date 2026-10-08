@@ -94,7 +94,7 @@ struct ActivityDetailView: View {
                     .font(DesignTokens.personTitle)
                     .foregroundStyle(Palette.ink)
                     .lineLimit(1)
-                Text(Humanize.timestamp(item.sourceAt))
+                Text(Humanize.postTime(item.sourceAt))
                     .font(DesignTokens.caption)
                     .foregroundStyle(Palette.tertiaryInk)
                     .lineLimit(2)

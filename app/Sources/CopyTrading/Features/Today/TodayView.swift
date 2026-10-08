@@ -59,7 +59,7 @@ struct TodayView: View {
 
     @MainActor private var subtitle: String {
         let date = Date.now.formatted(
-            .dateTime.weekday(.wide).month(.wide).day().locale(AppLanguagePreference.shared.language.locale)
+            AppTime.style(.dateTime.weekday(.wide).month(.wide).day())
         )
         let names = GuruDirectory(model.savedTradingConfiguration).gurus.map(\.name)
         guard !names.isEmpty else { return date }

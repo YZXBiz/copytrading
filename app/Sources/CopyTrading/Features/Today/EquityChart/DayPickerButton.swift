@@ -9,7 +9,7 @@ struct DayPickerButton: View {
         Calendar.current.isDateInToday(day)
             ? L10n.string("Today")
             : day.formatted(
-                .dateTime.weekday(.abbreviated).month(.abbreviated).day().locale(AppLanguagePreference.shared.language.locale)
+                AppTime.style(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
             )
     }
 
@@ -35,7 +35,7 @@ struct DayPickerButton: View {
             FloatingPanelSurface(
                 title: L10n.string("Chart day"),
                 subtitle: day.formatted(
-                    .dateTime.weekday(.wide).month(.wide).day().year().locale(AppLanguagePreference.shared.language.locale)
+                    AppTime.style(.dateTime.weekday(.wide).month(.wide).day().year())
                 )
             ) {
                 VStack(spacing: 16) {

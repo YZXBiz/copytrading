@@ -5,19 +5,21 @@ import Foundation
 enum MarketHoursText {
     private static let newYork = TimeZone(identifier: "America/New_York") ?? .gmt
 
-    /// "1 AM–6:30 AM and 1 PM–5 PM your time (4 AM–9:30 AM and 4 PM–8 PM New York)", or
+    /// "1 AM–6:30 AM and 1 PM–5 PM PT (4 AM–9:30 AM and 4 PM–8 PM New York)", or
     /// "8 PM–4 AM New York time" on a Mac in New York.
     @MainActor
     static func hours(
-        _ ranges: [(from: (Int, Int), to: (Int, Int))], now: Date = .now, zone: TimeZone = .current,
-        locale: Locale = .current
+        _ ranges: [(from: (Int, Int), to: (Int, Int))], now: Date = .now, zone: TimeZone? = nil,
+        locale: Locale? = nil
     ) -> String {
+        let zone = zone ?? AppTime.zone
+        let locale = locale ?? AppTime.locale
         let inNewYork = L10n.list(ranges.map { span($0, now: now, zone: newYork, locale: locale) })
         guard zone.secondsFromGMT(for: now) != newYork.secondsFromGMT(for: now) else {
             return L10n.string("%@ New York time", inNewYork)
         }
         let local = L10n.list(ranges.map { span($0, now: now, zone: zone, locale: locale) })
-        return L10n.string("%@ your time (%@ New York)", local, inNewYork)
+        return L10n.string("%@ %@ (%@ New York)", local, AppTime.shortName(zone, locale: locale), inNewYork)
     }
 
     private static func span(

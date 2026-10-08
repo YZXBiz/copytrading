@@ -32,9 +32,20 @@ enum Humanize {
 
     @MainActor
     static func timestamp(_ date: Date) -> String {
-        date.formatted(
-            .dateTime.month(.abbreviated).day().hour().minute().locale(AppLanguagePreference.shared.language.locale)
-        )
+        date.formatted(AppTime.style(.dateTime.month(.abbreviated).day().hour().minute()))
+    }
+
+    /// A post's time to the second, e.g. "Oct 8, 8:58:12 AM": calls arrive seconds apart.
+    @MainActor
+    static func postTime(_ iso: String?) -> String {
+        guard let iso else { return "—" }
+        guard let date = date(iso) else { return iso }
+        return postTime(date)
+    }
+
+    @MainActor
+    static func postTime(_ date: Date) -> String {
+        date.formatted(AppTime.style(.dateTime.month(.abbreviated).day().hour().minute().second()))
     }
 
     /// "2 min. ago" style text for recent events.
