@@ -56,6 +56,8 @@ struct AppearanceSettingsPage: View {
         .buttonStyle(QuietPressButtonStyle())
         .accessibilityLabel(L10n.string(option.title))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+        // macOS doesn't read the selected trait on a button; the value says it.
+        .accessibilityValue(L10n.string(isSelected ? "Selected" : "Not selected"))
         .accessibilityIdentifier("settings.appearance.\(option.rawValue)")
     }
 }
