@@ -1,12 +1,10 @@
 import DesktopCore
 import SwiftUI
 
-/// Settings as a light panel with close and back at the top, the page's
-/// title, and its groups of rows. The pages are listed in the Settings sidebar.
+/// Settings as a white page: close and back at the top, the page's title in the display face with
+/// its lede, and its groups of rows. The pages are listed in the Settings sidebar.
 struct SettingsView: View {
     @Bindable var model: AppModel
-    @Environment(\.colorSchemeContrast) private var contrast
-    @Environment(\.displayScale) private var displayScale
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -19,42 +17,47 @@ struct SettingsView: View {
                     .transition(.opacity)
                     .frame(maxWidth: 880, alignment: .leading)
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 14)
-            .padding(.bottom, 36)
+            .padding(.horizontal, 40)
+            .padding(.top, 20)
+            .padding(.bottom, 40)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollEdgeEffectHidden(true, for: .top)
         .animation(reduceMotion ? nil : .smooth(duration: 0.22), value: model.settingsPage)
-        .background(Palette.panel)
-        .clipShape(.rect(cornerRadius: DesignTokens.panelCornerRadius, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: DesignTokens.panelCornerRadius, style: .continuous)
-                .strokeBorder(contrast == .increased ? Palette.secondaryInk : Palette.hairline, lineWidth: 1 / displayScale)
-        }
-        .padding([.trailing, .bottom], 8)
+        .background(Palette.page)
         .navigationTitle(L10n.string("Settings"))
     }
 
     private var header: some View {
-        HStack(spacing: 10) {
-            SquareHeaderButton(title: L10n.string("Close Settings"), symbol: "xmark", fill: Palette.well, action: model.closeSettings)
-                // While the assistant is open, Esc closes it first.
-                .keyboardShortcut(model.assistant.isOpen ? nil : .cancelAction)
-                .accessibilityIdentifier("settings.close")
-            if !model.settingsTrail.isEmpty {
-                SquareHeaderButton(title: L10n.string("Back"), symbol: "chevron.left", fill: Palette.well, action: model.settingsBack)
-                    .accessibilityIdentifier("settings.back")
-                    .transition(.opacity.combined(with: .scale(scale: 0.8)))
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(spacing: 8) {
+                buttons
             }
-            Text(L10n.string(model.settingsPage.title))
-                .font(DesignTokens.pageTitle)
-                .foregroundStyle(Palette.ink)
-                .padding(.leading, 4)
-                .accessibilityAddTraits(.isHeader)
+            PageHeadline(L10n.string(model.settingsPage.title), lede: L10n.string(model.settingsPage.lede))
                 .contentTransition(.opacity)
         }
         .animation(reduceMotion ? nil : .smooth(duration: 0.22), value: model.settingsTrail.isEmpty)
+    }
+
+    @ViewBuilder
+    private var buttons: some View {
+        roundButton(L10n.string("Close Settings"), symbol: "xmark", action: model.closeSettings)
+            // While the assistant is open, Esc closes it first.
+            .keyboardShortcut(model.assistant.isOpen ? nil : .cancelAction)
+            .accessibilityIdentifier("settings.close")
+        if !model.settingsTrail.isEmpty {
+            roundButton(L10n.string("Back"), symbol: "chevron.left", action: model.settingsBack)
+                .accessibilityIdentifier("settings.back")
+                .transition(.opacity.combined(with: .scale(scale: 0.8)))
+        }
+    }
+
+    /// A grey round button with one symbol, as the page's quiet controls are.
+    private func roundButton(_ title: String, symbol: String, action: @escaping () -> Void) -> some View {
+        Button(title, systemImage: symbol, action: action)
+            .labelStyle(.iconOnly)
+            .buttonStyle(PageButtonStyle(horizontalPadding: 8))
+            .help(title)
     }
 
     @ViewBuilder

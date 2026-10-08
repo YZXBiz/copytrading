@@ -14,7 +14,7 @@ struct GuideBeforeYouGoSection: View {
                     EnvironmentBadge(environment: .live)
                 }
             }
-            Divider()
+            Hairline()
             GuideSafetyRow(
                 text:
                     "**A sleeping Mac copies nothing.** Keep it plugged in and awake, with CopyTrading open, while the market is. A closed MacBook lid sleeps it unless a display is connected."
@@ -23,7 +23,7 @@ struct GuideBeforeYouGoSection: View {
                     .font(DesignTokens.bodyText)
                     .foregroundStyle(Palette.ink)
             }
-            Divider()
+            Hairline()
             GuideSafetyRow(
                 text:
                     "**Discord's terms** don't allow automating a personal account. Use a separate account that only joins your gurus' servers."
@@ -32,13 +32,13 @@ struct GuideBeforeYouGoSection: View {
                     .font(.title2)
                     .foregroundStyle(Palette.secondaryInk)
             }
-            Divider()
+            Hairline()
             GuideSafetyRow(text: "**Your AI service bills you** for each post it reads, usually a fraction of a cent.") {
                 Image(systemName: "dollarsign.circle")
                     .font(.title2)
                     .foregroundStyle(Palette.secondaryInk)
             }
-            Divider()
+            Hairline()
             GuideSafetyRow(
                 text:
                     "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Pause Copying** stops everything at once."
@@ -48,9 +48,7 @@ struct GuideBeforeYouGoSection: View {
                     .foregroundStyle(Palette.ink)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 7)
-                    .background(Palette.page, in: .capsule)
-                    .overlay { Capsule().strokeBorder(Palette.hairline, lineWidth: 1) }
-                    .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
+                    .background(Palette.well, in: .capsule)
             }
         }
     }

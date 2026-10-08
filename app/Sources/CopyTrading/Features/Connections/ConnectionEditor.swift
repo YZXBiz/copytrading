@@ -174,8 +174,7 @@ struct ConnectionEditor: View {
         .background {
             if active {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Palette.accent.opacity(0.07))
-                    .strokeBorder(Palette.accent.opacity(0.6), lineWidth: 1.5)
+                    .strokeBorder(Palette.ink, lineWidth: InkStroke.style.lineWidth)
             }
         }
         .setupTourTarget(stop.target)

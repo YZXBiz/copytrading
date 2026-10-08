@@ -10,7 +10,7 @@ struct UpdateAvailableBanner: View {
         if let version = updater.offer.version {
             HStack(spacing: 10) {
                 Image(systemName: "arrow.down.circle.fill")
-                    .foregroundStyle(Palette.accent)
+                    .foregroundStyle(Palette.ink)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(L10n.string("CopyTrading %@ is ready to install.", version))
@@ -23,7 +23,7 @@ struct UpdateAvailableBanner: View {
                 Button(L10n.string("Later"), action: updater.offer.postpone)
                     .accessibilityIdentifier("update.later")
                 Button(L10n.string("Install Update…"), action: updater.installOfferedUpdate)
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(PageButtonStyle(isProminent: true))
                     .accessibilityIdentifier("update.install")
             }
             .font(.callout)

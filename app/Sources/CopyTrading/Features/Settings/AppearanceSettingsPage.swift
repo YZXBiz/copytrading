@@ -14,9 +14,7 @@ struct AppearanceSettingsPage: View {
                         .frame(maxWidth: .infinity)
                 }
             }
-            .padding(.vertical, 22)
-            .padding(.horizontal, 12)
-            .background(Palette.well, in: .rect(cornerRadius: 14, style: .continuous))
+            .padding(.vertical, 8)
 
             SettingsSection(
                 title: "Motion and Transparency",
@@ -45,11 +43,11 @@ struct AppearanceSettingsPage: View {
                     .padding(3)
                     .overlay {
                         RoundedRectangle(cornerRadius: 13, style: .continuous)
-                            .strokeBorder(isSelected ? Palette.accent : .clear, lineWidth: 2.5)
+                            .strokeBorder(isSelected ? Palette.ink : .clear, lineWidth: 2)
                     }
                 Text(L10n.string(option.title))
                     .font(.system(.body, weight: .semibold).scaled(by: 14.0 / 13))
-                    .foregroundStyle(isSelected ? Palette.accent : Palette.ink)
+                    .foregroundStyle(isSelected ? Palette.ink : Palette.tertiaryInk)
             }
             .contentShape(.rect)
         }

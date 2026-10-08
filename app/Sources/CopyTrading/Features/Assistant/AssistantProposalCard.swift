@@ -1,13 +1,12 @@
 import DesktopCore
 import SwiftUI
 
-/// Something the assistant asked the owner to approve, on a small white slip in the answer. The
+/// Something the assistant asked the owner to approve, between hairlines in the answer. The
 /// assistant never approves; Review… brings back the approval sheet, which asks for Touch ID.
 struct AssistantProposalCard: View {
     let model: AppModel
     let proposalID: String
     @State private var isReviewing = false
-    @Environment(\.colorSchemeContrast) private var contrast
 
     private var proposal: AgentProposal? { model.agentProposals.first { $0.id == proposalID } }
 
@@ -16,10 +15,11 @@ struct AssistantProposalCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            Hairline()
             HStack(spacing: 6) {
                 Image(systemName: isWaiting ? "hand.raised.fill" : statusSymbol)
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(isWaiting ? StatusTone.caution.color : Palette.tertiaryInk)
+                    .foregroundStyle(isWaiting ? Palette.amber : Palette.tertiaryInk)
                     .accessibilityHidden(true)
                 Text(status)
                     .font(DesignTokens.caption.weight(.medium))
@@ -35,12 +35,8 @@ struct AssistantProposalCard: View {
                         // Reads "Review…" in English; its own key, as Chinese says it differently from Setup's "Review…".
                         Text(L10n.string("Review the approval…"))
                             .font(DesignTokens.caption.weight(.semibold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 5)
-                            .background(Palette.accent, in: .capsule)
                     }
-                    .buttonStyle(QuietPressButtonStyle())
+                    .buttonStyle(PageButtonStyle(isProminent: true))
                     .disabled(isReviewing)
                     .accessibilityHint(L10n.string("Opens the approval sheet"))
                     .accessibilityIdentifier("assistant.review")
@@ -51,14 +47,9 @@ struct AssistantProposalCard: View {
                 .padding(.top, 2)
             }
         }
-        .padding(14)
+        .padding(.bottom, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.page, in: .rect(cornerRadius: 14, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(contrast == .increased ? Palette.secondaryInk : Palette.hairline, lineWidth: 1)
-        }
-        .shadow(color: .black.opacity(0.05), radius: 8, y: 3)
+        .overlay(alignment: .bottom) { Hairline() }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.string("%@: %@", status, question))
     }

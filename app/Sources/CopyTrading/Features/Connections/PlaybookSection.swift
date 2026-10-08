@@ -20,7 +20,7 @@ struct PlaybookSection: View {
                         systemImage: "sparkles"
                     )
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(PageButtonStyle(isProminent: true))
                 .disabled(isLearning)
                 .accessibilityIdentifier("playbook.learn")
                 if isLearning {

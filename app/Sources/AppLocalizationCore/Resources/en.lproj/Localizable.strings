@@ -1954,3 +1954,19 @@
 "%@ holds new buys until you resume entries · %@" = "%@ holds new buys until you resume entries · %@";
 "%@ is waiting for a fill · %@ of %@" = "%@ is waiting for a fill · %@ of %@";
 "%@ is waiting for a fill · %@" = "%@ is waiting for a fill · %@";
+
+"Getting started" = "Getting started";
+"About 10 minutes, five steps." = "About 10 minutes, five steps.";
+"Have your Discord, AI provider, and Alpaca logins at hand." = "Have your Discord, AI provider, and Alpaca logins at hand.";
+"You're set up." = "You're set up.";
+"This page stays here as your guide." = "This page stays here as your guide.";
+"No records match “%@”." = "No records match “%@”.";
+"Show Steps" = "Show Steps";
+"The log starts here" = "The log starts here";
+"How CopyTrading opens, and how it tells the time." = "How CopyTrading opens, and how it tells the time.";
+"Light, dark, or as your Mac is set." = "Light, dark, or as your Mac is set.";
+"New versions, and when to look for them." = "New versions, and when to look for them.";
+"The local engine that reads posts and places orders." = "The local engine that reads posts and places orders.";
+"What other apps on this Mac may ask CopyTrading to do." = "What other apps on this Mac may ask CopyTrading to do.";
+"Copies of your setup, kept on this Mac." = "Copies of your setup, kept on this Mac.";
+"What the engine wrote down, with keys removed." = "What the engine wrote down, with keys removed.";

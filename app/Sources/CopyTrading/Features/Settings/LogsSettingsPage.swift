@@ -68,8 +68,7 @@ struct LogsSettingsPage: View {
                     titleColor: Palette.secondaryInk
                 ) {
                     Button(L10n.string("Save"), action: save)
-                        .buttonStyle(.borderedProminent)
-                        .buttonBorderShape(.capsule)
+                        .buttonStyle(PageButtonStyle(isProminent: true))
                         .disabled(!hasChanges)
                         .accessibilityIdentifier("settings.logs.save")
                 }

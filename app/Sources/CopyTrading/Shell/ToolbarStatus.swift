@@ -28,7 +28,6 @@ struct ToolbarStatus: View {
                 .contentShape(.capsule)
             }
             .buttonStyle(.plain)
-            .background(Palette.group.opacity(0.6), in: .capsule)
             .help(L10n.string("Refresh now"))
             .accessibilityIdentifier("toolbar.refresh")
             .keyboardShortcut("r", modifiers: .command)

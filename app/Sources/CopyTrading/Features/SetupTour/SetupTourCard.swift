@@ -17,18 +17,17 @@ struct SetupTourCard: View {
             Text(
                 L10n.string("Tour stop %lld of %lld", Int64(stop.rawValue + 1), Int64(SetupTourStop.allCases.count)).uppercased()
             )
-            .font(.system(size: 10.5, weight: .semibold))
-            .tracking(1.2)
-            .foregroundStyle(Palette.accent)
+            .font(DesignTokens.eyebrow)
+            .tracking(DesignTokens.eyebrowTracking)
+            .foregroundStyle(Palette.tertiaryInk)
             .monospacedDigit()
             .padding(.bottom, 8)
             Text(L10n.string(stop.title))
-                .font(.system(size: 21, weight: .semibold))
+                .font(DisplayFont.font(size: 24, weight: .medium, relativeTo: .title2))
                 .foregroundStyle(Palette.ink)
                 .accessibilityAddTraits(.isHeader)
             Text(L10n.string(stop.subtitle))
-                .font(.system(size: 21))
-                .foregroundStyle(Palette.secondaryInk)
+                .font(DisplayFont.font(size: 24, relativeTo: .title2))
                 .foregroundStyle(Palette.tertiaryInk)
                 .padding(.bottom, 10)
             if stop == .discordRow && model.setupProgress.completed == 0 {
@@ -45,8 +44,8 @@ struct SetupTourCard: View {
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 7) {
                 ZStack {
-                    Circle().fill(Palette.accent.opacity(0.18)).frame(width: 14, height: 14)
-                    Circle().fill(Palette.accent).frame(width: 6, height: 6)
+                    Circle().strokeBorder(Palette.ink, lineWidth: 1.2).frame(width: 12, height: 12)
+                    Circle().fill(Palette.ink).frame(width: 5, height: 5)
                 }
                 .accessibilityHidden(true)
                 Text(L10n.string(stop.waiting))
@@ -61,7 +60,7 @@ struct SetupTourCard: View {
             HStack(spacing: 4) {
                 ForEach(SetupTourStop.allCases) { other in
                     Capsule()
-                        .fill(other.rawValue <= stop.rawValue ? Palette.accent : Palette.ink.opacity(0.12))
+                        .fill(other.rawValue <= stop.rawValue ? Palette.ink : Palette.ink.opacity(0.12))
                         .opacity(other.rawValue < stop.rawValue ? 0.4 : 1)
                         .frame(width: other == stop ? 16 : 5, height: 5)
                 }

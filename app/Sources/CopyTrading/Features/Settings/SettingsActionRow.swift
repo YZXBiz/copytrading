@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// A row that does something when clicked, such as "Stop Engine": the action
-/// in the accent, or red when it stops or removes something, with what it does underneath.
+/// in ink, or red when it stops or removes something, with what it does underneath.
 struct SettingsActionRow: View {
     let title: String
     var detail: String?
@@ -14,7 +14,7 @@ struct SettingsActionRow: View {
 
     var body: some View {
         Button(action: action) {
-            SettingsRow(title: title, detail: detail, titleColor: role == .destructive ? .red : Palette.accent)
+            SettingsRow(title: title, detail: detail, titleColor: role == .destructive ? .red : Palette.ink)
                 .background(Palette.ink.opacity(isHovered && isEnabled ? 0.04 : 0))
         }
         .buttonStyle(QuietPressButtonStyle())

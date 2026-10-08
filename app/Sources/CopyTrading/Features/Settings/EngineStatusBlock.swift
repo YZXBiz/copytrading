@@ -1,13 +1,10 @@
 import DesktopCore
 import SwiftUI
 
-/// The engine as a framed card, the way the invitations are drawn: its heartbeat on the app's
-/// chart paper, a line saying how it is, one sentence about what it is doing, and the one
-/// control that starts or stops it.
+/// The engine on the page itself: a line saying how it is, one sentence about what it is doing,
+/// the one control that starts or stops it, and the walker on its ground while it runs.
 struct EngineStatusBlock: View {
     let model: AppModel
-    @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.colorSchemeContrast) private var contrast
 
     private var isStopped: Bool {
         model.runtimeState == .stopped || model.runtimeState == .failed
@@ -15,16 +12,6 @@ struct EngineStatusBlock: View {
 
     private var isBeating: Bool {
         model.runtimeState == .ready || model.runtimeState == .degraded
-    }
-
-    /// The icon's teal while it runs, amber when it needs a look, grey when it is stopped.
-    private var pulseColor: Color {
-        switch model.runtimeState {
-        case .ready, .starting:
-            colorScheme == .dark ? Color(red: 0.25, green: 0.88, blue: 0.7) : Color(red: 0.11, green: 0.62, blue: 0.5)
-        case .degraded: .orange
-        case .stopped, .failed: Palette.tertiaryInk
-        }
     }
 
     private var state: String {
@@ -73,49 +60,39 @@ struct EngineStatusBlock: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            EngineHeartbeat(color: pulseColor, isBeating: isBeating)
-                .frame(height: 46)
-                .padding(.horizontal, 32)
-                .frame(maxWidth: .infinity)
-                .frame(height: 104)
-                .background { ChartPaperBackdrop(focus: UnitPoint(x: 0.5, y: 0.5), gridSpacing: 22) }
-                .clipShape(.rect(topLeadingRadius: 16, topTrailingRadius: 16, style: .continuous))
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top, spacing: 16) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(L10n.string("The engine"))
-                        Text(state).foregroundStyle(Palette.secondaryInk)
-                    }
-                    .font(DesignTokens.panelTitle)
-                    .foregroundStyle(Palette.ink)
-                    .contentTransition(.opacity)
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(L10n.string("Local engine, %@", L10n.string(Humanize.code(model.runtimeState.rawValue))))
-                    .accessibilityAddTraits(.isHeader)
-                    Spacer(minLength: 12)
-                    control
-                        .padding(.top, 6)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L10n.string("The engine"))
+                    Text(state).foregroundStyle(Palette.tertiaryInk)
                 }
-                Text(sentence)
-                    .font(DesignTokens.documentBody)
-                    .foregroundStyle(Palette.secondaryInk)
-                    .lineSpacing(2)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .contentTransition(.opacity)
+                .font(DesignTokens.panelTitle)
+                .foregroundStyle(Palette.ink)
+                .contentTransition(.opacity)
+                .accessibilityElement(children: .ignore)
+                .accessibilityAddTraits(.isHeader)
+                .accessibilityLabel(L10n.string("Local engine, %@", L10n.string(Humanize.code(model.runtimeState.rawValue))))
+                Spacer(minLength: 12)
+                control
+                    .padding(.top, 6)
             }
-            .padding(.horizontal, 28)
-            .padding(.top, 22)
-            .padding(.bottom, 26)
+            Text(sentence)
+                .font(DesignTokens.documentBody)
+                .foregroundStyle(Palette.secondaryInk)
+                .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .contentTransition(.opacity)
+            InkGround(height: 56)
+                .overlay(alignment: .bottomLeading) {
+                    if isBeating {
+                        InkWalker()
+                            .padding(.leading, 60)
+                            .padding(.bottom, 3)
+                            .transition(.opacity)
+                    }
+                }
+                .padding(.top, 6)
         }
-        .background(Palette.panel, in: .rect(cornerRadius: 16, style: .continuous))
-        .padding(6)
-        .background(Palette.page, in: .rect(cornerRadius: 22, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .strokeBorder(contrast == .increased ? Palette.secondaryInk : .black.opacity(0.05), lineWidth: 1)
-        }
-        .shadow(color: .black.opacity(0.06), radius: 16, y: 5)
         .animation(.smooth(duration: 0.3), value: model.runtimeState)
     }
 
@@ -123,14 +100,11 @@ struct EngineStatusBlock: View {
     private var control: some View {
         if isStopped {
             Button(L10n.string("Start Engine"), action: model.requestStart)
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.capsule)
+                .buttonStyle(PageButtonStyle(isProminent: true))
                 .accessibilityIdentifier("settings.startEngine")
         } else {
             Button(L10n.string("Stop Engine"), role: .destructive, action: stopEngine)
-                .buttonStyle(.bordered)
-                .buttonBorderShape(.capsule)
-                .tint(.red)
+                .buttonStyle(PageButtonStyle())
                 .disabled(model.runtimeState == .starting)
                 .help(L10n.string("Stopping drains work in progress. Orders the broker already accepted may stay open."))
                 .accessibilityIdentifier("settings.stopEngine")

@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Diagnostics before anything is logged: what the log keeps, where it lives, and a way to see it
-/// fill in.
+/// fill in, standing on the walker's ground.
 struct LogInvitation: View {
     let model: AppModel
 
@@ -10,15 +10,16 @@ struct LogInvitation: View {
     }
 
     var body: some View {
-        InvitationCard(
-            lead: L10n.string("The log"),
-            emphasis: L10n.string("starts here"),
-            message: L10n.string(
-                "Posts, model calls, and trading steps appear here as the engine handles them, with keys removed. The log stays on this Mac."
-            )
-        ) {
-            LogInvitationFigure()
-        } actions: {
+        VStack(alignment: .leading, spacing: 18) {
+            Text(L10n.string("The log starts here"))
+                .font(DesignTokens.listHeading)
+                .tracking(DesignTokens.listHeadingTracking)
+                .foregroundStyle(Palette.ink)
+                .accessibilityAddTraits(.isHeader)
+            InkEmptyState(
+                message: L10n.string(
+                    "Posts, model calls, and trading steps appear here as the engine handles them, with keys removed. The log stays on this Mac."
+                ))
             if model.isLoadingDiagnostics {
                 HStack(spacing: 8) {
                     ProgressView()
@@ -30,9 +31,7 @@ struct LogInvitation: View {
             } else {
                 HStack(spacing: 14) {
                     Button(L10n.string("Run Self-Test"), action: runSelfTest)
-                        .buttonStyle(.borderedProminent)
-                        .buttonBorderShape(.capsule)
-                        .controlSize(.large)
+                        .buttonStyle(PageButtonStyle(isProminent: true))
                         .disabled(!engineRunning || model.isRunningSelfTest)
                         .accessibilityIdentifier("diagnostics.runSelfTest")
                     Text(
@@ -40,12 +39,13 @@ struct LogInvitation: View {
                             ? L10n.string("A test message fills the log in a few seconds.")
                             : L10n.string("Start the engine and the log fills in as it works.")
                     )
-                    .font(DesignTokens.bodyText)
+                    .font(DesignTokens.caption)
                     .foregroundStyle(Palette.tertiaryInk)
                     .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
+        .frame(maxWidth: 620, alignment: .leading)
     }
 
     private func runSelfTest() {

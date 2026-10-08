@@ -1954,3 +1954,19 @@
 "%@ holds new buys until you resume entries · %@" = "%@ 暂停新买入，等你恢复开仓 · %@";
 "%@ is waiting for a fill · %@ of %@" = "%@ 等待成交 · %@ / %@";
 "%@ is waiting for a fill · %@" = "%@ 等待成交 · %@";
+
+"Getting started" = "快速开始";
+"About 10 minutes, five steps." = "大约 10 分钟，共五步。";
+"Have your Discord, AI provider, and Alpaca logins at hand." = "请准备好 Discord、AI 服务商和 Alpaca 的登录信息。";
+"You're set up." = "设置已完成。";
+"This page stays here as your guide." = "本页会一直保留，供你参考。";
+"No records match “%@”." = "没有与“%@”匹配的记录。";
+"Show Steps" = "查看步骤";
+"The log starts here" = "日志从这里开始";
+"How CopyTrading opens, and how it tells the time." = "CopyTrading 如何打开，以及如何显示时间。";
+"Light, dark, or as your Mac is set." = "浅色、深色，或跟随 Mac 的设置。";
+"New versions, and when to look for them." = "新版本，以及何时检查更新。";
+"The local engine that reads posts and places orders." = "读取帖子并下单的本地引擎。";
+"What other apps on this Mac may ask CopyTrading to do." = "这台 Mac 上的其他 App 可以请求 CopyTrading 做什么。";
+"Copies of your setup, kept on this Mac." = "你的设置副本，保存在这台 Mac 上。";
+"What the engine wrote down, with keys removed." = "引擎记录的内容，已去除密钥。";

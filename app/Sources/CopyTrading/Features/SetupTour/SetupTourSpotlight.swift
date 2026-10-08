@@ -23,10 +23,9 @@ struct SetupTourSpotlight: View {
                         .compositingGroup()
                 }
             RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .stroke(Palette.accent.opacity(0.9), lineWidth: 1.5)
+                .stroke(Palette.ink, style: InkStroke.style)
                 .frame(width: hole.width, height: hole.height)
                 .position(x: hole.midX, y: hole.midY)
-                .shadow(color: Palette.accent.opacity(0.45), radius: 10)
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
