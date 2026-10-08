@@ -1,44 +1,28 @@
 import DesktopCore
 import Foundation
 
-/// How a guru's calls went, counted from the posts CopyTrading has loaded.
-struct GuruStats {
-    let posts: Int
-    let trades: Int
-    /// Orders, across every account, that filled or were skipped.
-    let filled: Int
-    let skipped: Int
-    /// Calls at least one account filled, and calls no account filled but one skipped.
-    let copiedCalls: Int
-    let skippedCalls: Int
-    let needsReview: Int
-    let lastPost: Date?
-    /// How each recent post went, oldest first: up to the last twelve.
-    let trail: [StatusTone]
+/// The numbers at the top of a guru's page, counted from the posts CopyTrading has loaded.
+struct GuruStats: Equatable {
+    let postsToday: Int
+    /// Today's posts at least one account bought or sold on.
+    let tradedToday: Int
+    /// Posts with a call still waiting for the owner, any day.
+    let waiting: Int
+    /// How long the reader took per post, on average; nil before any post was read.
+    let averageRead: TimeInterval?
 
     @MainActor
-    init(guruID: String, activity: [SourceActivity]) {
-        let mine = activity.filter { $0.guruID == guruID }
-        let outcomes = mine.flatMap { $0.outcomes }.map(\.outcome)
-        posts = mine.count
-        trades = mine.filter { !$0.instructions.isEmpty }.count
-        filled = outcomes.filter(Self.isFill).count
-        skipped = outcomes.filter(Self.isSkip).count
-        let calls = mine.filter { !$0.instructions.isEmpty }.map { activity in
-            activity.outcomes.map(\.outcome)
+    init(entries: [GuruFeed.Entry], calendar: Calendar, now: Date) {
+        let today = entries.filter { $0.item.sourceDate.map { calendar.isDate($0, inSameDayAs: now) } ?? false }
+        postsToday = today.count
+        tradedToday = today.filter { $0.accounts.contains { $0.kind == .traded } }.count
+        waiting = entries.filter { $0.accounts.contains { $0.kind == .waiting } }.count
+        let reads = entries.compactMap { entry -> TimeInterval? in
+            guard let started = Humanize.date(entry.item.readStartedAt), let read = Humanize.date(entry.item.readAt) else {
+                return nil
+            }
+            return max(0, read.timeIntervalSince(started))
         }
-        copiedCalls = calls.filter { $0.contains(where: Self.isFill) }.count
-        skippedCalls = calls.filter { !$0.contains(where: Self.isFill) && $0.contains(where: Self.isSkip) }.count
-        needsReview = mine.filter(\.needsManualReview).count
-        lastPost = mine.compactMap(\.sourceDate).max()
-        trail = mine.sorted { ($0.sourceDate ?? .distantPast) < ($1.sourceDate ?? .distantPast) }.suffix(12).map(\.decisionTone)
-    }
-
-    private static func isFill(_ outcome: DestinationOutcome) -> Bool {
-        if case .filled = outcome { true } else if case .partlyFilled = outcome { true } else { false }
-    }
-
-    private static func isSkip(_ outcome: DestinationOutcome) -> Bool {
-        if case .skipped = outcome { true } else { false }
+        averageRead = reads.isEmpty ? nil : reads.reduce(0, +) / Double(reads.count)
     }
 }

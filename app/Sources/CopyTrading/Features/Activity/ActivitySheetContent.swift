@@ -1,8 +1,8 @@
 import DesktopCore
 import SwiftUI
 
-/// The sheet an account page raises: copying or reviewing a post, or evaluating an old one.
-struct AccountPageSheet: View {
+/// The sheet a post's card asks for: review or copy its calls, or evaluate an earlier post.
+struct ActivitySheetContent: View {
     let selected: ActivitySheet
     let model: AppModel
     let feature: AccountFeatureModel
@@ -17,16 +17,12 @@ struct AccountPageSheet: View {
                 accounts: feature.accounts,
                 operations: model.accountActions(),
                 feature: reviewFeature,
-                confirmOrders: confirmOrders,
+                confirmOrders: { try await model.confirmOrders(for: $0, reason: L10n.string("send these orders")) },
                 engineStopped: model.runtimeState == .stopped || model.runtimeState == .failed,
                 startEngine: model.requestStart
             )
         case .historicalEvaluation(let source):
             HistoricalProfileEvaluationSheet(source: source, model: model)
         }
-    }
-
-    private func confirmOrders(_ accountIDs: Set<String>) async throws {
-        try await model.confirmOrders(for: accountIDs, reason: L10n.string("send these orders"))
     }
 }

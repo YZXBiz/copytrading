@@ -14,6 +14,7 @@ from copytrading_engine.execution.domain.manual_commands import (
     ManualCommandPageRequest,
 )
 from copytrading_engine.execution.domain.market import EquityHistory, HistoryWindow
+from copytrading_engine.execution.presentation.account_feed import AccountFeedPage
 from copytrading_engine.execution.presentation.operator_views import (
     AccountEventPage,
     AccountOverview,
@@ -163,6 +164,24 @@ class OperatorQueryService:
             database, before_seq=before_seq, limit=limit, timeout=2
         )
         return page
+
+    async def account_feed(
+        self, account_id: str, before_seq: int | None, limit: int
+    ) -> AccountFeedPage:
+        """The account's feed: from its running owner, or else from its retained ledger."""
+        if not 1 <= limit <= 100 or (before_seq is not None and before_seq < 1):
+            raise ValueError("Invalid account feed page")
+        supervisor = self._access.supervisors().get(account_id)
+        if supervisor is not None and supervisor.owner is not None and supervisor.state != "failed":
+            live = await bounded_owner_read(supervisor.owner.feed_page(before_seq, limit))
+            if not isinstance(live, OwnerUnavailable):
+                return live
+        database = self._access.retained_paths().get(account_id)
+        if database is None:
+            raise KeyError(account_id)
+        return await self._access.retained_feed(
+            database, before_seq=before_seq, limit=limit, timeout=2
+        )
 
     async def equity_history(self, account_id: str, window: HistoryWindow) -> EquityHistory | None:
         """The running account's broker curve; None while it has no live owner to ask."""

@@ -48,8 +48,11 @@ struct AccountLimitsStrip: View {
                 .frame(minWidth: 160, maxWidth: 220)
         }
         if let totalCap = Decimal(engine: policy.maxTotalUSD) {
-            LimitMeter(title: "In stocks", used: Decimal(engine: account.totalExposureUSD) ?? 0, limit: totalCap)
-                .frame(minWidth: 160, maxWidth: 220)
+            LimitMeter(
+                title: "In stocks", used: Decimal(engine: account.totalExposureUSD) ?? 0, limit: totalCap,
+                note: ExposureSplit.note(account)
+            )
+            .frame(minWidth: 160, maxWidth: 220)
         }
     }
 

@@ -147,11 +147,11 @@ public struct EngineActions: Sendable {
         return try await client.replayGuruPosts(replay)
     }
 
-    public func accountEvents(
+    public func accountFeed(
         accountID: String, beforeSeq: Int? = nil, limit: Int = 50
-    ) async throws -> AccountEventPage {
+    ) async throws -> AccountFeedPage {
         let client = try await supervisor.engineClient()
-        return try await client.accountEvents(accountID: accountID, beforeSeq: beforeSeq, limit: limit)
+        return try await client.accountFeed(accountID: accountID, beforeSeq: beforeSeq, limit: limit)
     }
 
     public func equityHistory(

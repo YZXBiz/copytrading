@@ -10,11 +10,13 @@ from typing import Literal
 from copytrading_engine.execution.adapters.sqlite_ledger import (
     EXECUTION_SCHEMA,
     decode_ledger_snapshot,
+    feed_events,
     message_events,
 )
 from copytrading_engine.execution.domain.events import JournalEvent
 from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
 from copytrading_engine.execution.domain.manual_commands import ManualSourceEvidence
+from copytrading_engine.execution.presentation.account_feed import AccountFeedPage, account_feed
 from copytrading_engine.execution.presentation.operator_views import (
     AccountEventPage,
     AccountOverview,
@@ -367,6 +369,32 @@ def historical_source_message(database: Path, source_id: str) -> RawMessage:
     return source
 
 
+def _retained_snapshot(db: sqlite3.Connection) -> LedgerSnapshot:
+    revision = db.execute(
+        "SELECT revision FROM copytrading_engine_schema_revisions WHERE component='execution'"
+    ).fetchone()
+    if revision != (EXECUTION_SCHEMA.revision,):
+        raise RuntimeError("Unsupported retained execution schema revision")
+    identity = db.execute(
+        "SELECT environment,account_id FROM identity WHERE singleton=1"
+    ).fetchone()
+    row = db.execute("SELECT data FROM snapshot WHERE singleton=1").fetchone()
+    if identity is None or row is None:
+        raise RuntimeError("Retained account evidence is incomplete")
+    snapshot = decode_ledger_snapshot(row[0])
+    if (snapshot.environment, snapshot.account_id) != identity:
+        raise RuntimeError("Retained account identity mismatch")
+    return snapshot
+
+
+def retained_feed(path: Path, *, before_seq: int | None, limit: int) -> AccountFeedPage:
+    """A retained account's feed, read without binding a broker or a writer."""
+    with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)) as db:
+        snapshot = _retained_snapshot(db)
+        rows = feed_events(db, before_seq, limit)
+    return account_feed(path.parent.name, snapshot, rows, limit)
+
+
 def retained_account(
     path: Path, *, before_seq: int | None = None, limit: int = 50
 ) -> tuple[AccountOverview, LedgerSnapshot, AccountEventPage]:
@@ -374,20 +402,7 @@ def retained_account(
     if not 1 <= limit <= 100 or (before_seq is not None and before_seq < 1):
         raise ValueError("Invalid account event page")
     with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)) as db:
-        revision = db.execute(
-            "SELECT revision FROM copytrading_engine_schema_revisions WHERE component='execution'"
-        ).fetchone()
-        if revision != (EXECUTION_SCHEMA.revision,):
-            raise RuntimeError("Unsupported retained execution schema revision")
-        identity = db.execute(
-            "SELECT environment,account_id FROM identity WHERE singleton=1"
-        ).fetchone()
-        row = db.execute("SELECT data FROM snapshot WHERE singleton=1").fetchone()
-        if identity is None or row is None:
-            raise RuntimeError("Retained account evidence is incomplete")
-        snapshot = decode_ledger_snapshot(row[0])
-        if (snapshot.environment, snapshot.account_id) != identity:
-            raise RuntimeError("Retained account identity mismatch")
+        snapshot = _retained_snapshot(db)
         rows = db.execute(
             "SELECT id,event FROM journal WHERE (? IS NULL OR id < ?) ORDER BY id DESC LIMIT ?",
             (before_seq, before_seq, limit),
@@ -425,6 +440,9 @@ class SQLiteOperatorEvidence:
         self, path: Path, *, before_seq: int | None = None, limit: int = 50
     ) -> tuple[AccountOverview, LedgerSnapshot, AccountEventPage]:
         return retained_account(path, before_seq=before_seq, limit=limit)
+
+    def retained_feed(self, path: Path, *, before_seq: int | None, limit: int) -> AccountFeedPage:
+        return retained_feed(path, before_seq=before_seq, limit=limit)
 
     def retained_message_events(
         self, path: Path, message_ids: set[str]

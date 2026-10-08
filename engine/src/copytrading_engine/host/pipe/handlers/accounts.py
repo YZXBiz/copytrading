@@ -2,7 +2,7 @@
 
 from copytrading_engine.host.pipe.requests import (
     ControlAccountRequest,
-    GetAccountEventsRequest,
+    GetAccountFeedRequest,
     GetAccountsRequest,
     GetEquityHistoryRequest,
     GetSourceActivityRequest,
@@ -26,7 +26,7 @@ class AccountHandlers:
             ResolveOwnershipRequest: self._on_resolve_ownership,
             GetAccountsRequest: self._on_get_accounts,
             GetSourceActivityRequest: self._on_get_source_activity,
-            GetAccountEventsRequest: self._on_get_account_events,
+            GetAccountFeedRequest: self._on_get_account_feed,
             GetEquityHistoryRequest: self._on_get_equity_history,
         }
 
@@ -80,16 +80,16 @@ class AccountHandlers:
             ok={"type": "source_activity", "activity": page.model_dump(mode="json")},
         )
 
-    async def _on_get_account_events(self, request: GetAccountEventsRequest) -> bytes:
+    async def _on_get_account_feed(self, request: GetAccountFeedRequest) -> bytes:
         if self._trading is None:
             return reply(request.version, request.request_id, error="unavailable")
-        page = await self._trading.operator.account_events(
+        page = await self._trading.operator.account_feed(
             request.account_id, request.before_seq, request.limit
         )
         return reply(
             request.version,
             request.request_id,
-            ok={"type": "account_events", "events": page.model_dump(mode="json")},
+            ok={"type": "account_feed", "feed": page.model_dump(mode="json")},
         )
 
     async def _on_get_equity_history(self, request: GetEquityHistoryRequest) -> bytes:

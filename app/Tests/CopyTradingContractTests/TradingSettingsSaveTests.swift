@@ -1663,19 +1663,26 @@ struct TradingSettingsSaveTests {
             reviewedPage.items[0].sourceEvent.attachments[0].status == "origin_rejected",
             "Attachment evidence status drifted"
         )
-        let eventResponse = try JSONDecoder().decode(
+        let feedResponse = try JSONDecoder().decode(
             EngineResponse.self,
-            from: Data(contentsOf: contracts.appending(path: "account-events-response.json"))
+            from: Data(contentsOf: contracts.appending(path: "account-feed-response.json"))
         )
-        guard case .accountEvents(let events) = try eventResponse.successValue() else {
-            throw ContractFailure("Account event response did not decode")
+        guard case .accountFeed(let feed) = try feedResponse.successValue() else {
+            throw ContractFailure("Account feed response did not decode")
         }
+        let sale = feed.items[0]
         try check(
-            events.items[0].kind == "account_control_changed" && events.items[0].reason == "set_recovery"
-                && events.items[0].status == "automatic",
-            "An owner's control change lost what it changed"
+            sale.kind == "sold" && sale.source == "you" && sale.side == "sell" && sale.symbol == "PM"
+                && sale.shares == "1" && sale.price == "201.70" && sale.amount == "201.70"
+                && sale.orderID == "lotsale-04ddab63a704",
+            "The owner's sale lost what it sold"
         )
-        try check(events.items[1].reason == "account_paused", "Account audit reason drifted")
+        try check(
+            feed.items[2].kind == "cancelled" && feed.items[2].side == "buy" && feed.items[2].guruID == "tradez",
+            "A cancelled copy lost its side or guru"
+        )
+        try check(feed.items[1].kind == "resumed" && feed.items[1].symbol == nil, "A control row drifted")
+        try check(feed.nextBeforeSeq == 26, "The feed's next page drifted")
         print("CopyTradingContractTests: account command and operator read wire fixtures decoded")
     }
 
@@ -1888,17 +1895,24 @@ struct TradingSettingsSaveTests {
         refreshFeature.authorizePrivateEvidence()
         await refreshFeature.refresh(using: refreshActions)
 
-        await refreshActions.suspendNext("events")
-        let eventRead = Task {
-            await refreshFeature.loadEvents(accountID: "paper", using: refreshActions)
+        await refreshActions.suspendNext("feed")
+        let feedRead = Task {
+            await refreshFeature.loadFeed(accountID: "paper", using: refreshActions)
         }
-        try await waitForSuspension("events", from: refreshActions)
+        try await waitForSuspension("feed", from: refreshActions)
         refreshFeature.clearPrivateEvidence()
         await refreshActions.releaseSuspendedOperation()
-        await eventRead.value
+        await feedRead.value
         try check(
-            refreshFeature.events.isEmpty && refreshFeature.errors.isEmpty,
-            "A suspended event page repopulated evidence after lock"
+            refreshFeature.feeds.isEmpty && refreshFeature.errors.isEmpty,
+            "A suspended feed page repopulated evidence after lock"
+        )
+        refreshFeature.authorizePrivateEvidence()
+        await refreshFeature.refresh(using: refreshActions)
+        await refreshFeature.loadFeed(accountID: "paper", using: refreshActions)
+        try check(
+            refreshFeature.ownerSales.map(\.item.orderID) == ["lotsale-04ddab63a704"],
+            "Activity lost the owner's sale from the account feed"
         )
 
         let commandActions = SuspendedAccountActions(suspendedOperation: "control")
@@ -1914,7 +1928,7 @@ struct TradingSettingsSaveTests {
         await command.value
         try check(
             commandFeature.accounts.isEmpty && commandFeature.activity.isEmpty
-                && commandFeature.events.isEmpty && commandFeature.errors.isEmpty
+                && commandFeature.feeds.isEmpty && commandFeature.errors.isEmpty
                 && commandFeature.pendingAccounts.isEmpty,
             "An account command completed after lock and repopulated private evidence"
         )
@@ -2389,12 +2403,12 @@ private actor RecordingAccountActions: AccountOperations {
         return value
     }
 
-    func accountEvents(accountID: String, beforeSeq: Int?, limit: Int) throws -> AccountEventPage {
+    func accountFeed(accountID: String, beforeSeq: Int?, limit: Int) throws -> AccountFeedPage {
         let response = try JSONDecoder().decode(
-            EngineResponse.self, from: fixture("account-events-response.json")
+            EngineResponse.self, from: fixture("account-feed-response.json")
         )
-        guard case .accountEvents(let value) = try response.successValue() else {
-            throw ContractFailure("Account event fixture type changed")
+        guard case .accountFeed(let value) = try response.successValue() else {
+            throw ContractFailure("Account feed fixture type changed")
         }
         return value
     }
@@ -2492,11 +2506,11 @@ private actor SuspendedAccountActions: AccountOperations {
         }
     }
 
-    func accountEvents(accountID: String, beforeSeq: Int?, limit: Int) async throws -> AccountEventPage {
-        try await suspendIfRequested("events")
-        return try decoded("account-events-response.json", as: AccountEventPage.self) {
-            guard case .accountEvents(let value) = try $0.successValue() else {
-                throw ContractFailure("Events fixture type changed")
+    func accountFeed(accountID: String, beforeSeq: Int?, limit: Int) async throws -> AccountFeedPage {
+        try await suspendIfRequested("feed")
+        return try decoded("account-feed-response.json", as: AccountFeedPage.self) {
+            guard case .accountFeed(let value) = try $0.successValue() else {
+                throw ContractFailure("Feed fixture type changed")
             }
             return value
         }

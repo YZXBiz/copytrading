@@ -62,6 +62,7 @@ from copytrading_engine.execution.domain.recovery import (
 )
 from copytrading_engine.execution.domain.signals import CopyConfig
 from copytrading_engine.execution.domain.sizing import DestinationSignal
+from copytrading_engine.execution.presentation.account_feed import AccountFeedPage
 from copytrading_engine.execution.presentation.operator_views import (
     AccountEventPage,
     AccountOverview,
@@ -360,6 +361,9 @@ class ExecutionOwner:
 
     async def event_page(self, before_seq: int | None, limit: int) -> AccountEventPage:
         return await self._submit(lambda resource: resource.event_page(before_seq, limit))
+
+    async def feed_page(self, before_seq: int | None, limit: int) -> AccountFeedPage:
+        return await self._submit(lambda resource: resource.feed_page(before_seq, limit))
 
     async def equity_history(self, window: HistoryWindow, now: dt.datetime) -> EquityHistory:
         return await self._submit(lambda resource: resource.equity_history(window, now))

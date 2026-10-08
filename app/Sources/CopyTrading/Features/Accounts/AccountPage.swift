@@ -37,7 +37,7 @@ struct AccountPage: View {
         .background(Palette.page)
         .navigationTitle(accountID)
         .sheet(item: $sheet, onDismiss: reviewFeature.clearPrivateEvidence) { selected in
-            AccountPageSheet(selected: selected, model: model, feature: feature, reviewFeature: reviewFeature)
+            ActivitySheetContent(selected: selected, model: model, feature: feature, reviewFeature: reviewFeature)
         }
     }
 }

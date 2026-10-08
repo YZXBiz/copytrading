@@ -456,7 +456,7 @@ def _timeline(
 _TIMEOUT_EVIDENCE_SECONDS = 30
 
 
-def _older_cancel_reason(submitted_at: object, cancelled_at: dt.datetime) -> str:
+def older_cancel_reason(submitted_at: object, cancelled_at: dt.datetime) -> str:
     if isinstance(submitted_at, dt.datetime):
         if (cancelled_at - submitted_at).total_seconds() >= _TIMEOUT_EVIDENCE_SECONDS:
             return "timeout"
@@ -482,7 +482,7 @@ def _order_detail(order_events: tuple[JournalEvent, ...]) -> dict[str, object]:
             case SubmissionQuote():
                 detail.update(quote_bid=payload.quote.bid, quote_ask=payload.quote.ask)
             case CancelRequested():
-                requested = payload.reason or _older_cancel_reason(
+                requested = payload.reason or older_cancel_reason(
                     detail.get("submitted_at"), event.at
                 )
             case OrderUpdate() if payload.status.value in _ENDED:

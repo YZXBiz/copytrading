@@ -49,12 +49,7 @@ struct AccountPageContent: View {
         if !isSharingWidth {
             AccountPositions(account: account, model: model, feature: feature, openPost: openPost)
         }
-        AccountActivityFeed(
-            accountID: account.accountID,
-            activity: feature.activity,
-            directory: directory,
-            selection: activityState.selectedActivityID
-        )
+        AccountFeedList(accountID: account.accountID, model: model, feature: feature)
     }
 
     private func copy(_ call: WaitingCall) {

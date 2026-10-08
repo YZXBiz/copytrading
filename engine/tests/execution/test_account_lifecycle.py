@@ -222,6 +222,9 @@ async def test_retained_account_and_source_page_show_real_evidence_without_broke
     events = await runtime.operator.account_events("paper", None, 2)
     assert events.account_id == "paper"
     assert len(events.items) == 2
+    feed = await runtime.operator.account_feed("paper", None, 50)
+    assert feed.account_id == "paper"
+    assert feed.next_before_seq is None
 
 
 async def test_retained_account_overviews_use_stable_bounded_keyset_pages(tmp_path):
