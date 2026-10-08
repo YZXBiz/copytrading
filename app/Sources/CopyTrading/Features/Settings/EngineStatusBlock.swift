@@ -62,6 +62,10 @@ struct EngineStatusBlock: View {
         case .starting:
             return L10n.string("Copying is starting: it is connecting to Discord, your interpreter, and your accounts.")
         case .paused, .pausing:
+            // Before the first start nothing was ever copying, so nothing is paused.
+            guard model.savedTradingConfiguration != nil else {
+                return L10n.string("Copying hasn't started yet. Start it from Connections.")
+            }
             return L10n.string("Copying is paused, so new posts wait until it resumes.") + handled
         case .failed:
             return L10n.string("Copying stopped on a problem. Activity and Diagnostics say what happened.")

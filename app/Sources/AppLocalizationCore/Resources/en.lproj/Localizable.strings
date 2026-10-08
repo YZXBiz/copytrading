@@ -1606,8 +1606,8 @@
 "Guru sells" = "Guru sells";
 "1/6 SOUN at 5.85" = "1/6 SOUN at 5.85";
 "Buy SOUN $5.85" = "Buy SOUN $5.85";
-"1/6 of $2,000" = "1/6 of $2,000";
-"56 at $5.85" = "56 at $5.85";
+"1/6 of $600" = "1/6 of $600";
+"17 at $5.85" = "17 at $5.85";
 "In Activity" = "In Activity";
 "Half at 6.40" = "Half at 6.40";
 "later" = "later";
@@ -1666,3 +1666,12 @@
 "That file isn't a setup CopyTrading can read. Choose a small text file with your keys." = "That file isn't a setup CopyTrading can read. Choose a small text file with your keys.";
 "Nothing in that file looks like a setup: no Discord, model, or Alpaca lines." = "Nothing in that file looks like a setup: no Discord, model, or Alpaca lines.";
 "CopyTrading couldn't move the file to the Trash. Delete it yourself once you've started copying." = "CopyTrading couldn't move the file to the Trash. Delete it yourself once you've started copying.";
+"Copying hasn't started yet. Start it from Connections." = "Copying hasn't started yet. Start it from Connections.";
+"Your gurus show here once you start copying. Start Copying in Connections checks and saves them." = "Your gurus show here once you start copying. Start Copying in Connections checks and saves them.";
+"Your accounts show here once you start copying. Start Copying in Connections checks and saves them." = "Your accounts show here once you start copying. Start Copying in Connections checks and saves them.";
+"Re-post window in minutes" = "Re-post window in minutes";
+"Re-post window" = "Re-post window";
+"Lock CopyTrading. Unsaved setup changes are discarded." = "Lock CopyTrading. Unsaved setup changes are discarded.";
+"Lock and discard your unsaved setup changes?" = "Lock and discard your unsaved setup changes?";
+"Discard and Lock" = "Discard and Lock";
+"What you typed in Connections is dropped, keys included. Your saved setup stays." = "What you typed in Connections is dropped, keys included. Your saved setup stays.";

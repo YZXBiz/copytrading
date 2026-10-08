@@ -21,11 +21,13 @@ struct GuruRulesSection: View {
                             .labelsHidden()
                             .multilineTextAlignment(.trailing)
                             .frame(width: 56)
-                            .accessibilityLabel(Text(L10n.string("Minutes")))
+                            .accessibilityLabel(Text(L10n.string("Re-post window in minutes")))
                         Text(L10n.string("minutes"))
                             .foregroundStyle(.secondary)
+                            .accessibilityHidden(true)
                         Stepper(L10n.string("Minutes"), value: repeatMinutes, in: TradingRouteConfiguration.repeatWindowRange)
                             .labelsHidden()
+                            .accessibilityLabel(Text(L10n.string("Re-post window")))
                     }
                 }
             }

@@ -17,8 +17,6 @@ struct ConnectionsView: View {
     @AppStorage("connections.ideasHidden") private var ideasHidden = false
     /// A channel ID is in and typing has paused for a moment; the setup tour moves on from it.
     @State private var channelsEntered = false
-    /// The open panel for Import Setup…, the only way a setup file reaches the app.
-    @State private var isImporting = false
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorSchemeContrast) private var contrast
@@ -150,13 +148,13 @@ struct ConnectionsView: View {
             }
             Spacer(minLength: 12)
             if model.savedTradingConfiguration == nil {
-                Button(L10n.string("Import Setup…"), systemImage: "square.and.arrow.down") { isImporting = true }
+                Button(L10n.string("Import Setup…"), systemImage: "square.and.arrow.down") { model.isShowingSetupImporter = true }
                     .controlSize(.small)
                     .help(L10n.string("Fill every field from a text file with your keys. Nothing is saved until it's checked."))
                     .accessibilityIdentifier("connections.importSetup")
             }
             Menu {
-                Button(L10n.string("Import Setup…"), systemImage: "square.and.arrow.down") { isImporting = true }
+                Button(L10n.string("Import Setup…"), systemImage: "square.and.arrow.down") { model.isShowingSetupImporter = true }
                 Button(L10n.string(ideasHidden ? "Show Ideas" : "Hide Ideas"), systemImage: "lightbulb", action: toggleIdeas)
                 Button(L10n.string("Open Getting Started"), systemImage: "hand.wave") { model.selectedScreen = .gettingStarted }
             } label: {
@@ -169,7 +167,7 @@ struct ConnectionsView: View {
             .help(L10n.string("More"))
             .accessibilityLabel(L10n.string("More"))
         }
-        .fileImporter(isPresented: $isImporting, allowedContentTypes: [.plainText, .text, .json]) { result in
+        .fileImporter(isPresented: $model.isShowingSetupImporter, allowedContentTypes: [.plainText, .text, .json]) { result in
             if case .success(let url) = result { model.importSetup(from: url) }
         }
     }

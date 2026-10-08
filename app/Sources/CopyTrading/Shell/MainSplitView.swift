@@ -10,6 +10,8 @@ struct MainSplitView: View {
     @State private var previousScreens: [AppModel.Screen] = []
     @State private var nextScreens: [AppModel.Screen] = []
     @State private var isHistoryNavigation = false
+    /// Lock asks first when it would drop setup changes that aren't saved yet.
+    @State private var confirmsLock = false
     /// Activity's filter and selection, here so the assistant knows which post "this post" is.
     @State private var activityState = ActivityScreenState()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -117,11 +119,22 @@ struct MainSplitView: View {
                 .buttonStyle(.glass)
                 .buttonBorderShape(.capsule)
             AssistantToolbarButton(assistant: model.assistant)
-            Button(L10n.string("Lock"), systemImage: "lock", action: lock)
+            Button(L10n.string("Lock"), systemImage: "lock", action: requestLock)
                 .labelStyle(.iconOnly)
                 .buttonStyle(.glass)
                 .buttonBorderShape(.circle)
-                .help(L10n.string("Lock CopyTrading"))
+                .help(
+                    L10n.string(
+                        model.hasUnsavedSetupChanges ? "Lock CopyTrading. Unsaved setup changes are discarded." : "Lock CopyTrading")
+                )
+                .confirmationDialog(
+                    L10n.string("Lock and discard your unsaved setup changes?"), isPresented: $confirmsLock, titleVisibility: .visible
+                ) {
+                    Button(L10n.string("Discard and Lock"), role: .destructive, action: lock)
+                    Button(L10n.string("Cancel"), role: .cancel) {}
+                } message: {
+                    Text(L10n.string("What you typed in Connections is dropped, keys included. Your saved setup stays."))
+                }
         }
         // Reserve the window buttons (seated 20 points in) when the sidebar is collapsed.
         .padding(.leading, showsSidebar ? 0 : 80)
@@ -252,6 +265,14 @@ struct MainSplitView: View {
             } catch {
                 return
             }
+        }
+    }
+
+    private func requestLock() {
+        if model.hasUnsavedSetupChanges {
+            confirmsLock = true
+        } else {
+            lock()
         }
     }
 

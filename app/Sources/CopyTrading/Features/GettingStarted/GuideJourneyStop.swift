@@ -10,8 +10,9 @@ struct GuideJourneyStop: Hashable {
     let screen: AppModel.Screen
     let caution: String
 
-    /// One SOUN call followed from the guru's post to the sale, with numbers that add up: 1/6 of
-    /// a $2,000 full position is $333, which buys 56 shares at $5.85.
+    /// One SOUN call followed from the guru's post to the sale, with numbers that add up under the
+    /// default limits: 1/6 of a $600 full position is $100, the most one order spends, which buys
+    /// 17 shares at $5.85.
     static let all = [
         GuideJourneyStop(
             symbol: "bubble.left.fill", title: "Guru posts", example: "1/6 SOUN at 5.85",
@@ -24,12 +25,12 @@ struct GuideJourneyStop: Hashable {
             setting: "Each guru's playbook, drafted by Learn", screen: .connections,
             caution: "An \"if\", a range or no price waits for you."),
         GuideJourneyStop(
-            symbol: "gauge.with.needle", title: "Limits check", example: "1/6 of $2,000",
+            symbol: "gauge.with.needle", title: "Limits check", example: "1/6 of $600",
             headline: "Your limits check it", gist: "Sized as the guru's share of your max per stock.",
             setting: "Every limit, per account", screen: .connections,
             caution: "New accounts start with entries off."),
         GuideJourneyStop(
-            symbol: "paperplane.fill", title: "Order fills", example: "56 at $5.85",
+            symbol: "paperplane.fill", title: "Order fills", example: "17 at $5.85",
             headline: "The order goes to Alpaca", gist: "A limit order, never above the guru's price plus your allowance.",
             setting: "Price allowance and order timeout", screen: .connections,
             caution: "Unfilled by the order timeout, it's cancelled."),

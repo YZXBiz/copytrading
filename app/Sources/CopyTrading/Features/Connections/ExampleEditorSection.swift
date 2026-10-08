@@ -39,6 +39,7 @@ struct ExampleEditorSection: View {
                 }
             }
             TextField(L10n.string("Expected ticker"), text: $example.expectedSymbol)
+                .accessibilityLabel(L10n.string("Expected ticker"))
             TextField(L10n.string("Expected size"), text: size, prompt: Text(L10n.string("e.g. 1/6, optional")))
                 .accessibilityLabel(L10n.string("Expected size"))
             TextField(

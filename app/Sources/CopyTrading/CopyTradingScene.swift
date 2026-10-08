@@ -36,6 +36,7 @@ public struct CopyTradingScene: Scene {
         .windowStyle(.hiddenTitleBar)
         .commands {
             UpdateCommands(updater: updater)
+            SetupCommands(model: model)
             GoCommands(model: model)
             HelpCommands(model: model)
             AssistantCommands(model: model)

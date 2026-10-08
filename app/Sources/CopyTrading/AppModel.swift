@@ -116,6 +116,9 @@ final class AppModel {
     var isTradingCommandPending = false
     /// The last import's summary, until the owner keeps or trashes the file.
     var setupImportResult: SetupImportResult?
+    /// The open panel for Import Setup…, from Connections or File; the only way a setup file
+    /// reaches the app.
+    var isShowingSetupImporter = false
     var isTradingUnlocked = false
     var agentAccess: AgentAccessSetting = .off
     var isAgentRelayListening = false

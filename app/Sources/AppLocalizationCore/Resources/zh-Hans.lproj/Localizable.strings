@@ -1606,8 +1606,8 @@
 "Guru sells" = "信号源卖出";
 "1/6 SOUN at 5.85" = "1/6 SOUN 于 5.85";
 "Buy SOUN $5.85" = "买入 SOUN $5.85";
-"1/6 of $2,000" = "$2,000 的 1/6";
-"56 at $5.85" = "56 股 $5.85";
+"1/6 of $600" = "$600 的 1/6";
+"17 at $5.85" = "17 股 $5.85";
 "In Activity" = "在活动中";
 "Half at 6.40" = "一半于 6.40";
 "later" = "之后";
@@ -1666,3 +1666,12 @@
 "That file isn't a setup CopyTrading can read. Choose a small text file with your keys." = "CopyTrading 无法读取这个文件。请选择一个含有密钥的小文本文件。";
 "Nothing in that file looks like a setup: no Discord, model, or Alpaca lines." = "这个文件里没有设置内容：没有 Discord、模型或 Alpaca 的行。";
 "CopyTrading couldn't move the file to the Trash. Delete it yourself once you've started copying." = "CopyTrading 无法把文件移到废纸篓。开始跟单后请自行删除。";
+"Copying hasn't started yet. Start it from Connections." = "跟单还没有开始。请在“连接”中开始。";
+"Your gurus show here once you start copying. Start Copying in Connections checks and saves them." = "开始跟单后，你的导师会显示在这里。在“连接”中点“开始跟单”会检查并保存他们。";
+"Your accounts show here once you start copying. Start Copying in Connections checks and saves them." = "开始跟单后，你的账户会显示在这里。在“连接”中点“开始跟单”会检查并保存它们。";
+"Re-post window in minutes" = "重复发布窗口（分钟）";
+"Re-post window" = "重复发布窗口";
+"Lock CopyTrading. Unsaved setup changes are discarded." = "锁定 CopyTrading。未保存的设置更改会被丢弃。";
+"Lock and discard your unsaved setup changes?" = "锁定并丢弃未保存的设置更改？";
+"Discard and Lock" = "丢弃并锁定";
+"What you typed in Connections is dropped, keys included. Your saved setup stays." = "你在“连接”中输入的内容会被丢弃，包括密钥。已保存的设置不受影响。";

@@ -959,8 +959,11 @@ def j6_setup_editing(app: AppDriver) -> None:
 
 
 def _relock(app: AppDriver) -> None:
-    """Locking drops everything typed into the setup; unlocking returns to a clean draft."""
+    """Locking drops everything typed into the setup; unlocking returns to a clean draft. With
+    unsaved changes, Lock asks first."""
     app.click("Lock")
+    if app.see().find("Discard and Lock") is not None:
+        app.click("Discard and Lock")
     app.wait_for("CopyTrading is locked", timeout=20)
     app.click("app.unlock")
     app.wait_for("navigation.today", timeout=30)

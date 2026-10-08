@@ -5,6 +5,8 @@ struct AccountsInvitation: View {
     let model: AppModel
 
     private var isSetUp: Bool { model.savedTradingConfiguration != nil }
+    /// Accounts are added in Connections but not saved yet: they show here once copying starts.
+    private var hasUnsavedAccounts: Bool { !isSetUp && !model.setupDraft.accounts.isEmpty }
 
     var body: some View {
         InvitationCard(
@@ -12,12 +14,14 @@ struct AccountsInvitation: View {
             emphasis: "inside your limits",
             message: isSetUp
                 ? "Accounts appear once the engine has read them."
-                : "Your broker accounts show here once you set them up in Connections. Start with an Alpaca paper account: it trades pretend money at real prices."
+                : hasUnsavedAccounts
+                    ? "Your accounts show here once you start copying. Start Copying in Connections checks and saves them."
+                    : "Your broker accounts show here once you set them up in Connections. Start with an Alpaca paper account: it trades pretend money at real prices."
         ) {
             AccountsInvitationFigure()
         } actions: {
             if !isSetUp {
-                Button(L10n.string("Set Up in Connections"), systemImage: "slider.horizontal.3") {
+                Button(L10n.string(hasUnsavedAccounts ? "Open Connections" : "Set Up in Connections"), systemImage: "slider.horizontal.3") {
                     model.selectedScreen = .connections
                 }
                 .buttonStyle(.borderedProminent)

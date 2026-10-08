@@ -42,8 +42,11 @@ struct PeopleView: View {
                                 title: "Edit in Connections", symbol: "slider.horizontal.3", action: openConnections)
                         })
                     if cardCount == 0 {
-                        PeopleInvitation(openConnections: openConnections)
-                            .padding(.top, 10)
+                        PeopleInvitation(
+                            hasUnsavedGurus: model.setupDraft.routes.contains { !$0.displayName.trimmed.isEmpty },
+                            openConnections: openConnections
+                        )
+                        .padding(.top, 10)
                     } else {
                         LazyVGrid(
                             columns: Array(
