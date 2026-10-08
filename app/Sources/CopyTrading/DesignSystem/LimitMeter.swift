@@ -5,6 +5,8 @@ struct LimitMeter: View {
     let title: String
     let used: Decimal
     let limit: Decimal
+    /// One quiet line under the track, e.g. how the amount splits.
+    var note: String? = nil
 
     private var fraction: Double {
         guard limit > 0 else { return 0 }
@@ -43,9 +45,16 @@ struct LimitMeter: View {
             }
             .frame(height: 5)
             .accessibilityHidden(true)
+            if let note {
+                Text(note)
+                    .font(.caption)
+                    .foregroundStyle(Palette.secondaryInk)
+                    .monospacedDigit()
+            }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(L10n.string(title))
-        .accessibilityValue(L10n.string("%lld percent used", Int64((fraction * 100).rounded())))
+        .accessibilityValue(
+            [L10n.string("%lld percent used", Int64((fraction * 100).rounded())), note].compactMap(\.self).joined(separator: ", "))
     }
 }

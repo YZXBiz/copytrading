@@ -32,7 +32,8 @@ struct AccountLimits: View {
                 LimitMeter(
                     title: "In stocks",
                     used: Decimal(engine: overview?.totalExposureUSD) ?? 0,
-                    limit: totalCap
+                    limit: totalCap,
+                    note: ExposureSplit.note(overview)
                 )
             }
         }

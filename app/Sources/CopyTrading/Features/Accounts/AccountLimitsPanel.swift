@@ -18,7 +18,9 @@ struct AccountLimitsPanel: View {
                     LimitMeter(title: "Loss today", used: lossToday, limit: dailyCap)
                 }
                 if let totalCap = Decimal(engine: policy.maxTotalUSD) {
-                    LimitMeter(title: "In stocks", used: Decimal(engine: account.totalExposureUSD) ?? 0, limit: totalCap)
+                    LimitMeter(
+                        title: "In stocks", used: Decimal(engine: account.totalExposureUSD) ?? 0, limit: totalCap,
+                        note: ExposureSplit.note(account))
                 }
                 Divider()
                 VStack(alignment: .leading, spacing: 6) {

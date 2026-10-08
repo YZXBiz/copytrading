@@ -1872,3 +1872,4 @@
 "Type" = "Type";
 "Market %@" = "Market %@";
 "Limit %@" = "Limit %@";
+"%@ copied · %@ held outside CopyTrading" = "%@ copied · %@ held outside CopyTrading";

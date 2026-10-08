@@ -1872,3 +1872,4 @@
 "Type" = "类型";
 "Market %@" = "市价%@";
 "Limit %@" = "限价%@";
+"%@ copied · %@ held outside CopyTrading" = "复制持有 %@ · CopyTrading 之外持有 %@";
