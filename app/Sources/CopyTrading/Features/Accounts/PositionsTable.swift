@@ -55,7 +55,7 @@ struct PositionsTable: View {
         } else {
             VStack(spacing: 0) {
                 header
-                Divider()
+                Hairline()
                 ForEach(positions) { position in
                     PositionRow(
                         position: position,
@@ -65,7 +65,7 @@ struct PositionsTable: View {
                     if expanded.contains(position.id) {
                         VStack(spacing: 0) {
                             ForEach(position.lots) { lot in
-                                Divider()
+                                Hairline()
                                 let guruName = gurus.gurus.first { $0.id == lot.guruID }?.name ?? lot.guruID.map(Humanize.code)
                                 PositionLotRow(
                                     lot: lot,
@@ -84,7 +84,7 @@ struct PositionsTable: View {
                         .transition(.opacity)
                     }
                     if position.id != positions.last?.id {
-                        Divider()
+                        Hairline()
                     }
                 }
             }
@@ -112,9 +112,9 @@ struct PositionsTable: View {
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
         }
-        .font(.system(size: 12))
+        .font(DesignTokens.caption.weight(.medium))
         .foregroundStyle(Palette.tertiaryInk)
-        .padding(.vertical, 6)
+        .padding(.vertical, 8)
         .accessibilityHidden(true)
     }
 

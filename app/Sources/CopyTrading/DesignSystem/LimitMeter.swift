@@ -28,10 +28,11 @@ struct LimitMeter: View {
                         limit.formatted(.currency(code: "USD").precision(.fractionLength(0)))
                     )
                 )
+                .fontWeight(.semibold)
                 .monospacedDigit()
-                .foregroundStyle(fraction >= 0.8 ? tint : Palette.tertiaryInk)
+                .foregroundStyle(fraction >= 0.8 ? tint : Palette.ink)
             }
-            .font(.callout)
+            .font(DesignTokens.caption)
             // A thin track that stays empty at zero, instead of a system bar with a stray dot.
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
@@ -41,7 +42,7 @@ struct LimitMeter: View {
                     }
                 }
             }
-            .frame(height: 5)
+            .frame(height: 4)
             .accessibilityHidden(true)
         }
         .accessibilityElement(children: .ignore)

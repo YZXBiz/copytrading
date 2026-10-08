@@ -54,7 +54,7 @@ private func connectionTilesFollowTheDraft() throws {
 @MainActor
 private func settingsRetracesPagesAndClosesBack() throws {
     let model = AppModel()
-    model.screenBeforeSettings = .people
+    model.screenBeforeSettings = .account("primary")
     model.selectedScreen = .settings
     model.show(.general)
     try #require(model.settingsTrail.isEmpty, "Opening the page already shown added a step back")
@@ -64,11 +64,11 @@ private func settingsRetracesPagesAndClosesBack() throws {
     model.settingsBack()
     try #require(model.settingsPage == .engine, "Back did not return to Engine")
     model.closeSettings()
-    try #require(model.selectedScreen == .people, "Closing Settings did not return to People")
+    try #require(model.selectedScreen == .account("primary"), "Closing Settings did not return to the account")
     try #require(model.settingsTrail.isEmpty, "Closing Settings kept the trail")
 
     model.screenBeforeSettings = .settings
     model.selectedScreen = .settings
     model.closeSettings()
-    try #require(model.selectedScreen == .today, "Closing Settings with nowhere to return did not land on Today")
+    try #require(model.selectedScreen == model.homeScreen, "Closing Settings with nowhere to return did not land at home")
 }

@@ -48,6 +48,15 @@ enum Humanize {
         date.formatted(AppTime.style(.dateTime.month(.abbreviated).day().hour().minute().second()))
     }
 
+    /// A feed row's time: the clock for today, the day and clock before that.
+    @MainActor
+    static func feedTime(_ iso: String?, now: Date = .now) -> String {
+        guard let date = date(iso) else { return iso ?? "—" }
+        return AppTime.calendar.isDate(date, inSameDayAs: now)
+            ? date.formatted(AppTime.style(.dateTime.hour().minute().second()))
+            : date.formatted(AppTime.style(.dateTime.month(.abbreviated).day().hour().minute()))
+    }
+
     /// "2 min. ago" style text for recent events.
     @MainActor
     static func relative(_ iso: String?, now: Date = .now) -> String {

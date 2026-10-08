@@ -1872,3 +1872,16 @@
 "Type" = "类型";
 "Market %@" = "市价%@";
 "Limit %@" = "限价%@";
+"%lld need you" = "%lld 条等你处理";
+"Copy by %@" = "请在 %@ 前复制";
+"Edit Limits" = "修改限额";
+"Edit Limits…" = "修改限额…";
+"Enter the trade yourself" = "自己填写交易";
+"More for this account" = "此账户的更多操作";
+"Posts your gurus send to this account appear here, with what came of each." = "信号源发往此账户的帖子会显示在这里，并附上每条的结果。";
+"Quiet today" = "今天没有动静";
+"The engine is stopped. The balance appears once it runs and the broker has been read." = "引擎已停止。引擎运行并读取券商后，余额会显示在这里。";
+"This guru is not in your setup" = "此信号源不在你的设置中";
+"Per stock" = "每只股票";
+"Your account" = "你的账户";
+"In your account" = "在你的账户中";

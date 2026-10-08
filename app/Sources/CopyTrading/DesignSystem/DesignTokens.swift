@@ -32,6 +32,16 @@ enum DesignTokens {
     // macOS's native defaults to the workspace's compact reading hierarchy. Titles are set in
     // New York, as the invitations are; everything people read and press stays in SF Pro.
     static let pageTitle = Font.system(.title2, weight: .semibold).scaled(by: 21.0 / 17)
+    /// An account's or guru's page: the name, then the balance under it.
+    static let entityTitle = Font.system(.title2, weight: .semibold).scaled(by: 22.0 / 17)
+    static let balanceDisplay = Font.system(.largeTitle, weight: .semibold).scaled(by: 30.0 / 26)
+    static let statValue = Font.system(.body, weight: .semibold).scaled(by: 14.0 / 13)
+    static let listHeading = Font.system(.body, weight: .semibold).scaled(by: 15.0 / 13)
+    static let feedTitle = Font.system(.body, weight: .semibold)
+    /// The sidebar's account and guru rows, and the small capitals over each group.
+    static let sidebarTitle = Font.system(.body, weight: .medium)
+    static let sidebarDetail = Font.system(.caption).scaled(by: 11.0 / 10)
+    static let sidebarGroup = Font.system(.caption, weight: .semibold).scaled(by: 10.5 / 10)
     static let settingsHeading = Font.system(.title3, weight: .semibold).scaled(by: 18.0 / 15)
     static let sectionTitle = Font.system(.body, design: .default, weight: .medium).scaled(by: 14.0 / 13)
     static let rowTitle = Font.system(.body, design: .default, weight: .medium).scaled(by: 14.0 / 13)

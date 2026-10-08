@@ -716,11 +716,9 @@ class Runner:
         print(f"{result.status.upper():8} {journey} {result.detail}", flush=True)
 
 
+# The pages every window has; accounts and gurus join them as navigation.account.<id> and
+# navigation.guru.<id> once a setup is saved.
 SCREENS = {
-    "today": "Today",
-    "activity": "Activity",
-    "people": "People",
-    "accounts": "Accounts",
     "connections": "Connections",
     "gettingStarted": "Getting Started",
     "diagnostics": "Diagnostics",
@@ -728,9 +726,18 @@ SCREENS = {
 }
 
 
+UNLOCKED = "navigation.connections"
+
+
 def j1_launch_and_unlock(app: AppDriver) -> None:
-    snapshot = app.wait_for("navigation.today", timeout=30, name="unlocked")
+    snapshot = app.wait_for(UNLOCKED, timeout=30, name="unlocked")
     app.expect(snapshot, *(f"navigation.{s}" for s in SCREENS))
+    # Nothing is saved yet, so the sidebar lists no accounts or gurus.
+    if any(
+        e.identifier.startswith(("navigation.account.", "navigation.guru."))
+        for e in snapshot.elements
+    ):
+        raise JourneyFailure("a fresh window listed an account or guru before any setup was saved")
     # Nothing is saved on a fresh state root, so a first launch opens into the setup tour. Ending
     # it is remembered, so the journeys after this one start without it.
     tour = app.wait_for("tour.card", timeout=60, name="opens-into-the-tour")
@@ -813,7 +820,7 @@ def j37_everyday_buttons(app: AppDriver) -> None:
 
 def j3_first_run_guidance(app: AppDriver) -> None:
     """With nothing saved, Getting Started offers the setup tour, which points at the Discord row
-    on Connections; Today offers to continue it."""
+    on Connections, and the sidebar lists only the setup pages."""
     guide = app.open_screen("gettingStarted")
     app.expect(
         guide, "Status: Not set up yet", "guide.tour", "0 of 5", "How a post becomes a trade"
@@ -823,16 +830,11 @@ def j3_first_run_guidance(app: AppDriver) -> None:
     app.expect(tour, "Connect Discord", "connections.discord", "tour.strip")
     app.click("tour.end")
     app.wait_gone("tour.card", timeout=10)
-    today = app.open_screen("today")
-    app.expect(today, "Your trading day, at a glance", "today.gettingStarted")
+    app.expect(app.see("no-setup-sidebar"), "Status: Not set up yet", "navigation.gettingStarted")
 
 
 def j4_every_screen(app: AppDriver) -> None:
     empty_states = {
-        "today": "Your trading day, at a glance",
-        "activity": "Every post, and what came of it",
-        "people": "The traders you choose to copy",
-        "accounts": "Your accounts, inside your limits",
         "connections": "Discord token and channels",
         "gettingStarted": "About 10 minutes",
     }
@@ -846,14 +848,13 @@ def j4_every_screen(app: AppDriver) -> None:
 
 def j20_toolbar(app: AppDriver) -> None:
     """With nothing set up, copying cannot start and the freshness label says so."""
-    snapshot = app.open_screen("today")
+    snapshot = app.open_screen("gettingStarted")
     copying = snapshot.find("toolbar.copying")
     if copying is None or copying.enabled:
         raise JourneyFailure("Start Copying must be present and disabled before setup")
     app.expect(snapshot, "Not copying")
     app.click("toolbar.refresh")
-    app.open_screen("people")
-    app.click("people.openConnections")
+    app.open_screen("connections")
     app.click("connections.gurus.add")
     app.expect(app.see("guru-from-connections"), "Where they post", "Remove Guru")
     app.click("Remove Guru")
@@ -881,13 +882,13 @@ def j21_settings_pages(app: AppDriver) -> None:
         "backups": ("Create Backup…", "Restore from Backup…"),
         "logs": ("Log Health", "Log Retention", "settings.support.saveLog"),
     }
-    app.open_screen("today")
+    app.open_screen("connections")
     for page, texts in expected.items():
         app.expect(app.open_settings(page), *texts)
     app.click("settings.back")
     app.expect(app.see("settings-back"), "Create Backup…")
     app.click("settings.close")
-    app.expect(app.see("settings-closed"), "navigation.today", "Your trading day, at a glance")
+    app.expect(app.see("settings-closed"), UNLOCKED, "Discord token and channels")
 
 
 def j5_self_test(app: AppDriver) -> None:
@@ -944,11 +945,9 @@ def j6_setup_editing(app: AppDriver) -> None:
     app.wait_for("Counts as a re-post within", timeout=10, name="guru-reposts-on")
     app.click("Done")
     app.expect(app.see("guru-added"), "connections.guru", "Unnamed guru")
-    # Unsaved accounts and gurus stay in Connections.
-    app.expect(
-        app.open_screen("people"), "The traders you choose to copy", "people.openConnections"
-    )
-    app.expect(app.open_screen("accounts"), "Your accounts, inside your limits")
+    # Unsaved accounts and gurus stay in Connections; the sidebar lists only saved ones.
+    unsaved = app.see("unsaved-sidebar")
+    app.expect_absent(unsaved, "navigation.account.primary")
     # Leave the setup as found, so later journeys start from nothing saved and nothing typed.
     app.open_screen("connections")
     app.click("connections.guru")
@@ -966,7 +965,7 @@ def _relock(app: AppDriver) -> None:
         app.click("Discard and Lock")
     app.wait_for("CopyTrading is locked", timeout=20)
     app.click("app.unlock")
-    app.wait_for("navigation.today", timeout=30)
+    app.wait_for(UNLOCKED, timeout=30)
 
 
 def j7_validation_gate(app: AppDriver) -> None:
@@ -1128,7 +1127,7 @@ def j22_setup_keeps_typing(app: AppDriver) -> None:
     app.open_connection("discord")
     app.type("987654321", into="Channel IDs")
     app.click("connections.done")
-    app.open_screen("today")
+    app.open_screen("gettingStarted")
     app.open_screen("connections")
     app.expect(app.see("discord-tile"), "Discord, 1 channel")
     app.open_connection("discord")
@@ -1285,7 +1284,7 @@ def j40_apply_changes(app: AppDriver) -> None:
     if app.state_root is None:
         raise JourneySkipped("needs the run's state root")
     _paper_setup()
-    app.open_screen("today")
+    app.open_screen("account.primary")
     toolbar = app.see().find("toolbar.copying")
     if toolbar is not None and "Start" in toolbar.label:
         app.click("toolbar.copying")
@@ -1296,7 +1295,7 @@ def j40_apply_changes(app: AppDriver) -> None:
     target = "175" if app.field_value("Maximum per order") == "150" else "150"
     app.type(target, into="Maximum per order")
     app.click("Done")
-    pending = app.open_screen("accounts")
+    pending = app.open_screen("account.primary")
     app.expect(pending, "Changed — not saved yet", "Apply Changes")
     if app.see().find("toolbar.copying") is None:
         raise JourneyFailure("the toolbar has no copying button")
@@ -1419,7 +1418,7 @@ def _check_locked_app_still_pauses(app: AppDriver) -> None:
     _expect_exit(app, 4, "status")
     _expect_exit(app, 0, "pause")
     app.click("app.unlock")
-    app.wait_for("navigation.today", timeout=30)
+    app.wait_for(UNLOCKED, timeout=30)
 
 
 def _choose_in_file_panel(app: AppDriver, folder: Path, name: str | None = None) -> None:
@@ -1564,7 +1563,7 @@ def _copying_with_entries(app: AppDriver) -> None:
     """Copying on, automatic recovery, and entries on, asking the owner where the app asks."""
     # Copying is paused after a restore; start it again from the toolbar. The button toggles, so
     # it is pressed only when it offers Start: an earlier journey may have left copying on.
-    app.open_screen("today")
+    app.open_screen("account.primary")
     toolbar = app.see().find("toolbar.copying")
     if toolbar is not None and "Start" in toolbar.label:
         app.click("toolbar.copying")
@@ -1620,14 +1619,14 @@ def _set_ask_before_orders(app: AppDriver, on: bool) -> None:
 def _post_and_wait_for_hold(app: AppDriver, setup: dict[str, str], symbol: str) -> None:
     price = (_latest_price(setup, symbol) * Decimal("1.004")).quantize(Decimal("0.01"))
     _post_test_call(setup, f"Bought {symbol} at {price}")
-    app.open_screen("activity")
-    app.click("Needs you")
-    app.wait_for("activity.copy", timeout=240, name=f"held-{symbol.lower()}")
+    app.open_screen("account.primary")
+    app.wait_for("needsYou.copy", timeout=240, name=f"held-{symbol.lower()}")
 
 
 def j36_approve_and_skip(app: AppDriver) -> None:
-    """With "Ask me before sending orders" on, a real call waits in Activity: Skip drops it, and
-    Approve… copies it into Alpaca paper through the review sheet. The lot is then sold.
+    """With "Ask me before sending orders" on, a real call waits under the account's Needs you:
+    Skip drops it, and Approve… copies it into Alpaca paper through the review sheet. The lot is
+    then sold.
 
     Needs a saved paper setup (after J31, or --reuse-state) and Alpaca's trading hours.
     """
@@ -1644,15 +1643,15 @@ def j36_approve_and_skip(app: AppDriver) -> None:
     try:
         # Skip: the call leaves the waiting list and nothing is bought.
         _post_and_wait_for_hold(app, setup, unused[0])
-        app.click("activity.skip")
-        app.wait_gone("activity.copy", timeout=30)
+        app.click("needsYou.skip")
+        app.wait_gone("needsYou.copy", timeout=30)
         if _lots(app, unused[0]):
             raise JourneyFailure("a skipped call still bought shares")
 
         # Approve: review the held call, preview it, and confirm one order.
         symbol = unused[1]
         _post_and_wait_for_hold(app, setup, symbol)
-        app.click("activity.copy")
+        app.click("needsYou.copy")
         app.wait_for("Save and Preview Order", timeout=30, name="approval-sheet")
         app.click("Save and Preview Order")
         app.wait_for("Review 1 Ready Order…", timeout=60, name="approval-preview")
@@ -1674,13 +1673,12 @@ def j36_approve_and_skip(app: AppDriver) -> None:
         outcomes = {o for d in approved["destinations"] for o in d["instruction_outcomes"]}
         if outcomes != {"approved_by_owner"}:
             raise JourneyFailure(f"the approved call still reads {sorted(outcomes)}")
-        app.open_screen("activity")
-        app.click("Needs you")
+        app.open_screen("account.primary")
         deadline = time.monotonic() + 30
         while app.see().find(f"Bought {symbol} ") is not None:
             if time.monotonic() > deadline:
                 app.see(f"still-waiting-{symbol.lower()}")
-                raise JourneyFailure("the approved call is still listed under Waiting for You")
+                raise JourneyFailure("the approved call is still listed under Needs you")
             time.sleep(3)
         app.see(f"approved-{symbol.lower()}")
         _sell_lot(app, symbol, bought[0])
@@ -1690,22 +1688,20 @@ def j36_approve_and_skip(app: AppDriver) -> None:
         _agent_result(app, 0, "accounts", "pause", "primary")
 
 
-def j38_today_chart(app: AppDriver) -> None:
-    """With a saved setup, Today's chart opens its day picker and its range details, and the
-    toolbar opens and closes the assistant. Run after J31, or with --reuse-state."""
+def j38_account_chart(app: AppDriver) -> None:
+    """With a saved setup, the account page's chart switches range and opens its day picker, and
+    the toolbar opens and closes the assistant. Run after J31, or with --reuse-state."""
     if app.state_root is None:
         raise JourneySkipped("needs the run's state root")
     _paper_setup()
-    today = app.open_screen("today")
-    if today.find("today.day") is None:
+    account = app.open_screen("account.primary")
+    if account.find("today.day") is None:
         raise JourneySkipped("needs a saved setup with an equity chart")
     app.click("today.day")
     picker = app.wait_for("Chart day", timeout=15, name="chart-day-picker")
     app.expect(picker, "Done")
     app.click("Done")
     app.wait_gone("Done", timeout=10)  # the button itself is labelled "Chart day, …"
-    app.click("today.rangeDetails")
-    app.expect(app.wait_for("High", timeout=15, name="range-details"), "Low")
     app.click("toolbar.assistant")
     app.wait_for("assistant.panel", timeout=15, name="assistant-open")
     app.click("toolbar.assistant")
@@ -1714,7 +1710,7 @@ def j38_today_chart(app: AppDriver) -> None:
 
 def j35_copy_and_sell(app: AppDriver) -> None:
     """A real call in the test channel is held for approval, approved into Alpaca paper, and the
-    lot it bought is sold from Accounts.
+    lot it bought is sold from the account page.
 
     Needs a saved paper setup (run after J31, or with --reuse-state) and an open market. It posts
     one short call in the test channel and trades one share on Alpaca paper.
@@ -1745,7 +1741,7 @@ def j35_copy_and_sell(app: AppDriver) -> None:
         deadline = time.monotonic() + 240
         while not (bought := [lot for lot in _lots(app, symbol) if _open(lot)]):
             if time.monotonic() > deadline:
-                app.open_screen("activity")
+                app.open_screen("account.primary")
                 app.see("timeout-copied-call")
                 raise JourneyFailure(f"the posted call did not buy {symbol} on Alpaca paper")
             time.sleep(5)
@@ -1756,9 +1752,9 @@ def j35_copy_and_sell(app: AppDriver) -> None:
 
 
 def _sell_lot(app: AppDriver, symbol: str, lot: dict[str, Any]) -> None:
-    """Sell one lot from Accounts: review first, then sell, and wait for the fill."""
-    app.open_screen("accounts")
-    # A lot bought moments ago appears once Accounts next syncs with the broker.
+    """Sell one lot from the account page: review first, then sell, and wait for the fill."""
+    app.open_screen("account.primary")
+    # A lot bought moments ago appears once the account next syncs with the broker.
     app.wait_for(f"accounts.position.{symbol}", timeout=60, name="accounts-position")
     app.click(f"accounts.position.{symbol}")
     app.click(f"accounts.lot.sell.{lot['lot_id']}")
@@ -2087,12 +2083,12 @@ def j30_assistant(app: AppDriver) -> None:
 
 def j26_help_menu(app: AppDriver) -> None:
     """Help opens the guide and its shortcut reference, and a section's help names its steps."""
-    app.open_screen("today")
+    app.open_screen("gettingStarted")
     peekaboo("menu", "click", "--app", APP_NAME, "--path", "Help > Keyboard Shortcuts")
     time.sleep(1)
     shortcuts = app.see("help-shortcuts")
     app.expect(shortcuts, "Show or hide the sidebar", "Move through posts in Activity")
-    app.open_screen("today")
+    app.open_screen("connections")
     peekaboo("menu", "click", "--app", APP_NAME, "--path", "Help > Getting Started")
     time.sleep(1)
     app.expect(app.see("help-guide"), "About 10 minutes")
@@ -2101,7 +2097,7 @@ def j26_help_menu(app: AppDriver) -> None:
 def j15_lock(app: AppDriver) -> None:
     app.click("Lock")
     snapshot = app.wait_for("CopyTrading is locked", timeout=20, name="locked")
-    app.expect_absent(snapshot, "navigation.today")
+    app.expect_absent(snapshot, UNLOCKED)
 
 
 def j17_crash_recovery(app: AppDriver) -> None:
@@ -2118,7 +2114,7 @@ def j17_crash_recovery(app: AppDriver) -> None:
     subprocess.run(["kill", "-9", *app_pids], check=False)
     time.sleep(3)
     launch(app.state_root, quit_first=False)
-    app.wait_for("navigation.today", timeout=60)
+    app.wait_for(UNLOCKED, timeout=60)
     app.open_settings("engine")
     app.wait_for("Local engine, Ready", timeout=90, name="relaunched-after-crash")
     survivors = orphans_before & set(_bundle_processes())
@@ -2158,7 +2154,7 @@ JOURNEYS: list[tuple[str, Callable[[AppDriver], None]]] = [
     ("J31 agent approval", j31_agent_approval),
     ("J40 apply changes while copying", j40_apply_changes),
     ("J33 backup and restore", j33_backup_and_restore),
-    ("J38 today chart", j38_today_chart),
+    ("J38 account chart", j38_account_chart),
     ("J35 copy and sell", j35_copy_and_sell),
     ("J36 approve and skip", j36_approve_and_skip),
     # Alone, on a fresh state: it saves and starts a setup from the first launch.

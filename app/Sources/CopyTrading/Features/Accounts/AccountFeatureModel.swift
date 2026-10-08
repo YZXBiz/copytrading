@@ -31,8 +31,6 @@ final class AccountFeatureModel {
     private(set) var lastUpdatedAt: Date?
     private(set) var histories: [String: EquityHistory] = [:]
     private(set) var historyWindow: EquityHistoryWindow = .today
-    /// A post another screen asked Activity to show; Activity clears it once shown.
-    var focusedActivityID: SourceActivity.ID?
     private var retryCommands: [String: AccountControlCommand] = [:]
     private var privateAccessGeneration: UUID?
     private var loadedAccountPageCount = 0
@@ -287,7 +285,6 @@ final class AccountFeatureModel {
         lastUpdatedAt = nil
         histories = [:]
         historyWindow = .today
-        focusedActivityID = nil
     }
 
     private func isCurrent(_ generation: UUID) -> Bool {

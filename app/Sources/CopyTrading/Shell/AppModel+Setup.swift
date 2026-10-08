@@ -311,7 +311,7 @@ extension AppModel {
         }
         message = nil
         copyingStartedAt = .now
-        selectedScreen = .today
+        selectedScreen = homeScreen
     }
 
     /// Fills the setup from a file the owner chose in the open panel. Only the draft changes:

@@ -7,8 +7,11 @@ struct GuideJourneyStop: Hashable {
     let headline: String
     let gist: String
     let setting: String
-    let screen: AppModel.Screen
+    /// Where the setting lives; nil is the owner's account page.
+    let screen: AppModel.Screen?
     let caution: String
+
+    var placeTitle: String { screen?.title ?? "Your account" }
 
     /// One SOUN call followed from the guru's post to the sale, with numbers that add up under the
     /// default limits: 1/6 of a $600 full position is $100, the most one order spends, which buys
@@ -35,14 +38,14 @@ struct GuideJourneyStop: Hashable {
             setting: "Price allowance and order timeout", screen: .connections,
             caution: "Unfilled by the order timeout, it's cancelled."),
         GuideJourneyStop(
-            symbol: "checkmark.seal.fill", title: "You see it", example: "In Activity",
+            symbol: "checkmark.seal.fill", title: "You see it", example: "In your account",
             headline: "You see what happened", gist: "Every post ends with an outcome and its reason.",
-            setting: "Copy or skip a waiting call until its day ends", screen: .activity,
+            setting: "Copy or skip a waiting call until its day ends", screen: nil,
             caution: "Each account decides on its own."),
         GuideJourneyStop(
             symbol: "arrow.uturn.backward", title: "Guru sells", example: "Half at 6.40",
             headline: "When the guru sells", gist: "That part is sold, at no less than their price less your allowance.",
-            setting: "Copy exits, or sell any lot yourself", screen: .accounts,
+            setting: "Copy exits, or sell any lot yourself", screen: nil,
             caution: "Never your own shares, and no stop-loss of its own."),
     ]
 }
