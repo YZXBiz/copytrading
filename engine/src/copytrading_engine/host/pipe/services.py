@@ -160,6 +160,7 @@ class ProfileReview(Protocol):
         provider: ProviderConfiguration,
         provider_api_key: SecretStr,
         profile: ProfileRevision,
+        destinations: list[RouteConnection],
     ) -> ProfileReplay: ...
 
 

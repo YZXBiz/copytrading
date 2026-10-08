@@ -824,10 +824,13 @@ public struct GuruReplayRequest: Equatable, Sendable {
     public var provider: TradingProviderConfiguration
     public var providerAPIKey: String
     public var profile: TradingProfileRevision
+    /// The guru's accounts, so each replayed buy says how much it would spend.
+    public var destinations: [TradingRouteConnection]
 
     public init(
         channelID: String, authorID: String?, discordToken: String,
-        provider: TradingProviderConfiguration, providerAPIKey: String, profile: TradingProfileRevision
+        provider: TradingProviderConfiguration, providerAPIKey: String, profile: TradingProfileRevision,
+        destinations: [TradingRouteConnection]
     ) {
         self.channelID = channelID
         self.authorID = authorID
@@ -835,6 +838,7 @@ public struct GuruReplayRequest: Equatable, Sendable {
         self.provider = provider
         self.providerAPIKey = providerAPIKey
         self.profile = profile
+        self.destinations = destinations
     }
 }
 
@@ -846,6 +850,8 @@ public struct ReplayedPost: Codable, Equatable, Sendable {
     public let reading: PostReading?
     public let instructions: [SourceInstruction]
     public let suggested: [SourceInstruction]
+    /// What each of the guru's accounts would spend, before the account's maximum per order.
+    public let destinations: [ProfileDestinationEvaluation]
 }
 
 public struct GuruReplay: Codable, Equatable, Sendable {

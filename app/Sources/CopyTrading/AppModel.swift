@@ -1081,7 +1081,9 @@ final class AppModel {
                     discordToken: reading.discordToken,
                     provider: draft.providerConfiguration,
                     providerAPIKey: reading.providerAPIKey,
-                    profile: profile
+                    profile: profile,
+                    destinations: route.connection.map { [$0.terms(fullPositionUSD: draft.fullPosition(for: $0))] }?
+                        .filter { (Decimal(string: $0.fullPositionUSD) ?? 0) > 0 } ?? []
                 ))
         } catch EngineContractError.remote(code: _, message: let message?) {
             throw TradingSettingsError.invalidConfiguration(message)

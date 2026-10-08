@@ -28,6 +28,7 @@ from copytrading_engine.trading.domain.profiles import (
     ProfileReplay,
     ProfileRevision,
     ReplayedPost,
+    size_destinations,
 )
 
 # Enough posts to see a guru's habits; few enough to stay one bounded model call.
@@ -150,9 +151,10 @@ class ProfileReviewService:
         provider: ProviderConfiguration,
         provider_api_key: SecretStr,
         profile: ProfileRevision,
+        destinations: list[RouteConnection],
     ) -> ProfileReplay:
         """Read the guru's recent posts as the live pipeline would, with this draft's playbook and
-        rules, and say what each would have done. Nothing is placed or saved."""
+        rules, and say what each would have done in each account. Nothing is placed or saved."""
         self._register_secrets(
             (discord_token.get_secret_value(), provider_api_key.get_secret_value())
         )
@@ -186,6 +188,7 @@ class ProfileReviewService:
                         reading=None,
                         instructions=(),
                         suggested=(),
+                        destinations=(),
                     )
             return ReplayedPost(
                 text=text,
@@ -194,6 +197,7 @@ class ProfileReviewService:
                 reading=signal.reading,
                 instructions=signal.instructions,
                 suggested=signal.suggested,
+                destinations=size_destinations(signal.instructions, destinations),
             )
 
         try:

@@ -72,7 +72,7 @@ struct RouteEditorSheet: View {
 
                 GuruRulesSection(route: $route)
 
-                GuruReplaySection(route: route, replay: replay)
+                GuruReplaySection(route: route, policies: policies, replay: replay)
 
                 DestinationEditorSection(
                     connection: $route.connection,

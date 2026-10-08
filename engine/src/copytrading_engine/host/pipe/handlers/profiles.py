@@ -91,6 +91,7 @@ class ProfileHandlers:
             request.provider,
             request.provider_api_key,
             request.profile,
+            request.destinations,
         )
         return reply(
             request.version,

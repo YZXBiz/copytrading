@@ -206,6 +206,8 @@ class ReplayGuruPostsRequest(PipeRequest):
     provider: ProviderConfiguration
     provider_api_key: SecretStr
     profile: ProfileRevision
+    # The guru's accounts, so each replayed buy says how much it would spend.
+    destinations: list[RouteConnection] = Field(max_length=20)
 
 
 class GetAccountEventsRequest(PipeRequest):

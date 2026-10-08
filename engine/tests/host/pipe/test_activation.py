@@ -143,9 +143,18 @@ class _Trading:
         return Evaluation()
 
     async def replay_posts(
-        self, channel_id, author_id, discord_token, provider, provider_api_key, profile
+        self,
+        channel_id,
+        author_id,
+        discord_token,
+        provider,
+        provider_api_key,
+        profile,
+        destinations,
     ):
-        self.replays.append((channel_id, profile.guru_id))
+        self.replays.append(
+            (channel_id, profile.guru_id, tuple(d.account_id for d in destinations))
+        )
         return ProfileReplay(
             posts=(
                 ReplayedPost(
@@ -155,6 +164,7 @@ class _Trading:
                     reading=None,
                     instructions=(),
                     suggested=(),
+                    destinations=(),
                 ),
             ),
             provider=provider.name,
@@ -564,6 +574,7 @@ async def test_replay_pipe_reads_recent_posts_with_the_draft_and_never_echoes_to
         provider={"name": "deepseek", "model": "test-model"},
         provider_api_key="private-provider-key",
         profile=profile.model_dump(mode="json"),
+        destinations=[{"account_id": "paper-account", "full_position_usd": "600.00"}],
     )
 
     raw = (await server.handle_line(request)).decode()
@@ -573,4 +584,4 @@ async def test_replay_pipe_reads_recent_posts_with_the_draft_and_never_echoes_to
     assert [post["decision"] for post in response["ok"]["replay"]["posts"]] == ["ignore"]
     assert "private-discord-token" not in raw
     assert "private-provider-key" not in raw
-    assert trading.replays == [("1517754775674949742", profile.guru_id)]
+    assert trading.replays == [("1517754775674949742", profile.guru_id, ("paper-account",))]
