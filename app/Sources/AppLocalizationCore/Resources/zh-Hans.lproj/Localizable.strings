@@ -1296,7 +1296,6 @@
 "Next: %@." = "下一步：%@。";
 "%@ of 4 steps done" = "已完成 %@/4 步";
 "Optional" = "可选";
-"Pause copying to save these changes." = "请先暂停跟单，再保存这些更改。";
 "Pretend money at real prices. Start here." = "用虚拟资金按真实价格交易，建议从这里开始。";
 "Ready to start. Every connection is checked first." = "可以开始了。开始前会先检查每个连接。";
 "Real money. Each order still stays inside your limits." = "真实资金。每笔订单仍受你的限额约束。";
@@ -1641,3 +1640,7 @@
 "Alpaca live account found" = "找到 Alpaca 实盘账户";
 "Alpaca paper account found" = "找到 Alpaca 模拟账户";
 "Each example is one request to your model service, which may charge for it." = "每个示例都会向你的模型服务发送一次请求，可能产生费用。";
+"Apply Changes" = "应用更改";
+"Apply Changes pauses copying for a moment, checks the new setup, and copies with it. Posts in between aren't missed." = "应用更改会短暂暂停跟单，检查新设置后用它继续跟单。期间的帖子不会漏掉。";
+"Your changes weren't saved, so copying continues with the saved setup." = "你的更改没有保存，跟单继续使用已保存的设置。";
+"Copying still uses the saved limits until you apply your changes." = "在你应用更改之前，跟单仍使用已保存的限额。";

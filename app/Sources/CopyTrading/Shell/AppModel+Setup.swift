@@ -129,6 +129,10 @@ extension AppModel {
     /// in the draft, so a failed check never makes the owner type them again. When only the
     /// readings are left to look over, it shows them, and pressed beside them it approves them.
     func checkAndStartCopying() {
+        if isCopyingSavedSetup {
+            applyChangesWhileCopying()
+            return
+        }
         if awaitsExampleReview && checkedSetupSignature == setupDraft.signature {
             guard isShowingSetupCheck else {
                 isShowingSetupCheck = true
@@ -149,11 +153,54 @@ extension AppModel {
         }
     }
 
-    /// Start Copying can run: the four steps are filled in, copying is paused, and no check or
-    /// start is under way.
+    /// Start Copying can run: the four steps are filled in, copying is paused or runs the saved
+    /// setup (then the button applies the changes), and no check or start is under way.
     var canCheckAndStart: Bool {
-        setupProgress.isReadyToCheck && tradingStatus?.state == .paused && !isValidatingTrading
-            && !isActivatingTrading
+        setupProgress.isReadyToCheck && (tradingStatus?.state == .paused || isCopyingSavedSetup)
+            && !isValidatingTrading && !isActivatingTrading && !isTradingCommandPending
+    }
+
+    /// Copying runs the saved setup, so the setup's changes are applied rather than started.
+    var isCopyingSavedSetup: Bool {
+        savedTradingConfiguration != nil && [.running, .degraded].contains(tradingStatus?.state)
+    }
+
+    /// The engine takes a new setup only while paused: pause, check, and start the new setup.
+    /// Posts that arrive meanwhile are read when copying starts again.
+    private func applyChangesWhileCopying() {
+        let submission: (TradingConfiguration, TradingSecrets)
+        do {
+            submission = try setupDraft.submission()
+        } catch {
+            message = Self.setupProblem(for: error)
+            return
+        }
+        checkedSetupSignature = setupDraft.signature
+        isPausedToApplyChanges = true
+        Task { [weak self] in
+            guard let self else { return }
+            await self.pauseTrading()
+            guard self.tradingStatus?.state == .paused else {
+                self.isPausedToApplyChanges = false
+                return
+            }
+            await self.checkThenStart(submission.0, enteredSecrets: submission.1)
+            await self.resumeSavedSetupIfPausedForChanges()
+        }
+    }
+
+    /// Copying paused only to apply changes that did not start: the saved setup copies again,
+    /// and the rows in Connections keep what each check found.
+    func resumeSavedSetupIfPausedForChanges() async {
+        guard isPausedToApplyChanges, !isValidatingTrading, !isActivatingTrading, !isShowingSetupCheck,
+            tradingStatus?.state == .paused
+        else { return }
+        isPausedToApplyChanges = false
+        cancelTradingActivation()
+        await startTrading()
+        if message == nil {
+            message = L10n.string("Your changes weren't saved, so copying continues with the saved setup.")
+        }
     }
 
     /// Start Copying must save exactly what was checked, so any later edit discards the check.
@@ -182,6 +229,7 @@ extension AppModel {
 
     /// A new setup was saved and copying started: show the owner where its results will appear.
     func didStartCopyingNewSetup() {
+        isPausedToApplyChanges = false
         checkedSetupSignature = nil
         isShowingSetupCheck = false
         profileExampleReviews = [:]

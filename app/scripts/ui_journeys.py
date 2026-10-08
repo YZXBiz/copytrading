@@ -1546,13 +1546,8 @@ def _trading_hours() -> bool:
 
 
 def _set_ask_before_orders(app: AppDriver, on: bool) -> None:
-    """Flip "Ask me before sending orders" in the account sheet and apply it with Start Copying.
-
-    A saved setup changes only while copying is paused ("Pause copying to save these changes")."""
-    toolbar = app.see().find("toolbar.copying")
-    if toolbar is not None and "Pause" in toolbar.label:
-        app.click("toolbar.copying")
-        app.wait_for("Start Copying", timeout=60)
+    """Flip "Ask me before sending orders" in the account sheet and apply it: Apply Changes while
+    copying pauses, checks, and copies with the new setup; Start Copying when paused."""
     app.open_screen("connections")
     app.click("connections.account.primary")
     switch = app.see().find("Ask me before sending orders", role="checkbox")

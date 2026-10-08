@@ -30,7 +30,9 @@ struct SetupChangesStatus: Equatable {
         } else if model.awaitsExampleReview {
             self.init("Everything checks out. Look over how the examples were read.", "text.magnifyingglass", .neutral)
         } else if model.tradingStatus?.state != .paused {
-            self.init("Pause copying to save these changes.", "pause.circle.fill", .inactive)
+            self.init(
+                "Apply Changes pauses copying for a moment, checks the new setup, and copies with it. Posts in between aren't missed.",
+                "pencil.circle.fill", .neutral)
         } else if model.savedTradingConfiguration == nil {
             self.init("Ready to start. Every connection is checked first.", "info.circle.fill", .neutral)
         } else {
