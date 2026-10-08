@@ -1,8 +1,9 @@
 import DesktopCore
 import SwiftUI
 
-/// What Technical details shows when opened: where the post stopped, who read it, and the Discord
-/// IDs to look it up by, on one quiet grey surface.
+/// What Technical details shows when opened: the post's timed trip from Discord to the broker,
+/// each order's facts, who read it, and the Discord IDs to look it up by, on one quiet grey
+/// surface.
 struct ActivityTechnicalDetailsContent: View {
     let item: SourceActivity
 
@@ -16,13 +17,18 @@ struct ActivityTechnicalDetailsContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            ActivityPipelineTrack(item: item)
+            ActivityTimelineView(timeline: PostTimeline(item))
+            ForEach(item.destinations) { destination in
+                ForEach(destination.orders) { order in
+                    Divider()
+                    OrderFactsView(order: order, account: destination.accountID)
+                }
+            }
             Divider()
             VStack(alignment: .leading, spacing: 8) {
                 if let interpretedBy = item.interpretedBy {
                     TechnicalFactRow(label: "Read by") { Text(interpretedBy) }
                 }
-                TechnicalFactRow(label: "Captured") { Text(Humanize.timestamp(item.capturedAt)) }
                 if item.sourceRevision > 1 {
                     TechnicalFactRow(label: "Edits") {
                         Text(L10n.string("Edited %@ after posting", Humanize.count(item.sourceRevision - 1, "time")))

@@ -211,7 +211,15 @@ class OperatorQueryService:
             except Exception as exc:  # noqa: BLE001 - one unreadable ledger must not hide others
                 log.warning("destination_read_failed id=%s type=%s", account_id, type(exc).__name__)
                 return AccountUnavailable(account_id=account_id, reason="read_failed")
-            return destination_views(snapshot, ids)
+            try:
+                events = await asyncio.wait_for(
+                    asyncio.to_thread(self._access.evidence.retained_message_events, database, ids),
+                    timeout=2,
+                )
+            except Exception as exc:  # noqa: BLE001 - the timeline is extra; the outcome stands
+                log.warning("timeline_read_failed id=%s type=%s", account_id, type(exc).__name__)
+                events = ()
+            return destination_views(snapshot, ids, events)
 
         results = await asyncio.gather(
             *(

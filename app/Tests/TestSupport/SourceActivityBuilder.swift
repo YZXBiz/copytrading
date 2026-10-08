@@ -30,15 +30,19 @@ public struct SourceActivityBuilder {
     public func reading(_ reading: PostReading) throws -> Self {
         setting("reading", try JSONSerialization.jsonObject(with: JSONEncoder().encode(reading)))
     }
+    /// When the reader took the post, finished, and handed the reading to the accounts.
+    public func read(started: String, finished: String, delivered: String) -> Self {
+        setting("read_started_at", started).setting("read_at", finished).setting("delivered_at", delivered)
+    }
     public func destination(
         _ account: String, status: String, outcomes: [String] = [], environment: String = "paper",
-        limits: [[String: Any]] = [], orders: [[String: Any]] = []
+        limits: [[String: Any]] = [], orders: [[String: Any]] = [], timeline: [[String: Any]] = []
     ) -> Self {
         var copy = self
         var destinations = copy.payload["destinations"] as? [Any] ?? []
         destinations.append([
             "account_id": account, "environment": environment, "status": status,
-            "instruction_outcomes": outcomes, "limits_hit": limits, "orders": orders,
+            "instruction_outcomes": outcomes, "limits_hit": limits, "orders": orders, "timeline": timeline,
         ])
         copy.payload["destinations"] = destinations
         return copy

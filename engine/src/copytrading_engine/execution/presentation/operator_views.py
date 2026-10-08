@@ -6,7 +6,20 @@ from typing import Literal
 
 from pydantic import AwareDatetime
 
-from copytrading_engine.execution.domain.events import AccountControlChanged, JournalEvent
+from copytrading_engine.execution.domain.events import (
+    AccountControlChanged,
+    BrokerAcknowledged,
+    CancelRequested,
+    JournalEvent,
+    Message,
+    OrderPrepared,
+    OrderUpdate,
+    SubmissionAborted,
+    SubmissionQuote,
+    SubmitError,
+    SubmitStarted,
+)
+from copytrading_engine.execution.domain.events import Skipped as SkippedEvent
 from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
 from copytrading_engine.execution.domain.market import Account, Position
 from copytrading_engine.execution.domain.orders import OwnedLot
@@ -128,6 +141,20 @@ class OrderView(Value):
     average_fill_price: Positive | None
     broker_id: str | None
     created_at: AwareDatetime
+    # How the order went out: its type and session, the guru's price, and how far above it a
+    # buy was allowed to pay.
+    order_type: Literal["market", "limit"] | None = None
+    session: str | None = None
+    source_price: Positive | None = None
+    entry_tolerance_pct: Quantity | None = None
+    submitted_at: AwareDatetime | None = None
+    # The quote when it was sent, for "your limit was $201.00; PM was offered at $208.86".
+    quote_bid: Quantity | None = None
+    quote_ask: Quantity | None = None
+    # Why it ended unfilled: CopyTrading's own cancel (timeout, replaced_by_sell,
+    # copying_stopped), Alpaca's (cancelled_at_broker, expired), or rejected.
+    cancel_reason: str | None = None
+    ended_at: AwareDatetime | None = None
     # Which of the post's calls this order places, and for a buy what the call asked for and
     # what the maximum per order allowed of it (ADR-0007).
     instruction_index: int
@@ -145,6 +172,35 @@ class LimitHit(Value):
     limit: Quantity
 
 
+type Step = Literal[
+    "received",
+    "held",
+    "resumed",
+    "skipped",
+    "sized",
+    "sent",
+    "accepted",
+    "partially_filled",
+    "filled",
+    "cancel_requested",
+    "cancelled",
+    "expired",
+    "rejected",
+    "failed",
+]
+
+
+class TimelineStep(Value):
+    """One moment of a post's trip through an account, read from the account's journal."""
+
+    step: Step
+    at: AwareDatetime
+    client_id: str | None = None
+    reason: str | None = None
+    quantity: Quantity | None = None
+    price: Positive | None = None
+
+
 class DestinationView(Value):
     account_id: str
     environment: str
@@ -152,6 +208,7 @@ class DestinationView(Value):
     instruction_outcomes: tuple[str, ...]
     limits_hit: tuple[LimitHit, ...]
     orders: tuple[OrderView, ...]
+    timeline: tuple[TimelineStep, ...] = ()
 
 
 class AccountEventView(Value):
@@ -287,7 +344,150 @@ def account_overview(
     )
 
 
-def destination_views(snapshot: LedgerSnapshot, source_ids: set[str]) -> dict[str, DestinationView]:
+_ENDED: dict[str, Step] = {"canceled": "cancelled", "expired": "expired", "rejected": "rejected"}
+_UPDATES = {"partially_filled", "filled", "cancelled", "expired", "rejected"}
+_STEP_ORDER: tuple[Step, ...] = (
+    "received",
+    "held",
+    "resumed",
+    "skipped",
+    "sized",
+    "sent",
+    "accepted",
+    "partially_filled",
+    "filled",
+    "cancel_requested",
+    "cancelled",
+    "expired",
+    "rejected",
+    "failed",
+)
+_FILLS: dict[str, Step] = {"partially_filled": "partially_filled", "filled": "filled"}
+
+
+def _timeline(
+    events: tuple[JournalEvent, ...], resumes: tuple[dt.datetime, ...]
+) -> tuple[TimelineStep, ...]:
+    """A post's steps in one account, in the order they happened. A resume between the post
+    reaching the account and its first decision means the buy was held for the owner."""
+    steps: list[TimelineStep] = []
+    seen: set[tuple[str, str]] = set()
+    for event in events:
+        payload, at = event.payload, event.at
+        match payload:
+            case Message():
+                steps.append(TimelineStep(step="received", at=at))
+            case SkippedEvent():
+                steps.append(TimelineStep(step="skipped", at=at, reason=payload.reason))
+            case OrderPrepared():
+                steps.append(
+                    TimelineStep(
+                        step="sized",
+                        at=at,
+                        client_id=payload.client_id,
+                        quantity=payload.qty,
+                        price=payload.limit_price,
+                    )
+                )
+            case SubmitStarted():
+                steps.append(TimelineStep(step="sent", at=at, client_id=payload.client_id))
+            case BrokerAcknowledged():
+                steps.append(TimelineStep(step="accepted", at=at, client_id=payload.client_id))
+            case CancelRequested():
+                steps.append(
+                    TimelineStep(
+                        step="cancel_requested",
+                        at=at,
+                        client_id=payload.client_id,
+                        reason=payload.reason,
+                    )
+                )
+            case SubmitError() | SubmissionAborted():
+                reason = (
+                    payload.reason if isinstance(payload, SubmissionAborted) else "submit_error"
+                )
+                steps.append(
+                    TimelineStep(step="failed", at=at, client_id=payload.client_id, reason=reason)
+                )
+            case OrderUpdate():
+                status = payload.status.value
+                step = _FILLS.get(status) or _ENDED.get(status)
+                key = (payload.client_id, f"{status}:{payload.filled_qty}")
+                if step is None or key in seen:
+                    continue
+                seen.add(key)
+                steps.append(
+                    TimelineStep(
+                        step=step,
+                        at=at,
+                        client_id=payload.client_id,
+                        quantity=payload.filled_qty if step in _FILLS.values() else None,
+                        price=payload.filled_avg_price,
+                    )
+                )
+            case _:
+                continue
+    # Alpaca's answer to a submit can already carry the fill, written just before the
+    # acknowledgement: the order was accepted no later than its first update.
+    first_update: dict[str, dt.datetime] = {}
+    for step in steps:
+        if step.client_id is not None and step.step in _UPDATES:
+            first_update.setdefault(step.client_id, step.at)
+    steps = [
+        step.model_copy(update={"at": min(step.at, first_update[step.client_id])})
+        if step.step == "accepted" and step.client_id in first_update
+        else step
+        for step in steps
+    ]
+    received = next((step.at for step in steps if step.step == "received"), None)
+    decided = next((step.at for step in steps if step.step in {"sized", "skipped", "failed"}), None)
+    if received is not None and decided is not None:
+        held = [at for at in resumes if received <= at <= decided]
+        if held:
+            steps.append(TimelineStep(step="held", at=received, reason="waiting_for_resume"))
+            steps.append(TimelineStep(step="resumed", at=held[0]))
+    # Steps recorded in the same instant read in the order they happen.
+    order = {name: index for index, name in enumerate(_STEP_ORDER)}
+    return tuple(sorted(steps, key=lambda step: (step.at, order[step.step])))
+
+
+def _order_detail(order_events: tuple[JournalEvent, ...]) -> dict[str, object]:
+    """What the journal adds to an order: how it went out, the quote then, and how it ended."""
+    detail: dict[str, object] = {}
+    requested: str | None = None
+    for event in order_events:
+        payload = event.payload
+        match payload:
+            case OrderPrepared():
+                detail.update(
+                    order_type=payload.type,
+                    session=payload.session.value,
+                    source_price=payload.source_price,
+                    entry_tolerance_pct=payload.entry_tolerance_pct,
+                )
+            case SubmitStarted():
+                detail["submitted_at"] = payload.submit_started_at
+            case SubmissionQuote():
+                detail.update(quote_bid=payload.quote.bid, quote_ask=payload.quote.ask)
+            case CancelRequested():
+                requested = payload.reason or "cancel_requested"
+            case OrderUpdate() if payload.status.value in _ENDED:
+                status = payload.status.value
+                detail["ended_at"] = event.at
+                if status == "canceled":
+                    detail["cancel_reason"] = requested or "cancelled_at_broker"
+                else:
+                    detail["cancel_reason"] = status
+            case _:
+                continue
+    return detail
+
+
+def destination_views(
+    snapshot: LedgerSnapshot,
+    source_ids: set[str],
+    events: tuple[JournalEvent, ...] = (),
+) -> dict[str, DestinationView]:
     if snapshot.account_id is None or snapshot.environment is None:
         return {}
     views: dict[str, DestinationView] = {}
@@ -297,6 +497,21 @@ def destination_views(snapshot: LedgerSnapshot, source_ids: set[str]) -> dict[st
         for command in snapshot.manual_commands.values()
         if command.state == "prepared"
     }
+    by_message: dict[str, list[JournalEvent]] = {}
+    by_order: dict[str, list[JournalEvent]] = {}
+    resumes: list[dt.datetime] = []
+    for event in events:
+        payload = event.payload
+        if isinstance(payload, AccountControlChanged):
+            if payload.result.command.action == "resume":
+                resumes.append(payload.result.applied_at)
+            continue
+        message_id = getattr(payload, "message_id", None)
+        if message_id is not None:
+            by_message.setdefault(message_id, []).append(event)
+        client_id = getattr(payload, "client_id", None)
+        if client_id is not None:
+            by_order.setdefault(client_id, []).append(event)
     for message in snapshot.messages.values():
         source_id = f"{message.source}:{message.channel_id}:{message.id}"
         if source_id not in source_ids:
@@ -316,7 +531,7 @@ def destination_views(snapshot: LedgerSnapshot, source_ids: set[str]) -> dict[st
                 instruction_index=order.instruction_index,
                 requested_usd=order.requested_usd,
                 budget_usd=order.budget_usd,
-            )
+            ).model_copy(update=_order_detail(tuple(by_order.get(order.client_id, ()))))
             for order in snapshot.orders.values()
             if order.message_id == message.key
         )
@@ -334,6 +549,7 @@ def destination_views(snapshot: LedgerSnapshot, source_ids: set[str]) -> dict[st
                 for exposure in part.exposure
             ),
             orders=orders,
+            timeline=_timeline(tuple(by_message.get(message.key, ())), tuple(resumes)),
         )
     return views
 

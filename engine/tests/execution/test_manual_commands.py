@@ -695,7 +695,7 @@ def test_cancelled_manual_order_is_reconciled_before_a_new_preview(tmp_path):
     first = app.confirm(confirmation_request(), NOW + dt.timedelta(seconds=1))
     assert first.status == "accepted"
     assert first.client_id is not None
-    engine.cancel(engine.ledger.order(first.client_id), NOW + dt.timedelta(seconds=2))
+    engine.cancel(engine.ledger.order(first.client_id), NOW + dt.timedelta(seconds=2), "timeout")
 
     cancelled = app.confirm(confirmation_request(), NOW + dt.timedelta(seconds=3))
     assert cancelled.status == "cancelled"

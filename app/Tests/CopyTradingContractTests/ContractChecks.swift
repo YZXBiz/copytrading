@@ -6,6 +6,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
     case activitySourceReading = "activity source reading"
     case activityDestinationOutcomes = "activity destination outcomes"
     case activityCard = "activity card"
+    case activityTimeline = "activity timeline"
     case appWindowLifecycle = "app window lifecycle"
     case connectionsDraft = "connections draft"
     case guidedSetup = "guided setup"
@@ -32,6 +33,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
         case .activitySourceReading: try checkActivitySourceReadingRepresentation()
         case .activityDestinationOutcomes: try checkActivityDestinationInstructionOutcomes()
         case .activityCard: try runActivityCardTests()
+        case .activityTimeline: try runActivityTimelineTests()
         case .appWindowLifecycle: try await runAppWindowLifecycleTests()
         case .connectionsDraft: try runConnectionsDraftTests()
         case .guidedSetup: try runGuidedSetupTests()

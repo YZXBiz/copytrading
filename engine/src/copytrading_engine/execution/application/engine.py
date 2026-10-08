@@ -20,6 +20,7 @@ from copytrading_engine.execution.application.ports import (
 )
 from copytrading_engine.execution.domain.events import (
     BrokerAcknowledged,
+    CancelReason,
     CancelRequested,
     Exposure,
     JournalEvent,
@@ -207,7 +208,7 @@ class CopyEngine:
                 and is_cancelable(current.status)
                 and (now - current.created_at).total_seconds() >= self.config.order_timeout_seconds
             ):
-                self.cancel(current, now)
+                self.cancel(current, now, "timeout")
 
         # Operator-released IDs leave the ordinary pending set, but remain
         # under broker observation for their full audit history.
@@ -220,7 +221,7 @@ class CopyEngine:
                 self.ledger.apply_order(client_id, update, now)
         self.ledger.open_ownership_incidents(self.audit_positions(), now)
 
-    def cancel(self, order: OrderRecord, now: dt.datetime) -> None:
+    def cancel(self, order: OrderRecord, now: dt.datetime, reason: CancelReason) -> None:
         if not order.broker_id or not is_cancelable(order.status):
             return
         try:
@@ -231,6 +232,7 @@ class CopyEngine:
                     payload=CancelRequested(
                         client_id=order.client_id,
                         message_id=order.message_id,
+                        reason=reason,
                     ),
                 )
             )
@@ -285,7 +287,7 @@ class CopyEngine:
             if s.action != "buy" and not manual:
                 for order in active:
                     if order.message_id != message_id and is_cancelable(order.status):
-                        self.cancel(order, now)
+                        self.cancel(order, now, "replaced_by_sell")
             return TradeDecision(None, "wait_pending_order")
         session = self.market_session(now)
         if session == Session.CLOSED:

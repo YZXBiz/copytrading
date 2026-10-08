@@ -10,6 +10,7 @@ from typing import Literal
 from copytrading_engine.execution.adapters.sqlite_ledger import (
     EXECUTION_SCHEMA,
     decode_ledger_snapshot,
+    message_events,
 )
 from copytrading_engine.execution.domain.events import JournalEvent
 from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
@@ -42,6 +43,16 @@ def _has_table(db: sqlite3.Connection, name: str) -> bool:
     return row is not None
 
 
+def _moment(value: object) -> dt.datetime | None:
+    """A stored time as an aware moment: ISO text, or epoch seconds from older rows."""
+    if value is None:
+        return None
+    if isinstance(value, int | float):
+        return dt.datetime.fromtimestamp(value, dt.UTC)
+    moment = dt.datetime.fromisoformat(str(value))
+    return moment if moment.tzinfo else moment.replace(tzinfo=dt.UTC)
+
+
 def source_page(
     database: Path,
     *,
@@ -60,7 +71,8 @@ def source_page(
         rows = db.execute(
             "SELECT capture.seq,capture.id,capture.payload,capture.source_at,"
             "capture.captured_at,capture.mode,capture.confirmed,parser.result,"
-            "delivery.delivered_at,event.event_payload,event.capture_status,event.payload_bytes "
+            "delivery.delivered_at,event.event_payload,event.capture_status,event.payload_bytes,"
+            "parser.enqueued_at,parser.completed_at "
             "FROM source_captures capture LEFT JOIN parser_inbox parser ON parser.id=capture.id "
             "LEFT JOIN parser_signal_deliveries delivery ON delivery.message_id=capture.id "
             "LEFT JOIN source_event_evidence event ON event.source_id=capture.id "
@@ -145,6 +157,8 @@ def source_page(
         event_payload,
         event_status,
         event_bytes,
+        read_started_at,
+        read_at,
     ) in rows:
         source = RawMessage.model_validate_json(raw)
         decision = StockSignal.model_validate_json(parsed) if parsed else None
@@ -191,6 +205,9 @@ def source_page(
                 profile_revision=decision.profile_revision if decision else None,
                 source_event=source_event,
                 destinations=destinations.get(source_id, ()),
+                read_started_at=_moment(read_started_at),
+                read_at=_moment(read_at),
+                delivered_at=_moment(delivered_at),
             )
         )
     return SourceActivityPage(
@@ -408,6 +425,12 @@ class SQLiteOperatorEvidence:
         self, path: Path, *, before_seq: int | None = None, limit: int = 50
     ) -> tuple[AccountOverview, LedgerSnapshot, AccountEventPage]:
         return retained_account(path, before_seq=before_seq, limit=limit)
+
+    def retained_message_events(
+        self, path: Path, message_ids: set[str]
+    ) -> tuple[JournalEvent, ...]:
+        with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)) as db:
+            return message_events(db, message_ids)
 
     def manual_source_evidence(self, database: Path, source_id: str) -> ManualSourceEvidence:
         return manual_source_evidence(database, source_id)

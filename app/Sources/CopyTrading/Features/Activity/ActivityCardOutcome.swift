@@ -87,11 +87,15 @@ struct ActivityCardOutcome {
         var lines = destination.orders.map { order in
             Line(
                 what: DestinationOutcome.order(order, count: 1).detail,
-                why: wasTrimmed(order)
-                    ? L10n.string(
-                        "The call was for %@. Your max per order cut it to %@.",
-                        Humanize.dollars(order.requestedUSD), Humanize.dollars(order.budgetUSD))
-                    : nil)
+                // Why it ended unfilled comes first: it is what the owner opens the card to learn.
+                why: [
+                    CancelReasonText.sentence(order),
+                    wasTrimmed(order)
+                        ? L10n.string(
+                            "The call was for %@. Your max per order cut it to %@.",
+                            Humanize.dollars(order.requestedUSD), Humanize.dollars(order.budgetUSD))
+                        : nil,
+                ].compactMap(\.self).joined(separator: " ").nilIfEmpty)
         }
         for (part, outcome) in destination.instructionOutcomes.enumerated()
         where !Self.carriedOn.contains(outcome) && !WaitingCall.heldForOwner.contains(outcome) {

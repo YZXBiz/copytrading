@@ -288,6 +288,20 @@ public struct OrderActivity: Codable, Equatable, Identifiable, Sendable {
     /// For a buy: what the call asked for, and what the maximum per order allowed of it.
     public let requestedUSD: String?
     public let budgetUSD: String?
+    /// How it went out: "limit" or "market", in which session, from which guru price, and how far
+    /// above it a buy could pay.
+    public let orderType: String?
+    public let session: String?
+    public let sourcePrice: String?
+    public let entryTolerancePct: String?
+    public let submittedAt: String?
+    /// The market when it went out.
+    public let quoteBid: String?
+    public let quoteAsk: String?
+    /// Why it ended unfilled: timeout, replaced_by_sell, copying_stopped, cancelled_at_broker,
+    /// expired, or rejected.
+    public let cancelReason: String?
+    public let endedAt: String?
     public var id: String { clientID }
 
     enum CodingKeys: String, CodingKey {
@@ -301,6 +315,31 @@ public struct OrderActivity: Codable, Equatable, Identifiable, Sendable {
         case instructionIndex = "instruction_index"
         case requestedUSD = "requested_usd"
         case budgetUSD = "budget_usd"
+        case orderType = "order_type"
+        case session
+        case sourcePrice = "source_price"
+        case entryTolerancePct = "entry_tolerance_pct"
+        case submittedAt = "submitted_at"
+        case quoteBid = "quote_bid"
+        case quoteAsk = "quote_ask"
+        case cancelReason = "cancel_reason"
+        case endedAt = "ended_at"
+    }
+}
+
+/// One moment of a post's trip through an account: received, held, sized, sent, accepted,
+/// filled, cancelled… with its time.
+public struct TimelineStep: Codable, Equatable, Sendable {
+    public let step: String
+    public let at: String
+    public let clientID: String?
+    public let reason: String?
+    public let quantity: String?
+    public let price: String?
+
+    enum CodingKeys: String, CodingKey {
+        case step, at, reason, quantity, price
+        case clientID = "client_id"
     }
 }
 
@@ -322,6 +361,8 @@ public struct DestinationActivity: Codable, Equatable, Identifiable, Sendable {
     public let instructionOutcomes: [String]
     public let limitsHit: [LimitHit]
     public let orders: [OrderActivity]
+    /// Every step the post took in this account, in order.
+    public let timeline: [TimelineStep]
     public var id: String { accountID }
 
     enum CodingKeys: String, CodingKey {
@@ -329,7 +370,18 @@ public struct DestinationActivity: Codable, Equatable, Identifiable, Sendable {
         case environment, status
         case instructionOutcomes = "instruction_outcomes"
         case limitsHit = "limits_hit"
-        case orders
+        case orders, timeline
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        accountID = try values.decode(String.self, forKey: .accountID)
+        environment = try values.decode(String.self, forKey: .environment)
+        status = try values.decode(String.self, forKey: .status)
+        instructionOutcomes = try values.decode([String].self, forKey: .instructionOutcomes)
+        limitsHit = try values.decode([LimitHit].self, forKey: .limitsHit)
+        orders = try values.decode([OrderActivity].self, forKey: .orders)
+        timeline = try values.decodeIfPresent([TimelineStep].self, forKey: .timeline) ?? []
     }
 }
 
@@ -453,6 +505,10 @@ public struct SourceActivity: Codable, Equatable, Identifiable, Sendable {
     public let reading: PostReading?
     public let sourceEvent: SourceEventEvidence
     public let destinations: [DestinationActivity]
+    /// When the reader took the post, when it finished, and when the reading reached the accounts.
+    public let readStartedAt: String?
+    public let readAt: String?
+    public let deliveredAt: String?
     public var id: Int { sequence }
 
     enum CodingKeys: String, CodingKey {
@@ -477,6 +533,9 @@ public struct SourceActivity: Codable, Equatable, Identifiable, Sendable {
         case reading
         case sourceEvent = "source_event"
         case destinations
+        case readStartedAt = "read_started_at"
+        case readAt = "read_at"
+        case deliveredAt = "delivered_at"
     }
 }
 

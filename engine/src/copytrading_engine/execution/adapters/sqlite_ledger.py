@@ -196,6 +196,12 @@ class Store:
             ),
         )
 
+    def message_events(self, message_ids: set[str]) -> tuple[JournalEvent, ...]:
+        """Every journal event of these posts, plus the account's control changes over the
+        same span, for Activity's timeline."""
+        self._require_usable()
+        return message_events(self.db, message_ids)
+
     def event_page(
         self, before_seq: int | None, limit: int
     ) -> tuple[tuple[int, JournalEvent], ...]:
@@ -250,3 +256,30 @@ class Store:
             except BaseException:
                 self._discard()
                 raise
+
+
+def message_events(db: sqlite3.Connection, message_ids: set[str]) -> tuple[JournalEvent, ...]:
+    """The journal events of these posts in order, with the account's control changes between
+    the first and the last of them (a resume explains a held buy)."""
+    if not message_ids:
+        return ()
+    marks = ",".join("?" * len(message_ids))
+    rows = db.execute(
+        "SELECT event FROM journal WHERE json_extract(event, '$.payload.message_id') "
+        f"IN ({marks}) ORDER BY id",
+        tuple(sorted(message_ids)),
+    ).fetchall()
+    events = tuple(JournalEvent.model_validate_json(raw) for (raw,) in rows)
+    if not events:
+        return ()
+    first, last = min(event.at for event in events), max(event.at for event in events)
+    controls = db.execute(
+        "SELECT event FROM journal WHERE json_extract(event, '$.payload.kind') = "
+        "'account_control_changed' ORDER BY id"
+    ).fetchall()
+    changes = tuple(
+        event
+        for event in (JournalEvent.model_validate_json(raw) for (raw,) in controls)
+        if first <= event.at <= last
+    )
+    return events + changes

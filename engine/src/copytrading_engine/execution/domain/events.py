@@ -143,10 +143,17 @@ class BrokerAcknowledged(EventPayloadValue):
     message_id: Identifier
 
 
+# Why CopyTrading asked Alpaca to cancel an order: it went unfilled for the account's order
+# timeout, a sell of the same stock replaced a buy still waiting, or copying stopped.
+CancelReason = Literal["timeout", "replaced_by_sell", "copying_stopped"]
+
+
 class CancelRequested(EventPayloadValue):
     kind: Literal["cancel_requested"] = "cancel_requested"
     client_id: Identifier
     message_id: Identifier
+    # None for orders cancelled before the reason was recorded.
+    reason: CancelReason | None = None
 
 
 class QuoteUnavailable(EventPayloadValue):

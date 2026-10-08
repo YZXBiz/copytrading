@@ -191,7 +191,9 @@ class ExecutionResources:
         )
 
     def destination_views(self, source_ids: set[str]) -> dict[str, DestinationView]:
-        return destination_views(self.engine.ledger.snapshot(), source_ids)
+        return destination_views(
+            self.engine.ledger.snapshot(), source_ids, self.store.message_events(source_ids)
+        )
 
     def equity_history(self, window: HistoryWindow, now: dt.datetime) -> EquityHistory:
         """The broker's curve, fetched at most once a minute so charts never crowd out trading."""
@@ -482,7 +484,7 @@ class ExecutionResources:
             now = dt.datetime.now(dt.UTC)
             for order in self.engine.pending():
                 try:
-                    self.engine.cancel(order, now)
+                    self.engine.cancel(order, now, "copying_stopped")
                 except BrokerError as exc:
                     log.warning("shutdown_cancel_unconfirmed error=%s", type(exc).__name__)
             try:

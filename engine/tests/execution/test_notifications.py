@@ -96,12 +96,12 @@ def test_unknown_submission_and_cancel_request_never_claim_completion():
     assert "Do not submit a duplicate" in repository.notices[-1].payload.annotations["evidence"]
     engine.reconcile(NOW)
     order = engine.ledger.orders()[0]
-    engine.cancel(order, NOW)
+    engine.cancel(order, NOW, "timeout")
     notice = repository.notices[-1]
     cancel_key = notice.key
     assert "cancellation requested" in notice.payload.annotations["summary"]
     assert "not yet confirmed" in notice.payload.annotations["evidence"]
-    engine.cancel(order, NOW)
+    engine.cancel(order, NOW, "timeout")
     assert repository.notices[-1].key == cancel_key
     engine.reconcile(NOW)
     assert "canceled" in repository.notices[-1].payload.annotations["summary"]
