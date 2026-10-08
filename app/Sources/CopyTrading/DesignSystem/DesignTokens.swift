@@ -30,14 +30,20 @@ enum DesignTokens {
     static let pageTitle = Font.system(.title2, weight: .semibold).scaled(by: 21.0 / 17)
     /// An account's or guru's page: the name, then the balance under it.
     /// An account or guru's name: large and regular, tracked tight, as on a studio site.
-    static let entityTitle = Font.system(.largeTitle, weight: .regular).scaled(by: 30.0 / 26)
-    static let entityTitleTracking: CGFloat = -0.9
+    static let entityTitle = DisplayFont.font(size: 42, weight: .medium, relativeTo: .largeTitle)
+    static let entityTitleTracking: CGFloat = 0.2
     /// The balance is the page's one big figure: light enough to read as type, not a badge.
-    static let balanceDisplay = Font.system(.largeTitle, weight: .regular).scaled(by: 52.0 / 26)
-    static let balanceTracking: CGFloat = -2
+    static let balanceDisplay = DisplayFont.font(size: 68, weight: .regular, relativeTo: .largeTitle)
+    static let balanceTracking: CGFloat = -0.5
     static let statValue = Font.system(.body, weight: .semibold).scaled(by: 14.0 / 13)
-    static let listHeading = Font.system(.title3, weight: .regular).scaled(by: 20.0 / 15)
-    static let listHeadingTracking: CGFloat = -0.4
+    static let listHeading = DisplayFont.font(size: 26, weight: .medium, relativeTo: .title2)
+    static let listHeadingTracking: CGFloat = 0.2
+    /// Small bold capitals spaced wide, like a studio site's navigation: labels, never sentences.
+    static let eyebrow = Font.system(.caption, weight: .bold).scaled(by: 11.0 / 10)
+    static let eyebrowTracking: CGFloat = 1.4
+    /// A quiet line under a big name, spaced a little wide so it reads as a caption to the title.
+    static let lede = Font.system(.body).scaled(by: 14.0 / 13)
+    static let ledeTracking: CGFloat = 0.8
     static let feedTitle = Font.system(.body, weight: .semibold)
     /// The sidebar's account and guru rows, and the small capitals over each group.
     static let sidebarTitle = Font.system(.body, weight: .medium)

@@ -20,14 +20,12 @@ struct EquityPlot: View {
 
     /// The whole line takes the day's direction: green when it ends above its reference, red below,
     /// grey when it has not moved. Crossings stay readable against the dotted reference.
-    private var lineTone: Color { tone(stats.last.value) }
 
     private func tone(_ value: Double) -> Color {
         value > reference ? EquityTone.of(true) : value < reference ? EquityTone.of(false) : Palette.tertiaryInk
     }
 
     /// The latest point is the balance just read, so it pulses while the day is still being written.
-    private var isLive: Bool { range == .day && Date.now.timeIntervalSince(stats.last.at) < 15 * 60 }
 
     private var valueRange: (lower: Double, upper: Double) {
         let low = min(stats.low.value, reference)
@@ -47,17 +45,6 @@ struct EquityPlot: View {
         let runs = EquityLineRun.runs(curve.points, on: scale)
         Chart {
             referenceLine
-            ForEach(curve.points, id: \.at) { point in
-                AreaMark(
-                    x: .value("Time", scale.x(point.at)),
-                    yStart: .value("Floor", bounds.lower),
-                    yEnd: .value("Equity", point.value),
-                    series: .value("Fill", "fill")
-                )
-                .foregroundStyle(wash)
-                .interpolationMethod(.monotone)
-                .accessibilityHidden(true)
-            }
             ForEach(runs) { run in
                 ForEach(run.points, id: \.at) { point in
                     LineMark(
@@ -65,7 +52,7 @@ struct EquityPlot: View {
                         y: .value("Equity", point.value),
                         series: .value("Run", run.id)
                     )
-                    .foregroundStyle(lineTone.opacity(run.isExtended ? 0.45 : 1))
+                    .foregroundStyle(Palette.ink.opacity(run.isExtended ? 0.35 : 1))
                     .interpolationMethod(.monotone)
                     .lineStyle(StrokeStyle(lineWidth: contrast == .increased ? 2.25 : 1.75, lineCap: .round, lineJoin: .round))
                     .accessibilityLabel(EquityChartTime.point(point.at, in: range))
@@ -75,11 +62,12 @@ struct EquityPlot: View {
             measureMarks(on: scale)
             focusMarks(on: scale)
             PointMark(x: .value("Time", scale.x(stats.last.at)), y: .value("Equity", stats.last.value))
-                .symbolSize(38)
-                .foregroundStyle(lineTone)
-                .annotation(position: .overlay) {
-                    if isLive && selection == .none {
-                        LivePulse(color: lineTone)
+                .symbolSize(30)
+                .foregroundStyle(Palette.ink)
+                .annotation(position: .top, spacing: 1) {
+                    // The walker stands where the line has got to; it steps in, then stays still.
+                    if selection == .none {
+                        InkWalker()
                     }
                 }
                 .accessibilityHidden(true)
@@ -183,13 +171,5 @@ struct EquityPlot: View {
         let start = scale.x(stats.open.at)
         let end = scale.x(max(stats.last.at, stats.open.at.addingTimeInterval(3_600)))
         return start...max(end, start + 0.05)
-    }
-
-    /// The day's color fading from the line to the floor of the plot.
-    private var wash: LinearGradient {
-        let strong = contrast == .increased ? 0.14 : 0.07
-        return LinearGradient(
-            stops: [.init(color: lineTone.opacity(strong), location: 0), .init(color: lineTone.opacity(0), location: 0.8)],
-            startPoint: .top, endPoint: .bottom)
     }
 }

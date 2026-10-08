@@ -23,13 +23,9 @@ struct AccountLimitsStrip: View {
                 HStack(spacing: 24) { caps }
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
-        .overlay {
-            RoundedRectangle(cornerRadius: 18)
-                .strokeBorder(Palette.hairline)
-                .accessibilityHidden(true)
-        }
+        .padding(.vertical, 18)
+        .overlay(alignment: .top) { Hairline() }
+        .overlay(alignment: .bottom) { Hairline() }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.string("Limits"))
     }
@@ -70,9 +66,10 @@ struct AccountLimitsStrip: View {
 
     private func cap(_ title: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(L10n.string(title))
-                .font(DesignTokens.caption)
-                .foregroundStyle(Palette.secondaryInk)
+            Text(L10n.string(title).uppercased())
+                .font(DesignTokens.eyebrow)
+                .tracking(DesignTokens.eyebrowTracking)
+                .foregroundStyle(Palette.tertiaryInk)
             Text(Decimal(engine: value)?.formatted(.currency(code: "USD").precision(.fractionLength(0))) ?? value)
                 .font(DesignTokens.caption.weight(.semibold))
                 .monospacedDigit()

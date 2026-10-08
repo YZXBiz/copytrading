@@ -21,9 +21,7 @@ struct AccountFeedList: View {
                         .accessibilityLabel(L10n.string("Account activity error: %@", error))
                 }
                 if items.isEmpty {
-                    Text(L10n.string("Nothing has been bought or sold in this account yet."))
-                        .foregroundStyle(Palette.tertiaryInk)
-                        .font(DesignTokens.caption)
+                    InkEmptyState(message: L10n.string("Nothing has been bought or sold in this account yet."))
                         .padding(.vertical, 8)
                 }
                 let directory = GuruDirectory(model.savedTradingConfiguration)

@@ -20,10 +20,10 @@ struct GuruFeedList: View {
                     .foregroundStyle(Palette.tertiaryInk)
             }
             if days.isEmpty {
-                Text(L10n.string("No posts from %@ yet. They show here as soon as CopyTrading reads one.", guruName))
-                    .font(.body)
-                    .foregroundStyle(Palette.secondaryInk)
-                    .padding(.top, 16)
+                InkEmptyState(
+                    message: L10n.string("No posts from %@ yet. They show here as soon as CopyTrading reads one.", guruName)
+                )
+                .padding(.top, 16)
             }
             LazyVStack(alignment: .leading, spacing: 0) {
                 ForEach(days) { day in

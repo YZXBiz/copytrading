@@ -27,10 +27,6 @@ struct AccountFeedRow: View {
 
     private var content: some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Image(systemName: item.tone.symbol)
-                .foregroundStyle(item.tone.color)
-                .font(.caption)
-                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.sentence)
                     .foregroundStyle(Palette.ink)

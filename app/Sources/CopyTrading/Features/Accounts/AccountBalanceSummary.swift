@@ -31,13 +31,13 @@ struct AccountBalanceSummary: View {
                     }
                 }
                 ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .lastTextBaseline, spacing: 24) {
+                    HStack(alignment: .lastTextBaseline, spacing: 40) {
                         stats
                         Spacer(minLength: 16)
                         freshness(balance)
                     }
                     VStack(alignment: .leading, spacing: 12) {
-                        HStack(spacing: 24) { stats }
+                        HStack(spacing: 40) { stats }
                         freshness(balance)
                     }
                 }
@@ -55,10 +55,11 @@ struct AccountBalanceSummary: View {
     }
 
     private func stat(_ title: String, _ value: String?) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(L10n.string(title))
-                .font(DesignTokens.caption)
-                .foregroundStyle(Palette.secondaryInk)
+        VStack(alignment: .leading, spacing: 6) {
+            Text(L10n.string(title).uppercased())
+                .font(DesignTokens.eyebrow)
+                .tracking(DesignTokens.eyebrowTracking)
+                .foregroundStyle(Palette.tertiaryInk)
             MoneyText(value: Decimal(engine: value) ?? 0, font: DesignTokens.statValue)
                 .foregroundStyle(Palette.ink)
         }

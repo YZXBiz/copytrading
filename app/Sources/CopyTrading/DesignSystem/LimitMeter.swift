@@ -20,8 +20,10 @@ struct LimitMeter: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline) {
-                Text(L10n.string(title))
-                    .foregroundStyle(Palette.secondaryInk)
+                Text(L10n.string(title).uppercased())
+                    .font(DesignTokens.eyebrow)
+                    .tracking(DesignTokens.eyebrowTracking)
+                    .foregroundStyle(Palette.tertiaryInk)
                     .fixedSize()
                 Spacer(minLength: 8)
                 Text(

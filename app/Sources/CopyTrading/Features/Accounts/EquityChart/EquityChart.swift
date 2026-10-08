@@ -13,6 +13,8 @@ struct EquityChart: View {
     var plotHeight: CGFloat = 176
     @State private var day = Date.now
     @State private var selection = EquitySelection.none
+    /// Bumped by Draw It Again to draw the line in once more.
+    @State private var drawing = 0
     @FocusState private var isChartFocused: Bool
     /// A click focuses the chart without a ring; Tab or an arrow key brings the ring in.
     @State private var focusCameFromPointer = false
@@ -62,6 +64,12 @@ struct EquityChart: View {
                         .fixedSize()
                 }
                 rangeControl
+                Button(L10n.string("Draw It Again"), systemImage: "arrow.counterclockwise") { drawing += 1 }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(QuietPressButtonStyle())
+                    .foregroundStyle(Palette.tertiaryInk)
+                    .help(L10n.string("Draw It Again"))
+                    .accessibilityIdentifier("chart.redraw")
             }
             if let stats {
                 plot(curve: curve, stats: stats)
@@ -75,6 +83,7 @@ struct EquityChart: View {
         }
         .onChange(of: window) { _, chosen in
             selection = .none
+            drawing += 1
             if chosen.range == .day { day = chosen.chosenDay }
         }
     }
@@ -91,6 +100,7 @@ struct EquityChart: View {
     @ViewBuilder
     private func plot(curve: EquityCurve, stats: EquityCurveStats) -> some View {
         EquityPlot(curve: curve, stats: stats, range: window.range, selection: $selection)
+            .drawsIn(token: drawing)
             .popoverTip(MeasureChartTip(generation: tipGeneration), arrowEdge: .bottom)
             .task {
                 await MeasureChartTip.chartViewed.donate()
@@ -141,25 +151,12 @@ struct EquityChart: View {
 
     /// Kept at the plot's height so data arriving does not move the page.
     private var emptyState: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "chart.xyaxis.line")
-                .font(.title2)
-                .foregroundStyle(.tertiary)
-                .accessibilityHidden(true)
-            Text(
-                history == nil
-                    ? L10n.string("The broker's equity curve appears here while copying is on.")
-                    : L10n.string("The broker has no equity points for this %@.", L10n.string(window.range == .day ? "Day" : "Range"))
-            )
-            .foregroundStyle(.secondary)
-        }
-        .font(DesignTokens.caption)
-        .frame(maxWidth: .infinity, minHeight: plotHeight)
-        .overlay {
-            RoundedRectangle(cornerRadius: DesignTokens.blockCornerRadius)
-                .strokeBorder(Palette.hairline, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                .accessibilityHidden(true)
-        }
+        InkEmptyState(
+            message: history == nil
+                ? L10n.string("The broker's equity curve appears here while copying is on.")
+                : L10n.string("The broker has no equity points for this %@.", L10n.string(window.range == .day ? "Day" : "Range"))
+        )
+        .frame(height: plotHeight, alignment: .bottom)
     }
 
     private func choose(_ chosen: EquityHistoryWindow) {

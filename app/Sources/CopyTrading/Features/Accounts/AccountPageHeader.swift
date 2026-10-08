@@ -94,7 +94,7 @@ struct AccountPageHeader: View {
     /// The name, large and plain, with its mode and entry state in one grey line under it. Only a
     /// live account's mode carries colour, since it trades real money.
     private var identity: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 8) {
             Text(account.accountID)
                 .font(DesignTokens.entityTitle)
                 .tracking(DesignTokens.entityTitleTracking)
@@ -112,7 +112,8 @@ struct AccountPageHeader: View {
                 Text(L10n.string(entryState.text))
                     .foregroundStyle(entryState.tone == .caution ? Palette.amber : Palette.tertiaryInk)
             }
-            .font(DesignTokens.bodyText)
+            .font(DesignTokens.lede)
+            .tracking(DesignTokens.ledeTracking)
         }
         .fixedSize(horizontal: true, vertical: false)
     }

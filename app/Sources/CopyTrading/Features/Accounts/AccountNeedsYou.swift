@@ -46,12 +46,7 @@ struct AccountNeedsYou: View {
                         )
                     }
                 }
-                .clipShape(.rect(cornerRadius: 18))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 18)
-                        .strokeBorder(Palette.hairline)
-                        .accessibilityHidden(true)
-                }
+                .overlay(alignment: .top) { Hairline() }
             }
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("account.needsYou")

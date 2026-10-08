@@ -6,8 +6,8 @@ struct SidebarGroupTitle: View {
 
     var body: some View {
         Text(L10n.string(title).uppercased())
-            .font(DesignTokens.sidebarGroup)
-            .tracking(0.6)
+            .font(DesignTokens.eyebrow)
+            .tracking(DesignTokens.eyebrowTracking)
             .foregroundStyle(Palette.tertiaryInk)
             .padding(.horizontal, 10)
             .padding(.bottom, 4)

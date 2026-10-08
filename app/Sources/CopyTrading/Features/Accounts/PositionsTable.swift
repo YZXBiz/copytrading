@@ -104,15 +104,16 @@ struct PositionsTable: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            Text(L10n.string("Symbol"))
+            Text(L10n.string("Symbol").uppercased())
                 .padding(.leading, PositionRow.lotInset)
                 .frame(maxWidth: .infinity, alignment: .leading)
             ForEach(["Shares", "Avg cost", "Price", "Value", "Gain/loss"], id: \.self) { title in
-                Text(L10n.string(title))
+                Text(L10n.string(title).uppercased())
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
         }
-        .font(DesignTokens.caption.weight(.medium))
+        .font(DesignTokens.eyebrow)
+        .tracking(DesignTokens.eyebrowTracking)
         .foregroundStyle(Palette.tertiaryInk)
         .padding(.vertical, 8)
         .accessibilityHidden(true)

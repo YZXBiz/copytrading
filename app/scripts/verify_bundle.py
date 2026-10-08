@@ -308,6 +308,7 @@ def verify(app: Path, *, inspect_macho: bool = True) -> list[str]:
         agent_command,
         localization_bundle / "en.lproj/Localizable.strings",
         localization_bundle / "zh-Hans.lproj/Localizable.strings",
+        resources / "CopyTrading_CopyTradingUI.bundle/Fonts/JosefinSans.ttf",
         resources / "Engine" / "src" / "copytrading_engine" / "__main__.py",
         runtime / "THIRD_PARTY_NOTICES.md",
         runtime / "cpython" / "python" / "lib" / "python3.14" / "os.py",
