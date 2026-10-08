@@ -114,6 +114,8 @@ final class AppModel {
     /// resumes the saved one, so copying never stays paused by surprise.
     var isPausedToApplyChanges = false
     var isTradingCommandPending = false
+    /// The last import's summary, until the owner keeps or trashes the file.
+    var setupImportResult: SetupImportResult?
     var isTradingUnlocked = false
     var agentAccess: AgentAccessSetting = .off
     var isAgentRelayListening = false

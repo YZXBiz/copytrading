@@ -1972,6 +1972,79 @@ def j32_connection_check(app: AppDriver) -> None:
     _relock(app)
 
 
+# A key file in the owner's layout, with made-up values: nothing here reaches a real service.
+IMPORT_CHANNEL = "111122223333444455"
+IMPORT_KEYS = f"""CopyTrading test keys (made up for a journey).
+
+Discord token:
+journey-import-discord-token
+
+Discord channel ID:
+{IMPORT_CHANNEL}
+
+Model service: DeepSeek, model deepseek-flash
+DeepSeek API key:
+sk-journey-import-key
+
+Alpaca PAPER API key:
+PKJOURNEYIMPORTKEY01
+
+Alpaca PAPER API secret:
+journeyimportsecretjourneyimportsecret01
+
+Guru:
+Journey Import
+"""
+
+
+def j41_import_setup(app: AppDriver) -> None:
+    """Import Setup… fills an empty setup from a key file the owner picks, says what it filled,
+    and moves the file to the Trash on request. The values are made up, so the journey never
+    connects or starts, and it locks afterwards, which drops everything imported."""
+    folder = Path(tempfile.mkdtemp(prefix="copytrading-ui-import.")).resolve()
+    keys = folder / "journey-keys.txt"
+    keys.write_text(IMPORT_KEYS)
+    try:
+        page = app.open_screen("connections")
+        app.expect(page, "connections.importSetup")
+        app.click("connections.importSetup", real=True)
+        _choose_in_file_panel(app, keys)
+        imported = app.wait_for("setupImport.sheet", timeout=30, name="setup-imported")
+        app.expect(
+            imported,
+            "Setup imported",
+            "Discord channels",
+            "Discord token",
+            "DeepSeek key and model",
+            "Alpaca paper key and secret",
+            "Guru “Journey Import”",
+            "setupImport.trash",
+            "setupImport.done",
+        )
+        app.click("setupImport.trash")
+        app.wait_gone("setupImport.sheet", timeout=20)
+        if keys.exists():
+            raise JourneyFailure("Move File to Trash left the key file in its folder")
+
+        rows = app.see("setup-import-rows")
+        app.expect(rows, "Journey Import", "connections.account.primary", "DeepSeek")
+        app.open_connection("discord")
+        if app.field_value("Channel IDs") != IMPORT_CHANNEL:
+            raise JourneyFailure("Import Setup… did not fill the Discord channel")
+        app.click("connections.close")
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+
+    # Nothing was connected or saved: locking drops the import, and the setup is empty again.
+    _relock(app)
+    app.open_screen("connections")
+    app.open_connection("discord")
+    if app.field_value("Channel IDs") != "":
+        raise JourneyFailure("Locking did not drop the imported setup")
+    app.click("connections.close")
+    app.expect_absent(app.see("setup-import-dropped"), "Journey Import")
+
+
 def j30_assistant(app: AppDriver) -> None:
     """The assistant answers from a local OpenAI-compatible model and closes on Esc.
 
@@ -2074,6 +2147,7 @@ JOURNEYS: list[tuple[str, Callable[[AppDriver], None]]] = [
     ("J22 setup keeps typing", j22_setup_keeps_typing),
     ("J28 connections panel", j28_connections_panel),
     ("J32 connection check", j32_connection_check),
+    ("J41 import setup", j41_import_setup),
     ("J25 getting started", j25_getting_started),
     ("J30 assistant", j30_assistant),
     ("J26 help menu", j26_help_menu),

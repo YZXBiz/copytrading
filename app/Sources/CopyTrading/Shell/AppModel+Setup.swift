@@ -267,6 +267,40 @@ extension AppModel {
         selectedScreen = .today
     }
 
+    /// Fills the setup from a file the owner chose in the open panel. Only the draft changes:
+    /// Connect and Start Copying check everything before it is saved. Nothing from the file is
+    /// logged or kept, and the summary names fields, never values.
+    func importSetup(from url: URL) {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size <= SetupImport.maximumBytes,
+            let data = try? Data(contentsOf: url), let text = String(data: data, encoding: .utf8)
+        else {
+            message = L10n.string("That file isn't a setup CopyTrading can read. Choose a small text file with your keys.")
+            return
+        }
+        let setup = SetupImport(text: text)
+        guard !setup.isEmpty else {
+            message = L10n.string("Nothing in that file looks like a setup: no Discord, model, or Alpaca lines.")
+            return
+        }
+        setupEditor = nil
+        setup.apply(to: &setupDraft)
+        selectedScreen = .connections
+        setupImportResult = SetupImportResult(fileURL: url, filled: setup.filled, missing: setup.missing)
+    }
+
+    /// The imported file to the Trash, once its keys are in the setup.
+    func trashImportedFile() {
+        guard let url = setupImportResult?.fileURL else { return }
+        setupImportResult = nil
+        do {
+            try FileManager.default.trashItem(at: url, resultingItemURL: nil)
+        } catch {
+            message = L10n.string("CopyTrading couldn't move the file to the Trash. Delete it yourself once you've started copying.")
+        }
+    }
+
     /// Starts the setup tour on Connections, at the first thing still to do.
     func startSetupTour() {
         setupEditor = nil

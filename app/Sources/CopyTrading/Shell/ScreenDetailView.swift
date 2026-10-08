@@ -12,6 +12,9 @@ struct ScreenDetailView: View {
             .sheet(isPresented: $model.isShowingSetupCheck) {
                 SetupCheckSheet(model: model)
             }
+            .sheet(item: $model.setupImportResult) { result in
+                SetupImportSheet(result: result, model: model)
+            }
             .onChange(of: model.isShowingSetupCheck) { _, showing in
                 // Closing the readings without starting puts the saved setup back to work.
                 if !showing { Task { await model.resumeSavedSetupIfPausedForChanges() } }

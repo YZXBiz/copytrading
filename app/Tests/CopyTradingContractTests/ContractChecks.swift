@@ -9,6 +9,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
     case appWindowLifecycle = "app window lifecycle"
     case connectionsDraft = "connections draft"
     case guidedSetup = "guided setup"
+    case setupImport = "setup import"
     case equityChartScale = "equity chart scale"
     case connectionsAndSettingsPages = "connections and settings pages"
     case providerChoice = "provider choice"
@@ -32,6 +33,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
         case .appWindowLifecycle: try await runAppWindowLifecycleTests()
         case .connectionsDraft: try runConnectionsDraftTests()
         case .guidedSetup: try runGuidedSetupTests()
+        case .setupImport: try runSetupImportTests()
         case .equityChartScale: try runEquityChartScaleTests()
         case .connectionsAndSettingsPages: try runConnectionsAndSettingsPagesTests()
         case .providerChoice: try runProviderChoiceTests()
