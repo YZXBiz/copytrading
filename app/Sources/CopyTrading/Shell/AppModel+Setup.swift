@@ -156,8 +156,17 @@ extension AppModel {
     /// Start Copying can run: the four steps are filled in, copying is paused or runs the saved
     /// setup (then the button applies the changes), and no check or start is under way.
     var canCheckAndStart: Bool {
-        setupProgress.isReadyToCheck && (tradingStatus?.state == .paused || isCopyingSavedSetup)
+        isFilledInToCheck && (tradingStatus?.state == .paused || isCopyingSavedSetup)
             && !isValidatingTrading && !isActivatingTrading && !isTradingCommandPending
+    }
+
+    /// Everything a check needs is filled in. A connection whose last check failed doesn't
+    /// block it: Start Copying checks every connection again, and a one-off timeout clears.
+    private var isFilledInToCheck: Bool {
+        SetupProgress(
+            draft: setupDraft, hasSavedKeys: hasTradingSecrets, hasSavedProviderKey: hasSavedProviderKey,
+            savedKeyAccountIDs: savedKeyAccountIDs, isSetUp: savedTradingConfiguration != nil
+        ).isReadyToCheck
     }
 
     /// Copying runs the saved setup, so the setup's changes are applied rather than started.
