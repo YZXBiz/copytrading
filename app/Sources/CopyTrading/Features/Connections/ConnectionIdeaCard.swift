@@ -1,7 +1,7 @@
 import DesktopCore
 import SwiftUI
 
-/// One idea as a card: a tinted page inside a white frame, a serif title,
+/// One idea as a card: a tinted page inside a white frame, a title,
 /// a short line, and a picture. Clicking it opens the steps in a popover.
 struct ConnectionIdeaCard: View {
     let idea: ConnectionIdea
@@ -59,7 +59,7 @@ struct ConnectionIdeaCard: View {
     private var words: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(idea.title)
-                .font(DesignTokens.cardSerif)
+                .font(DesignTokens.cardTitle)
                 .foregroundStyle(Palette.ink)
             Text(idea.blurb)
                 .font(DesignTokens.bodyText)

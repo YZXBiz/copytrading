@@ -70,7 +70,7 @@ enum SetupTourStop: Int, CaseIterable, Identifiable {
         }
     }
 
-    /// The italic second line under the title.
+    /// The quieter second line under the title.
     var subtitle: String {
         switch self {
         case .discordRow: "where your guru posts"

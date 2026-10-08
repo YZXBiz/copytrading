@@ -28,7 +28,7 @@ struct GuideJourneyDiagram: View {
                 glow(width: geometry.size.width)
                 path(curve)
                 Text(L10n.string("later"))
-                    .font(.system(size: 10.5, design: .serif).italic())
+                    .font(.system(size: 10.5))
                     .foregroundStyle(Palette.tertiaryInk)
                     .position(curve.point(onLeg: stops.count - 2, at: 0.45).applying(.init(translationX: 4, y: -18)))
                 chevrons(curve)
@@ -154,10 +154,10 @@ struct GuideJourneyDiagram: View {
         VStack(spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(number.formatted())
-                    .font(.system(size: 12, weight: .medium, design: .serif).italic())
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Palette.accent)
                 Text(L10n.string(stop.title))
-                    .font(.system(size: 14, weight: .medium, design: .serif))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(isSelected ? Palette.ink : Palette.secondaryInk)
                     .lineLimit(1)
             }

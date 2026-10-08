@@ -22,6 +22,7 @@ struct ActivityDetailView: View {
     /// The one account Activity is showing, or every account.
     var accountID: String?
     @State private var readerPosition = ScrollPosition(edge: .top)
+    @Environment(\.postProgressContext) private var progressContext
 
     private var outcome: ActivityCardOutcome {
         ActivityCardOutcome(item, skipped: skippedCalls.contains(item.sourceID), resume: resume)
@@ -51,6 +52,11 @@ struct ActivityDetailView: View {
         return VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
                 header(outcome)
+                if let progress = PostProgress(item, context: progressContext, resume: resume) {
+                    PostProgressLabel(progress: progress)
+                        .font(DesignTokens.caption.weight(.medium))
+                        .padding(.top, 14)
+                }
                 quote.padding(.top, 20)
                 readAs.padding(.top, 22)
             }
@@ -174,7 +180,7 @@ struct ActivityDetailView: View {
 
     private func readLine(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 21, weight: .semibold))
+            .font(DesignTokens.cardTitle)
             .tracking(-0.3)
             .foregroundStyle(Palette.ink)
             .monospacedDigit()

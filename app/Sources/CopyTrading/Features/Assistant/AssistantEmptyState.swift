@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The panel before the first question: "Ask about / *your trading*" in the invitations' serif,
+/// The panel before the first question: "Ask about / *your trading*" in the invitations' title style,
 /// then four questions to start with, or, before a model is set up, where to choose one.
 struct AssistantEmptyState: View {
     let hasModel: Bool
@@ -42,8 +42,8 @@ struct AssistantEmptyState: View {
     }
 
     private var greeting: some View {
-        SerifTitle(lead: L10n.string("Ask about"), emphasis: L10n.string("your trading"), alignment: .center)
-            .font(DesignTokens.panelSerif)
+        TwoLineTitle(lead: L10n.string("Ask about"), emphasis: L10n.string("your trading"), alignment: .center)
+            .font(DesignTokens.panelTitle)
             .foregroundStyle(Palette.secondaryInk)
             .multilineTextAlignment(.center)
     }

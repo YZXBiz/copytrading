@@ -1,17 +1,18 @@
 import SwiftUI
 
-/// One timed step: its dot on the rail, what happened, when, and how long it took.
+/// One phase: its dot on the rail, what happened and when, how long the phase took, the finer
+/// steps in one quiet line, its waits in orange, and, for a post in flight, the live step.
 struct ActivityTimelineRow: View {
-    let row: PostTimeline.Row
+    let phase: PostTimeline.Phase
     let isLast: Bool
-
-    private var dotColor: Color { row.caution ? .orange : Palette.accent }
+    /// The step a post in flight is on now, shown under the phase it follows.
+    var progress: PostProgress?
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(spacing: 0) {
                 Circle()
-                    .fill(dotColor)
+                    .fill(phase.caution ? Color.orange : Palette.accent)
                     .frame(width: 8, height: 8)
                     .padding(.top, 5)
                 if !isLast {
@@ -22,32 +23,42 @@ struct ActivityTimelineRow: View {
                 }
             }
             .frame(width: 8)
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(row.title)
+                    Text(phase.title)
                         .font(DesignTokens.bodyText)
-                        .foregroundStyle(row.caution ? .orange : Palette.ink)
+                        .foregroundStyle(phase.caution ? .orange : Palette.ink)
                     Spacer(minLength: 8)
-                    if let gap = row.gap {
-                        Text(L10n.string("+%@", PostTimeline.duration(gap)))
+                    if let duration = phase.duration {
+                        Text(PostTimeline.duration(duration))
                             .font(DesignTokens.caption.monospacedDigit())
-                            .foregroundStyle(row.slow ? .orange : Palette.tertiaryInk)
-                            .help(row.slow ? L10n.string("Slower than expected") : "")
+                            .foregroundStyle(Palette.tertiaryInk)
                     }
-                    Text(row.at.formatted(AppTime.style(.dateTime.hour().minute().second())))
+                    Text(phase.at.formatted(AppTime.style(.dateTime.hour().minute().second())))
                         .font(DesignTokens.caption.monospacedDigit())
                         .foregroundStyle(Palette.secondaryInk)
                 }
-                if let detail = row.detail {
+                if let detail = phase.detail {
                     Text(detail)
                         .font(DesignTokens.caption)
                         .foregroundStyle(Palette.secondaryInk)
-                        .fixedSize(horizontal: false, vertical: true)
                         .textSelection(.enabled)
                 }
+                ForEach(phase.waits, id: \.self) { wait in
+                    Label(wait, systemImage: "hourglass")
+                        .font(DesignTokens.caption)
+                        .foregroundStyle(.orange)
+                }
+                if let progress {
+                    PostProgressLabel(progress: progress)
+                        .font(DesignTokens.caption.weight(.medium))
+                        .padding(.top, 2)
+                }
             }
-            .padding(.bottom, isLast ? 0 : 12)
+            .padding(.bottom, isLast ? 0 : 14)
         }
+        // The connector fills the row's own height, never extra height a container offers.
+        .fixedSize(horizontal: false, vertical: true)
         .accessibilityElement(children: .combine)
     }
 }

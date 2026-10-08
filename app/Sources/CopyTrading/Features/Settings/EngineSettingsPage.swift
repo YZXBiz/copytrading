@@ -52,7 +52,7 @@ struct EngineSettingsPage: View {
     private func heading(_ title: String, _ subtitle: String?) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(L10n.string(title))
-                .font(DesignTokens.cardSerif)
+                .font(DesignTokens.cardTitle)
                 .foregroundStyle(Palette.ink)
                 .accessibilityAddTraits(.isHeader)
             if let subtitle {

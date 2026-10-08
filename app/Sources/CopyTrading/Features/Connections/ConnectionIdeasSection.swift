@@ -1,7 +1,7 @@
 import DesktopCore
 import SwiftUI
 
-/// "Setup Tips", closing the Connections page: a serif heading with a
+/// "Setup Tips", closing the Connections page: a heading with a
 /// dismiss button and the how-tos as cards, wide and narrow in turn. Narrow pages stack them.
 struct ConnectionIdeasSection: View {
     let provider: TradingProviderName
@@ -12,7 +12,7 @@ struct ConnectionIdeasSection: View {
         VStack(alignment: .leading, spacing: 22) {
             HStack(alignment: .firstTextBaseline) {
                 Text(L10n.string("Setup Tips"))
-                    .font(DesignTokens.displaySerif)
+                    .font(DesignTokens.displayTitle)
                     .foregroundStyle(Palette.ink)
                     .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 12)

@@ -31,8 +31,8 @@ enum DesignTokens {
     // Semantic system styles keep the platform's text and legibility preferences. Scale from
     // macOS's native defaults to the workspace's compact reading hierarchy. Titles are set in
     // New York, as the invitations are; everything people read and press stays in SF Pro.
-    static let pageTitle = Font.system(.title2, design: .serif, weight: .medium).scaled(by: 21.0 / 17)
-    static let settingsHeading = Font.system(.title3, design: .serif, weight: .medium).scaled(by: 18.0 / 15)
+    static let pageTitle = Font.system(.title2, weight: .semibold).scaled(by: 21.0 / 17)
+    static let settingsHeading = Font.system(.title3, weight: .semibold).scaled(by: 18.0 / 15)
     static let sectionTitle = Font.system(.body, design: .default, weight: .medium).scaled(by: 14.0 / 13)
     static let rowTitle = Font.system(.body, design: .default, weight: .medium).scaled(by: 14.0 / 13)
     static let personTitle = Font.system(.title3, design: .default, weight: .semibold)
@@ -41,16 +41,16 @@ enum DesignTokens {
     static let caption = Font.system(.caption, design: .default).scaled(by: 12.0 / 10)
     static let moneyDisplay = Font.system(.largeTitle, design: .default, weight: .medium).scaled(by: 32.0 / 26)
 
-    // The Getting Started guide reads like a document: a large serif title, roomy serif
+    // The Getting Started guide reads like a document: a large title, roomy
     // headings, and body text a step above the workspace's compact interface text.
-    static let documentTitle = Font.system(.largeTitle, design: .serif, weight: .medium).scaled(by: 34.0 / 26)
-    static let documentHeading = Font.system(.title2, design: .serif, weight: .medium).scaled(by: 23.0 / 17)
+    static let documentTitle = Font.system(.largeTitle, weight: .semibold).scaled(by: 34.0 / 26)
+    static let documentHeading = Font.system(.title2, weight: .semibold).scaled(by: 23.0 / 17)
     static let documentSubheading = Font.system(.body, design: .default, weight: .semibold).scaled(by: 15.0 / 13)
     static let documentBody = Font.system(.body, design: .default, weight: .regular).scaled(by: 15.0 / 13)
-    // Invitations are set in a serif: "Setup Tips", "Create New".
-    static let displaySerif = Font.system(.title, design: .serif).scaled(by: 26.0 / 22)
-    static let panelSerif = Font.system(.title, design: .serif).scaled(by: 27.0 / 22)
-    static let cardSerif = Font.system(.title3, design: .serif, weight: .medium).scaled(by: 19.0 / 15)
+    // Invitation titles: "Setup Tips", "Create New".
+    static let displayTitle = Font.system(.title, weight: .semibold).scaled(by: 26.0 / 22)
+    static let panelTitle = Font.system(.title, weight: .semibold).scaled(by: 27.0 / 22)
+    static let cardTitle = Font.system(.title3, weight: .semibold).scaled(by: 19.0 / 15)
 
     /// The guide's page inset, wider than a working surface's so the text has margins like a page.
     static let documentInset: CGFloat = 44

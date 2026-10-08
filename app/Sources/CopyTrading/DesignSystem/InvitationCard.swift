@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// A first-run page that invites you in instead of showing an empty pane: a framed card with a
-/// small drawing of what will appear here on the app's chart paper, a serif title with an italic
+/// small drawing of what will appear here on the app's chart paper, a title with a quieter
 /// second line, one plain sentence, and what to do next.
 struct InvitationCard<Figure: View, Actions: View>: View {
     let lead: String
@@ -20,8 +20,8 @@ struct InvitationCard<Figure: View, Actions: View>: View {
                 .clipShape(.rect(topLeadingRadius: 16, topTrailingRadius: 16, style: .continuous))
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 12) {
-                SerifTitle(lead: L10n.string(lead), emphasis: L10n.string(emphasis))
-                    .font(DesignTokens.panelSerif)
+                TwoLineTitle(lead: L10n.string(lead), emphasis: L10n.string(emphasis))
+                    .font(DesignTokens.panelTitle)
                     .foregroundStyle(Palette.ink)
                 Text(L10n.string(message))
                     .font(DesignTokens.documentBody)

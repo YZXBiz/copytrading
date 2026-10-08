@@ -10,6 +10,7 @@ struct ActivityInboxRow: View {
     var showsAccounts = false
     @ScaledMetric(relativeTo: .body) private var sourceSize = 14
     @Environment(SkippedCalls.self) private var skippedCalls: SkippedCalls?
+    @Environment(\.postProgressContext) private var progressContext
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -36,8 +37,12 @@ struct ActivityInboxRow: View {
             // How the post ended, in the card's words (ADR-0007).
             let outcome = ActivityCardOutcome(item, skipped: skippedCalls?.contains(item.sourceID) == true)
             HStack(spacing: 8) {
-                Label(outcome.title, systemImage: outcome.tone.symbol)
-                    .foregroundStyle(outcome.tone.color)
+                if let progress = PostProgress(item, context: progressContext) {
+                    PostProgressLabel(progress: progress, compact: true)
+                } else {
+                    Label(outcome.title, systemImage: outcome.tone.symbol)
+                        .foregroundStyle(outcome.tone.color)
+                }
                 if showsAccounts, !item.destinations.isEmpty {
                     Text(item.destinations.map(\.accountID).joined(separator: ", "))
                         .foregroundStyle(Palette.tertiaryInk)

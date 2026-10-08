@@ -2,7 +2,7 @@ import DesktopCore
 import SwiftUI
 
 /// The engine as a framed card, the way the invitations are drawn: its heartbeat on the app's
-/// chart paper, a serif line saying how it is, one sentence about what it is doing, and the one
+/// chart paper, a line saying how it is, one sentence about what it is doing, and the one
 /// control that starts or stops it.
 struct EngineStatusBlock: View {
     let model: AppModel
@@ -85,9 +85,9 @@ struct EngineStatusBlock: View {
                 HStack(alignment: .top, spacing: 16) {
                     VStack(alignment: .leading, spacing: 0) {
                         Text(L10n.string("The engine"))
-                        Text(state).italic()
+                        Text(state).foregroundStyle(Palette.secondaryInk)
                     }
-                    .font(DesignTokens.panelSerif)
+                    .font(DesignTokens.panelTitle)
                     .foregroundStyle(Palette.ink)
                     .contentTransition(.opacity)
                     .accessibilityElement(children: .ignore)

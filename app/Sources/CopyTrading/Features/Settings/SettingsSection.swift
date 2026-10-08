@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A titled group of settings: a serif heading, an optional grey line under it,
+/// A titled group of settings: a heading, an optional grey line under it,
 /// and its rows in one soft rounded well with hairlines between them.
 struct SettingsSection<Content: View>: View {
     var title: String?
