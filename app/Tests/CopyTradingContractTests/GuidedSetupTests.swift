@@ -8,6 +8,8 @@ func runGuidedSetupTests() throws {
     try helpArticlesAreCompleteAndLinked()
     try newAccountsAndGurusStartUsable()
     try unsavedChangesFollowTheSavedSetup()
+    try aKeyStaysWithItsService()
+    try theTourAsksOnlyForWhatIsLeft()
     print("CopyTradingContractTests: the guide's checklist, help articles, and setup edits follow the draft")
 }
 
@@ -169,6 +171,54 @@ private func unsavedChangesFollowTheSavedSetup() throws {
     try verifyGuide(
         !model.hasUnsavedSetupChanges && model.setupDraft.routes[0].displayName == "Alex",
         "Discard Changes did not return to the saved setup")
+}
+
+/// One service's key is never shown in, or sent to, another service's sheet.
+@MainActor
+private func aKeyStaysWithItsService() throws {
+    var draft = ConnectionsDraft()
+    draft.provider = .deepseek
+    draft.modelName = "deepseek-flash"
+    draft.providerAPIKey = "deepseek-typed-key"
+    draft.pick(.anthropic)
+    try verifyGuide(draft.provider == .anthropic, "Picking a service did not switch to it")
+    try verifyGuide(draft.providerAPIKey.isEmpty, "Another service's sheet kept the DeepSeek key")
+    try verifyGuide(draft.modelName == SetupHelp.prefilledModel(for: .anthropic), "Picking a service did not suggest its model")
+    draft.providerAPIKey = "anthropic-typed-key"
+    draft.pick(.anthropic)
+    try verifyGuide(draft.providerAPIKey == "anthropic-typed-key", "Picking the same service dropped its key")
+}
+
+/// The tour's hint inside a sheet asks only for what that service still needs; a connected
+/// service's sheet shows none, and the tour keeps its place instead of ending.
+@MainActor
+private func theTourAsksOnlyForWhatIsLeft() throws {
+    var draft = ConnectionsDraft()
+    func progress() -> SetupProgress {
+        SetupProgress(
+            draft: draft, hasSavedKeys: false, hasSavedProviderKey: false, savedKeyAccountIDs: [], isSetUp: false)
+    }
+    try verifyGuide(
+        SetupTourStop.current(progress: progress(), channelsEntered: false, panel: .discord) == .channelIDs,
+        "An empty Discord sheet did not ask for the channel")
+    try verifyGuide(
+        SetupTourStop.current(progress: progress(), channelsEntered: true, panel: .discord) == .discordToken,
+        "A Discord sheet with a channel did not ask for the token")
+    draft.channels = "123"
+    draft.discordToken = "typed"
+    draft.provider = .deepseek
+    draft.modelName = "deepseek-flash"
+    draft.providerAPIKey = "typed"
+    let connectedDiscord = SetupTourStop.current(
+        progress: progress(), channelsEntered: true, panel: .discord, panelConnected: true)
+    try verifyGuide(connectedDiscord?.isInPanel == false, "A connected Discord sheet still asked for its token")
+    try verifyGuide(connectedDiscord == .accounts, "A connected Discord sheet moved the tour off its next step")
+    let connectedModel = SetupTourStop.current(
+        progress: progress(), channelsEntered: true, panel: .interpreter, panelConnected: true)
+    try verifyGuide(connectedModel?.isInPanel == false, "A connected interpreter sheet still asked for its key")
+    try verifyGuide(
+        SetupTourStop.current(progress: progress(), channelsEntered: true, panel: .interpreter) == .interpreterKey,
+        "An interpreter sheet not yet connected lost its hint")
 }
 
 private func verifyGuide(_ condition: @autoclosure () -> Bool, _ message: String) throws {

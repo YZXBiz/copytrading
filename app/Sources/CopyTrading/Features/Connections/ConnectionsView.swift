@@ -94,8 +94,11 @@ struct ConnectionsView: View {
             }
             .overlayPreferenceValue(SetupTourTargetKey.self) { targets in
                 // An account or guru sheet covers the page, and a check or start already answers
-                // the last stop; the tour waits behind them.
-                if let tourStop, model.setupEditor == nil, !model.isValidatingTrading, !model.isActivatingTrading {
+                // the last stop; the tour waits behind them. Any open panel, alerts included, hides
+                // the page's card: only a hint inside the panel shows.
+                if let tourStop, model.setupEditor == nil, !model.isValidatingTrading, !model.isActivatingTrading,
+                    panel == nil || tourStop.isInPanel
+                {
                     SetupTourOverlay(stop: tourStop, targets: targets, model: model)
                 }
             }
@@ -131,7 +134,9 @@ struct ConnectionsView: View {
     private var tourStop: SetupTourStop? {
         guard model.isTouringSetup else { return nil }
         let open: ConnectionKind? = if case .editor(let kind) = panel?.page { kind } else { nil }
-        return SetupTourStop.current(progress: progress, channelsEntered: channelsEntered, panel: open)
+        let connected = open.map { ConnectionSummary.of($0, in: model)?.status.tone == .positive } ?? false
+        return SetupTourStop.current(
+            progress: progress, channelsEntered: channelsEntered, panel: open, panelConnected: connected)
     }
 
     private var header: some View {
@@ -324,8 +329,7 @@ struct ConnectionsView: View {
     /// Picks an interpreter service from its own row and opens its settings out of that row.
     private func connect(_ provider: TradingProviderName) {
         let before = model.setupDraft
-        model.setupDraft.provider = provider
-        model.setupDraft.suggestModel(after: before.provider)
+        model.setupDraft.pick(provider)
         beforeConnect = (before, interpreterFingerprint)
         showsAllServices = false
         open(.editor(.interpreter), from: .provider(provider))

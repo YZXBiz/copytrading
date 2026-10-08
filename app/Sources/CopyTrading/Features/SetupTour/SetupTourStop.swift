@@ -15,8 +15,12 @@ enum SetupTourStop: Int, CaseIterable, Identifiable {
 
     /// The stop for a setup this far along, with this Connections panel open; nil once copying
     /// has started. `channelsEntered`: a channel is in and the typing has paused, so the tour
-    /// doesn't jump away on the first digit.
-    static func current(progress: SetupProgress, channelsEntered: Bool, panel: ConnectionKind?) -> SetupTourStop? {
+    /// doesn't jump away on the first digit. `panelConnected`: the open panel's service already
+    /// reads Connected, so its sheet asks for nothing and the tour stays on its next step.
+    static func current(
+        progress: SetupProgress, channelsEntered: Bool, panel: ConnectionKind?, panelConnected: Bool = false
+    ) -> SetupTourStop? {
+        let panel = panelConnected ? nil : panel
         if panel == .discord {
             return channelsEntered ? .discordToken : .channelIDs
         }
