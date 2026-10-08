@@ -47,7 +47,8 @@
         }
 
         /// Every field the setup asks for: Discord, the interpreter, one paper account, and one
-        /// guru on the channel who copies into it.
+        /// guru on the channel who copies into it, with one example post so Start Copying shows
+        /// how it was read.
         func fill(_ draft: inout ConnectionsDraft) {
             draft.channels = channelID
             draft.discordToken = discordToken
@@ -61,6 +62,11 @@
             draft.routes = [
                 TradingRouteDraft(
                     channelID: channelID, displayName: guruName,
+                    examples: [
+                        TradingProfileExampleDraft(
+                            message: "5.85加了6分之一soun", expectedAction: .buy, expectedSymbol: "SOUN",
+                            expectedFraction: "0.1666666666666666666666666667")
+                    ],
                     connection: TradingConnectionDraft(accountID: account.name))
             ]
         }

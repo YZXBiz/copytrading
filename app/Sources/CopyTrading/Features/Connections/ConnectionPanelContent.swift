@@ -37,8 +37,9 @@ struct ConnectionPanelContent: View {
         return (openedSetUp ?? (!connecting && isSetUp(kind))) ? name : L10n.string("Connect to %@", name)
     }
 
+    /// Connected, not merely filled in: a service typed but never checked still asks to connect.
     private func isSetUp(_ kind: ConnectionKind) -> Bool {
-        ConnectionSummary.of(kind, in: model) != nil
+        ConnectionSummary.of(kind, in: model)?.status.tone == .positive
     }
 
     private func brand(for kind: ConnectionKind) -> String? {
