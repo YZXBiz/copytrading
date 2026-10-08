@@ -58,6 +58,9 @@ struct ActivityCardOutcome {
             (title, tone) = (L10n.string("Ignored"), .inactive)
         } else if open || awaitsResume {
             (title, tone) = (L10n.string("Waiting for you"), .caution)
+        } else if orders.contains(where: { $0.tone == .positive }), orders.contains(where: { $0.tone != .positive }) {
+            // One account filled and another didn't: the post traded, but not everywhere.
+            (title, tone) = (L10n.string("Partly traded"), .neutral)
         } else if let unsettled = orders.first(where: { $0.tone != .positive }) {
             // An order still working, cancelled, or failed says so before the post counts as traded.
             (title, tone) = (unsettled.title, unsettled.tone)
