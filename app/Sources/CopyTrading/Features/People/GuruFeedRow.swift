@@ -44,8 +44,9 @@ struct GuruFeedRow: View {
         .accessibilityHint(L10n.string("Open the original post, interpretation, and account results."))
     }
 
+    /// To the second, since a guru's calls can land seconds apart.
     private var time: some View {
-        Text(entry.item.sourceDate?.formatted(AppTime.style(.dateTime.hour().minute())) ?? "—")
+        Text(entry.item.sourceDate?.formatted(AppTime.style(.dateTime.hour().minute().second())) ?? "—")
             .font(DesignTokens.caption)
             .monospacedDigit()
             .foregroundStyle(Palette.tertiaryInk)
