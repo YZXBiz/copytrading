@@ -2,6 +2,13 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
+## 0.1.0-alpha.8 — developer preview
+
+Changes to your setup apply while copying runs.
+
+- **Apply Changes while copying.** A limit or anything else changed in Connections used to stay "Changed — not saved yet" until you paused copying and started again. While copying runs, Start Copying now reads **Apply Changes**: one press pauses copying for a moment, checks the new setup, and copies with it. Posts that arrive in between are read when copying resumes. Accounts offers Apply Changes beside an edited account. If the check fails, or you close the readings without starting, copying continues with your saved setup and says your changes weren't saved. You stay on the screen where you made the change.
+- **A failed check no longer locks Start Copying.** A single "Discord didn't answer in time" used to grey out Start Copying while Discord read Connected. The button now needs only the setup filled in, since it checks every connection again.
+
 ## 0.1.0-alpha.7 — developer preview
 
 Setup walks you through itself, the interpreter reads each post knowing what the guru already bought, and four per-guru switches are gone ([ADR-0010](docs/adr/0010-the-reader-reads-rules-pick-shares.md)).
