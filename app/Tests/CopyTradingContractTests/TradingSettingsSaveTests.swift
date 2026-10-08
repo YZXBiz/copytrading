@@ -1362,12 +1362,23 @@ struct TradingSettingsSaveTests {
         model.setupDraft.accounts[0].policy.maxOrderUSD = "200"
         model.selectedScreen = .accounts
         try check(model.isCopyingSavedSetup && model.canCheckAndStart, "A change while copying could not be applied")
+        let beforeApply = await starter.events().count
+        model.checkAndStartCopying()
+        // A second press while the first apply runs must not cancel it or start a second one.
+        try check(model.isApplyingChanges && !model.canCheckAndStart, "Start Copying stayed pressable during an apply")
         model.checkAndStartCopying()
         for _ in 0..<4_000 where model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD != "200" {
             try await Task.sleep(for: .milliseconds(1))
             if model.isShowingSetupCheck && model.awaitsExampleReview { model.checkAndStartCopying() }
         }
-        try check(model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD == "200", "The new limit was not saved")
+        let duringApply = Array(await starter.events().dropFirst(beforeApply))
+        try check(
+            duringApply.filter { $0 == "start" }.count == 1 && duringApply.filter { $0 == "pause" }.count == 1,
+            "A second press during an apply paused or started twice: \(duringApply)")
+        try check(
+            model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD == "200",
+            "The new limit was not saved: applying \(model.isApplyingChanges) sheet \(model.isShowingSetupCheck) reviews \(model.profileExampleReviews.count) state \(String(describing: model.tradingStatus?.state)) message \(model.message ?? "nil") events \(await starter.events().suffix(6))"
+        )
         try check(model.tradingStatus?.state == .running, "Copying did not run again with the new limit")
         let applied = await starter.events()
         guard let pause = applied.lastIndex(of: "pause") else { throw ContractFailure("Applying did not pause copying first") }

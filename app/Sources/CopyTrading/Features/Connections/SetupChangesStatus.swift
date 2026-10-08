@@ -14,6 +14,8 @@ struct SetupChangesStatus: Equatable {
             || model.tradingValidation.map { !$0.report.activatable } == true
         if model.isValidatingTrading {
             self.init("Checking every connection…", working: true)
+        } else if model.isApplyingChanges && !model.isShowingSetupCheck {
+            self.init("Applying your changes…", working: true)
         } else if model.isActivatingTrading || (model.validatedConfiguration != nil && model.tradingStatus?.state != .paused) {
             // Copying can report started before the engine confirms the new setup is the one running.
             self.init("Saving and starting…", working: true)

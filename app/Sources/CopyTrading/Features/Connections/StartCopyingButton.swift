@@ -12,7 +12,7 @@ struct StartCopyingButton: View {
             systemImage: model.isCopyingSavedSetup ? "arrow.triangle.2.circlepath" : "play.fill", action: requestStart
         )
         .buttonStyle(.borderedProminent)
-        .disabled(!model.canStartCopyingFromCheck && !model.canCheckAndStart)
+        .disabled(model.isApplyingChanges || (!model.canStartCopyingFromCheck && !model.canCheckAndStart))
         .accessibilityIdentifier("setup.startCopying")
         .confirmationDialog(
             "Start copying into live accounts?",

@@ -129,6 +129,7 @@ extension AppModel {
     /// in the draft, so a failed check never makes the owner type them again. When only the
     /// readings are left to look over, it shows them, and pressed beside them it approves them.
     func checkAndStartCopying() {
+        guard !isApplyingChanges else { return }
         if isCopyingSavedSetup {
             applyChangesWhileCopying()
             return
@@ -157,7 +158,7 @@ extension AppModel {
     /// setup (then the button applies the changes), and no check or start is under way.
     var canCheckAndStart: Bool {
         isFilledInToCheck && (tradingStatus?.state == .paused || isCopyingSavedSetup)
-            && !isValidatingTrading && !isActivatingTrading && !isTradingCommandPending
+            && !isValidatingTrading && !isActivatingTrading && !isTradingCommandPending && !isApplyingChanges
     }
 
     /// Everything a check needs is filled in. A connection whose last check failed doesn't
@@ -196,8 +197,10 @@ extension AppModel {
         }
         checkedSetupSignature = setupDraft.signature
         applyChangesTask?.cancel()
+        isApplyingChanges = true
         applyChangesTask = Task { [weak self] in
             guard let self else { return }
+            defer { self.isApplyingChanges = false }
             let reviews: [String: ProfileExampleReview]
             if readingsShown {
                 // Pressed beside the readings: the owner's yes to them.
