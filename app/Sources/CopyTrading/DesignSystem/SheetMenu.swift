@@ -22,7 +22,7 @@ struct SheetMenu<Value: Hashable>: View {
             }
         } label: {
             HStack(spacing: 6) {
-                Text(choices.first { $0.value == selection }?.title ?? "")
+                Text(chosen)
                     .font(DesignTokens.bodyText)
                     .foregroundStyle(Palette.ink)
                     .lineLimit(1)
@@ -39,5 +39,10 @@ struct SheetMenu<Value: Hashable>: View {
         .menuIndicator(.hidden)
         .fixedSize()
         .accessibilityLabel(label)
+        .accessibilityValue(chosen)
+    }
+
+    private var chosen: String {
+        choices.first { $0.value == selection }?.title ?? ""
     }
 }

@@ -38,7 +38,7 @@ struct AccountPageMenu: View {
     }
 
     private func editLimits() {
-        model.editAccount(named: account.accountID)
+        model.editAccount(named: account.accountID, focus: .limits)
     }
 
     private func editInConnections() {

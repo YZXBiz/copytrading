@@ -63,7 +63,7 @@ struct PostDetailPane: View {
     }
 
     private func editLimits(_ accountID: String) {
-        model.editAccount(named: accountID, focusingEntryTolerance: true)
+        model.editAccount(named: accountID, focus: .entryTolerance)
     }
 
     private func reviewHoldings(_ accountID: String) {

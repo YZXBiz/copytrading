@@ -80,8 +80,9 @@ struct AccountPageContent: View {
         Task { await feature.refreshHistories(window: window, using: model.accountActions()) }
     }
 
-    /// The account's sheet opens over this page; the changes apply as soon as they are saved.
+    /// The account's sheet opens over this page on its limits; the changes apply as soon as they
+    /// are saved.
     private func editLimits() {
-        model.editAccount(named: account.accountID)
+        model.editAccount(named: account.accountID, focus: .limits)
     }
 }

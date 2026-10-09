@@ -1290,8 +1290,11 @@ def j40_live_limits(app: AppDriver) -> None:
         app.click("toolbar.copying")
     _wait_for_account(app, "primary", timeout=180)
 
-    app.open_screen("connections")
-    app.click("connections.account.primary")
+    # Edit Limits, under the Limits tab, opens the account sheet scrolled to its limits.
+    app.click("account.section.limits")
+    app.click("account.editLimits")
+    app.wait_for("Maximum per order", timeout=15, name="limits-sheet")
+    time.sleep(0.6)
     target = "175" if app.field_value("Maximum per order") == "150" else "150"
     app.type(target, into="Maximum per order")
     app.click("Done")
@@ -1301,8 +1304,12 @@ def j40_live_limits(app: AppDriver) -> None:
     deadline = time.monotonic() + 60
     while True:
         app.open_screen("account.primary")
+        # The new cap reads under Limits; the note that it changed, under Activity.
+        app.click("account.section.limits")
         snapshot = app.see()
-        texts = " ".join(e.label + " " + e.value for e in snapshot.elements)
+        app.click("account.section.activity")
+        activity = app.see()
+        texts = " ".join(e.label + " " + e.value for e in snapshot.elements + activity.elements)
         if "not saved yet" in texts or "Apply Changes" in texts:
             app.see("live-limits-pending")
             raise JourneyFailure("a limit change still waits for Apply Changes")
@@ -1754,10 +1761,17 @@ def _sell_lot(app: AppDriver, symbol: str, lot: dict[str, Any]) -> None:
     app.wait_for(f"accounts.position.{symbol}", timeout=60, name="accounts-position")
     app.click(f"accounts.position.{symbol}")
     app.click(f"accounts.lot.sell.{lot['lot_id']}")
-    app.click("lotSale.review.button")
-    app.wait_for("lotSale.sell", timeout=60, name="lot-sale-review")
-    app.click("lotSale.sell", outcome_checked=True)
-    app.wait_for("lotSale.outcome", timeout=60, name="lot-sale-sent")
+    for attempt in range(2):
+        app.click("lotSale.review.button")
+        app.wait_for("lotSale.sell", timeout=60, name="lot-sale-review")
+        app.click("lotSale.sell", outcome_checked=True)
+        sent = app.wait_for("lotSale.outcome", timeout=60, name="lot-sale-sent")
+        # A lot bought moments ago can still be settling while it is reviewed; the sheet refuses
+        # the stale review and offers Review Again, as an owner would take it.
+        if attempt == 0 and sent.has("The account changed since you reviewed the sale"):
+            app.click("Review Again")
+            continue
+        break
     deadline = time.monotonic() + 120
     while any(left["lot_id"] == lot["lot_id"] and _open(left) for left in _lots(app, symbol)):
         if time.monotonic() > deadline:

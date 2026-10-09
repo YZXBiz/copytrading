@@ -8,8 +8,8 @@ struct AccountEditorSheet: View {
     /// Accounts whose broker keys are already in the Keychain; a blank field keeps those.
     let savedAccountIDs: Set<String>
     let remove: () -> Void
-    /// Opens on Maximum above signal price, scrolled to it with the field focused.
-    var focusesEntryTolerance = false
+    /// Opens scrolled to one setting with its field focused: the limits, or the price tolerance.
+    var focus: AccountEditorFocus?
     /// The account's latest check, when it failed and its keys are unchanged since.
     var failedCheck: TradingCapabilityCheck?
     /// Checks the account's keys with Alpaca; nil when there are none to check yet.
@@ -23,7 +23,7 @@ struct AccountEditorSheet: View {
     @State private var isChecking = false
     /// nil until limits are saved or refused; then whether they were saved.
     @State private var limitsSaved: Bool?
-    @FocusState private var entryToleranceFocused: Bool
+    @FocusState private var focusedField: AccountEditorFocus?
 
     private var hasSavedCredentials: Bool { savedAccountIDs.contains(account.name.trimmed) }
 
@@ -58,11 +58,11 @@ struct AccountEditorSheet: View {
             .onSubmit(commitLimits)
             .onChange(of: account.policy) { limitsSaved = nil }
             .task {
-                guard focusesEntryTolerance else { return }
+                guard let focus else { return }
                 // After the sheet settles, so the scroll lands and the field takes focus.
                 try? await Task.sleep(for: .milliseconds(250))
-                withAnimation { proxy.scrollTo(Self.entryToleranceRow, anchor: .center) }
-                entryToleranceFocused = true
+                withAnimation { proxy.scrollTo(focus, anchor: focus == .limits ? .top : .center) }
+                focusedField = focus
             }
         }
         .frame(minWidth: 560, idealWidth: 600, minHeight: 620, idealHeight: 720)
@@ -120,7 +120,8 @@ struct AccountEditorSheet: View {
             textLimit(
                 "Maximum per order", hint: "The most one buy can spend. A bigger buy is made smaller.",
                 text: $account.policy.maxOrderUSD,
-                example: LimitExamples.maxOrder)
+                example: LimitExamples.maxOrder,
+                focus: .limits)
             textLimit(
                 "Maximum per stock",
                 hint:
@@ -144,9 +145,8 @@ struct AccountEditorSheet: View {
                     "The most a buy can pay above the guru's price. 0 means never more than the guru paid.",
                 text: $account.policy.maxAboveSignalPct,
                 example: LimitExamples.maxAboveSignal,
-                focus: $entryToleranceFocused
+                focus: .entryTolerance
             )
-            .id(Self.entryToleranceRow)
             textLimit(
                 "Maximum below signal price (%)",
                 hint:
@@ -214,8 +214,6 @@ struct AccountEditorSheet: View {
         }
     }
 
-    private static let entryToleranceRow = "maxAboveSignalPct"
-
     /// Limits saved without a check say so where they were typed.
     @ViewBuilder private var limitsSavedNote: some View {
         switch limitsSaved {
@@ -235,17 +233,17 @@ struct AccountEditorSheet: View {
     }
 
     private func textLimit(
-        _ title: String, hint: String, text: Binding<String>, example: String, focus: FocusState<Bool>.Binding? = nil
+        _ title: String, hint: String, text: Binding<String>, example: String, focus: AccountEditorFocus? = nil
     ) -> some View {
         SheetRow(title: L10n.string(title), hint: L10n.string(hint), example: example) {
-            Group {
-                if let focus {
-                    TextField(L10n.string(title), text: text).focused(focus)
-                } else {
-                    TextField(L10n.string(title), text: text)
-                }
+            if let focus {
+                TextField(L10n.string(title), text: text)
+                    .focused($focusedField, equals: focus)
+                    .limitField()
+                    .id(focus)
+            } else {
+                TextField(L10n.string(title), text: text).limitField()
             }
-            .limitField()
         }
     }
 

@@ -467,8 +467,8 @@ final class AppModel {
     var setupDraftSource: TradingConfiguration?
     /// The account or guru being edited, shown as one sheet over whichever screen asked for it.
     var setupEditor: ConnectionsEditingTarget?
-    /// The account sheet opens on Maximum above signal price, as Activity's suggestion asks.
-    var editorFocusesEntryTolerance = false
+    /// Where the account sheet opens: on its limits, or on the price tolerance Activity suggests.
+    var accountEditorFocus: AccountEditorFocus?
     /// Accounts whose new limits were just saved without a check, each until the owner edits again.
     var limitsSavedAccountIDs: Set<String> = []
     /// The engine refused the draft's limits, so they wait for the full check like other changes.
