@@ -12,10 +12,9 @@ struct LockedView: View {
                 .font(DesignTokens.documentTitle)
                 .tracking(DesignTokens.documentTitleTracking)
                 .foregroundStyle(Palette.ink)
-                .accessibilityLabel(L10n.string("CopyTrading is locked"))
                 .accessibilityAddTraits(.isHeader)
             VStack(spacing: 6) {
-                Text(L10n.string("Authenticate to view accounts, activity, settings, and local diagnostics."))
+                Text(L10n.string("CopyTrading is locked"))
                     .foregroundStyle(Palette.tertiaryInk)
                 if let runtimeStopMessage = model.runtimeStopMessage {
                     Text(runtimeStopMessage)
