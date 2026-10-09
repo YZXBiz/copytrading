@@ -125,10 +125,14 @@ private func aTrimmedBuyIsTradedSmallerAndSaysByHowMuch() throws {
     try #require(
         result.facts
             == [
-                .init(label: "Price", value: "$5.85"), .init(label: "Shares", value: "42 shares"),
+                .init(label: "Shares", value: "42 shares"),
                 .init(label: "Order (max per order)", value: "$250 of $333.33"),
             ],
         "facts were \(result.facts)")
+    // The fill price is drawn beside the limit on the ruler rather than listed as a number.
+    try #require(
+        result.prices == PricePoints(limit: 5.85, market: 5.85, marketLabel: "Filled at", buying: true),
+        "prices were \(String(describing: result.prices))")
 }
 
 @MainActor

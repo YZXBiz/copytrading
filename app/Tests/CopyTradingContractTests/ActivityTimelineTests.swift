@@ -120,16 +120,19 @@ private func anUnfilledBuySaysWhyItWasCancelled() throws {
         + "Raise Maximum above signal price in the account's limits to let buys fill nearby."
     let sentence = CancelReasonText.sentence(try #require(source.destinations.first?.orders.first))
     try #require(sentence == expected, "reason was \(sentence ?? "nil")")
-    // The card leads with the takeaway and the numbers; the full sentence stays in Technical details.
+    // The card leads with the takeaway, the price ruler, and the numbers; the full sentence stays in Technical details.
     let result = try #require(ActivityCardOutcome(source, skipped: false).accounts.first?.results.first)
     try #require(result.headline == "Not bought: the price ran above your limit", "headline was \(result.headline)")
     try #require(
         result.facts
             == [
-                .init(label: "Your limit", value: "$201.00"), .init(label: "Market", value: "$208.86"),
                 .init(label: "Waited", value: "1 min 2 s"), .init(label: "Order (max per order)", value: "$200 of $600"),
             ],
         "facts were \(result.facts)")
+    // The limit and the ask it met are drawn on the price ruler, the gap between them filled.
+    try #require(
+        result.prices == PricePoints(limit: 201, market: Decimal(string: "208.86")!, marketLabel: "Market", buying: true),
+        "prices were \(String(describing: result.prices))")
     try #require(result.note == nil && result.suggestion == .allowAboveGuru, "result was \(result)")
 }
 
