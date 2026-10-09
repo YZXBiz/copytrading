@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The guide's hero, set like a studio site's front page: a large headline, a two-line lede, the
-/// walker on its ground heading for the next step, and the button that shows the owner around.
+/// an ink dot on its ground heading for the next step, and the button that shows the owner around.
 struct GuideHeader: View {
     let progress: SetupProgress
     /// Starts the setup tour on Connections.

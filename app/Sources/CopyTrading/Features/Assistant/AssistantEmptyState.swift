@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The panel before the first question: "Ask about / your trading" in the display face over the
-/// walker's ground, then four questions to start with between hairlines, or, before a model is set
+/// ink dot's ground, then four questions to start with between hairlines, or, before a model is set
 /// up, where to choose one.
 struct AssistantEmptyState: View {
     let hasModel: Bool
@@ -29,11 +29,6 @@ struct AssistantEmptyState: View {
             .padding(.top, 12)
             .padding(.horizontal, 24)
             InkGround(height: 56)
-                .overlay(alignment: .bottomTrailing) {
-                    InkWalker()
-                        .padding(.trailing, 64)
-                        .padding(.bottom, 3)
-                }
                 .padding(.horizontal, 24)
                 .padding(.top, 14)
             Group {

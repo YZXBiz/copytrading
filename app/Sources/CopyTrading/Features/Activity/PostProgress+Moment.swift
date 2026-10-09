@@ -1,9 +1,9 @@
 import Foundation
 
-/// The words and the walker's place for the live moment on the card: one headline per step, a
-/// calm line under it with the running time, and how far along the ground the walker has come.
+/// The words and the ink dot's place for the live moment on the card: one headline per step, a
+/// calm line under it with the running time, and how far along the ground the dot has come.
 extension PostProgress {
-    /// The walker's stop on the ground: read, sized, sent, then filled.
+    /// The ink dot's stop on the ground: read, sized, sent, then filled.
     static let filledStage = 4
 
     var stage: Int {

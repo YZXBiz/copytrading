@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The five setup steps as posts along a hand-drawn ground, numbered underneath, with the walker
+/// The five setup steps as posts along a hand-drawn ground, numbered underneath, with an ink dot
 /// standing just short of the next one. It walks there when the page opens, and when a step is
 /// done it hops and walks on to the following post. Nothing moves after that.
 struct GuideStage: View {
@@ -26,8 +26,8 @@ struct GuideStage: View {
                         .foregroundStyle(step == progress.next ? Palette.ink : Palette.tertiaryInk)
                         .position(x: x(of: step.rawValue, in: width), y: groundHeight + 16)
                 }
-                InkWalker(hop: progress.completed)
-                    .position(x: walkerX(in: width), y: groundHeight - 15.5)
+                InkBead(hop: progress.completed)
+                    .position(x: beadX(in: width), y: groundHeight - 6)
             }
         }
         .frame(height: groundHeight + 28)
@@ -51,7 +51,7 @@ struct GuideStage: View {
 
     /// Just short of the next post, or past the last one once everything is done; on the way in,
     /// it starts a step's width back.
-    private func walkerX(in width: CGFloat) -> CGFloat {
+    private func beadX(in width: CGFloat) -> CGFloat {
         let target = progress.next.map { x(of: $0.rawValue, in: width) - 30 } ?? width - 36
         return arrived ? target : max(14, target - width / CGFloat(steps.count))
     }

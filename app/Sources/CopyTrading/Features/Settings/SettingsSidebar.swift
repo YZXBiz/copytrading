@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The sidebar that replaces the main one while Settings is open: the walker and the app's name, a
+/// The sidebar that replaces the main one while Settings is open: the mark and the app's name, a
 /// line on how it is, and the Settings pages under their tracked-capital groups.
 struct SettingsSidebar<Header: View>: View {
     @Bindable var model: AppModel

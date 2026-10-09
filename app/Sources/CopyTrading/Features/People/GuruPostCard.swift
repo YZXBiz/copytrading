@@ -32,15 +32,10 @@ struct GuruPostCard: View {
                 GuruAccountOutcomeList(outcomes: entry.accounts, alignment: .leading)
                     .padding(.top, 2)
                 // Like a gallery that plays a clip under the pointer: hovering draws the ground and
-                // the walker steps along it, once, then stands.
+                // nothing more.
                 ZStack(alignment: .bottomLeading) {
                     if isHovered || isSelected {
                         InkGround(height: 44)
-                            .overlay(alignment: .bottomTrailing) {
-                                InkWalker()
-                                    .padding(.trailing, 24)
-                                    .padding(.bottom, 3)
-                            }
                             .transition(.opacity)
                     }
                     CreditChip(name: guruName, time: time)

@@ -1,7 +1,7 @@
 import DesktopCore
 import SwiftUI
 
-/// A read account's page: a hero (name, balance, the curve with the walker, what the balance is
+/// A read account's page: a hero (name, balance, the curve, what the balance is
 /// made of), any warnings, the calls waiting on the owner, then positions, activity, or limits,
 /// one at a time.
 struct AccountPageContent: View {
@@ -31,8 +31,7 @@ struct AccountPageContent: View {
                 history: feature.histories[account.accountID],
                 window: feature.historyWindow,
                 chooseWindow: chooseWindow,
-                plotHeight: isSharingWidth ? 120 : 200,
-                walkerHop: fills
+                plotHeight: isSharingWidth ? 120 : 200
             )
             AccountBalanceBreakdown(account: account, model: model, feature: feature)
         }
@@ -71,11 +70,6 @@ struct AccountPageContent: View {
         .onAppear {
             if account.positions.isEmpty { section = .activity }
         }
-    }
-
-    /// Orders the account filled, from its feed: the walker hops each time one more lands.
-    private var fills: Int {
-        (feature.feeds[account.accountID] ?? []).count { $0.kind == "bought" || $0.kind == "sold" }
     }
 
     private func copy(_ call: WaitingCall) {

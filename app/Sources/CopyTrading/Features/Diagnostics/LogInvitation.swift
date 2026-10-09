@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Diagnostics before anything is logged: what the log keeps, where it lives, and a way to see it
-/// fill in, standing on the walker's ground.
+/// fill in, standing on the ink dot's ground.
 struct LogInvitation: View {
     let model: AppModel
 

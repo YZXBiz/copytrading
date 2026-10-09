@@ -2,7 +2,7 @@ import DesktopCore
 import SwiftUI
 
 /// The engine on the page itself: a line saying how it is, one sentence about what it is doing,
-/// the one control that starts or stops it, and the walker on its ground while it runs.
+/// the one control that starts or stops it, and an ink ground while it runs.
 struct EngineStatusBlock: View {
     let model: AppModel
 
@@ -85,7 +85,7 @@ struct EngineStatusBlock: View {
             InkGround(height: 56)
                 .overlay(alignment: .bottomLeading) {
                     if isBeating {
-                        InkWalker()
+                        InkBead()
                             .padding(.leading, 60)
                             .padding(.bottom, 3)
                             .transition(.opacity)

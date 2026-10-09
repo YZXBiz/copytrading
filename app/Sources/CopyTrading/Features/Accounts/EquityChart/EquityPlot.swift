@@ -10,7 +10,6 @@ struct EquityPlot: View {
     let stats: EquityCurveStats
     let range: EquityHistoryRange
     @Binding var selection: EquitySelection
-    var walkerHop = 0
     @Environment(\.colorSchemeContrast) private var contrast
     @ScaledMetric(relativeTo: .caption) private var valueAxisWidth = 84
 
@@ -65,12 +64,6 @@ struct EquityPlot: View {
             PointMark(x: .value("Time", scale.x(stats.last.at)), y: .value("Equity", stats.last.value))
                 .symbolSize(30)
                 .foregroundStyle(Palette.ink)
-                .annotation(position: .top, spacing: 1) {
-                    // The walker stands where the line has got to; it steps in, then stays still.
-                    if selection == .none {
-                        InkWalker(hop: walkerHop)
-                    }
-                }
                 .accessibilityHidden(true)
         }
         .chartXScale(domain: xDomain(on: scale), range: .plotDimension(startPadding: 4, endPadding: 14))

@@ -46,11 +46,6 @@ struct AccountFeedTile: View {
             ZStack(alignment: .bottomLeading) {
                 if open != nil, isHovered || isSelected {
                     InkGround(height: 44)
-                        .overlay(alignment: .bottomTrailing) {
-                            InkWalker()
-                                .padding(.trailing, 24)
-                                .padding(.bottom, 3)
-                        }
                         .transition(.opacity)
                 }
                 CreditChip(name: item.credit(directory), time: item.time)

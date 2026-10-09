@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The guide as one airy page: the hero with the walker and the setup steps, how a post becomes a
+/// The guide as one airy page: the hero with the setup steps, how a post becomes a
 /// trade, what to know before copying, shortcuts, and where to get help. Sections are set apart
 /// by space and hairlines, never boxes.
 struct GuideDocument: View {

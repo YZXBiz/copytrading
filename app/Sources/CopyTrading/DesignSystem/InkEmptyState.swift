@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// An empty section as a small scene: one plain sentence, then the ground line drawn in with the
-/// walker standing at its end.
+/// An empty section as a small scene: one plain sentence, then the ground line drawn in.
 struct InkEmptyState: View {
     let message: String
 
@@ -13,11 +12,6 @@ struct InkEmptyState: View {
                 .foregroundStyle(Palette.secondaryInk)
                 .fixedSize(horizontal: false, vertical: true)
             InkGround()
-                .overlay(alignment: .bottomTrailing) {
-                    InkWalker()
-                        .padding(.trailing, 40)
-                        .padding(.bottom, 3)
-                }
         }
         .accessibilityElement(children: .combine)
     }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The locked window as a quiet hero: the app's name in the display face, a line on what unlocking
-/// opens, the walker on its ground, and one Unlock.
+/// opens, an ink ground, and one Unlock.
 struct LockedView: View {
     let model: AppModel
 
@@ -33,10 +33,6 @@ struct LockedView: View {
             .padding(.top, 16)
             .padding(.horizontal, 40)
             InkGround(height: 64)
-                .overlay(alignment: .bottom) {
-                    InkWalker()
-                        .padding(.bottom, 3)
-                }
                 .frame(width: 380)
                 .padding(.top, 36)
             Group {
