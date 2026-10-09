@@ -7,6 +7,7 @@ func runLotSaleFlowTests() async throws {
     try await paperSalesNeedNoTouchIDAndSendTheReviewedPreview()
     try await liveSalesAskForTouchIDAndSendNothingWithoutIt()
     try await aRetryAfterALostConnectionReusesTheSaleIdentity()
+    try partsOfALotRoundDownToHundredthsAndAllIsExact()
     print("CopyTradingContractTests: lot sales review first, ask for Touch ID on live accounts, and never send twice")
 }
 
@@ -121,4 +122,20 @@ private func aRetryAfterALostConnectionReusesTheSaleIdentity() async throws {
 
 private func saleFailure(_ message: String) -> NSError {
     NSError(domain: "LotSaleFlowTests", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
+}
+
+@MainActor
+private func partsOfALotRoundDownToHundredthsAndAllIsExact() throws {
+    let lot = try JSONDecoder().decode(
+        AccountLotView.self,
+        from: Data(
+            """
+            {"lot_id":"copy-lot","source_id":null,"guru_id":null,"posted_at":null,"excerpt":null,"bought_at":null,\
+            "original_qty":"0.885","remaining_qty":"0.885","average_price":"110.75"}
+            """.utf8))
+    let flow = LotSaleFlow(
+        target: LotSaleTarget(accountID: "primary", environment: .paper, symbol: "WMT", lot: lot, guruName: nil))
+    try #require(flow.amount(Decimal(string: "0.25")!) == Decimal(string: "0.22")!, "A quarter of a lot did not round down")
+    try #require(flow.amount(Decimal(string: "0.5")!) == Decimal(string: "0.44")!, "Half a lot did not round down")
+    try #require(flow.amount(1) == Decimal(string: "0.885")!, "All of a lot was not the whole lot")
 }

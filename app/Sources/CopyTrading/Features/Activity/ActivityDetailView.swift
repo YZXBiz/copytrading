@@ -49,8 +49,11 @@ struct ActivityDetailView: View {
             VStack(alignment: .leading, spacing: 36) {
                 card
                 // The trip at a glance; a post still in flight shows its live moment instead.
-                if progress == nil {
-                    PostJourneyLine(timeline: PostTimeline(item))
+                if progress == nil, PostTimeline(item).phases.count >= 2 {
+                    VStack(alignment: .leading, spacing: 10) {
+                        ActivityLabel(text: L10n.string("Timeline"))
+                        PostJourneyLine(timeline: PostTimeline(item))
+                    }
                 }
                 ActivityTechnicalDetails(item: item)
                     .id(item.sourceID)
@@ -80,10 +83,11 @@ struct ActivityDetailView: View {
             quote.padding(.top, 18)
             liveMoment.padding(.top, 28)
             // A post still being read has no reading or accounts yet; the moment above says so.
+            // What the post asked for comes first, compact; then what each account did with it.
             if !isBeingRead {
-                readAs.padding(.top, 28)
+                readAs.padding(.top, 30)
                 if item.decision != "ignore" {
-                    accounts(outcome).padding(.top, 28)
+                    accounts(outcome).padding(.top, 34)
                 }
             }
         }
@@ -147,9 +151,9 @@ struct ActivityDetailView: View {
     /// How the reader read the post under a tracked-capital label: one plain line per call, what
     /// the call leaves out, then what kind of post it was and who read it.
     private var readAs: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             ActivityLabel(text: L10n.string("Read as"))
-                .padding(.bottom, 2)
+                .padding(.bottom, 4)
             if let reading = item.reading {
                 if reading.calls.isEmpty {
                     readLine(ReadAsText.lines(reading).first ?? "")
@@ -157,7 +161,7 @@ struct ActivityDetailView: View {
                 } else {
                     ForEach(Array(reading.calls.enumerated()), id: \.offset) { index, call in
                         let headline = ReadAsText.headline(call)
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(alignment: .leading, spacing: 2) {
                             readLine(headline.title)
                             detailLine(
                                 [
@@ -166,9 +170,9 @@ struct ActivityDetailView: View {
                                 ]
                                 .compactMap(\.self))
                         }
-                        .padding(.top, index == 0 ? 0 : 10)
+                        .padding(.top, index == 0 ? 0 : 8)
                     }
-                    subline([ReadAsText.kind(reading), readBy].compactMap(\.self)).padding(.top, 2)
+                    subline([ReadAsText.kind(reading), readBy].compactMap(\.self)).padding(.top, 4)
                 }
             } else {
                 readLine(item.headline)
@@ -184,7 +188,7 @@ struct ActivityDetailView: View {
 
     private func readLine(_ text: String) -> some View {
         Text(text)
-            .font(DesignTokens.activityQuote.weight(.medium))
+            .font(DesignTokens.bodyEmphasis)
             .foregroundStyle(Palette.ink)
             .monospacedDigit()
             .fixedSize(horizontal: false, vertical: true)
@@ -195,7 +199,7 @@ struct ActivityDetailView: View {
     private func detailLine(_ parts: [String]) -> some View {
         if !parts.isEmpty {
             Text(capitalized(parts.joined(separator: " · ")))
-                .font(DesignTokens.activityBody)
+                .font(DesignTokens.caption)
                 .foregroundStyle(Palette.secondaryInk)
                 .monospacedDigit()
                 .fixedSize(horizontal: false, vertical: true)
@@ -220,13 +224,12 @@ struct ActivityDetailView: View {
     }
 
     /// What each account did with the post, takeaway first, with Copy and Skip where one waits.
-    /// Each account is its own block under its name and Paper/Live in tracked capitals, so whose
-    /// result it is is never unclear; hairlines part them.
+    /// Each account is its own block under its name and Paper/Live in tracked capitals, parted from
+    /// the next by whitespace alone, so the page keeps its few lines for what they draw.
     @ViewBuilder
     private func accounts(_ outcome: ActivityCardOutcome) -> some View {
         let shown = outcome.accounts.filter { accountID == nil || $0.id == accountID }
-        VStack(alignment: .leading, spacing: 0) {
-            Hairline()
+        VStack(alignment: .leading, spacing: 36) {
             if shown.isEmpty {
                 // "Yet" only while the trade is still on its way to the accounts; once delivered with
                 // no account attached, none will act on it.
@@ -238,23 +241,18 @@ struct ActivityDetailView: View {
                 )
                 .font(DesignTokens.activityBody)
                 .foregroundStyle(Palette.secondaryInk)
-                .padding(.vertical, 22)
             }
-            ForEach(Array(shown.enumerated()), id: \.element.id) { index, account in
-                if index > 0 {
-                    Hairline()
-                }
+            ForEach(shown) { account in
                 accountRow(account)
-                    .padding(.vertical, 22)
             }
         }
     }
 
-    /// One account's result: whose it is, then for each order the takeaway in one bold line, the
-    /// numbers behind it, and at most one thing to do.
+    /// One account's result: whose it is, then for each order the outcome as one big sentence with
+    /// its mark, the price ruler, the numbers behind it, and at most one thing to do.
     private func accountRow(_ account: ActivityCardOutcome.Account) -> some View {
         let environment = TradingEnvironment(rawValue: account.environment) ?? .paper
-        return VStack(alignment: .leading, spacing: 14) {
+        return VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 0) {
                 ActivityLabel(text: account.id)
                 ActivityLabel(text: " · ")
@@ -262,8 +260,9 @@ struct ActivityDetailView: View {
                     text: L10n.string(environment == .live ? "Live" : "Paper"),
                     color: environment == .live ? .orange : Palette.tertiaryInk)
             }
-            ForEach(Array(account.results.enumerated()), id: \.offset) { _, result in
-                resultBlock(result, account: account.id)
+            ForEach(Array(account.results.enumerated()), id: \.offset) { index, result in
+                resultBlock(result, tone: tone(of: index, in: account), account: account.id)
+                    .padding(.top, index == 0 ? 0 : 14)
             }
             if account.waits, let waiting = WaitingCall(item) {
                 waitingActions(waiting)
@@ -276,7 +275,7 @@ struct ActivityDetailView: View {
             }
             if heldByHoldings(account.id) {
                 Button(L10n.string("Review in Accounts")) { reviewHoldings(account.id) }
-                    .buttonStyle(PageButtonStyle())
+                    .buttonStyle(QuietTextButtonStyle())
                     .accessibilityIdentifier("activity.reviewHoldings")
             }
         }
@@ -285,16 +284,29 @@ struct ActivityDetailView: View {
         .accessibilityLabel(L10n.string("Account %@", account.id))
     }
 
-    private func resultBlock(_ result: ActivityCardOutcome.Result, account: String) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(result.headline)
-                .font(DesignTokens.activityOutcome)
-                .foregroundStyle(Palette.ink)
-                .monospacedDigit()
-                .fixedSize(horizontal: false, vertical: true)
+    /// How one result ended, for its mark: an order's own outcome; otherwise waiting on the owner,
+    /// or a call the account did not carry out.
+    private func tone(of index: Int, in account: ActivityCardOutcome.Account) -> StatusTone {
+        let orders = item.destinations.first { $0.accountID == account.id }?.orders ?? []
+        if orders.indices.contains(index) {
+            return DestinationOutcome.order(orders[index], count: 1).tone
+        }
+        return account.waits || account.awaitsResume ? .caution : .inactive
+    }
+
+    private func resultBlock(_ result: ActivityCardOutcome.Result, tone: StatusTone, account: String) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 12) {
+                OutcomeMark(tone: tone)
+                    .padding(.top, 4)
+                Text(result.headline)
+                    .font(DisplayFont.font(size: 22, weight: .medium, relativeTo: .title3))
+                    .foregroundStyle(Palette.ink)
+                    .monospacedDigit()
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if let prices = result.prices {
                 PriceRuler(points: prices)
-                    .padding(.vertical, 4)
             }
             if !result.facts.isEmpty {
                 ActivityFactPairs(facts: result.facts)
@@ -307,7 +319,7 @@ struct ActivityDetailView: View {
             }
             if result.suggestion == .allowAboveGuru {
                 Button(L10n.string("Allow 1% above the guru's price")) { editLimits(account) }
-                    .buttonStyle(PageButtonStyle())
+                    .buttonStyle(QuietTextButtonStyle())
                     .accessibilityIdentifier("activity.allowAboveGuru")
                     .accessibilityHint(
                         L10n.string("Opens this account's limits at Maximum above signal price. Nothing changes until you save."))
@@ -351,7 +363,7 @@ struct ActivityDetailView: View {
             .accessibilityIdentifier("activity.copy")
             .accessibilityHint(L10n.string("Opens the call to check, then previews the order in each waiting account."))
             Button(L10n.string("Skip")) { skippedCalls.skip(item.sourceID) }
-                .buttonStyle(PageButtonStyle())
+                .buttonStyle(QuietTextButtonStyle())
                 .accessibilityIdentifier("activity.skip")
         }
     }
@@ -360,7 +372,7 @@ struct ActivityDetailView: View {
     private var evaluateButton: some View {
         if item.isHistorical {
             Button(L10n.string("Evaluate with Saved Profile…"), action: evaluate)
-                .buttonStyle(PageButtonStyle())
+                .buttonStyle(QuietTextButtonStyle())
                 .disabled(!canEvaluate)
                 .accessibilityIdentifier("activity.evaluateHistorical")
                 .accessibilityHint(L10n.string("Runs a simulated interpretation and destination sizing preview with no order submission."))

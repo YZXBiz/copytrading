@@ -1,8 +1,9 @@
 import SwiftUI
 
 /// A post in flight as one calm moment: a centred headline that changes with each step, a quiet
-/// line with the running time, and an ink dot moving along the ground a stage at a time. When the
-/// order fills the dot bounces once and everything stands still; nothing here loops.
+/// line under it, and the four stops (Read · Sized · Sent · Filled) on one ink line with the bead
+/// where the post is. A fill wait grows along the Sent–Filled stretch with its countdown over it.
+/// When the order fills the bead bounces once and everything stands still; nothing here loops.
 struct PostLiveMoment: View {
     /// The step the post is on; nil once its order has filled.
     let progress: PostProgress?
@@ -13,11 +14,6 @@ struct PostLiveMoment: View {
 
     private var stage: Int { progress?.stage ?? PostProgress.filledStage }
 
-    /// The ink dot's place along the ground for each stage; it does not move again to hop.
-    private var fraction: CGFloat {
-        [0.14, 0.36, 0.58, 0.8, 0.8][min(stage, PostProgress.filledStage)]
-    }
-
     var body: some View {
         VStack(spacing: 8) {
             Text(progress?.headline ?? L10n.string("Filled"))
@@ -25,21 +21,22 @@ struct PostLiveMoment: View {
                 .foregroundStyle(Palette.ink)
                 .multilineTextAlignment(.center)
                 .contentTransition(.opacity)
-            calmLine
-                .font(DesignTokens.lede)
-                .tracking(DesignTokens.ledeTracking)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-            InkGround()
-                .overlay {
-                    GeometryReader { proxy in
-                        // One dot glides on a stage at a time and bounces where it stands on a fill.
-                        InkBead(hop: hops)
-                            .position(x: proxy.size.width * fraction, y: proxy.size.height - 2 - 6)
-                            .animation(reduceMotion ? nil : .smooth(duration: 0.6), value: fraction)
+            if let progress {
+                // Ticks once a second only while the post is in flight.
+                TimelineView(.periodic(from: progress.since, by: 1)) { context in
+                    VStack(spacing: 14) {
+                        calm(progress.calmLine(at: context.date), color: progress.waitsOnOwner ? Palette.amber : Palette.tertiaryInk)
+                        PostStageLine(
+                            stage: stage, fillWait: progress.fillWait(at: context.date),
+                            waitText: progress.fillWaitText(at: context.date), waitsOnOwner: progress.waitsOnOwner)
                     }
                 }
-                .padding(.top, 6)
+            } else {
+                VStack(spacing: 14) {
+                    calm(filledLine, color: Palette.tertiaryInk)
+                    PostStageLine(stage: stage, hops: hops)
+                }
+            }
         }
         .frame(maxWidth: .infinity)
         .animation(reduceMotion ? nil : .easeInOut(duration: 1.2), value: stage)
@@ -52,19 +49,13 @@ struct PostLiveMoment: View {
         .accessibilityIdentifier("activity.progress")
     }
 
-    @ViewBuilder
-    private var calmLine: some View {
-        if let progress {
-            // Ticks once a second only while the post is in flight.
-            TimelineView(.periodic(from: progress.since, by: 1)) { context in
-                Text(progress.calmLine(at: context.date))
-                    .monospacedDigit()
-                    .foregroundStyle(progress.waitsOnOwner ? Palette.amber : Palette.tertiaryInk)
-            }
-        } else {
-            Text(filledLine)
-                .monospacedDigit()
-                .foregroundStyle(Palette.tertiaryInk)
-        }
+    private func calm(_ text: String, color: Color) -> some View {
+        Text(text)
+            .font(DesignTokens.lede)
+            .tracking(DesignTokens.ledeTracking)
+            .monospacedDigit()
+            .foregroundStyle(color)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }

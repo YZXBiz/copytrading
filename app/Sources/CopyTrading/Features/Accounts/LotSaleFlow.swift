@@ -2,7 +2,7 @@ import DesktopCore
 import Foundation
 import Observation
 
-/// Selling one lot: choose how many shares, review a fresh preview, confirm once. A live account
+/// Selling one lot: choose how much of it, review a fresh preview, confirm once. A live account
 /// asks for Touch ID before the sale goes out. The same confirmation ID is reused if the owner
 /// retries, so a sale is never placed twice.
 @MainActor
@@ -28,6 +28,16 @@ final class LotSaleFlow {
     }
 
     var remaining: Decimal { Decimal(engine: target.lot.remainingQty) ?? 0 }
+
+    /// A part of the lot for the sheet's chips (a quarter, a half, three quarters, or all of it).
+    /// Parts round down to hundredths of a share, so a sale never asks for more than the lot holds.
+    func amount(_ part: Decimal) -> Decimal {
+        guard part < 1 else { return remaining }
+        var exact = remaining * part
+        var rounded = Decimal()
+        NSDecimalRound(&rounded, &exact, 2, .down)
+        return rounded
+    }
 
     var canReview: Bool {
         shares > 0 && shares <= remaining && phase != .checking

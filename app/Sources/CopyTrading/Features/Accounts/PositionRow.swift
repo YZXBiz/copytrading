@@ -1,12 +1,15 @@
 import DesktopCore
 import SwiftUI
 
-/// One symbol the way a trader reads it: shares, what they cost, what they are worth now, and the
-/// gain or loss, from the broker's valuation. When CopyTrading bought some, a chevron opens the
-/// lots that make them up and the line under the symbol says how many posts they came from.
+/// One symbol the way a trader reads it: its name in the display face, shares, what they are worth,
+/// a small ruler from average cost to today's price, and the gain or loss, from the broker's
+/// valuation. When CopyTrading bought some, a chevron opens the lots that make them up and the line
+/// under the symbol says how many posts they came from.
 struct PositionRow: View {
     /// How far lots and the symbol column sit in from the chevron's edge.
     static let lotInset: CGFloat = 22
+    /// The cost-to-price ruler's column, with room either side of the ruler.
+    static let costColumnWidth: CGFloat = PositionCostMark.width + 36
 
     let position: AccountPositionView
     let isExpanded: Bool
@@ -45,9 +48,9 @@ struct PositionRow: View {
                     .frame(width: Self.lotInset, alignment: .leading)
                     .opacity(position.lots.isEmpty ? 0 : 1)
                     .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 1) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(position.symbol)
-                        .fontWeight(.semibold)
+                        .font(DesignTokens.cardTitle)
                         .foregroundStyle(Palette.ink)
                     if posts > 0 {
                         Text(L10n.string("from %@", Humanize.count(posts, "post")))
@@ -58,13 +61,26 @@ struct PositionRow: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             sharesCell
-            moneyCell(position.avgEntryPrice)
-            moneyCell(position.currentPrice)
             moneyCell(position.marketValue)
+            costCell
             gainCell
         }
-        .padding(.vertical, 9)
+        .padding(.vertical, 14)
         .contentShape(.rect)
+    }
+
+    /// Average cost to today's price on the shared ruler, or a dash when the broker gave neither.
+    private var costCell: some View {
+        Group {
+            if let cost = position.avgEntryPrice.flatMap({ Decimal(engine: $0) }),
+                let price = position.currentPrice.flatMap({ Decimal(engine: $0) })
+            {
+                PositionCostMark(cost: cost, price: price)
+            } else {
+                Text(verbatim: "—").foregroundStyle(Palette.tertiaryInk)
+            }
+        }
+        .frame(width: Self.costColumnWidth)
     }
 
     private var owned: Decimal { Decimal(engine: position.ownedQty) ?? 0 }
@@ -77,6 +93,7 @@ struct PositionRow: View {
     @MainActor private var sharesCell: some View {
         VStack(alignment: .trailing, spacing: 1) {
             Text(Self.quantity(shares))
+                .font(DesignTokens.bodyText)
                 .monospacedDigit()
                 .foregroundStyle(Palette.ink)
             // Only a mix needs saying; the limits strip already says what is held outside.
@@ -94,7 +111,7 @@ struct PositionRow: View {
     private func moneyCell(_ value: String?) -> some View {
         Group {
             if let amount = value.flatMap({ Decimal(engine: $0) }) {
-                MoneyText(value: amount)
+                MoneyText(value: amount, font: DesignTokens.bodyText)
                     .foregroundStyle(Palette.ink)
             } else {
                 Text(verbatim: "—").foregroundStyle(Palette.tertiaryInk)
@@ -107,7 +124,7 @@ struct PositionRow: View {
     @MainActor private var gainCell: some View {
         VStack(alignment: .trailing, spacing: 1) {
             if let gain = position.unrealizedPL.flatMap({ Decimal(engine: $0) }) {
-                MoneyText(value: gain, style: .change)
+                MoneyText(value: gain, style: .change, font: DesignTokens.bodyEmphasis)
                 if let percent = position.unrealizedPLPercent.flatMap({ Decimal(engine: $0) }) {
                     Text(percent, format: .percent.precision(.fractionLength(2)).sign(strategy: .always(includingZero: false)))
                         .font(DesignTokens.caption)

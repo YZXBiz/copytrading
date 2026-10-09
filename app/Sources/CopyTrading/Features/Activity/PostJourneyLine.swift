@@ -2,8 +2,9 @@ import DesktopCore
 import SwiftUI
 
 /// The post's trip drawn as one ink line: a dot for each phase (received, read, sent, how it
-/// ended) with its name under it and the time it took over the stretch before it. A phase that
-/// ended badly or waits on the owner is a hollow dot; the rest are solid.
+/// ended) with its name under it and the time it took over the stretch before it. A trip that got
+/// to its end finishes on a butter dot; a phase that ended badly or waits on the owner is a hollow
+/// ring; the rest are solid ink.
 struct PostJourneyLine: View {
     let timeline: PostTimeline
 
@@ -29,12 +30,12 @@ struct PostJourneyLine: View {
                                     .fixedSize()
                                     .position(x: x - step / 2, y: 12)
                             }
-                            dot(phase)
+                            dot(phase, isLast: index == phases.count - 1)
                                 .position(x: x, y: 30)
                             // The line names the phase; its full story is in Technical details.
                             Text(phase.title.components(separatedBy: " · ").first ?? phase.title)
                                 .font(DesignTokens.caption.weight(.medium))
-                                .foregroundStyle(phase.caution ? Palette.amber : Palette.ink)
+                                .foregroundStyle(phase.caution ? Palette.secondaryInk : Palette.ink)
                                 .fixedSize()
                                 .position(x: label(x, in: proxy.size.width), y: 52)
                         }
@@ -64,12 +65,17 @@ struct PostJourneyLine: View {
     }
 
     @ViewBuilder
-    private func dot(_ phase: PostTimeline.Phase) -> some View {
+    private func dot(_ phase: PostTimeline.Phase, isLast: Bool) -> some View {
         if phase.caution {
             Circle()
-                .strokeBorder(Palette.amber, lineWidth: InkStroke.width)
+                .strokeBorder(Palette.ink, lineWidth: InkStroke.width)
                 .background(Circle().fill(Palette.page))
-                .frame(width: 11, height: 11)
+                .frame(width: 12, height: 12)
+        } else if isLast {
+            Circle()
+                .fill(Palette.butter)
+                .overlay(Circle().strokeBorder(Palette.ink, lineWidth: InkStroke.width))
+                .frame(width: 13, height: 13)
         } else {
             Circle()
                 .fill(Palette.ink)
