@@ -27,27 +27,43 @@ struct TimeZonePicker: View {
     }
 
     var body: some View {
-        NavigationStack {
-            List(zones) { zone in
-                Button {
-                    choose(zone.id)
-                } label: {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(zone.city).foregroundStyle(Palette.ink)
-                        Text(zone.name).font(.caption).foregroundStyle(.secondary)
+        SheetScaffold(
+            kind: L10n.string("Settings"),
+            title: L10n.string("Time Zone"),
+            lede: L10n.string("Search every zone by city or name.")
+        ) {
+            VStack(alignment: .leading, spacing: 0) {
+                TextField(L10n.string("Search"), text: $query, prompt: Text(L10n.string("City or time zone")))
+                    .labelsHidden()
+                    .underlineField()
+                    .padding(.bottom, 12)
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(zones) { zone in
+                        Button {
+                            choose(zone.id)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(zone.city)
+                                    .font(DesignTokens.rowTitle)
+                                    .foregroundStyle(Palette.ink)
+                                Text(zone.name)
+                                    .font(DesignTokens.caption)
+                                    .foregroundStyle(Palette.tertiaryInk)
+                            }
+                            .padding(.vertical, 10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(.rect)
+                        }
+                        .buttonStyle(QuietPressButtonStyle())
+                        .accessibilityIdentifier("timeZone.\(zone.id)")
                     }
                 }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("timeZone.\(zone.id)")
             }
-            .searchable(text: $query, prompt: Text(L10n.string("City or time zone")))
-            .navigationTitle(L10n.string("Time Zone"))
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(L10n.string("Cancel")) { dismiss() }
-                }
-            }
+        } actions: {
+            Button(L10n.string("Cancel")) { dismiss() }
+                .buttonStyle(SheetButtonStyle())
+                .keyboardShortcut(.cancelAction)
         }
-        .frame(minWidth: 420, idealWidth: 460, minHeight: 480, idealHeight: 560)
+        .frame(minWidth: 460, idealWidth: 500, minHeight: 520, idealHeight: 600)
     }
 }

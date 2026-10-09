@@ -5,16 +5,17 @@ struct ExampleReviewSection: View {
     let model: AppModel
 
     var body: some View {
-        Section {
+        SheetSection(L10n.string("How the examples were read")) {
             ForEach(model.profileExampleReviews.keys.sorted(), id: \.self) { routeID in
                 if let review = model.profileExampleReviews[routeID] {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Text(guruName(review.guruID))
-                                .bold()
+                                .font(DesignTokens.rowTitle)
+                                .foregroundStyle(Palette.ink)
                             Text(L10n.string("Read by %@", review.model))
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
+                                .font(DesignTokens.caption)
+                                .foregroundStyle(Palette.tertiaryInk)
                         }
                         ForEach(review.examples, id: \.exampleIndex) { example in
                             ExampleComparisonRow(example: example)
@@ -27,19 +28,17 @@ struct ExampleReviewSection: View {
                                 tone: .caution)
                         }
                         Text(L10n.string(review.costNotice))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .font(DesignTokens.caption)
+                            .foregroundStyle(Palette.tertiaryInk)
                     }
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 12)
                 }
             }
             if model.canAcknowledgeProfileExamples {
                 Text(L10n.string("Start Copying says these readings are what you meant."))
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .font(DesignTokens.caption)
+                    .foregroundStyle(Palette.tertiaryInk)
             }
-        } header: {
-            Label(L10n.string("How the examples were read"), systemImage: "text.magnifyingglass")
         }
     }
 

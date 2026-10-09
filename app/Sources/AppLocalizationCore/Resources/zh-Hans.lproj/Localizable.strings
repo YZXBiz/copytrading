@@ -1983,3 +1983,10 @@
 "At your limit" = "正好是你的限价";
 "over your limit" = "高于你的限价";
 "under your limit" = "低于你的限价";
+"Agent request" = "代理请求";
+"The request" = "请求内容";
+"Before copying starts" = "开始复制之前";
+"Import" = "导入";
+"Each connection, and how each guru's examples were read." = "每个连接的检查结果，以及每个信号源的示例是怎么读的。";
+"Live · real orders, real money" = "实盘 · 真实下单，真金白银";
+"Paper · pretend money, real prices" = "模拟盘 · 虚拟资金，真实价格";

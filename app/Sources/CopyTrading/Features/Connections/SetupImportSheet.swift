@@ -8,50 +8,50 @@ struct SetupImportSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(L10n.string("Setup imported"))
-                    .font(.system(.title3, weight: .semibold))
-                    .foregroundStyle(Palette.ink)
-                Text(L10n.string("From %@. Nothing is saved until Connect and Start Copying check it.", result.fileURL.lastPathComponent))
-                    .font(.callout)
-                    .foregroundStyle(Palette.secondaryInk)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            list(L10n.string("Filled in"), result.filled, symbol: "checkmark.circle.fill", tint: .green)
+        SheetScaffold(
+            kind: L10n.string("Import"),
+            title: L10n.string("Setup imported"),
+            lede: L10n.string("From %@. Nothing is saved until Connect and Start Copying check it.", result.fileURL.lastPathComponent),
+            scrolls: false
+        ) {
+            list(L10n.string("Filled in"), result.filled, isDone: true)
             if !result.missing.isEmpty {
-                list(L10n.string("Still to do"), result.missing, symbol: "circle.dashed", tint: Palette.secondaryInk)
+                list(L10n.string("Still to do"), result.missing, isDone: false)
             }
             Callout(
                 L10n.string("The file holds your keys in plain text. Once they're in the Keychain, it's safer in the Trash."),
                 tone: .caution)
-            HStack {
-                Spacer()
-                Button(L10n.string("Keep File"), action: close)
-                    .accessibilityIdentifier("setupImport.done")
-                Button(L10n.string("Move File to Trash"), action: trash)
-                    .buttonStyle(.borderedProminent)
-                    .keyboardShortcut(.defaultAction)
-                    .accessibilityIdentifier("setupImport.trash")
-            }
+        } actions: {
+            Button(L10n.string("Keep File"), action: close)
+                .buttonStyle(SheetButtonStyle())
+                .accessibilityIdentifier("setupImport.done")
+            Button(L10n.string("Move File to Trash"), action: trash)
+                .buttonStyle(SheetButtonStyle(isPrimary: true))
+                .keyboardShortcut(.defaultAction)
+                .accessibilityIdentifier("setupImport.trash")
         }
-        .padding(24)
-        .frame(width: 440)
+        .frame(width: 500)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("setupImport.sheet")
     }
 
-    private func list(_ title: String, _ lines: [String], symbol: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.callout.weight(.semibold))
-                .foregroundStyle(Palette.ink)
+    /// Each line on a hairline, after a bead: butter in an ink ring once it's filled, an empty ring
+    /// while it still waits.
+    private func list(_ title: String, _ lines: [String], isDone: Bool) -> some View {
+        SheetSection(title) {
             ForEach(lines, id: \.self) { line in
-                Label {
-                    Text(line).foregroundStyle(Palette.ink)
-                } icon: {
-                    Image(systemName: symbol).foregroundStyle(tint)
+                HStack(spacing: 12) {
+                    Circle()
+                        .fill(isDone ? Palette.butter : Color.clear)
+                        .overlay(Circle().strokeBorder(isDone ? Palette.ink : Palette.tertiaryInk, lineWidth: InkStroke.width))
+                        .frame(width: 11, height: 11)
+                        .accessibilityHidden(true)
+                    Text(line)
+                        .foregroundStyle(isDone ? Palette.ink : Palette.secondaryInk)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                .padding(.vertical, 9)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
