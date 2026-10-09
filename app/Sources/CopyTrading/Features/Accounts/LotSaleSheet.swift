@@ -7,6 +7,8 @@ import SwiftUI
 /// next sends it. Nothing reaches the broker until then, and a live account asks for Touch ID first.
 struct LotSaleSheet: View {
     @State private var flow: LotSaleFlow
+    /// The sale is held for a few seconds before it leaves, so it can be undone.
+    @State private var isHolding = false
     let operations: (any LotSaleOperations)?
     let confirmOwner: () async throws -> Void
     let finished: () -> Void
@@ -290,13 +292,25 @@ struct LotSaleSheet: View {
                 .disabled(!flow.canReview || operations == nil)
                 .keyboardShortcut(.defaultAction)
                 .accessibilityIdentifier("lotSale.review.button")
+            case .reviewing(let preview) where isHolding:
+                OrderHold(
+                    title: sellTitle(preview), seconds: OrderHold.chosenSeconds,
+                    send: {
+                        isHolding = false
+                        Task { await flow.confirm(using: operations, confirmOwner: confirmOwner) }
+                    },
+                    undo: { isHolding = false })
             case .reviewing(let preview):
                 quiet(L10n.string("Back")) { flow.startOver() }
                     .keyboardShortcut(.cancelAction)
                 Spacer()
                 if preview.plan != nil {
                     Button(sellTitle(preview)) {
-                        Task { await flow.confirm(using: operations, confirmOwner: confirmOwner) }
+                        if OrderHold.chosenSeconds > 0 {
+                            isHolding = true
+                        } else {
+                            Task { await flow.confirm(using: operations, confirmOwner: confirmOwner) }
+                        }
                     }
                     .buttonStyle(PageButtonStyle(isProminent: true, horizontalPadding: 20))
                     .keyboardShortcut(.defaultAction)

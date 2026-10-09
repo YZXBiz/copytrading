@@ -2087,3 +2087,26 @@
 "No size given" = "No size given";
 "Your max per order, %@, caps any one buy." = "Your max per order, %@, caps any one buy.";
 "Max %@ an order · %@ a stock" = "Max %@ an order · %@ a stock";
+
+"From %@'s post · %@" = "From %@'s post · %@";
+"Into %@" = "Into %@";
+"Sold %@ of %@" = "Sold %@ of %@";
+"Bought %@ of %@" = "Bought %@ of %@";
+"Tell me when a trade fills" = "Tell me when a trade fills";
+"A notification with a sound for each copied buy or sell, saying what filled and from whose post." = "A notification with a sound for each copied buy or sell, saying what filled and from whose post.";
+"Holding %@ in %@ from these calls" = "Holding %@ in %@ from these calls";
+"While you were away" = "While you were away";
+"Here's what happened" = "Here's what happened";
+"Since %@" = "Since %@";
+"Nothing filled while you were away." = "Nothing filled while you were away.";
+"They're at the top of each account's page." = "They're at the top of each account's page.";
+"Skipped “%@”" = "Skipped “%@”";
+"Undo" = "Undo";
+"Nothing else is waiting" = "Nothing else is waiting";
+"Sending in %lld s" = "Sending in %lld s";
+"%@, sending soon" = "%@, sending soon";
+"Placing %lld order(s)" = "Placing %lld order(s)";
+"Hold my orders before sending" = "Hold my orders before sending";
+"After you press Sell or confirm a copy, the order waits this long with Undo before it leaves for Alpaca." = "After you press Sell or confirm a copy, the order waits this long with Undo before it leaves for Alpaca.";
+"5 seconds" = "5 seconds";
+"10 seconds" = "10 seconds";

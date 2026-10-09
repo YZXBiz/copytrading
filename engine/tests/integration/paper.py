@@ -264,6 +264,11 @@ class Rig:
                     raise
                 await asyncio.sleep(3)
 
+    async def limits(self, **changes: object) -> None:
+        """As the owner changing a limit in the account sheet while copying runs."""
+        self.policy = {**self.policy, **changes}
+        await self.runtime.update_account_limits(configuration(self.policy))
+
     async def activity(self, index: int):
         page = await self.runtime.operator.source_activity(None, 50)
         return next((item for item in page.items if item.text == self.posts[index].text), None)

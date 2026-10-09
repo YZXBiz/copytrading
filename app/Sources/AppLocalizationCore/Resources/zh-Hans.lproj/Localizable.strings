@@ -2087,3 +2087,26 @@
 "No size given" = "未给数量";
 "Your max per order, %@, caps any one buy." = "单笔上限 %@ 会限制任何一笔买入。";
 "Max %@ an order · %@ a stock" = "单笔上限 %@ · 单只股票上限 %@";
+
+"From %@'s post · %@" = "来自 %@ 的消息 · %@";
+"Into %@" = "账户 %@";
+"Sold %@ of %@" = "卖出 %2$@ %1$@";
+"Bought %@ of %@" = "买入 %2$@ %1$@";
+"Tell me when a trade fills" = "成交时通知我";
+"A notification with a sound for each copied buy or sell, saying what filled and from whose post." = "每笔复制的买卖成交时，发出带提示音的通知，说明成交内容和来源。";
+"Holding %@ in %@ from these calls" = "这些信号目前持有 %@，共 %@";
+"While you were away" = "你离开期间";
+"Here's what happened" = "发生了这些";
+"Since %@" = "自 %@ 起";
+"Nothing filled while you were away." = "你离开期间没有成交。";
+"They're at the top of each account's page." = "在每个账户页面的顶部。";
+"Skipped “%@”" = "已跳过“%@”";
+"Undo" = "撤销";
+"Nothing else is waiting" = "没有其他待处理的信号";
+"Sending in %lld s" = "%lld 秒后发送";
+"%@, sending soon" = "%@，即将发送";
+"Placing %lld order(s)" = "正在下 %lld 笔订单";
+"Hold my orders before sending" = "发送前保留订单";
+"After you press Sell or confirm a copy, the order waits this long with Undo before it leaves for Alpaca." = "按下卖出或确认复制后，订单会等待这段时间并可撤销，然后才发往 Alpaca。";
+"5 seconds" = "5 秒";
+"10 seconds" = "10 秒";

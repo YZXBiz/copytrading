@@ -9,6 +9,7 @@ and leave the account as they found it. Run with the keys set:
 
 import asyncio
 import datetime as dt
+import os
 import time
 from decimal import ROUND_DOWN, ROUND_UP, Decimal
 
@@ -43,8 +44,10 @@ pytestmark = [
     pytest.mark.asyncio(loop_scope="module"),
 ]
 
-SYMBOL = "F"
-OTHER = "SOFI"
+# Two cheap stocks with a two-sided quote in the session the run happens in; outside regular
+# hours a stock's free-feed ask can vanish, so a run can name its own pair.
+SYMBOL = os.environ.get("COPYTRADING_TEST_SYMBOL", "F")
+OTHER = os.environ.get("COPYTRADING_TEST_OTHER_SYMBOL", "SOFI")
 
 
 @pytest_asyncio.fixture(autouse=True, loop_scope="module")
@@ -438,3 +441,110 @@ async def test_a_burst_of_posts_settles_every_one(tmp_path):
         assert talk.decision == "ignore", talk
         assert unknown is not None, "the unknown ticker was never read"
         assert unknown_orders == [], unknown
+
+
+# Limits the owner changes while copying runs
+
+
+async def test_a_raised_maximum_per_order_reaches_the_next_buy(tmp_path):
+    first, second = await guru_price(SYMBOL), await guru_price(OTHER)
+    posts = (Post(f"Bought {SYMBOL} at {first}"), Post(f"Bought {OTHER} at {second}"))
+    async with Rig(tmp_path, posts, policy={"max_order_usd": "15"}) as rig:
+        order = _one(await rig.post(0, until=placed))
+        assert order.budget_usd == Decimal("15"), order
+        await rig.limits(max_order_usd="30")
+        order = _one(await rig.post(1, until=placed))
+        assert order.budget_usd == Decimal("30"), order
+        assert _notional(order) <= Decimal("30")
+
+
+async def test_a_raised_account_total_lets_the_next_buy_through(tmp_path):
+    ceiling = (await total_exposure() + 5).quantize(CENT)
+    first, second = await guru_price(SYMBOL), await guru_price(OTHER)
+    posts = (Post(f"Bought {SYMBOL} at {first}"), Post(f"Bought {OTHER} at {second}"))
+    async with Rig(tmp_path, posts, policy={"max_total_usd": str(ceiling)}) as rig:
+        activity, orders = await rig.post(0)
+        assert _outcomes(activity) == ("total_exposure_cap",), activity
+        assert orders == []
+        await rig.limits(max_total_usd=str(ceiling + 5000))
+        order = _one(await rig.post(1, until=placed))
+        assert order.symbol == OTHER
+
+
+async def test_a_five_dollar_daily_loss_cap_stops_buys_on_a_down_day(tmp_path):
+    account = (await broker("GET", "/account")).json()
+    down = Decimal(account["last_equity"]) - Decimal(account["equity"])
+    if down < 5:
+        pytest.skip(f"the paper account is not down $5 today (down ${down})")
+    first, second = await guru_price(SYMBOL), await guru_price(OTHER)
+    posts = (Post(f"Bought {SYMBOL} at {first}"), Post(f"Bought {OTHER} at {second}"))
+    async with Rig(tmp_path, posts, policy={"daily_loss_cap_usd": "5"}) as rig:
+        activity, orders = await rig.post(0)
+        assert _outcomes(activity) == ("daily_loss_cap",), activity
+        assert orders == []
+        await rig.limits(daily_loss_cap_usd=str((down + 1000).quantize(CENT)))
+        order = _one(await rig.post(1, until=placed))
+        assert order.symbol == OTHER
+
+
+# Shares the owner trades outside CopyTrading
+
+
+async def test_shares_bought_outside_sync_and_the_next_call_trades(tmp_path):
+    price = await guru_price(OTHER)
+    # Room under the per-stock cap, which counts the owner's own shares too.
+    async with Rig(
+        tmp_path, (Post(f"Bought {OTHER} at {price}"),), policy={"max_symbol_usd": "500"}
+    ) as rig:
+        _, ask = await quote(OTHER)
+        bought = await broker(
+            "POST",
+            "/orders",
+            json={
+                "symbol": OTHER,
+                "qty": "1",
+                "side": "buy",
+                "type": "limit",
+                "limit_price": str((ask * Decimal("1.02")).quantize(CENT)),
+                "time_in_force": "day",
+                "extended_hours": True,
+            },
+        )
+        assert bought.status_code == 200, bought.text
+        outside_id = bought.json()["id"]
+        for _ in range(60):
+            if (await broker("GET", f"/orders/{outside_id}")).json()["status"] == "filled":
+                break
+            await asyncio.sleep(1)
+        else:
+            await _cancel(outside_id)
+            pytest.skip("the outside buy did not fill in this session")
+        # The next syncs see the share, then count it as the owner's own.
+        for _ in range(90):
+            account = await rig.account()
+            settled_share = not account.ownership_incidents and any(
+                position.symbol == OTHER and position.external_qty >= 1
+                for position in account.positions
+            )
+            if settled_share:
+                break
+            await asyncio.sleep(1)
+        else:
+            raise AssertionError(f"the outside share never synced: {account.ownership_incidents}")
+        order = _one(await rig.post(0, until=placed))
+        assert order.symbol == OTHER
+
+
+# Sells without a price
+
+
+async def test_a_sell_with_no_price_goes_at_a_limit_under_the_bid(tmp_path):
+    price = await guru_price(SYMBOL)
+    posts = (Post(f"Bought {SYMBOL} at {price}"), Post(f"Out of all my {SYMBOL}"))
+    async with Rig(tmp_path, posts) as rig:
+        bought = _one(await rig.post(0, until=filled))
+        bid, _ = await quote(SYMBOL)
+        sold = _one(await rig.post(1, until=placed))
+        assert (sold.side, sold.quantity) == ("sell", bought.filled_quantity), sold
+        assert sold.limit_price <= bid, sold
+        assert sold.limit_price >= (bid * Decimal("0.98")).quantize(CENT), sold

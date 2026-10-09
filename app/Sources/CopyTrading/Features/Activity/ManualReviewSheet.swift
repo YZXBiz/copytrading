@@ -32,6 +32,8 @@ struct ManualReviewSheet: View {
     @State private var confirmationRequests: [String: ManualConfirmationRequest] = [:]
     @State private var confirmationToSubmit: [ManualConfirmationRequest] = []
     @State private var showsConfirmation = false
+    /// Confirmed orders wait here a few seconds before they leave, so they can be undone.
+    @State private var isHolding = false
     @State private var approvalProblem: String?
 
     init(
@@ -314,30 +316,44 @@ struct ManualReviewSheet: View {
                         .buttonStyle(InkActionButtonStyle(isProminent: false))
                 }
             }
-            HStack(alignment: .center, spacing: 14) {
-                if correctionRequest == nil, let summary = estimate.summary {
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        // The order the choices make, marked by the bead, which hops when it changes.
-                        InkBead(hop: summary.order.hashValue)
-                            .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text(summary.order)
-                                .font(DesignTokens.bodyEmphasis)
-                                .foregroundStyle(Palette.ink)
-                                .monospacedDigit()
-                                .lineLimit(1)
-                            Eyebrow(summary.place)
+            if isHolding {
+                OrderHold(
+                    title: L10n.string("Placing %lld order(s)", Int64(confirmationToSubmit.count)),
+                    seconds: OrderHold.chosenSeconds,
+                    send: {
+                        isHolding = false
+                        Task { await feature.confirm(confirmationToSubmit, using: operations) }
+                    },
+                    undo: {
+                        isHolding = false
+                        confirmationToSubmit = []
+                    })
+            } else {
+                HStack(alignment: .center, spacing: 14) {
+                    if correctionRequest == nil, let summary = estimate.summary {
+                        HStack(alignment: .firstTextBaseline, spacing: 10) {
+                            // The order the choices make, marked by the bead, which hops when it changes.
+                            InkBead(hop: summary.order.hashValue)
+                                .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text(summary.order)
+                                    .font(DesignTokens.bodyEmphasis)
+                                    .foregroundStyle(Palette.ink)
+                                    .monospacedDigit()
+                                    .lineLimit(1)
+                                Eyebrow(summary.place)
+                            }
                         }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier("review.estimate")
                     }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityIdentifier("review.estimate")
+                    Spacer(minLength: 12)
+                    Button(L10n.string("Close")) { dismiss() }
+                        .buttonStyle(InkActionButtonStyle(isProminent: false))
+                        .keyboardShortcut(.cancelAction)
+                        .accessibilityIdentifier("review.close")
+                    primaryButton
                 }
-                Spacer(minLength: 12)
-                Button(L10n.string("Close")) { dismiss() }
-                    .buttonStyle(InkActionButtonStyle(isProminent: false))
-                    .keyboardShortcut(.cancelAction)
-                    .accessibilityIdentifier("review.close")
-                primaryButton
             }
         }
         .padding(.horizontal, 40)
@@ -410,7 +426,12 @@ struct ManualReviewSheet: View {
             return
         }
         approvalProblem = nil
-        await feature.confirm(confirmationToSubmit, using: operations)
+        // Confirmed; held a few seconds in the footer so it can still be undone.
+        if OrderHold.chosenSeconds > 0 {
+            isHolding = true
+        } else {
+            await feature.confirm(confirmationToSubmit, using: operations)
+        }
     }
 
     /// Unlocks the choices for another try under a new correction, after the engine refused.

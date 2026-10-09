@@ -36,6 +36,8 @@ struct GuruPage: View {
                     if let feed {
                         GuruStatsStrip(stats: feed.stats)
                             .padding(.top, 36)
+                        GuruHoldingsLine(guruID: guruID, accounts: feature.accounts)
+                            .padding(.top, 20)
                         GuruFeedList(days: feed.days, guruName: guru?.name ?? guruID, selection: $selectedID)
                             .padding(.top, 56)
                     }

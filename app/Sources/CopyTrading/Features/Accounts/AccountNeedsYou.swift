@@ -22,15 +22,25 @@ struct AccountNeedsYou: View {
     }
 
     var body: some View {
+        // Ticks each second only while a skip can still be undone, so the line leaves on time.
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            content(undo: skippedCalls.undoable(at: context.date))
+        }
+    }
+
+    @ViewBuilder
+    private func content(undo: (sourceID: String, text: String, at: Date)?) -> some View {
         let waiting = self.waiting
-        if !waiting.isEmpty {
+        if !waiting.isEmpty || undo != nil {
             VStack(alignment: .leading, spacing: 12) {
                 // One sentence, as a studio page would say it: how many wait, and until when.
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
                     Text(
-                        waiting.count == 1
-                            ? L10n.string("One call is waiting for you")
-                            : L10n.string("%lld calls are waiting for you", Int64(waiting.count))
+                        waiting.isEmpty
+                            ? L10n.string("Nothing else is waiting")
+                            : waiting.count == 1
+                                ? L10n.string("One call is waiting for you")
+                                : L10n.string("%lld calls are waiting for you", Int64(waiting.count))
                     )
                     .font(DesignTokens.listHeading)
                     .tracking(DesignTokens.listHeadingTracking)
@@ -44,7 +54,10 @@ struct AccountNeedsYou: View {
                             .foregroundStyle(Palette.amber)
                     }
                 }
-                VStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 0) {
+                    if let undo {
+                        undoLine(undo.text)
+                    }
                     ForEach(Array(waiting.enumerated()), id: \.element.source.id) { index, call in
                         AccountNeedsYouRow(
                             call: call,
@@ -53,7 +66,7 @@ struct AccountNeedsYou: View {
                             isSelected: call.source.id == selectedPostID,
                             open: { open(call) },
                             copy: { copy(call) },
-                            skip: { skippedCalls.skip(call.source.sourceID) }
+                            skip: { skippedCalls.skip(call.source.sourceID, text: call.source.readableText()) }
                         )
                     }
                 }
@@ -61,5 +74,21 @@ struct AccountNeedsYou: View {
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("account.needsYou")
         }
+    }
+
+    /// Where the skipped call was, for a few seconds: what was skipped, and Undo.
+    private func undoLine(_ text: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(text.isEmpty ? L10n.string("Skipped") : L10n.string("Skipped “%@”", text))
+                .font(DesignTokens.bodyText)
+                .foregroundStyle(Palette.tertiaryInk)
+                .lineLimit(1)
+            Button(L10n.string("Undo")) { skippedCalls.undo() }
+                .buttonStyle(QuietTextButtonStyle())
+                .keyboardShortcut("z", modifiers: .command)
+                .accessibilityIdentifier("account.needsYou.undo")
+        }
+        .padding(.vertical, 10)
+        .transition(.opacity)
     }
 }

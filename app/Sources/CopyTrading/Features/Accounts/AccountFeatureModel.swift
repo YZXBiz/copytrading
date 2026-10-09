@@ -19,7 +19,15 @@ final class AccountFeatureModel {
     private(set) var accounts: [AccountOverview] = []
     private(set) var nextAccountCursor: String?
     private(set) var isLoadingMoreAccounts = false
-    private(set) var activity: [SourceActivity] = []
+    private(set) var activity: [SourceActivity] = [] {
+        didSet {
+            let fills = fillWatch.newFills(in: activity)
+            if !fills.isEmpty { onFills?(fills) }
+        }
+    }
+    private var fillWatch = FillWatch()
+    /// Told of each copied order that newly filled, once; the app turns them into notifications.
+    var onFills: (([FillWatch.Fill]) -> Void)?
     private(set) var unavailableAccounts: [AccountUnavailable] = []
     private(set) var nextActivityCursor: Int?
     /// Each account's feed, newest first, and where its next older page starts.

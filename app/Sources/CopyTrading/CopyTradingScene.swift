@@ -30,6 +30,9 @@ public struct CopyTradingScene: Scene {
                 .task {
                     lifecycle.model = model
                     updater.willRelaunch = { [model] in model.rememberCopyingForRelaunch() }
+                    accountFeature.onFills = { [model] fills in
+                        FillNotifications.post(fills, directory: GuruDirectory(model.savedTradingConfiguration))
+                    }
                     model.startIfNeeded()
                 }
         }
@@ -51,9 +54,7 @@ public struct CopyTradingScene: Scene {
                     lifecycle.model = model
                 }
         } label: {
-            // The status item drops the title, and the symbol would otherwise be announced as "Divide".
-            Label("CopyTrading", systemImage: "arrow.triangle.branch")
-                .accessibilityLabel("CopyTrading")
+            MenuBarGlance(model: model, accountFeature: accountFeature)
         }
         .menuBarExtraStyle(.window)
     }
