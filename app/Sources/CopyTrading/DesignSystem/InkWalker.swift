@@ -13,8 +13,11 @@ struct InkWalker: View {
 
     var body: some View {
         Canvas { context, size in
-            let w = size.width
-            let h = size.height
+            // Inset by half the pen so the outline is never cut at the canvas edge.
+            let inset = InkStroke.width
+            context.translateBy(x: inset, y: inset)
+            let w = size.width - inset * 2
+            let h = size.height - inset * 2
             let body = Path(ellipseIn: CGRect(x: w * 0.18, y: 0, width: w * 0.64, height: h * 0.72))
             context.fill(body, with: .color(Palette.page))
             context.stroke(body, with: .color(color), style: InkStroke.style)
@@ -31,7 +34,7 @@ struct InkWalker: View {
             legs.addLine(to: CGPoint(x: w * (0.7 + swing), y: h))
             context.stroke(legs, with: .color(color), style: InkStroke.style)
         }
-        .frame(width: 22, height: 27)
+        .frame(width: 26, height: 31)
         .offset(y: -lift)
         .task {
             guard !reduceMotion else { return }
