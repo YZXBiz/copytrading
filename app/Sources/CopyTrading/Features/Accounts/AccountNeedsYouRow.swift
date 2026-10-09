@@ -53,7 +53,7 @@ struct AccountNeedsYouRow: View {
             .accessibilityIdentifier("needsYou.open")
             Spacer(minLength: 12)
             Button(L10n.string("Skip"), action: skip)
-                .buttonStyle(PageButtonStyle())
+                .buttonStyle(QuietTextButtonStyle())
                 .accessibilityIdentifier("needsYou.skip")
             Button(
                 L10n.string(call.calls.isEmpty ? "Enter Trade…" : call.awaitsApproval ? "Approve…" : "Copy…"),

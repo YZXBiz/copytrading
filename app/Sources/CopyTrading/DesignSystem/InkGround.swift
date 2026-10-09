@@ -13,7 +13,8 @@ struct InkGround: View {
             ZStack {
                 Self.ground(width: w, height: h)
                     .trim(from: 0, to: drawn)
-                    .stroke(Palette.ink, style: InkStroke.style)
+                    // Quiet: the ground sets the scene, it is not the subject.
+                    .stroke(Palette.ink.opacity(0.3), style: InkStroke.style)
             }
         }
         .frame(height: height)

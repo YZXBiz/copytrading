@@ -17,8 +17,8 @@ struct AccountPageContent: View {
     @State private var section = AccountSection.positions
 
     private var hasWarnings: Bool {
-        !account.ownershipIncidents.isEmpty || account.accountRiskReason != nil
-            || account.accountActivityReason != nil || !account.unresolvedIncidents.isEmpty
+        !account.ownershipIncidents.isEmpty || AccountWarnings.shown(account.accountRiskReason) != nil
+            || AccountWarnings.shown(account.accountActivityReason) != nil || !account.unresolvedIncidents.isEmpty
     }
 
     var body: some View {
