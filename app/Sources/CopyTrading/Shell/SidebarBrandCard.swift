@@ -1,7 +1,7 @@
 import DesktopCore
 import SwiftUI
 
-/// The walker and the app's name at the top of the sidebar, like a studio's mark.
+/// The app's mark and name at the top of the sidebar, like a studio's mark.
 struct SidebarBrandCard: View {
     let model: AppModel
 
@@ -13,8 +13,8 @@ struct SidebarBrandCard: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            InkWalker()
-                .frame(width: 32, height: 32)
+            AppMark(size: 26)
+                .padding(3)
             VStack(alignment: .leading, spacing: 1) {
                 Text(L10n.string("CopyTrading"))
                     .font(DisplayFont.font(size: 19, weight: .medium, relativeTo: .headline))

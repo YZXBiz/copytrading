@@ -1,6 +1,9 @@
 // Renders the 1024 px master for Resources/AppIcon.icns.
 // Usage: swift app/scripts/render_app_icon.swift <output.png>
 // Then: app/scripts/build_app_icon.sh regenerates the .icns from it.
+//
+// The icon is the app's own drawing: a white sheet with one ink line, drawn by hand, that dips,
+// holds, and rises to a solid dot where a call becomes a trade. Black on white, nothing else.
 
 import AppKit
 import CoreGraphics
@@ -19,10 +22,6 @@ func color(_ hex: UInt32, _ alpha: CGFloat = 1) -> CGColor {
     )
 }
 
-func gradient(_ colors: [CGColor], _ locations: [CGFloat]) -> CGGradient {
-    CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB)!, colors: colors as CFArray, locations: locations)!
-}
-
 let space = CGColorSpace(name: CGColorSpace.sRGB)!
 let context = CGContext(
     data: nil, width: Int(size), height: Int(size), bitsPerComponent: 8, bytesPerRow: 0,
@@ -31,108 +30,60 @@ let context = CGContext(
 
 let squircle = CGPath(roundedRect: body, cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
 
-// Drop shadow under the body, as on system icons.
+// A soft shadow under the sheet, as on system icons.
 context.saveGState()
-context.setShadow(offset: CGSize(width: 0, height: -10), blur: 28, color: color(0x000000, 0.35))
+context.setShadow(offset: CGSize(width: 0, height: -8), blur: 24, color: color(0x000000, 0.22))
 context.addPath(squircle)
-context.setFillColor(color(0x0A1224))
+context.setFillColor(color(0xFFFFFF))
 context.fillPath()
 context.restoreGState()
 
-// Body: deep navy fading to indigo, with a teal glow rising from the lower right.
+// The sheet: paper white, with the faintest warmth toward the bottom.
 context.saveGState()
 context.addPath(squircle)
 context.clip()
 context.drawLinearGradient(
-    gradient([color(0x1B2B5E), color(0x0B1430)], [0, 1]),
-    start: CGPoint(x: body.minX, y: body.maxY), end: CGPoint(x: body.maxX, y: body.minY), options: []
+    CGGradient(colorsSpace: space, colors: [color(0xFFFFFF), color(0xF4F3F0)] as CFArray, locations: [0, 1])!,
+    start: CGPoint(x: 0, y: body.maxY), end: CGPoint(x: 0, y: body.minY), options: []
 )
-context.drawRadialGradient(
-    gradient([color(0x19C6B0, 0.45), color(0x19C6B0, 0)], [0, 1]),
-    startCenter: CGPoint(x: 760, y: 300), startRadius: 0,
-    endCenter: CGPoint(x: 760, y: 300), endRadius: 520, options: []
-)
-
-// Faint chart grid.
-context.setStrokeColor(color(0xFFFFFF, 0.07))
-context.setLineWidth(3)
-for step in 1..<6 {
-    let offset = body.minX + CGFloat(step) * body.width / 6
-    context.move(to: CGPoint(x: offset, y: body.minY))
-    context.addLine(to: CGPoint(x: offset, y: body.maxY))
-    context.move(to: CGPoint(x: body.minX, y: offset))
-    context.addLine(to: CGPoint(x: body.maxX, y: offset))
-}
+context.restoreGState()
+context.addPath(squircle)
+context.setStrokeColor(color(0x000000, 0.08))
+context.setLineWidth(2)
 context.strokePath()
 
-// The signal: a flat line that spikes like a pulse, then breaks out upward.
-let points: [CGPoint] = [
-    CGPoint(x: 215, y: 430),
-    CGPoint(x: 330, y: 430),
-    CGPoint(x: 395, y: 560),
-    CGPoint(x: 470, y: 300),
-    CGPoint(x: 545, y: 470),
-    CGPoint(x: 610, y: 430),
-    CGPoint(x: 740, y: 600),
-]
-let tip = CGPoint(x: 800, y: 680)
-let signal = CGMutablePath()
-signal.move(to: points[0])
-for point in points.dropFirst() { signal.addLine(to: point) }
-signal.addLine(to: tip)
+let ink = color(0x1D1F21)
 
-func strokeSignal(width: CGFloat) {
-    context.saveGState()
-    context.addPath(signal)
-    context.setLineWidth(width)
-    context.setLineCap(.round)
-    context.setLineJoin(.round)
-    context.replacePathWithStrokedPath()
-    context.clip()
-    context.drawLinearGradient(
-        gradient([color(0x4FA8FF), color(0x3CF2C9)], [0, 1]),
-        start: CGPoint(x: 215, y: 0), end: CGPoint(x: 800, y: 0), options: []
-    )
-    context.restoreGState()
-}
+// The ground: nearly level, with the wobble of a line drawn without a ruler.
+let ground = CGMutablePath()
+ground.move(to: CGPoint(x: 230, y: 300))
+ground.addCurve(to: CGPoint(x: 512, y: 296), control1: CGPoint(x: 320, y: 304), control2: CGPoint(x: 420, y: 292))
+ground.addCurve(to: CGPoint(x: 794, y: 302), control1: CGPoint(x: 610, y: 300), control2: CGPoint(x: 700, y: 306))
+context.addPath(ground)
+context.setStrokeColor(color(0x1D1F21, 0.28))
+context.setLineWidth(14)
+context.setLineCap(.round)
+context.strokePath()
 
-// Soft glow first, drawn as a blurred shadow of a solid stroke so it brightens rather than outlines.
-context.saveGState()
-context.setShadow(offset: .zero, blur: 46, color: color(0x3CF2C9, 0.75))
-context.addPath(signal)
-context.setLineWidth(30)
+// The line: it dips, holds, and rises, the shape of a good copied trade.
+let line = CGMutablePath()
+line.move(to: CGPoint(x: 236, y: 470))
+line.addCurve(to: CGPoint(x: 400, y: 420), control1: CGPoint(x: 300, y: 470), control2: CGPoint(x: 340, y: 404))
+line.addCurve(to: CGPoint(x: 540, y: 520), control1: CGPoint(x: 460, y: 436), control2: CGPoint(x: 480, y: 530))
+line.addCurve(to: CGPoint(x: 744, y: 712), control1: CGPoint(x: 620, y: 508), control2: CGPoint(x: 660, y: 690))
+context.addPath(line)
+context.setStrokeColor(ink)
+context.setLineWidth(34)
 context.setLineCap(.round)
 context.setLineJoin(.round)
-context.setStrokeColor(color(0x2ED3C0, 0.9))
 context.strokePath()
-context.restoreGState()
-strokeSignal(width: 40)
 
-// Endpoint: a bright node with a halo, where the signal becomes a trade.
-for (radius, alpha) in [(92.0, 0.12), (64.0, 0.22)] {
-    context.setFillColor(color(0x3CF2C9, alpha))
-    context.fillEllipse(in: CGRect(x: tip.x - radius, y: tip.y - radius, width: radius * 2, height: radius * 2))
-}
-context.saveGState()
-context.setShadow(offset: .zero, blur: 30, color: color(0x3CF2C9, 0.9))
-context.setFillColor(color(0xE9FFFA))
-context.fillEllipse(in: CGRect(x: tip.x - 40, y: tip.y - 40, width: 80, height: 80))
-context.restoreGState()
-
-// Top sheen, like the glass highlight on system icons.
-context.drawLinearGradient(
-    gradient([color(0xFFFFFF, 0.14), color(0xFFFFFF, 0)], [0, 1]),
-    start: CGPoint(x: 0, y: body.maxY), end: CGPoint(x: 0, y: body.midY + 80), options: []
-)
-context.restoreGState()
-
-// Hairline edge so the icon holds its shape on dark backgrounds.
-context.addPath(squircle.copy(using: nil)!)
-context.setStrokeColor(color(0xFFFFFF, 0.12))
-context.setLineWidth(3)
-context.strokePath()
+// The dot where the line arrives: the trade.
+let dot: CGFloat = 46
+context.setFillColor(ink)
+context.fillEllipse(in: CGRect(x: 744 - dot, y: 712 - dot, width: dot * 2, height: dot * 2))
 
 let image = context.makeImage()!
-let output = URL(fileURLWithPath: CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "AppIcon.png")
 let rep = NSBitmapImageRep(cgImage: image)
-try rep.representation(using: .png, properties: [:])!.write(to: output)
+let url = URL(fileURLWithPath: CommandLine.arguments[1])
+try rep.representation(using: .png, properties: [:])!.write(to: url)
