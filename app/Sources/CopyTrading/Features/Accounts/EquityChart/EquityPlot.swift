@@ -10,6 +10,7 @@ struct EquityPlot: View {
     let stats: EquityCurveStats
     let range: EquityHistoryRange
     @Binding var selection: EquitySelection
+    var walkerHop = 0
     @Environment(\.colorSchemeContrast) private var contrast
     @ScaledMetric(relativeTo: .caption) private var valueAxisWidth = 84
 
@@ -67,7 +68,7 @@ struct EquityPlot: View {
                 .annotation(position: .top, spacing: 1) {
                     // The walker stands where the line has got to; it steps in, then stays still.
                     if selection == .none {
-                        InkWalker()
+                        InkWalker(hop: walkerHop)
                     }
                 }
                 .accessibilityHidden(true)

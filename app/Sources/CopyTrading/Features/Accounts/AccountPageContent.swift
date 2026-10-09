@@ -1,8 +1,9 @@
 import DesktopCore
 import SwiftUI
 
-/// A read account's page, top to bottom: header, money and chart, limits, warnings, the calls
-/// waiting on the owner, holdings, and activity.
+/// A read account's page: a hero (name, balance, the curve with the walker, what the balance is
+/// made of), any warnings, the calls waiting on the owner, then positions, activity, or limits,
+/// one at a time.
 struct AccountPageContent: View {
     let account: AccountOverview
     let policy: TradingAccountPolicy?
@@ -13,6 +14,7 @@ struct AccountPageContent: View {
     let selectedPostID: SourceActivity.ID?
     @Binding var sheet: ActivitySheet?
     let openPost: (SourceActivity.ID) -> Void
+    @State private var section = AccountSection.positions
 
     private var hasWarnings: Bool {
         !account.ownershipIncidents.isEmpty || account.accountRiskReason != nil
@@ -21,7 +23,7 @@ struct AccountPageContent: View {
 
     var body: some View {
         let directory = GuruDirectory(model.savedTradingConfiguration)
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: 28) {
             AccountPageHeader(account: account, model: model, feature: feature)
             AccountBalanceSummary(account: account, model: model, feature: feature)
             EquityChart(
@@ -29,11 +31,10 @@ struct AccountPageContent: View {
                 history: feature.histories[account.accountID],
                 window: feature.historyWindow,
                 chooseWindow: chooseWindow,
-                plotHeight: isSharingWidth ? 120 : 176
+                plotHeight: isSharingWidth ? 120 : 200,
+                walkerHop: fills
             )
-            if let policy {
-                AccountLimitsStrip(account: account, policy: policy, isCompact: isSharingWidth, editLimits: editLimits)
-            }
+            AccountBalanceBreakdown(account: account, model: model, feature: feature)
         }
         if hasWarnings {
             VStack(alignment: .leading, spacing: 8) {
@@ -50,12 +51,29 @@ struct AccountPageContent: View {
             copy: copy,
             open: { openPost($0.source.id) }
         )
-        if !isSharingWidth {
-            AccountPositions(account: account, model: model, feature: feature) { openPost($0.id) }
+        VStack(alignment: .leading, spacing: 20) {
+            AccountSectionSwitcher(selection: $section, counts: [.positions: account.positions.count])
+            switch section {
+            case .positions:
+                AccountPositions(account: account, model: model, feature: feature) { openPost($0.id) }
+            case .activity:
+                AccountFeedList(
+                    accountID: account.accountID, model: model, feature: feature, selectedPostID: selectedPostID,
+                    openPost: openPost)
+            case .limits:
+                if let policy {
+                    AccountLimitsStrip(account: account, policy: policy, isCompact: isSharingWidth, editLimits: editLimits)
+                }
+            }
         }
-        AccountFeedList(
-            accountID: account.accountID, model: model, feature: feature, selectedPostID: selectedPostID,
-            openPost: openPost)
+        .onAppear {
+            if account.positions.isEmpty { section = .activity }
+        }
+    }
+
+    /// Orders the account filled, from its feed: the walker hops each time one more lands.
+    private var fills: Int {
+        (feature.feeds[account.accountID] ?? []).count { $0.kind == "bought" || $0.kind == "sold" }
     }
 
     private func copy(_ call: WaitingCall) {

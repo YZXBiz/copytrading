@@ -25,9 +25,23 @@ struct AccountNeedsYou: View {
         let waiting = self.waiting
         if !waiting.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
-                ListHeading("Needs you", count: waiting.count) {
+                // One sentence, as a studio page would say it: how many wait, and until when.
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    Text(
+                        waiting.count == 1
+                            ? L10n.string("One call is waiting for you")
+                            : L10n.string("%lld calls are waiting for you", Int64(waiting.count))
+                    )
+                    .font(DesignTokens.listHeading)
+                    .tracking(DesignTokens.listHeadingTracking)
+                    .foregroundStyle(Palette.ink)
+                    .accessibilityAddTraits(.isHeader)
+                    Spacer(minLength: 12)
                     if let deadline = waiting.compactMap(\.deadline).min() {
                         Text(L10n.string("Copy by %@", TradingDeadlineText.text(deadline, now: .now)))
+                            .font(DesignTokens.lede)
+                            .tracking(DesignTokens.ledeTracking)
+                            .foregroundStyle(Palette.amber)
                     }
                 }
                 VStack(spacing: 0) {

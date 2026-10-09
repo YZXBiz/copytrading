@@ -10,7 +10,6 @@ struct AccountPositions: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            ListHeading("Positions")
             PositionsTable(
                 positions: account.positions,
                 accountID: account.accountID,

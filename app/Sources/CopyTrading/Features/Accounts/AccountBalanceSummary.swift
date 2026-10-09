@@ -1,8 +1,7 @@
 import DesktopCore
 import SwiftUI
 
-/// The broker's numbers for the account: what it is worth, how today went, the cash, stocks and
-/// buying power behind it, and when the prices were read.
+/// What the account is worth, in the display face, and how today went under it.
 struct AccountBalanceSummary: View {
     let account: AccountOverview
     let model: AppModel
@@ -30,50 +29,8 @@ struct AccountBalanceSummary: View {
                             .foregroundStyle(Palette.tertiaryInk)
                     }
                 }
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .lastTextBaseline, spacing: 40) {
-                        stats
-                        Spacer(minLength: 16)
-                        freshness(balance)
-                    }
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack(spacing: 40) { stats }
-                        freshness(balance)
-                    }
-                }
             }
         }
-    }
-
-    @ViewBuilder
-    private var stats: some View {
-        if let balance = account.balance {
-            stat("Cash", balance.cash)
-            stat("In stocks", account.totalExposureUSD)
-            stat("Buying power", balance.buyingPower)
-        }
-    }
-
-    private func stat(_ title: String, _ value: String?) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(L10n.string(title).uppercased())
-                .font(DesignTokens.eyebrow)
-                .tracking(DesignTokens.eyebrowTracking)
-                .foregroundStyle(Palette.tertiaryInk)
-            MoneyText(value: Decimal(engine: value) ?? 0, font: DesignTokens.statValue)
-                .foregroundStyle(Palette.ink)
-        }
-        .fixedSize()
-        .accessibilityElement(children: .combine)
-    }
-
-    private func freshness(_ balance: AccountBalance) -> some View {
-        AccountFreshness(
-            observedAt: balance.observedAt,
-            isRefreshing: feature.isRefreshing,
-            engineStopped: model.runtimeState == .stopped || model.runtimeState == .failed,
-            refresh: { Task { await feature.refresh(using: model.accountActions()) } }
-        )
     }
 
     /// Today's change against yesterday's close, the equity less the change.

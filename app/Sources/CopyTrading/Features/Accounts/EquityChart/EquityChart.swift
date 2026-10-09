@@ -11,6 +11,8 @@ struct EquityChart: View {
     let chooseWindow: (EquityHistoryWindow) -> Void
     /// Tall on its own, short while a detail pane shares the page.
     var plotHeight: CGFloat = 176
+    /// Changes when an order fills, so the walker at the end of the line hops.
+    var walkerHop = 0
     @State private var day = Date.now
     @State private var selection = EquitySelection.none
     /// Bumped by Draw It Again to draw the line in once more.
@@ -99,7 +101,7 @@ struct EquityChart: View {
 
     @ViewBuilder
     private func plot(curve: EquityCurve, stats: EquityCurveStats) -> some View {
-        EquityPlot(curve: curve, stats: stats, range: window.range, selection: $selection)
+        EquityPlot(curve: curve, stats: stats, range: window.range, selection: $selection, walkerHop: walkerHop)
             .drawsIn(token: drawing)
             .popoverTip(MeasureChartTip(generation: tipGeneration), arrowEdge: .bottom)
             .task {

@@ -1970,3 +1970,5 @@
 "What other apps on this Mac may ask CopyTrading to do." = "这台 Mac 上的其他 App 可以请求 CopyTrading 做什么。";
 "Copies of your setup, kept on this Mac." = "你的设置副本，保存在这台 Mac 上。";
 "What the engine wrote down, with keys removed." = "引擎记录的内容，已去除密钥。";
+"One call is waiting for you" = "有一条喊单在等你";
+"%lld calls are waiting for you" = "有 %lld 条喊单在等你";

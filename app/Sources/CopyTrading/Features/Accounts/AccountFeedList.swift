@@ -14,7 +14,6 @@ struct AccountFeedList: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ListHeading("Activity")
             VStack(alignment: .leading, spacing: 0) {
                 if let error = feature.errors["feed:\(accountID)"] {
                     Callout(error, tone: .critical)
