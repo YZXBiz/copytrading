@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// A day's label in the timeline's gutter, in tracked capitals, with the rail running through and a
-/// hairline across the rest of the row.
+/// A day's label in the timeline's gutter, in tracked capitals, with the rail running through. The
+/// rail already joins the posts, so no line crosses the row.
 struct TimelineDayRow: View {
     let title: String
     let runsAbove: Bool
@@ -12,7 +12,8 @@ struct TimelineDayRow: View {
             Eyebrow(title)
                 .accessibilityAddTraits(.isHeader)
         } content: {
-            Hairline()
+            Color.clear
+                .frame(height: 1)
                 .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4.5 }
         } trailing: {
             EmptyView()

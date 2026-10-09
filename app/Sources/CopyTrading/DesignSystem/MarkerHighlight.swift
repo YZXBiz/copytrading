@@ -5,13 +5,15 @@ import SwiftUI
 struct MarkerHighlight: ViewModifier {
     let isOn: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// In the dark the marker is softer, so light text over it stays readable.
+    @Environment(\.colorScheme) private var colorScheme
 
     func body(content: Content) -> some View {
         content
             .background(alignment: .bottomLeading) {
                 GeometryReader { proxy in
                     Rectangle()
-                        .fill(Palette.butter.opacity(0.85))
+                        .fill(Palette.butter.opacity(colorScheme == .dark ? 0.4 : 0.85))
                         .frame(width: proxy.size.width + 6, height: proxy.size.height * 0.42)
                         .offset(x: -3, y: proxy.size.height * 0.52)
                         .scaleEffect(x: isOn ? 1 : 0, anchor: .leading)

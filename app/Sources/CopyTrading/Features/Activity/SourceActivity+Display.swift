@@ -139,8 +139,9 @@ extension SourceInstruction {
         }
     }
 
+    /// The guru's share in words; a reader's rounded decimal (0.3333) still reads as "a third".
     private static func share(_ fraction: String) -> String {
-        switch Humanize.fraction(fraction) {
+        switch common(fraction) ?? Humanize.fraction(fraction) {
         case "1/2": "half"
         case "1/3": "a third"
         case "1/4": "a quarter"
@@ -149,5 +150,11 @@ extension SourceInstruction {
         case "1": "all"
         case let other: other
         }
+    }
+
+    private static func common(_ fraction: String) -> String? {
+        guard let value = Double(fraction) else { return nil }
+        let known: [(Double, String)] = [(1.0 / 3, "1/3"), (2.0 / 3, "2/3"), (1.0 / 6, "1/6"), (1.0 / 8, "1/8")]
+        return known.first { abs($0.0 - value) < 0.0006 }?.1
     }
 }
