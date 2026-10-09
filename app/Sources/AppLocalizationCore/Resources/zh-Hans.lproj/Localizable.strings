@@ -2048,7 +2048,7 @@
 "It counted %@; the broker holds %@. %@ calls wait until you update it." = "它记录为 %@，券商持有 %@。更新之前，%@ 的信号会等待。";
 "Update the Count" = "更新记录";
 "CopyTrading will use the broker's count. Nothing is bought or sold." = "CopyTrading 将采用券商的数量，不会买卖任何股票。";
-"%@ of %@ that CopyTrading didn't buy" = "%2$@ 有 %1$@ 不是 CopyTrading 买入的";
+"%@ of %@ that CopyTrading didn't buy" = "%@（%@）不是 CopyTrading 买入的";
 "%@ calls wait until you say whose they are." = "在你确认归属之前，%@ 的信号会等待。";
 "They're Mine" = "是我的";
 "CopyTrading will leave these shares alone and copy %@ calls again. Nothing is bought or sold." = "CopyTrading 不会动这些股票，并恢复复制 %@ 的信号。不会买卖任何股票。";
@@ -2063,9 +2063,9 @@
 "An order in Alpaca that CopyTrading didn't place is still open" = "Alpaca 中有一笔不是 CopyTrading 下的订单仍未完成";
 "Let it fill or cancel it in Alpaca. Until it's gone, CopyTrading can't settle holdings." = "等它成交，或在 Alpaca 中取消。在此之前，CopyTrading 无法确认持仓。";
 "CopyTrading checks again on the next sync." = "CopyTrading 会在下次同步时再次检查。";
-"You bought %@ of %@ outside CopyTrading. They count as yours; CopyTrading won't sell them." = "你在 CopyTrading 之外买入了 %2$@ %1$@。这些算作你的，CopyTrading 不会卖出。";
-"You sold %@ of your own %@ outside CopyTrading. The count is updated." = "你在 CopyTrading 之外卖出了自己的 %2$@ %1$@。持仓已更新。";
-"%@ of copied %@ were sold outside CopyTrading. The oldest buys count as sold." = "复制的 %2$@ 中有 %1$@ 在 CopyTrading 之外卖出。按最早买入的先计为已卖出。";
+"You bought %@ of %@ outside CopyTrading. They count as yours; CopyTrading won't sell them." = "你在 CopyTrading 之外买入了 %@（%@）。这些算作你的，CopyTrading 不会卖出。";
+"You sold %@ of your own %@ outside CopyTrading. The count is updated." = "你在 CopyTrading 之外卖出了自己的 %@（%@）。持仓已更新。";
+"%@ of copied %@ were sold outside CopyTrading. The oldest buys count as sold." = "复制的 %@（%@）在 CopyTrading 之外被卖出。按最早买入的先计为已卖出。";
 "%@ at Alpaca matches CopyTrading's count again" = "Alpaca 中的 %@ 与 CopyTrading 的记录再次一致";
 "%@ (Control-%lld)" = "%@（Control-%lld）";
 "of %@" = "/ %@";
@@ -2090,8 +2090,8 @@
 
 "From %@'s post · %@" = "来自 %@ 的消息 · %@";
 "Into %@" = "账户 %@";
-"Sold %@ of %@" = "卖出 %2$@ %1$@";
-"Bought %@ of %@" = "买入 %2$@ %1$@";
+"Sold %@ of %@" = "卖出 %@（%@）";
+"Bought %@ of %@" = "买入 %@（%@）";
 "Tell me when a trade fills" = "成交时通知我";
 "A notification with a sound for each copied buy or sell, saying what filled and from whose post." = "每笔复制的买卖成交时，发出带提示音的通知，说明成交内容和来源。";
 "Holding %@ in %@ from these calls" = "这些信号目前持有 %@，共 %@";

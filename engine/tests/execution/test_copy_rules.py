@@ -10,7 +10,7 @@ from copytrading_engine.execution.application.engine import CopyEngine
 from copytrading_engine.execution.application.ports import BrokerError
 from copytrading_engine.execution.domain.manual_commands import ManualCorrectionRecord
 from copytrading_engine.execution.domain.market import Quote
-from copytrading_engine.execution.domain.progress import Skipped
+from copytrading_engine.execution.domain.progress import Pending, Skipped
 from copytrading_engine.execution.domain.signals import CopyConfig
 from copytrading_engine.shared.signals import StockSignal
 
@@ -124,24 +124,27 @@ def test_half_with_no_price_sells_half_at_a_limit_just_under_the_live_bid():
 
 
 @pytest.mark.parametrize(
-    ("broker", "reason"),
+    "broker",
     [
-        pytest.param(FakeBroker(), "quote_unavailable", id="a-broker-with-no-quotes"),
+        pytest.param(FakeBroker(), id="a-broker-with-no-quotes"),
         pytest.param(
-            QuotingBroker("30.01", quoted_at=NOW - dt.timedelta(minutes=5)),
-            "quote_stale",
-            id="a-quote-too-old",
+            QuotingBroker("30.01", quoted_at=NOW - dt.timedelta(hours=7)), id="a-quote-too-old"
         ),
     ],
 )
-def test_a_sell_at_the_market_with_no_live_bid_sends_nothing(broker, reason):
+def test_a_sell_at_the_market_with_no_live_bid_waits_until_the_post_is_too_old(broker):
+    """A thin market's quotes can be minutes apart: the sell sends nothing and waits for a live
+    bid, until the account's maximum signal age says the post is too old."""
     engine = _engine(broker)
     deliver(engine, _whole(event("1", price="25")))
     calls = broker.calls
 
     deliver(engine, _at_market(event("2", "close", timestamp=NOW + dt.timedelta(seconds=1))))
+    assert isinstance(_outcome(engine, "2"), Pending)
+    assert broker.calls == calls
 
-    assert _outcome(engine, "2") == Skipped(reason=reason)
+    engine.process(NOW + dt.timedelta(minutes=11))
+    assert _outcome(engine, "2") == Skipped(reason="stale")
     assert broker.calls == calls
 
 
@@ -156,8 +159,24 @@ def test_a_sell_at_the_market_waits_out_a_quote_the_broker_cannot_give():
     deliver(engine, _whole(event("1", price="25")))
 
     deliver(engine, _at_market(event("2", "close", timestamp=NOW + dt.timedelta(seconds=1))))
+    assert isinstance(_outcome(engine, "2"), Pending)
 
-    assert _outcome(engine, "2") == Skipped(reason="quote_unavailable")
+    engine.process(NOW + dt.timedelta(minutes=11))
+    assert _outcome(engine, "2") == Skipped(reason="stale")
+
+
+def test_a_sell_at_the_market_goes_out_once_a_fresh_bid_arrives():
+    broker = QuotingBroker("30.01", quoted_at=NOW - dt.timedelta(hours=7))
+    engine = _engine(broker)
+    deliver(engine, _whole(event("1", price="25")))
+    deliver(engine, _at_market(event("2", "close", timestamp=NOW + dt.timedelta(seconds=1))))
+    assert isinstance(_outcome(engine, "2"), Pending)
+
+    later = NOW + dt.timedelta(seconds=40)
+    broker.quoted_at = later
+    engine.process(later)
+    sale = next(order for order in engine.ledger.orders() if order.side == "sell")
+    assert (sale.source_price, sale.limit_price) == (Decimal("30.00"), Decimal("29.70"))
 
 
 def test_a_sell_naming_no_buy_with_nothing_held_sells_nothing():

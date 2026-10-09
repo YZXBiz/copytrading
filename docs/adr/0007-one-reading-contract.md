@@ -57,8 +57,11 @@ same as his 1/6.
      (Z defaults to 1%, set per account), so it never fills far below what the guru got; one that
      hasn't filled by the order timeout is cancelled and the shares stay. A sell with no price,
      or at the market ("sell wmt half", "跑路了"), is the guru getting out now: it sells at the
-     market, as a limit Z% under the live bid when the order is planned, and sends nothing when
-     the broker has no bid from the last 30 seconds. A buy with no price, or at the market, waits
+     market, as a limit Z% under the bid when the order is planned. With no bid yet it waits and
+     tries again each cycle until the post is too old; a bid up to six hours old will do, since it
+     only sets the floor: a limit sell fills at the market's better price, or rests until its
+     timeout and the shares stay (Oct 2026, after live runs found the free feed's last bid is the
+     4 PM one all evening). A buy with no price, or at the market, waits
      for the owner: only the guru's price bounds what a copied buy pays. So does a batch until its
      guru's N is set, and a sell that names no buy for a guru whose sells refer to the buy price.
 5. **Limits only protect.** Maximum per order trims a buy and the trim is shown. A buy that would

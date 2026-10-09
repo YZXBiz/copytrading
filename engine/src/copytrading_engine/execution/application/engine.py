@@ -33,7 +33,10 @@ from copytrading_engine.execution.domain.order_lifecycle import OrderStatus, is_
 from copytrading_engine.execution.domain.orders import OrderPlan, OrderRecord, OrderRequest
 from copytrading_engine.execution.domain.ownership import account_activity_reason
 from copytrading_engine.execution.domain.positions import PositionAudit, compare_positions
-from copytrading_engine.execution.domain.pricing import quote_problem
+from copytrading_engine.execution.domain.pricing import (
+    SELL_FLOOR_QUOTE_MAX_AGE_SECONDS,
+    quote_problem,
+)
 from copytrading_engine.execution.domain.progress import Pending
 from copytrading_engine.execution.domain.risk import (
     EntryFacts,
@@ -128,6 +131,9 @@ class _SubmissionGuard:
 # Buys blocked only while an account recovers after a restart wait for it instead of being
 # skipped: the next cycle tries again, and the signal age still decides when a post is too old.
 RECOVERY_WAITS = frozenset({"recovery_pending", "manual_resume_required"})
+# A sell at the market with no fresh bid yet waits and tries again each cycle: a thin market's
+# quotes can be minutes apart. The account's maximum signal age still ends the wait.
+QUOTE_WAITS = frozenset({"quote_stale", "quote_unavailable"})
 # What a held buy that aged out says instead of a bare "stale".
 _AGED_OUT_WAITING = {
     "recovery_pending": "stale_during_recovery",
@@ -265,7 +271,7 @@ class CopyEngine:
             quote = self.broker.quote(symbol)
         except BrokerError:
             return None, "quote_unavailable"
-        problem = quote_problem(quote, quote.bid, now)
+        problem = quote_problem(quote, quote.bid, now, SELL_FLOOR_QUOTE_MAX_AGE_SECONDS)
         if problem is not None:
             return None, problem
         return quote.bid, "ready"
@@ -593,6 +599,8 @@ class CopyEngine:
                 instruction, message.key, message.source_key, current, halted=controls.halted()
             )
         if decision.reason == "wait_pending_order":
+            return
+        if decision.plan is None and instruction.action != "buy" and decision.reason in QUOTE_WAITS:
             return
         if decision.plan is None:
             details = tuple(

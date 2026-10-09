@@ -299,7 +299,11 @@ class Rig:
                 return activity, orders
             await asyncio.sleep(1)
         assert not must, (
-            f"post {index} never reached {getattr(until, '__name__', 'its condition')}: {orders}"
+            f"post {index} never reached {getattr(until, '__name__', 'its condition')}: {orders}; "
+            f"read as {getattr(activity, 'decision', None)} "
+            f"({getattr(activity, 'parser_reason', None)}), outcomes "
+            f"{[d.instruction_outcomes for d in getattr(activity, 'destinations', ())]}, statuses "
+            f"{[d.status for d in getattr(activity, 'destinations', ())]}"
         )
         return activity, orders
 
