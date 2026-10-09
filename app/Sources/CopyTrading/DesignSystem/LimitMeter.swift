@@ -44,7 +44,7 @@ struct LimitMeter: View {
                     }
                 }
             }
-            .frame(height: 8)
+            .frame(height: 6)
             .accessibilityHidden(true)
             if let note {
                 Text(note)

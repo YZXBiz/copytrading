@@ -33,10 +33,7 @@ struct AccountPageContent: View {
                 chooseWindow: chooseWindow,
                 plotHeight: isSharingWidth ? 120 : 200
             )
-            AccountBalanceBreakdown(account: account, model: model, feature: feature)
-            if let policy {
-                AccountLimitsStrip(account: account, policy: policy, isCompact: isSharingWidth, editLimits: editLimits)
-            }
+            AccountFacts(account: account, policy: policy, model: model, feature: feature, editLimits: editLimits)
         }
         if hasWarnings {
             VStack(alignment: .leading, spacing: 8) {

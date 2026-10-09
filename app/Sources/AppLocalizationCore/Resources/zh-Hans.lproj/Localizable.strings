@@ -2086,3 +2086,4 @@
 "A 1/2 call" = "1/2 信号";
 "No size given" = "未给数量";
 "Your max per order, %@, caps any one buy." = "单笔上限 %@ 会限制任何一笔买入。";
+"Max %@ an order · %@ a stock" = "单笔上限 %@ · 单只股票上限 %@";

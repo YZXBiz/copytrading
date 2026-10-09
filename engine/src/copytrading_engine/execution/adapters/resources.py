@@ -79,6 +79,7 @@ from copytrading_engine.execution.presentation.operator_views import (
     destination_views,
     event_page,
 )
+from copytrading_engine.shared.owner_facing import OwnerFacingError
 
 # A ledger not yet bound to a broker account matches no broker account, so manual orders and
 # lot sales refuse until the account has connected.
@@ -266,6 +267,19 @@ class ExecutionResources:
             and not self.engine.ledger.snapshot().buy_halted
         )
 
+    def _resume_refusal(self, inspection: OwnershipInspection) -> str:
+        """Why new buys can't resume yet, in the owner's words."""
+        if inspection.account_activity_reason == "unresolved_account_order":
+            return (
+                "An order in Alpaca that CopyTrading didn't place is still open. "
+                "Let it fill or cancel it in Alpaca, then resume."
+            )
+        if not self.account.active:
+            return "Alpaca says this account isn't active, so it can't buy."
+        if self.engine.ledger.snapshot().buy_halted:
+            return "An order's outcome is still unclear at Alpaca. Resume once it settles."
+        return "CopyTrading couldn't read this account's holdings just now. Try again in a moment."
+
     def control_account(
         self, command: AccountControlCommand, now: dt.datetime
     ) -> AccountControlResult:
@@ -281,7 +295,7 @@ class ExecutionResources:
             self.account = self.broker.account()
             self.account_observed_at = now
             if not self._inspection_ready(inspection):
-                raise RuntimeError("Account reconciliation or risk is unavailable")
+                raise OwnerFacingError(self._resume_refusal(inspection))
         result = self.engine.ledger.account_control(
             command, now, local_account_id=self.data_dir.name
         )

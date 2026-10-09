@@ -2086,3 +2086,4 @@
 "A 1/2 call" = "A 1/2 call";
 "No size given" = "No size given";
 "Your max per order, %@, caps any one buy." = "Your max per order, %@, caps any one buy.";
+"Max %@ an order · %@ a stock" = "Max %@ an order · %@ a stock";

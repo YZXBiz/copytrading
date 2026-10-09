@@ -1,7 +1,7 @@
 import DesktopCore
 import SwiftUI
 
-/// The account's less frequent controls behind ⋯: its limits, its keys in Connections, and what it
+/// The account's less frequent controls behind ⋯: its keys in Connections, and what it
 /// does after a restart.
 struct AccountPageMenu: View {
     let account: AccountOverview
@@ -12,8 +12,6 @@ struct AccountPageMenu: View {
 
     var body: some View {
         Menu(L10n.string("More for this account"), systemImage: "ellipsis") {
-            Button(L10n.string("Edit Limits…"), systemImage: "slider.horizontal.3", action: editLimits)
-                .disabled(!isInSetup)
             Button(L10n.string("Edit in Connections"), systemImage: "point.3.connected.trianglepath.dotted", action: editInConnections)
                 .disabled(!isInSetup)
             Divider()
@@ -35,10 +33,6 @@ struct AccountPageMenu: View {
         .fixedSize()
         .help(L10n.string("More for this account"))
         .accessibilityIdentifier("account.more")
-    }
-
-    private func editLimits() {
-        model.editAccount(named: account.accountID, focus: .limits)
     }
 
     private func editInConnections() {

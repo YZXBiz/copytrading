@@ -201,6 +201,14 @@ class PipeServer:
                 type(exc).__name__,
                 str(exc)[:160] if owner_facing else "",
             )
+            if isinstance(exc, OwnerFacingError):
+                # A sentence written for the owner is said as written, whatever was asked.
+                return reply(
+                    request.version,
+                    request.request_id,
+                    error="invalid_request",
+                    message=str(exc),
+                )
             if isinstance(
                 request,
                 (
