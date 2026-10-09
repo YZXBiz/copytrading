@@ -52,7 +52,9 @@ struct AccountPageContent: View {
             open: { openPost($0.source.id) }
         )
         VStack(alignment: .leading, spacing: 20) {
-            AccountSectionSwitcher(selection: $section, counts: [.positions: account.positions.count])
+            TrackedSwitcher(
+                choices: AccountSection.allCases, selection: $section, title: \.title,
+                count: { $0 == .positions ? account.positions.count : 0 }, identifier: "account.section")
             switch section {
             case .positions:
                 AccountPositions(account: account, model: model, feature: feature) { openPost($0.id) }

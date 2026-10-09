@@ -1,18 +1,24 @@
 import DesktopCore
 import SwiftUI
 
-/// A guru's posts, newest first, under a spaced-capital label for each day, rows split by hairlines.
+/// A guru's posts, newest first, as a gallery of tiles, filtered by what came of them.
 struct GuruFeedList: View {
     let days: [GuruFeed.Day]
     let guruName: String
     @Binding var selection: SourceActivity.ID?
+    @State private var filter = GuruPostFilter.all
+
+    private var entries: [GuruFeed.Entry] { days.flatMap(\.entries) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ListHeading("Posts") {
-                if !days.isEmpty {
-                    Text(L10n.string("Newest first"))
-                }
+            ListHeading("Posts")
+            if !days.isEmpty {
+                TrackedSwitcher(
+                    choices: GuruPostFilter.allCases, selection: $filter, title: \.title,
+                    count: { choice in entries.count { choice.includes($0) } }, identifier: "guru.filter"
+                )
+                .padding(.top, 16)
             }
             if days.isEmpty {
                 InkEmptyState(
@@ -20,18 +26,8 @@ struct GuruFeedList: View {
                 )
                 .padding(.top, 20)
             }
-            LazyVStack(alignment: .leading, spacing: 0) {
-                ForEach(days) { day in
-                    GuruFeedDayLabel(start: day.start)
-                        .padding(.top, 28)
-                        .padding(.bottom, 10)
-                    Hairline()
-                    ForEach(day.entries) { entry in
-                        GuruFeedRow(entry: entry, selection: $selection)
-                        Hairline()
-                    }
-                }
-            }
+            GuruPostGallery(entries: entries.filter(filter.includes), guruName: guruName, selection: $selection)
+                .padding(.top, 20)
         }
     }
 }

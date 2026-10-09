@@ -1972,3 +1972,4 @@
 "What the engine wrote down, with keys removed." = "引擎记录的内容，已去除密钥。";
 "One call is waiting for you" = "有一条喊单在等你";
 "%lld calls are waiting for you" = "有 %lld 条喊单在等你";
+"Not traded" = "没交易";
