@@ -25,6 +25,8 @@ struct ActivityCardOutcome {
         /// One short sentence under the facts, only when the headline and facts leave a question.
         var note: String?
         var suggestion: Suggestion?
+        /// The limit beside the price the order met, drawn as a ruler instead of two numbers.
+        var prices: PricePoints?
     }
 
     struct Account: Equatable, Identifiable {
@@ -150,10 +152,16 @@ struct ActivityCardOutcome {
         var facts: [Fact] = []
         let headline: String
         var suggestion: Suggestion?
+        var prices: PricePoints?
+        let limitPrice = Decimal(engine: order.limitPrice)
         switch DestinationOutcome.order(order, count: 1) {
         case .filled:
             headline = L10n.string(buying ? "Bought %@" : "Sold %@", OrderAmount.filled(order) ?? planned)
-            facts.append(Fact(label: L10n.string("Price"), value: money(order.averageFillPrice) ?? "—"))
+            if let limitPrice, let fill = Decimal(engine: order.averageFillPrice) {
+                prices = PricePoints(limit: limitPrice, market: fill, marketLabel: L10n.string("Filled at"), buying: buying)
+            } else {
+                facts.append(Fact(label: L10n.string("Price"), value: money(order.averageFillPrice) ?? "—"))
+            }
             facts.append(Fact(label: L10n.string("Shares"), value: Humanize.shares(Decimal(engine: order.filledQuantity) ?? 0)))
         case .partlyFilled:
             headline = L10n.string(
@@ -175,8 +183,12 @@ struct ActivityCardOutcome {
         default:
             let market = money(buying ? order.quoteAsk : order.quoteBid)
             headline = L10n.string(buying ? "Not bought: %@" : "Not sold: %@", cancelReason(order))
-            if let limit { facts.append(Fact(label: L10n.string("Your limit"), value: limit)) }
-            if let market { facts.append(Fact(label: L10n.string("Market"), value: market)) }
+            if let limitPrice, let met = Decimal(engine: buying ? order.quoteAsk : order.quoteBid) {
+                prices = PricePoints(limit: limitPrice, market: met, marketLabel: L10n.string("Market"), buying: buying)
+            } else {
+                if let limit { facts.append(Fact(label: L10n.string("Your limit"), value: limit)) }
+                if let market { facts.append(Fact(label: L10n.string("Market"), value: market)) }
+            }
             if let waited = CancelReasonText.waitedSeconds(order), order.cancelReason == "timeout" {
                 facts.append(Fact(label: L10n.string("Waited"), value: PostTimeline.duration(waited)))
             }
@@ -193,7 +205,7 @@ struct ActivityCardOutcome {
                             "%@ of %@", Humanize.dollars(order.budgetUSD), Humanize.dollars(order.requestedUSD)))
                     : Fact(label: L10n.string("Order"), value: OrderAmount.dollars(budget)))
         }
-        return Result(headline: headline, facts: Array(facts.prefix(4)), suggestion: suggestion)
+        return Result(headline: headline, facts: Array(facts.prefix(4)), suggestion: suggestion, prices: prices)
     }
 
     /// Why an order ended unfilled, in a few words after "Not bought:".

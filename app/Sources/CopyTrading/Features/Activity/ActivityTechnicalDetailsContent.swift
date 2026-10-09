@@ -1,12 +1,11 @@
 import DesktopCore
 import SwiftUI
 
-/// What Technical details shows when opened: the post's timed trip from Discord to the broker,
-/// each order's facts, who read it, and the Discord IDs to look it up by, as hairline rows on the
+/// What Technical details shows when opened, the trip itself drawn above it on the card: each
+/// order's facts, who read it, and the Discord IDs to look it up by, as hairline rows on the
 /// page with no frame.
 struct ActivityTechnicalDetailsContent: View {
     let item: SourceActivity
-    @Environment(\.postProgressContext) private var progressContext
 
     /// The model's raw note, only when the reading above did not already show it in full.
     private var parserNote: String? {
@@ -18,10 +17,6 @@ struct ActivityTechnicalDetailsContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 28) {
-            VStack(alignment: .leading, spacing: 0) {
-                TechnicalSectionTitle(text: L10n.string("Timeline"))
-                ActivityTimelineView(timeline: PostTimeline(item), progress: PostProgress(item, context: progressContext))
-            }
             ForEach(item.destinations) { destination in
                 ForEach(destination.orders) { order in
                     OrderFactsView(order: order, account: destination.accountID)

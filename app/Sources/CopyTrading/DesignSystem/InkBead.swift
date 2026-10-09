@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A small solid ink dot that marks where something has got to on a drawn line: the step being
+/// A small butter dot in an ink ring that marks where something has got to on a drawn line: the step being
 /// read, the order in flight, the next setup step. It bounces once each time `hop` changes, as
 /// when an order fills, and is otherwise still. Nothing about it loops.
 struct InkBead: View {
@@ -11,8 +11,9 @@ struct InkBead: View {
 
     var body: some View {
         Circle()
-            .fill(Palette.ink)
-            .frame(width: 10, height: 10)
+            .fill(Palette.butter)
+            .overlay(Circle().strokeBorder(Palette.ink, lineWidth: InkStroke.width))
+            .frame(width: 13, height: 13)
             .offset(y: -lift)
             .onChange(of: hop) {
                 guard !reduceMotion else { return }

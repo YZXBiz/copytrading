@@ -33,6 +33,10 @@ enum Palette {
     /// Links, switches, and a screen's one primary action.
     static let accent = Color(red: 0.204, green: 0.471, blue: 0.965)
     /// What waits on the owner: a count beside a heading, a guru with calls to answer.
+    /// The one warm fill, as a studio drawing uses it: inside an ink outline, on the thing the eye
+    /// should land on (the gap that decided an order, how much of a limit is used, a step done).
+    /// Never text and never a whole surface.
+    static let butter = dynamic(light: rgb(0xF2D46B), dark: rgb(0xE3C25A))
     static let amber = dynamic(light: rgb(0xB8860B), dark: rgb(0xF5C04A))
 
     private static func rgb(_ hex: Int) -> NSColor {

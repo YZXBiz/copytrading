@@ -2,8 +2,8 @@
 // Usage: swift app/scripts/render_app_icon.swift <output.png>
 // Then: app/scripts/build_app_icon.sh regenerates the .icns from it.
 //
-// The icon is two ink circles on a white sheet: an outlined ring, the guru's call, and a solid
-// disc overlapping it, your copy of that call. Black on white, nothing else.
+// The icon is two circles on a white sheet: an ink ring, the guru's call, and overlapping it a
+// butter-yellow disc in an ink outline, your copy of that call. Ink and one warm fill, nothing else.
 
 import AppKit
 import CoreGraphics
@@ -63,13 +63,17 @@ context.setStrokeColor(ink)
 context.setLineWidth(30)
 context.strokeEllipse(in: CGRect(x: call.x - radius, y: call.y - radius, width: radius * 2, height: radius * 2))
 
-// Your copy: the same circle, solid, a step to the right, with a thin white gap where it covers
+// Your copy: the same circle, filled butter yellow, a step to the right, with a thin white gap where it covers
 // the ring so the two read as separate shapes.
 let gap: CGFloat = 16
 context.setFillColor(color(0xFFFFFF))
 context.fillEllipse(in: CGRect(x: copy.x - radius - gap, y: copy.y - radius - gap, width: (radius + gap) * 2, height: (radius + gap) * 2))
-context.setFillColor(ink)
-context.fillEllipse(in: CGRect(x: copy.x - radius, y: copy.y - radius, width: radius * 2, height: radius * 2))
+let disc = CGRect(x: copy.x - radius, y: copy.y - radius, width: radius * 2, height: radius * 2)
+context.setFillColor(color(0xF2D46B))
+context.fillEllipse(in: disc)
+context.setStrokeColor(ink)
+context.setLineWidth(30)
+context.strokeEllipse(in: disc.insetBy(dx: 15, dy: 15))
 
 let image = context.makeImage()!
 let rep = NSBitmapImageRep(cgImage: image)

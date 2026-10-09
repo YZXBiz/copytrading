@@ -1975,3 +1975,11 @@
 "Not traded" = "没交易";
 "Needs a look" = "需要看一下";
 "Stopped unexpectedly" = "意外停止";
+"Filled at" = "成交价";
+"Post to fill in %@" = "从喊单到成交 %@";
+"Post to order in %@" = "从喊单到下单 %@";
+"%@ after %@" = "%@，用时 %@";
+"Your limit %@, %@ %@" = "你的限价 %@，%@ %@";
+"At your limit" = "正好是你的限价";
+"over your limit" = "高于你的限价";
+"under your limit" = "低于你的限价";

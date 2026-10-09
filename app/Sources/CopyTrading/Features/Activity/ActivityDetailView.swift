@@ -48,6 +48,10 @@ struct ActivityDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 36) {
                 card
+                // The trip at a glance; a post still in flight shows its live moment instead.
+                if progress == nil {
+                    PostJourneyLine(timeline: PostTimeline(item))
+                }
                 ActivityTechnicalDetails(item: item)
                     .id(item.sourceID)
             }
@@ -288,6 +292,10 @@ struct ActivityDetailView: View {
                 .foregroundStyle(Palette.ink)
                 .monospacedDigit()
                 .fixedSize(horizontal: false, vertical: true)
+            if let prices = result.prices {
+                PriceRuler(points: prices)
+                    .padding(.vertical, 4)
+            }
             if !result.facts.isEmpty {
                 ActivityFactPairs(facts: result.facts)
             }

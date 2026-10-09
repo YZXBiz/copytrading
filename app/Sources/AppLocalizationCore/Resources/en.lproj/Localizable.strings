@@ -1975,3 +1975,11 @@
 "Not traded" = "Not traded";
 "Needs a look" = "Needs a look";
 "Stopped unexpectedly" = "Stopped unexpectedly";
+"Filled at" = "Filled at";
+"Post to fill in %@" = "Post to fill in %@";
+"Post to order in %@" = "Post to order in %@";
+"%@ after %@" = "%@ after %@";
+"Your limit %@, %@ %@" = "Your limit %@, %@ %@";
+"At your limit" = "At your limit";
+"over your limit" = "over your limit";
+"under your limit" = "under your limit";

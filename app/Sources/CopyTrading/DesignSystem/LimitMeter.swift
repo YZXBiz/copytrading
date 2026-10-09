@@ -14,7 +14,7 @@ struct LimitMeter: View {
     }
 
     private var tint: Color {
-        fraction >= 1 ? .red : fraction >= 0.8 ? .orange : Palette.ink
+        fraction >= 1 ? .red : fraction >= 0.8 ? .orange : Palette.butter
     }
 
     var body: some View {
