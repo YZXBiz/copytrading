@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// A titled group of settings: a heading in the display face, an optional grey line under it, and
-/// its rows on the page between hairlines, with no well around them.
+/// A titled group of settings: a heading in the display face, then its rows on the page with a
+/// hairline only between rows. The heading and the space around it set the group apart, so no
+/// line runs under the heading or after the last row.
 struct SettingsSection<Content: View>: View {
     var title: String?
     var subtitle: String?
@@ -33,7 +34,6 @@ struct SettingsSection<Content: View>: View {
             Group(subviews: content) { rows in
                 if !rows.isEmpty {
                     VStack(spacing: 0) {
-                        rule
                         ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
                             if index > 0 {
                                 rule
@@ -42,7 +42,6 @@ struct SettingsSection<Content: View>: View {
                             row
                                 .padding(.horizontal, -14)
                         }
-                        rule
                     }
                 }
             }
