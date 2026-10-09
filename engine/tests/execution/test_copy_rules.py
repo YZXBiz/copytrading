@@ -7,6 +7,7 @@ from decimal import Decimal
 import pytest
 
 from copytrading_engine.execution.application.engine import CopyEngine
+from copytrading_engine.execution.application.ports import BrokerError
 from copytrading_engine.execution.domain.manual_commands import ManualCorrectionRecord
 from copytrading_engine.execution.domain.market import Quote
 from copytrading_engine.execution.domain.progress import Skipped
@@ -93,6 +94,70 @@ def test_half_naming_no_buy_sells_half_of_everything_bought():
     deliver(engine, _whole(event("3", "reduce", "30", timestamp=NOW + dt.timedelta(seconds=2))))
 
     assert broker.holdings["ABC"] == Decimal("4.5")
+
+
+# --- A sell with no price sells at the market (ADR-0007) ----------------------------------------
+
+
+def _at_market(message: dict) -> dict:
+    """A sell the post gave no price, such as "sell wmt half"."""
+    for item in (*message["instructions"], *message["evidence"]):
+        item["price"] = None
+    for item in message["evidence"]:
+        item["price_evidence"] = None
+    return _whole(message)
+
+
+def test_half_with_no_price_sells_half_at_a_limit_just_under_the_live_bid():
+    broker = QuotingBroker("30.01")  # bid 30.00
+    engine = _engine(broker)
+    deliver(engine, _whole(event("1", price="25")))
+    deliver(engine, _whole(event("2", price="20", timestamp=NOW + dt.timedelta(seconds=1))))
+
+    deliver(engine, _at_market(event("3", "reduce", timestamp=NOW + dt.timedelta(seconds=2))))
+
+    assert broker.holdings["ABC"] == Decimal("4.5")
+    sale = next(order for order in engine.ledger.orders() if order.side == "sell")
+    # The bid stands in for the guru's price: 1% under it, so the copy never fills far below.
+    assert (sale.source_price, sale.limit_price) == (Decimal("30.00"), Decimal("29.70"))
+    assert sale.qty == Decimal("4.5")
+
+
+@pytest.mark.parametrize(
+    ("broker", "reason"),
+    [
+        pytest.param(FakeBroker(), "quote_unavailable", id="a-broker-with-no-quotes"),
+        pytest.param(
+            QuotingBroker("30.01", quoted_at=NOW - dt.timedelta(minutes=5)),
+            "quote_stale",
+            id="a-quote-too-old",
+        ),
+    ],
+)
+def test_a_sell_at_the_market_with_no_live_bid_sends_nothing(broker, reason):
+    engine = _engine(broker)
+    deliver(engine, _whole(event("1", price="25")))
+    calls = broker.calls
+
+    deliver(engine, _at_market(event("2", "close", timestamp=NOW + dt.timedelta(seconds=1))))
+
+    assert _outcome(engine, "2") == Skipped(reason=reason)
+    assert broker.calls == calls
+
+
+class _BrokenQuotes(FakeBroker):
+    def quote(self, symbol: str) -> Quote:
+        raise BrokerError(503)
+
+
+def test_a_sell_at_the_market_waits_out_a_quote_the_broker_cannot_give():
+    broker = _BrokenQuotes()
+    engine = _engine(broker)
+    deliver(engine, _whole(event("1", price="25")))
+
+    deliver(engine, _at_market(event("2", "close", timestamp=NOW + dt.timedelta(seconds=1))))
+
+    assert _outcome(engine, "2") == Skipped(reason="quote_unavailable")
 
 
 def test_a_sell_naming_no_buy_with_nothing_held_sells_nothing():

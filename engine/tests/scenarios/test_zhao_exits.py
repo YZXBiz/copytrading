@@ -3,8 +3,10 @@ else's shares."""
 
 from decimal import Decimal
 
+from copytrading_engine.shared.reading import Fraction
+
 from .rig import Account, Rig, orders, outcomes
-from .zhao import buy, close
+from .zhao import buy, close, sell_now
 
 
 async def test_selling_a_stock_never_bought_sends_nothing(tmp_path):
@@ -94,3 +96,36 @@ async def test_exits_are_skipped_when_the_account_does_not_copy_them(tmp_path):
         assert outcomes(activity, "paper") == ("exits_disabled",)
         assert rig.brokers["paper"].holdings["NVDA"] == 4
         assert rig.brokers["paper"].cash == Decimal("500.00")
+
+
+async def test_sell_half_with_no_price_sells_half_of_every_buy_at_the_market(tmp_path):
+    """Oct 9 2026: Zhao bought WMT twice, then wrote "sell wmt half" with no price. The copy
+    sells half of what both buys have left, as a limit 1% under the live bid, without asking."""
+    accounts = {"paper": Account(cash="1000", full_position_usd="600")}
+    async with Rig(tmp_path, accounts, {"WMT": "110"}) as rig:
+        broker = rig.brokers["paper"]
+        sixth = str(Decimal(1) / 6)
+        rig.reader.expect(
+            "buy WMT at 110 1/6", buy("WMT", "110", said="buy", fraction=sixth, fraction_said="1/6")
+        )
+        rig.reader.expect(
+            "buy WMT at 113 1/6", buy("WMT", "113", said="buy", fraction=sixth, fraction_said="1/6")
+        )
+        half = Fraction(value=Decimal("0.5"), words="half")
+        rig.reader.expect("sell WMT half", sell_now("WMT", said="sell", share=half))
+
+        await rig.post("buy WMT at 110 1/6")
+        broker.move("WMT", "113")
+        await rig.post("buy WMT at 113 1/6")
+        held = broker.holdings["WMT"]
+        broker.move("WMT", "120")
+        sold = await rig.post("sell WMT half")
+
+        assert sold.decision == "trade"
+        assert outcomes(sold, "paper") == ("order_linked",)
+        [sale] = broker.submitted("sell")
+        assert Decimal(sale["qty"]) == (held / 2).quantize(Decimal("0.000001"))
+        assert Decimal(sale["limit_price"]) == Decimal("118.80")
+        assert broker.holdings["WMT"] == held - Decimal(sale["qty"])
+        [lot] = await rig.lots("paper", "WMT")
+        assert lot.remaining_qty == broker.holdings["WMT"]

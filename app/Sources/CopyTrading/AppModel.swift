@@ -1890,7 +1890,7 @@ final class AppModel {
             // match what the example names (none means every buy).
             let priceMatches =
                 expected.expectedPrice.flatMap { Decimal(string: $0) }.map { expectedPrice in
-                    instruction.flatMap { Decimal(string: $0.price) } == expectedPrice
+                    instruction?.price.flatMap { Decimal(string: $0) } == expectedPrice
                 } ?? true
             let checksBuyPrice = expected.expectedBuyPrice != nil || expected.expectedAction != .buy
             let buyPriceMatches =

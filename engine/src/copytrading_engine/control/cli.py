@@ -398,7 +398,8 @@ def _render_accounts(page: wire.AccountsPage) -> str:
 def _instruction(step: wire.InstructionItem) -> str:
     share = f"{step.fraction:%} of " if step.fraction is not None else ""
     verb = {"buy": "buy", "reduce": "sell", "close": "sell all"}[step.action]
-    return f"{verb} {share}{step.symbol} at ${step.price}"
+    price = f"${step.price}" if step.price is not None else "the market"
+    return f"{verb} {share}{step.symbol} at {price}"
 
 
 def _render_activity(page: wire.ActivityPage) -> str:
@@ -435,7 +436,7 @@ def _render_preview(preview: wire.ManualPreview) -> str:
         f"Preview {preview.preview_id} for {preview.account_id} ({preview.environment}), "
         f"expires {_time(preview.expires_at)}",
         f"  Instruction: {instruction.action} {instruction.symbol} at "
-        f"{_dollars(instruction.price)}",
+        + (_dollars(instruction.price) if instruction.price is not None else "the market"),
     ]
     if preview.plan is None:
         lines.append("  Blocked: " + ", ".join(_words(reason) for reason in preview.reasons))

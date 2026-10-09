@@ -278,14 +278,12 @@ class LedgerSnapshot(Value):
                 if (
                     preview.plan.side,
                     preview.plan.symbol,
-                    preview.plan.source_price,
                     preview.plan.entry_price,
                 ) != (
                     expected_side,
                     instruction.symbol,
-                    instruction.price,
                     expected_entry,
-                ):
+                ) or instruction.price not in (None, preview.plan.source_price):
                     raise ValueError("Manual preview plan differs from corrected instruction")
         manual_order_ids: set[str] = set()
         for key, command in self.manual_commands.items():

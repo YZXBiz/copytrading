@@ -150,13 +150,14 @@ class InstructionEvaluation(BaseModel):
 
     action: Literal["buy", "reduce", "close"]
     symbol: str
-    price: Decimal
+    # None for a sell at the market (ADR-0007).
+    price: Decimal | None
     fraction: Decimal | None
     entry_price: Decimal | None
     exit_basis: ExitBasis | None
     action_evidence: str
     symbol_evidence: str
-    price_evidence: str
+    price_evidence: str | None
     fraction_evidence: str | None
 
 
@@ -182,6 +183,7 @@ def size_destinations(
     for connection in destinations:
         for instruction in instructions:
             if instruction.action == "buy":
+                assert instruction.price is not None  # a buy always has the guru's price
                 sized = requested_entry_budget(connection, instruction.fraction)
                 quantity = (
                     (sized.budget / instruction.price).quantize(

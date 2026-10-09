@@ -42,7 +42,8 @@ def _fraction(value: Decimal | None) -> str | None:
 
 
 def _instruction(item: wire.InstructionItem) -> str:
-    text = f"{ACTIONS[item.action]} {item.symbol} at {money(item.price)}"
+    price = money(item.price) if item.price is not None else "the market"
+    text = f"{ACTIONS[item.action]} {item.symbol} at {price}"
     size = _fraction(item.fraction)
     return f"{text}, {size}" if size else text
 

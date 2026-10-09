@@ -18,7 +18,7 @@ struct ManualInstructionDraft: Identifiable {
     init(call: SourceInstruction) {
         action = ManualInstructionAction(rawValue: call.action) ?? .buy
         symbol = call.symbol
-        price = call.price
+        price = call.price ?? ""
         entryPrice = call.entryPrice ?? ""
         fraction = call.fraction ?? ""
         exitBasis = call.exitBasis

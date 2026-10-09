@@ -469,7 +469,8 @@ public struct RejectedSourceActivity: Codable, Equatable, Identifiable, Sendable
 public struct SourceInstruction: Codable, Equatable, Sendable {
     public let action: String
     public let symbol: String
-    public let price: String
+    /// The guru's price; nil for a sell at the market, priced from the live bid (ADR-0007).
+    public let price: String?
     public let entryPrice: String?
     public let fraction: String?
     public let exitBasis: String?

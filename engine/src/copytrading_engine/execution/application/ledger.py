@@ -935,12 +935,12 @@ class TradingLedger:
             if instruction.entry_price is not None
             else plan.entry_price
         )
-        if (plan.symbol, plan.side, plan.source_price, plan.entry_price) != (
+        # A sell at the market has no guru's price; its plan carries the bid it was priced from.
+        if (plan.symbol, plan.side, plan.entry_price) != (
             instruction.symbol,
             side,
-            instruction.price,
             entry_price,
-        ):
+        ) or instruction.price not in (None, plan.source_price):
             raise RuntimeError("Order plan differs from its source instruction")
         if plan.side == "buy" and self._snapshot.entry_halted:
             raise RuntimeError("Unresolved late-order incidents halt new buy orders")

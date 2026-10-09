@@ -16,6 +16,22 @@ func runActivityCardTests() throws {
     try aDeadlineReadsOnTheOwnersClock()
     try theTimeZoneSettingMovesADeadline()
     try activityShowsOnlyTheChosenAccount()
+    try aSellWithNoPriceReadsAsAtTheMarket()
+}
+
+/// "sell wmt half" names no price: the engine sends the call with none, and sells at the market
+/// (ADR-0007). The card says so instead of failing to read the post.
+@MainActor
+private func aSellWithNoPriceReadsAsAtTheMarket() throws {
+    let sell: [String: Any] = [
+        "action": "reduce", "symbol": "WMT", "price": NSNull(), "entry_price": NSNull(),
+        "fraction": "0.5", "exit_basis": "remaining_position",
+    ]
+    let source = try SourceActivityBuilder().text("sell wmt half").decision("trade", reason: "Sell half")
+        .calls([sell]).build()
+    try #require(source.instructions.first?.price == nil, "a market sell carried a price")
+    try #require(
+        source.headline == "Sell half of WMT at the market price", "headline was \(source.headline)")
 }
 
 /// Choosing an account keeps the posts that reached it; every account shows all posts.
