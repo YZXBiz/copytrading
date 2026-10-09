@@ -1801,7 +1801,7 @@ struct TradingSettingsSaveTests {
         let sold = OwnershipFix(
             incident: try incident("F", expected: "1.54202", actual: "0"),
             position: try position("F", broker: nil, lots: []), accountID: "paper")
-        try check(sold.title == "Clear the Old Count", "A sold-off outside holding offered \(sold.title)")
+        try check(sold.action == "Update the Count", "A sold-off outside holding offered \(sold.action)")
         try check(
             sold.request.brokerQty == "0" && sold.request.externalQty == "0" && sold.request.lotRemaining.isEmpty,
             "Clearing an outside holding did not allocate the broker's zero")
@@ -1810,14 +1810,16 @@ struct TradingSettingsSaveTests {
         let extra = OwnershipFix(
             incident: try incident("ABC", expected: "5", actual: "7"),
             position: try position("ABC", broker: "7", lots: [("l1", "5")]), accountID: "paper")
-        try check(extra.title == "Count 2 Shares as Yours", "Extra broker shares offered \(extra.title)")
+        try check(extra.action == "They're Mine", "Extra broker shares offered \(extra.action)")
+        try check(
+            extra.headline == "2 shares of ABC that CopyTrading didn't buy", "Extra broker shares read \(extra.headline)")
         try check(extra.request.externalQty == "2" && extra.request.lotRemaining == ["l1": "5"], "Copied shares changed")
 
         // Fewer than were copied: the oldest buys count as sold first.
         let short = OwnershipFix(
             incident: try incident("XYZ", expected: "5", actual: "4"),
             position: try position("XYZ", broker: "4", lots: [("old", "3"), ("new", "2")]), accountID: "paper")
-        try check(short.title == "Treat 1 Copied Shares as Sold", "A shortfall offered \(short.title)")
+        try check(short.action == "They Were Sold", "A shortfall offered \(short.action)")
         try check(
             short.request.externalQty == "0" && short.request.lotRemaining == ["old": "2", "new": "2"],
             "A shortfall did not sell the oldest buy first: \(short.request.lotRemaining)")

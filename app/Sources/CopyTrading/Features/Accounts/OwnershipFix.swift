@@ -7,11 +7,20 @@ import Foundation
 /// them were sold outside the app, oldest first, the way a sell takes them.
 struct OwnershipFix: Equatable {
     let request: OwnershipResolutionRequest
-    let title: String
-    let explanation: String
+    /// What doesn't add up, as one plain sentence: "28.011 shares of NIO CopyTrading didn't buy".
+    let headline: String
+    /// What waits on the owner until it is settled.
+    let detail: String
+    /// The owner's answer, as a short word on the row: "They're Mine".
+    let action: String
+    /// What the answer does, shown in the row before it is sent.
+    let confirmation: String
+    /// The one black button that sends it.
+    let confirm: String
 
     @MainActor
     init(incident: OwnershipIncidentView, position: AccountPositionView?, accountID: String) {
+        let symbol = incident.symbol
         let broker = Decimal(string: position?.brokerQty ?? "0") ?? 0
         let lots = position?.lots ?? []
         let copied = lots.reduce(Decimal(0)) { $0 + (Decimal(string: $1.remainingQty) ?? 0) }
@@ -20,13 +29,22 @@ struct OwnershipFix: Equatable {
         if broker >= copied {
             external = broker - copied
             for lot in lots { remaining[lot.lotID] = lot.remainingQty }
-            title =
-                external == 0
-                ? L10n.string("Clear the Old Count")
-                : L10n.string("Count %@ Shares as Yours", Self.text(external))
-            explanation = L10n.string(
-                "CopyTrading counted %@ %@ shares, and the broker holds %@. Every copied share is still there, so the broker's other shares count as yours, and %@ is copied again.",
-                Self.text(Decimal(string: incident.expectedQty) ?? 0), incident.symbol, Self.text(broker), incident.symbol)
+            if external == 0 {
+                headline = L10n.string("CopyTrading's count of %@ is out of date", symbol)
+                detail = L10n.string(
+                    "It counted %@; the broker holds %@. %@ calls wait until you update it.",
+                    Humanize.shares(Decimal(string: incident.expectedQty) ?? 0), Humanize.shares(broker), symbol)
+                action = L10n.string("Update the Count")
+                confirmation = L10n.string("CopyTrading will use the broker's count. Nothing is bought or sold.")
+                confirm = L10n.string("Update the Count")
+            } else {
+                headline = L10n.string("%@ of %@ that CopyTrading didn't buy", Humanize.shares(external), symbol)
+                detail = L10n.string("%@ calls wait until you say whose they are.", symbol)
+                action = L10n.string("They're Mine")
+                confirmation = L10n.string(
+                    "CopyTrading will leave these shares alone and copy %@ calls again. Nothing is bought or sold.", symbol)
+                confirm = L10n.string("Count as Mine")
+            }
         } else {
             external = 0
             var missing = copied - broker
@@ -36,10 +54,15 @@ struct OwnershipFix: Equatable {
                 missing -= taken
                 remaining[lot.lotID] = Self.text(held - taken)
             }
-            title = L10n.string("Treat %@ Copied Shares as Sold", Self.text(copied - broker))
-            explanation = L10n.string(
-                "CopyTrading bought %@ %@ shares, and the broker holds %@. The missing shares were sold outside CopyTrading; the oldest buys are counted as sold first, and %@ is copied again.",
-                Self.text(copied), incident.symbol, Self.text(broker), incident.symbol)
+            headline = L10n.string("Fewer %@ shares at the broker than CopyTrading copied", symbol)
+            detail = L10n.string(
+                "%@ are missing, likely sold outside CopyTrading. %@ calls wait until you confirm.",
+                Humanize.shares(copied - broker), symbol)
+            action = L10n.string("They Were Sold")
+            confirmation = L10n.string(
+                "CopyTrading will count its oldest copied shares as sold first and copy %@ calls again. Nothing is bought or sold.",
+                symbol)
+            confirm = L10n.string("Count as Sold")
         }
         request = OwnershipResolutionRequest(
             resolutionID: "owner-\(incident.incidentID)", incidentID: incident.incidentID, accountID: accountID,

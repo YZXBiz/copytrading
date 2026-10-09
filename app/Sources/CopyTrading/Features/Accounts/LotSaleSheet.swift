@@ -135,7 +135,7 @@ struct LotSaleSheet: View {
     @ViewBuilder
     private var preview: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(L10n.string("%@ of %@ sh", PositionRow.quantity(flow.shares), PositionRow.quantity(flow.remaining)))
+            Text(L10n.string("%@ of %@ shares", PositionRow.quantity(flow.shares), PositionRow.quantity(flow.remaining)))
                 .font(DisplayFont.font(size: 22, weight: .medium, relativeTo: .title3))
                 .monospacedDigit()
                 .foregroundStyle(Palette.ink)

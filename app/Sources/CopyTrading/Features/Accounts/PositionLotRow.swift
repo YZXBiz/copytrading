@@ -2,7 +2,7 @@ import DesktopCore
 import SwiftUI
 
 /// One block of shares under its position, as one clean line: whose post bought it and when, what
-/// the post said, then "0.885 sh · bought $110.75 · now $110.75"; the lot's own gain on the right,
+/// the post said, then "0.885 shares · bought $110.75 · now $110.75"; the lot's own gain on the right,
 /// a quiet "Open post ↗" back to the post, and a black Sell pill.
 struct PositionLotRow: View {
     let lot: AccountLotView
@@ -30,13 +30,13 @@ struct PositionLotRow: View {
         return Humanize.shares(remaining, of: original)
     }
 
-    /// "0.885 sh · bought $110.75 · now $110.75"; a partly sold lot says "of 2 sh".
+    /// "0.885 shares · bought $110.75 · now $110.75"; a partly sold lot says "0.5 of 2 shares".
     @MainActor private var numbers: String {
         let original = Decimal(engine: lot.originalQty) ?? remaining
         var parts = [
             original == remaining
-                ? L10n.string("%@ sh", PositionRow.quantity(remaining))
-                : L10n.string("%@ of %@ sh", PositionRow.quantity(remaining), PositionRow.quantity(original))
+                ? Humanize.shares(remaining)
+                : Humanize.shares(remaining, of: original)
         ]
         if let bought { parts.append(L10n.string("bought %@", bought.formatted(.currency(code: "USD")))) }
         if let currentPrice { parts.append(L10n.string("now %@", currentPrice.formatted(.currency(code: "USD")))) }
