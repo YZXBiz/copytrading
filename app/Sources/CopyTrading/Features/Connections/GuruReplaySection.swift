@@ -13,12 +13,15 @@ struct GuruReplaySection: View {
     @State private var isReplaying = false
 
     var body: some View {
-        Section {
+        SheetSection(
+            L10n.string("Try it on recent posts"), detail: L10n.string("See what their last posts would have done with these settings.")
+        ) {
             Button(
                 L10n.string(result == nil ? "Replay Recent Posts" : "Replay Again"), systemImage: "arrow.clockwise",
                 action: run
             )
-            .buttonStyle(.borderless)
+            .buttonStyle(SheetQuietButtonStyle())
+            .padding(.vertical, 12)
             .disabled(isReplaying)
             .accessibilityIdentifier("guru.replay")
             if isReplaying {
@@ -31,13 +34,11 @@ struct GuruReplaySection: View {
                 Text(tally(result.posts))
                     .font(DesignTokens.bodyEmphasis)
                     .foregroundStyle(Palette.ink)
+                    .padding(.bottom, 4)
                 ForEach(Array(result.posts.enumerated()), id: \.offset) { _, post in
                     row(post)
                 }
             }
-        } header: {
-            SetupSectionHeader(
-                title: "Try it on recent posts", detail: "See what their last posts would have done with these settings.")
         } footer: {
             Text(L10n.string("Reads their last 15 posts with your model, which may cost a little. Nothing is bought or sold."))
         }
@@ -62,7 +63,8 @@ struct GuruReplaySection: View {
             }
             .font(DesignTokens.caption)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// What a replayed post would have done, in the Activity card's words.

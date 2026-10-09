@@ -12,30 +12,29 @@ struct DestinationEditorSection: View {
     let policy: TradingAccountPolicy?
 
     var body: some View {
-        Section {
+        SheetSection(L10n.string("Copies into")) {
             if accountIDs.isEmpty && connection == nil {
                 Text(L10n.string("Every account already copies a guru. Add a broker account in Connections first."))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Palette.tertiaryInk)
+                    .padding(.vertical, 12)
             } else {
-                Picker(L10n.string("Account"), selection: account) {
-                    if connection == nil {
-                        Text(L10n.string("Choose an account")).tag("")
-                    }
-                    ForEach(accountChoices, id: \.self) { accountID in
-                        Text(accountID).tag(accountID)
-                    }
+                SheetRow(title: L10n.string("Account")) {
+                    SheetMenu(
+                        label: L10n.string("Account"),
+                        choices: (connection == nil ? [("", L10n.string("Choose an account"))] : [])
+                            + accountChoices.map { ($0, $0) },
+                        selection: account)
                 }
             }
             if let draft = connection {
                 let summary = SizingSummary.text(draft, policy: policy)
                 Text((try? AttributedString(markdown: summary)) ?? AttributedString(summary))
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .font(DesignTokens.bodyText)
+                    .foregroundStyle(Palette.secondaryInk)
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 12)
                     .accessibilityIdentifier("guru.sizingSummary")
             }
-        } header: {
-            Text(L10n.string("Copies into"))
         } footer: {
             Text(L10n.string("Each account follows one guru. Its max per stock is that guru's full position."))
         }

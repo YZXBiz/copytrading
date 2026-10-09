@@ -12,7 +12,7 @@ struct PlaybookSection: View {
     @State private var failure: String?
 
     var body: some View {
-        Section {
+        SheetSection(L10n.string("Playbook")) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 Button(action: start) {
                     Label(
@@ -20,17 +20,18 @@ struct PlaybookSection: View {
                         systemImage: "sparkles"
                     )
                 }
-                .buttonStyle(PageButtonStyle(isProminent: true))
+                .buttonStyle(SheetQuietButtonStyle())
                 .disabled(isLearning)
                 .accessibilityIdentifier("playbook.learn")
                 if isLearning {
                     ProgressView()
                         .controlSize(.small)
                     Text(L10n.string("Reading recent posts…"))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Palette.tertiaryInk)
                 }
                 Spacer(minLength: 0)
             }
+            .padding(.vertical, 12)
             if let learned {
                 Callout(learnedSummary(learned), tone: .positive)
                     .accessibilityIdentifier("playbook.summary")
@@ -39,20 +40,21 @@ struct PlaybookSection: View {
                 Callout(failure, tone: .critical)
                     .accessibilityIdentifier("playbook.failure")
             }
+            // No box: the text on one light rule, like every field in the sheet.
             TextEditor(text: $route.playbook)
-                .font(.body)
+                .font(DesignTokens.bodyText)
                 .frame(minHeight: 180)
                 .scrollContentBackground(.hidden)
-                .padding(6)
-                .background(Palette.group, in: .rect(cornerRadius: DesignTokens.blockCornerRadius))
+                .padding(.bottom, 8)
+                .overlay(alignment: .bottom) { Hairline() }
                 .accessibilityLabel(L10n.string("Playbook"))
                 .accessibilityIdentifier("playbook.text")
             Text(L10n.string("%@ of %@ characters", route.playbook.count.formatted(), tradingPlaybookMaxLength.formatted()))
-                .font(.caption)
-                .foregroundStyle(route.playbook.count > tradingPlaybookMaxLength ? .red : .secondary)
+                .font(DesignTokens.caption)
+                .foregroundStyle(route.playbook.count > tradingPlaybookMaxLength ? .red : Palette.tertiaryInk)
                 .monospacedDigit()
-        } header: {
-            Text(L10n.string("Playbook"))
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.top, 6)
         } footer: {
             Text(
                 L10n.string(
