@@ -3,7 +3,7 @@ import SwiftUI
 
 /// One thing that happened in the account, as a gallery tile on the white page: the dollars that
 /// moved set large, what happened in a sentence, and who did it on the corner chip. A tile that
-/// came from a guru's post draws its ground under the pointer and opens the post.
+/// came from a guru's post is marked in butter under the pointer, shows its ↗, and opens the post.
 struct AccountFeedTile: View {
     let item: AccountFeedItem
     let directory: GuruDirectory
@@ -36,26 +36,27 @@ struct AccountFeedTile: View {
                 Hairline()
                     .padding(.bottom, 8)
             }
-            if item.isTrade, let amount = Decimal(engine: item.amount) {
-                Text(amount, format: .currency(code: "USD"))
-                    .font(Self.figure)
-                    .monospacedDigit()
-                    .foregroundStyle(Palette.ink)
+            HStack(alignment: .top, spacing: 12) {
+                if item.isTrade, let amount = Decimal(engine: item.amount) {
+                    Text(amount, format: .currency(code: "USD"))
+                        .font(Self.figure)
+                        .monospacedDigit()
+                        .foregroundStyle(Palette.ink)
+                        .markerHighlight(open != nil && (isHovered || isSelected))
+                }
+                Spacer(minLength: 0)
+                if open != nil {
+                    OpenArrow(isShown: isHovered || isSelected)
+                }
             }
             Text(item.sentence)
                 .font(DesignTokens.bodyText)
                 .foregroundStyle(item.isTrade ? Palette.secondaryInk : Palette.ink)
                 .monospacedDigit()
                 .fixedSize(horizontal: false, vertical: true)
-            ZStack(alignment: .bottomLeading) {
-                if open != nil, isHovered || isSelected {
-                    InkGround()
-                        .transition(.opacity)
-                }
-                CreditChip(name: item.credit(directory), time: item.time)
-                    .padding(.bottom, 10)
-            }
-            .frame(height: 56, alignment: .bottomLeading)
+            CreditChip(name: item.credit(directory), time: item.time)
+                .padding(.top, 8)
+                .padding(.bottom, 10)
         }
         .padding(.bottom, 8)
         .frame(maxWidth: .infinity, alignment: .leading)

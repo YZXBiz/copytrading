@@ -2,7 +2,7 @@ import DesktopCore
 import SwiftUI
 
 /// One post as a gallery tile on the white page: the guru's words set large, how it was read, what
-/// each account did, and the guru's chip on the corner. Hovering draws its ground; choosing it
+/// each account did, and the guru's chip on the corner. Hovering marks the quote and shows ↗; choosing it
 /// opens the post beside the page.
 struct GuruPostCard: View {
     let entry: GuruFeed.Entry
@@ -23,29 +23,27 @@ struct GuruPostCard: View {
                     Hairline()
                         .padding(.bottom, 10)
                 }
-                Text(ActivitySourceText.formattedPreview(quoted))
-                    .font(Self.quote)
-                    .foregroundStyle(Palette.ink)
-                    .lineLimit(6)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
+                // Under the pointer the quote is marked in butter and the ↗ says it opens.
+                HStack(alignment: .top, spacing: 12) {
+                    Text(ActivitySourceText.formattedPreview(quoted))
+                        .font(Self.quote)
+                        .foregroundStyle(Palette.ink)
+                        .lineLimit(6)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .markerHighlight(isHovered || isSelected)
+                    Spacer(minLength: 0)
+                    OpenArrow(isShown: isHovered || isSelected)
+                }
                 Text(entry.readAs)
                     .font(DesignTokens.caption)
                     .foregroundStyle(Palette.tertiaryInk)
                     .lineLimit(2)
                 GuruAccountOutcomeList(outcomes: entry.accounts, alignment: .leading)
                     .padding(.top, 2)
-                // Like a gallery that plays a clip under the pointer: hovering draws the ground and
-                // nothing more.
-                ZStack(alignment: .bottomLeading) {
-                    if isHovered || isSelected {
-                        InkGround()
-                            .transition(.opacity)
-                    }
-                    CreditChip(name: guruName, time: time)
-                        .padding(.bottom, 10)
-                }
-                .frame(height: 56, alignment: .bottomLeading)
+                CreditChip(name: guruName, time: time)
+                    .padding(.top, 8)
+                    .padding(.bottom, 10)
             }
             .padding(.bottom, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
