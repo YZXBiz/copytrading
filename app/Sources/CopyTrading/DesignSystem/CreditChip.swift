@@ -1,15 +1,15 @@
 import SwiftUI
 
-/// The white pill on a post card's corner, the way a gallery credits its maker: the guru's ring
-/// and name, and when they posted.
-struct GuruPostChip: View {
-    let guruName: String
+/// The white pill on a gallery tile's corner, the way a gallery credits its maker: who it was
+/// (a guru, or the owner) in an ink ring, and when.
+struct CreditChip: View {
+    let name: String
     let time: String
 
     var body: some View {
         HStack(spacing: 8) {
-            GuruMonogram(name: guruName, size: 22)
-            Text(guruName)
+            GuruMonogram(name: name, size: 22)
+            Text(name)
                 .font(DesignTokens.bodyEmphasis)
                 .foregroundStyle(Palette.ink)
             Text(time)

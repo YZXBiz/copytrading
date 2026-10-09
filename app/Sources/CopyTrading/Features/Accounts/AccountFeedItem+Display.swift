@@ -38,9 +38,9 @@ extension AccountFeedItem {
         }
     }
 
-    /// Who made it happen: the guru whose post was copied, or "manual" for the owner.
-    @MainActor func origin(_ directory: GuruDirectory) -> String {
-        source == "you" ? L10n.string("manual") : directory.name(for: guruID) ?? L10n.string("Copied post")
+    /// Who made it happen, for a gallery tile's chip: the guru whose post was copied, or "You".
+    @MainActor func credit(_ directory: GuruDirectory) -> String {
+        source == "you" ? L10n.string("You") : directory.name(for: guruID) ?? L10n.string("Copied post")
     }
 
     /// To the second today, since trades land seconds apart; the date on older rows.

@@ -23,22 +23,12 @@ struct AccountFeedList: View {
                     InkEmptyState(message: L10n.string("Nothing has been bought or sold in this account yet."))
                         .padding(.vertical, 8)
                 }
-                let directory = GuruDirectory(model.savedTradingConfiguration)
-                ForEach(items) { item in
-                    let post = post(for: item)
-                    AccountFeedRow(
-                        item: item, directory: directory, isSelected: post != nil && post?.id == selectedPostID,
-                        open: post.map { post in { openPost(post.id) } }
-                    )
-                    .overlay(alignment: .bottom) {
-                        if item.id != items.last?.id {
-                            Hairline()
-                        }
-                    }
-                }
+                AccountFeedGallery(
+                    items: items, directory: GuruDirectory(model.savedTradingConfiguration),
+                    selectedPostID: selectedPostID, post: post(for:), openPost: openPost)
                 if feature.feedCursors[accountID] != nil {
                     Button(L10n.string("Show Older Activity"), action: loadMore)
-                        .buttonStyle(.link)
+                        .buttonStyle(PageButtonStyle())
                         .padding(.top, 8)
                 }
             }

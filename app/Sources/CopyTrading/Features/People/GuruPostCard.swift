@@ -43,7 +43,7 @@ struct GuruPostCard: View {
                             }
                             .transition(.opacity)
                     }
-                    GuruPostChip(guruName: guruName, time: time)
+                    CreditChip(name: guruName, time: time)
                         .padding(.bottom, 10)
                 }
                 .frame(height: 56, alignment: .bottomLeading)
