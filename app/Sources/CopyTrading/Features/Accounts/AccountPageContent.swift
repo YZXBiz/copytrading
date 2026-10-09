@@ -1,9 +1,9 @@
 import DesktopCore
 import SwiftUI
 
-/// A read account's page: a hero (name, balance, the curve, what the balance is
-/// made of), any warnings, the calls waiting on the owner, then positions, activity, or limits,
-/// one at a time.
+/// A read account's page: a hero (name, balance, the curve, what the balance is made of, and the
+/// limits it trades under, always in view), any warnings, the calls waiting on the owner, then
+/// positions or activity, one at a time.
 struct AccountPageContent: View {
     let account: AccountOverview
     let policy: TradingAccountPolicy?
@@ -34,6 +34,9 @@ struct AccountPageContent: View {
                 plotHeight: isSharingWidth ? 120 : 200
             )
             AccountBalanceBreakdown(account: account, model: model, feature: feature)
+            if let policy {
+                AccountLimitsStrip(account: account, policy: policy, isCompact: isSharingWidth, editLimits: editLimits)
+            }
         }
         if hasWarnings {
             VStack(alignment: .leading, spacing: 8) {
@@ -61,10 +64,6 @@ struct AccountPageContent: View {
                 AccountFeedList(
                     accountID: account.accountID, model: model, feature: feature, selectedPostID: selectedPostID,
                     openPost: openPost)
-            case .limits:
-                if let policy {
-                    AccountLimitsStrip(account: account, policy: policy, isCompact: isSharingWidth, editLimits: editLimits)
-                }
             }
         }
         .onAppear {

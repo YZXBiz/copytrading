@@ -18,13 +18,12 @@ struct AccountLimitsStrip: View {
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(alignment: .center, spacing: 24) { items }
+            HStack(alignment: .top, spacing: 32) { items }
             VStack(alignment: .leading, spacing: 16) {
-                HStack(spacing: 24) { meters }
-                HStack(spacing: 24) { caps }
+                HStack(alignment: .top, spacing: 32) { meters }
+                HStack(alignment: .top, spacing: 32) { caps }
             }
         }
-        .padding(.vertical, 18)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.string("Limits"))
     }
@@ -59,18 +58,15 @@ struct AccountLimitsStrip: View {
         }
         Spacer(minLength: 8)
         Button(L10n.string("Edit Limits"), action: editLimits)
-            .buttonStyle(PageButtonStyle())
+            .buttonStyle(QuietTextButtonStyle())
             .accessibilityIdentifier("account.editLimits")
     }
 
     private func cap(_ title: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(L10n.string(title).uppercased())
-                .font(DesignTokens.eyebrow)
-                .tracking(DesignTokens.eyebrowTracking)
-                .foregroundStyle(Palette.tertiaryInk)
+        VStack(alignment: .leading, spacing: 8) {
+            Eyebrow(L10n.string(title))
             Text(Decimal(engine: value)?.formatted(.currency(code: "USD").precision(.fractionLength(0))) ?? value)
-                .font(DesignTokens.caption.weight(.semibold))
+                .font(DesignTokens.statValue)
                 .monospacedDigit()
                 .foregroundStyle(Palette.ink)
         }

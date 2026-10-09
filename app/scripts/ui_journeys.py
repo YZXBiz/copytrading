@@ -1193,7 +1193,7 @@ def _start_paper_setup(app: AppDriver, setup: dict[str, str]) -> None:
     app.click("connections.gurus.add")
     app.type("Journey Guru", into="Name")
     app.click("Done")
-    app.expect(app.see("setup-filled"), "Ready to start. Every connection is checked first.")
+    app.expect(app.see("setup-filled"), "Ready to start")
     app.expect(app.open_screen("gettingStarted"), "4 of 5")
     app.open_screen("connections")
     app.click("setup.startCopying")
@@ -1290,8 +1290,7 @@ def j40_live_limits(app: AppDriver) -> None:
         app.click("toolbar.copying")
     _wait_for_account(app, "primary", timeout=180)
 
-    # Edit Limits, under the Limits tab, opens the account sheet scrolled to its limits.
-    app.click("account.section.limits")
+    # Edit Limits, under the balance, opens the account sheet scrolled to its limits.
     app.click("account.editLimits")
     app.wait_for("Maximum per order", timeout=15, name="limits-sheet")
     time.sleep(0.6)
@@ -1304,8 +1303,7 @@ def j40_live_limits(app: AppDriver) -> None:
     deadline = time.monotonic() + 60
     while True:
         app.open_screen("account.primary")
-        # The new cap reads under Limits; the note that it changed, under Activity.
-        app.click("account.section.limits")
+        # The new cap reads under the balance; the note that it changed, under Activity.
         snapshot = app.see()
         app.click("account.section.activity")
         activity = app.see()

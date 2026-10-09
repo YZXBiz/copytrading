@@ -27,17 +27,47 @@ struct DestinationEditorSection: View {
                 }
             }
             if let draft = connection {
-                let summary = SizingSummary.text(draft, policy: policy)
-                Text((try? AttributedString(markdown: summary)) ?? AttributedString(summary))
-                    .font(DesignTokens.bodyText)
-                    .foregroundStyle(Palette.secondaryInk)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 12)
-                    .accessibilityIdentifier("guru.sizingSummary")
+                if let sizing = SizingSummary.of(draft, policy: policy) {
+                    sizingFigures(sizing)
+                } else {
+                    Text(L10n.string("First set this account's max per stock. It's the guru's full position."))
+                        .font(DesignTokens.caption)
+                        .foregroundStyle(Palette.tertiaryInk)
+                        .padding(.top, 12)
+                }
             }
         } footer: {
             Text(L10n.string("Each account follows one guru. Its max per stock is that guru's full position."))
         }
+    }
+
+    /// What each kind of call buys, as figures in a row: a tracked label over a clear amount. A
+    /// figure the per-order limit cut down carries a small marker and the note says why.
+    private func sizingFigures(_ sizing: SizingSummary) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 28) {
+                ForEach(sizing.figures) { figure in
+                    VStack(alignment: .leading, spacing: 6) {
+                        Eyebrow(figure.label)
+                        Text(figure.amount)
+                            .font(DisplayFont.font(size: 22, weight: .medium, relativeTo: .title3))
+                            .monospacedDigit()
+                            .foregroundStyle(Palette.ink)
+                            .markerHighlight(figure.isTrimmed)
+                    }
+                    .fixedSize()
+                }
+                Spacer(minLength: 0)
+            }
+            if let note = sizing.note {
+                Text(note)
+                    .font(DesignTokens.caption)
+                    .foregroundStyle(Palette.tertiaryInk)
+            }
+        }
+        .padding(.top, 14)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("guru.sizingSummary")
     }
 
     private var accountChoices: [String] {

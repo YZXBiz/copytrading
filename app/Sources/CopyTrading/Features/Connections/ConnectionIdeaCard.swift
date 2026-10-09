@@ -1,7 +1,7 @@
 import DesktopCore
 import SwiftUI
 
-/// One idea as a plain note: an ink tick and a tracked number, a title, a short line, and "Show
+/// One idea as a plain note: a tracked number, a title, a short line, and "Show
 /// Steps", which opens the steps in a popover.
 struct ConnectionIdeaCard: View {
     let idea: ConnectionIdea
@@ -16,10 +16,7 @@ struct ConnectionIdeaCard: View {
     var body: some View {
         Button(action: toggle) {
             VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 10) {
-                    SectionMark()
-                    Eyebrow(String(format: "%02d", number))
-                }
+                Eyebrow(String(format: "%02d", number))
                 Text(idea.title)
                     .font(DesignTokens.cardTitle)
                     .tracking(DesignTokens.listHeadingTracking)

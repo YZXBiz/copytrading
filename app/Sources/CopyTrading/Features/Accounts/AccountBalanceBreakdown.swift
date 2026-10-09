@@ -26,8 +26,8 @@ struct AccountBalanceBreakdown: View {
 
     @ViewBuilder
     private func stats(_ balance: AccountBalance) -> some View {
+        // What is in stocks reads on the limit meter below, against its cap.
         stat("Cash", balance.cash)
-        stat("In stocks", account.totalExposureUSD)
         stat("Buying power", balance.buyingPower)
     }
 

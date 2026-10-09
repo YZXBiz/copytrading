@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Choices as a row of tracked capitals, like a studio site's navigation, each with an optional
 /// count. The chosen one is in ink with a short drawn line under it, the only line here, that
-/// slides across when the choice changes, then rests.
+/// slides across when the choice changes, then rests. Control-1, Control-2… pick a choice from the
+/// keyboard; Command-1, 2… stay the sidebar's. One switcher per page, so the keys are its.
 struct TrackedSwitcher<Choice: Hashable & Identifiable>: View {
     let choices: [Choice]
     @Binding var selection: Choice
@@ -15,13 +16,16 @@ struct TrackedSwitcher<Choice: Hashable & Identifiable>: View {
 
     var body: some View {
         HStack(spacing: 32) {
-            ForEach(choices) { choice in
+            ForEach(Array(choices.enumerated()), id: \.element.id) { index, choice in
                 Button {
                     withAnimation(reduceMotion ? nil : .smooth(duration: 0.3)) { selection = choice }
                 } label: {
                     label(choice)
                 }
                 .buttonStyle(QuietPressButtonStyle())
+                // A switcher has at most a handful of choices, so each gets a digit.
+                .keyboardShortcut(KeyEquivalent(Character(String(index + 1))), modifiers: .control)
+                .help(L10n.string("%@ (Control-%lld)", L10n.string(title(choice)), Int64(index + 1)))
                 .accessibilityAddTraits(choice == selection ? [.isButton, .isSelected] : .isButton)
                 .accessibilityIdentifier("\(identifier).\(choice.id)")
             }

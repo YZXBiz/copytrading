@@ -62,6 +62,9 @@ struct TimelineRow<Gutter: View, Content: View, Trailing: View>: View {
     private var dot: some View {
         Group {
             switch mark {
+            case .day:
+                Circle()
+                    .fill(Palette.ink)
             case .traded:
                 Circle()
                     .fill(Palette.sage)

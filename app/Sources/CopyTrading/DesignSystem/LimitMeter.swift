@@ -18,43 +18,40 @@ struct LimitMeter: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(L10n.string(title).uppercased())
-                    .font(DesignTokens.eyebrow)
-                    .tracking(DesignTokens.eyebrowTracking)
+        VStack(alignment: .leading, spacing: 8) {
+            Eyebrow(L10n.string(title))
+            // What is used, large, then what it is out of, quiet: "$14 of $250".
+            HStack(alignment: .firstTextBaseline, spacing: 5) {
+                Text(used.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                    .font(DesignTokens.statValue)
+                    .foregroundStyle(fraction >= 0.8 ? tint : Palette.ink)
+                Text(L10n.string("of %@", limit.formatted(.currency(code: "USD").precision(.fractionLength(0)))))
+                    .font(DesignTokens.caption)
                     .foregroundStyle(Palette.tertiaryInk)
-                    .fixedSize()
-                Spacer(minLength: 8)
-                Text(
-                    L10n.string(
-                        "%@ of %@",
-                        used.formatted(.currency(code: "USD").precision(.fractionLength(0))),
-                        limit.formatted(.currency(code: "USD").precision(.fractionLength(0)))
-                    )
-                )
-                .fontWeight(.semibold)
-                .monospacedDigit()
-                .foregroundStyle(fraction >= 0.8 ? tint : Palette.ink)
-                .fixedSize()
             }
-            .font(DesignTokens.caption)
-            // A thin track that stays empty at zero, instead of a system bar with a stray dot.
+            .monospacedDigit()
+            .fixedSize()
+            // An ink-drawn track, filled the way a studio drawing fills one shape: butter while
+            // there is room, orange near the cap, red at it.
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
-                    Capsule().fill(Palette.group)
+                    Capsule().strokeBorder(Palette.ink.opacity(0.35), lineWidth: 1)
                     if fraction > 0 {
-                        Capsule().fill(tint).frame(width: max(4, proxy.size.width * fraction))
+                        Capsule()
+                            .fill(tint)
+                            .overlay(Capsule().strokeBorder(Palette.ink, lineWidth: 1.2))
+                            .frame(width: max(8, proxy.size.width * fraction))
                     }
                 }
             }
-            .frame(height: 4)
+            .frame(height: 8)
             .accessibilityHidden(true)
             if let note {
                 Text(note)
-                    .font(.caption)
-                    .foregroundStyle(Palette.secondaryInk)
+                    .font(DesignTokens.caption)
+                    .foregroundStyle(Palette.tertiaryInk)
                     .monospacedDigit()
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .accessibilityElement(children: .ignore)

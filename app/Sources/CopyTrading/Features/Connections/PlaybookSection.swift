@@ -44,7 +44,7 @@ struct PlaybookSection: View {
             // No box: the text on a writing line, like every field in the sheet.
             TextEditor(text: $route.playbook)
                 .font(DesignTokens.bodyText)
-                .frame(minHeight: 180)
+                .frame(minHeight: 110)
                 .scrollContentBackground(.hidden)
                 .focused($isEditing)
                 .padding(.bottom, 8)

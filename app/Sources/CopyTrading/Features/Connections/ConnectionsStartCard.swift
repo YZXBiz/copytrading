@@ -38,7 +38,7 @@ struct ConnectionsStartCard: View {
                     .accessibilityIdentifier("setup.status")
                 if let detail {
                     Text(detail)
-                        .font(.body)
+                        .font(DesignTokens.bodyText)
                         .foregroundStyle(Palette.tertiaryInk)
                         .fixedSize(horizontal: false, vertical: true)
                         .contentTransition(.opacity)
@@ -97,6 +97,9 @@ struct ConnectionsStartCard: View {
     private var detail: String? {
         if let next = progress.next, !progress.isReadyToCheck {
             return L10n.string("Next: %@.", L10n.string(next.title))
+        }
+        if let detail = status.detail {
+            return detail
         }
         if model.savedTradingConfiguration == nil && !status.isWorking {
             return L10n.string("New accounts start with entries off, so nothing is bought until you allow it.")

@@ -1,8 +1,7 @@
-/// The parts of an account page below its hero, one shown at a time.
+/// The parts of an account page below its hero and limits, one shown at a time.
 enum AccountSection: String, CaseIterable, Identifiable {
     case positions
     case activity
-    case limits
 
     var id: Self { self }
 
@@ -10,7 +9,6 @@ enum AccountSection: String, CaseIterable, Identifiable {
         switch self {
         case .positions: "Positions"
         case .activity: "Activity"
-        case .limits: "Limits"
         }
     }
 }

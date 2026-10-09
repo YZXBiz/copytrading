@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Rows that read strictly top to bottom in time, newest first: each day's label in the gutter, then
+/// Rows that read strictly top to bottom in time, newest first: each day as a stop on the rail, then
 /// its rows, joined by one ink rail from the first day down to the last row's dot.
 struct TimelineFeed<Item: Identifiable, Row: View>: View {
     let days: [TimelineDay<Item>]
@@ -10,7 +10,7 @@ struct TimelineFeed<Item: Identifiable, Row: View>: View {
     var body: some View {
         LazyVStack(alignment: .leading, spacing: 0) {
             ForEach(Array(days.enumerated()), id: \.element.id) { dayIndex, day in
-                TimelineDayRow(title: day.title(), runsAbove: dayIndex > 0, top: dayIndex > 0 ? 30 : 0)
+                TimelineDayRow(title: day.title(), date: day.date(), runsAbove: dayIndex > 0, top: dayIndex > 0 ? 36 : 0)
                 ForEach(Array(day.items.enumerated()), id: \.element.id) { index, item in
                     let isLast = dayIndex == days.count - 1 && index == day.items.count - 1
                     row(item, TimelinePlace(runsBelow: !isLast, isWide: width >= TimelineMetrics.wideWidth))

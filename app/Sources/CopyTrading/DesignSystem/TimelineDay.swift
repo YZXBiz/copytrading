@@ -20,6 +20,16 @@ struct TimelineDay<Item: Identifiable>: Identifiable {
         return start.formatted(AppTime.style(sameYear ? base : base.year()))
     }
 
+    /// The date beside a relative label ("Thu, Oct 9" beside "Today"); a dated label needs none.
+    @MainActor
+    func date(now: Date = .now) -> String? {
+        let calendar = AppTime.calendar
+        guard let yesterday = calendar.date(byAdding: .day, value: -1, to: now),
+            calendar.isDate(start, inSameDayAs: now) || calendar.isDate(start, inSameDayAs: yesterday)
+        else { return nil }
+        return start.formatted(AppTime.style(.dateTime.weekday(.abbreviated).month(.abbreviated).day()))
+    }
+
     /// Splits items that are already newest first into days; an item with no date joins the day before it.
     @MainActor
     static func days(of items: [Item], date: (Item) -> Date?) -> [Self] {

@@ -59,6 +59,12 @@ struct RouteEditorSheet: View {
                 HelpPopoverButton(articles: [SetupHelp.channelID, SetupHelp.userID])
             }
 
+            DestinationEditorSection(
+                connection: $route.connection,
+                accountIDs: accountIDs,
+                policy: route.connection.flatMap { policies[$0.accountID.trimmed] }
+            )
+
             PlaybookSection(route: $route, learn: learn)
 
             ForEach($route.examples) { $example in
@@ -84,11 +90,6 @@ struct RouteEditorSheet: View {
 
             GuruReplaySection(route: route, policies: policies, replay: replay)
 
-            DestinationEditorSection(
-                connection: $route.connection,
-                accountIDs: accountIDs,
-                policy: route.connection.flatMap { policies[$0.accountID.trimmed] }
-            )
         } leading: {
             Button(L10n.string("Remove Guru"), role: .destructive, action: removeGuru)
                 .buttonStyle(SheetQuietButtonStyle(isDestructive: true))
