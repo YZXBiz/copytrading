@@ -125,7 +125,7 @@ struct EquityChart: View {
             }
             .overlay {
                 RoundedRectangle(cornerRadius: 6)
-                    .strokeBorder(Palette.accent, lineWidth: contrast == .increased ? 2 : 1.5)
+                    .strokeBorder(Palette.ink, lineWidth: contrast == .increased ? 2 : 1.5)
                     .opacity(isChartFocused && !focusCameFromPointer ? 1 : 0)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)

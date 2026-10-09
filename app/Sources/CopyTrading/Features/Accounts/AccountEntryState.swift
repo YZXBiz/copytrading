@@ -8,8 +8,10 @@ struct AccountEntryState: Equatable {
     let tone: StatusTone
 
     init(_ account: AccountOverview) {
+        // The engine holds only the accounts it is copying into; while copying is off, or after an
+        // account leaves the setup, this one is simply not copying.
         guard account.activeConfiguration else {
-            (text, tone) = ("Not in setup", .inactive)
+            (text, tone) = ("Not copying right now", .inactive)
             return
         }
         switch account.entryPermission {

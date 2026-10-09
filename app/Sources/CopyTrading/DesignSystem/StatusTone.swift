@@ -13,7 +13,7 @@ enum StatusTone: Equatable {
         case .positive: .green
         case .caution: .orange
         case .critical: .red
-        case .neutral: .blue
+        case .neutral: Palette.secondaryInk
         case .inactive: .secondary
         }
     }

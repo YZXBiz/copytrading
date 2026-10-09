@@ -70,7 +70,7 @@ struct MainSplitView: View {
         // (panel inset 8 + half the 40-point header); without the sidebar, level with the toolbar.
         .background(WindowButtonPlacement(leading: 20, centerY: showsSidebar ? 28 : 26))
         .ignoresSafeArea(.container)
-        .tint(Palette.accent)
+        .tint(Palette.ink)
         .sheet(item: pendingAgentProposal) { proposal in
             AgentProposalSheet(model: model, proposal: proposal)
         }

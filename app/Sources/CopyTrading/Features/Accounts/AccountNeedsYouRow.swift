@@ -72,7 +72,7 @@ struct AccountNeedsYouRow: View {
     }
 
     private var highlight: Color {
-        if isSelected { return Palette.accent.opacity(0.08) }
-        return isHovered ? Palette.accent.opacity(0.035) : .clear
+        if isSelected { return Palette.ink.opacity(0.08) }
+        return isHovered ? Palette.ink.opacity(0.035) : .clear
     }
 }

@@ -54,7 +54,7 @@ struct AccountPageContent: View {
         VStack(alignment: .leading, spacing: 20) {
             TrackedSwitcher(
                 choices: AccountSection.allCases, selection: $section, title: \.title,
-                count: { $0 == .positions ? account.positions.count : 0 }, identifier: "account.section")
+                count: { $0 == .positions ? account.positions.count { !PositionRow.isEmpty($0) } : 0 }, identifier: "account.section")
             switch section {
             case .positions:
                 AccountPositions(account: account, model: model, feature: feature) { openPost($0.id) }

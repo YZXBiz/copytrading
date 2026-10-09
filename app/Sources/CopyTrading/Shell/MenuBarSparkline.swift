@@ -30,7 +30,7 @@ struct MenuBarSparkline: View {
         if values.count >= 2, let first = values.first?.1, let last = values.last?.1,
             (values.map(\.1).max() ?? 0) - (values.map(\.1).min() ?? 0) >= 0.01
         {
-            let tint: Color = last > first ? .green : last < first ? .red : Palette.accent
+            let tint: Color = last > first ? .green : last < first ? .red : Palette.secondaryInk
             let low = values.map(\.1).min() ?? 0
             let high = values.map(\.1).max() ?? 0
             Chart(values, id: \.0) { point in

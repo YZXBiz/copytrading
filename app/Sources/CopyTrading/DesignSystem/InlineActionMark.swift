@@ -8,9 +8,9 @@ struct InlineActionMark: View {
     var body: some View {
         Text(L10n.string(title))
             .font(DesignTokens.caption.weight(.semibold))
-            .foregroundStyle(Palette.accent)
+            .foregroundStyle(Palette.ink)
             .padding(.horizontal, 9)
             .padding(.vertical, 3)
-            .background(Palette.accent.opacity(0.1), in: .capsule)
+            .background(Palette.ink.opacity(0.1), in: .capsule)
     }
 }
