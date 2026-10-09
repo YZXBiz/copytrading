@@ -950,20 +950,21 @@ public struct ProfileExampleReviewRequest: Codable, Equatable, Sendable {
 public struct ProfileInstructionEvaluation: Codable, Equatable, Sendable {
     public var action: TradingInstructionAction
     public var symbol: String
-    public var price: String
+    /// The guru's price; nil for a sell at the market (ADR-0007).
+    public var price: String?
     public var fraction: String?
     /// For a sell, the buy price it names; nil when it sells from every buy.
     public var entryPrice: String?
     public var exitBasis: TradingExitBasis?
     public var actionEvidence: String
     public var symbolEvidence: String
-    public var priceEvidence: String
+    public var priceEvidence: String?
     public var fractionEvidence: String?
 
     public init(
-        action: TradingInstructionAction, symbol: String, price: String,
+        action: TradingInstructionAction, symbol: String, price: String?,
         fraction: String?, entryPrice: String? = nil, exitBasis: TradingExitBasis?, actionEvidence: String,
-        symbolEvidence: String, priceEvidence: String, fractionEvidence: String?
+        symbolEvidence: String, priceEvidence: String?, fractionEvidence: String?
     ) {
         self.action = action
         self.symbol = symbol

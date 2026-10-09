@@ -1407,6 +1407,7 @@
 "at %@" = "价格 %@";
 "between %@ and %@" = "价格在 %@ 到 %@ 之间";
 "at the market price" = "按市价";
+"the market price" = "市价";
 "with no price given" = "未给出价格";
 ", %@ of a full position" = "，满仓的%@";
 ", batch %lld" = "，第 %lld 批";

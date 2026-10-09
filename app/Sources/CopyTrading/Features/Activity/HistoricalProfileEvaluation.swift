@@ -158,12 +158,13 @@ struct HistoricalProfileEvaluationSheet: View {
                     Text(
                         L10n.string(
                             "%@ %@ at %@", L10n.string(Humanize.code(instruction.action.rawValue)), instruction.symbol,
-                            Humanize.usd(instruction.price))
+                            instruction.price.map { Humanize.usd($0) } ?? L10n.string("the market price"))
                     )
                     .font(.headline)
                     Text(
                         L10n.string(
-                            "Evidence: %@ · %@ · %@", instruction.actionEvidence, instruction.symbolEvidence, instruction.priceEvidence)
+                            "Evidence: %@ · %@ · %@", instruction.actionEvidence, instruction.symbolEvidence,
+                            instruction.priceEvidence ?? L10n.string("the market price"))
                     )
                     .foregroundStyle(.secondary)
                     if let fraction = instruction.fraction {

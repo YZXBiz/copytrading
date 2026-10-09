@@ -17,7 +17,9 @@ class Instruction(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
     action: Literal["buy", "reduce", "close"]
     symbol: str = Field(pattern=r"^[A-Z]{1,5}(?:[.][A-Z])?$")
-    price: Decimal = Field(gt=0, le=100000)
+    # The guru's price. A sell the post gives no price, or says is at the market, has none: it
+    # sells at the market when it is placed, as a limit just under the live bid (ADR-0007).
+    price: Decimal | None = Field(gt=0, le=100000)
     entry_price: Decimal | None = Field(default=None, gt=0, le=100000)
     fraction: Decimal | None = Field(default=None, gt=0, le=1, allow_inf_nan=False)
     # An exit's share counts from what is left of the buys it sells from, unless the post or the
@@ -32,6 +34,8 @@ class Instruction(BaseModel):
             raise PydanticCustomError(
                 "entry_has_lot_reference", "An entry cannot reference an existing lot"
             )
+        if self.action == "buy" and self.price is None:
+            raise ValueError("A buy needs the guru's price")
         if self.action != "buy" and self.fraction is None:
             raise ValueError("An exit requires an explicit fraction")
         if self.action == "close" and self.fraction != 1:
@@ -44,9 +48,17 @@ class Instruction(BaseModel):
 class Evidence(Instruction):
     action_evidence: str = Field(min_length=1, max_length=100)
     symbol_evidence: str = Field(min_length=1, max_length=30)
-    price_evidence: str = Field(min_length=1, max_length=30)
+    # None for a sell at the market: there is no price to cite. "At market" words, when the post
+    # has them, are in the reading.
+    price_evidence: str | None = Field(min_length=1, max_length=30)
     entry_evidence: str | None = Field(default=None, max_length=30)
     fraction_evidence: str | None = Field(default=None, max_length=30)
+
+    @model_validator(mode="after")
+    def validate_price_evidence(self) -> Self:
+        if (self.price is None) != (self.price_evidence is None):
+            raise ValueError("A stated price needs its words, and only a stated price has them")
+        return self
 
 
 class StockSignal(BaseModel):

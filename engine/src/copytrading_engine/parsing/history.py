@@ -38,7 +38,8 @@ class RecentCall:
     at: dt.datetime
     action: Literal["buy", "reduce", "close"]
     symbol: str
-    price: Decimal
+    # None for a sell at the market (ADR-0007).
+    price: Decimal | None
     fraction: Decimal | None
     entry_price: Decimal | None
     open: bool
@@ -91,7 +92,12 @@ def describe(calls: tuple[RecentCall, ...], now: dt.datetime) -> str:
     lines = []
     for call in calls:
         minutes = max(0, int((now - call.at).total_seconds() // 60))
-        parts = [call.ref, call.action, call.symbol, f"at {call.price}"]
+        parts = [
+            call.ref,
+            call.action,
+            call.symbol,
+            f"at {call.price}" if call.price is not None else "at market",
+        ]
         if call.fraction is not None:
             parts.append(f"share {call.fraction.normalize()}")
         if call.entry_price is not None:

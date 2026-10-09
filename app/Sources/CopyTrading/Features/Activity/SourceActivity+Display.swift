@@ -124,10 +124,13 @@ extension SourceEmbedEvidence {
 }
 
 extension SourceInstruction {
-    /// "Buy ABC at $12.34", "Sell half of ABC at $14", "Sell all ABC at $15".
+    /// "Buy ABC at $12.34", "Sell half of ABC at $14", "Sell all ABC at the market price".
     @MainActor
     var phrase: String {
-        let price = Decimal(engine: price).map { $0.formatted(.currency(code: "USD")) } ?? price
+        // A sell the guru gave no price sells at the market, priced from the live bid (ADR-0007).
+        let price =
+            price.map { Decimal(engine: $0).map { $0.formatted(.currency(code: "USD")) } ?? $0 }
+            ?? L10n.string("the market price")
         switch action {
         case "buy":
             return L10n.string("Buy %@ at %@", symbol, price)

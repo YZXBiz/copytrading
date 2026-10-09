@@ -33,6 +33,7 @@ from copytrading_engine.execution.domain.order_lifecycle import OrderStatus, is_
 from copytrading_engine.execution.domain.orders import OrderPlan, OrderRecord, OrderRequest
 from copytrading_engine.execution.domain.ownership import account_activity_reason
 from copytrading_engine.execution.domain.positions import PositionAudit, compare_positions
+from copytrading_engine.execution.domain.pricing import quote_problem
 from copytrading_engine.execution.domain.progress import Pending
 from copytrading_engine.execution.domain.risk import (
     EntryFacts,
@@ -241,6 +242,19 @@ class CopyEngine:
                 raise
         # A later lookup must confirm cancellation before releasing the reservation.
 
+    def _market_bid(self, symbol: str, now: dt.datetime) -> tuple[Decimal | None, str]:
+        """The live bid for a sell at the market, or why there is none to sell against."""
+        if not isinstance(self.broker, QuoteBroker):
+            return None, "quote_unavailable"
+        try:
+            quote = self.broker.quote(symbol)
+        except BrokerError:
+            return None, "quote_unavailable"
+        problem = quote_problem(quote, quote.bid, now)
+        if problem is not None:
+            return None, problem
+        return quote.bid, "ready"
+
     def market_session(self, now: dt.datetime) -> Session:
         date = trade_date(now).isoformat()
         if date not in self._calendar:
@@ -312,8 +326,15 @@ class CopyEngine:
                 return TradeDecision(None, "overnight_not_supported")
             if asset.overnight_halted or "overnight_halted" in asset.attributes:
                 return TradeDecision(None, "overnight_halted")
-        tick = Decimal("0.01") if s.price >= 1 else Decimal("0.0001")
-        if s.action == "buy" and s.price != s.price.quantize(tick):
+        source_price = s.price
+        if source_price is None:
+            # A sell at the market (ADR-0007): the live bid stands in for the guru's price, so
+            # the limit under it still bounds how low the copy can fill.
+            source_price, problem = self._market_bid(s.symbol, now)
+            if source_price is None:
+                return TradeDecision(None, problem)
+        tick = Decimal("0.01") if source_price >= 1 else Decimal("0.0001")
+        if s.action == "buy" and source_price != source_price.quantize(tick):
             return TradeDecision(None, "invalid_price_tick")
         lot_id = None
         limit_price = None
@@ -343,7 +364,7 @@ class CopyEngine:
         requested_usd = None
         budget_usd = None
         if s.action == "buy":
-            limit_price = c.entry_pricing.limit_price(s.price)
+            limit_price = c.entry_pricing.limit_price(source_price)
             # Every buy of a stock joins the guru's open lot of it (ADR-0010).
             open_lots = self.ledger.position_lots(source_key, s.symbol)
             joins_lot = open_lots[0][0] if open_lots else None
@@ -400,7 +421,7 @@ class CopyEngine:
             requested_usd = decision.requested
             budget_usd = decision.budget
             qty = (decision.budget / limit_price).quantize(STEP, rounding=ROUND_DOWN)
-            entry_price = s.price
+            entry_price = source_price
         else:
             if chosen_lot is not None:
                 lot = self.ledger.snapshot().lots.get(chosen_lot)
@@ -442,7 +463,7 @@ class CopyEngine:
                     qty = min(qty, held * s.fraction)
             qty = qty.quantize(STEP, rounding=ROUND_DOWN)
             # An exit is a limit order too, no lower than the allowance under the guru's price.
-            limit_price = c.entry_pricing.exit_limit_price(s.price)
+            limit_price = c.entry_pricing.exit_limit_price(source_price)
         if not asset.fractionable:
             qty = qty.quantize(Decimal(1), rounding=ROUND_DOWN)
         if qty <= 0:
@@ -479,7 +500,7 @@ class CopyEngine:
                 qty=qty,
                 type="limit",
                 limit_price=limit_price,
-                source_price=s.price,
+                source_price=source_price,
                 entry_tolerance_pct=c.entry_pricing.max_above_signal_pct
                 if s.action == "buy"
                 else c.entry_pricing.max_below_signal_pct,

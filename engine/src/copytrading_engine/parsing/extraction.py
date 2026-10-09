@@ -372,7 +372,10 @@ def check_references(
             {
                 listed.price
                 for listed in recent
-                if listed.open and listed.action == "buy" and listed.symbol == call.stock.ticker
+                if listed.open
+                and listed.action == "buy"
+                and listed.symbol == call.stock.ticker
+                and listed.price is not None
             }
         )
         if held and call.sell_from.buy_price not in held:

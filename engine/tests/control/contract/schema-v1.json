@@ -1414,6 +1414,9 @@
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
+              },
+              {
+                "type": "null"
               }
             ],
             "title": "Price"
@@ -1482,6 +1485,9 @@
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
+              },
+              {
+                "type": "null"
               }
             ],
             "title": "Price"

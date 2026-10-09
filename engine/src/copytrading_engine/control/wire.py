@@ -277,7 +277,8 @@ class DestinationView(Wire):
 class InstructionItem(Wire):
     action: Literal["buy", "reduce", "close"]
     symbol: str
-    price: Decimal
+    # None for a sell at the market (ADR-0007).
+    price: Decimal | None
     fraction: Decimal | None
 
 
@@ -356,7 +357,8 @@ class ManualCommandsPage(Wire):
 class InstructionView(Wire):
     action: Literal["buy", "reduce", "close"]
     symbol: str
-    price: Decimal
+    # None for a sell at the market (ADR-0007).
+    price: Decimal | None
     entry_price: Decimal | None
     fraction: Decimal | None
 
