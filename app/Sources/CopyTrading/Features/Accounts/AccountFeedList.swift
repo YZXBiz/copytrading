@@ -23,7 +23,7 @@ struct AccountFeedList: View {
                     InkEmptyState(message: L10n.string("Nothing has been bought or sold in this account yet."))
                         .padding(.vertical, 8)
                 }
-                AccountFeedGallery(
+                AccountFeedTimeline(
                     items: items, directory: GuruDirectory(model.savedTradingConfiguration),
                     selectedPostID: selectedPostID, post: post(for:), openPost: openPost)
                 if feature.feedCursors[accountID] != nil {

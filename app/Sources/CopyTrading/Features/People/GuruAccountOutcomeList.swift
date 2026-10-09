@@ -19,7 +19,8 @@ struct GuruAccountOutcomeList: View {
                         .foregroundStyle(Palette.secondaryInk)
                     Text(outcome.summary)
                         .foregroundStyle(outcome.kind == .waiting ? Palette.amber : Palette.tertiaryInk)
-                        .lineLimit(1)
+                        .lineLimit(2)
+                        .multilineTextAlignment(alignment == .trailing ? .trailing : .leading)
                 }
                 .accessibilityElement(children: .combine)
             }

@@ -38,17 +38,14 @@ extension AccountFeedItem {
         }
     }
 
-    /// Who made it happen, for a gallery tile's chip: the guru whose post was copied, or "You".
+    /// Who made it happen, under the row's time: the guru whose post was copied, or "You".
     @MainActor func credit(_ directory: GuruDirectory) -> String {
         source == "you" ? L10n.string("You") : directory.name(for: guruID) ?? L10n.string("Copied post")
     }
 
-    /// To the second today, since trades land seconds apart; the date on older rows.
+    /// The clock to the second, since trades land seconds apart; the day is the label above.
     @MainActor var time: String {
-        guard let date = Humanize.date(at) else { return "—" }
-        return AppTime.calendar.isDateInToday(date)
-            ? date.formatted(AppTime.style(.dateTime.hour().minute().second()))
-            : Humanize.postTime(date)
+        Humanize.date(at)?.formatted(AppTime.style(.dateTime.hour().minute().second())) ?? "—"
     }
 
     var isTrade: Bool { kind == "bought" || kind == "sold" }

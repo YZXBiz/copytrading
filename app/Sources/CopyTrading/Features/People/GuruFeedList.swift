@@ -1,7 +1,7 @@
 import DesktopCore
 import SwiftUI
 
-/// A guru's posts, newest first, as a gallery of tiles, filtered by what came of them.
+/// A guru's posts, newest first, on one timeline, filtered by what came of them.
 struct GuruFeedList: View {
     let days: [GuruFeed.Day]
     let guruName: String
@@ -26,8 +26,8 @@ struct GuruFeedList: View {
                 )
                 .padding(.top, 20)
             }
-            GuruPostGallery(entries: entries.filter(filter.includes), guruName: guruName, selection: $selection)
-                .padding(.top, 20)
+            GuruPostTimeline(entries: entries.filter(filter.includes), selection: $selection)
+                .padding(.top, 28)
         }
     }
 }

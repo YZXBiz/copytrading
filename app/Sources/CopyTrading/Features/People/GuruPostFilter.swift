@@ -1,4 +1,4 @@
-/// Which of a guru's posts the gallery shows: all of them, or those that traded, wait on the owner,
+/// Which of a guru's posts the timeline shows: all of them, or those that traded, wait on the owner,
 /// or were not trades at all.
 enum GuruPostFilter: String, CaseIterable, Identifiable {
     case all
