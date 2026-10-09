@@ -10,6 +10,8 @@ struct AccountFeedTile: View {
     let isSelected: Bool
     /// Opens the post the tile came from; nil when the owner did it or the post is gone.
     let open: (() -> Void)?
+    /// The top tile of a column sits under the switcher's own line, so it draws none.
+    var showsRule = true
     @State private var isHovered = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -30,8 +32,10 @@ struct AccountFeedTile: View {
 
     private var content: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Hairline()
-                .padding(.bottom, 8)
+            if showsRule {
+                Hairline()
+                    .padding(.bottom, 8)
+            }
             if item.isTrade, let amount = Decimal(engine: item.amount) {
                 Text(amount, format: .currency(code: "USD"))
                     .font(Self.figure)
@@ -45,7 +49,7 @@ struct AccountFeedTile: View {
                 .fixedSize(horizontal: false, vertical: true)
             ZStack(alignment: .bottomLeading) {
                 if open != nil, isHovered || isSelected {
-                    InkGround(height: 44)
+                    InkGround()
                         .transition(.opacity)
                 }
                 CreditChip(name: item.credit(directory), time: item.time)

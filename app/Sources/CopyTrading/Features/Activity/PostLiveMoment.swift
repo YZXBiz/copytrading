@@ -30,7 +30,7 @@ struct PostLiveMoment: View {
                 .tracking(DesignTokens.ledeTracking)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-            InkGround(height: 56)
+            InkGround()
                 .overlay {
                     GeometryReader { proxy in
                         // One dot glides on a stage at a time and bounces where it stands on a fill.

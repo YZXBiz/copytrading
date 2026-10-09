@@ -1,7 +1,7 @@
 import DesktopCore
 import SwiftUI
 
-/// The app's mark and name at the top of the sidebar, like a studio's mark.
+/// The app's name at the top of the sidebar as a wordmark, like a studio site's.
 struct SidebarBrandCard: View {
     let model: AppModel
 
@@ -13,11 +13,9 @@ struct SidebarBrandCard: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            AppMark(size: 26)
-                .padding(3)
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(L10n.string("CopyTrading"))
-                    .font(DisplayFont.font(size: 19, weight: .medium, relativeTo: .headline))
+                    .font(DisplayFont.font(size: 21, weight: .medium, relativeTo: .headline))
                     .foregroundStyle(Palette.ink)
                 Text(detail)
                     .font(.system(size: 11))

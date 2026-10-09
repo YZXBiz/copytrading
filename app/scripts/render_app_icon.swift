@@ -2,8 +2,8 @@
 // Usage: swift app/scripts/render_app_icon.swift <output.png>
 // Then: app/scripts/build_app_icon.sh regenerates the .icns from it.
 //
-// The icon is the app's own drawing: a white sheet with one ink line, drawn by hand, that dips,
-// holds, and rises to a solid dot where a call becomes a trade. Black on white, nothing else.
+// The icon is two ink circles on a white sheet: an outlined ring, the guru's call, and a solid
+// disc overlapping it, your copy of that call. Black on white, nothing else.
 
 import AppKit
 import CoreGraphics
@@ -53,35 +53,23 @@ context.setLineWidth(2)
 context.strokePath()
 
 let ink = color(0x1D1F21)
+let radius: CGFloat = 178
+let centerY: CGFloat = 512
+let call = CGPoint(x: 512 - 104, y: centerY)
+let copy = CGPoint(x: 512 + 104, y: centerY)
 
-// The ground: nearly level, with the wobble of a line drawn without a ruler.
-let ground = CGMutablePath()
-ground.move(to: CGPoint(x: 230, y: 300))
-ground.addCurve(to: CGPoint(x: 512, y: 296), control1: CGPoint(x: 320, y: 304), control2: CGPoint(x: 420, y: 292))
-ground.addCurve(to: CGPoint(x: 794, y: 302), control1: CGPoint(x: 610, y: 300), control2: CGPoint(x: 700, y: 306))
-context.addPath(ground)
-context.setStrokeColor(color(0x1D1F21, 0.28))
-context.setLineWidth(14)
-context.setLineCap(.round)
-context.strokePath()
-
-// The line: it dips, holds, and rises, the shape of a good copied trade.
-let line = CGMutablePath()
-line.move(to: CGPoint(x: 236, y: 470))
-line.addCurve(to: CGPoint(x: 400, y: 420), control1: CGPoint(x: 300, y: 470), control2: CGPoint(x: 340, y: 404))
-line.addCurve(to: CGPoint(x: 540, y: 520), control1: CGPoint(x: 460, y: 436), control2: CGPoint(x: 480, y: 530))
-line.addCurve(to: CGPoint(x: 744, y: 712), control1: CGPoint(x: 620, y: 508), control2: CGPoint(x: 660, y: 690))
-context.addPath(line)
+// The guru's call: a ring.
 context.setStrokeColor(ink)
-context.setLineWidth(34)
-context.setLineCap(.round)
-context.setLineJoin(.round)
-context.strokePath()
+context.setLineWidth(30)
+context.strokeEllipse(in: CGRect(x: call.x - radius, y: call.y - radius, width: radius * 2, height: radius * 2))
 
-// The dot where the line arrives: the trade.
-let dot: CGFloat = 46
+// Your copy: the same circle, solid, a step to the right, with a thin white gap where it covers
+// the ring so the two read as separate shapes.
+let gap: CGFloat = 16
+context.setFillColor(color(0xFFFFFF))
+context.fillEllipse(in: CGRect(x: copy.x - radius - gap, y: copy.y - radius - gap, width: (radius + gap) * 2, height: (radius + gap) * 2))
 context.setFillColor(ink)
-context.fillEllipse(in: CGRect(x: 744 - dot, y: 712 - dot, width: dot * 2, height: dot * 2))
+context.fillEllipse(in: CGRect(x: copy.x - radius, y: copy.y - radius, width: radius * 2, height: radius * 2))
 
 let image = context.makeImage()!
 let rep = NSBitmapImageRep(cgImage: image)

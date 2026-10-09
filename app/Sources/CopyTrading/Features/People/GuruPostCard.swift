@@ -8,6 +8,8 @@ struct GuruPostCard: View {
     let entry: GuruFeed.Entry
     let guruName: String
     @Binding var selection: SourceActivity.ID?
+    /// The top tile of a column sits under the switcher's own line, so it draws none.
+    var showsRule = true
     @State private var isHovered = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -17,8 +19,10 @@ struct GuruPostCard: View {
     var body: some View {
         Button(action: toggle) {
             VStack(alignment: .leading, spacing: 14) {
-                Hairline()
-                    .padding(.bottom, 10)
+                if showsRule {
+                    Hairline()
+                        .padding(.bottom, 10)
+                }
                 Text(ActivitySourceText.formattedPreview(quoted))
                     .font(Self.quote)
                     .foregroundStyle(Palette.ink)
@@ -35,7 +39,7 @@ struct GuruPostCard: View {
                 // nothing more.
                 ZStack(alignment: .bottomLeading) {
                     if isHovered || isSelected {
-                        InkGround(height: 44)
+                        InkGround()
                             .transition(.opacity)
                     }
                     CreditChip(name: guruName, time: time)

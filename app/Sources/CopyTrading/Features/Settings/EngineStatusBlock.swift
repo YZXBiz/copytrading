@@ -1,8 +1,8 @@
 import DesktopCore
 import SwiftUI
 
-/// The engine on the page itself: a line saying how it is, one sentence about what it is doing,
-/// the one control that starts or stops it, and an ink ground while it runs.
+/// The engine on the page itself: one word for how it is beside a status dot, one sentence about
+/// what it is doing, and the one control that starts or stops it.
 struct EngineStatusBlock: View {
     let model: AppModel
 
@@ -10,17 +10,13 @@ struct EngineStatusBlock: View {
         model.runtimeState == .stopped || model.runtimeState == .failed
     }
 
-    private var isBeating: Bool {
-        model.runtimeState == .ready || model.runtimeState == .degraded
-    }
-
-    private var state: String {
+    private var state: (word: String, tone: StatusTone) {
         switch model.runtimeState {
-        case .ready: L10n.string("is running")
-        case .starting: L10n.string("is starting")
-        case .degraded: L10n.string("needs a look")
-        case .stopped: L10n.string("is stopped")
-        case .failed: L10n.string("stopped unexpectedly")
+        case .ready: (L10n.string("Running"), .positive)
+        case .starting: (L10n.string("Starting"), .inactive)
+        case .degraded: (L10n.string("Needs a look"), .caution)
+        case .stopped: (L10n.string("Stopped"), .inactive)
+        case .failed: (L10n.string("Stopped unexpectedly"), .critical)
         }
     }
 
@@ -60,21 +56,23 @@ struct EngineStatusBlock: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 16) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(L10n.string("The engine"))
-                    Text(state).foregroundStyle(Palette.tertiaryInk)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 16) {
+                HStack(spacing: 10) {
+                    Circle()
+                        .fill(state.tone.color)
+                        .frame(width: 8, height: 8)
+                    Text(state.word)
+                        .font(DesignTokens.listHeading)
+                        .tracking(DesignTokens.listHeadingTracking)
+                        .foregroundStyle(Palette.ink)
+                        .contentTransition(.opacity)
                 }
-                .font(DesignTokens.panelTitle)
-                .foregroundStyle(Palette.ink)
-                .contentTransition(.opacity)
                 .accessibilityElement(children: .ignore)
                 .accessibilityAddTraits(.isHeader)
                 .accessibilityLabel(L10n.string("Local engine, %@", L10n.string(Humanize.code(model.runtimeState.rawValue))))
                 Spacer(minLength: 12)
                 control
-                    .padding(.top, 6)
             }
             Text(sentence)
                 .font(DesignTokens.documentBody)
@@ -82,17 +80,10 @@ struct EngineStatusBlock: View {
                 .lineSpacing(2)
                 .fixedSize(horizontal: false, vertical: true)
                 .contentTransition(.opacity)
-            InkGround(height: 56)
-                .overlay(alignment: .bottomLeading) {
-                    if isBeating {
-                        InkBead()
-                            .padding(.leading, 60)
-                            .padding(.bottom, 3)
-                            .transition(.opacity)
-                    }
-                }
-                .padding(.top, 6)
         }
+        .padding(.vertical, 18)
+        .overlay(alignment: .top) { Hairline() }
+        .overlay(alignment: .bottom) { Hairline() }
         .animation(.smooth(duration: 0.3), value: model.runtimeState)
     }
 

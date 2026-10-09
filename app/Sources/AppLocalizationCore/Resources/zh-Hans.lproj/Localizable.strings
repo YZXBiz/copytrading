@@ -1973,3 +1973,5 @@
 "One call is waiting for you" = "有一条喊单在等你";
 "%lld calls are waiting for you" = "有 %lld 条喊单在等你";
 "Not traded" = "没交易";
+"Needs a look" = "需要看一下";
+"Stopped unexpectedly" = "意外停止";

@@ -25,11 +25,11 @@ struct AccountFeedGallery: View {
 
     private func stack(_ column: [AccountFeedItem]) -> some View {
         LazyVStack(spacing: 20) {
-            ForEach(column) { item in
+            ForEach(Array(column.enumerated()), id: \.element.id) { index, item in
                 let post = post(item)
                 AccountFeedTile(
                     item: item, directory: directory, isSelected: post != nil && post?.id == selectedPostID,
-                    open: post.map { post in { openPost(post.id) } })
+                    open: post.map { post in { openPost(post.id) } }, showsRule: index > 0)
             }
         }
     }

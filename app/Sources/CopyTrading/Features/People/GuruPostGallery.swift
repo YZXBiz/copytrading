@@ -22,8 +22,8 @@ struct GuruPostGallery: View {
 
     private func stack(_ column: [GuruFeed.Entry]) -> some View {
         LazyVStack(spacing: 20) {
-            ForEach(column) { entry in
-                GuruPostCard(entry: entry, guruName: guruName, selection: $selection)
+            ForEach(Array(column.enumerated()), id: \.element.id) { index, entry in
+                GuruPostCard(entry: entry, guruName: guruName, selection: $selection, showsRule: index > 0)
             }
         }
     }

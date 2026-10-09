@@ -28,7 +28,7 @@ struct AssistantEmptyState: View {
             .fixedSize(horizontal: false, vertical: true)
             .padding(.top, 12)
             .padding(.horizontal, 24)
-            InkGround(height: 56)
+            InkGround()
                 .padding(.horizontal, 24)
                 .padding(.top, 14)
             Group {

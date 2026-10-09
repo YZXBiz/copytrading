@@ -16,7 +16,9 @@ struct InkBead: View {
             .offset(y: -lift)
             .onChange(of: hop) {
                 guard !reduceMotion else { return }
-                withAnimation(.spring(response: 0.22, dampingFraction: 0.5)) { lift = 8 } completion: {
+                withAnimation(.spring(response: 0.22, dampingFraction: 0.5)) {
+                    lift = 8
+                } completion: {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { lift = 0 }
                 }
             }

@@ -1973,3 +1973,5 @@
 "One call is waiting for you" = "One call is waiting for you";
 "%lld calls are waiting for you" = "%lld calls are waiting for you";
 "Not traded" = "Not traded";
+"Needs a look" = "Needs a look";
+"Stopped unexpectedly" = "Stopped unexpectedly";

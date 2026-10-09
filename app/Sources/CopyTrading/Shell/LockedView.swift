@@ -32,7 +32,7 @@ struct LockedView: View {
             .fixedSize(horizontal: false, vertical: true)
             .padding(.top, 16)
             .padding(.horizontal, 40)
-            InkGround(height: 64)
+            InkGround()
                 .frame(width: 380)
                 .padding(.top, 36)
             Group {
