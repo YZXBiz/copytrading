@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// One part of a sheet: a hairline, its label in tracked capitals with an optional quiet line
-/// under it and an accessory at the trailing edge, then its rows, then a footnote.
+/// One part of a sheet: its label in tracked capitals with an optional quiet line under it and an
+/// accessory at the trailing edge, then its rows, then a footnote. Space sets sections apart; no
+/// line runs between them.
 struct SheetSection<Content: View, Accessory: View, Footer: View>: View {
     let title: String
     let detail: String?
@@ -22,7 +23,6 @@ struct SheetSection<Content: View, Accessory: View, Footer: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Hairline()
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
                     Eyebrow(title)
@@ -40,7 +40,7 @@ struct SheetSection<Content: View, Accessory: View, Footer: View>: View {
                 Spacer(minLength: 12)
                 accessory
             }
-            .padding(.top, 14)
+            .padding(.top, 30)
             .padding(.bottom, 6)
             VStack(alignment: .leading, spacing: 0) {
                 content

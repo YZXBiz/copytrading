@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// A native text field with no box: the text on one very light rule that turns to ink only while
-/// the field has focus. Typing, focus, and the field's accessibility stay the system's.
+/// A native text field with no box and no line at rest: the field being typed in gets an ink
+/// underline, so the only line is the one that says where the typing goes. Typing, focus, and the field's accessibility stay the system's.
 struct UnderlineField: ViewModifier {
     @FocusState private var isFocused: Bool
     @Environment(\.colorSchemeContrast) private var contrast
@@ -16,6 +16,7 @@ struct UnderlineField: ViewModifier {
             .overlay(alignment: .bottom) {
                 Rectangle()
                     .fill(isFocused ? Palette.ink : rule)
+                    .opacity(isFocused || contrast == .increased ? 1 : 0)
                     .frame(height: isFocused ? 1.5 : 1)
                     .accessibilityHidden(true)
             }
