@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// Choices as a row of tracked capitals, like a studio site's navigation, each with an optional
-/// count. The chosen one is in ink with a short drawn line under it that slides across when the
-/// choice changes, then rests.
+/// count. The chosen one is in ink with a short drawn line under it, the only line here, that
+/// slides across when the choice changes, then rests.
 struct TrackedSwitcher<Choice: Hashable & Identifiable>: View {
     let choices: [Choice]
     @Binding var selection: Choice
@@ -27,8 +27,6 @@ struct TrackedSwitcher<Choice: Hashable & Identifiable>: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(.bottom, 4)
-        .overlay(alignment: .bottom) { Hairline() }
     }
 
     private func label(_ choice: Choice) -> some View {
