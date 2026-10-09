@@ -462,35 +462,77 @@ def test_cleared_quarantine_audit_allows_later_ownership_resolution():
     assert store.load().quarantined_fills[late_order.client_id].unapplied_qty > 0
     assert not store.load().late_order_incidents[late_order.client_id].unresolved
 
+    # A share bought outside after the quarantine cleared settles from the broker's filled
+    # count at the next sync, with the quarantined fill left as it was.
     broker.holdings["ABC"] += Decimal("1")
     engine.reconcile(NOW + dt.timedelta(minutes=6))
-    incident = next(
-        incident
-        for incident in engine.ledger.snapshot().ownership_incidents.values()
-        if incident.symbol == "ABC" and not incident.resolved
-    )
-    lot_remaining = {
-        lot_id: lot.remaining_qty
-        for lot_id, lot in engine.ledger.snapshot().lots.items()
-        if lot.symbol == "ABC"
-    }
-    request = OwnershipResolutionRequest(
-        resolution_id="after-cleared-quarantine",
-        incident_id=incident.incident_id,
-        account_id="paper-demo",
-        symbol="ABC",
-        actor="operator",
-        reason="verified new external share",
-        broker_qty=engine.ledger.expected_position("ABC") + Decimal("1"),
-        external_qty=Decimal("1"),
-        lot_remaining=lot_remaining,
-    )
-    result = RecoveryApplication(
-        engine.ledger, broker, clock=lambda: NOW + dt.timedelta(minutes=7)
-    ).resolve_ownership(request)
-    assert result.request == request
+    engine.reconcile(NOW + dt.timedelta(minutes=7))
+    assert not engine.ledger.unresolved_ownership("ABC")
     assert store.load().quarantined_fills[late_order.client_id].unapplied_qty > 0
     assert engine.audit_positions().matched
+
+
+def _settled(engine):
+    return [
+        resolution.request
+        for resolution in engine.ledger.snapshot().ownership_resolutions.values()
+        if resolution.request.actor == "copytrading"
+    ]
+
+
+@pytest.mark.parametrize(
+    ("broker_qty", "reason", "external", "copied"),
+    [
+        ("153", "owner_bought_outside", "103", "50"),
+        ("120", "owner_sold_own_shares", "70", "50"),
+        ("40", "owner_sold_copied_shares", "0", "40"),
+    ],
+)
+def test_filled_count_changed_outside_settles_at_the_next_sync(
+    broker_qty, reason, external, copied
+):
+    """Shares bought or sold by hand settle from the broker's filled count once it has held for a
+    sync: copied shares the broker still holds stay copied, the rest are the owner's, and a count
+    below the copied shares takes the oldest buys as sold (ADR-0011)."""
+    _, broker, engine = mixed_account()
+    broker.holdings["ABC"] = Decimal(broker_qty)
+
+    engine.reconcile(NOW + dt.timedelta(seconds=1))
+    assert engine.ledger.unresolved_ownership("ABC")
+
+    engine.reconcile(NOW + dt.timedelta(seconds=16))
+    assert not engine.ledger.unresolved_ownership("ABC")
+    [request] = _settled(engine)
+    assert request.reason == reason
+    assert engine.ledger.snapshot().external_positions["ABC"].qty == Decimal(external)
+    assert engine.ledger.owned("ABC") == Decimal(copied)
+    assert engine.audit_positions().matched
+
+
+def test_outside_open_order_holds_the_sync_until_it_is_gone():
+    """An order the app didn't place can still move the count, so the stock waits for it."""
+    _, broker, engine = mixed_account()
+    broker.holdings["ABC"] = Decimal("153")
+    broker.orders["outside-buy"] = BrokerOrder(
+        id="broker-outside",
+        client_order_id="outside-buy",
+        symbol="ABC",
+        side="buy",
+        qty=Decimal(10),
+        filled_qty=Decimal(0),
+        filled_avg_price=None,
+        status="new",
+    ).model_dump(mode="json")
+
+    engine.reconcile(NOW + dt.timedelta(seconds=1))
+    engine.reconcile(NOW + dt.timedelta(seconds=16))
+    assert engine.ledger.unresolved_ownership("ABC")
+    assert not _settled(engine)
+
+    broker.orders["outside-buy"]["status"] = "canceled"
+    engine.reconcile(NOW + dt.timedelta(seconds=31))
+    assert not engine.ledger.unresolved_ownership("ABC")
+    assert [request.reason for request in _settled(engine)] == ["owner_bought_outside"]
 
 
 @pytest.mark.parametrize("problem", ["missing_valuation", "unknown_order"])
@@ -817,25 +859,22 @@ async def test_owner_cancellation_waits_for_resolution_commit_and_reopens(tmp_pa
     reopened.close()
 
 
-def test_a_mismatch_stays_open_while_it_lasts_and_closes_once_the_broker_matches_again():
+def test_shares_bought_outside_after_connecting_count_as_the_owners_at_the_next_sync():
     store = MemoryRepository()
     broker = FakeBroker()
     engine = engine_with_wide_limits(store, broker)
     engine.bind(NOW)
 
-    # Shares bought outside the app after it connected: the stock is held back until it is clear.
+    # Bought outside the app after it connected: the question opens, then settles once the
+    # filled count has held for a sync.
     broker.holdings["ABC"] = Decimal("3")
     engine.reconcile(NOW + dt.timedelta(minutes=1))
-    engine.reconcile(NOW + dt.timedelta(minutes=2))
     assert engine.ledger.unresolved_ownership("ABC")
-
-    # Sold again outside the app: nothing is left to allocate, so the incident closes by itself.
-    broker.holdings["ABC"] = Decimal("0")
-    engine.reconcile(NOW + dt.timedelta(minutes=3))
+    engine.reconcile(NOW + dt.timedelta(minutes=2))
     assert not engine.ledger.unresolved_ownership("ABC")
     [resolution] = store.load().ownership_resolutions.values()
-    assert resolution.request.reason == "broker_matches_again"
-    assert resolution.request.external_qty == 0
+    assert resolution.request.reason == "owner_bought_outside"
+    assert resolution.request.external_qty == 3
 
 
 def test_owner_selling_their_own_shares_of_a_stock_with_nothing_copied_closes_by_itself():
@@ -858,13 +897,3 @@ def test_owner_selling_their_own_shares_of_a_stock_with_nothing_copied_closes_by
     assert resolution.request.reason == "owner_sold_own_shares"
     assert resolution.request.external_qty == 0
     assert engine.ledger.snapshot().external_positions["ABC"].qty == 0
-
-
-def test_a_shortfall_beside_copied_shares_still_waits_for_the_owner():
-    _, broker, engine = mixed_account()
-    broker.holdings["ABC"] -= Decimal("10")
-    engine.reconcile(NOW + dt.timedelta(minutes=1))
-    engine.reconcile(NOW + dt.timedelta(minutes=2))
-    engine.reconcile(NOW + dt.timedelta(minutes=3))
-
-    assert engine.ledger.unresolved_ownership("ABC")

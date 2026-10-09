@@ -420,11 +420,10 @@ async def test_symbol_incident_blocks_only_affected_symbol_after_manual_resume(t
             NOW,
         )
 
-        # An AAPL share appears outside the app and stays: its incident is open while it lasts
-        # (one that matches again closes by itself).
+        # An AAPL share appears outside the app: its question is open until the next sync
+        # settles it from the filled count, and meanwhile only AAPL waits.
         broker.holdings["AAPL"] = Decimal("1")
-        await owner.cycle(NOW + dt.timedelta(seconds=1), halted=False)
-        observation = await owner.cycle(NOW + dt.timedelta(seconds=2), halted=False)
+        observation = await owner.cycle(NOW + dt.timedelta(seconds=1), halted=False)
         incidents = tuple(observation.ledger.ownership_incidents.values())
         assert any(incident.symbol == "AAPL" and not incident.resolved for incident in incidents)
 

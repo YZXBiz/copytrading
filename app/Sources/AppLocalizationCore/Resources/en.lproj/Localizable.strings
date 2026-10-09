@@ -2063,3 +2063,7 @@
 "An order in Alpaca that CopyTrading didn't place is still open" = "An order in Alpaca that CopyTrading didn't place is still open";
 "Let it fill or cancel it in Alpaca. Until it's gone, CopyTrading can't settle holdings." = "Let it fill or cancel it in Alpaca. Until it's gone, CopyTrading can't settle holdings.";
 "CopyTrading checks again on the next sync." = "CopyTrading checks again on the next sync.";
+"You bought %@ of %@ outside CopyTrading. They count as yours; CopyTrading won't sell them." = "You bought %@ of %@ outside CopyTrading. They count as yours; CopyTrading won't sell them.";
+"You sold %@ of your own %@ outside CopyTrading. The count is updated." = "You sold %@ of your own %@ outside CopyTrading. The count is updated.";
+"%@ of copied %@ were sold outside CopyTrading. The oldest buys count as sold." = "%@ of copied %@ were sold outside CopyTrading. The oldest buys count as sold.";
+"%@ at Alpaca matches CopyTrading's count again" = "%@ at Alpaca matches CopyTrading's count again";

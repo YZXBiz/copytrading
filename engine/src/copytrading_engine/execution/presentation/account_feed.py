@@ -52,6 +52,9 @@ class AccountFeedItem(Value):
     order_id: str | None = None
     # The limits the owner changed, for a limits_changed row.
     changes: tuple[LimitChange, ...] = ()
+    # Why a holdings count was settled, for a settled row: the owner answered, or the broker's
+    # filled count showed shares bought or sold outside the app (ADR-0011).
+    reason: str | None = None
 
 
 class AccountFeedPage(Value):
@@ -95,13 +98,22 @@ def _item(seq: int, event: JournalEvent, snapshot: LedgerSnapshot) -> AccountFee
                 order_id=order.client_order_id,
             )
         case OwnershipResolved(resolution=resolution):
+            request = resolution.request
+            incident = snapshot.ownership_incidents.get(request.incident_id)
+            # How far the broker's count moved from the app's, which is what the owner did.
+            moved = (
+                abs(request.broker_qty - incident.expected_qty)
+                if incident is not None
+                else request.external_qty
+            )
             return AccountFeedItem(
                 sequence=seq,
                 at=event.at,
                 kind="settled",
                 source="you",
-                symbol=resolution.request.symbol,
-                shares=resolution.external_qty,
+                symbol=request.symbol,
+                shares=moved,
+                reason=request.reason,
             )
         case LimitsChanged(changes=changes):
             return AccountFeedItem(

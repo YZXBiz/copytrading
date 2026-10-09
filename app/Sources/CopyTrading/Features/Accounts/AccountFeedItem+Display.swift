@@ -31,10 +31,27 @@ extension AccountFeedItem {
                 : L10n.string("Alpaca rejected a sale of %@ of %@", count, stock)
         case "paused": return L10n.string("You paused new buys")
         case "resumed": return L10n.string("You resumed new buys")
-        case "settled": return L10n.string("You settled the holdings review for %@", stock)
+        case "settled": return settledSentence(stock: stock, count: count)
         case "limits_changed":
             return L10n.string("You changed limits: %@", changes.map(Self.phrase).joined(separator: L10n.string(", ")))
         default: return L10n.string(Humanize.code(kind))
+        }
+    }
+
+    /// A settled holdings count, said as what happened at the broker: shares bought or sold
+    /// outside CopyTrading and how they now count, or the owner's own answer.
+    @MainActor private func settledSentence(stock: String, count: String) -> String {
+        switch reason {
+        case "owner_bought_outside":
+            L10n.string("You bought %@ of %@ outside CopyTrading. They count as yours; CopyTrading won't sell them.", count, stock)
+        case "owner_sold_own_shares":
+            L10n.string("You sold %@ of your own %@ outside CopyTrading. The count is updated.", count, stock)
+        case "owner_sold_copied_shares":
+            L10n.string("%@ of copied %@ were sold outside CopyTrading. The oldest buys count as sold.", count, stock)
+        case "broker_matches_again":
+            L10n.string("%@ at Alpaca matches CopyTrading's count again", stock)
+        default:
+            L10n.string("You settled the holdings review for %@", stock)
         }
     }
 

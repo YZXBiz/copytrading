@@ -572,10 +572,13 @@ public struct AccountFeedItem: Codable, Equatable, Identifiable, Sendable {
     public let orderID: String?
     /// The limits the owner changed, for a `limits_changed` row.
     public let changes: [AccountLimitChange]
+    /// Why a `settled` row's holdings count was settled: the owner answered, or the broker's
+    /// filled count showed shares bought or sold outside CopyTrading.
+    public let reason: String?
     public var id: Int { sequence }
 
     enum CodingKeys: String, CodingKey {
-        case sequence, at, kind, source, side, symbol, shares, price, amount, changes
+        case sequence, at, kind, source, side, symbol, shares, price, amount, changes, reason
         case guruID = "guru_id"
         case messageID = "message_id"
         case orderID = "order_id"

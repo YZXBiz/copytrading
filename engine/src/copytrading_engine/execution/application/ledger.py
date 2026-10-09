@@ -637,13 +637,22 @@ class TradingLedger:
                 ),
             )
 
-    def open_ownership_incidents(self, audit: PositionAudit, now: dt.datetime) -> None:
-        # The audit predates what was just closed, so those stocks wait for the next one.
-        closed = self._close_matched_incidents(audit, now)
+    def open_ownership_incidents(
+        self,
+        audit: PositionAudit,
+        now: dt.datetime,
+        outside_orders: frozenset[str] = frozenset(),
+    ) -> None:
+        """Open a question for each stock whose broker count left what the ledger expects, and
+        settle every earlier one whose count has held still since (ADR-0011). `outside_orders` are
+        the stocks with an open broker order the app didn't place; those wait, since that order
+        can still move the count."""
+        # The audit predates what was just settled, so those stocks wait for the next one.
+        settled = self._settle_incidents(audit, now, outside_orders)
         for comparison in audit.positions:
             if (
                 not comparison.mismatched
-                or comparison.symbol in closed
+                or comparison.symbol in settled
                 or self.unresolved_ownership(comparison.symbol)
             ):
                 continue
@@ -672,60 +681,75 @@ class TradingLedger:
                 JournalEvent(at=now, payload=OwnershipIncidentOpened(incident=incident)),
             )
 
-    def _close_matched_incidents(self, audit: PositionAudit, now: dt.datetime) -> set[str]:
-        """A mismatch closes by itself when nothing about it is ambiguous: the broker holds
-        exactly what the app expects again (shares bought outside were sold again), or the stock
-        has no copied shares left and the broker holds fewer than the owner's own count (the
-        owner sold their own shares). Either way nothing is left to allocate, and an open incident
-        would keep refusing every call for the stock. Shares that appear, or a shortfall beside
-        copied shares, still wait for the owner."""
+    def _settle_incidents(
+        self, audit: PositionAudit, now: dt.datetime, outside_orders: frozenset[str]
+    ) -> set[str]:
+        """Settle each open question from the broker's filled count, once that count has held
+        still for a sync and no order in the stock is in flight (the app's own, an uncertain one,
+        or one placed outside). Copied shares the broker still holds stay copied and the rest
+        count as the owner's own; a broker count below the copied shares means copied shares were
+        sold outside the app, oldest buys first, the way the app's own sells take them."""
         account_id = self.account_id
-        closed: set[str] = set()
+        settled: set[str] = set()
         if account_id is None:
-            return closed
+            return settled
         compared = {comparison.symbol: comparison for comparison in audit.positions}
         for incident in tuple(self._snapshot.ownership_incidents.values()):
-            if incident.resolved:
+            if incident.resolved or now <= incident.observed_at:
+                continue
+            symbol = incident.symbol
+            if (
+                symbol in outside_orders
+                or self.pending(symbol)
+                or any(
+                    item.symbol == symbol and item.unresolved
+                    for item in self._snapshot.late_order_incidents.values()
+                )
+            ):
                 continue
             lots = {
                 key: lot.remaining_qty
                 for key, lot in self._snapshot.lots.items()
-                if lot.symbol == incident.symbol
+                if lot.symbol == symbol
             }
-            comparison = compared.get(incident.symbol)
-            matches = comparison is None or comparison.actual == comparison.expected
-            owner_sold_own = (
-                comparison is not None
-                and comparison.actual < comparison.expected
-                and not any(lots.values())
-            )
-            if not (matches or owner_sold_own):
-                continue
-            if self.pending(incident.symbol) or any(
-                item.symbol == incident.symbol and item.unresolved
-                for item in self._snapshot.late_order_incidents.values()
-            ):
-                continue
+            comparison = compared.get(symbol)
             broker_qty = comparison.actual if comparison is not None else Decimal(0)
-            external_qty = broker_qty - sum(lots.values(), Decimal(0))
-            if external_qty < 0 or now <= incident.observed_at:
-                continue
+            expected = comparison.expected if comparison is not None else broker_qty
+            copied = sum(lots.values(), Decimal(0))
+            remaining = dict(lots)
+            if broker_qty >= copied:
+                external_qty = broker_qty - copied
+            else:
+                external_qty = Decimal(0)
+                missing = copied - broker_qty
+                for key, held in lots.items():
+                    taken = min(held, missing)
+                    remaining[key] = held - taken
+                    missing -= taken
+            if broker_qty == expected:
+                reason = "broker_matches_again"
+            elif broker_qty > expected:
+                reason = "owner_bought_outside"
+            elif broker_qty >= copied:
+                reason = "owner_sold_own_shares"
+            else:
+                reason = "owner_sold_copied_shares"
             self.resolve_ownership(
                 OwnershipResolutionRequest(
-                    resolution_id=f"matched-{incident.incident_id}",
+                    resolution_id=f"synced-{incident.incident_id}",
                     incident_id=incident.incident_id,
                     account_id=account_id,
-                    symbol=incident.symbol,
+                    symbol=symbol,
                     actor="copytrading",
-                    reason="broker_matches_again" if matches else "owner_sold_own_shares",
+                    reason=reason,
                     broker_qty=broker_qty,
                     external_qty=external_qty,
-                    lot_remaining=lots,
+                    lot_remaining=remaining,
                 ),
                 now,
             )
-            closed.add(incident.symbol)
-        return closed
+            settled.add(symbol)
+        return settled
 
     def resolve_ownership(
         self, request: OwnershipResolutionRequest, checked_at: dt.datetime

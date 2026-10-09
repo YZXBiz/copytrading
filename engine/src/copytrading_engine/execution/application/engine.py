@@ -220,7 +220,22 @@ class CopyEngine:
             update = self.broker.lookup(client_id)
             if update is not None:
                 self.ledger.apply_order(client_id, update, now)
-        self.ledger.open_ownership_incidents(self.audit_positions(), now)
+        self.ledger.open_ownership_incidents(self.audit_positions(), now, self._outside_orders())
+
+    def _outside_orders(self) -> frozenset[str]:
+        """Stocks with an open broker order the app didn't place. Read only while a holdings
+        question is open, since only settling one needs it."""
+        if not any(
+            not incident.resolved
+            for incident in self.ledger.snapshot().ownership_incidents.values()
+        ):
+            return frozenset()
+        known = {order.client_id for order in self.pending()}
+        return frozenset(
+            order.symbol
+            for order in self.broker.open_orders()
+            if order.client_order_id not in known
+        )
 
     def cancel(self, order: OrderRecord, now: dt.datetime, reason: CancelReason) -> None:
         if not order.broker_id or not is_cancelable(order.status):
