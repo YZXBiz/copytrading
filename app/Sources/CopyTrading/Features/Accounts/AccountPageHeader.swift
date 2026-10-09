@@ -126,20 +126,24 @@ struct AccountPageHeader: View {
                     .controlSize(.small)
                     .help(L10n.string("Saving account command"))
             }
-            if entriesOff {
-                Button(L10n.string(neverEnabled ? "Enable Entries" : "Resume Entries"), systemImage: "play.fill", action: toggleEntries)
-                    .buttonStyle(PageButtonStyle(isProminent: true))
-                    .disabled(!canControl)
-                    .help(L10n.string("Allow new entry orders for this account."))
-                    .labelStyle(.titleOnly)
-                    .accessibilityIdentifier("account.entries")
-            } else {
-                Button(L10n.string("Pause Entries"), systemImage: "pause.fill", action: toggleEntries)
-                    .buttonStyle(PageButtonStyle())
-                    .disabled(!canControl)
-                    .help(L10n.string("Stop new entry orders. Exits still follow the account policy."))
-                    .labelStyle(.titleOnly)
-                    .accessibilityIdentifier("account.entries")
+            // Entries only mean something while the engine holds the account, so the switch waits
+            // until copying runs.
+            if account.activeConfiguration {
+                if entriesOff {
+                    Button(L10n.string(neverEnabled ? "Enable Entries" : "Resume Entries"), systemImage: "play.fill", action: toggleEntries)
+                        .buttonStyle(PageButtonStyle(isProminent: true))
+                        .disabled(!canControl)
+                        .help(L10n.string("Allow new entry orders for this account."))
+                        .labelStyle(.titleOnly)
+                        .accessibilityIdentifier("account.entries")
+                } else {
+                    Button(L10n.string("Pause Entries"), systemImage: "pause.fill", action: toggleEntries)
+                        .buttonStyle(PageButtonStyle())
+                        .disabled(!canControl)
+                        .help(L10n.string("Stop new entry orders. Exits still follow the account policy."))
+                        .labelStyle(.titleOnly)
+                        .accessibilityIdentifier("account.entries")
+                }
             }
             AccountPageMenu(account: account, canControl: canControl, isInSetup: isInSetup, model: model, feature: feature)
         }

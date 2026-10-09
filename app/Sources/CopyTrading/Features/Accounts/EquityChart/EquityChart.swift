@@ -149,14 +149,14 @@ struct EquityChart: View {
             }
     }
 
-    /// Kept at the plot's height so data arriving does not move the page.
+    /// A short line while there is no curve, so an idle account doesn't open on a blank band.
     private var emptyState: some View {
         InkEmptyState(
             message: history == nil
                 ? L10n.string("The broker's equity curve appears here while copying is on.")
                 : L10n.string("The broker has no equity points for this %@.", L10n.string(window.range == .day ? "Day" : "Range"))
         )
-        .frame(height: plotHeight, alignment: .bottom)
+        .frame(height: 72, alignment: .bottom)
     }
 
     private func choose(_ chosen: EquityHistoryWindow) {
