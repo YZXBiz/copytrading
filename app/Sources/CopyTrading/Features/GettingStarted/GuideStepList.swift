@@ -1,17 +1,16 @@
 import SwiftUI
 
 /// The five setup steps as a plain numbered list: a tracked number, the step and what it is for,
-/// and at the trailing edge either that it is done or, for the next one, the way there.
+/// and at the trailing edge either that it is done or, for the next one, the way there. The column
+/// of numbers lines the steps up, so space parts them, not rules.
 struct GuideStepList: View {
     let progress: SetupProgress
     let open: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Hairline()
+        VStack(alignment: .leading, spacing: 4) {
             ForEach(SetupStep.allCases) { step in
                 row(step)
-                Hairline()
             }
         }
     }

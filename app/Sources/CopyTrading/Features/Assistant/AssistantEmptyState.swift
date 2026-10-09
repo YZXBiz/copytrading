@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The panel before the first question: "Ask about / your trading" in the display face over the
-/// ink dot's ground, then four questions to start with between hairlines, or, before a model is set
+/// ink dot's ground, then four questions to start with, a hairline only between them, or, before a model is set
 /// up, where to choose one.
 struct AssistantEmptyState: View {
     let hasModel: Bool
@@ -54,11 +54,7 @@ struct AssistantEmptyState: View {
 
     private var suggestionList: some View {
         VStack(spacing: 0) {
-            Hairline()
             ForEach(Array(suggestions.enumerated()), id: \.offset) { index, suggestion in
-                if index > 0 {
-                    Hairline()
-                }
                 Button {
                     ask(suggestion)
                 } label: {
@@ -86,7 +82,6 @@ struct AssistantEmptyState: View {
                 .accessibilityIdentifier("assistant.suggestion.\(index)")
             }
         }
-        .overlay(alignment: .bottom) { Hairline() }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovered)
         .padding(.horizontal, 24)
     }

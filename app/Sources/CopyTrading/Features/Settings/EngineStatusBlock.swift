@@ -82,8 +82,6 @@ struct EngineStatusBlock: View {
                 .contentTransition(.opacity)
         }
         .padding(.vertical, 18)
-        .overlay(alignment: .top) { Hairline() }
-        .overlay(alignment: .bottom) { Hairline() }
         .animation(.smooth(duration: 0.3), value: model.runtimeState)
     }
 

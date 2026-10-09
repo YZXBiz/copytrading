@@ -24,9 +24,6 @@ struct SidebarStatusFooter: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Hairline()
-                .padding(.horizontal, 10)
-                .padding(.bottom, 8)
             ForEach(Self.pages, id: \.self) { screen in
                 SidebarRow(
                     title: screen.title,

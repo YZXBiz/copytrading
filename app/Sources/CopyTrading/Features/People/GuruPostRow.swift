@@ -69,6 +69,7 @@ struct GuruPostRow: View {
         let kinds = entry.accounts.map(\.kind)
         if kinds.contains(.traded) { return .traded }
         if kinds.contains(.waiting) { return .waiting }
+        if kinds.contains(.working) { return .working }
         return .quiet
     }
 

@@ -71,8 +71,11 @@ struct AccountEditorSheet: View {
     private var accountSection: some View {
         SheetSection(L10n.string("Account"), detail: L10n.string("Letters, digits, “-” and “_”. Paper trades pretend money.")) {
             SheetField(title: L10n.string("Name")) {
-                TextField(L10n.string("Name"), text: $account.name, prompt: Text(L10n.string("e.g. %@", "primary")))
-                    .accessibilityLabel(L10n.string("Account name"))
+                TextField(
+                    L10n.string("Name"), text: $account.name,
+                    prompt: Text(L10n.string("e.g. %@", "primary")).foregroundStyle(Palette.tertiaryInk)
+                )
+                .accessibilityLabel(L10n.string("Account name"))
             }
             SheetChoices(
                 label: L10n.string("Environment"),
@@ -91,14 +94,16 @@ struct AccountEditorSheet: View {
             SheetField(title: L10n.string("API key")) {
                 SecureField(
                     L10n.string("API key"), text: $account.key,
-                    prompt: Text(L10n.string(hasSavedCredentials ? "Leave blank to keep the saved key" : "Required"))
+                    prompt: Text(L10n.string(hasSavedCredentials ? "Leave blank to keep the saved key" : "Required")).foregroundStyle(
+                        Palette.tertiaryInk)
                 )
                 .accessibilityLabel(L10n.string("Alpaca API key"))
             }
             SheetField(title: L10n.string("API secret")) {
                 SecureField(
                     L10n.string("API secret"), text: $account.secret,
-                    prompt: Text(L10n.string(hasSavedCredentials ? "Leave blank to keep the saved secret" : "Required"))
+                    prompt: Text(L10n.string(hasSavedCredentials ? "Leave blank to keep the saved secret" : "Required")).foregroundStyle(
+                        Palette.tertiaryInk)
                 )
                 .accessibilityLabel(L10n.string("Alpaca API secret"))
             }

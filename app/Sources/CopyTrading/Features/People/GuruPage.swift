@@ -49,11 +49,10 @@ struct GuruPage: View {
             .scrollContentBackground(.visible)
             .frame(minWidth: 460)
             if let selectedItem {
-                Rectangle()
-                    .fill(Palette.hairline)
-                    .frame(width: 1)
+                // The post sits on the canvas grey beside the white page: tone parts them, not a rule.
                 PostDetailPane(item: selectedItem, model: model, feature: feature, close: closePost)
                     .frame(width: 460)
+                    .background(Palette.canvas)
                     .transition(reduceMotion ? .opacity : .move(edge: .trailing).combined(with: .opacity))
             }
         }

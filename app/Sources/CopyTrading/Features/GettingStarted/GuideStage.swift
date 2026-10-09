@@ -70,7 +70,7 @@ struct GuideStage: View {
             flag.addLine(to: CGPoint(x: 2, y: 9))
             flag.closeSubpath()
             if isDone {
-                context.fill(flag, with: .color(Palette.butter))
+                context.fill(flag, with: .color(Palette.sage))
             }
             context.stroke(flag, with: .color(Palette.ink), style: InkStroke.style)
         }

@@ -53,7 +53,7 @@ struct SettingsSummaryCard: View {
         }
         .padding(.bottom, 16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .overlay(alignment: .bottom) { Hairline() }
+
         .accessibilityElement(children: .combine)
     }
 }

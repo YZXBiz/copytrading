@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The top of a connect sheet, on the page with a hairline under it: one sentence on where the key
+/// The top of a connect sheet, on the page with space under it, so the sections' ticks start what follows: one sentence on where the key
 /// comes from, a button that opens that page, and the full steps a click away.
 struct ConnectionGuideCard: View {
     let article: HelpArticle
@@ -24,6 +24,5 @@ struct ConnectionGuideCard: View {
         }
         .padding(.bottom, 16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .overlay(alignment: .bottom) { Hairline() }
     }
 }

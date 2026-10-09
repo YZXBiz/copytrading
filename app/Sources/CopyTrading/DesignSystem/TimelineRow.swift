@@ -64,7 +64,11 @@ struct TimelineRow<Gutter: View, Content: View, Trailing: View>: View {
             switch mark {
             case .traded:
                 Circle()
-                    .fill(Palette.butter)
+                    .fill(Palette.sage)
+                    .overlay(Circle().strokeBorder(Palette.ink, lineWidth: InkStroke.width))
+            case .working:
+                Circle()
+                    .fill(Palette.sky)
                     .overlay(Circle().strokeBorder(Palette.ink, lineWidth: InkStroke.width))
             case .waiting:
                 Circle()

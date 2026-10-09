@@ -1,8 +1,9 @@
 import DesktopCore
 import SwiftUI
 
-/// The account's limits in one outlined strip: how much of today's loss and of its stock budget
-/// is used, the per-order and per-stock caps, and a way to change them.
+/// The account's limits on one line: how much of today's loss and of its stock budget is used, a
+/// gap, then the per-order and per-stock caps and a way to change them. The meters
+/// carry their own ink, so no rules frame the strip.
 struct AccountLimitsStrip: View {
     let account: AccountOverview
     let policy: TradingAccountPolicy
@@ -24,8 +25,6 @@ struct AccountLimitsStrip: View {
             }
         }
         .padding(.vertical, 18)
-        .overlay(alignment: .top) { Hairline() }
-        .overlay(alignment: .bottom) { Hairline() }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.string("Limits"))
     }
@@ -33,7 +32,7 @@ struct AccountLimitsStrip: View {
     @ViewBuilder
     private var items: some View {
         meters
-        Hairline(vertical: true).frame(height: 28)
+        Spacer().frame(width: 12)
         caps
     }
 

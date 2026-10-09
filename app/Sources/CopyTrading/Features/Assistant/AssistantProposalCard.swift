@@ -15,7 +15,6 @@ struct AssistantProposalCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Hairline()
             HStack(spacing: 6) {
                 Image(systemName: isWaiting ? "hand.raised.fill" : statusSymbol)
                     .font(.system(size: 10, weight: .semibold))
@@ -49,7 +48,7 @@ struct AssistantProposalCard: View {
         }
         .padding(.bottom, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .overlay(alignment: .bottom) { Hairline() }
+
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.string("%@: %@", status, question))
     }

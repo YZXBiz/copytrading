@@ -111,13 +111,13 @@ struct ConnectionEditor: View {
                 row("Channel IDs") {
                     TextField(
                         L10n.string("Channel IDs"), text: $model.setupDraft.channels,
-                        prompt: Text(L10n.string("Comma-separated Discord channel IDs")))
+                        prompt: Text(L10n.string("Comma-separated Discord channel IDs")).foregroundStyle(Palette.tertiaryInk))
                 }
             }
             row("Allowed authors") {
                 TextField(
                     L10n.string("Allowed authors"), text: $model.setupDraft.authors,
-                    prompt: Text(L10n.string("Optional, comma-separated user IDs")))
+                    prompt: Text(L10n.string("Optional, comma-separated user IDs")).foregroundStyle(Palette.tertiaryInk))
             }
             toured(.discordToken) {
                 row("Discord token") {
@@ -149,7 +149,8 @@ struct ConnectionEditor: View {
         case .alerts:
             row("Chat ID") {
                 TextField(
-                    L10n.string("Chat ID"), text: $model.setupDraft.notificationChatID, prompt: Text(L10n.string("From %@", "@userinfobot"))
+                    L10n.string("Chat ID"), text: $model.setupDraft.notificationChatID,
+                    prompt: Text(L10n.string("From %@", "@userinfobot")).foregroundStyle(Palette.tertiaryInk)
                 )
             }
             row("Bot token") {

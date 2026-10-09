@@ -1,9 +1,9 @@
 import SwiftUI
 
 /// The small ink mark in front of an outcome sentence, so how a thing ended reads before its words:
-/// a solid ink disc with a tick when it went through, the butter bead while it is still going, an
-/// amber ring while it waits on the owner, and a hollow ring when it did not happen (a dash) or
-/// failed (a cross). Each has its own shape, so the mark never depends on colour alone.
+/// a sage disc with an ink tick when it went through, the butter bead while it is still going, an
+/// amber ring while it waits on the owner, a blush disc with a cross when it failed, and a hollow
+/// ring with a dash when it did not happen. Each has its own shape, so the mark never depends on colour alone.
 struct OutcomeMark: View {
     let tone: StatusTone
     var size: CGFloat = 15
@@ -19,11 +19,12 @@ struct OutcomeMark: View {
         switch tone {
         case .positive:
             Circle()
-                .fill(Palette.ink)
+                .fill(Palette.sage)
+                .overlay(Circle().strokeBorder(Palette.ink, lineWidth: InkStroke.width))
                 .overlay {
                     Image(systemName: "checkmark")
-                        .font(.system(size: size * 0.5, weight: .heavy))
-                        .foregroundStyle(Palette.page)
+                        .font(.system(size: size * 0.46, weight: .heavy))
+                        .foregroundStyle(Palette.ink)
                 }
         case .neutral:
             InkBead()
@@ -33,7 +34,8 @@ struct OutcomeMark: View {
                 .overlay(Circle().fill(Palette.amber).frame(width: size * 0.3, height: size * 0.3))
         case .critical:
             Circle()
-                .strokeBorder(Palette.ink, lineWidth: InkStroke.width)
+                .fill(Palette.blush)
+                .overlay(Circle().strokeBorder(Palette.ink, lineWidth: InkStroke.width))
                 .overlay {
                     Image(systemName: "xmark")
                         .font(.system(size: size * 0.42, weight: .bold))

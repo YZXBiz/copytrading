@@ -1,7 +1,7 @@
 import DesktopCore
 import SwiftUI
 
-/// One idea as a plain note under a hairline: a tracked number, a title, a short line, and "Show
+/// One idea as a plain note: an ink tick and a tracked number, a title, a short line, and "Show
 /// Steps", which opens the steps in a popover.
 struct ConnectionIdeaCard: View {
     let idea: ConnectionIdea
@@ -16,9 +16,10 @@ struct ConnectionIdeaCard: View {
     var body: some View {
         Button(action: toggle) {
             VStack(alignment: .leading, spacing: 10) {
-                Hairline()
-                    .padding(.bottom, 8)
-                Eyebrow(String(format: "%02d", number))
+                HStack(spacing: 10) {
+                    SectionMark()
+                    Eyebrow(String(format: "%02d", number))
+                }
                 Text(idea.title)
                     .font(DesignTokens.cardTitle)
                     .tracking(DesignTokens.listHeadingTracking)

@@ -55,7 +55,7 @@ struct PositionsTable: View {
         } else {
             VStack(spacing: 0) {
                 header
-                Hairline()
+                    .padding(.bottom, 4)
                 ForEach(positions) { position in
                     PositionRow(
                         position: position,
@@ -84,9 +84,6 @@ struct PositionsTable: View {
                         .padding(.leading, PositionRow.lotInset)
                         .padding(.bottom, 6)
                         .transition(.opacity)
-                    }
-                    if position.id != positions.last?.id {
-                        Hairline()
                     }
                 }
             }

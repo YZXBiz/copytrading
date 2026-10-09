@@ -46,9 +46,6 @@ struct AccountNeedsYou: View {
                 }
                 VStack(spacing: 0) {
                     ForEach(Array(waiting.enumerated()), id: \.element.source.id) { index, call in
-                        if index > 0 {
-                            Hairline()
-                        }
                         AccountNeedsYouRow(
                             call: call,
                             guruName: directory.name(for: call.source.guruID),
@@ -60,7 +57,6 @@ struct AccountNeedsYou: View {
                         )
                     }
                 }
-                .overlay(alignment: .top) { Hairline() }
             }
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("account.needsYou")

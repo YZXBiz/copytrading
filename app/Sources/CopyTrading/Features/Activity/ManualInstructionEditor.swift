@@ -78,7 +78,7 @@ struct ManualInstructionEditor: View {
                 }
             }
         } else {
-            TextField(L10n.string("Ticker"), text: $draft.symbol, prompt: Text(L10n.string("Ticker")))
+            TextField(L10n.string("Ticker"), text: $draft.symbol, prompt: Text(L10n.string("Ticker")).foregroundStyle(Palette.tertiaryInk))
                 .textFieldStyle(.plain)
                 .font(DisplayFont.font(size: 22, weight: .medium, relativeTo: .title3))
                 .foregroundStyle(Palette.ink)
@@ -190,7 +190,7 @@ struct ManualInstructionEditor: View {
                 }
             }
             if other {
-                TextField(L10n.string("Price"), text: $draft.price, prompt: Text(L10n.string("Price")))
+                TextField(L10n.string("Price"), text: $draft.price, prompt: Text(L10n.string("Price")).foregroundStyle(Palette.tertiaryInk))
                     .textFieldStyle(.plain)
                     .font(DesignTokens.bodyEmphasis)
                     .monospacedDigit()
@@ -210,9 +210,9 @@ struct ManualInstructionEditor: View {
         return L10n.string("≈ %@", Humanize.usd(marketPrice))
     }
 
-    /// A field's one line, drawn only while it is being edited or still empty.
+    /// A field's writing line: solid ink while it is being edited, dotted while it is still empty.
     private func fieldLine(_ isShown: Bool) -> some View {
-        Hairline().opacity(isShown ? 1 : 0)
+        WritingLine(isActive: isShown)
     }
 
     // MARK: Changes

@@ -42,7 +42,7 @@ struct SetupImportSheet: View {
             ForEach(lines, id: \.self) { line in
                 HStack(spacing: 12) {
                     Circle()
-                        .fill(isDone ? Palette.butter : Color.clear)
+                        .fill(isDone ? Palette.sage : Color.clear)
                         .overlay(Circle().strokeBorder(isDone ? Palette.ink : Palette.tertiaryInk, lineWidth: InkStroke.width))
                         .frame(width: 11, height: 11)
                         .accessibilityHidden(true)

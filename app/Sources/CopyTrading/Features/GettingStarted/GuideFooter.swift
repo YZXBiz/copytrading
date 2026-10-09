@@ -5,11 +5,9 @@ struct GuideFooter: View {
     let model: AppModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Hairline()
-            HStack(spacing: 16) {
-                GuideFooterLinks(model: model)
-            }
+        HStack(spacing: 16) {
+            GuideFooterLinks(model: model)
         }
+        .padding(.top, 14)
     }
 }

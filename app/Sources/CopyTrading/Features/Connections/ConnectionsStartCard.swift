@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The foot of Connections while there is something to start, between hairlines: how far the
+/// The foot of Connections while there is something to start, set apart by space: how far the
 /// setup has come, and the one Start Copying that checks every connection and starts. Results stay
 /// a click away.
 struct ConnectionsStartCard: View {
@@ -69,8 +69,6 @@ struct ConnectionsStartCard: View {
         }
         .buttonStyle(PageButtonStyle())
         .padding(.vertical, 20)
-        .overlay(alignment: .top) { Hairline() }
-        .overlay(alignment: .bottom) { Hairline() }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.string("Start copying"))
     }

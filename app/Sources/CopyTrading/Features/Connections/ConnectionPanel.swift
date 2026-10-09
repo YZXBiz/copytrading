@@ -12,7 +12,6 @@ struct ConnectionPanel<Content: View>: View {
     @ViewBuilder let content: Content
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.colorSchemeContrast) private var contrast
-    @Environment(\.displayScale) private var displayScale
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -39,11 +38,6 @@ struct ConnectionPanel<Content: View>: View {
             .padding(.horizontal, 20)
             .padding(.top, 18)
             .padding(.bottom, 14)
-
-            Rectangle()
-                .fill(Palette.hairline)
-                .frame(height: 1 / displayScale)
-                .padding(.horizontal, 20)
 
             content
                 .padding(20)

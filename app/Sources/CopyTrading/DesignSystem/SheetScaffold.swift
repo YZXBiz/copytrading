@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Every sheet's frame: what it edits in tracked capitals, its name in the display face and a quiet
 /// lede, the content on white, and one bar at the bottom whose only black action is the sheet's
-/// answer. No grey grouped panels; sections are ruled with hairlines (`SheetSection`).
+/// answer. No grey panels and no rules; sections open with an ink tick (`SheetSection`).
 struct SheetScaffold<Content: View, Leading: View, Actions: View>: View {
     var kind: String?
     let title: String
@@ -26,7 +26,6 @@ struct SheetScaffold<Content: View, Leading: View, Actions: View>: View {
                 page
                     .fixedSize(horizontal: false, vertical: true)
             }
-            Hairline()
             HStack(spacing: 10) {
                 leading
                 Spacer(minLength: 12)

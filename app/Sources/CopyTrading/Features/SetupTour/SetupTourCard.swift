@@ -56,10 +56,7 @@ struct SetupTourCard: View {
                     .foregroundStyle(Palette.tertiaryInk)
             }
             .padding(.top, 12)
-            Rectangle()
-                .fill(Palette.hairline)
-                .frame(height: 0.5)
-                .padding(.vertical, 12)
+            Spacer().frame(height: 18)
             HStack(spacing: 4) {
                 ForEach(SetupTourStop.allCases) { other in
                     Capsule()

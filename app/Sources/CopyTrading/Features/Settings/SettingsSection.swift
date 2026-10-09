@@ -1,16 +1,11 @@
 import SwiftUI
 
-/// A titled group of settings: a heading in the display face, then its rows on the page with a
-/// hairline only between rows. The heading and the space around it set the group apart, so no
-/// line runs under the heading or after the last row.
+/// A titled group of settings: a heading in the display face, then its rows on the page, parted by
+/// space alone. No line runs anywhere in the group.
 struct SettingsSection<Content: View>: View {
     var title: String?
     var subtitle: String?
-    /// How far the hairlines between rows start from the leading edge; rows with an icon start
-    /// them past it.
-    var dividerInset: CGFloat = 14
     @ViewBuilder let content: Content
-    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -33,12 +28,8 @@ struct SettingsSection<Content: View>: View {
             }
             Group(subviews: content) { rows in
                 if !rows.isEmpty {
-                    VStack(spacing: 0) {
-                        ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                            if index > 0 {
-                                rule
-                                    .padding(.leading, max(0, dividerInset - 14))
-                            }
+                    VStack(spacing: 4) {
+                        ForEach(rows) { row in
                             row
                                 .padding(.horizontal, -14)
                         }
@@ -48,9 +39,4 @@ struct SettingsSection<Content: View>: View {
         }
     }
 
-    private var rule: some View {
-        Rectangle()
-            .fill(contrast == .increased ? Palette.secondaryInk : Palette.hairline)
-            .frame(height: 1)
-    }
 }

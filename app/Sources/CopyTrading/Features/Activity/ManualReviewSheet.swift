@@ -225,7 +225,6 @@ struct ManualReviewSheet: View {
                     position: instructions.count > 1 ? (index, instructions.count) : nil,
                     remove: { instructions.removeAll { $0.id == instruction.id } }
                 )
-                if instruction.id != instructions.last?.id { Hairline() }
             }
             if correctionRequest == nil, instructions.count < 20 {
                 Button {

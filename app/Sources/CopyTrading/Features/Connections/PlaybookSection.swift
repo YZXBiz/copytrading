@@ -10,6 +10,7 @@ struct PlaybookSection: View {
     /// How many of the learned examples were new to this guru.
     @State private var addedExamples = 0
     @State private var failure: String?
+    @FocusState private var isEditing: Bool
 
     var body: some View {
         SheetSection(L10n.string("Playbook")) {
@@ -40,13 +41,14 @@ struct PlaybookSection: View {
                 Callout(failure, tone: .critical)
                     .accessibilityIdentifier("playbook.failure")
             }
-            // No box: the text on one light rule, like every field in the sheet.
+            // No box: the text on a writing line, like every field in the sheet.
             TextEditor(text: $route.playbook)
                 .font(DesignTokens.bodyText)
                 .frame(minHeight: 180)
                 .scrollContentBackground(.hidden)
+                .focused($isEditing)
                 .padding(.bottom, 8)
-                .overlay(alignment: .bottom) { Hairline() }
+                .overlay(alignment: .bottom) { WritingLine(isActive: isEditing) }
                 .accessibilityLabel(L10n.string("Playbook"))
                 .accessibilityIdentifier("playbook.text")
             Text(L10n.string("%@ of %@ characters", route.playbook.count.formatted(), tradingPlaybookMaxLength.formatted()))

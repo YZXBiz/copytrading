@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// One part of a sheet: its label in tracked capitals with an optional quiet line under it and an
-/// accessory at the trailing edge, then its rows, then a footnote. Space sets sections apart; no
-/// line runs between them.
+/// One part of a sheet: a short ink tick (`SectionMark`) leading its label in tracked capitals with an
+/// optional quiet line under it and an accessory at the trailing edge, then its rows, then a
+/// footnote. Space and the tick set sections apart; no grey rule runs between them.
 struct SheetSection<Content: View, Accessory: View, Footer: View>: View {
     let title: String
     let detail: String?
@@ -25,7 +25,10 @@ struct SheetSection<Content: View, Accessory: View, Footer: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Eyebrow(title)
+                    HStack(spacing: 10) {
+                        SectionMark()
+                        Eyebrow(title)
+                    }
                     if let detail {
                         Text(detail)
                             .font(DesignTokens.caption)
@@ -40,7 +43,7 @@ struct SheetSection<Content: View, Accessory: View, Footer: View>: View {
                 Spacer(minLength: 12)
                 accessory
             }
-            .padding(.top, 30)
+            .padding(.top, 14)
             .padding(.bottom, 6)
             VStack(alignment: .leading, spacing: 0) {
                 content

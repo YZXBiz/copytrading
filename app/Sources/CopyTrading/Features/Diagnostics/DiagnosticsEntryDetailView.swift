@@ -30,7 +30,6 @@ struct DiagnosticsEntryDetailView: View {
                     .font(DesignTokens.caption)
                     .foregroundStyle(Palette.tertiaryInk)
                     .monospacedDigit()
-                    Hairline()
                     Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
                         ForEach(entry.displayFields, id: \.label) { field in
                             GridRow {

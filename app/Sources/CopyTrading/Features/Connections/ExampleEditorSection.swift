@@ -30,7 +30,8 @@ struct ExampleEditorSection: View {
         SheetSection(L10n.string("Example %lld", Int64(index + 1))) {
             SheetField(title: L10n.string("Message")) {
                 TextField(
-                    L10n.string("Message"), text: $example.message, prompt: Text(L10n.string("Paste an exact source message")),
+                    L10n.string("Message"), text: $example.message,
+                    prompt: Text(L10n.string("Paste an exact source message")).foregroundStyle(Palette.tertiaryInk),
                     axis: .vertical
                 )
                 .accessibilityLabel(L10n.string("Message"))
@@ -49,20 +50,26 @@ struct ExampleEditorSection: View {
                             .accessibilityLabel(L10n.string("Expected ticker"))
                     }
                     SheetField(title: L10n.string("Expected size")) {
-                        TextField(L10n.string("Expected size"), text: size, prompt: Text(L10n.string("e.g. 1/6, optional")))
-                            .accessibilityLabel(L10n.string("Expected size"))
+                        TextField(
+                            L10n.string("Expected size"), text: size,
+                            prompt: Text(L10n.string("e.g. 1/6, optional")).foregroundStyle(Palette.tertiaryInk)
+                        )
+                        .accessibilityLabel(L10n.string("Expected size"))
                     }
                 }
                 GridRow {
                     SheetField(title: priceTitle) {
-                        TextField(priceTitle, text: $example.expectedPrice, prompt: Text(L10n.string("e.g. %@, optional", "39.5")))
-                            .accessibilityLabel(priceTitle)
+                        TextField(
+                            priceTitle, text: $example.expectedPrice,
+                            prompt: Text(L10n.string("e.g. %@, optional", "39.5")).foregroundStyle(Palette.tertiaryInk)
+                        )
+                        .accessibilityLabel(priceTitle)
                     }
                     if example.expectedAction != .buy {
                         SheetField(title: L10n.string("Sells from the buy at")) {
                             TextField(
                                 L10n.string("Sells from the buy at"), text: $example.expectedBuyPrice,
-                                prompt: Text(L10n.string("e.g. %@, or empty for every buy", "39.5"))
+                                prompt: Text(L10n.string("e.g. %@, or empty for every buy", "39.5")).foregroundStyle(Palette.tertiaryInk)
                             )
                             .accessibilityLabel(L10n.string("Sells from the buy at"))
                         }

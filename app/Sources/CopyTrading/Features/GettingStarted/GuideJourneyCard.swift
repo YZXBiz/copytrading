@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The chosen stop of a post's journey as a note under a hairline: where it is on the path, its
+/// The chosen stop of a post's journey as a note under the drawing, set apart by space: where it is on the path, its
 /// headline, one line on what happens, where to change it, and the one caution.
 struct GuideJourneyCard: View {
     let index: Int
@@ -12,8 +12,6 @@ struct GuideJourneyCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Hairline()
-                .padding(.bottom, 18)
             HStack(alignment: .center) {
                 Eyebrow(L10n.string("Step %lld of %lld", Int64(index + 1), Int64(count)))
                 Spacer()

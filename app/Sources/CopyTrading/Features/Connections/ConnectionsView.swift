@@ -188,7 +188,7 @@ struct ConnectionsView: View {
     private func section(_ kind: ConnectionKind) -> some View {
         let summary = ConnectionSummary.of(kind, in: model)
         VStack(alignment: .leading, spacing: 10) {
-            SettingsSection(dividerInset: 56) {
+            SettingsSection {
                 switch kind {
                 case .discord:
                     serviceRow(
@@ -232,7 +232,7 @@ struct ConnectionsView: View {
             }
             .setupTourTarget(kind == .interpreter ? .interpreterServices : nil)
             if kind == .interpreter && (summary == nil || isEditingFromProviderRow) {
-                SettingsSection(dividerInset: 56) {
+                SettingsSection {
                     ForEach(ProviderGroup.ownModel.providers, id: \.self) { provider in
                         providerRow(provider, title: L10n.string(provider.title), detail: provider.tagline)
                     }

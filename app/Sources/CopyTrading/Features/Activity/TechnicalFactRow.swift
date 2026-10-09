@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A label and its value as one hairline row of a two-column table: the label in tracked capitals
+/// A label and its value as one row of a two-column table: the label in tracked capitals
 /// in a fixed column, the value beside it, so every value starts at the same edge.
 struct TechnicalFactRow<Value: View>: View {
     let label: String
@@ -8,7 +8,6 @@ struct TechnicalFactRow<Value: View>: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Hairline()
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 ActivityLabel(text: L10n.string(label))
                     .frame(width: DesignTokens.factLabelWidth, alignment: .leading)

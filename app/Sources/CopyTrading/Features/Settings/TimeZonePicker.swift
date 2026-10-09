@@ -33,10 +33,12 @@ struct TimeZonePicker: View {
             lede: L10n.string("Search every zone by city or name.")
         ) {
             VStack(alignment: .leading, spacing: 0) {
-                TextField(L10n.string("Search"), text: $query, prompt: Text(L10n.string("City or time zone")))
-                    .labelsHidden()
-                    .underlineField()
-                    .padding(.bottom, 12)
+                TextField(
+                    L10n.string("Search"), text: $query, prompt: Text(L10n.string("City or time zone")).foregroundStyle(Palette.tertiaryInk)
+                )
+                .labelsHidden()
+                .underlineField()
+                .padding(.bottom, 12)
                 LazyVStack(alignment: .leading, spacing: 0) {
                     ForEach(zones) { zone in
                         Button {

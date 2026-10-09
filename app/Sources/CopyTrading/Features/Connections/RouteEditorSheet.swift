@@ -24,8 +24,11 @@ struct RouteEditorSheet: View {
         ) {
             // The name sits right under the title it fills in; the header already says "Guru".
             SheetField(title: L10n.string("Name")) {
-                TextField(L10n.string("Name"), text: $route.displayName, prompt: Text(L10n.string("How you refer to this guru")))
-                    .accessibilityLabel(L10n.string("Name"))
+                TextField(
+                    L10n.string("Name"), text: $route.displayName,
+                    prompt: Text(L10n.string("How you refer to this guru")).foregroundStyle(Palette.tertiaryInk)
+                )
+                .accessibilityLabel(L10n.string("Name"))
             }
 
             SheetSection(
@@ -48,7 +51,7 @@ struct RouteEditorSheet: View {
                 SheetField(title: L10n.string("Author ID")) {
                     TextField(
                         L10n.string("Author ID"), text: $route.authorID,
-                        prompt: Text(L10n.string("Needed when several people post there"))
+                        prompt: Text(L10n.string("Needed when several people post there")).foregroundStyle(Palette.tertiaryInk)
                     )
                     .accessibilityLabel(L10n.string("Author ID"))
                 }

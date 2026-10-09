@@ -32,7 +32,6 @@ struct DiagnosticsView: View {
             .padding(.horizontal, 40)
             .padding(.top, 20)
             .padding(.bottom, 16)
-            Hairline()
             if model.diagnosticsEntries.isEmpty {
                 ScrollView {
                     LogInvitation(model: model)
@@ -63,8 +62,8 @@ struct DiagnosticsView: View {
                 }
             }
             .frame(minWidth: 300, idealWidth: 320, maxWidth: 320, maxHeight: .infinity)
-
-            Hairline(vertical: true)
+            // The list sits on the canvas grey and the record on white, so no rule parts them.
+            .background(Palette.canvas)
 
             Group {
                 if let selectedEntry {

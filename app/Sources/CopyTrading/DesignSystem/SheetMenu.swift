@@ -30,13 +30,8 @@ struct SheetMenu<Value: Hashable>: View {
                     .font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(Palette.tertiaryInk)
             }
+            // The chevron says it opens; no line under it.
             .padding(.vertical, 7)
-            .overlay(alignment: .bottom) {
-                Rectangle()
-                    .fill(Palette.hairline)
-                    .frame(height: 1)
-                    .accessibilityHidden(true)
-            }
             .contentShape(.rect)
         }
         .menuStyle(.button)
