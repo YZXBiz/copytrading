@@ -27,6 +27,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
     case learnedExamples = "learned examples"
     case updateOffer = "update offer banner"
     case guruFeed = "guru feed"
+    case manualInstructionGuess = "manual instruction guess"
 
     var testDescription: String { rawValue }
 
@@ -56,6 +57,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
         case .learnedExamples: try runLearnedExamplesTests()
         case .updateOffer: try runUpdateOfferTests()
         case .guruFeed: try runGuruFeedTests()
+        case .manualInstructionGuess: try runManualInstructionGuessTests()
         }
     }
 }

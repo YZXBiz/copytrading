@@ -1644,14 +1644,14 @@ def j36_approve_and_skip(app: AppDriver) -> None:
         if _lots(app, unused[0]):
             raise JourneyFailure("a skipped call still bought shares")
 
-        # Approve: review the held call, preview it, and confirm one order.
+        # Approve: the sheet opens filled from the held call; Approve checks the order in the
+        # account, then asks to confirm the one ready order.
         symbol = unused[1]
         _post_and_wait_for_hold(app, setup, symbol)
         app.click("needsYou.copy")
-        app.wait_for("Save and Preview Order", timeout=30, name="approval-sheet")
-        app.click("Save and Preview Order")
-        app.wait_for("Review 1 Ready Order…", timeout=60, name="approval-preview")
-        app.click("Review 1 Ready Order…")
+        app.wait_for("review.primary", timeout=30, name="approval-sheet")
+        app.click("review.primary")
+        app.wait_for("Confirm 1 order(s)", timeout=60, name="approval-preview")
         app.click("Confirm 1 order(s)", outcome_checked=True)
         deadline = time.monotonic() + 180
         while not (bought := [lot for lot in _lots(app, symbol) if _open(lot)]):

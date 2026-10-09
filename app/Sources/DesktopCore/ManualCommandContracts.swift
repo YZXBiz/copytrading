@@ -9,7 +9,8 @@ public enum ManualInstructionAction: String, Codable, CaseIterable, Sendable {
 public struct ManualInstruction: Codable, Equatable, Sendable {
     public let action: ManualInstructionAction
     public let symbol: String
-    public let price: String
+    /// The guru's price; nil for a sell at the market, priced from the live bid (ADR-0007).
+    public let price: String?
     public let entryPrice: String?
     public let fraction: String?
     public let exitBasis: String?
@@ -17,7 +18,7 @@ public struct ManualInstruction: Codable, Equatable, Sendable {
     public init(
         action: ManualInstructionAction,
         symbol: String,
-        price: String,
+        price: String?,
         entryPrice: String? = nil,
         fraction: String? = nil,
         exitBasis: String? = nil
@@ -34,6 +35,17 @@ public struct ManualInstruction: Codable, Equatable, Sendable {
         case action, symbol, price, fraction
         case entryPrice = "entry_price"
         case exitBasis = "exit_basis"
+    }
+
+    /// The engine requires `price` on every instruction, as null for a sell at the market.
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(action, forKey: .action)
+        try container.encode(symbol, forKey: .symbol)
+        try container.encode(price, forKey: .price)
+        try container.encodeIfPresent(entryPrice, forKey: .entryPrice)
+        try container.encodeIfPresent(fraction, forKey: .fraction)
+        try container.encodeIfPresent(exitBasis, forKey: .exitBasis)
     }
 }
 
