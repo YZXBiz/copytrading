@@ -41,6 +41,7 @@ from copytrading_engine.trading.adapters.capabilities import (
     CapabilityCheck,
     TradingCapabilityReport,
 )
+from copytrading_engine.trading.application.paused_reader import ReadKeys
 from copytrading_engine.trading.domain.config import (
     ConnectionCheck,
     ProviderConfiguration,
@@ -99,6 +100,10 @@ class OperatorReads(Protocol):
     async def list_manual_commands(
         self, request: ManualCommandPageRequest
     ) -> ManualCommandPage: ...
+
+    def attach_readers(self, keys: tuple[ReadKeys, ...]) -> None: ...
+
+    def detach_readers(self) -> None: ...
 
 
 class ManualIntervention(Protocol):

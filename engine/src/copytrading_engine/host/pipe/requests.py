@@ -224,6 +224,30 @@ class GetAccountFeedRequest(PipeRequest):
     limit: StrictInt = Field(default=50, ge=1, le=100)
 
 
+class AccountReadKeys(BaseModel):
+    """One account's broker keys, for reading it while copying is paused. Never stored or logged."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
+
+    account_id: str = Field(min_length=1, max_length=64)
+    environment: Literal["paper", "live"]
+    key: SecretStr
+    secret: SecretStr
+
+
+class AttachAccountReadersRequest(PipeRequest):
+    """Sent when the owner unlocks: read these accounts live while copying is paused."""
+
+    operation: Literal["attach_account_readers"]
+    accounts: tuple[AccountReadKeys, ...] = Field(max_length=20)
+
+
+class DetachAccountReadersRequest(PipeRequest):
+    """Sent when the owner locks: forget every read key."""
+
+    operation: Literal["detach_account_readers"]
+
+
 class GetEquityHistoryRequest(PipeRequest):
     operation: Literal["get_equity_history"]
     account_id: str = Field(min_length=1, max_length=64)
@@ -354,6 +378,8 @@ RequestType = Annotated[
     | ReplayGuruPostsRequest
     | GetAccountFeedRequest
     | GetEquityHistoryRequest
+    | AttachAccountReadersRequest
+    | DetachAccountReadersRequest
     | SaveManualCorrectionRequest
     | PreviewManualOrderRequest
     | ConfirmManualOrdersRequest

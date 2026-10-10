@@ -289,6 +289,7 @@ public enum EngineResult: Equatable, Sendable {
     case connectionCheck(TradingCapabilityCheck)
     /// The engine's revision of a setup whose changed account limits copying now uses.
     case accountLimits(revision: String)
+    case accountReaders
     case accountControl(AccountControlResult)
     case ownershipResolution(OwnershipResolution)
     case accounts(AccountOverviewPage)
@@ -451,6 +452,8 @@ public struct EngineSuccess: Decodable, Equatable, Sendable {
             result = .connectionCheck(try container.decode(TradingCapabilityCheck.self, forKey: .check))
         case "account_limits":
             result = .accountLimits(revision: try container.decode(String.self, forKey: .revision))
+        case "account_readers":
+            result = .accountReaders
         case "account_control":
             result = .accountControl(try container.decode(AccountControlResult.self, forKey: .control))
         case "ownership_resolution":
@@ -585,6 +588,8 @@ enum EngineOperation: Sendable {
     case replayGuruPosts(GuruReplayRequest)
     case accountFeed(accountID: String, beforeSeq: Int?, limit: Int)
     case equityHistory(accountID: String, window: EquityHistoryWindow)
+    case attachAccountReaders([AccountReadKeys])
+    case detachAccountReaders
     case saveManualCorrection(ManualCorrectionRequest)
     case previewManualOrder(ManualPreviewRequest)
     case confirmManualOrders([ManualConfirmationRequest])
@@ -773,6 +778,11 @@ struct EngineRequest: Encodable, Sendable {
             try container.encode("get_equity_history", forKey: .operation)
             try container.encode(accountID, forKey: .accountID)
             try container.encode(window, forKey: .window)
+        case .attachAccountReaders(let accounts):
+            try container.encode("attach_account_readers", forKey: .operation)
+            try container.encode(accounts, forKey: .accounts)
+        case .detachAccountReaders:
+            try container.encode("detach_account_readers", forKey: .operation)
         case .saveManualCorrection(let correction):
             try container.encode("save_manual_correction", forKey: .operation)
             try container.encode(correction, forKey: .correction)

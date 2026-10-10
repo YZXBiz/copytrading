@@ -60,7 +60,10 @@ final class AppModel {
     /// Where closing Settings returns to.
     var screenBeforeSettings: Screen = .gettingStarted
     var runtimeState: RuntimeState = .stopped {
-        didSet { holdMacAwakeWhileCopying() }
+        didSet {
+            holdMacAwakeWhileCopying()
+            if oldValue != runtimeState, runtimeState == .ready { shareAccountReadKeys() }
+        }
     }
     var engineStatus: EngineStatus?
     var tradingStatus: TradingStatus? {
@@ -85,7 +88,9 @@ final class AppModel {
     /// The open panel for Import Setup…, from Connections or File; the only way a setup file
     /// reaches the app.
     var isShowingSetupImporter = false
-    var isTradingUnlocked = false
+    var isTradingUnlocked = false {
+        didSet { if oldValue != isTradingUnlocked { shareAccountReadKeys() } }
+    }
     var agentAccess: AgentAccessSetting = .off
     var isAgentRelayListening = false
     var isChangingAgentAccess = false
@@ -1494,6 +1499,24 @@ final class AppModel {
             message = Self.userMessage(for: error)
             return false
         }
+    }
+
+    /// While unlocked, the engine may read every saved account live, so a paused account still
+    /// shows its money; locking takes the keys back. Copying stays the only path to an order.
+    func shareAccountReadKeys() {
+        guard let engineActions else { return }
+        guard isTradingUnlocked, let stored = try? tradingConfigurationStore?.load() else {
+            Task { try? await engineActions.detachAccountReaders() }
+            return
+        }
+        let environments = Dictionary(
+            stored.configuration.accounts.map { ($0.id, $0.environment) }, uniquingKeysWith: { first, _ in first })
+        let keys = stored.secrets.brokers.compactMap { broker in
+            environments[broker.accountID].map {
+                AccountReadKeys(accountID: broker.accountID, environment: $0, key: broker.key, secret: broker.secret)
+            }
+        }
+        Task { try? await engineActions.attachAccountReaders(keys) }
     }
 
     func unlockTrading() async {

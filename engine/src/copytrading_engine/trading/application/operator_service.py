@@ -23,6 +23,7 @@ from copytrading_engine.execution.presentation.operator_views import (
     DestinationView,
     UnavailableReason,
     destination_views,
+    with_live_facts,
 )
 from copytrading_engine.shared.route_keys import choose_route, route_key
 from copytrading_engine.trading.application.account_access import (
@@ -30,16 +31,41 @@ from copytrading_engine.trading.application.account_access import (
     OwnerUnavailable,
     bounded_owner_read,
 )
+from copytrading_engine.trading.application.paused_reader import (
+    PausedAccountReader,
+    ReadKeys,
+    ReadOnlyBroker,
+)
 from copytrading_engine.trading.presentation.operator_models import SourceActivityPage
 
 log = logging.getLogger(__name__)
 
 
+def _no_broker(keys: ReadKeys) -> ReadOnlyBroker:
+    raise RuntimeError("This engine reads no broker while copying is paused")
+
+
 class OperatorQueryService:
     """Answer the native app's paged account, event, source, and command-history reads."""
 
-    def __init__(self, access: AccountAccess) -> None:
+    def __init__(self, access: AccountAccess, reader: PausedAccountReader | None = None) -> None:
         self._access = access
+        # With no reader given, paused accounts are read from their ledgers alone.
+        self._reader = reader if reader is not None else PausedAccountReader(_no_broker)
+
+    def attach_readers(self, keys: tuple[ReadKeys, ...]) -> None:
+        """Read paused accounts live with these keys until `detach_readers`."""
+        self._reader.attach(keys)
+
+    def detach_readers(self) -> None:
+        self._reader.detach()
+
+    async def _live(self, account_id: str, overview: AccountOverview) -> AccountOverview:
+        """A retained overview with the broker's balance and valuations, when they can be read."""
+        facts = await self._reader.facts(account_id)
+        if facts is None:
+            return overview
+        return with_live_facts(overview, facts.account, facts.positions, facts.observed_at)
 
     def _unavailable_readiness(self, account_id: str) -> str:
         """Why an account is not running, when its owner can act on it; else just unavailable."""
@@ -101,6 +127,7 @@ class OperatorQueryService:
                     )
                     failure = "read_failed"
                 else:
+                    overview = await self._live(account_id, overview)
                     if account_id not in configured:
                         return overview, None
                     readiness = (
@@ -184,13 +211,17 @@ class OperatorQueryService:
         )
 
     async def equity_history(self, account_id: str, window: HistoryWindow) -> EquityHistory | None:
-        """The running account's broker curve; None while it has no live owner to ask."""
+        """The account's broker curve: from its running owner, or while paused from the read
+        keys the app attached; None when neither can ask."""
         configuration = self._access.configuration()
-        if configuration is None or account_id not in {item.id for item in configuration.accounts}:
+        configured = configuration is not None and account_id in {
+            item.id for item in configuration.accounts
+        }
+        if not configured and not self._reader.holds(account_id):
             raise KeyError(account_id)
         supervisor = self._access.supervisors().get(account_id)
         if supervisor is None or supervisor.owner is None or supervisor.state == "failed":
-            return None
+            return await self._reader.equity_history(account_id, window)
         history = await bounded_owner_read(
             supervisor.owner.equity_history(window, dt.datetime.now(dt.UTC))
         )

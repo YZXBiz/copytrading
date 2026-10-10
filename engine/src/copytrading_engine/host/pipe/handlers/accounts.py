@@ -1,7 +1,9 @@
 """Accounts, activity, history, and the owner's account controls."""
 
 from copytrading_engine.host.pipe.requests import (
+    AttachAccountReadersRequest,
     ControlAccountRequest,
+    DetachAccountReadersRequest,
     GetAccountFeedRequest,
     GetAccountsRequest,
     GetEquityHistoryRequest,
@@ -12,6 +14,7 @@ from copytrading_engine.host.pipe.requests import (
 )
 from copytrading_engine.host.pipe.responses import reply
 from copytrading_engine.host.pipe.services import TradingServices
+from copytrading_engine.trading.application.paused_reader import ReadKeys
 
 
 class AccountHandlers:
@@ -28,7 +31,31 @@ class AccountHandlers:
             GetSourceActivityRequest: self._on_get_source_activity,
             GetAccountFeedRequest: self._on_get_account_feed,
             GetEquityHistoryRequest: self._on_get_equity_history,
+            AttachAccountReadersRequest: self._on_attach_account_readers,
+            DetachAccountReadersRequest: self._on_detach_account_readers,
         }
+
+    async def _on_attach_account_readers(self, request: AttachAccountReadersRequest) -> bytes:
+        if self._trading is None:
+            return reply(request.version, request.request_id, error="unavailable")
+        self._trading.operator.attach_readers(
+            tuple(
+                ReadKeys(
+                    account_id=item.account_id,
+                    environment=item.environment,
+                    key=item.key,
+                    secret=item.secret,
+                )
+                for item in request.accounts
+            )
+        )
+        return reply(request.version, request.request_id, ok={"type": "account_readers"})
+
+    async def _on_detach_account_readers(self, request: DetachAccountReadersRequest) -> bytes:
+        if self._trading is None:
+            return reply(request.version, request.request_id, error="unavailable")
+        self._trading.operator.detach_readers()
+        return reply(request.version, request.request_id, ok={"type": "account_readers"})
 
     async def _on_control_account(self, request: ControlAccountRequest) -> bytes:
         if self._trading is None:

@@ -616,3 +616,64 @@ def _event_view(seq: int, event: JournalEvent) -> AccountEventView:
         reason=getattr(payload, "reason", None),
         status=str(getattr(payload, "status", "")) or None,
     )
+
+
+def with_live_facts(
+    overview: AccountOverview,
+    account: Account,
+    positions: tuple[Position, ...],
+    observed_at: dt.datetime,
+) -> AccountOverview:
+    """A paused account's retained overview with what the broker reports now: its balance, and
+    each position's shares and valuation, the owner's own included. Nothing about ownership or
+    incidents changes; those are the ledger's."""
+    held = {position.symbol: position for position in positions}
+    views: list[PositionView] = []
+    for view in overview.positions:
+        position = held.pop(view.symbol, None)
+        if position is None:
+            views.append(view)
+            continue
+        price = position.current_price
+        lots = tuple(
+            lot.model_copy(
+                update={
+                    "unrealized_pl": ((price - lot.average_price) * lot.remaining_qty).quantize(
+                        Decimal("0.01")
+                    )
+                }
+            )
+            if price is not None
+            else lot
+            for lot in view.lots
+        )
+        views.append(
+            view.model_copy(
+                update={
+                    "broker_qty": str(position.qty),
+                    "lots": lots,
+                    **position.model_dump(include=set(Position.VALUATION)),
+                }
+            )
+        )
+    views.extend(
+        PositionView(
+            symbol=symbol,
+            owned_qty=Decimal(0),
+            external_qty=Decimal(0),
+            broker_qty=str(position.qty),
+            **position.model_dump(include=set(Position.VALUATION)),
+        )
+        for symbol, position in held.items()
+    )
+    exposure = sum(
+        (abs(position.market_value) for position in positions if position.market_value is not None),
+        Decimal(0),
+    )
+    return overview.model_copy(
+        update={
+            "positions": tuple(sorted(views, key=lambda item: item.symbol)),
+            "balance": account_balance(account, observed_at),
+            "total_exposure_usd": exposure,
+        }
+    )

@@ -511,6 +511,27 @@ extension TradingConfiguration {
     }
 }
 
+/// One account's broker keys, for the engine to read it while copying is paused. Sent when the
+/// owner unlocks and forgotten when they lock; the engine keeps them in memory only.
+public struct AccountReadKeys: Codable, Equatable, Sendable {
+    public var accountID: String
+    public var environment: TradingEnvironment
+    public var key: String
+    public var secret: String
+
+    public init(accountID: String, environment: TradingEnvironment, key: String, secret: String) {
+        self.accountID = accountID
+        self.environment = environment
+        self.key = key
+        self.secret = secret
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case accountID = "account_id"
+        case environment, key, secret
+    }
+}
+
 public struct TradingBrokerCredentials: Codable, Equatable, Sendable {
     public var accountID: String
     public var key: String

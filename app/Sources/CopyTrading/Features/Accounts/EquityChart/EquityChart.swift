@@ -153,7 +153,7 @@ struct EquityChart: View {
     private var emptyState: some View {
         InkEmptyState(
             message: history == nil
-                ? L10n.string("The broker's equity curve appears here while copying is on.")
+                ? L10n.string("Reading the account's curve from Alpaca…")
                 : L10n.string("The broker has no equity points for this %@.", L10n.string(window.range == .day ? "Day" : "Range"))
         )
         .frame(height: 72, alignment: .bottom)

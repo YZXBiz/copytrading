@@ -60,6 +60,16 @@ public struct EngineActions: Sendable {
         return try await client.updateAccountLimits(configuration: configuration)
     }
 
+    public func attachAccountReaders(_ accounts: [AccountReadKeys]) async throws {
+        let client = try await supervisor.engineClient()
+        try await client.attachAccountReaders(accounts)
+    }
+
+    public func detachAccountReaders() async throws {
+        let client = try await supervisor.engineClient()
+        try await client.detachAccountReaders()
+    }
+
     public func createBackup(destination: URL) async throws -> BackupManifestView {
         let client = try await supervisor.engineClient()
         return try await client.createBackup(destination: destination)

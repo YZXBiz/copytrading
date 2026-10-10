@@ -13,7 +13,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from copytrading_engine.backup.restore.gate import restore_manual_disabled
-from copytrading_engine.execution.adapters.alpaca.broker import AlpacaCredentials
+from copytrading_engine.execution.adapters.alpaca.broker import AlpacaBroker, AlpacaCredentials
 from copytrading_engine.execution.application.ports import AccountOpenRefused, BrokerError
 from copytrading_engine.execution.domain.pricing import EntryPricingPolicy
 from copytrading_engine.execution.domain.signals import CopyConfig
@@ -53,6 +53,7 @@ from copytrading_engine.trading.application.accounts import (
 )
 from copytrading_engine.trading.application.manual_intervention import ManualInterventionService
 from copytrading_engine.trading.application.operator_service import OperatorQueryService
+from copytrading_engine.trading.application.paused_reader import PausedAccountReader, ReadKeys
 from copytrading_engine.trading.application.profile_review import ProfileReviewService
 from copytrading_engine.trading.domain.config import (
     ConnectionCheck,
@@ -93,6 +94,11 @@ class _ParserPublisher:
 
 class _PausedBeforeReceipt(Exception):
     """Leave the durable delivery pending when Pause interrupts fanout."""
+
+
+def _alpaca_reader(keys: ReadKeys) -> AlpacaBroker:
+    """A broker client the paused reader uses for its three reads, and nothing else."""
+    return AlpacaBroker(AlpacaCredentials(keys.key, keys.secret), keys.environment)
 
 
 class TradingRuntime:
@@ -146,7 +152,7 @@ class TradingRuntime:
                 (item.error_code for item in self._status.accounts if item.id == account_id), None
             ),
         )
-        self.operator = OperatorQueryService(access)
+        self.operator = OperatorQueryService(access, PausedAccountReader(_alpaca_reader))
         self.manual = ManualInterventionService(access)
         self.profiles = ProfileReviewService(
             data_dir,
@@ -378,6 +384,7 @@ class TradingRuntime:
         return self._status
 
     async def shutdown(self) -> None:
+        self.operator.detach_readers()
         await self.pause()
         task = self._task
         if task is not None:
