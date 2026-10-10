@@ -14,7 +14,8 @@ struct AccountPageContent: View {
     let selectedPostID: SourceActivity.ID?
     @Binding var sheet: ActivitySheet?
     let openPost: (SourceActivity.ID) -> Void
-    @State private var section = AccountSection.positions
+    // The tab the owner last chose, kept across launches.
+    @AppStorage("account.section") private var section = AccountSection.positions
 
     private var hasWarnings: Bool {
         !account.ownershipIncidents.isEmpty || AccountWarnings.shown(account.accountRiskReason) != nil

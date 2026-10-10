@@ -1,4 +1,5 @@
 import DesktopCore
+import Foundation
 
 extension AppModel {
     /// What the window shows: one account or one guru, the two primary things the owner works
@@ -32,6 +33,20 @@ extension AppModel {
             case .gettingStarted: "hand.wave"
             case .diagnostics: "waveform.path.ecg"
             case .settings: "gearshape"
+            }
+        }
+
+        /// The screen an identifier names, as `identifier` spells it.
+        init?(identifier: String) {
+            let pages: [Screen] = [.connections, .gettingStarted, .diagnostics, .settings]
+            if let page = pages.first(where: { $0.identifier == identifier }) {
+                self = page
+            } else if identifier.hasPrefix("navigation.account.") {
+                self = .account(String(identifier.dropFirst("navigation.account.".count)))
+            } else if identifier.hasPrefix("navigation.guru.") {
+                self = .guru(String(identifier.dropFirst("navigation.guru.".count)))
+            } else {
+                return nil
             }
         }
 
@@ -69,8 +84,24 @@ extension AppModel {
     }
 
     /// Where the window settles: the first saved account, or Getting Started before there is one.
+    /// Where the window opens: the page the owner last had open, while it still exists, else
+    /// the first account. Settings is never reopened on its own.
     var homeScreen: Screen {
-        savedTradingConfiguration?.accounts.first.map { .account($0.id) } ?? .gettingStarted
+        if let last = Self.rememberedScreen, navigableScreens.contains(last), last != .settings {
+            return last
+        }
+        return savedTradingConfiguration?.accounts.first.map { .account($0.id) } ?? .gettingStarted
+    }
+
+    static let lastScreenKey = "window.lastScreen"
+
+    /// The page the owner last had open, kept across launches. The journeys start each run fresh.
+    static var rememberedScreen: Screen? {
+        #if DEBUG
+            if UITestLaunch.hidesTips { return nil }
+        #endif
+        guard let stored = UserDefaults.standard.string(forKey: lastScreenKey) else { return nil }
+        return Screen(identifier: stored)
     }
 
     /// The selectable screens in sidebar order, for ⌘1… and the page menu.

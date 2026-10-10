@@ -53,7 +53,13 @@ final class AppModel {
         case failed
     }
 
-    var selectedScreen: Screen = .gettingStarted
+    var selectedScreen: Screen = .gettingStarted {
+        didSet {
+            if selectedScreen != .settings {
+                UserDefaults.standard.set(selectedScreen.identifier, forKey: Self.lastScreenKey)
+            }
+        }
+    }
     /// The Settings page on show and the pages visited before it, newest last.
     var settingsPage: SettingsPage = .general
     var settingsTrail: [SettingsPage] = []

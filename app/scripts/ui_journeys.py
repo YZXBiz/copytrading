@@ -630,10 +630,10 @@ def build_debug_bundle() -> None:
 def launch(state_root: Path, *, quit_first: bool = True) -> None:
     if quit_first:
         quit_app()
-    # Ending the setup tour is remembered per app; a run starts as a first launch would.
-    subprocess.run(
-        ["defaults", "delete", BUNDLE_ID, "setupTour.ended"], capture_output=True, check=False
-    )
+    # The tour's end, the last page, and the last tab are remembered per app; a run starts as a
+    # first launch would.
+    for key in ("setupTour.ended", "window.lastScreen", "account.section"):
+        subprocess.run(["defaults", "delete", BUNDLE_ID, key], capture_output=True, check=False)
     subprocess.run(
         [
             "open",
