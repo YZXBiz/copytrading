@@ -12,8 +12,10 @@ struct AccountFacts: View {
     let feature: AccountFeatureModel
     let editLimits: () -> Void
 
-    private var lossToday: Decimal {
-        guard let change = Decimal(engine: account.balance?.dayChangeUSD), change < 0 else { return 0 }
+    /// Nil until the account's balance has been read, so an unread account never shows as empty.
+    private var lossToday: Decimal? {
+        guard let balance = account.balance else { return nil }
+        guard let change = Decimal(engine: balance.dayChangeUSD), change < 0 else { return 0 }
         return -change
     }
 
@@ -51,7 +53,8 @@ struct AccountFacts: View {
             }
             if let cap = Decimal(engine: policy.maxTotalUSD) {
                 LimitMeter(
-                    title: "In stocks", used: Decimal(engine: account.totalExposureUSD) ?? 0, limit: cap,
+                    title: "In stocks", used: account.balance == nil ? nil : Decimal(engine: account.totalExposureUSD) ?? 0,
+                    limit: cap,
                     note: ExposureSplit.note(account)
                 )
                 .frame(width: 200, alignment: .leading)
@@ -62,8 +65,15 @@ struct AccountFacts: View {
     private func figure(_ title: String, _ value: String?) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Eyebrow(L10n.string(title))
-            MoneyText(value: Decimal(engine: value) ?? 0, font: DesignTokens.statValue)
-                .foregroundStyle(Palette.ink)
+            if let amount = Decimal(engine: value) {
+                MoneyText(value: amount, font: DesignTokens.statValue)
+                    .foregroundStyle(Palette.ink)
+            } else {
+                // Not read yet: a dash, never a $0 that reads as an empty account.
+                Text("—")
+                    .font(DesignTokens.statValue)
+                    .foregroundStyle(Palette.tertiaryInk)
+            }
         }
         .fixedSize()
         .accessibilityElement(children: .combine)

@@ -3,13 +3,14 @@ import SwiftUI
 /// How much of a risk limit is already used, so a limit is visible before it stops a trade.
 struct LimitMeter: View {
     let title: String
-    let used: Decimal
+    /// Nil while the account hasn't been read: the figure reads "—" and the track stays empty.
+    let used: Decimal?
     let limit: Decimal
     /// One quiet line under the track, e.g. how the amount splits.
     var note: String? = nil
 
     private var fraction: Double {
-        guard limit > 0 else { return 0 }
+        guard limit > 0, let used else { return 0 }
         return min(1, max(0, (used / limit).doubleValue))
     }
 
@@ -22,7 +23,7 @@ struct LimitMeter: View {
             Eyebrow(L10n.string(title))
             // What is used, large, then what it is out of, quiet: "$14 of $250".
             HStack(alignment: .firstTextBaseline, spacing: 5) {
-                Text(used.formatted(.currency(code: "USD").precision(.fractionLength(0))))
+                Text(used?.formatted(.currency(code: "USD").precision(.fractionLength(0))) ?? "—")
                     .font(DesignTokens.statValue)
                     .foregroundStyle(fraction >= 0.8 ? tint : Palette.ink)
                 Text(L10n.string("of %@", limit.formatted(.currency(code: "USD").precision(.fractionLength(0)))))
@@ -57,6 +58,9 @@ struct LimitMeter: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(L10n.string(title))
         .accessibilityValue(
-            [L10n.string("%lld percent used", Int64((fraction * 100).rounded())), note].compactMap(\.self).joined(separator: ", "))
+            used == nil
+                ? L10n.string("Not read yet")
+                : [L10n.string("%lld percent used", Int64((fraction * 100).rounded())), note].compactMap(\.self).joined(
+                    separator: ", "))
     }
 }
