@@ -2115,3 +2115,6 @@
 "An order's outcome is still unclear at Alpaca. Resume once it settles." = "An order's outcome is still unclear at Alpaca. Resume once it settles.";
 "CopyTrading couldn't read this account's holdings just now. Try again in a moment." = "CopyTrading couldn't read this account's holdings just now. Try again in a moment.";
 "Reading the account's curve from Alpaca…" = "Reading the account's curve from Alpaca…";
+"copied" = "copied";
+"yours + %@" = "yours + %@";
+"yours" = "yours";
