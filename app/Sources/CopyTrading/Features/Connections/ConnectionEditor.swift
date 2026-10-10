@@ -13,6 +13,8 @@ struct ConnectionEditor: View {
     /// The field the cursor is in, by its label.
     @FocusState private var focused: String?
     @State private var isChecking = false
+    /// What an alerts sheet still needs before Connect can check it.
+    @State private var missingAlerts: String?
 
     private var subject: ConnectionCheckSubject { ConnectionCheckSubject(kind) }
 
@@ -57,6 +59,9 @@ struct ConnectionEditor: View {
             ConnectionGuideCard(article: guide)
             VStack(alignment: .leading, spacing: 14) {
                 fields
+            }
+            if let missingAlerts {
+                Callout(missingAlerts, tone: .caution)
             }
             if let failedCheck {
                 ConnectionCheckCallout(
@@ -106,13 +111,13 @@ struct ConnectionEditor: View {
                 row("Channel IDs") {
                     TextField(
                         L10n.string("Channel IDs"), text: $model.setupDraft.channels,
-                        prompt: Text(L10n.string("Comma-separated Discord channel IDs")))
+                        prompt: Text(L10n.string("Comma-separated Discord channel IDs")).foregroundStyle(Palette.tertiaryInk))
                 }
             }
             row("Allowed authors") {
                 TextField(
                     L10n.string("Allowed authors"), text: $model.setupDraft.authors,
-                    prompt: Text(L10n.string("Optional, comma-separated user IDs")))
+                    prompt: Text(L10n.string("Optional, comma-separated user IDs")).foregroundStyle(Palette.tertiaryInk))
             }
             toured(.discordToken) {
                 row("Discord token") {
@@ -144,7 +149,8 @@ struct ConnectionEditor: View {
         case .alerts:
             row("Chat ID") {
                 TextField(
-                    L10n.string("Chat ID"), text: $model.setupDraft.notificationChatID, prompt: Text(L10n.string("From %@", "@userinfobot"))
+                    L10n.string("Chat ID"), text: $model.setupDraft.notificationChatID,
+                    prompt: Text(L10n.string("From %@", "@userinfobot")).foregroundStyle(Palette.tertiaryInk)
                 )
             }
             row("Bot token") {
@@ -169,8 +175,7 @@ struct ConnectionEditor: View {
         .background {
             if active {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Palette.accent.opacity(0.07))
-                    .strokeBorder(Palette.accent.opacity(0.6), lineWidth: 1.5)
+                    .strokeBorder(Palette.ink, lineWidth: InkStroke.style.lineWidth)
             }
         }
         .setupTourTarget(stop.target)
@@ -199,6 +204,8 @@ struct ConnectionEditor: View {
     private func connect() {
         if kind == .alerts {
             let draft = model.setupDraft
+            missingAlerts = draft.missingForAlerts(savedSecret: alertSecretSaved)
+            guard missingAlerts == nil else { return }
             model.setupDraft.notificationsEnabled = !draft.notificationChatID.trimmed.isEmpty || !draft.notificationToken.isEmpty
         }
         Task {
@@ -207,6 +214,11 @@ struct ConnectionEditor: View {
             isChecking = false
             if check?.state != .failed { done() }
         }
+    }
+
+    /// The alerts service's secret is in the Keychain from a saved setup for the same service.
+    private var alertSecretSaved: Bool {
+        model.hasTradingSecrets && model.savedTradingConfiguration?.notification?.service == model.setupDraft.notificationService
     }
 
     /// Clears the chat and the bot token, which turns alerts off as the panel closes.

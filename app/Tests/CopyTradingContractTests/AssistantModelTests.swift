@@ -16,6 +16,7 @@ func runAssistantModelTests() async throws {
     try await aResetDuringAProposalRefreshEndsTheOldPage()
     try await resettingNeedsNoEngine()
     try interpreterResolutionPrefersTheSavedConfiguration()
+    try theContextCarriesTheUnsavedSetupWithoutAKey()
     print("CopyTradingContractTests: the assistant streams answers by polling, stops, resets on lock, and asks for proposals")
 }
 
@@ -236,6 +237,33 @@ private func anAnswerNeedsAnUnlockedModel() async throws {
     try #require(asks.isEmpty, "A question was sent without a model")
     try #require(!assistant.isAnswering, "A refused question left the assistant answering")
     try #require(assistant.messages.last?.errorText != nil, "A refused question gave no reason")
+}
+
+@MainActor
+/// An account filled in but not started is in the setup the assistant reads, so it never says
+/// there are no accounts; and nothing typed as a key or token leaves in the context.
+private func theContextCarriesTheUnsavedSetupWithoutAKey() throws {
+    let model = AppModel()
+    model.setupDraft.channels = "123456789012345678"
+    model.setupDraft.discordToken = "discord-secret-token"
+    model.setupDraft.provider = .deepseek
+    model.setupDraft.modelName = "deepseek-flash"
+    model.setupDraft.providerAPIKey = "sk-secret-model-key"
+    var account = TradingAccountDraft()
+    account.key = "PKSECRETKEY"
+    account.secret = "alpaca-secret-value"
+    model.setupDraft.accounts = [account]
+    let setup = model.assistantSetup
+    try #require(!setup.saved && !setup.copying && setup.unsavedChanges, "An unsaved setup read as saved: \(setup)")
+    try #require(setup.discord == .filled && setup.interpreter == .filled, "Filled services read wrong: \(setup)")
+    try #require(
+        setup.accounts == [AssistantSetup.Account(name: "primary", environment: .paper, state: .filled)],
+        "The unsaved account was not in the setup: \(setup.accounts)")
+    let sent = String(decoding: try JSONEncoder().encode(model.assistantContext(selectedPost: nil)), as: UTF8.self)
+    for secret in ["discord-secret-token", "sk-secret-model-key", "PKSECRETKEY", "alpaca-secret-value"] {
+        try #require(!sent.contains(secret), "The assistant context carried a secret")
+    }
+    try #require(sent.contains("\"primary\""), "The assistant context left out the account: \(sent)")
 }
 
 @MainActor

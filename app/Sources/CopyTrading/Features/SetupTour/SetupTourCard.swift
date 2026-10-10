@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The tour's card: which stop of how many, a serif title with an italic second line, one
+/// The tour's card: which stop of how many, a title with a quieter second line, one
 /// instruction, what moves it on, and the stop's help a click away.
 struct SetupTourCard: View {
     let stop: SetupTourStop
@@ -17,19 +17,22 @@ struct SetupTourCard: View {
             Text(
                 L10n.string("Tour stop %lld of %lld", Int64(stop.rawValue + 1), Int64(SetupTourStop.allCases.count)).uppercased()
             )
-            .font(.system(size: 10.5, weight: .semibold))
-            .tracking(1.2)
-            .foregroundStyle(Palette.accent)
+            .font(DesignTokens.eyebrow)
+            .tracking(DesignTokens.eyebrowTracking)
+            .foregroundStyle(Palette.tertiaryInk)
             .monospacedDigit()
             .padding(.bottom, 8)
+            // A card's title sits below a page's: the stop in the display face, its point as a lede.
             Text(L10n.string(stop.title))
-                .font(.system(size: 21, weight: .semibold, design: .serif))
+                .font(DisplayFont.font(size: 19, weight: .medium, relativeTo: .title3))
                 .foregroundStyle(Palette.ink)
                 .accessibilityAddTraits(.isHeader)
             Text(L10n.string(stop.subtitle))
-                .font(.system(size: 21, design: .serif).italic())
+                .font(DesignTokens.lede)
+                .tracking(DesignTokens.ledeTracking)
                 .foregroundStyle(Palette.tertiaryInk)
-                .padding(.bottom, 10)
+                .padding(.top, 2)
+                .padding(.bottom, 12)
             if stop == .discordRow && model.setupProgress.completed == 0 {
                 Text(L10n.string("Welcome. Five steps, about 10 minutes; nothing is saved or traded until the last one."))
                     .font(.system(size: 13))
@@ -44,8 +47,8 @@ struct SetupTourCard: View {
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 7) {
                 ZStack {
-                    Circle().fill(Palette.accent.opacity(0.18)).frame(width: 14, height: 14)
-                    Circle().fill(Palette.accent).frame(width: 6, height: 6)
+                    Circle().strokeBorder(Palette.ink, lineWidth: 1.2).frame(width: 12, height: 12)
+                    Circle().fill(Palette.ink).frame(width: 5, height: 5)
                 }
                 .accessibilityHidden(true)
                 Text(L10n.string(stop.waiting))
@@ -53,14 +56,11 @@ struct SetupTourCard: View {
                     .foregroundStyle(Palette.tertiaryInk)
             }
             .padding(.top, 12)
-            Rectangle()
-                .fill(Palette.hairline)
-                .frame(height: 0.5)
-                .padding(.vertical, 12)
+            Spacer().frame(height: 18)
             HStack(spacing: 4) {
                 ForEach(SetupTourStop.allCases) { other in
                     Capsule()
-                        .fill(other.rawValue <= stop.rawValue ? Palette.accent : Palette.ink.opacity(0.12))
+                        .fill(other.rawValue <= stop.rawValue ? Palette.ink : Palette.ink.opacity(0.12))
                         .opacity(other.rawValue < stop.rawValue ? 0.4 : 1)
                         .frame(width: other == stop ? 16 : 5, height: 5)
                 }

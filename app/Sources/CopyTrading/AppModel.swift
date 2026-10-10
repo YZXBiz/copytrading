@@ -23,6 +23,8 @@ protocol TradingStarting: Sendable {
 
     func pauseTrading() async throws -> TradingStatus
 
+    func updateAccountLimits(configuration: TradingConfiguration) async throws -> String
+
     func evaluateHistoricalProfile(
         _ evaluation: HistoricalProfileEvaluationRequest
     ) async throws -> ProfileEvaluation
@@ -51,53 +53,25 @@ final class AppModel {
         case failed
     }
 
-    enum Screen: String, CaseIterable, Hashable, Identifiable {
-        case today
-        case activity
-        case people
-        case accounts
-        case connections
-        case gettingStarted
-        case diagnostics
-        case settings
-
-        var id: String { rawValue }
-
-        var title: String {
-            switch self {
-            case .today: "Today"
-            case .activity: "Activity"
-            case .people: "People"
-            case .accounts: "Accounts"
-            case .connections: "Connections"
-            case .gettingStarted: "Getting Started"
-            case .diagnostics: "Diagnostics"
-            case .settings: "Settings"
-            }
-        }
-
-        var symbol: String {
-            switch self {
-            case .today: "sun.max"
-            case .activity: "list.bullet.rectangle"
-            case .people: "person.2"
-            case .accounts: "building.columns"
-            case .connections: "cloud"
-            case .gettingStarted: "hand.wave"
-            case .diagnostics: "waveform.path.ecg"
-            case .settings: "gearshape"
+    /// ⌘K's palette over the window.
+    var isShowingPalette = false
+    var selectedScreen: Screen = .gettingStarted {
+        didSet {
+            if selectedScreen != .settings {
+                UserDefaults.standard.set(selectedScreen.identifier, forKey: Self.lastScreenKey)
             }
         }
     }
-
-    var selectedScreen: Screen = .today
     /// The Settings page on show and the pages visited before it, newest last.
     var settingsPage: SettingsPage = .general
     var settingsTrail: [SettingsPage] = []
     /// Where closing Settings returns to.
-    var screenBeforeSettings: Screen = .today
+    var screenBeforeSettings: Screen = .gettingStarted
     var runtimeState: RuntimeState = .stopped {
-        didSet { holdMacAwakeWhileCopying() }
+        didSet {
+            holdMacAwakeWhileCopying()
+            if oldValue != runtimeState, runtimeState == .ready { shareAccountReadKeys() }
+        }
     }
     var engineStatus: EngineStatus?
     var tradingStatus: TradingStatus? {
@@ -113,8 +87,18 @@ final class AppModel {
     /// Copying was paused only to apply setup changes; anything short of starting the new setup
     /// resumes the saved one, so copying never stays paused by surprise.
     var isPausedToApplyChanges = false
+    /// An apply is under way, from reading the examples to copying again. Start Copying waits for
+    /// it: a second press would cancel it halfway and leave copying paused.
+    var isApplyingChanges = false
     var isTradingCommandPending = false
-    var isTradingUnlocked = false
+    /// The last import's summary, until the owner keeps or trashes the file.
+    var setupImportResult: SetupImportResult?
+    /// The open panel for Import Setup…, from Connections or File; the only way a setup file
+    /// reaches the app.
+    var isShowingSetupImporter = false
+    var isTradingUnlocked = false {
+        didSet { if oldValue != isTradingUnlocked { shareAccountReadKeys() } }
+    }
     var agentAccess: AgentAccessSetting = .off
     var isAgentRelayListening = false
     var isChangingAgentAccess = false
@@ -496,14 +480,14 @@ final class AppModel {
     var setupDraftSource: TradingConfiguration?
     /// The account or guru being edited, shown as one sheet over whichever screen asked for it.
     var setupEditor: ConnectionsEditingTarget?
+    /// Where the account sheet opens: on its limits, or on the price tolerance Activity suggests.
+    var accountEditorFocus: AccountEditorFocus?
+    /// Accounts whose new limits were just saved without a check, each until the owner edits again.
+    var limitsSavedAccountIDs: Set<String> = []
+    /// The engine refused the draft's limits, so they wait for the full check like other changes.
+    var limitsSaveRefused = false
     /// A connection the guide asked to open; Connections opens its panel and clears it.
     var requestedConnection: ConnectionKind?
-    /// A guru an assistant link asked to open; People opens their sheet and clears it.
-    var requestedGuruID: String?
-    /// The guru whose sheet is open on People, so the assistant knows who "this guru" is.
-    var openGuruID: String?
-    /// An account an assistant link asked to show; Accounts scrolls to it and clears it.
-    var requestedAccountID: String?
     /// The draft as it stood when the current check began; Start Copying needs it unchanged.
     var checkedSetupSignature: SetupDraftSignature?
     /// Each connection's latest check, kept only while what it checked stays as typed.
@@ -530,6 +514,8 @@ final class AppModel {
     var validatedConfiguration: TradingConfiguration? { pendingTradingActivation?.configuration }
 
     @ObservationIgnored private var tradingValidationTask: Task<Void, Never>?
+    /// Applying changes while copying runs, from reading the examples to starting the new setup.
+    @ObservationIgnored var applyChangesTask: Task<Void, Never>?
     @ObservationIgnored private var startupIntent = AppStartupIntent()
     @ObservationIgnored private let appUnlock: AppUnlock
     @ObservationIgnored private let shutdownCoordinator = ShutdownCoordinator()
@@ -691,12 +677,12 @@ final class AppModel {
             // an engine restart later never moves the owner.
             if !hasChosenFirstScreen {
                 hasChosenFirstScreen = true
-                if savedTrading == nil && selectedScreen == .today {
-                    if UserDefaults.standard.bool(forKey: Self.setupTourEndedKey) {
-                        selectedScreen = .gettingStarted
-                    } else {
+                if savedTrading == nil {
+                    if !UserDefaults.standard.bool(forKey: Self.setupTourEndedKey) {
                         startSetupTour()
                     }
+                } else {
+                    selectedScreen = homeScreen
                 }
             }
             let newJournal = CommandJournal(url: paths.applicationSupportDirectory.appending(path: "commands.json"))
@@ -1079,7 +1065,9 @@ final class AppModel {
                     discordToken: reading.discordToken,
                     provider: draft.providerConfiguration,
                     providerAPIKey: reading.providerAPIKey,
-                    profile: profile
+                    profile: profile,
+                    destinations: route.connection.map { [$0.terms(fullPositionUSD: draft.fullPosition(for: $0))] }?
+                        .filter { (Decimal(string: $0.fullPositionUSD) ?? 0) > 0 } ?? []
                 ))
         } catch EngineContractError.remote(code: _, message: let message?) {
             throw TradingSettingsError.invalidConfiguration(message)
@@ -1088,37 +1076,47 @@ final class AppModel {
         }
     }
 
+    /// Checks the setup in two stages: how each guru's examples read, which needs no pause, then
+    /// every connection, which the engine runs only while copying is paused. `reviewOnly` stops
+    /// after the readings; `reviewed` skips them for readings the owner already looked over.
+    /// Returns whether every stage asked for passed with nothing left for the owner.
+    @discardableResult
     func validateTradingSettings(
-        _ configuration: TradingConfiguration, enteredSecrets: TradingSecrets
-    ) async {
+        _ configuration: TradingConfiguration, enteredSecrets: TradingSecrets,
+        reviewOnly: Bool = false, reviewed: [String: ProfileExampleReview]? = nil
+    ) async -> Bool {
         defer { checkOutcomeMessage = message }
         guard !isRunningBackupRestore else {
             message = L10n.string("Wait for the backup or restore to finish, then check the setup.")
-            return
+            return false
         }
         guard isTradingUnlocked else {
             message = L10n.string("Unlock CopyTrading first.")
-            return
+            return false
         }
         guard let tradingConfigurationStore else {
             message = L10n.string("CopyTrading is still starting. Check the setup again in a moment.")
-            return
+            return false
         }
-        guard tradingStatus?.state == .paused, !isTradingCommandPending else {
+        guard reviewOnly || tradingStatus?.state == .paused, !isTradingCommandPending else {
             message = L10n.string("Pause copying before checking the setup.")
-            return
+            return false
         }
         guard let validator: (any TradingStarting) = tradingStarter ?? engineActions else {
             message = L10n.string("CopyTrading is still starting. Check the setup again in a moment.")
-            return
+            return false
         }
-        guard !isValidatingTrading, !isActivatingTrading else { return }
+        guard !isValidatingTrading, !isActivatingTrading else { return false }
         isValidatingTrading = true
         tradingValidation = nil
-        profileExampleReviews = [:]
-        profileExamplesAcknowledged = false
+        if let reviewed {
+            profileExampleReviews = reviewed
+        } else {
+            profileExampleReviews = [:]
+            profileExamplesAcknowledged = false
+            isShowingSetupCheck = false
+        }
         pendingTradingActivation = nil
-        isShowingSetupCheck = false
         defer { isValidatingTrading = false }
         do {
             try Self.validateTradingConfiguration(configuration)
@@ -1168,8 +1166,8 @@ final class AppModel {
                 configuration.profiles.map { ($0.profileRevision, $0) },
                 uniquingKeysWith: { first, _ in first }
             )
-            var reviews: [String: ProfileExampleReview] = [:]
-            for route in configuration.routes {
+            var reviews = reviewed ?? [:]
+            for route in configuration.routes where reviewed == nil {
                 guard let profile = profilesByRevision[route.profileRevision] else {
                     throw TradingSettingsError.invalidConfiguration(
                         L10n.string(
@@ -1197,7 +1195,11 @@ final class AppModel {
                 message = L10n.string(
                     "An example was read differently from what you expected. Fix the playbook or the example, then check again.")
                 isShowingSetupCheck = true
-                return
+                return false
+            }
+            if reviewOnly {
+                message = nil
+                return true
             }
             let validation = try await validator.validateTrading(
                 configuration: configuration, secrets: secrets
@@ -1208,7 +1210,7 @@ final class AppModel {
             guard validation.report.activatable, let activationToken = validation.activationToken else {
                 message = L10n.string("Some connections need attention. Nothing was saved.")
                 isShowingSetupCheck = true
-                return
+                return false
             }
             pendingTradingActivation = PendingTradingActivation(
                 configuration: configuration,
@@ -1218,7 +1220,8 @@ final class AppModel {
             )
             // The changes bar says the check passed; the readings still need a look when present.
             message = nil
-            isShowingSetupCheck = !reviews.isEmpty
+            if reviewed == nil { isShowingSetupCheck = !reviews.isEmpty }
+            return true
         } catch {
             if error is CancellationError {
                 tradingValidation = nil
@@ -1226,6 +1229,7 @@ final class AppModel {
             } else {
                 message = Self.userMessage(for: error)
             }
+            return false
         }
     }
 
@@ -1247,8 +1251,11 @@ final class AppModel {
 
     /// Checks the setup, then starts it when everything passed and there is nothing to look
     /// over; otherwise shows what needs the owner.
-    func checkThenStart(_ configuration: TradingConfiguration, enteredSecrets: TradingSecrets) async {
-        await validateTradingSettings(configuration, enteredSecrets: enteredSecrets)
+    func checkThenStart(
+        _ configuration: TradingConfiguration, enteredSecrets: TradingSecrets,
+        reviewed: [String: ProfileExampleReview]? = nil
+    ) async {
+        await validateTradingSettings(configuration, enteredSecrets: enteredSecrets, reviewed: reviewed)
         guard !Task.isCancelled else { return }
         if canStartCopyingFromCheck {
             await activateValidatedTradingSettings()
@@ -1373,7 +1380,11 @@ final class AppModel {
                 pendingTradingActivation = nil
                 tradingValidation = nil
                 syncSetupDraftWithSaved()
-                message = L10n.string("The new setup didn't start, so your previous setup is still in place.")
+                let why = status.errorCode.map(Reason.text) ?? L10n.string("The engine stopped while starting")
+                message =
+                    saved == nil
+                    ? L10n.string("Copying didn't start: %@.", why)
+                    : L10n.string("The new setup didn't start, so your previous setup is still in place: %@.", why)
                 return
             }
             // An activation the engine is still committing is progress, even with accounts already
@@ -1391,12 +1402,15 @@ final class AppModel {
         }
     }
 
-    func startTrading() async {
+    /// Starts the saved setup. `resumingSavedSetup` puts back a setup that was copying moments
+    /// ago, paused only to apply changes: the owner approved it already, so neither the unlock nor
+    /// a live account's Touch ID is asked for again.
+    func startTrading(resumingSavedSetup: Bool = false) async {
         guard !isRunningBackupRestore else {
             message = L10n.string("Wait for the backup or restore preview to finish before starting processing.")
             return
         }
-        guard isTradingUnlocked else {
+        guard isTradingUnlocked || resumingSavedSetup else {
             message = L10n.string("Unlock trading controls before starting processing.")
             return
         }
@@ -1418,7 +1432,9 @@ final class AppModel {
             guard let saved = try tradingConfigurationStore.load() else {
                 throw TradingSettingsError.missingCredentials("the saved credentials in Connections")
             }
-            guard await confirmLiveStart(saved.configuration) else { return }
+            if !resumingSavedSetup {
+                guard await confirmLiveStart(saved.configuration) else { return }
+            }
             let validation = try await starter.validateTrading(
                 configuration: saved.configuration, secrets: saved.secrets
             )
@@ -1459,6 +1475,60 @@ final class AppModel {
         } catch {
             message = Self.userMessage(for: error)
         }
+    }
+
+    /// When limits are all the draft changes, copying takes them now: no check, no Apply Changes,
+    /// no pause. The engine answers with the new setup's revision, which is saved with it, so the
+    /// next check and Start match the engine. Returns nil when the draft changes more than
+    /// limits, which wait for the full check; otherwise whether the limits were saved.
+    @discardableResult
+    func saveLimitOnlyChanges() async -> Bool? {
+        limitsSaveRefused = false
+        guard isTradingUnlocked, !setupDraft.hasTypedSecrets,
+            let saved = savedTradingConfiguration,
+            let edited = try? setupDraft.submission().0,
+            let changed = edited.limitOnlyChanges(from: saved),
+            let tradingConfigurationStore,
+            let control: (any TradingStarting) = tradingStarter ?? engineActions,
+            !isTradingCommandPending, !isValidatingTrading, !isActivatingTrading, pendingTradingActivation == nil,
+            (try? tradingConfigurationStore.pendingActivation()) == nil
+        else { return nil }
+        isTradingCommandPending = true
+        defer { isTradingCommandPending = false }
+        do {
+            try Self.validateTradingConfiguration(edited)
+            let revision = try await control.updateAccountLimits(configuration: edited)
+            try tradingConfigurationStore.saveLimits(configuration: edited, revision: revision)
+            savedTradingConfiguration = edited
+            setupDraftSource = edited
+            tradingValidation = nil
+            limitsSavedAccountIDs.formUnion(changed)
+            limitsSaveRefused = false
+            message = nil
+            return true
+        } catch {
+            limitsSaveRefused = true
+            message = Self.userMessage(for: error)
+            return false
+        }
+    }
+
+    /// While unlocked, the engine may read every saved account live, so a paused account still
+    /// shows its money; locking takes the keys back. Copying stays the only path to an order.
+    func shareAccountReadKeys() {
+        guard let engineActions else { return }
+        guard isTradingUnlocked, let stored = try? tradingConfigurationStore?.load() else {
+            Task { try? await engineActions.detachAccountReaders() }
+            return
+        }
+        let environments = Dictionary(
+            stored.configuration.accounts.map { ($0.id, $0.environment) }, uniquingKeysWith: { first, _ in first })
+        let keys = stored.secrets.brokers.compactMap { broker in
+            environments[broker.accountID].map {
+                AccountReadKeys(accountID: broker.accountID, environment: $0, key: broker.key, secret: broker.secret)
+            }
+        }
+        Task { try? await engineActions.attachAccountReaders(keys) }
     }
 
     func unlockTrading() async {
@@ -1510,6 +1580,10 @@ final class AppModel {
     @discardableResult
     func windowDidClose(_ sessionID: UUID) -> Task<Void, Never>? {
         guard windowSessionID == sessionID else { return nil }
+        // Changes still being applied stop here; the saved setup copies again below.
+        let applying = applyChangesTask
+        applyChangesTask = nil
+        applying?.cancel()
         windowSessionID = nil
         accessGeneration += 1
         isTradingUnlocked = false
@@ -1519,6 +1593,7 @@ final class AppModel {
         discardSetupWork()
         return Task { [weak self] in
             guard let self else { return }
+            await self.finishInterruptedApply(applying)
             await self.assistant.reset()
             await self.discardAgentProposals()
             await self.appUnlock.closeWindow(sessionID)
@@ -1611,10 +1686,11 @@ final class AppModel {
     /// Starts copying once per launch when the owner asked for it, the setup is paper only,
     /// and the engine reports copying paused. Start runs the same checks as the toolbar button.
     func startCopyingOnLaunchIfWanted() async {
-        guard launchPreferences.startsCopying, !didStartCopyingOnLaunch, isTradingUnlocked,
+        guard wantsCopyingOnLaunch, !didStartCopyingOnLaunch, isTradingUnlocked,
             canStartCopyingOnLaunch, tradingStatus?.state == .paused
         else { return }
         didStartCopyingOnLaunch = true
+        UserDefaults.standard.removeObject(forKey: Self.resumesAfterUpdateKey)
         await startTrading()
         retryLaunchStartWhileHeldBack()
     }
@@ -1634,7 +1710,7 @@ final class AppModel {
     }
 
     private var isHeldBackAtLaunch: Bool {
-        launchPreferences.startsCopying && isTradingUnlocked && tradingStatus?.state == .paused
+        wantsCopyingOnLaunch && isTradingUnlocked && tradingStatus?.state == .paused
             && tradingValidation?.report.activatable == false
     }
 
@@ -1651,6 +1727,10 @@ final class AppModel {
     }
 
     func lockAccess() async {
+        let applying = applyChangesTask
+        applyChangesTask = nil
+        applying?.cancel()
+        await finishInterruptedApply(applying)
         isTradingUnlocked = false
         isUnlockingTrading = false
         accessMessage = nil
@@ -1845,7 +1925,7 @@ final class AppModel {
             // match what the example names (none means every buy).
             let priceMatches =
                 expected.expectedPrice.flatMap { Decimal(string: $0) }.map { expectedPrice in
-                    instruction.flatMap { Decimal(string: $0.price) } == expectedPrice
+                    instruction?.price.flatMap { Decimal(string: $0) } == expectedPrice
                 } ?? true
             let checksBuyPrice = expected.expectedBuyPrice != nil || expected.expectedAction != .buy
             let buyPriceMatches =

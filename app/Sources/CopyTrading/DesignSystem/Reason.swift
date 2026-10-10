@@ -1,3 +1,4 @@
+import DesktopCore
 import Foundation
 
 /// Engine reason codes in the words a trader would use, in the app's language; unknown codes fall
@@ -7,6 +8,15 @@ enum Reason {
     static func text(_ code: String?) -> String {
         guard let code else { return "—" }
         return known[code].map { L10n.string($0) } ?? Humanize.code(code)
+    }
+
+    /// An engine refusal in the owner's words: a known code is worded here, in the app's language;
+    /// anything else is shown as the engine said it.
+    static func refusal(_ error: Error) -> String {
+        if case .remote(_, let message?) = error as? EngineContractError, known[message] != nil {
+            return text(message)
+        }
+        return error.localizedDescription
     }
 
     /// Keeps parser identifiers out of the main explanation while preserving free readable text.
@@ -43,8 +53,12 @@ enum Reason {
         "account_unavailable": "The account could not be reached",
         "outside_open_orders": "Cancel the orders open at Alpaca first",
         "broker_account_inactive": "Alpaca has not activated this account",
+        "account_in_use": "Another CopyTrading on this Mac is copying into this account",
         "account_risk_unavailable": "Risk could not be checked",
         "recovery_pending": "Still checking the account after a restart",
+        "manual_resume_required": "Entries wait for you to resume them after the restart",
+        "stale_during_recovery": "Too old by the time the account's restart checks finished",
+        "stale_waiting_for_resume": "Waited for you to resume entries after the restart, and got too old",
         "outside_session": "The market was closed",
         "overnight_halted": "Overnight trading was halted",
         "overnight_not_supported": "Overnight trading is not supported",
@@ -90,6 +104,10 @@ enum Reason {
         "sells_from_holdings": "Sells from what the account holds",
         "unresolved_order_incident": "An earlier order needs your review",
         "unresolved_account_order": "An open order at the broker needs your review",
+        "resume_blocked_outside_order": "An order placed outside CopyTrading is still open. Let it fill or cancel it, then resume.",
+        "resume_blocked_account_inactive": "Alpaca says this account isn't active, so it can't buy.",
+        "resume_blocked_order_unclear": "An order's outcome is still unclear at Alpaca. Resume once it settles.",
+        "resume_blocked_unreadable": "CopyTrading couldn't read this account's holdings just now. Try again in a moment.",
         "incomplete_account_orders": "The broker's order list was incomplete",
         "plan_unavailable": "The order couldn't be planned",
         "conditional": "The guru would trade only if something happens",

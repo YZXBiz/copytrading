@@ -1,50 +1,45 @@
 import SwiftUI
 
-/// The guide's title, with how far setup has come at
-/// the trailing edge.
+/// The guide's hero, set like a studio site's front page: a large headline, a two-line lede, the
+/// an ink dot on its ground heading for the next step, and the button that shows the owner around.
 struct GuideHeader: View {
     let progress: SetupProgress
     /// Starts the setup tour on Connections.
     let startTour: () -> Void
 
+    private var lede: (String, String) {
+        progress.isComplete
+            ? (L10n.string("You're set up."), L10n.string("This page stays here as your guide."))
+            : (L10n.string("About 10 minutes, five steps."), L10n.string("Have your Discord, AI provider, and Alpaca logins at hand."))
+    }
+
     var body: some View {
-        HStack(alignment: .top, spacing: 16) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(L10n.string("Getting started 👋"))
-                    .font(DesignTokens.documentTitle)
-                    .foregroundStyle(Palette.ink)
-                    .accessibilityAddTraits(.isHeader)
-                Text(
-                    progress.isComplete
-                        ? L10n.string("You're set up. This page stays here as your guide.")
-                        : L10n.string("About 10 minutes. Have your Discord, AI provider, and Alpaca logins at hand.")
-                )
-                .font(DesignTokens.bodyText)
-                .foregroundStyle(Palette.secondaryInk)
-                if !progress.isComplete {
-                    Button(
-                        L10n.string(progress.completed == 0 ? "Show Me Around" : "Pick Up Where I Left Off"),
-                        systemImage: "point.topleft.down.to.point.bottomright.curvepath", action: startTour
-                    )
-                    .buttonStyle(.borderedProminent)
-                    .buttonBorderShape(.capsule)
-                    .controlSize(.large)
-                    .padding(.top, 8)
+        VStack(spacing: 0) {
+            Text(L10n.string("Getting started"))
+                .font(DesignTokens.documentTitle)
+                .tracking(DesignTokens.documentTitleTracking)
+                .foregroundStyle(Palette.ink)
+                .multilineTextAlignment(.center)
+                .accessibilityAddTraits(.isHeader)
+            VStack(spacing: 6) {
+                Text(lede.0)
+                Text(lede.1)
+            }
+            .font(DesignTokens.lede)
+            .tracking(DesignTokens.ledeTracking)
+            .foregroundStyle(Palette.tertiaryInk)
+            .multilineTextAlignment(.center)
+            .padding(.top, 18)
+            .accessibilityElement(children: .combine)
+            if !progress.isComplete {
+                Button(L10n.string(progress.completed == 0 ? "Show Me Around" : "Pick Up Where I Left Off"), action: startTour)
+                    .buttonStyle(PageButtonStyle(isProminent: true, horizontalPadding: 18))
+                    .padding(.top, 26)
                     .accessibilityIdentifier("guide.tour")
-                }
             }
-            Spacer(minLength: 16)
-            HStack(spacing: 10) {
-                Text(L10n.string("%lld of %lld", Int64(progress.completed), Int64(progress.total)))
-                    .font(DesignTokens.caption.weight(.medium))
-                    .foregroundStyle(Palette.secondaryInk)
-                    .monospacedDigit()
-                    .contentTransition(.numericText(value: Double(progress.completed)))
-                ProgressRing(progress: progress.fraction, size: 30)
-            }
-            .padding(.top, 6)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(L10n.string("Setup progress, %lld of %lld steps done", Int64(progress.completed), Int64(progress.total)))
+            GuideStage(progress: progress)
+                .padding(.top, 34)
         }
+        .frame(maxWidth: .infinity)
     }
 }

@@ -1,5 +1,8 @@
 """Durable attribution of broker holdings outside copier-owned lots."""
 
+from collections.abc import Sequence
+from dataclasses import dataclass
+from decimal import Decimal
 from typing import Literal, Self
 
 from pydantic import AwareDatetime, Field, model_validator
@@ -7,6 +10,47 @@ from pydantic import AwareDatetime, Field, model_validator
 from copytrading_engine.execution.domain.market import BrokerOrder, Position
 from copytrading_engine.execution.domain.orders import OrderRecord
 from copytrading_engine.execution.domain.values import Identifier, Money, Quantity, Value
+
+# Why the app settled a holdings count from the broker's filled count by itself (ADR-0011).
+SyncReason = Literal[
+    "broker_matches_again",
+    "owner_bought_outside",
+    "owner_sold_own_shares",
+    "owner_sold_copied_shares",
+]
+
+
+@dataclass(frozen=True, slots=True)
+class Allocation:
+    """How a broker count splits: what each copied lot keeps, and what is the owner's own."""
+
+    lot_remaining: dict[str, Decimal]
+    external_qty: Decimal
+
+
+def allocate(broker_qty: Decimal, lots_oldest_first: Sequence[tuple[str, Decimal]]) -> Allocation:
+    """Copied shares the broker still holds stay copied and the rest are the owner's own. A count
+    below the copied shares means copied shares were sold outside the app, and they come off the
+    oldest buys first, the way the app's own sells take them."""
+    copied = sum((held for _, held in lots_oldest_first), Decimal(0))
+    if broker_qty >= copied:
+        return Allocation(dict(lots_oldest_first), broker_qty - copied)
+    missing = copied - broker_qty
+    remaining: dict[str, Decimal] = {}
+    for key, held in lots_oldest_first:
+        taken = min(held, missing)
+        remaining[key] = held - taken
+        missing -= taken
+    return Allocation(remaining, Decimal(0))
+
+
+def sync_reason(broker_qty: Decimal, expected: Decimal, copied: Decimal) -> SyncReason:
+    """What a settled count says the owner did."""
+    if broker_qty == expected:
+        return "broker_matches_again"
+    if broker_qty > expected:
+        return "owner_bought_outside"
+    return "owner_sold_own_shares" if broker_qty >= copied else "owner_sold_copied_shares"
 
 
 class ExternalPosition(Value):

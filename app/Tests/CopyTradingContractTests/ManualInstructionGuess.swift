@@ -1,0 +1,1 @@
+../../Sources/CopyTrading/Features/Activity/ManualInstructionGuess.swift

@@ -11,7 +11,7 @@ struct HelpPopoverButton: View {
         Button(L10n.string(title), systemImage: "questionmark.circle", action: toggle)
             .buttonStyle(.borderless)
             .font(DesignTokens.caption)
-            .foregroundStyle(.tint)
+            .foregroundStyle(Palette.ink)
             .popover(isPresented: $isPresented, arrowEdge: .bottom) {
                 FloatingPanelSurface(title: L10n.string(title)) {
                     ScrollView {

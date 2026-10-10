@@ -20,7 +20,9 @@ enum DestinationOutcome: Equatable {
             return
         }
         if destination.status == "review_required" {
-            self = .needsReview(Reason.text(destination.status))
+            // Say why it waits ("The post repeats an earlier call of the guru's"), not that it waits.
+            let why = destination.instructionOutcomes.first { $0 != "review_required" && $0 != "pending" }
+            self = .needsReview(Reason.text(why ?? destination.status))
         } else if ["stale", "out_of_order", "ignored"].contains(destination.status) {
             self = .skipped(Reason.text(destination.status))
         } else if destination.status == "done" {
@@ -30,36 +32,32 @@ enum DestinationOutcome: Equatable {
         }
     }
 
+    /// One order in a phrase, dollar first: "Bought $199.82 of PM", "Order for $200 of PM was
+    /// cancelled". Share counts stay with the order's facts.
     @MainActor
     static func order(_ order: OrderActivity, count: Int) -> Self {
-        let verb = L10n.string(order.side == "sell" ? "Sold" : "Bought")
+        let selling = order.side == "sell"
         let filled = Decimal(engine: order.filledQuantity) ?? 0
-        let quantity = Decimal(engine: order.quantity) ?? 0
-        let price = Decimal(engine: order.averageFillPrice)?.formatted(.currency(code: "USD"))
+        let planned = OrderAmount.planned(order) ?? order.symbol
+        let done = OrderAmount.filled(order) ?? planned
         switch order.status {
         case "filled":
-            var detail = L10n.string("%@ %@ %@", verb, filled.formatted(), order.symbol)
-            if let price { detail = L10n.string("%@ at %@", detail, price) }
+            var detail = L10n.string(selling ? "Sold %@" : "Bought %@", done)
             if count > 1 { detail = L10n.string("%@ and %lld more", detail, Int64(count - 1)) }
             return .filled(detail)
         case "partially_filled":
-            var detail = L10n.string("%@ %@ of %@ %@", verb, filled.formatted(), quantity.formatted(), order.symbol)
-            if let price { detail = L10n.string("%@ at %@", detail, price) }
-            return .partlyFilled(detail)
+            return .partlyFilled(L10n.string(selling ? "Partly sold: %@ so far" : "Partly bought: %@ so far", done))
         case "canceled", "expired", "done_for_day", "replaced", "released_unsubmitted", "aborted_before_submit":
             if filled > 0 {
-                var detail = L10n.string("%@ %@ of %@ %@", verb, filled.formatted(), quantity.formatted(), order.symbol)
-                if let price { detail = L10n.string("%@ at %@", detail, price) }
-                return .partlyFilled(L10n.string("%@, rest cancelled", detail))
+                return .partlyFilled(L10n.string(selling ? "Sold %@, rest cancelled" : "Bought %@, rest cancelled", done))
             }
-            return .cancelled(L10n.string("Order for %@ %@ was cancelled", quantity.formatted(), order.symbol))
+            return .cancelled(L10n.string("Order for %@ was cancelled", planned))
         case "rejected":
             return .failed(L10n.string("The broker rejected the order for %@", order.symbol))
         case "uncertain", "unrecognized":
             return .needsReview(L10n.string("The broker has not confirmed the order for %@", order.symbol))
         default:
-            let side = L10n.string(order.side == "sell" ? "Selling" : "Buying")
-            var detail = L10n.string("%@ %@ %@", side, quantity.formatted(), order.symbol)
+            var detail = L10n.string(selling ? "Selling %@" : "Buying %@", planned)
             if let limit = Decimal(engine: order.limitPrice)?.formatted(.currency(code: "USD")) {
                 detail = L10n.string("%@ at up to %@", detail, limit)
             }

@@ -5,6 +5,8 @@ import datetime as dt
 import sqlite3
 from uuid import uuid4
 
+import pytest
+
 from copytrading_engine.execution.application.ports import AccountOpenRefused, BrokerError
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore
 from copytrading_engine.shared.raw_message import RawMessage
@@ -339,17 +341,34 @@ async def test_post_that_fails_evidence_checks_goes_to_review_and_processing_con
         review = next(item for item in page.items if item.text.endswith("from 200"))
         assert review.decision == "review"
         assert review.parser_reason == "evidence_validation_failed"
+        # Activity's timeline: captured, then read, then handed to the accounts, in order.
+        bought = await wait_until_delivered(runtime, "Bought AAPL at 200")
+        assert bought.read_started_at is not None
+        assert bought.read_at is not None
+        assert bought.delivered_at is not None
+        assert bought.captured_at <= bought.read_started_at <= bought.read_at <= bought.delivered_at
     finally:
         await runtime.shutdown()
+
+
+async def wait_until_delivered(runtime, text):
+    for _ in range(200):
+        page = await runtime.operator.source_activity(None, 10)
+        item = next((item for item in page.items if item.text == text), None)
+        if item is not None and item.delivered_at is not None:
+            return item
+        await asyncio.sleep(0.02)
+    raise AssertionError(f"{text!r} was never handed to the accounts")
 
 
 def _never_posts(source, channels, authors, stop, report_failure):
     return Session(source, None)
 
 
-async def test_an_order_placed_outside_the_app_names_why_copying_could_not_start(tmp_path):
+@pytest.mark.parametrize("reason", ["outside_open_orders", "account_in_use"])
+async def test_a_refused_account_names_why_copying_could_not_start(tmp_path, reason):
     async def owner_factory(path, credentials, policy, environment):
-        raise AccountOpenRefused("outside_open_orders")
+        raise AccountOpenRefused(reason)
 
     runtime = TradingRuntime(
         tmp_path,
@@ -359,11 +378,13 @@ async def test_an_order_placed_outside_the_app_names_why_copying_could_not_start
             session=_never_posts,
         ),
     )
-    await runtime.start(trading_configuration("first"), trading_secrets_for("first"))
+    activation_id = str(uuid4())
+    await runtime.start(trading_configuration("first"), trading_secrets_for("first"), activation_id)
     failed = await wait_for(runtime, lambda status: status.state == "failed")
-    assert failed.error_code == "outside_open_orders"
+    assert failed.error_code == reason
+    assert runtime.activation_status(activation_id).error_code == reason
     [account] = (await runtime.operator.account_overviews()).items
-    assert account.readiness == "outside_open_orders"
+    assert account.readiness == reason
     await runtime.shutdown()
 
 

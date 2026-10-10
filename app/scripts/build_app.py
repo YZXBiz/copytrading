@@ -238,6 +238,17 @@ def copy_localization_bundle(bin_dir: Path, resources: Path) -> Path:
     return destination
 
 
+def copy_ui_bundle(bin_dir: Path, resources: Path) -> Path:
+    """Place the UI module's resource bundle, which carries the display font, beside the app's
+    other resources, where Bundle.module finds it."""
+    source = bin_dir / "CopyTrading_CopyTradingUI.bundle"
+    if not (source / "Contents/Resources/Fonts/JosefinSans.ttf").is_file():
+        raise ValueError("Swift build is missing the display font in the CopyTradingUI bundle")
+    destination = resources / source.name
+    shutil.copytree(source, destination)
+    return destination
+
+
 def build_number() -> str:
     """Commits on the checked-out history: it only grows on main, so Sparkle sees each release as
     newer than the last (CFBundleVersion)."""
@@ -335,6 +346,7 @@ def build(app: Path, prepared: Path, version: str | None = None) -> None:
             bin_dir / "Sparkle.framework", frameworks / "Sparkle.framework", symlinks=True
         )
         copy_localization_bundle(bin_dir, resources)
+        copy_ui_bundle(bin_dir, resources)
         helpers = staged / "Contents/Helpers"
         helpers.mkdir()
         shutil.copy2(MACOS / "Resources/Helpers/copytrading", helpers / "copytrading")

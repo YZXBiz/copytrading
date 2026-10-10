@@ -1,0 +1,1 @@
+../../Sources/CopyTrading/Features/Activity/CancelReasonText.swift

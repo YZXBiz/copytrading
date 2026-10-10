@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// A guru's initials in a muted tint that stays the same for the same name.
+/// A guru's initials inside a thin ink ring. `tint(for:)` keeps a steady colour per name for the
+/// few places that still need to tell gurus apart.
 struct GuruMonogram: View {
     let name: String
     var size: CGFloat = 28
@@ -24,9 +25,9 @@ struct GuruMonogram: View {
     var body: some View {
         Text(initials)
             .font(.system(size: size * 0.4, weight: .semibold, design: .rounded))
-            .foregroundStyle(tint)
+            .foregroundStyle(Palette.ink)
             .frame(width: size, height: size)
-            .background(tint.opacity(0.16), in: .circle)
+            .overlay(Circle().strokeBorder(Palette.ink, lineWidth: 1.2))
             .accessibilityHidden(true)
     }
 }

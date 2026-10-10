@@ -5,9 +5,10 @@ import Observation
 protocol AccountOperations: Sendable {
     func accounts(beforeAccountID: String?, limit: Int) async throws -> AccountOverviewPage
     func sourceActivity(beforeSeq: Int?, limit: Int) async throws -> SourceActivityPage
-    func accountEvents(accountID: String, beforeSeq: Int?, limit: Int) async throws -> AccountEventPage
+    func accountFeed(accountID: String, beforeSeq: Int?, limit: Int) async throws -> AccountFeedPage
     func controlAccount(_ command: AccountControlCommand) async throws -> AccountControlResult
     func equityHistory(accountID: String, window: EquityHistoryWindow) async throws -> EquityHistory?
+    func resolveOwnership(accountID: String, resolution: OwnershipResolutionRequest) async throws -> OwnershipResolution
 }
 
 extension EngineActions: AccountOperations {}
@@ -18,11 +19,20 @@ final class AccountFeatureModel {
     private(set) var accounts: [AccountOverview] = []
     private(set) var nextAccountCursor: String?
     private(set) var isLoadingMoreAccounts = false
-    private(set) var activity: [SourceActivity] = []
+    private(set) var activity: [SourceActivity] = [] {
+        didSet {
+            let fills = fillWatch.newFills(in: activity)
+            if !fills.isEmpty { onFills?(fills) }
+        }
+    }
+    private var fillWatch = FillWatch()
+    /// Told of each copied order that newly filled, once; the app turns them into notifications.
+    var onFills: (([FillWatch.Fill]) -> Void)?
     private(set) var unavailableAccounts: [AccountUnavailable] = []
     private(set) var nextActivityCursor: Int?
-    private(set) var events: [String: [AccountEvent]] = [:]
-    private(set) var eventCursors: [String: Int] = [:]
+    /// Each account's feed, newest first, and where its next older page starts.
+    private(set) var feeds: [String: [AccountFeedItem]] = [:]
+    private(set) var feedCursors: [String: Int] = [:]
     private(set) var pendingAccounts: Set<String> = []
     private(set) var isRefreshing = false
     private(set) var errors: [String: String] = [:]
@@ -30,8 +40,6 @@ final class AccountFeatureModel {
     private(set) var lastUpdatedAt: Date?
     private(set) var histories: [String: EquityHistory] = [:]
     private(set) var historyWindow: EquityHistoryWindow = .today
-    /// A post another screen asked Activity to show; Activity clears it once shown.
-    var focusedActivityID: SourceActivity.ID?
     private var retryCommands: [String: AccountControlCommand] = [:]
     private var privateAccessGeneration: UUID?
     private var loadedAccountPageCount = 0
@@ -70,6 +78,28 @@ final class AccountFeatureModel {
             guard isCurrent(generation) else { return }
             errors["read"] = error.localizedDescription
         }
+    }
+
+    /// Re-reads only the newest posts, for the fast tick while a post is in flight; older pages
+    /// already loaded stay.
+    func refreshActivity(using actions: (any AccountOperations)?) async {
+        guard let actions, let generation = privateAccessGeneration, !isRefreshing else { return }
+        do {
+            let page = try await actions.sourceActivity(beforeSeq: nil, limit: 25)
+            guard isCurrent(generation) else { return }
+            activity = Self.merged(page.items, into: activity)
+            errors.removeValue(forKey: "read")
+            lastUpdatedAt = .now
+        } catch {
+            guard isCurrent(generation) else { return }
+            errors["read"] = error.localizedDescription
+        }
+    }
+
+    /// The newest page in place of what it covers, followed by the older posts already loaded.
+    static func merged(_ newest: [SourceActivity], into current: [SourceActivity]) -> [SourceActivity] {
+        guard let oldest = newest.map(\.id).min() else { return current }
+        return newest + current.filter { $0.id < oldest }
     }
 
     /// Reads each loaded account's equity curve; an account with no running owner has none.
@@ -191,24 +221,67 @@ final class AccountFeatureModel {
             errors.removeValue(forKey: accountID)
         } catch {
             guard isCurrent(generation) else { return }
-            errors[accountID] = error.localizedDescription
+            errors[accountID] = Reason.refusal(error)
         }
     }
 
-    func loadEvents(accountID: String, more: Bool = false, using actions: (any AccountOperations)?) async {
+    /// Settles a holdings question the owner answered, then rereads the accounts so the warning
+    /// and the held-back entries clear together.
+    func resolveOwnership(_ fix: OwnershipFix, using actions: (any AccountOperations)?) async {
+        let accountID = fix.request.accountID
+        guard let actions, privateAccessGeneration != nil, !pendingAccounts.contains(accountID) else { return }
+        pendingAccounts.insert(accountID)
+        defer { pendingAccounts.remove(accountID) }
+        do {
+            _ = try await actions.resolveOwnership(accountID: accountID, resolution: fix.request)
+            errors.removeValue(forKey: accountID)
+        } catch {
+            errors[accountID] = L10n.string(
+                "The holdings couldn't be settled: %@. Check the broker for open orders in %@, then try again.",
+                error.localizedDescription, fix.request.symbol)
+            return
+        }
+        await refresh(using: actions)
+    }
+
+    /// Accounts the saved setup copies into that couldn't be read. One left by an earlier setup
+    /// isn't the owner's concern any more, so it isn't shown.
+    func unavailable(in setup: TradingConfiguration?) -> [AccountUnavailable] {
+        guard let setup else { return unavailableAccounts }
+        let ids = Set(setup.accounts.map(\.id))
+        return unavailableAccounts.filter { ids.contains($0.accountID) }
+    }
+
+    func loadFeed(accountID: String, more: Bool = false, using actions: (any AccountOperations)?) async {
         guard let actions, let generation = privateAccessGeneration else { return }
-        let cursor = more ? eventCursors[accountID] : nil
+        let cursor = more ? feedCursors[accountID] : nil
         if more && cursor == nil { return }
         do {
-            let page = try await actions.accountEvents(accountID: accountID, beforeSeq: cursor, limit: 25)
+            let page = try await actions.accountFeed(accountID: accountID, beforeSeq: cursor, limit: 25)
             guard isCurrent(generation) else { return }
-            events[accountID] = more ? (events[accountID] ?? []) + page.items : page.items
-            eventCursors[accountID] = page.nextBeforeSeq
-            errors.removeValue(forKey: "events:\(accountID)")
+            feeds[accountID] = more ? (feeds[accountID] ?? []) + page.items : page.items
+            feedCursors[accountID] = page.nextBeforeSeq
+            errors.removeValue(forKey: "feed:\(accountID)")
         } catch {
             guard isCurrent(generation) else { return }
-            errors["events:\(accountID)"] = error.localizedDescription
+            errors["feed:\(accountID)"] = error.localizedDescription
         }
+    }
+
+    /// The newest page of every listed account's feed; an account already paged further keeps
+    /// its older rows until the owner reloads it.
+    func refreshFeeds(using actions: (any AccountOperations)?) async {
+        for account in accounts where (feeds[account.accountID]?.count ?? 0) <= 25 {
+            await loadFeed(accountID: account.accountID, using: actions)
+        }
+    }
+
+    /// Sales the owner made, from every account, newest first; Activity lists them with the posts.
+    var ownerSales: [(accountID: String, item: AccountFeedItem)] {
+        feeds.flatMap { accountID, items in
+            items.filter { $0.source == "you" && $0.kind == "sold" }.map { (accountID, $0) }
+        }
+        .sorted { (Humanize.date($0.item.at) ?? .distantPast) > (Humanize.date($1.item.at) ?? .distantPast) }
     }
 
     /// Keep one entry per account; the latest page's reason replaces an earlier one.
@@ -227,8 +300,8 @@ final class AccountFeatureModel {
         activity = []
         nextActivityCursor = nil
         unavailableAccounts = []
-        events = [:]
-        eventCursors = [:]
+        feeds = [:]
+        feedCursors = [:]
         pendingAccounts = []
         isRefreshing = false
         isLoadingMoreAccounts = false
@@ -237,7 +310,6 @@ final class AccountFeatureModel {
         lastUpdatedAt = nil
         histories = [:]
         historyWindow = .today
-        focusedActivityID = nil
     }
 
     private func isCurrent(_ generation: UUID) -> Bool {

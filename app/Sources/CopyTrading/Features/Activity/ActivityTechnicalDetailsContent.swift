@@ -1,8 +1,9 @@
 import DesktopCore
 import SwiftUI
 
-/// What Technical details shows when opened: where the post stopped, who read it, and the Discord
-/// IDs to look it up by, on one quiet grey surface.
+/// What Technical details shows when opened, the trip itself drawn above it on the card: each
+/// order's facts, who read it, and the Discord IDs to look it up by, as hairline rows on the
+/// page with no frame.
 struct ActivityTechnicalDetailsContent: View {
     let item: SourceActivity
 
@@ -15,14 +16,17 @@ struct ActivityTechnicalDetailsContent: View {
     private var authorID: String? { item.authorID ?? item.sourceEvent.authorID }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            ActivityPipelineTrack(item: item)
-            Divider()
-            VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 28) {
+            ForEach(item.destinations) { destination in
+                ForEach(destination.orders) { order in
+                    OrderFactsView(order: order, account: destination.accountID)
+                }
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                TechnicalSectionTitle(text: L10n.string("Reading"))
                 if let interpretedBy = item.interpretedBy {
                     TechnicalFactRow(label: "Read by") { Text(interpretedBy) }
                 }
-                TechnicalFactRow(label: "Captured") { Text(Humanize.timestamp(item.capturedAt)) }
                 if item.sourceRevision > 1 {
                     TechnicalFactRow(label: "Edits") {
                         Text(L10n.string("Edited %@ after posting", Humanize.count(item.sourceRevision - 1, "time")))
@@ -31,23 +35,20 @@ struct ActivityTechnicalDetailsContent: View {
                 if item.profileRevision != nil {
                     TechnicalFactRow(label: "Guru version") {
                         Text(Humanize.revision(item.profileRevision))
-                            .font(.system(.callout, design: .monospaced))
+                            .font(DesignTokens.activityIdentifier)
+                            .foregroundStyle(Palette.secondaryInk)
                     }
                 }
                 if let parserNote {
                     TechnicalFactRow(label: "Model's note") {
                         Text(parserNote)
-                            .font(.system(.callout, design: .monospaced))
                             .textSelection(.enabled)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }
-            Divider()
-            VStack(alignment: .leading, spacing: 8) {
-                Text(L10n.string("Discord IDs"))
-                    .font(DesignTokens.caption.weight(.medium))
-                    .foregroundStyle(Palette.secondaryInk)
+            VStack(alignment: .leading, spacing: 0) {
+                TechnicalSectionTitle(text: L10n.string("Discord IDs"))
                 if let authorID {
                     CopyableIdentifierRow(label: "Author", value: authorID)
                 }
@@ -58,13 +59,11 @@ struct ActivityTechnicalDetailsContent: View {
                     CopyableIdentifierRow(label: "Message", value: messageID)
                 }
             }
-            Label(L10n.string("Orders follow the reading above, not the raw text of the post."), systemImage: "info.circle")
-                .font(DesignTokens.caption)
+            Text(L10n.string("Orders follow the reading above, not the raw text of the post."))
+                .font(DesignTokens.activityMeta)
                 .foregroundStyle(Palette.tertiaryInk)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.group, in: .rect(cornerRadius: DesignTokens.blockCornerRadius))
-        .padding(.top, 10)
     }
 }

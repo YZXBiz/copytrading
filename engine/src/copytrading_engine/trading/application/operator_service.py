@@ -14,6 +14,7 @@ from copytrading_engine.execution.domain.manual_commands import (
     ManualCommandPageRequest,
 )
 from copytrading_engine.execution.domain.market import EquityHistory, HistoryWindow
+from copytrading_engine.execution.presentation.account_feed import AccountFeedPage
 from copytrading_engine.execution.presentation.operator_views import (
     AccountEventPage,
     AccountOverview,
@@ -22,6 +23,7 @@ from copytrading_engine.execution.presentation.operator_views import (
     DestinationView,
     UnavailableReason,
     destination_views,
+    with_live_facts,
 )
 from copytrading_engine.shared.route_keys import choose_route, route_key
 from copytrading_engine.trading.application.account_access import (
@@ -29,16 +31,41 @@ from copytrading_engine.trading.application.account_access import (
     OwnerUnavailable,
     bounded_owner_read,
 )
+from copytrading_engine.trading.application.paused_reader import (
+    PausedAccountReader,
+    ReadKeys,
+    ReadOnlyBroker,
+)
 from copytrading_engine.trading.presentation.operator_models import SourceActivityPage
 
 log = logging.getLogger(__name__)
 
 
+def _no_broker(keys: ReadKeys) -> ReadOnlyBroker:
+    raise RuntimeError("This engine reads no broker while copying is paused")
+
+
 class OperatorQueryService:
     """Answer the native app's paged account, event, source, and command-history reads."""
 
-    def __init__(self, access: AccountAccess) -> None:
+    def __init__(self, access: AccountAccess, reader: PausedAccountReader | None = None) -> None:
         self._access = access
+        # With no reader given, paused accounts are read from their ledgers alone.
+        self._reader = reader if reader is not None else PausedAccountReader(_no_broker)
+
+    def attach_readers(self, keys: tuple[ReadKeys, ...]) -> None:
+        """Read paused accounts live with these keys until `detach_readers`."""
+        self._reader.attach(keys)
+
+    def detach_readers(self) -> None:
+        self._reader.detach()
+
+    async def _live(self, account_id: str, overview: AccountOverview) -> AccountOverview:
+        """A retained overview with the broker's balance and valuations, when they can be read."""
+        facts = await self._reader.facts(account_id)
+        if facts is None:
+            return overview
+        return with_live_facts(overview, facts.account, facts.positions, facts.observed_at)
 
     def _unavailable_readiness(self, account_id: str) -> str:
         """Why an account is not running, when its owner can act on it; else just unavailable."""
@@ -93,10 +120,14 @@ class OperatorQueryService:
                     failure = "timeout"
                 except Exception as exc:  # noqa: BLE001 - one unreadable ledger must not hide others
                     log.warning(
-                        "retained_account_read_failed id=%s type=%s", account_id, type(exc).__name__
+                        "retained_account_read_failed id=%s type=%s error=%s",
+                        account_id,
+                        type(exc).__name__,
+                        exc,
                     )
                     failure = "read_failed"
                 else:
+                    overview = await self._live(account_id, overview)
                     if account_id not in configured:
                         return overview, None
                     readiness = (
@@ -161,14 +192,36 @@ class OperatorQueryService:
         )
         return page
 
+    async def account_feed(
+        self, account_id: str, before_seq: int | None, limit: int
+    ) -> AccountFeedPage:
+        """The account's feed: from its running owner, or else from its retained ledger."""
+        if not 1 <= limit <= 100 or (before_seq is not None and before_seq < 1):
+            raise ValueError("Invalid account feed page")
+        supervisor = self._access.supervisors().get(account_id)
+        if supervisor is not None and supervisor.owner is not None and supervisor.state != "failed":
+            live = await bounded_owner_read(supervisor.owner.feed_page(before_seq, limit))
+            if not isinstance(live, OwnerUnavailable):
+                return live
+        database = self._access.retained_paths().get(account_id)
+        if database is None:
+            raise KeyError(account_id)
+        return await self._access.retained_feed(
+            database, before_seq=before_seq, limit=limit, timeout=2
+        )
+
     async def equity_history(self, account_id: str, window: HistoryWindow) -> EquityHistory | None:
-        """The running account's broker curve; None while it has no live owner to ask."""
+        """The account's broker curve: from its running owner, or while paused from the read
+        keys the app attached; None when neither can ask."""
         configuration = self._access.configuration()
-        if configuration is None or account_id not in {item.id for item in configuration.accounts}:
+        configured = configuration is not None and account_id in {
+            item.id for item in configuration.accounts
+        }
+        if not configured and not self._reader.holds(account_id):
             raise KeyError(account_id)
         supervisor = self._access.supervisors().get(account_id)
         if supervisor is None or supervisor.owner is None or supervisor.state == "failed":
-            return None
+            return await self._reader.equity_history(account_id, window)
         history = await bounded_owner_read(
             supervisor.owner.equity_history(window, dt.datetime.now(dt.UTC))
         )
@@ -208,7 +261,15 @@ class OperatorQueryService:
             except Exception as exc:  # noqa: BLE001 - one unreadable ledger must not hide others
                 log.warning("destination_read_failed id=%s type=%s", account_id, type(exc).__name__)
                 return AccountUnavailable(account_id=account_id, reason="read_failed")
-            return destination_views(snapshot, ids)
+            try:
+                events = await asyncio.wait_for(
+                    asyncio.to_thread(self._access.evidence.retained_message_events, database, ids),
+                    timeout=2,
+                )
+            except Exception as exc:  # noqa: BLE001 - the timeline is extra; the outcome stands
+                log.warning("timeline_read_failed id=%s type=%s", account_id, type(exc).__name__)
+                events = ()
+            return destination_views(snapshot, ids, events)
 
         results = await asyncio.gather(
             *(

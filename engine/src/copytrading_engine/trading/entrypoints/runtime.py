@@ -13,7 +13,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from copytrading_engine.backup.restore.gate import restore_manual_disabled
-from copytrading_engine.execution.adapters.alpaca.broker import AlpacaCredentials
+from copytrading_engine.execution.adapters.alpaca.broker import AlpacaBroker, AlpacaCredentials
 from copytrading_engine.execution.application.ports import AccountOpenRefused, BrokerError
 from copytrading_engine.execution.domain.pricing import EntryPricingPolicy
 from copytrading_engine.execution.domain.signals import CopyConfig
@@ -53,6 +53,7 @@ from copytrading_engine.trading.application.accounts import (
 )
 from copytrading_engine.trading.application.manual_intervention import ManualInterventionService
 from copytrading_engine.trading.application.operator_service import OperatorQueryService
+from copytrading_engine.trading.application.paused_reader import PausedAccountReader, ReadKeys
 from copytrading_engine.trading.application.profile_review import ProfileReviewService
 from copytrading_engine.trading.domain.config import (
     ConnectionCheck,
@@ -93,6 +94,11 @@ class _ParserPublisher:
 
 class _PausedBeforeReceipt(Exception):
     """Leave the durable delivery pending when Pause interrupts fanout."""
+
+
+def _alpaca_reader(keys: ReadKeys) -> AlpacaBroker:
+    """A broker client the paused reader uses for its three reads, and nothing else."""
+    return AlpacaBroker(AlpacaCredentials(keys.key, keys.secret), keys.environment)
 
 
 class TradingRuntime:
@@ -146,7 +152,7 @@ class TradingRuntime:
                 (item.error_code for item in self._status.accounts if item.id == account_id), None
             ),
         )
-        self.operator = OperatorQueryService(access)
+        self.operator = OperatorQueryService(access, PausedAccountReader(_alpaca_reader))
         self.manual = ManualInterventionService(access)
         self.profiles = ProfileReviewService(
             data_dir,
@@ -157,6 +163,8 @@ class TradingRuntime:
         )
         self._maintenance_lock = asyncio.Lock()
         self._maintenance_active = False
+        self._limits_lock = asyncio.Lock()
+        self._worker: ParseWorker | None = None
 
     def status(self) -> TradingStatus:
         return self._status
@@ -241,6 +249,51 @@ class TradingRuntime:
         )
         self._task = asyncio.create_task(self._run(configuration, secrets))
         return self._status
+
+    async def update_account_limits(self, configuration: TradingConfiguration) -> str:
+        """Copy with changed account limits from each account's next cycle, without pausing.
+
+        Only limits may differ from the setup copying now; anything else needs a full check and
+        Start. While paused there is nothing to swap: the next Start copies with the new setup.
+        Returns the new setup's revision, which the app saves alongside it."""
+        async with self._limits_lock:
+            running = self._configuration
+            if self._task is None or self._task.done() or running is None:
+                return configuration.revision()
+            if configuration.without_limits() != running.without_limits():
+                raise ValueError("Only account limits can change while copying")
+            await self._apply_limits(configuration)
+            self._configuration = configuration
+            record = self._activation_journal.record
+            if (
+                self._activation_id is not None
+                and record is not None
+                and record.activation_id == self._activation_id
+                and record.phase in {"starting", "ready"}
+            ):
+                self._activation_journal.adopt(self._activation_id, configuration.revision())
+            return configuration.revision()
+
+    async def _apply_limits(self, configuration: TradingConfiguration) -> None:
+        """Hand every open account its limits; each swaps them between two of its cycles."""
+        now = dt.datetime.now(dt.UTC)
+        for account in configuration.accounts:
+            supervisor = self._accounts.get(account.id)
+            if supervisor is None:
+                continue
+            supervisor.poll_seconds = account.policy.poll_seconds
+            if supervisor.owner is not None:
+                changes = await supervisor.owner.update_config(
+                    _copy_policy(configuration, account.id), now
+                )
+                if changes:
+                    log.info(
+                        "account_limits_changed id=%s settings=%s",
+                        account.id,
+                        ",".join(change.setting for change in changes),
+                    )
+        if self._worker is not None:
+            self._worker.max_age = _max_signal_age(configuration)
 
     async def check_connection(self, connection: ConnectionCheck) -> CapabilityCheck:
         """Check one service with the keys typed for it; nothing is saved or started."""
@@ -331,6 +384,7 @@ class TradingRuntime:
         return self._status
 
     async def shutdown(self) -> None:
+        self.operator.detach_readers()
         await self.pause()
         task = self._task
         if task is not None:
@@ -417,14 +471,13 @@ class TradingRuntime:
                 decoder,
                 routes,
                 configuration.provider.model,
-                max_age=max(
-                    account.policy.max_signal_age_seconds for account in configuration.accounts
-                ),
+                max_age=_max_signal_age(configuration),
                 observe=self._telemetry.model_span if self._telemetry else lambda _: nullcontext(),
                 observe_workflow=(
                     self._telemetry.workflow_span if self._telemetry else lambda _: nullcontext()
                 ),
             )
+            self._worker = worker
             stage = "broker_unavailable"
             account_root = self._data_dir / "accounts"
             account_root.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -480,6 +533,10 @@ class TradingRuntime:
                     open_failure=open_failure,
                 )
             self._account_changed()
+            # Limits changed while the accounts opened reach them before the first post.
+            async with self._limits_lock:
+                if self._configuration is not None and self._configuration != configuration:
+                    await self._apply_limits(self._configuration)
             if not any(account.owner is not None for account in self._accounts.values()):
                 if len(refusals) == len(configuration.accounts) and len(set(refusals)) == 1:
                     # Every account waits on the same thing its owner must settle first.
@@ -549,6 +606,7 @@ class TradingRuntime:
                 for account in self._accounts.values()
             )
             self._accounts.clear()
+            self._worker = None
             if decoder is not None:
                 try:
                     await decoder.close()
@@ -612,7 +670,7 @@ class TradingRuntime:
                             for account in configuration.accounts
                             if account.id == connection.account_id
                         ),
-                        configuration_revision=configuration.revision(),
+                        configuration_revision=configuration.routing_revision(),
                         guru_id=route.guru_id,
                         profile_revision=route.profile_revision,
                         repeat_window_minutes=route.repeat_window_minutes,
@@ -700,7 +758,7 @@ class TradingRuntime:
                 oldest_pending_signal_at=signal_backlog.oldest_at,
                 processed_signals=processed,
                 error_code=(
-                    "account_unavailable"
+                    self._account_failure()
                     if any(account.state == "failed" for account in self._accounts.values())
                     else "source_unavailable"
                     if self._source_failed
@@ -749,10 +807,18 @@ class TradingRuntime:
             type(error).__name__ if error is not None else "unknown",
         )
 
+    def _account_failure(self) -> str:
+        """The failed accounts' shared reason, such as another app owning the account, or
+        `account_unavailable` when they fail for different reasons."""
+        reasons = {
+            account.error_code for account in self._accounts.values() if account.state == "failed"
+        }
+        return reason if len(reasons) == 1 and (reason := reasons.pop()) else "account_unavailable"
+
     def _account_changed(self) -> None:
         statuses = tuple(account.status for account in self._accounts.values())
         if any(account.state == "failed" for account in self._accounts.values()):
-            self._fail_startup_if_pending("account_unavailable")
+            self._fail_startup_if_pending(self._account_failure())
         self._status = replace(
             self._status,
             accounts=statuses,
@@ -761,7 +827,7 @@ class TradingRuntime:
             if any(account.state == "failed" for account in self._accounts.values())
             and self._status.state in {"running", "degraded"}
             else self._status.state,
-            error_code="account_unavailable"
+            error_code=self._account_failure()
             if any(account.state == "failed" for account in self._accounts.values())
             else self._status.error_code,
         )
@@ -791,6 +857,10 @@ def _copy_policy(configuration: TradingConfiguration, account_id: str) -> CopyCo
         entry_pricing=EntryPricingPolicy(**account.policy.model_dump(include=pricing)),
         **account.policy.model_dump(exclude=pricing),
     )
+
+
+def _max_signal_age(configuration: TradingConfiguration) -> int:
+    return max(account.policy.max_signal_age_seconds for account in configuration.accounts)
 
 
 def _execution_notification_payload(value: Mapping[str, object]) -> NotificationPayload:

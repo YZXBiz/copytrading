@@ -37,7 +37,8 @@ let package = Package(
         .target(
             name: "CopyTradingUI",
             dependencies: ["DesktopCore", "AppLocalizationCore"],
-            path: "Sources/CopyTrading"
+            path: "Sources/CopyTrading",
+            resources: [.copy("Resources/Fonts")]
         ),
         .executableTarget(
             name: "CopyTrading",

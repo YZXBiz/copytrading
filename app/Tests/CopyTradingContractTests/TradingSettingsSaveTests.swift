@@ -29,7 +29,6 @@ struct TradingSettingsSaveTests {
         model.tradingStatus = try status(.paused)
         try checkNavigationContract()
         try checkCopyingSummary()
-        try checkAccountLinesFoldAfterThree()
         try checkActivityScreenStateAndStatusPolicy()
 
         let profile = try TradingProfileBuilder().build(
@@ -108,12 +107,14 @@ struct TradingSettingsSaveTests {
         try await checkDiscardedCheckAndLockedDraft(configuration: configuration, secrets: credentials)
         try await checkSetupCheckKeepsKeysAndFollowsEdits(configuration: configuration, secrets: credentials)
         try await checkApplyChangesWhileCopying(configuration: configuration, secrets: credentials)
+        try await checkLimitOnlyChangesApplyWithoutAPause(configuration: configuration, secrets: credentials)
         try await checkConnectionClientRequest(provider: configuration.provider)
         try await checkOneConnectionUsesSavedKeysAndFollowsEdits(configuration: configuration, secrets: credentials)
         try await checkConfigurationWriteFailureDoesNotStart()
         try checkOperatorWireFixtures()
         try await checkAccountPageClientRequest()
         try await checkAccountFeatureActions()
+        try await checkOwnershipResolution(configuration: configuration)
         try await checkAccountFeatureLockInterleavings()
         try await checkManualReviewActionPath()
         try await checkManualCorrectionReplicaRepairPath()
@@ -153,48 +154,23 @@ struct TradingSettingsSaveTests {
         print("CopyTradingContractTests: an unchecked status is neutral while unavailable and queryable keep their tones")
     }
 
-    private static func accountHistory(_ equity: Double) throws -> EquityHistory {
-        let json = """
-            {"window":{"range":"month","day":null},"base_value":null,"points":[
-             {"at":"2026-09-01T20:00:00Z","equity":"\(equity)"},{"at":"2026-09-02T20:00:00Z","equity":"\(equity * 1.01)"}]}
-            """
-        return try JSONDecoder().decode(EquityHistory.self, from: Data(json.utf8))
-    }
-
-    private static func checkAccountLinesFoldAfterThree() throws {
-        let three = AccountSeries.make(from: try ["a": 300.0, "b": 200.0, "c": 100.0].map { ($0.key, try accountHistory($0.value)) })
-        try check(three.map(\.name) == ["a", "b", "c"], "Three accounts each keep their own line, largest first: \(three.map(\.name))")
-        let five = AccountSeries.make(
-            from: try ["a": 500.0, "b": 400.0, "c": 300.0, "d": 200.0, "e": 100.0].map { ($0.key, try accountHistory($0.value)) })
-        try check(
-            five.map(\.name) == ["a", "b", "c", "Other accounts"],
-            "Past three accounts the rest fold into one line: \(five.map(\.name))")
-        let other = five[3]
-        try check(
-            other.equity.points.last.map { abs($0.value - 303) < 1e-9 } == true,
-            "The folded line carries the combined equity of the accounts it holds")
-        print("CopyTradingContractTests: three accounts keep their own lines and the rest fold into Other accounts")
-    }
-
     private static func checkNavigationContract() throws {
-        let screens = AppModel.Screen.allCases
+        let pages = AppModel.Screen.pages
         try check(
-            screens.map(\.rawValue) == [
-                "today", "activity", "people", "accounts", "connections", "gettingStarted", "diagnostics", "settings",
+            pages.map(\.identifier) == [
+                "navigation.connections", "navigation.gettingStarted", "navigation.settings", "navigation.diagnostics",
             ],
-            "Native navigation lost a required operator screen"
-        )
+            "Native navigation lost a required operator page")
         try check(
-            screens.map(\.title) == [
-                "Today", "Activity", "People", "Accounts", "Connections", "Getting Started", "Diagnostics", "Settings",
-            ],
-            "Native navigation titles changed")
-        let reachable = AppModel.ScreenSection.allCases.flatMap(\.screens) + AppModel.sidebarFooterScreens
+            pages.map(\.title) == ["Connections", "Getting Started", "Settings", "Diagnostics"], "Native navigation titles changed")
         try check(
-            reachable.count == screens.count && Set(reachable) == Set(screens),
-            "The sidebar rows and footer icons must reach every screen exactly once"
-        )
-        print("CopyTradingContractTests: required operator screens are navigable")
+            AppModel.Screen.account("primary").identifier == "navigation.account.primary"
+                && AppModel.Screen.guru("guru-1a2b").identifier == "navigation.guru.guru-1a2b",
+            "Accounts and gurus lost their sidebar identifiers")
+        try check(
+            AppModel.Screen.account("primary").assistantName == "accounts" && AppModel.Screen.guru("g").assistantName == "people",
+            "The assistant no longer reads accounts and gurus as the engine names them")
+        print("CopyTradingContractTests: every account, guru, and operator page is navigable")
     }
 
     private static func checkValidationClientRequest(
@@ -1238,6 +1214,30 @@ struct TradingSettingsSaveTests {
             "A failing check did not show on the Discord row")
         try check(!model.setupProgress.isDone(.discord), "A failed check still ticked the Discord step")
 
+        // While copying runs the saved setup, an edited token's failed check still speaks for its
+        // row, and an edit elsewhere leaves the guru saved.
+        model.savedTradingConfiguration = configuration
+        model.tradingStatus = try TradingStatusBuilder(.running).connected().build()
+        try check(
+            ConnectionStatus.discord(model)?.text == L10n.string("Couldn't connect"),
+            "A failed check of an edited token showed the running setup's Connected")
+        model.setupDraft.load(configuration)
+        model.setupDraft.clearSecrets()
+        try check(
+            ConnectionStatus.discord(model)?.text == L10n.string("Connected"),
+            "An unedited Discord row did not show the running engine's reading")
+        let route = model.setupDraft.routes[0]
+        try check(ConnectionStatus.guru(route, in: model).text == L10n.string("Copying"), "A saved guru did not read Copying")
+        model.setupDraft.accounts[0].policy.maxOrderUSD = "987"
+        try check(
+            ConnectionStatus.guru(route, in: model).text == L10n.string("Copying"),
+            "Changing an account's limit marked an unchanged guru as not saved")
+        model.setupDraft.routes[0].playbook += " Edited."
+        try check(
+            ConnectionStatus.guru(model.setupDraft.routes[0], in: model).text == L10n.string("Not saved yet"),
+            "Editing a guru's playbook did not mark that guru as not saved")
+        model.tradingStatus = try status(.paused)
+
         model.isTradingUnlocked = false
         let locked = await model.checkConnection(.discord)
         try check(locked == nil, "A locked app checked a connection")
@@ -1300,6 +1300,65 @@ struct TradingSettingsSaveTests {
 
     /// A limit changed while copying runs is applied in one press: copying pauses, the new setup
     /// is checked and starts. A change whose check fails leaves the saved setup copying again.
+    /// Limits alone go straight to the running engine: no check, no pause, no Apply Changes, and
+    /// the saved revision is the engine's, so the next Start matches it.
+    private static func checkLimitOnlyChangesApplyWithoutAPause(
+        configuration: TradingConfiguration, secrets: TradingSecrets
+    ) async throws {
+        print("CopyTradingContractTests: limits alone apply to running copying with no pause and no Apply Changes")
+        let directory = FileManager.default.temporaryDirectory.appending(
+            path: "app-model-live-limits-\(UUID().uuidString)", directoryHint: .isDirectory
+        )
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = TradingConfigurationStore(
+            url: directory.appending(path: "configuration.json"), secrets: TestSecretRevisions()
+        )
+        let starter = RecordingTradingStarter()
+        let model = AppModel(tradingConfigurationStore: store, tradingStarter: starter)
+        model.isTradingUnlocked = true
+        model.tradingStatus = try status(.paused)
+        await model.validateTradingSettings(configuration, enteredSecrets: secrets)
+        await model.activateValidatedTradingSettings()
+        try check(model.tradingStatus?.state == .running, model.message ?? "The first setup did not start")
+        model.syncSetupDraftWithSaved()
+
+        model.setupDraft.accounts[0].policy.maxOrderUSD = "500"
+        try check(model.hasOnlyLimitChanges, "A limit edit did not read as limits only")
+        try check(!model.hasSetupToStart, "A limit edit still asked for Apply Changes")
+        let before = await starter.events().count
+        let saved = await model.saveLimitOnlyChanges()
+        try check(saved == true, model.message ?? "The new limit was not saved")
+        let during = Array(await starter.events().dropFirst(before))
+        try check(during == ["update_limits"], "Saving limits did more than hand them over: \(during)")
+        try check(model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD == "500", "The saved setup kept the old limit")
+        try check(!model.hasUnsavedSetupChanges, "The saved limit still read as a change, with its pill")
+        try check(model.limitsSavedAccountIDs == ["paper"], "The account didn't say its limits were saved")
+        try check(model.tradingStatus?.state == .running, "Saving limits stopped copying")
+        guard let loaded = try store.load() else { throw ContractFailure("The saved setup is missing") }
+        try check(loaded.configuration.accounts[0].policy.maxOrderUSD == "500", "The limit was not written to disk")
+        try check(loaded.secrets == secrets, "Saving limits changed the saved keys")
+
+        // The engine and the app agree on the revision: pausing and resuming the saved setup
+        // commits it rather than rolling it back.
+        await model.pauseTrading()
+        model.tradingStatus = try status(.paused)
+        await model.startTrading(resumingSavedSetup: true)
+        try check(model.tradingStatus?.state == .running, model.message ?? "The saved setup didn't resume")
+        let unconfirmed = try store.pendingActivation()
+        try check(unconfirmed == nil, "Resuming left the activation unconfirmed")
+        try check(model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD == "500", "Resuming rolled the limit back")
+
+        // Anything beyond limits still waits for the full check.
+        model.setupDraft.modelName = "other-model"
+        model.setupDraft.accounts[0].policy.maxOrderUSD = "600"
+        let afterResume = await starter.events().count
+        let beyond = await model.saveLimitOnlyChanges()
+        try check(beyond == nil, "A change beyond limits skipped the check")
+        let afterBeyond = await starter.events().count
+        try check(afterBeyond == afterResume, "A change beyond limits reached the engine")
+        try check(model.hasSetupToStart && !model.hasOnlyLimitChanges, "A change beyond limits hid Apply Changes")
+    }
+
     private static func checkApplyChangesWhileCopying(
         configuration: TradingConfiguration, secrets: TradingSecrets
     ) async throws {
@@ -1335,41 +1394,134 @@ struct TradingSettingsSaveTests {
 
         // A higher maximum per order, applied while copying runs.
         model.setupDraft.accounts[0].policy.maxOrderUSD = "200"
-        model.selectedScreen = .accounts
+        model.selectedScreen = .account("primary")
         try check(model.isCopyingSavedSetup && model.canCheckAndStart, "A change while copying could not be applied")
+        let beforeApply = await starter.events().count
+        model.checkAndStartCopying()
+        // A second press while the first apply runs must not cancel it or start a second one.
+        try check(model.isApplyingChanges && !model.canCheckAndStart, "Start Copying stayed pressable during an apply")
         model.checkAndStartCopying()
         for _ in 0..<4_000 where model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD != "200" {
             try await Task.sleep(for: .milliseconds(1))
             if model.isShowingSetupCheck && model.awaitsExampleReview { model.checkAndStartCopying() }
         }
-        try check(model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD == "200", "The new limit was not saved")
+        let duringApply = Array(await starter.events().dropFirst(beforeApply))
+        try check(
+            duringApply.filter { $0 == "start" }.count == 1 && duringApply.filter { $0 == "pause" }.count == 1,
+            "A second press during an apply paused or started twice: \(duringApply)")
+        try check(
+            model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD == "200",
+            "The new limit was not saved: applying \(model.isApplyingChanges) sheet \(model.isShowingSetupCheck) reviews \(model.profileExampleReviews.count) state \(String(describing: model.tradingStatus?.state)) message \(model.message ?? "nil") events \(await starter.events().suffix(6))"
+        )
         try check(model.tradingStatus?.state == .running, "Copying did not run again with the new limit")
         let applied = await starter.events()
         guard let pause = applied.lastIndex(of: "pause") else { throw ContractFailure("Applying did not pause copying first") }
         try check(
             Array(applied[pause...]).contains("validate") && applied.last == "start", "Applying did not check and start after the pause")
         try check(!model.isPausedToApplyChanges, "A started change still counted as paused for it")
-        try check(model.selectedScreen == .accounts, "Applying changes moved the owner off the screen they used")
+        try check(model.selectedScreen == .account("primary"), "Applying changes moved the owner off the screen they used")
         try check(model.message == "Your changes are saved, and copying uses them now.", "Applying changes did not say they took effect")
 
-        // A change whose check fails: copying runs the saved setup again once the results close.
+        // A change whose check fails: the saved setup copies again at once, and the results stay
+        // readable in Setup Check.
         model.setupDraft.accounts[0].policy.maxOrderUSD = "300"
         let failing = try model.setupDraft.submission().0
         await starter.setFailingConfiguration(failing)
         model.checkAndStartCopying()
+        for _ in 0..<4_000 where model.message != "Your changes weren't saved, so copying continues with the saved setup." {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        try check(model.tradingStatus?.state == .running, model.message ?? "The saved setup did not copy again")
+        try check(
+            model.isShowingSetupCheck && model.tradingValidation?.report.activatable == false, "The failed check's results were not shown")
+        try check(model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD == "200", "A failed change replaced the saved setup")
+        try check(!model.isPausedToApplyChanges, "A resumed setup still counted as paused for changes")
+        await starter.setFailingConfiguration(nil)
+        model.isShowingSetupCheck = false
+
+        // With an example to look over, the readings wait for the owner while copying keeps
+        // running; Start Copying beside them pauses, checks, and starts without reading again.
+        model.setupDraft.routes[0].examples = [
+            TradingProfileExampleDraft(message: "Bought AAPL at 200", expectedAction: .buy, expectedSymbol: "AAPL")
+        ]
+        let beforeReview = await starter.events().count
+        model.checkAndStartCopying()
         for _ in 0..<4_000 where !model.isShowingSetupCheck || model.isValidatingTrading {
             try await Task.sleep(for: .milliseconds(1))
         }
-        try check(model.tradingValidation?.report.activatable == false, "The failing check did not show its results")
-        try check(model.tradingStatus?.state == .paused, "Copying was not paused for the check")
-        model.isShowingSetupCheck = false
-        await model.resumeSavedSetupIfPausedForChanges()
-        try check(model.tradingStatus?.state == .running, model.message ?? "The saved setup did not copy again")
-        try check(model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD == "200", "A failed change replaced the saved setup")
+        let reviewing = Array(await starter.events()[beforeReview...])
+        try check(reviewing == ["review_examples"], "Reading the examples did more than read them: \(reviewing)")
+        try check(model.tradingStatus?.state == .running, "Copying paused while the readings waited for the owner")
+        model.checkAndStartCopying()
+        for _ in 0..<4_000 where model.isShowingSetupCheck || model.isActivatingTrading || model.isPausedToApplyChanges {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        let started = Array(await starter.events()[beforeReview...])
         try check(
-            model.message == "Your changes weren't saved, so copying continues with the saved setup.",
-            "Resuming did not say the changes weren't saved")
+            started == ["review_examples", "pause", "validate", "start"],
+            "Starting beside the readings did not pause, check, and start once: \(started)")
+        try check(model.tradingStatus?.state == .running, "Copying did not run again after the readings")
+
+        // Locking while the check runs: the apply stops and the saved setup copies again.
+        let savedBeforeLock = model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD
+        model.setupDraft.accounts[0].policy.maxOrderUSD = "250"
+        model.setupDraft.routes[0].examples = []
+        await starter.setValidationSuspended(true)
+        model.checkAndStartCopying()
+        for _ in 0..<4_000 where !(model.isValidatingTrading && model.tradingStatus?.state == .paused) {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        try check(model.isPausedToApplyChanges, "The apply did not pause before its check")
+        await starter.setValidationSuspended(false)
+        await model.lockAccess()
+        try check(model.tradingStatus?.state == .running, model.message ?? "Locking mid-apply left copying paused")
+        try check(
+            model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD == savedBeforeLock, "Locking mid-apply saved the change")
+        try check(!model.isPausedToApplyChanges, "Locking mid-apply left the apply pending")
         print("CopyTradingContractTests: Apply Changes while copying pauses, checks, and starts; a failed check resumes the saved setup")
+        try await checkLiveResumeAfterApplyAsksOnce(configuration: configuration, secrets: secrets)
+    }
+
+    /// A live account's new setup asks for Touch ID once; refusing it puts the saved setup back
+    /// without asking again.
+    private static func checkLiveResumeAfterApplyAsksOnce(
+        configuration: TradingConfiguration, secrets: TradingSecrets
+    ) async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(
+            path: "app-model-apply-live-\(UUID().uuidString)", directoryHint: .isDirectory
+        )
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var saved = configuration
+        saved.accounts[0].environment = .live
+        let store = TradingConfigurationStore(
+            url: directory.appending(path: "configuration.json"), secrets: TestSecretRevisions()
+        )
+        try store.save(configuration: saved, revision: fakeEngineRevision(saved), secrets: secrets, when: .paused)
+        let starter = RecordingTradingStarter()
+        let owner = OwnerAnswers(confirms: false)
+        let model = AppModel(tradingConfigurationStore: store, tradingStarter: starter, appUnlock: try await unlocked(by: owner))
+        model.isTradingUnlocked = true
+        model.savedTradingConfiguration = saved
+        model.hasTradingSecrets = true
+        model.tradingStatus = try status(.running)
+        model.setupDraft.load(saved)
+        model.setupDraft.accounts[0].policy.maxOrderUSD = "150"
+        try check(model.isCopyingSavedSetup && model.canCheckAndStart, "A live change while copying could not be applied")
+
+        model.checkAndStartCopying()
+        for _ in 0..<4_000 where await !starter.events().contains("pause") {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        for _ in 0..<4_000 where model.tradingStatus?.state != .running || model.isPausedToApplyChanges {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        let confirmations = await owner.confirmations
+        try check(confirmations == 1, "Applying a live change asked for Touch ID \(confirmations) times")
+        try check(model.tradingStatus?.state == .running, model.message ?? "Refusing Touch ID left copying paused")
+        try check(
+            model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD == saved.accounts[0].policy.maxOrderUSD,
+            "A refused live change was saved")
+        print("CopyTradingContractTests: a refused live change asks once and puts the saved setup back")
     }
 
     /// A discarded check must not leave its "validated" banner behind, and locking must drop
@@ -1571,19 +1723,31 @@ struct TradingSettingsSaveTests {
             reviewedPage.items[0].sourceEvent.attachments[0].status == "origin_rejected",
             "Attachment evidence status drifted"
         )
-        let eventResponse = try JSONDecoder().decode(
+        let feedResponse = try JSONDecoder().decode(
             EngineResponse.self,
-            from: Data(contentsOf: contracts.appending(path: "account-events-response.json"))
+            from: Data(contentsOf: contracts.appending(path: "account-feed-response.json"))
         )
-        guard case .accountEvents(let events) = try eventResponse.successValue() else {
-            throw ContractFailure("Account event response did not decode")
+        guard case .accountFeed(let feed) = try feedResponse.successValue() else {
+            throw ContractFailure("Account feed response did not decode")
         }
+        let sale = feed.items[0]
         try check(
-            events.items[0].kind == "account_control_changed" && events.items[0].reason == "set_recovery"
-                && events.items[0].status == "automatic",
-            "An owner's control change lost what it changed"
+            sale.kind == "sold" && sale.source == "you" && sale.side == "sell" && sale.symbol == "PM"
+                && sale.shares == "1" && sale.price == "201.70" && sale.amount == "201.70"
+                && sale.orderID == "lotsale-04ddab63a704",
+            "The owner's sale lost what it sold"
         )
-        try check(events.items[1].reason == "account_paused", "Account audit reason drifted")
+        try check(
+            feed.items[3].kind == "cancelled" && feed.items[3].side == "buy" && feed.items[3].guruID == "tradez",
+            "A cancelled copy lost its side or guru"
+        )
+        try check(
+            feed.items[1].kind == "limits_changed" && feed.items[1].source == "you"
+                && feed.items[1].changes == [AccountLimitChange(setting: "max_order_usd", before: "200", after: "500")],
+            "A limit change lost what changed"
+        )
+        try check(feed.items[2].kind == "resumed" && feed.items[2].symbol == nil, "A control row drifted")
+        try check(feed.nextBeforeSeq == 26, "The feed's next page drifted")
         print("CopyTradingContractTests: account command and operator read wire fixtures decoded")
     }
 
@@ -1615,6 +1779,67 @@ struct TradingSettingsSaveTests {
         try check(page.items.first?.accountID == "paper", "EngineClient did not decode account page")
         try check(page.nextBeforeAccountID == "paper", "EngineClient did not decode account cursor")
         print("CopyTradingContractTests: account page request and cursor matched shared wire fixtures")
+    }
+
+    /// A holdings question becomes one answer the owner confirms: copied shares the broker still
+    /// holds stay copied, the rest are the owner's, and a shortfall sells the oldest buys first.
+    private static func checkOwnershipResolution(configuration: TradingConfiguration) async throws {
+        func incident(_ symbol: String, expected: String, actual: String) throws -> OwnershipIncidentView {
+            let json =
+                #"{"incident_id":"position-\#(symbol)","symbol":"\#(symbol)","expected_qty":"\#(expected)","actual_qty":"\#(actual)","observed_at":"2026-10-08T05:48:00Z","cause":"position_mismatch"}"#
+            return try JSONDecoder().decode(OwnershipIncidentView.self, from: Data(json.utf8))
+        }
+        func position(_ symbol: String, broker: String?, lots: [(String, String)]) throws -> AccountPositionView {
+            let lotJSON = lots.map { #"{"lot_id":"\#($0.0)","original_qty":"\#($0.1)","remaining_qty":"\#($0.1)","average_price":"10"}"# }
+            let brokerJSON = broker.map { #""\#($0)""# } ?? "null"
+            let json =
+                #"{"symbol":"\#(symbol)","owned_qty":"0","external_qty":"0","broker_qty":\#(brokerJSON),"lots":[\#(lotJSON.joined(separator: ","))]}"#
+            return try JSONDecoder().decode(AccountPositionView.self, from: Data(json.utf8))
+        }
+
+        // The owner's own shares were sold outside, and nothing was copied: the old count clears.
+        let sold = OwnershipFix(
+            incident: try incident("F", expected: "1.54202", actual: "0"),
+            position: try position("F", broker: nil, lots: []), accountID: "paper")
+        try check(sold.action == "Update the Count", "A sold-off outside holding offered \(sold.action)")
+        try check(
+            sold.request.brokerQty == "0" && sold.request.externalQty == "0" && sold.request.lotRemaining.isEmpty,
+            "Clearing an outside holding did not allocate the broker's zero")
+
+        // More shares at the broker than were copied: the extra are the owner's.
+        let extra = OwnershipFix(
+            incident: try incident("ABC", expected: "5", actual: "7"),
+            position: try position("ABC", broker: "7", lots: [("l1", "5")]), accountID: "paper")
+        try check(extra.action == "They're Mine", "Extra broker shares offered \(extra.action)")
+        try check(
+            extra.headline == "2 shares of ABC that CopyTrading didn't buy", "Extra broker shares read \(extra.headline)")
+        try check(extra.request.externalQty == "2" && extra.request.lotRemaining == ["l1": "5"], "Copied shares changed")
+
+        // Fewer than were copied: the oldest buys count as sold first.
+        let short = OwnershipFix(
+            incident: try incident("XYZ", expected: "5", actual: "4"),
+            position: try position("XYZ", broker: "4", lots: [("old", "3"), ("new", "2")]), accountID: "paper")
+        try check(short.action == "They Were Sold", "A shortfall offered \(short.action)")
+        try check(
+            short.request.externalQty == "0" && short.request.lotRemaining == ["old": "2", "new": "2"],
+            "A shortfall did not sell the oldest buy first: \(short.request.lotRemaining)")
+
+        let actions = RecordingAccountActions()
+        let feature = AccountFeatureModel()
+        feature.authorizePrivateEvidence()
+        await feature.refresh(using: actions)
+        await feature.resolveOwnership(sold, using: actions)
+        let sent = await actions.recordedResolutions()
+        try check(sent == [sold.request], "The owner's answer did not reach the engine")
+        try check(feature.errors["paper"] == nil, "A settled holding left an error")
+
+        // An unreadable account the saved setup doesn't copy into is from an earlier setup.
+        try check(feature.unavailable(in: nil).map(\.accountID) == ["archive"], "Unreadable accounts were dropped")
+        let copiesInto = Set(configuration.accounts.map(\.id))
+        try check(
+            feature.unavailable(in: configuration).allSatisfy { copiesInto.contains($0.accountID) },
+            "An earlier setup's unreadable account was still shown")
+        print("CopyTradingContractTests: holdings questions settle with one confirmed answer")
     }
 
     private static func checkAccountFeatureActions() async throws {
@@ -1666,6 +1891,15 @@ struct TradingSettingsSaveTests {
             "Lock retained the equity curve or its freshness"
         )
         print("CopyTradingContractTests: account pause failure, retry, resume, and status refresh passed")
+        // A held buy's Resume Entries runs the same resume as Accounts' button: one resume command.
+        let model = AppModel()
+        feature.authorizePrivateEvidence()
+        let before = await actions.recordedCommands().count
+        await model.resumeEntries(accountID: "paper", environment: .paper, feature: feature, using: actions)
+        let resumed = await actions.recordedCommands().dropFirst(before)
+        try check(
+            resumed.map(\.action) == [.resume] && resumed.first?.accountID == "paper",
+            "Resume Entries did not send one resume for paper: \(resumed.map(\.action))")
     }
 
     private static func checkAccountFeatureLockInterleavings() async throws {
@@ -1728,17 +1962,24 @@ struct TradingSettingsSaveTests {
         refreshFeature.authorizePrivateEvidence()
         await refreshFeature.refresh(using: refreshActions)
 
-        await refreshActions.suspendNext("events")
-        let eventRead = Task {
-            await refreshFeature.loadEvents(accountID: "paper", using: refreshActions)
+        await refreshActions.suspendNext("feed")
+        let feedRead = Task {
+            await refreshFeature.loadFeed(accountID: "paper", using: refreshActions)
         }
-        try await waitForSuspension("events", from: refreshActions)
+        try await waitForSuspension("feed", from: refreshActions)
         refreshFeature.clearPrivateEvidence()
         await refreshActions.releaseSuspendedOperation()
-        await eventRead.value
+        await feedRead.value
         try check(
-            refreshFeature.events.isEmpty && refreshFeature.errors.isEmpty,
-            "A suspended event page repopulated evidence after lock"
+            refreshFeature.feeds.isEmpty && refreshFeature.errors.isEmpty,
+            "A suspended feed page repopulated evidence after lock"
+        )
+        refreshFeature.authorizePrivateEvidence()
+        await refreshFeature.refresh(using: refreshActions)
+        await refreshFeature.loadFeed(accountID: "paper", using: refreshActions)
+        try check(
+            refreshFeature.ownerSales.map(\.item.orderID) == ["lotsale-04ddab63a704"],
+            "Activity lost the owner's sale from the account feed"
         )
 
         let commandActions = SuspendedAccountActions(suspendedOperation: "control")
@@ -1754,7 +1995,7 @@ struct TradingSettingsSaveTests {
         await command.value
         try check(
             commandFeature.accounts.isEmpty && commandFeature.activity.isEmpty
-                && commandFeature.events.isEmpty && commandFeature.errors.isEmpty
+                && commandFeature.feeds.isEmpty && commandFeature.errors.isEmpty
                 && commandFeature.pendingAccounts.isEmpty,
             "An account command completed after lock and repopulated private evidence"
         )
@@ -2177,6 +2418,17 @@ private func checkLogSettingsPersistBeforeRuntime(_ stateRoot: URL) throws {
 
 private actor RecordingAccountActions: AccountOperations {
     private var commands: [AccountControlCommand] = []
+    private var resolutions: [OwnershipResolutionRequest] = []
+
+    func recordedResolutions() -> [OwnershipResolutionRequest] { resolutions }
+
+    func resolveOwnership(accountID: String, resolution: OwnershipResolutionRequest) throws -> OwnershipResolution {
+        resolutions.append(resolution)
+        let request = try JSONEncoder().encode(resolution)
+        let json =
+            #"{"request":\#(String(decoding: request, as: UTF8.self)),"checked_at":"2026-10-08T06:00:00Z","lot_reductions":{},"allocation_revision":1}"#
+        return try JSONDecoder().decode(OwnershipResolution.self, from: Data(json.utf8))
+    }
     private var permission = "disabled"
     private var windows: [EquityHistoryWindow] = []
     private var firstFailure: CheckedContinuation<Void, Never>?
@@ -2218,12 +2470,12 @@ private actor RecordingAccountActions: AccountOperations {
         return value
     }
 
-    func accountEvents(accountID: String, beforeSeq: Int?, limit: Int) throws -> AccountEventPage {
+    func accountFeed(accountID: String, beforeSeq: Int?, limit: Int) throws -> AccountFeedPage {
         let response = try JSONDecoder().decode(
-            EngineResponse.self, from: fixture("account-events-response.json")
+            EngineResponse.self, from: fixture("account-feed-response.json")
         )
-        guard case .accountEvents(let value) = try response.successValue() else {
-            throw ContractFailure("Account event fixture type changed")
+        guard case .accountFeed(let value) = try response.successValue() else {
+            throw ContractFailure("Account feed fixture type changed")
         }
         return value
     }
@@ -2284,6 +2536,10 @@ private actor SuspendedAccountActions: AccountOperations {
 
     func isSuspended(_ operation: String) -> Bool { activeOperation == operation }
 
+    func resolveOwnership(accountID: String, resolution: OwnershipResolutionRequest) throws -> OwnershipResolution {
+        throw ContractFailure("Ownership resolution is not part of the suspension checks")
+    }
+
     func suspendNext(_ operation: String) {
         suspendedOperation = operation
     }
@@ -2317,11 +2573,11 @@ private actor SuspendedAccountActions: AccountOperations {
         }
     }
 
-    func accountEvents(accountID: String, beforeSeq: Int?, limit: Int) async throws -> AccountEventPage {
-        try await suspendIfRequested("events")
-        return try decoded("account-events-response.json", as: AccountEventPage.self) {
-            guard case .accountEvents(let value) = try $0.successValue() else {
-                throw ContractFailure("Events fixture type changed")
+    func accountFeed(accountID: String, beforeSeq: Int?, limit: Int) async throws -> AccountFeedPage {
+        try await suspendIfRequested("feed")
+        return try decoded("account-feed-response.json", as: AccountFeedPage.self) {
+            guard case .accountFeed(let value) = try $0.successValue() else {
+                throw ContractFailure("Feed fixture type changed")
             }
             return value
         }
@@ -2747,6 +3003,12 @@ private actor RecordingTradingStarter: TradingStarting {
         let status = try JSONDecoder().decode(TradingStatus.self, from: Data(json.utf8))
         latestTradingStatus = status
         return status
+    }
+
+    func updateAccountLimits(configuration: TradingConfiguration) async throws -> String {
+        operationEvents.append("update_limits")
+        self.configuration = configuration
+        return fakeEngineRevision(configuration)
     }
 
     /// Like the engine: the answer says pausing, and the next status read says paused.

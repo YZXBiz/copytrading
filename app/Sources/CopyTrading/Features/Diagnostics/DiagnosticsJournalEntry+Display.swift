@@ -81,7 +81,7 @@ extension DiagnosticsJournalEntry {
             guard let value = byName[name] else { return nil }
             switch name {
             case "previous_stage": return (L10n.string("After"), Humanize.code(value))
-            case "provider": return (L10n.string("Provider"), Humanize.code(value))
+            case "provider": return (L10n.string("Provider"), TradingProviderName(rawValue: value)?.title ?? Humanize.code(value))
             case "command_id": return (L10n.string("Command"), value)
             case "workflow_id": return (L10n.string("Workflow"), value)
             case "trace_id": return (L10n.string("Trace"), value)

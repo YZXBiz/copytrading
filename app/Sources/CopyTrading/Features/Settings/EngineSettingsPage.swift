@@ -20,7 +20,6 @@ struct EngineSettingsPage: View {
                     "Every post stops at each of these in turn. A stop that is not ready holds the posts behind it.")
                 RouteLine(stops: postStops)
             }
-            .padding(.horizontal, 4)
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
@@ -32,8 +31,7 @@ struct EngineSettingsPage: View {
                             .disabled(model.isRunningSelfTest)
                     }
                     Button(L10n.string(model.isRunningSelfTest ? "Running…" : "Run Self-Test"), action: run)
-                        .buttonStyle(.bordered)
-                        .buttonBorderShape(.capsule)
+                        .buttonStyle(PageButtonStyle())
                         .disabled(model.isRunningSelfTest || model.pendingCommandID != nil)
                         .accessibilityIdentifier("system.runSelfTest")
                 }
@@ -45,14 +43,14 @@ struct EngineSettingsPage: View {
                 RouteLine(stops: selfTestStops)
                     .padding(.top, 12)
             }
-            .padding(.horizontal, 4)
         }
     }
 
     private func heading(_ title: String, _ subtitle: String?) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(L10n.string(title))
-                .font(DesignTokens.cardSerif)
+                .font(DesignTokens.settingsHeading)
+                .tracking(DesignTokens.listHeadingTracking)
                 .foregroundStyle(Palette.ink)
                 .accessibilityAddTraits(.isHeader)
             if let subtitle {

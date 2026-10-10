@@ -41,6 +41,10 @@ def app(tmp_path: Path) -> Path:
         catalog = localization_resources / f"{language}.lproj/Localizable.strings"
         catalog.parent.mkdir(parents=True, exist_ok=True)
         catalog.write_text('"Language" = "Language";\n')
+    ui_resources = bundle / "Contents/Resources/CopyTrading_CopyTradingUI.bundle/Contents/Resources"
+    font = ui_resources / "Fonts/JosefinSans.ttf"
+    font.parent.mkdir(parents=True, exist_ok=True)
+    font.write_bytes(b"font")
     with (bundle / "Contents" / "Info.plist").open("wb") as stream:
         plistlib.dump(
             {

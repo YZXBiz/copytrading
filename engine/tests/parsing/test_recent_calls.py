@@ -16,6 +16,7 @@ from copytrading_engine.parsing.providers.anthropic import build_decoder as buil
 from copytrading_engine.parsing.routes import Route
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore, record_owner_correction
 from copytrading_engine.shared.model_providers import ProviderConfig
+from copytrading_engine.shared.reading import Fraction, NotGiven, NotSaid, Sell, Stock
 from copytrading_engine.shared.signals import Instruction
 
 from ..readings import buy, commentary, sell, trade
@@ -105,6 +106,15 @@ def test_the_reader_is_shown_fields_never_a_posts_text():
         describe((call,), NOW)
         == "c1 · buy · SOUN · at 5.85 · share 0.1666666666666666666666666667 · open · 5 min ago"
     )
+
+
+def test_a_sell_at_the_market_is_shown_with_no_price():
+    sold = Instruction(action="reduce", symbol="WMT", price=None, fraction=Decimal("0.5"))
+    [bought, call] = recent_calls(_past("p1", 5, _buy("WMT", "113"), sold))
+
+    shown = describe((call,), NOW)
+    assert shown == "c2 · reduce · WMT · at market · share 0.5 · closed · 5 min ago"
+    assert bought.open
 
 
 # --- The reader sees them, and is held to them -------------------------------------------------
@@ -201,6 +211,76 @@ async def test_a_sell_naming_a_buy_the_guru_does_not_hold_is_asked_about_once_th
         await decoder.close()
     assert len(asked) == 1
     assert "open IREN buys are at 39.5" in asked[0]
+
+
+async def test_sell_half_of_a_held_stock_with_no_price_trades_through_the_reader():
+    """Zhao, Oct 9 2026: "buy wmt at 110 1/6", "buy wmt at 113 1/6", then "sell wmt half". The
+    reader read it right (a sell of half, no price, no buy named) and the post still waited for
+    the owner with price_not_given. With both buys listed as open, the real reader agent and its
+    checks pass the reading on the first try, and it becomes a sell of half of every WMT buy at
+    the market."""
+    recent = recent_calls(
+        [*_past("p1", 6, _buy("WMT", "110")), *_past("p2", 3, _buy("WMT", "113"))]
+    )
+    reading = trade(
+        Sell(
+            action_words="sell",
+            stock=Stock(ticker="WMT", words="wmt"),
+            price=NotGiven(),
+            share=Fraction(value=Decimal("0.5"), words="half"),
+            sell_from=NotSaid(),
+        )
+    )
+    shown: list[str] = []
+    retried: list[str] = []
+
+    def reader(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        shown.append(info.instructions or "")
+        retried.extend(
+            str(part.content)
+            for message in messages
+            for part in message.parts
+            if isinstance(part, RetryPromptPart)
+        )
+        return ModelResponse(parts=[TextPart(_answer(reading))])
+
+    decoder, model = _decoder(FunctionModel(reader, profile=JSON_OUTPUT))
+    try:
+        with model:
+            result = await transform(_post("sell wmt half"), Route(), decoder, "test", recent)
+    finally:
+        await decoder.close()
+
+    assert retried == []
+    assert "c1 · buy · WMT · at 110" in shown[0]
+    assert "c2 · buy · WMT · at 113" in shown[0]
+    assert (result.decision, result.reading) == ("trade", reading)
+    assert result.instructions == (
+        Instruction(
+            action="reduce",
+            symbol="WMT",
+            price=None,
+            fraction=Decimal("0.5"),
+            exit_basis="remaining_position",
+        ),
+    )
+
+
+async def test_a_buy_with_no_price_still_waits_through_the_reader():
+    """Only a sell goes at the market: a buy needs the guru's price to bound what it pays."""
+    reading = trade(buy("WMT", "113", said="buy").model_copy(update={"price": NotGiven()}))
+
+    def reader(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        return ModelResponse(parts=[TextPart(_answer(reading))])
+
+    decoder, model = _decoder(FunctionModel(reader, profile=JSON_OUTPUT))
+    try:
+        with model:
+            result = await transform(_post("buy wmt"), Route(), decoder, "test")
+    finally:
+        await decoder.close()
+
+    assert (result.decision, result.reason, result.suggested) == ("review", "price_not_given", ())
 
 
 # --- What a repeat does, under the guru's window -----------------------------------------------
@@ -303,3 +383,45 @@ async def test_the_owners_correction_replaces_the_readers_call(store, tmp_path):
     [past] = await store.past_calls("demo", "discord:demo:2")
 
     assert past.instruction.symbol == "ABD"
+
+
+@pytest.mark.parametrize(
+    "second", ["Sells half of WMT", "卖出一半WMT"], ids=["corrected", "stands"]
+)
+async def test_an_english_post_read_with_a_chinese_summary_is_asked_about_once(second):
+    """Oct 9 2026: "Out of all my NIO" came back summarized as "全部卖出NIO。". The reader is told
+    once to write the post's language; whatever it answers next stands."""
+    recent = recent_calls(_past("p1", 3, _buy("WMT", "110")))
+
+    def reading(summary: str):
+        return trade(
+            Sell(
+                action_words="sell",
+                stock=Stock(ticker="WMT", words="wmt"),
+                price=NotGiven(),
+                share=Fraction(value=Decimal("0.5"), words="half"),
+                sell_from=NotSaid(),
+            ),
+            summary=summary,
+        )
+
+    asked: list[str] = []
+
+    def reader(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        asked.extend(
+            str(part.content)
+            for message in messages
+            for part in message.parts
+            if isinstance(part, RetryPromptPart)
+        )
+        summary = "卖出一半WMT" if not asked else second
+        return ModelResponse(parts=[TextPart(_answer(reading(summary)))])
+
+    decoder, model = _decoder(FunctionModel(reader, profile=JSON_OUTPUT))
+    try:
+        with model:
+            assert await decoder.decode("sell wmt half", Route(), recent) == reading(second)
+    finally:
+        await decoder.close()
+    assert len(asked) == 1
+    assert "English" in asked[0]

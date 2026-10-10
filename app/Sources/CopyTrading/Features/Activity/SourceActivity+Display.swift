@@ -85,7 +85,7 @@ extension SourceActivity {
         }
     }
 
-    var isToday: Bool { sourceDate.map(Calendar.current.isDateInToday) ?? false }
+    @MainActor var isToday: Bool { sourceDate.map(AppTime.calendar.isDateInToday) ?? false }
 
     @MainActor var outcomes: [(accountID: String, outcome: DestinationOutcome)] {
         destinations.map { ($0.accountID, DestinationOutcome($0)) }
@@ -124,10 +124,13 @@ extension SourceEmbedEvidence {
 }
 
 extension SourceInstruction {
-    /// "Buy ABC at $12.34", "Sell half of ABC at $14", "Sell all ABC at $15".
+    /// "Buy ABC at $12.34", "Sell half of ABC at $14", "Sell all ABC at the market price".
     @MainActor
     var phrase: String {
-        let price = Decimal(engine: price).map { $0.formatted(.currency(code: "USD")) } ?? price
+        // A sell the guru gave no price sells at the market, priced from the live bid (ADR-0007).
+        let price =
+            price.map { Decimal(engine: $0).map { $0.formatted(.currency(code: "USD")) } ?? $0 }
+            ?? L10n.string("the market price")
         switch action {
         case "buy":
             return L10n.string("Buy %@ at %@", symbol, price)
@@ -139,8 +142,9 @@ extension SourceInstruction {
         }
     }
 
+    /// The guru's share in words; a reader's rounded decimal (0.3333) still reads as "a third".
     private static func share(_ fraction: String) -> String {
-        switch Humanize.fraction(fraction) {
+        switch common(fraction) ?? Humanize.fraction(fraction) {
         case "1/2": "half"
         case "1/3": "a third"
         case "1/4": "a quarter"
@@ -149,5 +153,11 @@ extension SourceInstruction {
         case "1": "all"
         case let other: other
         }
+    }
+
+    private static func common(_ fraction: String) -> String? {
+        guard let value = Double(fraction) else { return nil }
+        let known: [(Double, String)] = [(1.0 / 3, "1/3"), (2.0 / 3, "2/3"), (1.0 / 6, "1/6"), (1.0 / 8, "1/8")]
+        return known.first { abs($0.0 - value) < 0.0006 }?.1
     }
 }

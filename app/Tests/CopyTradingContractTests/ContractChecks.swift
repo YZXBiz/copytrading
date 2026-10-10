@@ -6,9 +6,12 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
     case activitySourceReading = "activity source reading"
     case activityDestinationOutcomes = "activity destination outcomes"
     case activityCard = "activity card"
+    case activityTimeline = "activity timeline"
+    case liveSteps = "live steps"
     case appWindowLifecycle = "app window lifecycle"
     case connectionsDraft = "connections draft"
     case guidedSetup = "guided setup"
+    case setupImport = "setup import"
     case equityChartScale = "equity chart scale"
     case connectionsAndSettingsPages = "connections and settings pages"
     case providerChoice = "provider choice"
@@ -21,6 +24,11 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
     case orderApproval = "order approval"
     case keepAwake = "keep the Mac awake while copying"
     case backupRestoreNotes = "backup and restore notes"
+    case learnedExamples = "learned examples"
+    case updateOffer = "update offer banner"
+    case guruFeed = "guru feed"
+    case manualInstructionGuess = "manual instruction guess"
+    case fillWatch = "fill notifications"
 
     var testDescription: String { rawValue }
 
@@ -29,9 +37,12 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
         case .activitySourceReading: try checkActivitySourceReadingRepresentation()
         case .activityDestinationOutcomes: try checkActivityDestinationInstructionOutcomes()
         case .activityCard: try runActivityCardTests()
+        case .activityTimeline: try runActivityTimelineTests()
+        case .liveSteps: try runLiveStepTests()
         case .appWindowLifecycle: try await runAppWindowLifecycleTests()
         case .connectionsDraft: try runConnectionsDraftTests()
         case .guidedSetup: try runGuidedSetupTests()
+        case .setupImport: try runSetupImportTests()
         case .equityChartScale: try runEquityChartScaleTests()
         case .connectionsAndSettingsPages: try runConnectionsAndSettingsPagesTests()
         case .providerChoice: try runProviderChoiceTests()
@@ -44,6 +55,11 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
         case .orderApproval: try await runOrderApprovalTests()
         case .keepAwake: try runKeepAwakeTests()
         case .backupRestoreNotes: try await runBackupRestoreNoteTests()
+        case .learnedExamples: try runLearnedExamplesTests()
+        case .updateOffer: try runUpdateOfferTests()
+        case .guruFeed: try runGuruFeedTests()
+        case .manualInstructionGuess: try runManualInstructionGuessTests()
+        case .fillWatch: try runFillWatchTests()
         }
     }
 }

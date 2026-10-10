@@ -32,6 +32,20 @@ enum Palette {
     static let tertiaryInk = dynamic(light: rgb(0x5F6064), dark: rgb(0x8E8E93))
     /// Links, switches, and a screen's one primary action.
     static let accent = Color(red: 0.204, green: 0.471, blue: 0.965)
+    /// What waits on the owner: a count beside a heading, a guru with calls to answer.
+    /// The one warm fill, as a studio drawing uses it: inside an ink outline, on the thing the eye
+    /// should land on (the gap that decided an order, how much of a limit is used, a step done).
+    /// Never text and never a whole surface.
+    static let butter = dynamic(light: rgb(0xF2D46B), dark: rgb(0xE3C25A))
+    /// The riso set beside butter: soft fills at butter's own lightness, each with one meaning and
+    /// always inside an ink outline with a shape of its own, so none depends on colour alone.
+    /// Sage: it went through (a fill, a done step).
+    static let sage = dynamic(light: rgb(0xB5D6A7), dark: rgb(0x8FB583))
+    /// Blush: it was refused or failed.
+    static let blush = dynamic(light: rgb(0xF3B4A2), dark: rgb(0xD98F7C))
+    /// Sky: it is out with the broker, waiting on the market.
+    static let sky = dynamic(light: rgb(0xB7D3EE), dark: rgb(0x86A9CC))
+    static let amber = dynamic(light: rgb(0xB8860B), dark: rgb(0xF5C04A))
 
     private static func rgb(_ hex: Int) -> NSColor {
         NSColor(

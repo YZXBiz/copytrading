@@ -11,8 +11,8 @@ struct StartCopyingButton: View {
             L10n.string(model.isCopyingSavedSetup ? "Apply Changes" : "Start Copying"),
             systemImage: model.isCopyingSavedSetup ? "arrow.triangle.2.circlepath" : "play.fill", action: requestStart
         )
-        .buttonStyle(.borderedProminent)
-        .disabled(!model.canStartCopyingFromCheck && !model.canCheckAndStart)
+        .buttonStyle(PageButtonStyle(isProminent: true, horizontalPadding: 16))
+        .disabled(model.isApplyingChanges || (!model.canStartCopyingFromCheck && !model.canCheckAndStart))
         .accessibilityIdentifier("setup.startCopying")
         .confirmationDialog(
             "Start copying into live accounts?",

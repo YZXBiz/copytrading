@@ -61,9 +61,9 @@ struct AssistantComposer: View {
                     Button(action: submit) {
                         Image(systemName: "arrow.up")
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(canSend ? Color.white : Palette.tertiaryInk)
+                            .foregroundStyle(canSend ? Palette.page : Palette.tertiaryInk)
                             .frame(width: 26, height: 26)
-                            .background(canSend ? Palette.accent : Palette.well, in: .circle)
+                            .background(canSend ? Palette.ink : Palette.well, in: .circle)
                     }
                     .buttonStyle(QuietPressButtonStyle())
                     .disabled(!canSend)
@@ -80,7 +80,6 @@ struct AssistantComposer: View {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .strokeBorder(contrast == .increased ? Palette.secondaryInk : Palette.hairline, lineWidth: 1)
             }
-            .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
         }
         .onChange(of: text) { _, new in
             if new.count > Self.characterLimit { text = String(new.prefix(Self.characterLimit)) }

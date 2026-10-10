@@ -63,6 +63,26 @@ public struct TradingConfigurationStore: Sendable {
         }
     }
 
+    /// Save account limits the engine already copies with, or takes at the next Start, under the
+    /// revision it reported. Only limits change, so the saved keys stay as they are, and copying
+    /// need not be paused.
+    public func saveLimits(configuration: TradingConfiguration, revision engineRevision: String) throws {
+        guard configuration.version == TradingConfiguration.currentVersion, Self.isRevision(engineRevision) else {
+            throw TradingConfigurationStoreError.invalidConfiguration
+        }
+        guard let saved = try loadEnvelope() else { throw TradingConfigurationStoreError.missingSecrets }
+        guard saved.pendingActivation == nil else { throw TradingConfigurationStoreError.activationPending }
+        guard configuration.withPolicies(of: saved.configuration) == saved.configuration else {
+            throw TradingConfigurationStoreError.invalidConfiguration
+        }
+        try writer.write(
+            try encode(
+                SavedTradingConfiguration(
+                    version: saved.version, configuration: configuration, revision: engineRevision,
+                    secretRevision: saved.secretRevision
+                )), to: url)
+    }
+
     /// Persist the candidate and its rollback reference before sending Start.
     /// `engineRevision` is the revision the engine reported when it validated `configuration`;
     /// the app never computes one, so the engine's activation journal always matches it.

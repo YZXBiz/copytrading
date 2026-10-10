@@ -21,43 +21,30 @@ struct DiagnosticsView: View {
     }
 
     var body: some View {
-        Group {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 18) {
+                header
+                controls
+                if let message = model.diagnosticsJournalMessage {
+                    Callout(message, tone: .caution)
+                }
+            }
+            .padding(.horizontal, 40)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
             if model.diagnosticsEntries.isEmpty {
                 ScrollView {
                     LogInvitation(model: model)
-                        .frame(maxWidth: .infinity)
-                        .padding(.horizontal, DesignTokens.pagePadding)
-                        .padding(.top, 28)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 40)
+                        .padding(.top, 32)
                         .padding(.bottom, 32)
                 }
             } else {
                 readingLayout
             }
         }
-        .pageBar {
-            VStack(spacing: 0) {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 16) {
-                        header
-                        Spacer(minLength: 12)
-                        controls
-                    }
-                    VStack(alignment: .leading, spacing: 10) {
-                        header
-                        controls
-                    }
-                }
-                .padding(.horizontal, DesignTokens.pagePadding)
-                .padding(.top, 8)
-                .padding(.bottom, 12)
-                if let message = model.diagnosticsJournalMessage {
-                    Callout(message, tone: .caution)
-                        .padding(.horizontal, DesignTokens.pagePadding)
-                        .padding(.bottom, 10)
-                }
-                Divider()
-            }
-        }
+        .background(Palette.page)
         .navigationTitle(L10n.string("Diagnostics"))
         .task { await refreshWhileVisible() }
         .onChange(of: filter) { reconcileSelection() }
@@ -75,18 +62,16 @@ struct DiagnosticsView: View {
                 }
             }
             .frame(minWidth: 300, idealWidth: 320, maxWidth: 320, maxHeight: .infinity)
-
-            Divider()
+            // The list sits on the canvas grey and the record on white, so no rule parts them.
+            .background(Palette.canvas)
 
             Group {
                 if let selectedEntry {
                     DiagnosticsEntryDetailView(entry: selectedEntry)
                 } else {
-                    ContentUnavailableView(
-                        L10n.string("Select a record"),
-                        systemImage: "waveform.path.ecg",
-                        description: Text(L10n.string("See when it happened, how it ended, and the redacted payload it captured."))
-                    )
+                    InkEmptyState(message: L10n.string("See when it happened, how it ended, and the redacted payload it captured."))
+                        .padding(32)
+                        .frame(maxHeight: .infinity, alignment: .top)
                 }
             }
             .frame(minWidth: 350, maxWidth: .infinity, maxHeight: .infinity)
@@ -94,22 +79,15 @@ struct DiagnosticsView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(L10n.string("Diagnostics"))
-                .font(DesignTokens.pageTitle)
-                .foregroundStyle(Palette.ink)
-                .accessibilityAddTraits(.isHeader)
-            Text(
-                L10n.string(
-                    "%@ · %@ on this Mac",
-                    Humanize.count(model.diagnosticsEntries.count, "record"),
-                    Humanize.bytes(model.diagnosticsJournalBytes)
-                )
+        PageHeadline(
+            L10n.string("Diagnostics"),
+            lede: L10n.string(
+                "%@ · %@ on this Mac",
+                Humanize.count(model.diagnosticsEntries.count, "record"),
+                Humanize.bytes(model.diagnosticsJournalBytes)
             )
-            .font(DesignTokens.caption)
-            .foregroundStyle(Palette.tertiaryInk)
-            .monospacedDigit()
-        }
+        )
+        .monospacedDigit()
     }
 
     private var controls: some View {
@@ -119,6 +97,7 @@ struct DiagnosticsView: View {
             }
             .fixedSize()
             .accessibilityLabel(L10n.string("Record type"))
+            Spacer(minLength: 12)
             TextField(L10n.string("Search"), text: $query)
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 180)
@@ -136,15 +115,15 @@ struct DiagnosticsView: View {
     /// A search or filter that matches nothing; an empty log shows its invitation instead.
     @ViewBuilder
     private var emptyList: some View {
-        if !query.trimmingCharacters(in: .whitespaces).isEmpty {
-            ContentUnavailableView.search(text: query)
-        } else {
-            ContentUnavailableView(
-                L10n.string(filter.emptyTitle),
-                systemImage: "line.3.horizontal.decrease.circle",
-                description: Text(L10n.string(filter.emptyDescription))
-            )
+        Group {
+            if !query.trimmingCharacters(in: .whitespaces).isEmpty {
+                InkEmptyState(message: L10n.string("No records match “%@”.", query))
+            } else {
+                InkEmptyState(message: L10n.string(filter.emptyTitle))
+            }
         }
+        .padding(24)
+        .frame(maxHeight: .infinity, alignment: .top)
     }
 
     /// The journal grows while the engine runs; reread it every few seconds while this page is open.

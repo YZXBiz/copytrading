@@ -343,6 +343,19 @@ def _number(value: Decimal, words: str, text: str, path: str) -> None:
         )
 
 
+def _has_chinese(text: str) -> bool:
+    return any("\u3400" <= char <= "\u9fff" or "\uf900" <= char <= "\ufaff" for char in text)
+
+
+def check_summary_language(reading: PostReading, text: str, *, retried: bool) -> str | None:
+    """The summary is written in the post's own language. A post with no Chinese in it gets a
+    summary with none either: the reader's examples are Chinese and can pull it there. Asked
+    about once; a second answer stands, since a summary is read, never traded on."""
+    if retried or _has_chinese(text) or not _has_chinese(reading.summary):
+        return None
+    return "summary: write it in the post's own language, which is English here, not Chinese"
+
+
 def check_references(
     reading: PostReading, recent: tuple[RecentCall, ...], *, retried: bool
 ) -> str | None:
@@ -372,7 +385,10 @@ def check_references(
             {
                 listed.price
                 for listed in recent
-                if listed.open and listed.action == "buy" and listed.symbol == call.stock.ticker
+                if listed.open
+                and listed.action == "buy"
+                and listed.symbol == call.stock.ticker
+                and listed.price is not None
             }
         )
         if held and call.sell_from.buy_price not in held:

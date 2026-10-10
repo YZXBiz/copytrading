@@ -55,6 +55,7 @@ class Owner:
         self.cycles = 0
         self.outstanding_work = False
         self.deliveries = []
+        self.configs = []
 
     async def receive(self, delivery, now):
         assert now.tzinfo is not None
@@ -73,6 +74,11 @@ class Owner:
         assert not halted
         self.cycles += 1
         return SimpleNamespace(ledger=SimpleNamespace(has_outstanding_work=self.outstanding_work))
+
+    async def update_config(self, config, now):
+        assert now.tzinfo is not None
+        self.configs.append(config)
+        return ()
 
     async def account_status(self):
         from copytrading_engine.execution.application.ports import AccountRuntimeView

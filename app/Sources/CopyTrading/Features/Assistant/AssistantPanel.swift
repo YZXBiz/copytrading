@@ -1,8 +1,8 @@
 import DesktopCore
 import SwiftUI
 
-/// The assistant's right-hand panel. It floats over the page (which never reflows) on the
-/// Settings panel's surface, with chart paper fading in from the top, and closes on Esc.
+/// The assistant's right-hand panel. It floats over the page (which never reflows) as a plain
+/// white sheet with a hairline edge, and closes on Esc.
 struct AssistantPanel: View {
     static let width: CGFloat = 380
 
@@ -13,7 +13,6 @@ struct AssistantPanel: View {
     @FocusState private var isComposerFocused: Bool
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.colorSchemeContrast) private var contrast
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     private var assistant: AssistantModel { model.assistant }
 
@@ -35,14 +34,14 @@ struct AssistantPanel: View {
         }
         .frame(width: Self.width)
         .frame(maxHeight: .infinity)
-        .background { backdrop }
+        .background(Palette.page)
         .clipShape(.rect(cornerRadius: DesignTokens.panelCornerRadius, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: DesignTokens.panelCornerRadius, style: .continuous)
                 .strokeBorder(edge, lineWidth: 1)
                 .allowsHitTesting(false)
         }
-        .shadow(color: .black.opacity(colorScheme == .dark ? 0.4 : 0.13), radius: 30, x: -4, y: 12)
+        .shadow(color: .black.opacity(colorScheme == .dark ? 0.35 : 0.08), radius: 24, x: -2, y: 8)
         .onExitCommand(perform: close)
         .onChange(of: assistant.focusRequest) { isComposerFocused = true }
         .task {
@@ -82,7 +81,7 @@ struct AssistantPanel: View {
             .font(.system(size: 12, weight: .semibold))
             .foregroundStyle(Palette.tertiaryInk)
             .frame(width: 26, height: 26)
-            .background(Palette.page.opacity(0.7), in: .circle)
+            .background(Palette.well, in: .circle)
             .help(title)
             .accessibilityIdentifier(identifier)
     }
@@ -107,35 +106,14 @@ struct AssistantPanel: View {
         .scrollEdgeEffectStyle(.soft, for: .vertical)
     }
 
-    /// The Settings panel's surface with the chart paper of Connections' panels across its top:
-    /// deep behind the greeting, a thin band once a conversation starts.
-    private var backdrop: some View {
-        ZStack(alignment: .top) {
-            Palette.panel
-            if !reduceTransparency && contrast != .increased {
-                ChartPaperBackdrop(focus: UnitPoint(x: 0.5, y: 0), gridSpacing: 22)
-                    .frame(height: assistant.messages.isEmpty ? 340 : 96)
-                    .mask {
-                        LinearGradient(
-                            stops: [
-                                .init(color: .black, location: 0), .init(color: .black.opacity(0.4), location: 0.5),
-                                .init(color: .clear, location: 1),
-                            ],
-                            startPoint: .top, endPoint: .bottom)
-                    }
-            }
-        }
-        .accessibilityHidden(true)
-    }
-
     private var edge: Color {
         contrast == .increased ? Palette.secondaryInk : (colorScheme == .dark ? .white.opacity(0.14) : .black.opacity(0.06))
     }
 
     private var suggestions: [String] {
         let directory = GuruDirectory(model.savedTradingConfiguration)
-        let guru = directory.name(for: model.openGuruID) ?? directory.gurus.first?.name
-        return AssistantSuggestions.suggestions(for: model.selectedScreen, guru: guru)
+        let guru = directory.name(for: model.selectedScreen.guruID) ?? directory.gurus.first?.name
+        return AssistantSuggestions.suggestions(for: model.selectedScreen, guru: guru, hasSelectedPost: selectedPost != nil)
     }
 
     private var selectedPost: SourceActivity? {
@@ -156,8 +134,6 @@ struct AssistantPanel: View {
 
     private func follow(_ link: AssistantLink) {
         model.follow(link, activity: accountFeature.activity) { id in
-            // Activity reads the focus when it appears; when it is already showing, select the post now.
-            accountFeature.focusedActivityID = id
             activityState.focusActivity(id)
         }
     }

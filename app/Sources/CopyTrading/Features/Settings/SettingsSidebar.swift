@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The sidebar that replaces the main one while Settings is open: the app's icon and name, a status
-/// card, and the Settings pages in their groups.
+/// The sidebar that replaces the main one while Settings is open: the app's name, a
+/// line on how it is, and the Settings pages under their tracked-capital groups.
 struct SettingsSidebar<Header: View>: View {
     @Bindable var model: AppModel
     @ViewBuilder let header: () -> Header
@@ -9,18 +9,12 @@ struct SettingsSidebar<Header: View>: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                SettingsSidebarHero(model: model)
-                    .padding(.top, 6)
-                    .padding(.bottom, 20)
                 SettingsSummaryCard(model: model)
-                    .padding(.bottom, 26)
+                    .padding(.horizontal, 10)
+                    .padding(.top, 2)
+                    .padding(.bottom, 24)
                 ForEach(SettingsPageGroup.allCases) { group in
-                    Text(L10n.string(group.title))
-                        .font(.system(.body, weight: .semibold))
-                        .foregroundStyle(Palette.ink)
-                        .padding(.horizontal, 9)
-                        .padding(.bottom, 6)
-                        .accessibilityAddTraits(.isHeader)
+                    SidebarGroupTitle(title: group.title)
                     VStack(spacing: 2) {
                         ForEach(group.pages) { page in
                             SidebarRow(
@@ -31,7 +25,7 @@ struct SettingsSidebar<Header: View>: View {
                             ) { model.show(page) }
                         }
                     }
-                    .padding(.bottom, 22)
+                    .padding(.bottom, 18)
                 }
             }
             .padding(.horizontal, 10)
@@ -40,7 +34,10 @@ struct SettingsSidebar<Header: View>: View {
         .scrollIndicators(.never)
         .navigationTitle(L10n.string("Settings"))
         .safeAreaInset(edge: .top, spacing: 0) {
-            header()
+            VStack(spacing: 0) {
+                header()
+                SidebarBrandCard(model: model)
+            }
         }
         .background { SidebarPanelBackground() }
     }

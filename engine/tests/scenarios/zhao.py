@@ -2,7 +2,16 @@
 interpreter would. The reading is scripted, but the engine still checks that every price, ticker,
 and fraction it cites is in the post, exactly as it checks a real model's answer."""
 
-from copytrading_engine.shared.reading import Buy, PostReading, Sell
+from copytrading_engine.shared.reading import (
+    All,
+    Buy,
+    Fraction,
+    NotGiven,
+    NotSaid,
+    PostReading,
+    Sell,
+    Stock,
+)
 
 from .. import readings
 
@@ -42,6 +51,17 @@ def trim(
         fraction=fraction,
         fraction_said=fraction_said,
         counts_from="original",
+    )
+
+
+def sell_now(symbol: str, *, said: str, share: Fraction | All) -> Sell:
+    """A sell with no price and no buy named, such as "sell WMT half": out now, at the market."""
+    return Sell(
+        action_words=said,
+        stock=Stock(ticker=symbol, words=symbol),
+        price=NotGiven(),
+        share=share,
+        sell_from=NotSaid(),
     )
 
 

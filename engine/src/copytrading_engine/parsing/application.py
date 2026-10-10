@@ -147,7 +147,7 @@ def _act_on(
     reading: r.PostReading,
 ) -> tuple[Literal["trade", "ignore", "review"], str, tuple[tuple[Instruction, Evidence], ...]]:
     """Act or ask (ADR-0007): a trade made or an instruction with every call placeable trades;
-    conditionals, suggestions, and calls with no exact price or no named buy wait for the
+    conditionals, suggestions, a range, a buy with no exact price, and a vague trim wait for the
     owner; commentary is ignored."""
     match reading:
         case r.Commentary():
@@ -179,12 +179,12 @@ def _placeable(call: r.Call) -> tuple[Instruction, Evidence]:
             if instruction.entry_price is not None and isinstance(call.sell_from, r.Lot)
             else None
         )
-    assert isinstance(call.price, r.Exact)  # _instruction waits on any other price
     evidence = Evidence(
         **instruction.model_dump(),
         action_evidence=call.action_words,
         symbol_evidence=call.stock.words,
-        price_evidence=call.price.words,
+        # A sell at the market has no price to cite (_instruction waits on any other price).
+        price_evidence=call.price.words if isinstance(call.price, r.Exact) else None,
         entry_evidence=entry_words,
         fraction_evidence=fraction_words,
     )
@@ -194,7 +194,7 @@ def _placeable(call: r.Call) -> tuple[Instruction, Evidence]:
 def suggested(reading: r.PostReading | None) -> tuple[Instruction, ...]:
     """What Copy places for a post that waits for the owner (ADR-0007, ADR-0010): each call the
     owner can copy as read, a range at its top and a batch at the full position, trimmed by the
-    account's limits. A call with no price, or a sell that states no share, has nothing to copy;
+    account's limits. A buy with no price, or a sell that states no share, has nothing to copy;
     the owner enters it or sells the lot from Accounts."""
     if not isinstance(reading, r.TradeMade | r.Instruction | r.Conditional | r.Suggestion):
         return ()
@@ -208,12 +208,16 @@ def suggested(reading: r.PostReading | None) -> tuple[Instruction, ...]:
 
 
 def _instruction(call: r.Call, *, owner: bool) -> Instruction:
-    """One call as the engine places it (ADR-0010). On its own (`owner=False`) the engine waits
-    for the owner on a range and on a sell that states no share; when the owner copies, a range
-    buys at its top. A buy with no size asks for the full position, and one whose size is a batch
-    the playbook gives no share waits; a sell that
-    names a buy price sells from the buys at that price, and one that names none from every buy;
-    a share counts from what is left unless the post says the original buy."""
+    """One call as the engine places it (ADR-0007, ADR-0010). On its own (`owner=False`) the
+    engine waits for the owner on a range and on a sell that states no share; when the owner
+    copies, a range buys at its top. A sell with no price, or one at the market, sells at the
+    market when placed ("sell wmt half"): the guru is getting out now, and the limit under the
+    live bid bounds it. A buy needs the guru's price, which bounds what the copy pays. A buy with
+    no size asks for the full position, and one whose size is a batch the playbook gives no share
+    waits; a sell that names a buy price sells from the buys at that price, and one that names
+    none from every buy; a share counts from what is left unless the post says the original
+    buy."""
+    price: Decimal | None
     match call.price:
         case r.Exact(value=price):
             pass
@@ -221,6 +225,8 @@ def _instruction(call: r.Call, *, owner: bool) -> Instruction:
             price = high
         case r.Range():
             raise _Wait("price_range")
+        case r.AtMarket() | r.NotGiven() if isinstance(call, r.Sell):
+            price = None
         case r.AtMarket():
             raise _Wait("price_at_market")
         case _:

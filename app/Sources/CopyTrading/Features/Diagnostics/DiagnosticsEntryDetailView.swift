@@ -1,7 +1,7 @@
 import DesktopCore
 import SwiftUI
 
-/// The selected record on a white reading surface: its fields, then the redacted payload.
+/// The selected record on the page: its title, its fields under a hairline, then the redacted payload.
 struct DiagnosticsEntryDetailView: View {
     let entry: DiagnosticsJournalEntry
 
@@ -10,8 +10,9 @@ struct DiagnosticsEntryDetailView: View {
             VStack(alignment: .leading, spacing: DesignTokens.pageSectionSpacing) {
                 VStack(alignment: .leading, spacing: 14) {
                     HStack(alignment: .firstTextBaseline) {
-                        Label(entry.title, systemImage: entry.symbol)
-                            .font(DesignTokens.sectionTitle)
+                        Text(entry.title)
+                            .font(DesignTokens.listHeading)
+                            .tracking(DesignTokens.listHeadingTracking)
                             .foregroundStyle(Palette.ink)
                         Spacer(minLength: 12)
                         StatusBadge(entry.outcomeTitle, tone: entry.tone)
@@ -21,19 +22,19 @@ struct DiagnosticsEntryDetailView: View {
                             Date.FormatStyle(
                                 date: .abbreviated,
                                 time: .standard,
-                                locale: AppLanguagePreference.shared.language.locale
+                                locale: AppTime.locale,
+                                timeZone: AppTime.zone
                             )
                         )
                     )
                     .font(DesignTokens.caption)
                     .foregroundStyle(Palette.tertiaryInk)
                     .monospacedDigit()
-                    Divider()
                     Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
                         ForEach(entry.displayFields, id: \.label) { field in
                             GridRow {
                                 Text(field.label)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Palette.tertiaryInk)
                                 Text(field.value)
                                     .foregroundStyle(Palette.ink)
                                     .monospacedDigit()
@@ -44,19 +45,10 @@ struct DiagnosticsEntryDetailView: View {
                     .font(.callout)
                     .textSelection(.enabled)
                 }
-                .padding(DesignTokens.workingSurfacePadding)
-                .background(Palette.page, in: .rect(cornerRadius: DesignTokens.readingCornerRadius))
-                .overlay {
-                    RoundedRectangle(cornerRadius: DesignTokens.readingCornerRadius)
-                        .strokeBorder(Palette.hairline, lineWidth: 0.7)
-                        .allowsHitTesting(false)
-                }
 
                 if let payload = entry.payloadJSON {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text(L10n.string("Payload"))
-                            .font(DesignTokens.sectionTitle)
-                            .foregroundStyle(Palette.ink)
+                        Eyebrow(L10n.string("Payload"))
                         Text(payload)
                             .font(.system(.callout, design: .monospaced))
                             .foregroundStyle(Palette.ink)

@@ -95,6 +95,13 @@ class CheckConnectionRequest(PipeRequest):
     ]
 
 
+class UpdateAccountLimitsRequest(PipeRequest):
+    """The saved setup with changed account limits; copying takes them without a pause."""
+
+    operation: Literal["update_account_limits"]
+    configuration: TradingConfiguration
+
+
 class PauseTradingRequest(PipeRequest):
     operation: Literal["pause_trading"]
 
@@ -206,13 +213,39 @@ class ReplayGuruPostsRequest(PipeRequest):
     provider: ProviderConfiguration
     provider_api_key: SecretStr
     profile: ProfileRevision
+    # The guru's accounts, so each replayed buy says how much it would spend.
+    destinations: list[RouteConnection] = Field(max_length=20)
 
 
-class GetAccountEventsRequest(PipeRequest):
-    operation: Literal["get_account_events"]
+class GetAccountFeedRequest(PipeRequest):
+    operation: Literal["get_account_feed"]
     account_id: str = Field(min_length=1, max_length=64)
     before_seq: StrictInt | None = Field(default=None, ge=1)
     limit: StrictInt = Field(default=50, ge=1, le=100)
+
+
+class AccountReadKeys(BaseModel):
+    """One account's broker keys, for reading it while copying is paused. Never stored or logged."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
+
+    account_id: str = Field(min_length=1, max_length=64)
+    environment: Literal["paper", "live"]
+    key: SecretStr
+    secret: SecretStr
+
+
+class AttachAccountReadersRequest(PipeRequest):
+    """Sent when the owner unlocks: read these accounts live while copying is paused."""
+
+    operation: Literal["attach_account_readers"]
+    accounts: tuple[AccountReadKeys, ...] = Field(max_length=20)
+
+
+class DetachAccountReadersRequest(PipeRequest):
+    """Sent when the owner locks: forget every read key."""
+
+    operation: Literal["detach_account_readers"]
 
 
 class GetEquityHistoryRequest(PipeRequest):
@@ -327,6 +360,7 @@ RequestType = Annotated[
     | ValidateTradingRequest
     | CheckConnectionRequest
     | PauseTradingRequest
+    | UpdateAccountLimitsRequest
     | CreateBackupRequest
     | PreviewRestoreRequest
     | PrepareRestoreCandidateRequest
@@ -342,8 +376,10 @@ RequestType = Annotated[
     | ReviewProfileExamplesRequest
     | LearnGuruPlaybookRequest
     | ReplayGuruPostsRequest
-    | GetAccountEventsRequest
+    | GetAccountFeedRequest
     | GetEquityHistoryRequest
+    | AttachAccountReadersRequest
+    | DetachAccountReadersRequest
     | SaveManualCorrectionRequest
     | PreviewManualOrderRequest
     | ConfirmManualOrdersRequest

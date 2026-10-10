@@ -1,8 +1,6 @@
 """The agent's instructions carry the rules; its tools are exactly the assistant's tools."""
 
-from pydantic_ai.models.test import TestModel
-
-from copytrading_engine.assistant.agent import INSTRUCTIONS, LIMITS, SETTINGS, build_agent
+from copytrading_engine.assistant.agent import AGENT, INSTRUCTIONS, LIMITS, SETTINGS
 from copytrading_engine.assistant.knowledge import HELP
 
 
@@ -40,8 +38,8 @@ def test_the_help_covers_every_setup_topic():
 
 
 def test_the_agent_offers_the_assistant_tools_and_nothing_else():
-    agent = build_agent(TestModel())
-    names = set(agent._function_toolset.tools)
+    assert AGENT.name == "copytrading_assistant"
+    names = set(AGENT._function_toolset.tools)
     assert names == {
         "get_status",
         "list_accounts",

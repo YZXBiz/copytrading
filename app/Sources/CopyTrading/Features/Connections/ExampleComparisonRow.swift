@@ -23,13 +23,13 @@ struct ExampleComparisonRow: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline) {
                 Text(L10n.string("Example %lld", Int64(example.exampleIndex + 1)))
-                    .font(.callout.bold())
+                    .font(DesignTokens.bodyEmphasis)
                 Spacer()
                 StatusBadge(example.matches ? "Matches" : "Mismatch", tone: example.matches ? .positive : .caution)
             }
             Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 2) {
                 GridRow {
-                    Text(L10n.string("Expected")).foregroundStyle(.secondary)
+                    Text(L10n.string("Expected")).foregroundStyle(Palette.tertiaryInk)
                     Text(
                         L10n.string(
                             "%@ %@ · fraction %@",
@@ -39,24 +39,23 @@ struct ExampleComparisonRow: View {
                     )
                 }
                 GridRow {
-                    Text(L10n.string("Model")).foregroundStyle(.secondary)
+                    Text(L10n.string("Model")).foregroundStyle(Palette.tertiaryInk)
                     Text(actualText)
                 }
                 ForEach(example.actual.destinations, id: \.accountID) { destination in
                     GridRow {
-                        Text(destination.accountID).foregroundStyle(.secondary)
+                        Text(destination.accountID).foregroundStyle(Palette.tertiaryInk)
                         Text(destination.budgetUSD.map(Humanize.usd) ?? Reason.text(destination.reason))
                     }
                 }
             }
-            .font(.callout)
+            .font(DesignTokens.caption)
             ForEach(example.reviewReasons, id: \.self) { reason in
                 Text(Reason.text(reason))
                     .font(.callout)
                     .foregroundStyle(.orange)
             }
         }
-        .padding(8)
-        .background(.background.secondary, in: .rect(cornerRadius: DesignTokens.calloutCornerRadius))
+        .padding(.vertical, 10)
     }
 }
