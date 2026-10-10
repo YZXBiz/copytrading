@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.3/CopyTrading-0.1.0-alpha.3.dmg"><img src="https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD_macOS_%E7%89%88-0.1.0--alpha.3-1d1d1f?style=for-the-badge&logo=apple&logoColor=white" alt="下载 macOS 版 CopyTrading" height="36"></a>
+  <a href="https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.9/CopyTrading-0.1.0-alpha.9.dmg"><img src="https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD_macOS_%E7%89%88-0.1.0--alpha.9-1d1d1f?style=for-the-badge&logo=apple&logoColor=white" alt="下载 macOS 版 CopyTrading" height="36"></a>
 </p>
 
 <p align="center">
@@ -36,7 +36,7 @@ CopyTrading 是一款原生 macOS 应用。它读取交易者在 Discord 上发�
 > **开发者预览版。** CopyTrading 尚未通过实盘交易的资格验证。请先使用 Alpaca 模拟盘账户；已验证和尚未验证的内容见 [validation](docs/validation.md)。
 
 <p align="center">
-  <a href="docs/assets/zh/today.png"><img src="docs/assets/zh/today.png" alt="今日：当天的变化、净值曲线、每条帖子的处理结果和限额使用情况（示例数据）" width="860"></a>
+  <a href="docs/assets/zh/account.png"><img src="docs/assets/zh/account.png" alt="账户：余额与当日变化、净值曲线、现金和购买力，以及对照限额的今日亏损和股票持仓，每笔持仓都注明归属（示例数据）" width="860"></a>
 </p>
 
 <details>
@@ -44,14 +44,14 @@ CopyTrading 是一款原生 macOS 应用。它读取交易者在 Discord 上发�
 <br>
 <table>
   <tr>
-    <td width="33%"><a href="docs/assets/zh/accounts.png"><img src="docs/assets/zh/accounts.png" alt="账户：余额、限额，以及能追溯到买入帖子的持仓（示例数据）"></a></td>
-    <td width="33%"><a href="docs/assets/zh/people.png"><img src="docs/assets/zh/people.png" alt="信号源：每位信号源的最新信号、近期帖子的结果，以及跟单它的账户（示例数据）"></a></td>
-    <td width="33%"><a href="docs/assets/zh/connections.png"><img src="docs/assets/zh/connections.png" alt="连接：Discord、读取帖子的 AI 模型和提醒（示例数据）"></a></td>
+    <td width="33%"><a href="docs/assets/zh/guru.png"><img src="docs/assets/zh/guru.png" alt="信号源：今日数据和时间线上的每条帖子，以及每个账户的处理结果（示例数据）"></a></td>
+    <td width="33%"><a href="docs/assets/zh/guru-sheet.png"><img src="docs/assets/zh/guru-sheet.png" alt="信号源设置：在哪里发帖、跟单到哪个账户及每种信号买多少，以及操作指南（示例数据）"></a></td>
+    <td width="33%"><a href="docs/assets/zh/connections.png"><img src="docs/assets/zh/connections.png" alt="连接：Discord、读取帖子的 AI 模型、券商账户和信号源（示例数据）"></a></td>
   </tr>
   <tr>
-    <td align="center"><sub><b>账户</b>：每笔持仓都能追溯到买入它的帖子</sub></td>
-    <td align="center"><sub><b>信号源</b>：你跟随谁，表现如何</sub></td>
-    <td align="center"><sub><b>连接</b>：Discord、AI 模型、提醒</sub></td>
+    <td align="center"><sub><b>信号源</b>：每条帖子及其结果</sub></td>
+    <td align="center"><sub><b>信号源设置</b>：每种信号买多少</sub></td>
+    <td align="center"><sub><b>连接</b>：从上到下完成设置</sub></td>
   </tr>
 </table>
 </details>
@@ -61,7 +61,10 @@ CopyTrading 是一款原生 macOS 应用。它读取交易者在 Discord 上发�
 - **帖子变成明确的订单。** 由你选择的 AI 模型读取每条帖子；每个股票代码、价格和比例都必须出现在帖子原文里，所以模型无法凭空编造数字。
 - **按账户设定限额。** 每一笔跟单买入前都会检查每日亏损、单笔、单只股票和总敞口限额。新账户默认不开新仓。
 - **多位信号源，多个账户。** 每一对“信号源到账户”的连接都有自己的仓位规则，模拟盘和实盘账户并排显示。
-- **每笔持仓都能追溯到它的帖子。** 每笔跟单买入都保存为一个仓位批次，注明买入它的帖子；任意一批都可以单独卖出。
+- **每笔持仓都能追溯到它的帖子。** 每笔跟单买入都保存为一个仓位批次，注明买入它的帖子；任意一批都可以单独卖出。你自己在 Alpaca 中买卖的股票，会在下次同步时算作你的。
+- **始终实时。** 即使暂停跟单，也会从券商读取余额、持仓和净值曲线。成交时会发出通知，菜单栏显示今日变化，离开一段时间后会有一份回顾。
+- **留有反悔余地。** 卖出或确认复制后，订单会等待几秒并可撤销；跳过的信号也可以恢复。
+- **快速切换。** 账户和信号源就在侧边栏；⌘K 可查找任意页面、操作或帖子；Control-1、Control-2 切换页面标签。
 - **助手无法自行交易。** 按 ⌘J 提问，它根据你真实的帖子和账户回答；任何可能下单的操作都要等你用 Touch ID 批准。
 - **隐私优先。** 密钥保存在 macOS 钥匙串中；应用会与 Discord、你的 AI 模型服务商和你的券商通信；开启提醒时还会连接 Telegram，检查更新时会连接 GitHub。
 
@@ -71,7 +74,7 @@ CopyTrading 是一款原生 macOS 应用。它读取交易者在 Discord 上发�
 
 需要一台运行 macOS 26 或更高版本的 Apple 芯片 Mac。
 
-1. **[下载 macOS 版 CopyTrading](https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.3/CopyTrading-0.1.0-alpha.3.dmg)**（55 MB）。
+1. **[下载 macOS 版 CopyTrading](https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.9/CopyTrading-0.1.0-alpha.9.dmg)**（55 MB）。
 2. 打开 DMG，把 **CopyTrading** 拖进 **应用程序**。
 3. 打开 CopyTrading。预览版尚未经过 Apple 公证，所以第一次打开时 macOS 会阻止它：前往 **系统设置 → 隐私与安全性**，选择 **仍要打开**。只需操作这一次。
 
@@ -89,17 +92,17 @@ make app
 
 ## 快速上手
 
-应用打开后停在 **快速开始**，它的清单会随着你的填写自动打勾。在你点击 **开始跟单** 之前，不会保存任何内容，也不会下任何单。
+第一次打开时会停在 **连接**，并有一段简短导览，指向每一步要做的事。在你点击 **开始跟单** 之前，不会保存任何内容，也不会下任何单。
 
 所有设置都在 **连接** 中从上到下完成：
 
 1. **Discord**：要读取的频道，以及你的 Discord 令牌。
 2. **AI 模型**：读取帖子的模型，以及它的 API 密钥。
 3. **券商账户**：一个 Alpaca **模拟盘** 账户。
-4. **信号源**：点击 **从频道学习**，检查它起草的操作指南，并设置每个账户投入多少。
+4. **信号源**：选择每位信号源跟单到的账户（该账户的单只股票上限就是信号源的满仓），点击 **从频道学习**，并检查它起草的操作指南。
 5. 点击 **开始跟单**。它会先检查每个连接，全部通过后才开始。
 
-每个需要密钥或 ID 的字段旁都有 **这个去哪里找？** 链接。准备好之后，到 **账户** 中启用开仓，然后在 **活动** 里看到第一条帖子。
+每个需要密钥或 ID 的字段旁都有 **这个去哪里找？** 链接。准备好之后，在账户页面点击 **恢复开仓**，然后在信号源页面看到第一条帖子。
 
 ## 工作原理
 
@@ -144,7 +147,7 @@ Waiting for approval in CopyTrading: proposal p-4e1a9c, expires 16:42.
 
 ## 参与贡献
 
-先运行 `make doctor` 检查你的 Mac，再用 `make check` 运行引擎的 1,200 多个测试、Ruff 和 Ty。原生应用的检查和约定见 [CONTRIBUTING.md](CONTRIBUTING.md)。使用问题请到 [Discussions](https://github.com/YZXBiz/copytrading/discussions) 提问，缺陷请用 [issue 表单](https://github.com/YZXBiz/copytrading/issues/new/choose) 报告，安全漏洞请按 [SECURITY.md](SECURITY.md) 私下报告。
+先运行 `make doctor` 检查你的 Mac，再用 `make check` 运行引擎的 1,500 多个测试、Ruff 和 Ty。原生应用的检查和约定见 [CONTRIBUTING.md](CONTRIBUTING.md)。使用问题请到 [Discussions](https://github.com/YZXBiz/copytrading/discussions) 提问，缺陷请用 [issue 表单](https://github.com/YZXBiz/copytrading/issues/new/choose) 报告，安全漏洞请按 [SECURITY.md](SECURITY.md) 私下报告。
 
 ## 许可证
 

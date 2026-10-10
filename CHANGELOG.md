@@ -2,6 +2,47 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
+## 0.1.0-alpha.9 — developer preview
+
+A new look, accounts and gurus as the app's two places, and copying that keeps going when you trade by hand.
+
+### A calmer, clearer app
+
+- **Accounts and gurus are the sidebar.** Each account is a page: its balance and the day's change, the equity curve, then one band with cash, buying power, today's loss and what is in stocks against their limits, and the caps with **Edit Limits** on one quiet line. Below it, **Positions** and **Activity**; Control-1 and Control-2 switch between them. Each guru is a page too: today's numbers and every post on one timeline, a day at a time, with what each account did.
+- **A new look throughout.** Names and headings in a geometric display face, labels in tracked capitals, ink lines on white, and no boxes. Grey rules are gone: sections are set apart by space and their titles, and a text field sits on a dotted line that turns solid while you type. Colour carries meaning only: sage for what went through, blush for what failed, sky for an order still at the broker, butter where your eye should land.
+- **A post opens beside the page** from Needs You, Activity, or a position, with the guru's words large, a price ruler for each order, and the post's journey as one line.
+- **Positions read like a terminal.** Shares line up on the decimal point, and every row says whose shares they are: "from Zhao", "yours", or both. A lot opens to the post that bought it.
+- **A new icon**: a white sheet with an ink ring and a butter disc.
+
+### Always live
+
+- **Accounts stay live while copying is paused.** Balances, positions and the equity curve are read from Alpaca whenever the app is unlocked; copying only decides whether orders go out. The keys stay in memory and are dropped when you lock. An account that hasn't been read yet shows dashes, never $0.
+- **Fills announce themselves** with a notification and a sound (Settings → General → While Copying).
+- **The menu bar shows today's change** and how many calls wait for you.
+- **A recap after time away**: the first open after six hours shows what filled, how each account moved, and what waits.
+- **Each guru's page says what you hold from their calls** and how it stands.
+
+### Room to change your mind
+
+- **A sale or a confirmed copy waits a few seconds with Undo** before it leaves for Alpaca (Off, 5 s or 10 s in Settings). A skipped call can be brought back for ten seconds, also with ⌘Z.
+- **⌘K (or ⌘F) opens a palette** that finds any account, guru or page, a few safe actions, and posts by their words.
+- **The window reopens where you left it**, on the same page and tab.
+
+### Copying
+
+- **Shares you buy or sell in Alpaca yourself sync on their own** ([ADR-0011](docs/adr/0011-holdings-sync-from-filled-counts.md)). Copied shares still held stay copied and the rest count as yours; a shortfall takes the oldest copied buys first. Activity says what happened in a sentence, and copying never stops for it. While an order you placed is still open in that stock, it waits for it.
+- **A sell with no price sells at the market**, as a limit 1% under the bid ("sell wmt half"), instead of waiting for you. With no fresh bid it waits and tries again until the post is too old; a vague trim with no size still waits for you.
+- **Changed limits reach running copying at once**, the moment the account sheet closes; Edit Limits opens straight on them.
+- **Holdings questions read as plain rows** and say when an order placed outside the app has to fill or be cancelled first. Resuming entries says why it can't, in your language.
+- **Review and Correct is plain choices**: buy or sell, the stocks you hold, how much, the price, the accounts, and one button that says what it will do.
+- **The interpreter writes its summary in the post's language.**
+
+### Setup
+
+- **Import Setup…** (File menu) fills Connections from a key file you choose.
+- **A guru's settings show what each call buys** in that account: the full position, a 1/6 and a 1/2 call, and a call with no size.
+- **Times read on one clock**, with a time-zone setting, and a newer version is offered in the window.
+
 ## 0.1.0-alpha.8 — developer preview
 
 Changes to your setup apply while copying runs.
