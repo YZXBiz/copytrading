@@ -383,3 +383,45 @@ async def test_the_owners_correction_replaces_the_readers_call(store, tmp_path):
     [past] = await store.past_calls("demo", "discord:demo:2")
 
     assert past.instruction.symbol == "ABD"
+
+
+@pytest.mark.parametrize(
+    "second", ["Sells half of WMT", "卖出一半WMT"], ids=["corrected", "stands"]
+)
+async def test_an_english_post_read_with_a_chinese_summary_is_asked_about_once(second):
+    """Oct 9 2026: "Out of all my NIO" came back summarized as "全部卖出NIO。". The reader is told
+    once to write the post's language; whatever it answers next stands."""
+    recent = recent_calls(_past("p1", 3, _buy("WMT", "110")))
+
+    def reading(summary: str):
+        return trade(
+            Sell(
+                action_words="sell",
+                stock=Stock(ticker="WMT", words="wmt"),
+                price=NotGiven(),
+                share=Fraction(value=Decimal("0.5"), words="half"),
+                sell_from=NotSaid(),
+            ),
+            summary=summary,
+        )
+
+    asked: list[str] = []
+
+    def reader(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        asked.extend(
+            str(part.content)
+            for message in messages
+            for part in message.parts
+            if isinstance(part, RetryPromptPart)
+        )
+        summary = "卖出一半WMT" if not asked else second
+        return ModelResponse(parts=[TextPart(_answer(reading(summary)))])
+
+    decoder, model = _decoder(FunctionModel(reader, profile=JSON_OUTPUT))
+    try:
+        with model:
+            assert await decoder.decode("sell wmt half", Route(), recent) == reading(second)
+    finally:
+        await decoder.close()
+    assert len(asked) == 1
+    assert "English" in asked[0]

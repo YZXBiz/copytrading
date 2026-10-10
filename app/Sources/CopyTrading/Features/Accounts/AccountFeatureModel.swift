@@ -221,7 +221,7 @@ final class AccountFeatureModel {
             errors.removeValue(forKey: accountID)
         } catch {
             guard isCurrent(generation) else { return }
-            errors[accountID] = error.localizedDescription
+            errors[accountID] = Reason.refusal(error)
         }
     }
 

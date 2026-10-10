@@ -23,6 +23,7 @@ from copytrading_engine.execution.domain.ownership import OwnershipResolutionReq
 from copytrading_engine.execution.domain.progress import Skipped
 from copytrading_engine.execution.domain.recovery import ManualSale
 from copytrading_engine.execution.domain.signals import CopyConfig
+from copytrading_engine.shared.owner_facing import OwnerFacingError
 from copytrading_engine.shared.signals import StockSignal
 
 from .builders import (
@@ -897,3 +898,36 @@ def test_owner_selling_their_own_shares_of_a_stock_with_nothing_copied_closes_by
     assert resolution.request.reason == "owner_sold_own_shares"
     assert resolution.request.external_qty == 0
     assert engine.ledger.snapshot().external_positions["ABC"].qty == 0
+
+
+async def test_resume_with_an_outside_order_open_is_refused_with_a_code_the_app_words(tmp_path):
+    """The engine names why entries can't resume; the app says it in the owner's language."""
+    broker = FakeBroker()
+    owner = await ExecutionOwner.open(
+        tmp_path / "account",
+        AlpacaCredentials(SecretStr("key"), SecretStr("secret")),
+        CopyConfig(sources=["discord:demo"]),
+        environment="paper",
+        broker_factory=lambda *_: broker,
+        account_lock_root=tmp_path / "locks",
+    )
+    try:
+        await owner.inventory_account(NOW)
+        broker.orders["outside"] = BrokerOrder(
+            id="broker-outside",
+            client_order_id="outside",
+            symbol="ABC",
+            side="buy",
+            qty=Decimal(1),
+            filled_qty=Decimal(0),
+            filled_avg_price=None,
+            status="new",
+        ).model_dump(mode="json")
+        with pytest.raises(OwnerFacingError) as refused:
+            await owner.control_account(
+                AccountControlCommand(command_id="resume", account_id="account", action="resume"),
+                NOW + dt.timedelta(seconds=1),
+            )
+        assert str(refused.value) == "resume_blocked_outside_order"
+    finally:
+        await owner.close()

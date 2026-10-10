@@ -2110,3 +2110,7 @@
 "After you press Sell or confirm a copy, the order waits this long with Undo before it leaves for Alpaca." = "按下卖出或确认复制后，订单会等待这段时间并可撤销，然后才发往 Alpaca。";
 "5 seconds" = "5 秒";
 "10 seconds" = "10 秒";
+"An order placed outside CopyTrading is still open. Let it fill or cancel it, then resume." = "有一笔在 CopyTrading 之外下的订单仍未完成。等它成交或取消后再恢复。";
+"Alpaca says this account isn't active, so it can't buy." = "Alpaca 显示该账户未激活，无法买入。";
+"An order's outcome is still unclear at Alpaca. Resume once it settles." = "Alpaca 中一笔订单的结果尚不明确。待其确定后再恢复。";
+"CopyTrading couldn't read this account's holdings just now. Try again in a moment." = "CopyTrading 暂时无法读取该账户的持仓。请稍后再试。";

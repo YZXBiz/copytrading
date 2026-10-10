@@ -2110,3 +2110,7 @@
 "After you press Sell or confirm a copy, the order waits this long with Undo before it leaves for Alpaca." = "After you press Sell or confirm a copy, the order waits this long with Undo before it leaves for Alpaca.";
 "5 seconds" = "5 seconds";
 "10 seconds" = "10 seconds";
+"An order placed outside CopyTrading is still open. Let it fill or cancel it, then resume." = "An order placed outside CopyTrading is still open. Let it fill or cancel it, then resume.";
+"Alpaca says this account isn't active, so it can't buy." = "Alpaca says this account isn't active, so it can't buy.";
+"An order's outcome is still unclear at Alpaca. Resume once it settles." = "An order's outcome is still unclear at Alpaca. Resume once it settles.";
+"CopyTrading couldn't read this account's holdings just now. Try again in a moment." = "CopyTrading couldn't read this account's holdings just now. Try again in a moment.";

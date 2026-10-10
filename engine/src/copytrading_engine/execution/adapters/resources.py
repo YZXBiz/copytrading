@@ -268,17 +268,14 @@ class ExecutionResources:
         )
 
     def _resume_refusal(self, inspection: OwnershipInspection) -> str:
-        """Why new buys can't resume yet, in the owner's words."""
+        """Why new buys can't resume yet, as a code the app words in the owner's language."""
         if inspection.account_activity_reason == "unresolved_account_order":
-            return (
-                "An order in Alpaca that CopyTrading didn't place is still open. "
-                "Let it fill or cancel it in Alpaca, then resume."
-            )
+            return "resume_blocked_outside_order"
         if not self.account.active:
-            return "Alpaca says this account isn't active, so it can't buy."
+            return "resume_blocked_account_inactive"
         if self.engine.ledger.snapshot().buy_halted:
-            return "An order's outcome is still unclear at Alpaca. Resume once it settles."
-        return "CopyTrading couldn't read this account's holdings just now. Try again in a moment."
+            return "resume_blocked_order_unclear"
+        return "resume_blocked_unreadable"
 
     def control_account(
         self, command: AccountControlCommand, now: dt.datetime

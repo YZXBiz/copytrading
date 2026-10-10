@@ -68,6 +68,8 @@ from copytrading_engine.execution.domain.ownership import (
     OwnershipIncident,
     OwnershipResolution,
     OwnershipResolutionRequest,
+    allocate,
+    sync_reason,
 )
 from copytrading_engine.execution.domain.positions import PositionAudit
 from copytrading_engine.execution.domain.progress import (
@@ -707,33 +709,12 @@ class TradingLedger:
                 )
             ):
                 continue
-            lots = {
-                key: lot.remaining_qty
-                for key, lot in self._snapshot.lots.items()
-                if lot.symbol == symbol
-            }
+            lots = self._lots_oldest_first(symbol)
             comparison = compared.get(symbol)
             broker_qty = comparison.actual if comparison is not None else Decimal(0)
             expected = comparison.expected if comparison is not None else broker_qty
-            copied = sum(lots.values(), Decimal(0))
-            remaining = dict(lots)
-            if broker_qty >= copied:
-                external_qty = broker_qty - copied
-            else:
-                external_qty = Decimal(0)
-                missing = copied - broker_qty
-                for key, held in lots.items():
-                    taken = min(held, missing)
-                    remaining[key] = held - taken
-                    missing -= taken
-            if broker_qty == expected:
-                reason = "broker_matches_again"
-            elif broker_qty > expected:
-                reason = "owner_bought_outside"
-            elif broker_qty >= copied:
-                reason = "owner_sold_own_shares"
-            else:
-                reason = "owner_sold_copied_shares"
+            allocation = allocate(broker_qty, lots)
+            reason = sync_reason(broker_qty, expected, sum((held for _, held in lots), Decimal(0)))
             self.resolve_ownership(
                 OwnershipResolutionRequest(
                     resolution_id=f"synced-{incident.incident_id}",
@@ -743,13 +724,28 @@ class TradingLedger:
                     actor="copytrading",
                     reason=reason,
                     broker_qty=broker_qty,
-                    external_qty=external_qty,
-                    lot_remaining=remaining,
+                    external_qty=allocation.external_qty,
+                    lot_remaining=allocation.lot_remaining,
                 ),
                 now,
             )
             settled.add(symbol)
         return settled
+
+    def _lots_oldest_first(self, symbol: str) -> list[tuple[str, Decimal]]:
+        """A stock's copied lots and what each still holds, in the order their first buys were
+        placed, which is the order an outside sale takes them in."""
+        snapshot = self._snapshot
+        lots = [(key, lot) for key, lot in snapshot.lots.items() if lot.symbol == symbol]
+
+        def opened(item: tuple[str, object]) -> tuple[dt.datetime, str]:
+            order = snapshot.orders.get(item[0])
+            return (
+                order.created_at if order is not None else dt.datetime.max.replace(tzinfo=dt.UTC),
+                item[0],
+            )
+
+        return [(key, lot.remaining_qty) for key, lot in sorted(lots, key=opened)]
 
     def resolve_ownership(
         self, request: OwnershipResolutionRequest, checked_at: dt.datetime

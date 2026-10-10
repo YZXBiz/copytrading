@@ -73,6 +73,16 @@ REASONS = {
     "sells_from_holdings": "Sells from what the account holds",
     "unresolved_order_incident": "An earlier order needs your review",
     "unresolved_account_order": "An open order at the broker needs your review",
+    "resume_blocked_outside_order": (
+        "An order placed outside CopyTrading is still open. Let it fill or cancel it, then resume."
+    ),
+    "resume_blocked_account_inactive": "Alpaca says this account isn't active, so it can't buy.",
+    "resume_blocked_order_unclear": (
+        "An order's outcome is still unclear at Alpaca. Resume once it settles."
+    ),
+    "resume_blocked_unreadable": (
+        "CopyTrading couldn't read this account's holdings just now. Try again in a moment."
+    ),
     "incomplete_account_orders": "The broker's order list was incomplete",
     "plan_unavailable": "The order couldn't be planned",
     "conditional": "The guru would trade only if something happens",
