@@ -1125,7 +1125,6 @@
 "Look over how the examples were read before starting to copy." = "开始跟单前，请先查看示例是如何被解读的。";
 "Pause copying before starting a new setup." = "请先暂停跟单，再启用新设置。";
 "CopyTrading didn't hear back after starting. It keeps checking whether the new setup took effect." = "启动后 CopyTrading 没有收到回应，会继续检查新设置是否已生效。";
-"The new setup didn't start, so your previous setup is still in place." = "新设置没有启动，仍在使用之前的设置。";
 "Configuration activation is pending; engine status is unavailable. Credentials are retained." = "配置启用尚未完成，暂时无法获取引擎状态。凭据已保留。";
 "Wait for the backup or restore preview to finish before starting processing." = "请等备份或恢复预览完成后，再开始处理。";
 "Unlock trading controls before starting processing." = "请先解锁交易控制，再开始处理。";
@@ -2123,3 +2122,7 @@
 "Go to a page, run an action, or find a post" = "前往页面、执行操作或查找消息";
 "Nothing matches." = "没有匹配项。";
 "Command palette" = "命令面板";
+"Copying didn't start: %@." = "没有开始跟单：%@。";
+"The new setup didn't start, so your previous setup is still in place: %@." = "新设置没有启动，仍在使用之前的设置：%@。";
+"The engine stopped while starting" = "引擎在启动时停止了";
+"Another CopyTrading on this Mac is copying into this account" = "这台 Mac 上另一个 CopyTrading 正在为这个账户跟单";

@@ -72,7 +72,9 @@ class BrokerError(Exception):
 
 
 # Why a broker account cannot connect until its owner acts.
-type AccountOpenRefusal = Literal["outside_open_orders", "broker_account_inactive"]
+type AccountOpenRefusal = Literal[
+    "outside_open_orders", "broker_account_inactive", "account_in_use"
+]
 ACCOUNT_OPEN_REFUSALS: frozenset[str] = frozenset(get_args(AccountOpenRefusal.__value__))
 
 

@@ -13,6 +13,7 @@ struct AccountPageHeader: View {
     /// Readiness values for an account that is not running, so there is nothing to control.
     private static let notRunning: Set<String> = [
         "account_unavailable", "processing_stopped", "outside_open_orders", "broker_account_inactive",
+        "account_in_use",
     ]
 
     private var canControl: Bool {

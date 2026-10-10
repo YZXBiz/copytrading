@@ -1125,7 +1125,6 @@
 "Look over how the examples were read before starting to copy." = "Look over how the examples were read before starting to copy.";
 "Pause copying before starting a new setup." = "Pause copying before starting a new setup.";
 "CopyTrading didn't hear back after starting. It keeps checking whether the new setup took effect." = "CopyTrading didn't hear back after starting. It keeps checking whether the new setup took effect.";
-"The new setup didn't start, so your previous setup is still in place." = "The new setup didn't start, so your previous setup is still in place.";
 "Configuration activation is pending; engine status is unavailable. Credentials are retained." = "Configuration activation is pending; engine status is unavailable. Credentials are retained.";
 "Wait for the backup or restore preview to finish before starting processing." = "Wait for the backup or restore preview to finish before starting processing.";
 "Unlock trading controls before starting processing." = "Unlock trading controls before starting processing.";
@@ -2123,3 +2122,7 @@
 "Go to a page, run an action, or find a post" = "Go to a page, run an action, or find a post";
 "Nothing matches." = "Nothing matches.";
 "Command palette" = "Command palette";
+"Copying didn't start: %@." = "Copying didn't start: %@.";
+"The new setup didn't start, so your previous setup is still in place: %@." = "The new setup didn't start, so your previous setup is still in place: %@.";
+"The engine stopped while starting" = "The engine stopped while starting";
+"Another CopyTrading on this Mac is copying into this account" = "Another CopyTrading on this Mac is copying into this account";

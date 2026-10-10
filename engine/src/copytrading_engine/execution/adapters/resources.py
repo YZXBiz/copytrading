@@ -22,6 +22,7 @@ from copytrading_engine.execution.application.engine import CopyEngine
 from copytrading_engine.execution.application.lot_sales import LotSaleApplication
 from copytrading_engine.execution.application.manual_commands import ManualTradingApplication
 from copytrading_engine.execution.application.ports import (
+    AccountOpenRefused,
     AccountRuntimeView,
     Broker,
     BrokerError,
@@ -112,7 +113,7 @@ def _reserve_identity(environment: Environment, account_id: str) -> Callable[[],
     identity = (environment, account_id)
     with _identity_guard:
         if identity in _active_identities:
-            raise RuntimeError("Another executor owns this broker account")
+            raise AccountOpenRefused("account_in_use")
         _active_identities.add(identity)
 
     def release() -> None:
@@ -567,7 +568,7 @@ def build_resources(
         try:
             fcntl.flock(identity_lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError:
-            raise RuntimeError("Another executor owns this broker account") from None
+            raise AccountOpenRefused("account_in_use") from None
         store = Store(data_dir / "execution.sqlite3")
         stack.callback(store.close)
         store.bind_identity(account.id, environment)

@@ -21,6 +21,7 @@ REASONS = {
     "account_unavailable": "The account could not be reached",
     "outside_open_orders": "Cancel the orders open at Alpaca first",
     "broker_account_inactive": "Alpaca has not activated this account",
+    "account_in_use": "Another CopyTrading on this Mac is copying into this account",
     "account_risk_unavailable": "Risk could not be checked",
     "recovery_pending": "Still checking the account after a restart",
     "manual_resume_required": "Entries wait for you to resume them after the restart",

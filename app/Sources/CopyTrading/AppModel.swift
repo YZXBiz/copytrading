@@ -1380,7 +1380,11 @@ final class AppModel {
                 pendingTradingActivation = nil
                 tradingValidation = nil
                 syncSetupDraftWithSaved()
-                message = L10n.string("The new setup didn't start, so your previous setup is still in place.")
+                let why = status.errorCode.map(Reason.text) ?? L10n.string("The engine stopped while starting")
+                message =
+                    saved == nil
+                    ? L10n.string("Copying didn't start: %@.", why)
+                    : L10n.string("The new setup didn't start, so your previous setup is still in place: %@.", why)
                 return
             }
             // An activation the engine is still committing is progress, even with accounts already
