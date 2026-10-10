@@ -758,7 +758,7 @@ class TradingRuntime:
                 oldest_pending_signal_at=signal_backlog.oldest_at,
                 processed_signals=processed,
                 error_code=(
-                    "account_unavailable"
+                    self._account_failure()
                     if any(account.state == "failed" for account in self._accounts.values())
                     else "source_unavailable"
                     if self._source_failed
@@ -807,10 +807,18 @@ class TradingRuntime:
             type(error).__name__ if error is not None else "unknown",
         )
 
+    def _account_failure(self) -> str:
+        """The failed accounts' shared reason, such as another app owning the account, or
+        `account_unavailable` when they fail for different reasons."""
+        reasons = {
+            account.error_code for account in self._accounts.values() if account.state == "failed"
+        }
+        return reason if len(reasons) == 1 and (reason := reasons.pop()) else "account_unavailable"
+
     def _account_changed(self) -> None:
         statuses = tuple(account.status for account in self._accounts.values())
         if any(account.state == "failed" for account in self._accounts.values()):
-            self._fail_startup_if_pending("account_unavailable")
+            self._fail_startup_if_pending(self._account_failure())
         self._status = replace(
             self._status,
             accounts=statuses,
@@ -819,7 +827,7 @@ class TradingRuntime:
             if any(account.state == "failed" for account in self._accounts.values())
             and self._status.state in {"running", "degraded"}
             else self._status.state,
-            error_code="account_unavailable"
+            error_code=self._account_failure()
             if any(account.state == "failed" for account in self._accounts.values())
             else self._status.error_code,
         )

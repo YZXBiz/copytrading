@@ -5,6 +5,8 @@ import datetime as dt
 import sqlite3
 from uuid import uuid4
 
+import pytest
+
 from copytrading_engine.execution.application.ports import AccountOpenRefused, BrokerError
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore
 from copytrading_engine.shared.raw_message import RawMessage
@@ -363,9 +365,10 @@ def _never_posts(source, channels, authors, stop, report_failure):
     return Session(source, None)
 
 
-async def test_an_order_placed_outside_the_app_names_why_copying_could_not_start(tmp_path):
+@pytest.mark.parametrize("reason", ["outside_open_orders", "account_in_use"])
+async def test_a_refused_account_names_why_copying_could_not_start(tmp_path, reason):
     async def owner_factory(path, credentials, policy, environment):
-        raise AccountOpenRefused("outside_open_orders")
+        raise AccountOpenRefused(reason)
 
     runtime = TradingRuntime(
         tmp_path,
@@ -375,11 +378,13 @@ async def test_an_order_placed_outside_the_app_names_why_copying_could_not_start
             session=_never_posts,
         ),
     )
-    await runtime.start(trading_configuration("first"), trading_secrets_for("first"))
+    activation_id = str(uuid4())
+    await runtime.start(trading_configuration("first"), trading_secrets_for("first"), activation_id)
     failed = await wait_for(runtime, lambda status: status.state == "failed")
-    assert failed.error_code == "outside_open_orders"
+    assert failed.error_code == reason
+    assert runtime.activation_status(activation_id).error_code == reason
     [account] = (await runtime.operator.account_overviews()).items
-    assert account.readiness == "outside_open_orders"
+    assert account.readiness == reason
     await runtime.shutdown()
 
 
