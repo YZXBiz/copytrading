@@ -65,6 +65,20 @@ struct MainSplitView: View {
             }
         }
         .animation(reduceMotion ? .easeOut(duration: 0.2) : .smooth(duration: 0.34), value: model.assistant.isOpen)
+        .overlay(alignment: .top) {
+            if model.isShowingPalette {
+                ZStack(alignment: .top) {
+                    Color.black.opacity(0.08)
+                        .ignoresSafeArea()
+                        .onTapGesture { model.isShowingPalette = false }
+                        .accessibilityHidden(true)
+                    CommandPalette(model: model, accountFeature: accountFeature)
+                        .padding(.top, 96)
+                }
+                .transition(.opacity)
+            }
+        }
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: model.isShowingPalette)
         .background(Palette.canvas)
         // Seat the window buttons inside the sidebar panel, level with its header row
         // (panel inset 8 + half the 40-point header); without the sidebar, level with the toolbar.

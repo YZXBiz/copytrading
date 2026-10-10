@@ -2118,3 +2118,8 @@
 "copied" = "复制";
 "yours + %@" = "你的 + %@";
 "yours" = "你的";
+"Find…" = "查找…";
+"Find a Post…" = "查找消息…";
+"Go to a page, run an action, or find a post" = "前往页面、执行操作或查找消息";
+"Nothing matches." = "没有匹配项。";
+"Command palette" = "命令面板";

@@ -2118,3 +2118,8 @@
 "copied" = "copied";
 "yours + %@" = "yours + %@";
 "yours" = "yours";
+"Find…" = "Find…";
+"Find a Post…" = "Find a Post…";
+"Go to a page, run an action, or find a post" = "Go to a page, run an action, or find a post";
+"Nothing matches." = "Nothing matches.";
+"Command palette" = "Command palette";

@@ -53,6 +53,8 @@ final class AppModel {
         case failed
     }
 
+    /// ⌘K's palette over the window.
+    var isShowingPalette = false
     var selectedScreen: Screen = .gettingStarted {
         didSet {
             if selectedScreen != .settings {
