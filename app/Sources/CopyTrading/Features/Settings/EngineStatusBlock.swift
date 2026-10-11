@@ -14,7 +14,9 @@ struct EngineStatusBlock: View {
     private var problem: String? {
         guard let trading = model.tradingStatus, trading.state == .running || trading.state == .degraded else { return nil }
         if !trading.sourceConnected {
-            return L10n.string("Discord isn't connected, so new posts aren't reaching CopyTrading. Check the Discord token in Connections.")
+            return trading.errorCode == "source_unauthorized"
+                ? L10n.string("Discord turned down the token, so new posts aren't arriving. Paste a fresh Discord token in Connections.")
+                : L10n.string("Discord isn't connected, so new posts aren't reaching CopyTrading. It keeps trying to reconnect.")
         }
         if !trading.modelReady {
             return L10n.string("The interpreter isn't ready, so new posts wait to be read. Check its key in Connections.")

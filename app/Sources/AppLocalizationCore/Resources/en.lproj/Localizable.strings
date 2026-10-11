@@ -2127,6 +2127,9 @@
 "Click Apply Changes to use it. Copying restarts in a few seconds, and any post sent meanwhile is still copied." = "Click Apply Changes to use it. Copying restarts in a few seconds, and any post sent meanwhile is still copied.";
 "Click Start Copying to use it." = "Click Start Copying to use it.";
 "Sends a practice post through every step. It uses no keys and never places an order." = "Sends a practice post through every step. It uses no keys and never places an order.";
-"Discord isn't connected, so new posts aren't reaching CopyTrading. Check the Discord token in Connections." = "Discord isn't connected, so new posts aren't reaching CopyTrading. Check the Discord token in Connections.";
 "The interpreter isn't ready, so new posts wait to be read. Check its key in Connections." = "The interpreter isn't ready, so new posts wait to be read. Check its key in Connections.";
 "Copying into %@ of %@ accounts; the account page says what the other needs." = "Copying into %@ of %@ accounts; the account page says what the other needs.";
+"Discord could not be reached" = "Discord could not be reached";
+"Discord turned down the token" = "Discord turned down the token";
+"Discord turned down the token, so new posts aren't arriving. Paste a fresh Discord token in Connections." = "Discord turned down the token, so new posts aren't arriving. Paste a fresh Discord token in Connections.";
+"Discord isn't connected, so new posts aren't reaching CopyTrading. It keeps trying to reconnect." = "Discord isn't connected, so new posts aren't reaching CopyTrading. It keeps trying to reconnect.";

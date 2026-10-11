@@ -42,6 +42,7 @@ A new look, accounts and gurus as the app's two places, and copying that keeps g
 - **Import Setup…** (File menu) fills Connections from a key file you choose.
 - **A guru's settings show what each call buys** in that account: the full position, a 1/6 and a 1/2 call, and a call with no size.
 - **Times read on one clock**, with a time-zone setting, and a newer version is offered in the window.
+- **Discord reconnects on its own.** A dropped connection is tried again after 5 s, then less often up to every 5 minutes, instead of staying down until copying restarts. A token Discord turns down says so on the Engine page.
 - **A changed limit always applies at once.** A resume that lost Discord while starting but kept copying no longer leaves the setup "waiting to confirm", which had sent limit edits to Apply Changes.
 - **A setup that can't start says why.** If another CopyTrading on this Mac is already copying into the same Alpaca account, Start Copying says so instead of a bare failure, and a first setup no longer mentions a previous one.
 

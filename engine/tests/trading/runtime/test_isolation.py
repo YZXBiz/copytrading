@@ -5,6 +5,7 @@ import datetime as dt
 import sqlite3
 from uuid import uuid4
 
+import discord
 import pytest
 
 from copytrading_engine.execution.application.ports import AccountOpenRefused, BrokerError
@@ -114,6 +115,75 @@ async def test_failed_source_does_not_stop_broker_reconciliation(tmp_path):
     assert degraded.active_accounts == 1
     await wait_for(runtime, lambda status: opened["first"].cycles >= 2)
     await runtime.shutdown()
+
+
+async def test_discord_that_drops_is_opened_again(tmp_path):
+    """A dropped Discord connection is retried with a fresh session, and copying hears it again."""
+
+    class DroppingSession(Session):
+        async def ensure_running(self):
+            raise RuntimeError("fake source disconnected")
+
+    sessions: list[Session] = []
+
+    def session_factory(source, channels, authors, stop, report_failure):
+        session = (DroppingSession if not sessions else Session)(source, None)
+        sessions.append(session)
+        return session
+
+    runtime = TradingRuntime(
+        tmp_path,
+        factories=TradingFactories(
+            owner=lambda path, credentials, policy, environment: asyncio.sleep(
+                0, result=Owner(path, {}, {})
+            ),
+            decoder=lambda name, config: asyncio.sleep(0, result=Decoder()),
+            session=session_factory,
+        ),
+        source_retry_seconds=(0.05,),
+    )
+    await runtime.start(trading_configuration("first"), trading_secrets_for("first"))
+    try:
+        await wait_for(runtime, lambda status: status.error_code == "source_unavailable")
+        connected = await wait_for(
+            runtime, lambda status: status.source_connected and status.error_code is None
+        )
+        assert connected.state == "running"
+        assert len(sessions) == 2
+    finally:
+        await runtime.shutdown()
+
+
+async def test_a_token_discord_turns_down_is_not_tried_again(tmp_path):
+    class RejectedSession(Session):
+        async def ensure_running(self):
+            raise discord.LoginFailure("Improper token has been passed.")
+
+    sessions: list[Session] = []
+
+    def session_factory(source, channels, authors, stop, report_failure):
+        sessions.append(RejectedSession(source, None))
+        return sessions[-1]
+
+    runtime = TradingRuntime(
+        tmp_path,
+        factories=TradingFactories(
+            owner=lambda path, credentials, policy, environment: asyncio.sleep(
+                0, result=Owner(path, {}, {})
+            ),
+            decoder=lambda name, config: asyncio.sleep(0, result=Decoder()),
+            session=session_factory,
+        ),
+        source_retry_seconds=(0.01,),
+    )
+    await runtime.start(trading_configuration("first"), trading_secrets_for("first"))
+    try:
+        await wait_for(runtime, lambda status: status.error_code == "source_unauthorized")
+        await asyncio.sleep(0.2)
+        assert len(sessions) == 1
+        assert runtime.status().error_code == "source_unauthorized"
+    finally:
+        await runtime.shutdown()
 
 
 async def test_uncertain_shared_delivery_stops_all_accounts(tmp_path):

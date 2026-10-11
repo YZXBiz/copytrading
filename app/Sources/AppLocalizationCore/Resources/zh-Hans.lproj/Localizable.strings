@@ -2127,6 +2127,9 @@
 "Click Apply Changes to use it. Copying restarts in a few seconds, and any post sent meanwhile is still copied." = "点“应用更改”即可生效。跟单会在几秒内重新开始，这期间发来的消息照样会跟。";
 "Click Start Copying to use it." = "点“开始跟单”即可生效。";
 "Sends a practice post through every step. It uses no keys and never places an order." = "让一条练习消息走完每一步。不用任何密钥，也不会下单。";
-"Discord isn't connected, so new posts aren't reaching CopyTrading. Check the Discord token in Connections." = "Discord 没有连接，新消息到不了 CopyTrading。请在“连接”里检查 Discord 令牌。";
 "The interpreter isn't ready, so new posts wait to be read. Check its key in Connections." = "解读器还没就绪，新消息在等待解读。请在“连接”里检查它的密钥。";
 "Copying into %@ of %@ accounts; the account page says what the other needs." = "正在跟单的账户：%@ / %@；其余账户的页面会说明需要做什么。";
+"Discord could not be reached" = "无法连接 Discord";
+"Discord turned down the token" = "Discord 拒绝了这个令牌";
+"Discord turned down the token, so new posts aren't arriving. Paste a fresh Discord token in Connections." = "Discord 拒绝了这个令牌，新消息收不到。请在“连接”里粘贴新的 Discord 令牌。";
+"Discord isn't connected, so new posts aren't reaching CopyTrading. It keeps trying to reconnect." = "Discord 没有连接，新消息到不了 CopyTrading。它会一直尝试重新连接。";
