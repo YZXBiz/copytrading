@@ -338,7 +338,6 @@
 "Evaluate Message" = "评估消息";
 "Evaluate with Saved Profile…" = "使用已保存的配置评估…";
 "Evaluating with the configured model" = "正在使用已配置的模型评估";
-"Every post stops at each of these in turn. A stop that is not ready holds the posts behind it." = "每条帖子都会依次经过这些阶段。某个阶段未就绪时，后续帖子会暂停等待。";
 "Everything checks out. Look over how the examples were read." = "所有检查均已通过。请查看示例的解析结果。";
 "Everything checks out. Start copying when you're ready." = "所有检查均已通过。准备好后即可开始跟单。";
 "Everything CopyTrading records stays here, on this Mac." = "CopyTrading 记录的所有内容都保存在这台 Mac 上。";
@@ -772,7 +771,6 @@
 "Send your new bot any message, so it's allowed to message you back." = "给新机器人发送任意消息，以便它之后可以回复你。";
 "Sending the test message through now…" = "正在发送测试消息…";
 "Sending…" = "正在发送…";
-"Sends a fixed local message through capture, reading, and two test destinations. It uses no keys and never places an order." = "使用一条固定的本地消息，依次测试捕获、解读和两个测试目标。它不使用密钥，也绝不会下单。";
 "Sent %@ %@ %@, at market" = "已按市价 %@ %@股 %@";
 "Sent %@ %@ %@, limit %@" = "已提交 %@ %@股 %@，限价 %@";
 "Sent an order to the broker" = "已向券商发送订单";
@@ -900,7 +898,6 @@
 "The sale could not be checked" = "无法核实这笔卖出";
 "The setup checklist and how a day in CopyTrading goes." = "查看设置清单，了解在 CopyTrading 中的一天。";
 "The trader whose calls CopyTrading copies." = "CopyTrading 跟单的信号源（交易者）。";
-"The Way a Post Travels" = "帖子在 CopyTrading 中的处理过程";
 "These shares are no longer held" = "已不再持有这些股份";
 "This post is older than what Activity has loaded" = "这条帖子早于 Activity 当前加载的内容";
 "Nothing has changed yet. Restoring first checks the backup against your broker's account, orders, and holdings, and stops if they don't match." = "目前没有任何改动。恢复前会先将备份与券商的账户、订单和持仓核对，不一致就会停止。";
@@ -1767,10 +1764,6 @@
 "no size given, so a full position" = "未给出仓位，按满仓计";
 "from every buy of it" = "从它的每笔买入中卖出";
 "read by %@" = "由 %@ 解读";
-"Prices from %@, not updating: engine stopped" = "价格停留在 %@，未更新：引擎已停止";
-"Prices from %@, not updating" = "价格停留在 %@，未更新";
-"Prices as of %@" = "价格更新于 %@";
-"as of %@ · updates every %lld s" = "更新于 %@ · 每 %lld 秒更新";
 "Refresh now" = "立即刷新";
 "%lld accounts" = "%lld 个账户";
 "%@ · %@ · %@" = "%@ · %@ · %@";
@@ -1885,7 +1878,6 @@
 "Per stock" = "每只股票";
 "Your account" = "你的账户";
 "In your account" = "在你的账户中";
-"%@ copied · %@ held outside CopyTrading" = "复制持有 %@ · CopyTrading 之外持有 %@";
 "Recent activity" = "最近动态";
 "Account activity error: %@" = "账户动态读取出错：%@";
 "Nothing has been bought or sold in this account yet." = "这个账户还没有买入或卖出。";
@@ -2076,7 +2068,6 @@
 "Start copying when you're ready." = "准备好后开始复制。";
 "Look over how the examples were read." = "看看示例是如何被解读的。";
 "You changed the setup" = "你更改了设置";
-"Apply to copy with it. Copying pauses for a moment; no post is missed." = "应用后按新设置复制。复制会短暂暂停，不会漏掉任何消息。";
 "Every connection is checked first." = "会先检查每个连接。";
 "You have unsaved changes" = "你有未保存的更改";
 "Starting checks and saves them." = "开始时会检查并保存。";
@@ -2085,7 +2076,6 @@
 "A 1/2 call" = "1/2 信号";
 "No size given" = "未给数量";
 "Your max per order, %@, caps any one buy." = "单笔上限 %@ 会限制任何一笔买入。";
-"Max %@ an order · %@ a stock" = "单笔上限 %@ · 单只股票上限 %@";
 
 "From %@'s post · %@" = "来自 %@ 的消息 · %@";
 "Into %@" = "账户 %@";
@@ -2126,3 +2116,17 @@
 "The new setup didn't start, so your previous setup is still in place: %@." = "新设置没有启动，仍在使用之前的设置：%@。";
 "The engine stopped while starting" = "引擎在启动时停止了";
 "Another CopyTrading on this Mac is copying into this account" = "这台 Mac 上另一个 CopyTrading 正在为这个账户跟单";
+"Updated %@" = "更新于 %@";
+"Not updating since %@: the engine is stopped" = "自 %@ 起未更新：引擎已停止";
+"Not updating since %@" = "自 %@ 起未更新";
+"Each order" = "每笔订单";
+"Each stock" = "每只股票";
+"at most" = "上限";
+"%@ copied · %@ yours" = "跟单 %@ · 自有 %@";
+"%@ bought at %@" = "%@，买入价 %@";
+"Click Apply Changes to use it. Copying restarts in a few seconds, and any post sent meanwhile is still copied." = "点“应用更改”即可生效。跟单会在几秒内重新开始，这期间发来的消息照样会跟。";
+"Click Start Copying to use it." = "点“开始跟单”即可生效。";
+"Sends a practice post through every step. It uses no keys and never places an order." = "让一条练习消息走完每一步。不用任何密钥，也不会下单。";
+"Discord isn't connected, so new posts aren't reaching CopyTrading. Check the Discord token in Connections." = "Discord 没有连接，新消息到不了 CopyTrading。请在“连接”里检查 Discord 令牌。";
+"The interpreter isn't ready, so new posts wait to be read. Check its key in Connections." = "解读器还没就绪，新消息在等待解读。请在“连接”里检查它的密钥。";
+"Copying into %@ of %@ accounts; the account page says what the other needs." = "正在跟单的账户：%@ / %@；其余账户的页面会说明需要做什么。";

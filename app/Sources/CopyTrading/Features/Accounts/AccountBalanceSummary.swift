@@ -1,7 +1,7 @@
 import DesktopCore
 import SwiftUI
 
-/// What the account is worth, in the display face, and how today went under it.
+/// What the account is worth, in the display face, and how today went under it with when it was read.
 struct AccountBalanceSummary: View {
     let account: AccountOverview
     let model: AppModel
@@ -27,6 +27,13 @@ struct AccountBalanceSummary: View {
                         Text(L10n.string("today"))
                             .font(DesignTokens.bodyText)
                             .foregroundStyle(Palette.tertiaryInk)
+                        AccountFreshness(
+                            observedAt: balance.observedAt,
+                            isRefreshing: feature.isRefreshing,
+                            engineStopped: model.runtimeState == .stopped || model.runtimeState == .failed,
+                            refresh: { Task { await feature.refresh(using: model.accountActions()) } }
+                        )
+                        .padding(.leading, 14)
                     }
                 }
             }

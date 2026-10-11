@@ -24,11 +24,11 @@ enum ExposureSplit {
         return valued ? (copied, outside) : nil
     }
 
-    /// "$0 copied · $2,086 held outside CopyTrading", only when the owner holds shares themselves.
+    /// "$99 copied · $2,303 yours", only when the owner holds shares themselves.
     @MainActor
     static func note(_ account: AccountOverview?) -> String? {
         guard let account, let split = dollars(account), split.outside >= 1 else { return nil }
         let money = Decimal.FormatStyle.Currency(code: "USD").precision(.fractionLength(0))
-        return L10n.string("%@ copied · %@ held outside CopyTrading", split.copied.formatted(money), split.outside.formatted(money))
+        return L10n.string("%@ copied · %@ yours", split.copied.formatted(money), split.outside.formatted(money))
     }
 }

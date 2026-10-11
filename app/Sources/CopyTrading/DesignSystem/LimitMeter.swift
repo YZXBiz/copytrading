@@ -14,8 +14,9 @@ struct LimitMeter: View {
         return min(1, max(0, (used / limit).doubleValue))
     }
 
+    /// Sky while there is room, butter once it is close enough to look at, blush at the cap.
     private var tint: Color {
-        fraction >= 1 ? .red : fraction >= 0.8 ? .orange : Palette.butter
+        fraction >= 1 ? Palette.blush : fraction >= 0.8 ? Palette.butter : Palette.sky
     }
 
     var body: some View {
@@ -25,15 +26,14 @@ struct LimitMeter: View {
             HStack(alignment: .firstTextBaseline, spacing: 5) {
                 Text(used?.formatted(.currency(code: "USD").precision(.fractionLength(0))) ?? "—")
                     .font(DesignTokens.statValue)
-                    .foregroundStyle(fraction >= 0.8 ? tint : Palette.ink)
+                    .foregroundStyle(Palette.ink)
                 Text(L10n.string("of %@", limit.formatted(.currency(code: "USD").precision(.fractionLength(0)))))
                     .font(DesignTokens.caption)
                     .foregroundStyle(Palette.tertiaryInk)
             }
             .monospacedDigit()
             .fixedSize()
-            // An ink-drawn track, filled the way a studio drawing fills one shape: butter while
-            // there is room, orange near the cap, red at it.
+            // An ink-drawn track, filled the way a studio drawing fills one shape.
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule().strokeBorder(Palette.ink.opacity(0.35), lineWidth: 1)

@@ -10,9 +10,26 @@ struct EngineStatusBlock: View {
         model.runtimeState == .stopped || model.runtimeState == .failed
     }
 
+    /// What holds posts back while copying runs, in one sentence; nil when every stop works.
+    private var problem: String? {
+        guard let trading = model.tradingStatus, trading.state == .running || trading.state == .degraded else { return nil }
+        if !trading.sourceConnected {
+            return L10n.string("Discord isn't connected, so new posts aren't reaching CopyTrading. Check the Discord token in Connections.")
+        }
+        if !trading.modelReady {
+            return L10n.string("The interpreter isn't ready, so new posts wait to be read. Check its key in Connections.")
+        }
+        if trading.activeAccounts < trading.configuredAccounts {
+            return L10n.string(
+                "Copying into %@ of %@ accounts; the account page says what the other needs.",
+                trading.activeAccounts.formatted(), trading.configuredAccounts.formatted())
+        }
+        return nil
+    }
+
     private var state: (word: String, tone: StatusTone) {
         switch model.runtimeState {
-        case .ready: (L10n.string("Running"), .positive)
+        case .ready: problem == nil ? (L10n.string("Running"), .positive) : (L10n.string("Needs a look"), .caution)
         case .starting: (L10n.string("Starting"), .inactive)
         case .degraded: (L10n.string("Needs a look"), .caution)
         case .stopped: (L10n.string("Stopped"), .inactive)
@@ -34,6 +51,7 @@ struct EngineStatusBlock: View {
                 return status.completed > 0 || status.pending > 0
                     ? L10n.string(" It has handled %@ since it started%@.", Humanize.count(status.completed, "post"), waiting) : ""
             } ?? ""
+        if let problem { return problem }
         guard let trading = model.tradingStatus else {
             return model.savedTradingConfiguration == nil
                 ? L10n.string("It is ready for a setup. Nothing is copied until you start copying.")
@@ -59,9 +77,7 @@ struct EngineStatusBlock: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .center, spacing: 16) {
                 HStack(spacing: 10) {
-                    Circle()
-                        .fill(state.tone.color)
-                        .frame(width: 8, height: 8)
+                    ToneDot(tone: state.tone, size: 10)
                     Text(state.word)
                         .font(DesignTokens.listHeading)
                         .tracking(DesignTokens.listHeadingTracking)

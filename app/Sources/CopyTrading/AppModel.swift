@@ -1347,12 +1347,20 @@ final class AppModel {
             if let current = try? await control.tradingStatus() {
                 tradingStatus = current
             }
-            let activationCommitted =
-                status.activationID == pending.activationID
-                && status.candidateRevision == pending.candidateRevision
+            // The engine already copying with the candidate's revision is as good as a commit: a
+            // resume of the saved setup that lost Discord while starting keeps copying with it, so
+            // there is nothing to wait for or roll back.
+            let runsCandidate =
+                status.phase != .starting
                 && status.committedRevision == pending.candidateRevision
-                && status.committedActivationID == pending.activationID
-            if activationCommitted && (status.phase == .ready || status.phase == .stopped) {
+                && (status.runtimeState == .running || status.runtimeState == .degraded)
+            let activationCommitted =
+                runsCandidate
+                || (status.activationID == pending.activationID
+                    && status.candidateRevision == pending.candidateRevision
+                    && status.committedRevision == pending.candidateRevision
+                    && status.committedActivationID == pending.activationID)
+            if activationCommitted && (runsCandidate || status.phase == .ready || status.phase == .stopped) {
                 try tradingConfigurationStore.finalizeValidatedActivation(
                     activationID: pending.activationID
                 )

@@ -34,7 +34,7 @@ struct AccountPageContent: View {
                 chooseWindow: chooseWindow,
                 plotHeight: isSharingWidth ? 120 : 200
             )
-            AccountFacts(account: account, policy: policy, model: model, feature: feature, editLimits: editLimits)
+            AccountFacts(account: account, policy: policy, editLimits: editLimits)
         }
         if hasWarnings {
             VStack(alignment: .leading, spacing: 8) {

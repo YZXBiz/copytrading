@@ -2,7 +2,7 @@ import DesktopCore
 import SwiftUI
 
 /// One block of shares under its position, as one clean line: whose post bought it and when, what
-/// the post said, then "0.885 shares · bought $110.75 · now $110.75"; the lot's own gain on the right,
+/// the post said, then "0.885 shares bought at $110.75   now $111.35"; the lot's own gain on the right,
 /// a quiet "Open post ↗" back to the post, and a black Sell pill.
 struct PositionLotRow: View {
     let lot: AccountLotView
@@ -30,17 +30,21 @@ struct PositionLotRow: View {
         return Humanize.shares(remaining, of: original)
     }
 
-    /// "0.885 shares · bought $110.75 · now $110.75"; a partly sold lot says "0.5 of 2 shares".
-    @MainActor private var numbers: String {
+    /// "0.885 shares bought at $110.75", or "0.5 of 2 shares bought at $40" once some are sold.
+    /// Shares show to three decimals, as a broker statement does, never with an "≈".
+    @MainActor private var holding: String {
         let original = Decimal(engine: lot.originalQty) ?? remaining
-        var parts = [
+        let count = Self.count(remaining)
+        let shares =
             original == remaining
-                ? Humanize.shares(remaining)
-                : Humanize.shares(remaining, of: original)
-        ]
-        if let bought { parts.append(L10n.string("bought %@", bought.formatted(.currency(code: "USD")))) }
-        if let currentPrice { parts.append(L10n.string("now %@", currentPrice.formatted(.currency(code: "USD")))) }
-        return parts.joined(separator: " · ")
+            ? L10n.string(remaining == 1 ? "%@ share" : "%@ shares", count)
+            : L10n.string(original == 1 ? "%@ of %@ share" : "%@ of %@ shares", count, Self.count(original))
+        guard let bought else { return shares }
+        return L10n.string("%@ bought at %@", shares, bought.formatted(.currency(code: "USD")))
+    }
+
+    private static func count(_ value: Decimal) -> String {
+        value.formatted(.number.precision(.fractionLength(0...3)))
     }
 
     var body: some View {
@@ -66,10 +70,16 @@ struct PositionLotRow: View {
                         .font(DesignTokens.bodyText)
                         .foregroundStyle(Palette.secondaryInk)
                 }
-                Text(numbers)
-                    .font(DesignTokens.caption)
-                    .foregroundStyle(Palette.tertiaryInk)
-                    .monospacedDigit()
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text(holding)
+                        .foregroundStyle(Palette.tertiaryInk)
+                    if let currentPrice {
+                        Text(L10n.string("now %@", currentPrice.formatted(.currency(code: "USD"))))
+                            .foregroundStyle(Palette.secondaryInk)
+                    }
+                }
+                .font(DesignTokens.caption)
+                .monospacedDigit()
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             gain

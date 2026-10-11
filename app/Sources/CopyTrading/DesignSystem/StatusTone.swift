@@ -18,6 +18,18 @@ enum StatusTone: Equatable {
         }
     }
 
+    /// The riso fill a status dot carries inside its ink outline: sage when it works, butter when
+    /// it wants a look, blush when it failed, sky while it is under way; nothing while it waits.
+    var fill: Color? {
+        switch self {
+        case .positive: Palette.sage
+        case .caution: Palette.butter
+        case .critical: Palette.blush
+        case .neutral: Palette.sky
+        case .inactive: nil
+        }
+    }
+
     /// Symbols differ per tone so status never depends on color alone.
     var symbol: String {
         switch self {

@@ -1,8 +1,8 @@
 import DesktopCore
 import SwiftUI
 
-/// The local engine, written like a page: what it is doing in a sentence, the route every post
-/// travels with each stop's state, and the self-test that walks that route without real keys.
+/// The local engine, written like a page: what it is doing in a sentence with the route every post
+/// travels right under it, then the self-test that walks a practice post through without keys.
 struct EngineSettingsPage: View {
     let model: AppModel
 
@@ -11,17 +11,14 @@ struct EngineSettingsPage: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 36) {
-            EngineStatusBlock(model: model)
-
-            VStack(alignment: .leading, spacing: 20) {
-                heading(
-                    "The Way a Post Travels",
-                    "Every post stops at each of these in turn. A stop that is not ready holds the posts behind it.")
+        VStack(alignment: .leading, spacing: 44) {
+            VStack(alignment: .leading, spacing: 22) {
+                EngineStatusBlock(model: model)
+                // The route under the sentence it explains: where a post is now held, it shows.
                 RouteLine(stops: postStops)
             }
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
                     heading("Self-Test", nil)
                     Spacer(minLength: 12)
@@ -40,8 +37,23 @@ struct EngineSettingsPage: View {
                     .foregroundStyle(Palette.secondaryInk)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityLabel(selfTestAccessibility)
-                RouteLine(stops: selfTestStops)
-                    .padding(.top, 12)
+                selfTestSteps
+            }
+        }
+    }
+
+    /// The test's three steps on one quiet line, each with its own dot: "● Captured  ● Read  ○ Delivered".
+    private var selfTestSteps: some View {
+        HStack(spacing: 18) {
+            ForEach(selfTestStops) { stop in
+                HStack(spacing: 6) {
+                    ToneDot(tone: stop.tone, size: 9)
+                    Text(L10n.string(stop.title))
+                        .font(DesignTokens.caption.weight(stop.needsLook ? .semibold : .regular))
+                        .foregroundStyle(stop.tone == .inactive ? Palette.tertiaryInk : Palette.ink)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(L10n.string("%@, %@", L10n.string(stop.title), L10n.string(stop.state)))
             }
         }
     }
@@ -111,7 +123,7 @@ struct EngineSettingsPage: View {
         if model.isRunningSelfTest { return L10n.string("Sending the test message through now…") }
         guard let result = model.latestSelfTest else {
             return L10n.string(
-                "Sends a fixed local message through capture, reading, and two test destinations. It uses no keys and never places an order."
+                "Sends a practice post through every step. It uses no keys and never places an order."
             )
         }
         switch result.stage {

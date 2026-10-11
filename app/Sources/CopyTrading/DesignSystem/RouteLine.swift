@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// A route drawn like a transit line: a thin rule through small dots, each stop named under
-/// its dot with its state. A dot is filled once the stop is working, hollow while it waits.
+/// A route drawn like a transit line: riso dots in ink outlines, each stop named under its dot with
+/// its state. The line is solid ink while posts flow, and turns to dots after a stop that is not
+/// ready, because that stop holds the posts behind it.
 struct RouteLine: View {
     let stops: [RouteStop]
 
@@ -11,13 +12,10 @@ struct RouteLine: View {
                 VStack(spacing: 9) {
                     ZStack {
                         HStack(spacing: 0) {
-                            Rectangle()
-                                .fill(index == 0 ? .clear : Palette.hairline)
-                            Rectangle()
-                                .fill(index == stops.count - 1 ? .clear : Palette.hairline)
+                            segment(hidden: index == 0, flowing: index > 0 && flows(through: index - 1))
+                            segment(hidden: index == stops.count - 1, flowing: flows(through: index))
                         }
-                        .frame(height: 1.5)
-                        dot(stop.tone)
+                        ToneDot(tone: stop.tone, size: 12)
                     }
                     .frame(height: 12)
                     VStack(spacing: 2) {
@@ -25,8 +23,8 @@ struct RouteLine: View {
                             .font(.system(.body, weight: .medium))
                             .foregroundStyle(Palette.ink)
                         Text(L10n.string(stop.state))
-                            .font(DesignTokens.caption)
-                            .foregroundStyle(stop.tone == .caution || stop.tone == .critical ? stop.tone.color : Palette.secondaryInk)
+                            .font(DesignTokens.caption.weight(stop.needsLook ? .semibold : .regular))
+                            .foregroundStyle(stop.needsLook ? Palette.ink : Palette.secondaryInk)
                     }
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 4)
@@ -39,18 +37,19 @@ struct RouteLine: View {
         .accessibilityElement(children: .contain)
     }
 
+    /// Posts flow past a stop, and every stop before it, only while each of them is working.
+    private func flows(through index: Int) -> Bool {
+        stops[...index].allSatisfy { $0.tone == .positive }
+    }
+
     @ViewBuilder
-    private func dot(_ tone: StatusTone) -> some View {
-        if tone == .inactive {
-            Circle()
-                .strokeBorder(Palette.tertiaryInk.opacity(0.6), lineWidth: 1.5)
-                .background(Circle().fill(Palette.page))
-                .frame(width: 11, height: 11)
+    private func segment(hidden: Bool, flowing: Bool) -> some View {
+        if hidden {
+            Color.clear.frame(height: 1.5)
+        } else if flowing {
+            Rectangle().fill(Palette.ink).frame(height: 1.2)
         } else {
-            Circle()
-                .fill(tone.color)
-                .frame(width: 11, height: 11)
-                .background(Circle().fill(tone.color.opacity(0.18)).frame(width: 21, height: 21))
+            WritingLine()
         }
     }
 }

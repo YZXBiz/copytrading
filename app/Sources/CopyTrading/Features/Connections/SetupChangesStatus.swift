@@ -34,10 +34,14 @@ struct SetupChangesStatus: Equatable {
             self.init("Everything checks out", "Start copying when you're ready.", "checkmark.circle.fill", .positive)
         } else if model.awaitsExampleReview {
             self.init("Everything checks out", "Look over how the examples were read.", "text.magnifyingglass", .neutral)
-        } else if model.tradingStatus?.state != .paused {
+        } else if model.tradingStatus?.state != .paused && model.isCopyingSavedSetup {
+            // Applying restarts copying; posts from those few seconds wait and are copied after.
             self.init(
-                "You changed the setup", "Apply to copy with it. Copying pauses for a moment; no post is missed.",
+                "You changed the setup",
+                "Click Apply Changes to use it. Copying restarts in a few seconds, and any post sent meanwhile is still copied.",
                 "pencil.circle.fill", .neutral)
+        } else if model.tradingStatus?.state != .paused {
+            self.init("You changed the setup", "Click Start Copying to use it.", "pencil.circle.fill", .neutral)
         } else if model.savedTradingConfiguration == nil {
             self.init("Ready to start", "Every connection is checked first.", "info.circle.fill", .neutral)
         } else {

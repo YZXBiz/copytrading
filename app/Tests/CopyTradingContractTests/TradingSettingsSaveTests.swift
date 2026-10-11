@@ -98,6 +98,7 @@ struct TradingSettingsSaveTests {
         try await checkFailedSameRevisionActivationRetainsPreviousSecrets(configuration: configuration)
         try await checkInterruptedSameRevisionActivationRollsBackAfterReopen(configuration: configuration)
         try await checkReadySameRevisionActivationFinalizesAfterStoppedReopen(configuration: configuration)
+        try await checkResumeThatKeepsCopyingIsApplied(configuration: configuration, secrets: credentials)
         try await checkSavedLiveResumeUsesConfirmedActivationPath(configuration: configuration, secrets: credentials)
         try await checkLiveStartNeedsTheOwnerAndPaperDoesNot(configuration: configuration, secrets: credentials)
         try await checkProfileExampleReviewActionPath()
@@ -1010,6 +1011,45 @@ struct TradingSettingsSaveTests {
             discardedCandidateSecret == nil,
             "Interrupted same-revision Start retained an uncommitted credential reference")
         print("CopyTradingContractTests: interrupted same-revision Start restored prior credentials after reopen")
+    }
+
+    /// A resume of the saved setup the engine marked failed (Discord dropped while starting) but
+    /// kept copying with: the setup is in effect, so it is not left pending, and limits can still
+    /// be changed at once.
+    private static func checkResumeThatKeepsCopyingIsApplied(
+        configuration: TradingConfiguration, secrets: TradingSecrets
+    ) async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(
+            path: "app-model-resume-keeps-copying-\(UUID().uuidString)", directoryHint: .isDirectory)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appending(path: "configuration.json")
+        let store = TradingConfigurationStore(url: file, secrets: TestSecretRevisions())
+        let revision = fakeEngineRevision(configuration)
+        try store.save(configuration: configuration, revision: revision, secrets: secrets, when: .paused)
+        let activationID = UUID().uuidString.lowercased()
+        try store.stageSavedResume(activationID: activationID, when: .paused)
+        let starter = RecordingTradingStarter()
+        try await starter.setActivationStatus(
+            TradingActivationStatus(
+                requestedActivationID: activationID,
+                activationID: activationID,
+                candidateRevision: revision,
+                committedRevision: revision,
+                phase: .failed,
+                runtimeState: .degraded,
+                errorCode: "source_unavailable",
+                committedActivationID: UUID().uuidString.lowercased()
+            ), state: .degraded, activeAccounts: 1)
+
+        let model = AppModel(tradingConfigurationStore: store, tradingStarter: starter)
+        await model.reconcilePendingTradingActivation(using: starter)
+
+        let pending = try store.pendingActivation()
+        try check(pending == nil, "A resume the engine keeps copying with stayed pending")
+        let kept = try store.load()?.secrets
+        try check(kept == secrets, "Settling a running resume changed the saved keys")
+        try check(model.message == nil, "A running resume still said the setup can't be confirmed: \(model.message ?? "")")
+        print("CopyTradingContractTests: a resume that keeps copying is applied, not left pending")
     }
 
     private static func checkReadySameRevisionActivationFinalizesAfterStoppedReopen(

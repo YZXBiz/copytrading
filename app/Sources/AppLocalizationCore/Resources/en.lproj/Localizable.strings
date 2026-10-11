@@ -338,7 +338,6 @@
 "Evaluate Message" = "Evaluate Message";
 "Evaluate with Saved Profile…" = "Evaluate with Saved Profile…";
 "Evaluating with the configured model" = "Evaluating with the configured model";
-"Every post stops at each of these in turn. A stop that is not ready holds the posts behind it." = "Every post stops at each of these in turn. A stop that is not ready holds the posts behind it.";
 "Everything checks out. Look over how the examples were read." = "Everything checks out. Look over how the examples were read.";
 "Everything checks out. Start copying when you're ready." = "Everything checks out. Start copying when you're ready.";
 "Everything CopyTrading records stays here, on this Mac." = "Everything CopyTrading records stays here, on this Mac.";
@@ -772,7 +771,6 @@
 "Send your new bot any message, so it's allowed to message you back." = "Send your new bot any message, so it's allowed to message you back.";
 "Sending the test message through now…" = "Sending the test message through now…";
 "Sending…" = "Sending…";
-"Sends a fixed local message through capture, reading, and two test destinations. It uses no keys and never places an order." = "Sends a fixed local message through capture, reading, and two test destinations. It uses no keys and never places an order.";
 "Sent %@ %@ %@, at market" = "Sent %@ %@ %@, at market";
 "Sent %@ %@ %@, limit %@" = "Sent %@ %@ %@, limit %@";
 "Sent an order to the broker" = "Sent an order to the broker";
@@ -900,7 +898,6 @@
 "The sale could not be checked" = "The sale could not be checked";
 "The setup checklist and how a day in CopyTrading goes." = "The setup checklist and how a day in CopyTrading goes.";
 "The trader whose calls CopyTrading copies." = "The trader whose calls CopyTrading copies.";
-"The Way a Post Travels" = "The Way a Post Travels";
 "These shares are no longer held" = "These shares are no longer held";
 "This post is older than what Activity has loaded" = "This post is older than what Activity has loaded";
 "Nothing has changed yet. Restoring first checks the backup against your broker's account, orders, and holdings, and stops if they don't match." = "Nothing has changed yet. Restoring first checks the backup against your broker's account, orders, and holdings, and stops if they don't match.";
@@ -1767,10 +1764,6 @@
 "no size given, so a full position" = "no size given, so a full position";
 "from every buy of it" = "from every buy of it";
 "read by %@" = "read by %@";
-"Prices from %@, not updating: engine stopped" = "Prices from %@, not updating: engine stopped";
-"Prices from %@, not updating" = "Prices from %@, not updating";
-"Prices as of %@" = "Prices as of %@";
-"as of %@ · updates every %lld s" = "as of %@ · updates every %lld s";
 "Refresh now" = "Refresh now";
 "%lld accounts" = "%lld accounts";
 "%@ · %@ · %@" = "%@ · %@ · %@";
@@ -1885,7 +1878,6 @@
 "Per stock" = "Per stock";
 "Your account" = "Your account";
 "In your account" = "In your account";
-"%@ copied · %@ held outside CopyTrading" = "%@ copied · %@ held outside CopyTrading";
 "Recent activity" = "Recent activity";
 "Account activity error: %@" = "Account activity error: %@";
 "Nothing has been bought or sold in this account yet." = "Nothing has been bought or sold in this account yet.";
@@ -2076,7 +2068,6 @@
 "Start copying when you're ready." = "Start copying when you're ready.";
 "Look over how the examples were read." = "Look over how the examples were read.";
 "You changed the setup" = "You changed the setup";
-"Apply to copy with it. Copying pauses for a moment; no post is missed." = "Apply to copy with it. Copying pauses for a moment; no post is missed.";
 "Every connection is checked first." = "Every connection is checked first.";
 "You have unsaved changes" = "You have unsaved changes";
 "Starting checks and saves them." = "Starting checks and saves them.";
@@ -2085,7 +2076,6 @@
 "A 1/2 call" = "A 1/2 call";
 "No size given" = "No size given";
 "Your max per order, %@, caps any one buy." = "Your max per order, %@, caps any one buy.";
-"Max %@ an order · %@ a stock" = "Max %@ an order · %@ a stock";
 
 "From %@'s post · %@" = "From %@'s post · %@";
 "Into %@" = "Into %@";
@@ -2126,3 +2116,17 @@
 "The new setup didn't start, so your previous setup is still in place: %@." = "The new setup didn't start, so your previous setup is still in place: %@.";
 "The engine stopped while starting" = "The engine stopped while starting";
 "Another CopyTrading on this Mac is copying into this account" = "Another CopyTrading on this Mac is copying into this account";
+"Updated %@" = "Updated %@";
+"Not updating since %@: the engine is stopped" = "Not updating since %@: the engine is stopped";
+"Not updating since %@" = "Not updating since %@";
+"Each order" = "Each order";
+"Each stock" = "Each stock";
+"at most" = "at most";
+"%@ copied · %@ yours" = "%@ copied · %@ yours";
+"%@ bought at %@" = "%@ bought at %@";
+"Click Apply Changes to use it. Copying restarts in a few seconds, and any post sent meanwhile is still copied." = "Click Apply Changes to use it. Copying restarts in a few seconds, and any post sent meanwhile is still copied.";
+"Click Start Copying to use it." = "Click Start Copying to use it.";
+"Sends a practice post through every step. It uses no keys and never places an order." = "Sends a practice post through every step. It uses no keys and never places an order.";
+"Discord isn't connected, so new posts aren't reaching CopyTrading. Check the Discord token in Connections." = "Discord isn't connected, so new posts aren't reaching CopyTrading. Check the Discord token in Connections.";
+"The interpreter isn't ready, so new posts wait to be read. Check its key in Connections." = "The interpreter isn't ready, so new posts wait to be read. Check its key in Connections.";
+"Copying into %@ of %@ accounts; the account page says what the other needs." = "Copying into %@ of %@ accounts; the account page says what the other needs.";
