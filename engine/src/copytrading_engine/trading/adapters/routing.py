@@ -59,7 +59,7 @@ class RoutingRevision:
     def _check(
         self, db: sqlite3.Connection, configuration: TradingConfiguration, *, commit: bool
     ) -> None:
-        fingerprint = configuration.revision()
+        fingerprint = configuration.routing_revision()
         new_accounts = {account.id for account in configuration.accounts}
         old = db.execute(
             "SELECT fingerprint,account_ids FROM trading_routing_revision WHERE singleton=1"

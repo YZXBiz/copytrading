@@ -2,7 +2,8 @@
 
 ## Status
 Accepted, October 2026. Extends ADR-0006. Amended October 2026: the market-move hold (Y below)
-was removed; a buy is bounded by its limit alone.
+was removed; a buy is bounded by its limit alone. Amended again October 2026: a sell with no
+price, or at the market, sells at the market instead of waiting (decision 4, *At what price*).
 
 ## Context
 Gurus write very differently. 赵哥 states every trade, its size as a share of his normal
@@ -54,9 +55,15 @@ same as his 1/6.
      buy that can't fill, and the owner preferred fewer settings to a prompt after a drop.) A sell
      is a limit too, at the guru's price less Z%
      (Z defaults to 1%, set per account), so it never fills far below what the guru got; one that
-     hasn't filled by the order timeout is cancelled and the shares stay. A call with no price
-     waits for the owner, and so does a call at market, a batch until its guru's N is set, and a
-     sell that names no buy for a guru whose sells refer to the buy price.
+     hasn't filled by the order timeout is cancelled and the shares stay. A sell with no price,
+     or at the market ("sell wmt half", "跑路了"), is the guru getting out now: it sells at the
+     market, as a limit Z% under the bid when the order is planned. With no bid yet it waits and
+     tries again each cycle until the post is too old; a bid up to six hours old will do, since it
+     only sets the floor: a limit sell fills at the market's better price, or rests until its
+     timeout and the shares stay (Oct 2026, after live runs found the free feed's last bid is the
+     4 PM one all evening). A buy with no price, or at the market, waits
+     for the owner: only the guru's price bounds what a copied buy pays. So does a batch until its
+     guru's N is set, and a sell that names no buy for a guru whose sells refer to the buy price.
 5. **Limits only protect.** Maximum per order trims a buy and the trim is shown. A buy that would
    pass the maximum per stock or the maximum total, the daily loss cap, or the entries per day is
    skipped, with the reason shown.

@@ -1,13 +1,25 @@
 import DesktopCore
 import Foundation
 
-/// A few plain sentences for a guru's "Copies into" row: the guru's full position is the account's
-/// maximum per stock, each call buys the guru's share of it, and the per-order limit only ever
-/// trims a call, never sizes it. Amounts are what each call buys after that trim.
-enum SizingSummary {
+/// What a guru's calls come to in the account they copy into, as figures: the guru's full position
+/// (the account's maximum per stock), then what a 1/6 call, a 1/2 call, and a call with no size
+/// each buy once the per-order limit has trimmed them, as the engine trims them.
+struct SizingSummary: Equatable {
+    struct Figure: Equatable, Identifiable {
+        let label: String
+        let amount: String
+        /// The per-order limit cut this one down.
+        let isTrimmed: Bool
+        var id: String { label }
+    }
+
+    let figures: [Figure]
+    /// One quiet line: what the per-order limit does, when it trims anything.
+    let note: String?
+
+    /// Nil until the account has a maximum per stock, which is the guru's full position.
     @MainActor
-    static func text(_ connection: TradingConnectionDraft, policy: TradingAccountPolicy?) -> String {
-        let account = connection.accountID.trimmed.isEmpty ? L10n.string("this account") : connection.accountID.trimmed
+    static func of(_ connection: TradingConnectionDraft, policy: TradingAccountPolicy?) -> Self? {
         let full = policy?.maxSymbolUSD.trimmed ?? ""
         let terms = connection.terms(fullPositionUSD: full)
         guard let maximum = Decimal(string: full), maximum > 0,
@@ -15,22 +27,22 @@ enum SizingSummary {
             let half = terms.copiedBudgetUSD(sourceFraction: Decimal(1) / Decimal(2)),
             // A post with no size asks for the full position (ADR-0010).
             let whole = terms.copiedBudgetUSD(sourceFraction: nil)
-        else {
-            return L10n.string("First set this account's max per stock. It's the guru's full position.")
-        }
-        // What each call buys once the per-order limit has trimmed it, as the engine does.
+        else { return nil }
         let cap = policy.flatMap { Decimal(string: $0.maxOrderUSD.trimmed) }.flatMap { $0 > 0 ? $0 : nil }
-        func bought(_ asked: Decimal) -> Decimal { cap.map { min(asked, $0) } ?? asked }
-        var sentences = [
-            L10n.string("%@'s max per stock, **%@**, is this guru's full position.", account, dollars(maximum)),
-            L10n.string("A 1/6 call buys **%@** and a 1/2 call **%@**.", dollars(bought(sixth)), dollars(bought(half))),
-        ]
-        if let cap, [sixth, half, whole].contains(where: { $0 > cap }) {
-            sentences.append(
-                L10n.string("Your max per order, **%@**, cuts bigger buys down. Activity shows when.", dollars(cap)))
+        func figure(_ label: String, _ asked: Decimal) -> Figure {
+            let trimmed = cap.map { asked > $0 } ?? false
+            return Figure(label: L10n.string(label), amount: dollars(trimmed ? cap ?? asked : asked), isTrimmed: trimmed)
         }
-        sentences.append(L10n.string("A post with no size buys **%@**.", dollars(bought(whole))))
-        return L10n.sentences(sentences)
+        let figures = [
+            Figure(label: L10n.string("Full position"), amount: dollars(maximum), isTrimmed: false),
+            figure("A 1/6 call", sixth),
+            figure("A 1/2 call", half),
+            figure("No size given", whole),
+        ]
+        let note =
+            figures.contains(where: \.isTrimmed)
+            ? cap.map { L10n.string("Your max per order, %@, caps any one buy.", dollars($0)) } : nil
+        return Self(figures: figures, note: note)
     }
 
     /// Whole dollars without cents, as a person says an amount: "$40", "$41.66".

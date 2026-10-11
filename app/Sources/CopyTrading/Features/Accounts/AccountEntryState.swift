@@ -8,8 +8,10 @@ struct AccountEntryState: Equatable {
     let tone: StatusTone
 
     init(_ account: AccountOverview) {
+        // The engine holds only the accounts it is copying into; while copying is off, or after an
+        // account leaves the setup, this one is simply not copying.
         guard account.activeConfiguration else {
-            (text, tone) = ("Not in setup", .inactive)
+            (text, tone) = ("Not copying right now", .inactive)
             return
         }
         switch account.entryPermission {
@@ -21,6 +23,7 @@ struct AccountEntryState: Equatable {
             case "enabled_waiting_for_session": (text, tone) = ("Taking entries at the open", .positive)
             case "manual_resume_required": (text, tone) = ("Waiting for you to resume", .caution)
             case "recovery_pending": (text, tone) = ("Checking the account", .neutral)
+            case "inactive_evidence", "processing_stopped": (text, tone) = ("Not copying right now", .inactive)
             default: (text, tone) = (Reason.text(account.readiness), .caution)
             }
         }

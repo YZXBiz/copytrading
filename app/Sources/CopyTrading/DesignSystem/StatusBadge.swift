@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A compact, tinted capsule that pairs a status word with its tone symbol.
+/// A status word after its tone's small symbol: no capsule, only the symbol carries the colour.
 struct StatusBadge: View {
     let title: String
     let tone: StatusTone
@@ -11,14 +11,16 @@ struct StatusBadge: View {
     }
 
     var body: some View {
-        Label(L10n.string(title), systemImage: tone.symbol)
-            .font(.callout)
-            .imageScale(.small)
-            .lineLimit(1)
-            .foregroundStyle(tone.color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(tone.color.opacity(0.12), in: .capsule)
-            .fixedSize()
+        Label {
+            Text(L10n.string(title))
+                .foregroundStyle(Palette.secondaryInk)
+        } icon: {
+            Image(systemName: tone.symbol)
+                .foregroundStyle(tone.color)
+        }
+        .font(DesignTokens.caption)
+        .imageScale(.small)
+        .lineLimit(1)
+        .fixedSize()
     }
 }

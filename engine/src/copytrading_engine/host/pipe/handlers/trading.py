@@ -16,6 +16,7 @@ from copytrading_engine.host.pipe.requests import (
     PipeRequest,
     RequestHandler,
     StartTradingRequest,
+    UpdateAccountLimitsRequest,
     ValidateTradingRequest,
 )
 from copytrading_engine.host.pipe.responses import reply, trading_reply
@@ -47,6 +48,7 @@ class TradingLifecycleHandlers:
             CheckConnectionRequest: self._on_check_connection,
             StartTradingRequest: self._on_start_trading,
             PauseTradingRequest: self._on_pause_trading,
+            UpdateAccountLimitsRequest: self._on_update_account_limits,
         }
 
     async def _on_get_trading_status(self, request: GetTradingStatusRequest) -> bytes:
@@ -123,6 +125,17 @@ class TradingLifecycleHandlers:
             return reply(request.version, request.request_id, error="unavailable")
         status = await self._trading.lifecycle.pause()
         return trading_reply(request.version, request.request_id, status)
+
+    async def _on_update_account_limits(self, request: UpdateAccountLimitsRequest) -> bytes:
+        """Limits apply while copying runs; the reply's revision is what the app saves."""
+        if self._trading is None:
+            return reply(request.version, request.request_id, error="unavailable")
+        revision = await self._trading.lifecycle.update_account_limits(request.configuration)
+        return reply(
+            request.version,
+            request.request_id,
+            ok={"type": "account_limits", "revision": revision},
+        )
 
     def _secret_fingerprint(self, secrets: TradingSecrets) -> str:
         payload = {

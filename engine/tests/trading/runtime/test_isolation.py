@@ -5,6 +5,9 @@ import datetime as dt
 import sqlite3
 from uuid import uuid4
 
+import discord
+import pytest
+
 from copytrading_engine.execution.application.ports import AccountOpenRefused, BrokerError
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore
 from copytrading_engine.shared.raw_message import RawMessage
@@ -112,6 +115,75 @@ async def test_failed_source_does_not_stop_broker_reconciliation(tmp_path):
     assert degraded.active_accounts == 1
     await wait_for(runtime, lambda status: opened["first"].cycles >= 2)
     await runtime.shutdown()
+
+
+async def test_discord_that_drops_is_opened_again(tmp_path):
+    """A dropped Discord connection is retried with a fresh session, and copying hears it again."""
+
+    class DroppingSession(Session):
+        async def ensure_running(self):
+            raise RuntimeError("fake source disconnected")
+
+    sessions: list[Session] = []
+
+    def session_factory(source, channels, authors, stop, report_failure):
+        session = (DroppingSession if not sessions else Session)(source, None)
+        sessions.append(session)
+        return session
+
+    runtime = TradingRuntime(
+        tmp_path,
+        factories=TradingFactories(
+            owner=lambda path, credentials, policy, environment: asyncio.sleep(
+                0, result=Owner(path, {}, {})
+            ),
+            decoder=lambda name, config: asyncio.sleep(0, result=Decoder()),
+            session=session_factory,
+        ),
+        source_retry_seconds=(0.05,),
+    )
+    await runtime.start(trading_configuration("first"), trading_secrets_for("first"))
+    try:
+        await wait_for(runtime, lambda status: status.error_code == "source_unavailable")
+        connected = await wait_for(
+            runtime, lambda status: status.source_connected and status.error_code is None
+        )
+        assert connected.state == "running"
+        assert len(sessions) == 2
+    finally:
+        await runtime.shutdown()
+
+
+async def test_a_token_discord_turns_down_is_not_tried_again(tmp_path):
+    class RejectedSession(Session):
+        async def ensure_running(self):
+            raise discord.LoginFailure("Improper token has been passed.")
+
+    sessions: list[Session] = []
+
+    def session_factory(source, channels, authors, stop, report_failure):
+        sessions.append(RejectedSession(source, None))
+        return sessions[-1]
+
+    runtime = TradingRuntime(
+        tmp_path,
+        factories=TradingFactories(
+            owner=lambda path, credentials, policy, environment: asyncio.sleep(
+                0, result=Owner(path, {}, {})
+            ),
+            decoder=lambda name, config: asyncio.sleep(0, result=Decoder()),
+            session=session_factory,
+        ),
+        source_retry_seconds=(0.01,),
+    )
+    await runtime.start(trading_configuration("first"), trading_secrets_for("first"))
+    try:
+        await wait_for(runtime, lambda status: status.error_code == "source_unauthorized")
+        await asyncio.sleep(0.2)
+        assert len(sessions) == 1
+        assert runtime.status().error_code == "source_unauthorized"
+    finally:
+        await runtime.shutdown()
 
 
 async def test_uncertain_shared_delivery_stops_all_accounts(tmp_path):
@@ -339,17 +411,34 @@ async def test_post_that_fails_evidence_checks_goes_to_review_and_processing_con
         review = next(item for item in page.items if item.text.endswith("from 200"))
         assert review.decision == "review"
         assert review.parser_reason == "evidence_validation_failed"
+        # Activity's timeline: captured, then read, then handed to the accounts, in order.
+        bought = await wait_until_delivered(runtime, "Bought AAPL at 200")
+        assert bought.read_started_at is not None
+        assert bought.read_at is not None
+        assert bought.delivered_at is not None
+        assert bought.captured_at <= bought.read_started_at <= bought.read_at <= bought.delivered_at
     finally:
         await runtime.shutdown()
+
+
+async def wait_until_delivered(runtime, text):
+    for _ in range(200):
+        page = await runtime.operator.source_activity(None, 10)
+        item = next((item for item in page.items if item.text == text), None)
+        if item is not None and item.delivered_at is not None:
+            return item
+        await asyncio.sleep(0.02)
+    raise AssertionError(f"{text!r} was never handed to the accounts")
 
 
 def _never_posts(source, channels, authors, stop, report_failure):
     return Session(source, None)
 
 
-async def test_an_order_placed_outside_the_app_names_why_copying_could_not_start(tmp_path):
+@pytest.mark.parametrize("reason", ["outside_open_orders", "account_in_use"])
+async def test_a_refused_account_names_why_copying_could_not_start(tmp_path, reason):
     async def owner_factory(path, credentials, policy, environment):
-        raise AccountOpenRefused("outside_open_orders")
+        raise AccountOpenRefused(reason)
 
     runtime = TradingRuntime(
         tmp_path,
@@ -359,11 +448,13 @@ async def test_an_order_placed_outside_the_app_names_why_copying_could_not_start
             session=_never_posts,
         ),
     )
-    await runtime.start(trading_configuration("first"), trading_secrets_for("first"))
+    activation_id = str(uuid4())
+    await runtime.start(trading_configuration("first"), trading_secrets_for("first"), activation_id)
     failed = await wait_for(runtime, lambda status: status.state == "failed")
-    assert failed.error_code == "outside_open_orders"
+    assert failed.error_code == reason
+    assert runtime.activation_status(activation_id).error_code == reason
     [account] = (await runtime.operator.account_overviews()).items
-    assert account.readiness == "outside_open_orders"
+    assert account.readiness == reason
     await runtime.shutdown()
 
 

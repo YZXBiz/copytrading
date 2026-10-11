@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Progress as a ring: a quiet track and
-/// an accent arc that grows, closing into a green ring with a check drawn in once everything is.
+/// an ink arc that grows, closing into a ring with a check drawn in once everything is.
 struct ProgressRing: View {
     let progress: Double
     var size: CGFloat = 28
@@ -17,12 +17,12 @@ struct ProgressRing: View {
                 .stroke(Palette.hairline, lineWidth: lineWidth)
             Circle()
                 .trim(from: 0, to: clamped)
-                .stroke(isComplete ? Color.green : Palette.accent, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                .stroke(Palette.ink, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             if isComplete {
                 Image(systemName: "checkmark")
                     .font(.system(size: size * 0.42, weight: .bold))
-                    .foregroundStyle(.green)
+                    .foregroundStyle(Palette.ink)
                     .transition(reduceMotion ? AnyTransition.opacity : AnyTransition(.symbolEffect(.drawOn)))
             }
         }

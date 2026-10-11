@@ -93,6 +93,11 @@ class SourceActivity(Value):
     profile_revision: str | None = None
     source_event: SourceEventEvidence
     destinations: tuple[DestinationView, ...]
+    # When the reader took the post, when it finished, and when the reading reached the
+    # accounts: with source_at and captured_at, how long each step took.
+    read_started_at: AwareDatetime | None = None
+    read_at: AwareDatetime | None = None
+    delivered_at: AwareDatetime | None = None
 
 
 class SourceActivityPage(Value):

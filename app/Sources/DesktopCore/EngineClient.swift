@@ -90,6 +90,25 @@ public actor EngineClient {
         return status
     }
 
+    /// Hands copying a setup that changes only account limits; returns the setup's revision.
+    public func updateAccountLimits(configuration: TradingConfiguration) async throws -> String {
+        let result = try await request(.updateAccountLimits(configuration))
+        guard case .accountLimits(let revision) = result else { throw EngineContractError.missingResult }
+        return revision
+    }
+
+    /// Lets the engine read paused accounts live with these keys until `detachAccountReaders`.
+    public func attachAccountReaders(_ accounts: [AccountReadKeys]) async throws {
+        let result = try await request(.attachAccountReaders(accounts))
+        guard case .accountReaders = result else { throw EngineContractError.missingResult }
+    }
+
+    /// Makes the engine forget every read key, as when the owner locks the app.
+    public func detachAccountReaders() async throws {
+        let result = try await request(.detachAccountReaders)
+        guard case .accountReaders = result else { throw EngineContractError.missingResult }
+    }
+
     public func createBackup(destination: URL) async throws -> BackupManifestView {
         let result = try await request(.createBackup(destination.path))
         guard case .backup(let manifest) = result else { throw EngineContractError.missingResult }
@@ -218,11 +237,11 @@ public actor EngineClient {
         return value
     }
 
-    public func accountEvents(
+    public func accountFeed(
         accountID: String, beforeSeq: Int? = nil, limit: Int = 50
-    ) async throws -> AccountEventPage {
-        let result = try await request(.accountEvents(accountID: accountID, beforeSeq: beforeSeq, limit: limit))
-        guard case .accountEvents(let page) = result else { throw EngineContractError.missingResult }
+    ) async throws -> AccountFeedPage {
+        let result = try await request(.accountFeed(accountID: accountID, beforeSeq: beforeSeq, limit: limit))
+        guard case .accountFeed(let page) = result else { throw EngineContractError.missingResult }
         return page
     }
 

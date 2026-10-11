@@ -119,7 +119,7 @@ async def test_correction_replication_repairs_one_account_and_serializes_revisio
         runtime.manual._access.evidence, "manual_source_evidence", lambda *_: _source_evidence()
     )
 
-    async def snapshots():
+    async def snapshots(*_, **__):
         return {
             "account-a": SimpleNamespace(manual_corrections=owner_a.records),
             "account-b": SimpleNamespace(manual_corrections=owner_b.records),
@@ -543,3 +543,59 @@ async def test_manual_preview_and_confirmation_ignore_corrupt_unselected_store(t
     assert owner.preview_calls == 1
     assert owner.submit_calls == 1
     assert supervisor.refresh_calls == 1
+
+
+async def test_a_correction_saves_past_an_old_accounts_unreadable_ledger(tmp_path, monkeypatch):
+    """An account left by an earlier setup, whose ledger no longer reads, must not stop a
+    correction for the accounts the owner chose. It used to raise and take the engine down."""
+    runtime = TradingRuntime(tmp_path)
+
+    class LiveOwner(_CorrectionOwner):
+        async def observation(self):
+            return SimpleNamespace(ledger=SimpleNamespace(manual_corrections=self.records))
+
+    owner_a, owner_b = LiveOwner(), LiveOwner()
+    runtime._accounts = {
+        "account-a": SimpleNamespace(owner=owner_a, state="ready"),
+        "account-b": SimpleNamespace(owner=owner_b, state="ready"),
+    }
+    monkeypatch.setattr(
+        runtime.manual._access.evidence, "manual_source_evidence", lambda *_: _source_evidence()
+    )
+    old = tmp_path / "old-ledger.sqlite3"
+    monkeypatch.setattr(
+        runtime.manual._access,
+        "retained_paths",
+        lambda: {"account-a": tmp_path / "a", "account-b": tmp_path / "b", "testing": old},
+    )
+
+    async def unreadable(database, **_):
+        raise ValueError("Unsupported execution snapshot schema version")
+
+    monkeypatch.setattr(runtime.manual._access, "retained_account", unreadable)
+
+    saved = await runtime.manual.save_manual_correction(_request("correction-old", "25"))
+
+    assert [item.status for item in saved.accounts] == ["recorded", "recorded"]
+    assert owner_a.records["correction-old"] == saved.correction
+
+
+async def test_a_chosen_accounts_unreadable_ledger_still_refuses(tmp_path, monkeypatch):
+    runtime = TradingRuntime(tmp_path)
+    runtime._accounts = {}
+    monkeypatch.setattr(
+        runtime.manual._access.evidence, "manual_source_evidence", lambda *_: _source_evidence()
+    )
+    monkeypatch.setattr(
+        runtime.manual._access,
+        "retained_paths",
+        lambda: {"account-a": tmp_path / "a", "account-b": tmp_path / "b"},
+    )
+
+    async def unreadable(database, **_):
+        raise ValueError("Unsupported execution snapshot schema version")
+
+    monkeypatch.setattr(runtime.manual._access, "retained_account", unreadable)
+
+    with pytest.raises(RuntimeError, match="evidence is unavailable"):
+        await runtime.manual.save_manual_correction(_request("correction-chosen", "25"))

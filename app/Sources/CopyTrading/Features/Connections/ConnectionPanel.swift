@@ -12,14 +12,14 @@ struct ConnectionPanel<Content: View>: View {
     @ViewBuilder let content: Content
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.colorSchemeContrast) private var contrast
-    @Environment(\.displayScale) private var displayScale
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 10) {
                 ServiceIcon(brand: brand, symbol: symbol, size: 28)
                 Text(title)
-                    .font(.system(.title3, weight: .semibold))
+                    .font(DesignTokens.settingsHeading)
+                    .tracking(DesignTokens.listHeadingTracking)
                     .foregroundStyle(Palette.ink)
                     .lineLimit(1)
                     .accessibilityAddTraits(.isHeader)
@@ -30,7 +30,7 @@ struct ConnectionPanel<Content: View>: View {
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(Palette.secondaryInk)
                     .frame(width: 24, height: 24)
-                    .background(Palette.ink.opacity(0.07), in: .circle)
+                    .background(Palette.well, in: .circle)
                     .keyboardShortcut(escapeCloses ? .cancelAction : nil)
                     .help(L10n.string("Close"))
                     .accessibilityIdentifier("connections.close")
@@ -38,11 +38,6 @@ struct ConnectionPanel<Content: View>: View {
             .padding(.horizontal, 20)
             .padding(.top, 18)
             .padding(.bottom, 14)
-
-            Rectangle()
-                .fill(Palette.hairline)
-                .frame(height: 1 / displayScale)
-                .padding(.horizontal, 20)
 
             content
                 .padding(20)

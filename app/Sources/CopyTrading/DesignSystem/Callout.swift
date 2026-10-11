@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// An inline notice. Neutral callouts explain; caution and critical ones demand attention.
+/// An inline notice on the page itself, with no box: its symbol, then the words. Neutral callouts
+/// explain in grey; caution and critical ones put their colour on the symbol and read in ink.
 struct Callout: View {
     let text: String
     var tone: StatusTone = .neutral
@@ -13,18 +14,15 @@ struct Callout: View {
     var body: some View {
         Label {
             Text(text)
-                .foregroundStyle(tone == .neutral ? Color.secondary : Color.primary)
+                .foregroundStyle(tone == .neutral ? Palette.secondaryInk : Palette.ink)
+                .fixedSize(horizontal: false, vertical: true)
                 .textSelection(.enabled)
         } icon: {
             Image(systemName: tone == .neutral ? "info.circle" : tone.symbol)
-                .foregroundStyle(tone == .neutral ? Color.secondary : tone.color)
+                .foregroundStyle(tone == .neutral ? Palette.tertiaryInk : tone.color)
         }
         .font(.callout)
-        .padding(10)
+        .padding(.vertical, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            (tone == .neutral ? Color.secondary : tone.color).opacity(0.08),
-            in: .rect(cornerRadius: DesignTokens.calloutCornerRadius)
-        )
     }
 }

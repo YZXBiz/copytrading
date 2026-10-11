@@ -5,18 +5,23 @@ import SwiftUI
 /// rules, each saying what it would have done. Nothing is placed or saved.
 struct GuruReplaySection: View {
     let route: TradingRouteDraft
+    /// Each account's limits, by name: a replayed buy shows what the maximum per order lets through.
+    let policies: [String: TradingAccountPolicy]
     let replay: (TradingRouteDraft) async throws -> GuruReplay
     @State private var result: GuruReplay?
     @State private var failure: String?
     @State private var isReplaying = false
 
     var body: some View {
-        Section {
+        SheetSection(
+            L10n.string("Try it on recent posts"), detail: L10n.string("See what their last posts would have done with these settings.")
+        ) {
             Button(
                 L10n.string(result == nil ? "Replay Recent Posts" : "Replay Again"), systemImage: "arrow.clockwise",
                 action: run
             )
-            .buttonStyle(.borderless)
+            .buttonStyle(SheetQuietButtonStyle())
+            .padding(.vertical, 12)
             .disabled(isReplaying)
             .accessibilityIdentifier("guru.replay")
             if isReplaying {
@@ -29,20 +34,18 @@ struct GuruReplaySection: View {
                 Text(tally(result.posts))
                     .font(DesignTokens.bodyEmphasis)
                     .foregroundStyle(Palette.ink)
+                    .padding(.bottom, 4)
                 ForEach(Array(result.posts.enumerated()), id: \.offset) { _, post in
                     row(post)
                 }
             }
-        } header: {
-            SetupSectionHeader(
-                title: "Try it on recent posts", detail: "See what their last posts would have done with these settings.")
         } footer: {
             Text(L10n.string("Reads their last 15 posts with your model, which may cost a little. Nothing is bought or sold."))
         }
     }
 
     private func row(_ post: ReplayedPost) -> some View {
-        let outcome = Outcome(post)
+        let outcome = Outcome(post, policies: policies)
         return VStack(alignment: .leading, spacing: 4) {
             Text(post.text)
                 .font(DesignTokens.bodyText)
@@ -60,7 +63,8 @@ struct GuruReplaySection: View {
             }
             .font(DesignTokens.caption)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// What a replayed post would have done, in the Activity card's words.
@@ -71,16 +75,29 @@ struct GuruReplaySection: View {
         let kind: Kind
         let detail: String?
 
-        init(_ post: ReplayedPost) {
+        init(_ post: ReplayedPost, policies: [String: TradingAccountPolicy] = [:]) {
             switch post.decision {
             case "trade":
-                let lines = post.reading.map { $0.calls.map(ReadAsText.line) } ?? []
+                let lines = (post.reading.map { $0.calls.map(ReadAsText.line) } ?? []) + Self.amounts(post, policies: policies)
                 (kind, detail) = (.trade, lines.isEmpty ? nil : L10n.sentences(lines))
             case "ignore":
                 (kind, detail) = (.ignored, nil)
             default:
                 let waits = post.reading != nil || !post.suggested.isEmpty
                 (kind, detail) = (waits ? .wait : .unreadable, Reason.text(post.reason))
+            }
+        }
+
+        /// What each account would spend on the post's buys: the guru's share of its full position,
+        /// trimmed by the account's maximum per order, as the engine trims it.
+        static func amounts(_ post: ReplayedPost, policies: [String: TradingAccountPolicy]) -> [String] {
+            post.destinations.compactMap { destination in
+                guard destination.action == .buy, let budget = destination.budgetUSD.flatMap({ Decimal(string: $0) }) else {
+                    return nil
+                }
+                let maximum = policies[destination.accountID].flatMap { Decimal(string: $0.maxOrderUSD.trimmed) }
+                let spend = maximum.map { min(budget, $0) } ?? budget
+                return L10n.sentence(L10n.string("%@ into %@", Humanize.dollars("\(spend)"), destination.accountID))
             }
         }
 

@@ -1,10 +1,11 @@
 import DesktopCore
 import SwiftUI
 
-/// Shares per symbol: what CopyTrading bought, what the owner holds outside it, and the broker's
-/// total. A position opens into its lots, each with the post that bought it.
+/// Positions the way a trader reads them: shares, value, average cost against today's price on a
+/// small ruler, and gain or loss, from the broker's valuation. A position opens into its lots, each
+/// with the post that bought it and its own gain or loss, set in under it and parted by whitespace.
 struct PositionsTable: View {
-    let positions: [AccountPositionView]
+    let allPositions: [AccountPositionView]
     let accountID: String
     let environment: TradingEnvironment
     let approvesOrders: Bool
@@ -16,6 +17,27 @@ struct PositionsTable: View {
     let confirmOwner: (String) async throws -> Void
     let saleFinished: () -> Void
     @State private var expanded: Set<String> = []
+
+    init(
+        positions: [AccountPositionView], accountID: String, environment: TradingEnvironment, approvesOrders: Bool,
+        gurus: GuruDirectory, activity: [SourceActivity], openPost: @escaping (SourceActivity) -> Void,
+        saleOperations: (any LotSaleOperations)?, confirmOwner: @escaping (String) async throws -> Void,
+        saleFinished: @escaping () -> Void
+    ) {
+        self.allPositions = positions
+        self.accountID = accountID
+        self.environment = environment
+        self.approvesOrders = approvesOrders
+        self.gurus = gurus
+        self.activity = activity
+        self.openPost = openPost
+        self.saleOperations = saleOperations
+        self.confirmOwner = confirmOwner
+        self.saleFinished = saleFinished
+    }
+
+    /// Positions with something in them; an emptied symbol has nothing to read.
+    private var positions: [AccountPositionView] { allPositions.filter { !PositionRow.isEmpty($0) } }
     @State private var selling: LotSaleTarget?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -33,36 +55,37 @@ struct PositionsTable: View {
         } else {
             VStack(spacing: 0) {
                 header
-                Divider()
+                    .padding(.bottom, 4)
                 ForEach(positions) { position in
                     PositionRow(
                         position: position,
+                        gurus: guruNames(position),
+                        shareDecimals: shareDecimals,
                         isExpanded: expanded.contains(position.id),
                         toggle: { toggle(position) }
                     )
                     if expanded.contains(position.id) {
                         VStack(spacing: 0) {
                             ForEach(position.lots) { lot in
-                                Divider()
                                 let guruName = gurus.gurus.first { $0.id == lot.guruID }?.name ?? lot.guruID.map(Humanize.code)
                                 PositionLotRow(
                                     lot: lot,
                                     guruName: guruName,
+                                    currentPrice: position.currentPrice.flatMap { Decimal(engine: $0) },
                                     post: lot.sourceID.flatMap { id in activity.first { $0.sourceID == id } },
                                     openPost: openPost,
                                     sell: {
                                         selling = LotSaleTarget(
                                             accountID: accountID, environment: environment, symbol: position.symbol, lot: lot,
-                                            guruName: guruName, approvesOrders: approvesOrders)
+                                            guruName: guruName, approvesOrders: approvesOrders,
+                                            currentPrice: position.currentPrice.flatMap { Decimal(engine: $0) })
                                     }
                                 )
                             }
                         }
                         .padding(.leading, PositionRow.lotInset)
+                        .padding(.bottom, 6)
                         .transition(.opacity)
-                    }
-                    if position.id != positions.last?.id {
-                        Divider()
                     }
                 }
             }
@@ -71,7 +94,7 @@ struct PositionsTable: View {
             .accessibilityLabel(L10n.string("Positions"))
             .sheet(item: $selling) { target in
                 LotSaleSheet(
-                    target: target,
+                    flow: LotSaleFlow(target: target),
                     operations: saleOperations,
                     confirmOwner: { try await confirmOwner("Sell \(target.symbol) from \(target.accountID)") },
                     finished: saleFinished
@@ -82,18 +105,39 @@ struct PositionsTable: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            Text(L10n.string("Symbol"))
+            Text(L10n.string("Symbol").uppercased())
                 .padding(.leading, PositionRow.lotInset)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            ForEach(["Copied", "Held outside CopyTrading", "At broker"], id: \.self) { title in
-                Text(L10n.string(title))
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-            }
+            Text(L10n.string("Shares").uppercased())
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            Text(L10n.string("Value").uppercased())
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            Text(L10n.string("Cost → price").uppercased())
+                .frame(width: PositionRow.costColumnWidth)
+            Text(L10n.string("Gain/loss").uppercased())
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .font(.system(size: 12))
+        .font(DesignTokens.eyebrow)
+        .tracking(DesignTokens.eyebrowTracking)
         .foregroundStyle(Palette.tertiaryInk)
-        .padding(.vertical, 6)
+        .padding(.vertical, 8)
         .accessibilityHidden(true)
+    }
+
+    /// The most decimals any position's share count shows, so the column lines up.
+    private var shareDecimals: Int {
+        positions.map { PositionRow.decimals(PositionRow.shares(of: $0)) }.max() ?? 0
+    }
+
+    /// The gurus a position's copied shares came from, by name, in the order first bought.
+    private func guruNames(_ position: AccountPositionView) -> [String] {
+        var names: [String] = []
+        for lot in position.lots {
+            guard let id = lot.guruID else { continue }
+            let name = gurus.name(for: id) ?? Humanize.code(id)
+            if !names.contains(name) { names.append(name) }
+        }
+        return names
     }
 
     private func toggle(_ position: AccountPositionView) {

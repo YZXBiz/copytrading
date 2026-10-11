@@ -5,7 +5,7 @@ import dataclasses
 import datetime as dt
 import logging
 import os
-from collections.abc import AsyncIterator, Collection, Mapping
+from collections.abc import AsyncIterator, Callable, Collection, Mapping
 from contextlib import asynccontextmanager, nullcontext
 from dataclasses import replace
 from functools import partial
@@ -13,7 +13,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from copytrading_engine.backup.restore.gate import restore_manual_disabled
-from copytrading_engine.execution.adapters.alpaca.broker import AlpacaCredentials
+from copytrading_engine.execution.adapters.alpaca.broker import AlpacaBroker, AlpacaCredentials
 from copytrading_engine.execution.application.ports import AccountOpenRefused, BrokerError
 from copytrading_engine.execution.domain.pricing import EntryPricingPolicy
 from copytrading_engine.execution.domain.signals import CopyConfig
@@ -27,6 +27,7 @@ from copytrading_engine.shared.notification_models import NotificationPayload
 from copytrading_engine.shared.raw_message import RawMessage
 from copytrading_engine.shared.route_keys import route_key
 from copytrading_engine.sources.application import Delivery, ForwardBatch
+from copytrading_engine.sources.session import token_rejected
 from copytrading_engine.sources.sqlite import SQLiteSourceStore
 from copytrading_engine.trading.adapters.activation import (
     TradingActivationJournal,
@@ -53,6 +54,7 @@ from copytrading_engine.trading.application.accounts import (
 )
 from copytrading_engine.trading.application.manual_intervention import ManualInterventionService
 from copytrading_engine.trading.application.operator_service import OperatorQueryService
+from copytrading_engine.trading.application.paused_reader import PausedAccountReader, ReadKeys
 from copytrading_engine.trading.application.profile_review import ProfileReviewService
 from copytrading_engine.trading.domain.config import (
     ConnectionCheck,
@@ -95,6 +97,15 @@ class _PausedBeforeReceipt(Exception):
     """Leave the durable delivery pending when Pause interrupts fanout."""
 
 
+def _alpaca_reader(keys: ReadKeys) -> AlpacaBroker:
+    """A broker client the paused reader uses for its three reads, and nothing else."""
+    return AlpacaBroker(AlpacaCredentials(keys.key, keys.secret), keys.environment)
+
+
+# Waits before each new try at Discord after it drops; the last repeats until it connects.
+SOURCE_RETRY_SECONDS: tuple[float, ...] = (5, 15, 30, 60, 120, 300)
+
+
 class TradingRuntime:
     """Own real network resources only between explicit Start and Pause commands."""
 
@@ -107,8 +118,15 @@ class TradingRuntime:
         owner_open_timeout_seconds: float = 10,
         capability_service: TradingCapabilityService | None = None,
         restore_gate_path: Path | None = None,
+        source_retry_seconds: tuple[float, ...] = SOURCE_RETRY_SECONDS,
     ) -> None:
         self._data_dir = data_dir
+        self._source_retry_seconds = source_retry_seconds
+        self._source_retries = 0
+        self._source_retry_at: float | None = None
+        self._source_failure_code = "source_unavailable"
+        self._open_session: Callable[[], SourceSession] | None = None
+        self._session: SourceSession | None = None
         self._restore_gate_path = restore_gate_path or data_dir / ".restore-manual-disabled"
         self._activation_journal = TradingActivationJournal(data_dir / "trading-activation.json")
         self._activation_id: str | None = None
@@ -146,7 +164,7 @@ class TradingRuntime:
                 (item.error_code for item in self._status.accounts if item.id == account_id), None
             ),
         )
-        self.operator = OperatorQueryService(access)
+        self.operator = OperatorQueryService(access, PausedAccountReader(_alpaca_reader))
         self.manual = ManualInterventionService(access)
         self.profiles = ProfileReviewService(
             data_dir,
@@ -157,6 +175,8 @@ class TradingRuntime:
         )
         self._maintenance_lock = asyncio.Lock()
         self._maintenance_active = False
+        self._limits_lock = asyncio.Lock()
+        self._worker: ParseWorker | None = None
 
     def status(self) -> TradingStatus:
         return self._status
@@ -235,12 +255,59 @@ class TradingRuntime:
         self._source_stop = asyncio.Event()
         self._work_arrived = asyncio.Event()
         self._source_failed = False
+        self._source_retries = 0
+        self._source_retry_at = None
         self._failure_code = None
         self._status = TradingStatus(
             state="starting", configured_accounts=len(configuration.accounts)
         )
         self._task = asyncio.create_task(self._run(configuration, secrets))
         return self._status
+
+    async def update_account_limits(self, configuration: TradingConfiguration) -> str:
+        """Copy with changed account limits from each account's next cycle, without pausing.
+
+        Only limits may differ from the setup copying now; anything else needs a full check and
+        Start. While paused there is nothing to swap: the next Start copies with the new setup.
+        Returns the new setup's revision, which the app saves alongside it."""
+        async with self._limits_lock:
+            running = self._configuration
+            if self._task is None or self._task.done() or running is None:
+                return configuration.revision()
+            if configuration.without_limits() != running.without_limits():
+                raise ValueError("Only account limits can change while copying")
+            await self._apply_limits(configuration)
+            self._configuration = configuration
+            record = self._activation_journal.record
+            if (
+                self._activation_id is not None
+                and record is not None
+                and record.activation_id == self._activation_id
+                and record.phase in {"starting", "ready"}
+            ):
+                self._activation_journal.adopt(self._activation_id, configuration.revision())
+            return configuration.revision()
+
+    async def _apply_limits(self, configuration: TradingConfiguration) -> None:
+        """Hand every open account its limits; each swaps them between two of its cycles."""
+        now = dt.datetime.now(dt.UTC)
+        for account in configuration.accounts:
+            supervisor = self._accounts.get(account.id)
+            if supervisor is None:
+                continue
+            supervisor.poll_seconds = account.policy.poll_seconds
+            if supervisor.owner is not None:
+                changes = await supervisor.owner.update_config(
+                    _copy_policy(configuration, account.id), now
+                )
+                if changes:
+                    log.info(
+                        "account_limits_changed id=%s settings=%s",
+                        account.id,
+                        ",".join(change.setting for change in changes),
+                    )
+        if self._worker is not None:
+            self._worker.max_age = _max_signal_age(configuration)
 
     async def check_connection(self, connection: ConnectionCheck) -> CapabilityCheck:
         """Check one service with the keys typed for it; nothing is saved or started."""
@@ -331,6 +398,7 @@ class TradingRuntime:
         return self._status
 
     async def shutdown(self) -> None:
+        self.operator.detach_readers()
         await self.pause()
         task = self._task
         if task is not None:
@@ -381,6 +449,7 @@ class TradingRuntime:
         routing: RoutingRevision | None = None
         decoder: ManagedDecoder | None = None
         session: SourceSession | None = None
+        self._session = None
         stage = "storage_unavailable"
         try:
             database = self._data_dir / "application.db"
@@ -417,14 +486,13 @@ class TradingRuntime:
                 decoder,
                 routes,
                 configuration.provider.model,
-                max_age=max(
-                    account.policy.max_signal_age_seconds for account in configuration.accounts
-                ),
+                max_age=_max_signal_age(configuration),
                 observe=self._telemetry.model_span if self._telemetry else lambda _: nullcontext(),
                 observe_workflow=(
                     self._telemetry.workflow_span if self._telemetry else lambda _: nullcontext()
                 ),
             )
+            self._worker = worker
             stage = "broker_unavailable"
             account_root = self._data_dir / "accounts"
             account_root.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -480,21 +548,38 @@ class TradingRuntime:
                     open_failure=open_failure,
                 )
             self._account_changed()
+            # Limits changed while the accounts opened reach them before the first post.
+            async with self._limits_lock:
+                if self._configuration is not None and self._configuration != configuration:
+                    await self._apply_limits(self._configuration)
             if not any(account.owner is not None for account in self._accounts.values()):
                 if len(refusals) == len(configuration.accounts) and len(set(refusals)) == 1:
                     # Every account waits on the same thing its owner must settle first.
                     stage = refusals[0]
                 raise RuntimeError("No configured account could open")
             stage = "source_unavailable"
-            session = self._factories.session(
-                source,
-                {int(channel) for channel in configuration.source.channel_ids},
+            channels = {int(channel) for channel in configuration.source.channel_ids}
+            authors = (
                 {int(author) for author in configuration.source.author_ids}
                 if configuration.source.author_ids
-                else None,
-                self._source_stop,
-                self._report_source_failure,
+                else None
             )
+            token = secrets.discord_token.get_secret_value()
+
+            def open_session() -> SourceSession:
+                # Each try gets a fresh session and stop signal: a Discord session starts once.
+                self._source_stop = asyncio.Event()
+                fresh = self._factories.session(
+                    source, channels, authors, self._source_stop, self._report_source_failure
+                )
+                fresh.start(token)
+                return fresh
+
+            self._open_session = open_session
+            session = self._factories.session(
+                source, channels, authors, self._source_stop, self._report_source_failure
+            )
+            self._session = session
             notifier = (
                 self._factories.notifier(
                     configuration.notification, secrets.notification_token.get_secret_value()
@@ -507,14 +592,14 @@ class TradingRuntime:
                     await account.refresh()
                 account.start()
             try:
-                session.start(secrets.discord_token.get_secret_value())
+                session.start(token)
             except Exception as exc:  # noqa: BLE001 - the source failure is recorded and retried
                 self._mark_source_failure(exc)
             self._status = replace(self._status, state="degraded")
             stage = "provider_unavailable"
             await probe_model(decoder, worker.model_health)
             stage = "processing_unavailable"
-            await self._work_loop(configuration, source, parser, worker, session, notifier)
+            await self._work_loop(configuration, source, parser, worker, notifier)
         except RoutingChangePending:
             self._failure_code = "routing_change_pending"
         except AccountOwnershipPending:
@@ -530,9 +615,9 @@ class TradingRuntime:
             for account in self._accounts.values():
                 if account.owner is not None:
                     account.owner.request_stop()
-            if session is not None:
+            if self._session is not None:
                 try:
-                    await session.close()
+                    await self._session.close()
                 except Exception as exc:  # noqa: BLE001 - cleanup must not mask the primary outcome
                     log.error("source_close_failed type=%s", type(exc).__name__)
             for account in self._accounts.values():
@@ -549,6 +634,7 @@ class TradingRuntime:
                 for account in self._accounts.values()
             )
             self._accounts.clear()
+            self._worker = None
             if decoder is not None:
                 try:
                     await decoder.close()
@@ -593,7 +679,6 @@ class TradingRuntime:
         source: SQLiteSourceStore,
         parser: SQLiteExtractionStore,
         worker: ParseWorker,
-        session: SourceSession,
         notifier: NotificationSender | None,
     ) -> None:
         forwarder = ForwardBatch(
@@ -612,7 +697,7 @@ class TradingRuntime:
                             for account in configuration.accounts
                             if account.id == connection.account_id
                         ),
-                        configuration_revision=configuration.revision(),
+                        configuration_revision=configuration.routing_revision(),
                         guru_id=route.guru_id,
                         profile_revision=route.profile_revision,
                         repeat_window_minutes=route.repeat_window_minutes,
@@ -638,12 +723,17 @@ class TradingRuntime:
         while not self._stop.is_set():
             # Cleared before the pass: a post captured during it wakes the next pass at once.
             self._work_arrived.clear()
+            await self._retry_source_if_due()
+            session = self._session
+            assert session is not None
             if not self._source_failed:
                 try:
                     await session.ensure_running()
                 except Exception as exc:  # noqa: BLE001 - the source failure is recorded and retried
                     self._mark_source_failure(exc)
                 else:
+                    if session.ready:
+                        self._source_retries = 0
                     if (
                         self._activation_id is not None
                         and session.ready
@@ -700,9 +790,9 @@ class TradingRuntime:
                 oldest_pending_signal_at=signal_backlog.oldest_at,
                 processed_signals=processed,
                 error_code=(
-                    "account_unavailable"
+                    self._account_failure()
                     if any(account.state == "failed" for account in self._accounts.values())
-                    else "source_unavailable"
+                    else self._source_failure_code
                     if self._source_failed
                     else "notification_unavailable"
                     if notification_failed
@@ -730,6 +820,30 @@ class TradingRuntime:
             for wait in waits:
                 wait.cancel()
 
+    async def _retry_source_if_due(self) -> None:
+        """Open Discord again once its wait is over, unless Discord turned the token down."""
+        if not self._source_failed or self._source_retry_at is None or self._open_session is None:
+            return
+        if asyncio.get_running_loop().time() < self._source_retry_at:
+            return
+        self._source_retry_at = None
+        previous, self._session = self._session, None
+        if previous is not None:
+            try:
+                await previous.close()
+            except Exception as exc:  # noqa: BLE001 - the old session is gone either way
+                log.warning("source_close_failed type=%s", type(exc).__name__)
+        self._source_retries += 1
+        log.info("trading_source_retry attempt=%d", self._source_retries)
+        self._source_failed = False
+        try:
+            self._session = self._open_session()
+        except Exception as exc:  # noqa: BLE001 - recorded, and tried again after the next wait
+            self._session = previous
+            self._mark_source_failure(exc)
+            return
+        self._status = replace(self._status, error_code=None)
+
     def _report_source_failure(self, event: str, error: BaseException | None) -> None:
         del event
         self._mark_source_failure(error)
@@ -737,22 +851,39 @@ class TradingRuntime:
     def _mark_source_failure(self, error: BaseException | None) -> None:
         self._source_failed = True
         self._source_stop.set()
-        self._fail_startup_if_pending("source_unavailable")
+        rejected = token_rejected(error)
+        code = "source_unauthorized" if rejected else "source_unavailable"
+        self._source_failure_code = code
+        if not rejected:
+            waits = self._source_retry_seconds
+            wait = waits[min(self._source_retries, len(waits) - 1)] if waits else None
+            self._source_retry_at = (
+                None if wait is None else asyncio.get_running_loop().time() + wait
+            )
+        self._fail_startup_if_pending(code)
         self._status = replace(
             self._status,
             state="degraded",
             source_connected=False,
-            error_code="source_unavailable",
+            error_code=code,
         )
         log.error(
             "trading_source_failed type=%s",
             type(error).__name__ if error is not None else "unknown",
         )
 
+    def _account_failure(self) -> str:
+        """The failed accounts' shared reason, such as another app owning the account, or
+        `account_unavailable` when they fail for different reasons."""
+        reasons = {
+            account.error_code for account in self._accounts.values() if account.state == "failed"
+        }
+        return reason if len(reasons) == 1 and (reason := reasons.pop()) else "account_unavailable"
+
     def _account_changed(self) -> None:
         statuses = tuple(account.status for account in self._accounts.values())
         if any(account.state == "failed" for account in self._accounts.values()):
-            self._fail_startup_if_pending("account_unavailable")
+            self._fail_startup_if_pending(self._account_failure())
         self._status = replace(
             self._status,
             accounts=statuses,
@@ -761,7 +892,7 @@ class TradingRuntime:
             if any(account.state == "failed" for account in self._accounts.values())
             and self._status.state in {"running", "degraded"}
             else self._status.state,
-            error_code="account_unavailable"
+            error_code=self._account_failure()
             if any(account.state == "failed" for account in self._accounts.values())
             else self._status.error_code,
         )
@@ -791,6 +922,10 @@ def _copy_policy(configuration: TradingConfiguration, account_id: str) -> CopyCo
         entry_pricing=EntryPricingPolicy(**account.policy.model_dump(include=pricing)),
         **account.policy.model_dump(exclude=pricing),
     )
+
+
+def _max_signal_age(configuration: TradingConfiguration) -> int:
+    return max(account.policy.max_signal_age_seconds for account in configuration.accounts)
 
 
 def _execution_notification_payload(value: Mapping[str, object]) -> NotificationPayload:

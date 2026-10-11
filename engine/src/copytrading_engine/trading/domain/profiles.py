@@ -3,6 +3,7 @@
 import datetime as dt
 import hashlib
 import json
+from collections.abc import Sequence
 from decimal import ROUND_DOWN, Decimal
 from typing import Literal, Self
 
@@ -79,30 +80,6 @@ class ProfileDraft(BaseModel):
         return self
 
 
-class ReplayedPost(BaseModel):
-    """What one recent post would have done under a guru's draft (ADR-0007); nothing was placed."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    text: str
-    decision: Literal["trade", "ignore", "review"]
-    reason: str
-    reading: PostReading | None
-    instructions: tuple[Instruction, ...]
-    suggested: tuple[Instruction, ...]
-
-
-class ProfileReplay(BaseModel):
-    """A guru's recent posts read with the draft playbook and rules, before switching them on."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    posts: tuple[ReplayedPost, ...]
-    provider: str
-    model: str
-    cost_notice: str = PROFILE_EVALUATION_COST_NOTICE
-
-
 class LearnedPlaybook(BaseModel):
     """A draft for the owner to edit: nothing here is saved or used until they save the profile."""
 
@@ -173,13 +150,14 @@ class InstructionEvaluation(BaseModel):
 
     action: Literal["buy", "reduce", "close"]
     symbol: str
-    price: Decimal
+    # None for a sell at the market (ADR-0007).
+    price: Decimal | None
     fraction: Decimal | None
     entry_price: Decimal | None
     exit_basis: ExitBasis | None
     action_evidence: str
     symbol_evidence: str
-    price_evidence: str
+    price_evidence: str | None
     fraction_evidence: str | None
 
 
@@ -193,6 +171,77 @@ class DestinationEvaluation(BaseModel):
     estimated_quantity: Decimal | None
     exit_basis: ExitBasis | None
     reason: str
+
+
+def size_destinations(
+    instructions: Sequence[Instruction | InstructionEvaluation],
+    destinations: Sequence[RouteConnection],
+) -> tuple[DestinationEvaluation, ...]:
+    """What each account would do with each instruction: a buy's budget and shares after the
+    owner's limits; a sell takes from what the account holds. Nothing is placed."""
+    evaluations: list[DestinationEvaluation] = []
+    for connection in destinations:
+        for instruction in instructions:
+            if instruction.action == "buy":
+                assert instruction.price is not None  # a buy always has the guru's price
+                sized = requested_entry_budget(connection, instruction.fraction)
+                quantity = (
+                    (sized.budget / instruction.price).quantize(
+                        Decimal("0.000001"), rounding=ROUND_DOWN
+                    )
+                    if sized.budget is not None
+                    else None
+                )
+                evaluations.append(
+                    DestinationEvaluation(
+                        account_id=connection.account_id,
+                        action=instruction.action,
+                        symbol=instruction.symbol,
+                        budget_usd=sized.budget,
+                        estimated_quantity=quantity,
+                        exit_basis=None,
+                        reason=sized.reason,
+                    )
+                )
+            else:
+                evaluations.append(
+                    DestinationEvaluation(
+                        account_id=connection.account_id,
+                        action=instruction.action,
+                        symbol=instruction.symbol,
+                        budget_usd=None,
+                        estimated_quantity=None,
+                        exit_basis=instruction.exit_basis,
+                        reason="sells_from_holdings",
+                    )
+                )
+    return tuple(evaluations)
+
+
+class ReplayedPost(BaseModel):
+    """What one recent post would have done under a guru's draft (ADR-0007); nothing was placed."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    text: str
+    decision: Literal["trade", "ignore", "review"]
+    reason: str
+    reading: PostReading | None
+    instructions: tuple[Instruction, ...]
+    suggested: tuple[Instruction, ...]
+    # What each of the guru's accounts would buy or sell, after the owner's limits.
+    destinations: tuple[DestinationEvaluation, ...]
+
+
+class ProfileReplay(BaseModel):
+    """A guru's recent posts read with the draft playbook and rules, before switching them on."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    posts: tuple[ReplayedPost, ...]
+    provider: str
+    model: str
+    cost_notice: str = PROFILE_EVALUATION_COST_NOTICE
 
 
 class ProfileEvaluation(BaseModel):
@@ -411,47 +460,11 @@ class ProfileEvaluationService:
             )
             for item in signal.evidence
         )
-        evaluations: list[DestinationEvaluation] = []
-        review_reasons: list[str] = []
-        if signal.decision == "review":
-            review_reasons.append(signal.reason)
-        for connection in destinations:
-            for instruction in instructions:
-                if instruction.action == "buy":
-                    sized = requested_entry_budget(connection, instruction.fraction)
-                    quantity = (
-                        (sized.budget / instruction.price).quantize(
-                            Decimal("0.000001"), rounding=ROUND_DOWN
-                        )
-                        if sized.budget is not None
-                        else None
-                    )
-                    reason = sized.reason
-                    if reason != "ready":
-                        review_reasons.append(reason)
-                    evaluations.append(
-                        DestinationEvaluation(
-                            account_id=connection.account_id,
-                            action=instruction.action,
-                            symbol=instruction.symbol,
-                            budget_usd=sized.budget,
-                            estimated_quantity=quantity,
-                            exit_basis=None,
-                            reason=reason,
-                        )
-                    )
-                else:
-                    evaluations.append(
-                        DestinationEvaluation(
-                            account_id=connection.account_id,
-                            action=instruction.action,
-                            symbol=instruction.symbol,
-                            budget_usd=None,
-                            estimated_quantity=None,
-                            exit_basis=instruction.exit_basis,
-                            reason="sells_from_holdings",
-                        )
-                    )
+        evaluations = size_destinations(instructions, destinations)
+        review_reasons = [signal.reason] if signal.decision == "review" else []
+        review_reasons += [
+            item.reason for item in evaluations if item.action == "buy" and item.reason != "ready"
+        ]
         return ProfileEvaluation(
             message_identity=message.identity,
             guru_id=profile.guru_id,
@@ -461,6 +474,6 @@ class ProfileEvaluationService:
             decision=signal.decision,
             reason=signal.reason,
             instructions=instructions,
-            destinations=tuple(evaluations),
+            destinations=evaluations,
             review_reasons=tuple(dict.fromkeys(review_reasons)),
         )

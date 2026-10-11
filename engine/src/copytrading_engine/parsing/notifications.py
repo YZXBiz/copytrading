@@ -35,7 +35,8 @@ WAITING = {
 
 def _call(instruction: Instruction) -> str:
     action = {"buy": "Buy", "reduce": "Sell part of", "close": "Sell"}[instruction.action]
-    return f"{action} {instruction.symbol} at ${instruction.price}"
+    price = f"${instruction.price}" if instruction.price is not None else "the market"
+    return f"{action} {instruction.symbol} at {price}"
 
 
 def waiting_notification(
@@ -164,7 +165,11 @@ def decision_notification(
     lines = []
     for instruction in result.instructions:
         action = {"buy": "BUY", "reduce": "TRIM", "close": "EXIT"}[instruction.action]
-        line = f"{action} {instruction.symbol} at source price ${instruction.price}"
+        line = (
+            f"{action} {instruction.symbol} at source price ${instruction.price}"
+            if instruction.price is not None
+            else f"{action} {instruction.symbol} at the market"
+        )
         if instruction.action != "buy":
             line += f"; original entry ${instruction.entry_price}"
             if instruction.action == "reduce":

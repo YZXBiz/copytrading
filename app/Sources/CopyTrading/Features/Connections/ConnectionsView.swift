@@ -1,9 +1,10 @@
 import DesktopCore
 import SwiftUI
+import UniformTypeIdentifiers
 
-/// The one place CopyTrading is set up, top to bottom: Discord, the interpreter, broker accounts,
-/// gurus, and alerts, each a numbered step that turns green when it is done, then one Start
-/// Copying. Services open a frosted panel that grows out of their row; accounts and gurus open
+/// The one place CopyTrading is set up, top to bottom, on a white page: Discord, the interpreter,
+/// broker accounts, gurus, and alerts, each a numbered step that is checked when it is done, then
+/// one Start Copying. Services open a frosted panel that grows out of their row; accounts and gurus open
 /// their editor. People and Accounts only show what this page set up.
 struct ConnectionsView: View {
     @Bindable var model: AppModel
@@ -18,8 +19,6 @@ struct ConnectionsView: View {
     @State private var channelsEntered = false
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.colorSchemeContrast) private var contrast
-    @Environment(\.displayScale) private var displayScale
 
     private var motion: Animation? { reduceMotion ? nil : .smooth(duration: 0.42, extraBounce: 0.04) }
 
@@ -28,7 +27,7 @@ struct ConnectionsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     header
-                        .padding(.bottom, 30)
+                        .padding(.bottom, 40)
                     step(1, .discord) { section(.discord) }
                         .id(SetupTourTarget.discordRow)
                     step(2, .interpreter) { section(.interpreter) }
@@ -61,14 +60,14 @@ struct ConnectionsView: View {
                             .transition(.opacity)
                     }
                 }
-                .padding(.horizontal, 30)
-                .padding(.top, 14)
-                .padding(.bottom, 44)
+                .padding(.horizontal, 40)
+                .padding(.top, 20)
+                .padding(.bottom, 48)
                 .frame(maxWidth: 880, alignment: .leading)
                 .frame(maxWidth: .infinity)
             }
             .scrollEdgeEffectHidden(true, for: .top)
-            .background(Palette.panel)
+            .background(Palette.page)
             .overlayPreferenceValue(ConnectionOriginKey.self) { origins in
                 GeometryReader { layer in
                     ZStack {
@@ -86,15 +85,14 @@ struct ConnectionsView: View {
                     .frame(width: layer.size.width, height: layer.size.height)
                 }
             }
-            .clipShape(.rect(cornerRadius: DesignTokens.panelCornerRadius, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: DesignTokens.panelCornerRadius, style: .continuous)
-                    .strokeBorder(contrast == .increased ? Palette.secondaryInk : Palette.hairline, lineWidth: 1 / displayScale)
-            }
+            .clipped()
             .overlayPreferenceValue(SetupTourTargetKey.self) { targets in
                 // An account or guru sheet covers the page, and a check or start already answers
-                // the last stop; the tour waits behind them.
-                if let tourStop, model.setupEditor == nil, !model.isValidatingTrading, !model.isActivatingTrading {
+                // the last stop; the tour waits behind them. Any open panel, alerts included, hides
+                // the page's card: only a hint inside the panel shows.
+                if let tourStop, model.setupEditor == nil, !model.isValidatingTrading, !model.isActivatingTrading,
+                    panel == nil || tourStop.isInPanel
+                {
                     SetupTourOverlay(stop: tourStop, targets: targets, model: model)
                 }
             }
@@ -113,7 +111,6 @@ struct ConnectionsView: View {
                 withAnimation(motion) { scroller.scrollTo(stop.target, anchor: .center) }
             }
         }
-        .padding([.trailing, .bottom], 8)
         .onChange(of: model.requestedConnection, initial: true) { _, kind in
             guard let kind else { return }
             model.requestedConnection = nil
@@ -130,35 +127,52 @@ struct ConnectionsView: View {
     private var tourStop: SetupTourStop? {
         guard model.isTouringSetup else { return nil }
         let open: ConnectionKind? = if case .editor(let kind) = panel?.page { kind } else { nil }
-        return SetupTourStop.current(progress: progress, channelsEntered: channelsEntered, panel: open)
+        let connected = open.map { ConnectionSummary.of($0, in: model)?.status.tone == .positive } ?? false
+        return SetupTourStop.current(
+            progress: progress, channelsEntered: channelsEntered, panel: open, panelConnected: connected)
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(L10n.string("Connections"))
-                    .font(DesignTokens.pageTitle)
-                    .foregroundStyle(Palette.ink)
-                    .accessibilityAddTraits(.isHeader)
-                Text(L10n.string("Set up CopyTrading here, top to bottom. Nothing is saved or traded until you start copying."))
-                    .font(.body)
-                    .foregroundStyle(Palette.secondaryInk)
-                    .fixedSize(horizontal: false, vertical: true)
+        PageHeadline(
+            L10n.string("Connections"),
+            lede: L10n.string("Set up CopyTrading here, top to bottom. Nothing is saved or traded until you start copying.")
+        ) {
+            HStack(spacing: 8) {
+                headerControls
             }
-            Spacer(minLength: 12)
-            Menu {
-                Button(L10n.string(ideasHidden ? "Show Ideas" : "Hide Ideas"), systemImage: "lightbulb", action: toggleIdeas)
-                Button(L10n.string("Open Getting Started"), systemImage: "hand.wave") { model.selectedScreen = .gettingStarted }
-            } label: {
-                SquareControlLabel(symbol: "ellipsis")
-            }
-            .menuStyle(.button)
-            .buttonStyle(.plain)
-            .menuIndicator(.hidden)
-            .fixedSize()
-            .help(L10n.string("More"))
-            .accessibilityLabel(L10n.string("More"))
         }
+        .fileImporter(isPresented: $model.isShowingSetupImporter, allowedContentTypes: [.plainText, .text, .json]) { result in
+            if case .success(let url) = result { model.importSetup(from: url) }
+        }
+    }
+
+    @ViewBuilder
+    private var headerControls: some View {
+        if model.savedTradingConfiguration == nil {
+            Button(L10n.string("Import Setup…"), systemImage: "square.and.arrow.down") { model.isShowingSetupImporter = true }
+                .labelStyle(.titleOnly)
+                .buttonStyle(PageButtonStyle())
+                .help(L10n.string("Fill every field from a text file with your keys. Nothing is saved until it's checked."))
+                .accessibilityIdentifier("connections.importSetup")
+        }
+        Menu {
+            Button(L10n.string("Import Setup…"), systemImage: "square.and.arrow.down") { model.isShowingSetupImporter = true }
+            Button(L10n.string(ideasHidden ? "Show Ideas" : "Hide Ideas"), systemImage: "lightbulb", action: toggleIdeas)
+            Button(L10n.string("Open Getting Started"), systemImage: "hand.wave") { model.selectedScreen = .gettingStarted }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Palette.ink)
+                .frame(width: 28, height: 28)
+                .background(Palette.well, in: .circle)
+                .contentShape(.circle)
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help(L10n.string("More"))
+        .accessibilityLabel(L10n.string("More"))
     }
 
     /// A service's step, numbered in setup order.
@@ -174,7 +188,7 @@ struct ConnectionsView: View {
     private func section(_ kind: ConnectionKind) -> some View {
         let summary = ConnectionSummary.of(kind, in: model)
         VStack(alignment: .leading, spacing: 10) {
-            SettingsSection(dividerInset: 56) {
+            SettingsSection {
                 switch kind {
                 case .discord:
                     serviceRow(
@@ -218,7 +232,7 @@ struct ConnectionsView: View {
             }
             .setupTourTarget(kind == .interpreter ? .interpreterServices : nil)
             if kind == .interpreter && (summary == nil || isEditingFromProviderRow) {
-                SettingsSection(dividerInset: 56) {
+                SettingsSection {
                     ForEach(ProviderGroup.ownModel.providers, id: \.self) { provider in
                         providerRow(provider, title: L10n.string(provider.title), detail: provider.tagline)
                     }
@@ -313,8 +327,7 @@ struct ConnectionsView: View {
     /// Picks an interpreter service from its own row and opens its settings out of that row.
     private func connect(_ provider: TradingProviderName) {
         let before = model.setupDraft
-        model.setupDraft.provider = provider
-        model.setupDraft.suggestModel(after: before.provider)
+        model.setupDraft.pick(provider)
         beforeConnect = (before, interpreterFingerprint)
         showsAllServices = false
         open(.editor(.interpreter), from: .provider(provider))

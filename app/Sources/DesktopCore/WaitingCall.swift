@@ -55,6 +55,21 @@ public struct WaitingCall: Equatable, Sendable {
         return Self.tradingDay(of: posted) != Self.tradingDay(of: now)
     }
 
+    /// When the post's trading day ends and it can no longer be copied: 20:00 New York time.
+    public var deadline: Date? {
+        EquityCurve.date(source.sourceAt).map(Self.endOfTradingDay(of:))
+    }
+
+    /// 20:00 New York time on the trading day `instant` belongs to.
+    public static func endOfTradingDay(of instant: Date) -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "America/New_York")!
+        var day = tradingDay(of: instant)
+        day.hour = 20
+        day.minute = 0
+        return calendar.date(from: day)!
+    }
+
     /// The New York trading day an instant belongs to; from 20:00 it is the next day's, as the
     /// engine's `trade_date` counts it.
     public static func tradingDay(of instant: Date) -> DateComponents {

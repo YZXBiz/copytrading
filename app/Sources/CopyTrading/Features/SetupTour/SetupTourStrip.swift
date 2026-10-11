@@ -21,11 +21,11 @@ struct SetupTourStrip: View {
                     if progress.isDone(step) && step != current {
                         Image(systemName: "checkmark")
                             .font(.system(size: 8.5, weight: .bold))
-                            .foregroundStyle(Palette.accent)
+                            .foregroundStyle(Palette.ink)
                     }
                     Text(L10n.string(step.shortTitle))
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(step == current ? Palette.accent : Palette.tertiaryInk)
+                        .foregroundStyle(step == current ? Palette.ink : Palette.tertiaryInk)
                 }
             }
         }

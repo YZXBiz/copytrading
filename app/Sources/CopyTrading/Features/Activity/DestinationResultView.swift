@@ -47,11 +47,6 @@ struct DestinationResultView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 14)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(Palette.hairline)
-                .frame(height: 1)
-        }
         .accessibilityElement(children: .contain)
         .textSelection(.enabled)
     }

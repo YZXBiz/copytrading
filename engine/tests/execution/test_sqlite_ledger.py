@@ -20,6 +20,7 @@ from copytrading_engine.execution.adapters.owner import ExecutionOwner
 from copytrading_engine.execution.adapters.resources import default_account_lock_root
 from copytrading_engine.execution.adapters.sqlite_ledger import Store
 from copytrading_engine.execution.application.engine import CopyEngine
+from copytrading_engine.execution.application.ports import AccountOpenRefused
 from copytrading_engine.execution.domain.events import JournalEvent, SignalRejected
 from copytrading_engine.execution.domain.lifecycle import AccountControlCommand
 from copytrading_engine.execution.domain.signals import CopyConfig
@@ -320,7 +321,7 @@ async def test_owner_binds_only_on_explicit_open_and_replays_receive(tmp_path):
             await owner.receive(
                 destination_signal(signal.model_copy(update={"text": "changed"})), NOW
             )
-        with pytest.raises(RuntimeError, match="Another executor owns this broker account"):
+        with pytest.raises(AccountOpenRefused, match="account_in_use"):
             await ExecutionOwner.open(
                 tmp_path / "account-b",
                 keys,
@@ -388,7 +389,7 @@ asyncio.run(main())
     try:
         assert child.stdout is not None
         assert await asyncio.to_thread(child.stdout.readline) == "READY\n"
-        with pytest.raises(RuntimeError, match="Another executor owns this broker account"):
+        with pytest.raises(AccountOpenRefused, match="account_in_use"):
             await ExecutionOwner.open(
                 tmp_path / "second" / "account",
                 keys,

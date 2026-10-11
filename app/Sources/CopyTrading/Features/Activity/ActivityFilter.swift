@@ -2,18 +2,18 @@ import DesktopCore
 import Foundation
 
 enum ActivityFilter: String, CaseIterable, Identifiable {
-    case all = "All"
-    case waiting = "Waiting for You"
-    case trades = "Trades"
+    case all = "All posts"
+    case waiting = "Needs you"
+    case trades = "Traded"
 
     var id: String { rawValue }
 
     @MainActor
     var title: String {
         switch self {
-        case .all: L10n.string("All")
-        case .waiting: L10n.string("Waiting for You")
-        case .trades: L10n.string("Trades")
+        case .all: L10n.string("All posts")
+        case .waiting: L10n.string("Needs you")
+        case .trades: L10n.string("Traded")
         }
     }
 

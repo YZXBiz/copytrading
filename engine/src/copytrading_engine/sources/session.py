@@ -138,6 +138,11 @@ async def recover_recent_messages(
         log.info("source_recovery_complete channel=%s cursor=%s", channel_id, last_id)
 
 
+def token_rejected(error: BaseException | None) -> bool:
+    """Discord refused the token itself, so trying again cannot help until a new one is pasted."""
+    return isinstance(error, discord.LoginFailure)
+
+
 class DiscordSession:
     """Expose lifecycle operations while keeping recovery and task state private."""
 

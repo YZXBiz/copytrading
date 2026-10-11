@@ -56,6 +56,19 @@ class AccountControlChanged(EventPayloadValue):
     result: AccountControlResult
 
 
+class LimitChange(Value):
+    """One account limit the owner changed while copying: its policy name, before and after."""
+
+    setting: Identifier
+    before: str
+    after: str
+
+
+class LimitsChanged(EventPayloadValue):
+    kind: Literal["limits_changed"] = "limits_changed"
+    changes: tuple[LimitChange, ...] = Field(min_length=1)
+
+
 class OwnershipIncidentOpened(EventPayloadValue):
     kind: Literal["ownership_incident_opened"] = "ownership_incident_opened"
     incident: OwnershipIncident
@@ -143,10 +156,17 @@ class BrokerAcknowledged(EventPayloadValue):
     message_id: Identifier
 
 
+# Why CopyTrading asked Alpaca to cancel an order: it went unfilled for the account's order
+# timeout, a sell of the same stock replaced a buy still waiting, or copying stopped.
+CancelReason = Literal["timeout", "replaced_by_sell", "copying_stopped"]
+
+
 class CancelRequested(EventPayloadValue):
     kind: Literal["cancel_requested"] = "cancel_requested"
     client_id: Identifier
     message_id: Identifier
+    # None for orders cancelled before the reason was recorded.
+    reason: CancelReason | None = None
 
 
 class QuoteUnavailable(EventPayloadValue):
@@ -284,6 +304,7 @@ type EventPayload = Annotated[
     AccountBound
     | AccountInventoried
     | AccountControlChanged
+    | LimitsChanged
     | OwnershipIncidentOpened
     | OwnershipResolved
     | SignalRejected

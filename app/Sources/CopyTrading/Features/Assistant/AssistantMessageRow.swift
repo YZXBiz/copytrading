@@ -80,10 +80,8 @@ struct AssistantMessageRow: View {
                         .foregroundStyle(StatusTone.caution.color)
                 }
                 .font(DesignTokens.caption)
-                .padding(.horizontal, 11)
-                .padding(.vertical, 9)
+                .padding(.vertical, 4)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(StatusTone.caution.color.opacity(0.08), in: .rect(cornerRadius: 10, style: .continuous))
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("assistant.error")
             }

@@ -38,18 +38,4 @@ enum ConnectionIdea: String, CaseIterable, Identifiable {
         case .telegram: SetupHelp.telegram
         }
     }
-
-    /// Each idea has its own tint: peach, lilac, mint, and sky.
-    func tint(dark: Bool) -> Color {
-        switch (self, dark) {
-        case (.channelID, false): Color(red: 1.0, green: 0.969, blue: 0.941)
-        case (.discordToken, false): Color(red: 0.961, green: 0.949, blue: 0.996)
-        case (.interpreterKey, false): Color(red: 0.945, green: 0.98, blue: 0.949)
-        case (.telegram, false): Color(red: 0.941, green: 0.969, blue: 0.996)
-        case (.channelID, true): Color(red: 0.2, green: 0.17, blue: 0.15)
-        case (.discordToken, true): Color(red: 0.18, green: 0.17, blue: 0.22)
-        case (.interpreterKey, true): Color(red: 0.15, green: 0.19, blue: 0.16)
-        case (.telegram, true): Color(red: 0.14, green: 0.18, blue: 0.22)
-        }
-    }
 }

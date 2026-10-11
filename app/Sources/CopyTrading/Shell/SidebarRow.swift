@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A sidebar row: a grey symbol, 14pt graphite text, and, when chosen, a light
+/// A sidebar row: a grey symbol, graphite text, and, when chosen, a light
 /// grey pill. Never the accent: selection is a place, not an alarm. Screens and Settings pages
 /// both list this way.
 struct SidebarRow: View {
@@ -19,12 +19,12 @@ struct SidebarRow: View {
         Button(action: select) {
             HStack(spacing: 9) {
                 Image(systemName: symbol)
-                    .font(.system(size: 15))
+                    .font(.system(size: 13))
                     .foregroundStyle(Palette.tertiaryInk)
                     .frame(width: 20)
                     .accessibilityHidden(true)
                 Text(L10n.string(title))
-                    .font(.system(size: 14))
+                    .font(DesignTokens.sidebarTitle.weight(.regular))
                     .foregroundStyle(Palette.ink)
                 Spacer(minLength: 4)
                 if badge > 0 {
@@ -38,7 +38,7 @@ struct SidebarRow: View {
                         .accessibilityHidden(true)
                 }
             }
-            .padding(.horizontal, 9)
+            .padding(.horizontal, 10)
             .frame(height: 32)
             .background(
                 isSelected ? Palette.sidebarSelection : isHovering ? Palette.hover : .clear,

@@ -1,8 +1,7 @@
 import SwiftUI
 
-/// The how-to, written as a document: a white
-/// page on the canvas with a checklist that ticks itself as the setup fills in, live pictures of
-/// each screen, the safety controls, and every shortcut.
+/// The how-to, written as one white page: a hero whose steps tick themselves as the setup fills
+/// in, how a post travels, the safety controls, and every shortcut.
 struct GettingStartedView: View {
     @Bindable var model: AppModel
     let feature: AccountFeatureModel
@@ -13,10 +12,9 @@ struct GettingStartedView: View {
             ScrollView {
                 GuideDocument(model: model)
                     .padding(.horizontal, DesignTokens.pagePadding)
-                    .padding(.top, DesignTokens.pageTopPadding + 10)
-                    .padding(.bottom, 40)
                     .frame(maxWidth: .infinity)
             }
+            .background(Palette.page)
             .onChange(of: model.guideAnchor, initial: true) { _, anchor in
                 reveal(anchor, using: proxy)
             }

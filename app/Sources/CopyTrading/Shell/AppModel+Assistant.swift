@@ -45,11 +45,47 @@ extension AppModel {
     /// doesn't settle it.
     func assistantContext(selectedPost: SourceActivity?) -> AssistantAskContext {
         AssistantAskContext(
-            screen: selectedScreen.rawValue,
-            selectedSourceID: selectedScreen == .activity ? selectedPost?.sourceID : nil,
-            selectedGuruID: selectedScreen == .people ? openGuruID : nil,
+            screen: selectedScreen.assistantName,
+            selectedSourceID: selectedPost?.sourceID,
+            selectedAccountID: selectedScreen.accountID,
+            selectedGuruID: selectedScreen.guruID,
             language: AppLanguagePreference.shared.language.rawValue,
-            gurus: assistantGurus)
+            gurus: assistantGurus,
+            setup: assistantSetup)
+    }
+
+    /// Connections as the owner sees it, saved or not, without a single key: whether each part is
+    /// connected, filled in, missing, or failed its check.
+    var assistantSetup: AssistantSetup {
+        let progress = setupProgress
+        func state(_ status: ConnectionStatus?, done: Bool) -> AssistantSetup.State {
+            switch status?.tone {
+            case .positive: .connected
+            case .critical: .failed
+            case .caution: done ? .failed : .missing
+            default: done ? .filled : .missing
+            }
+        }
+        let accounts = setupDraft.accounts.compactMap { account -> AssistantSetup.Account? in
+            let name = account.name.trimmed
+            guard !name.isEmpty else { return nil }
+            let status = ConnectionStatus.account(account, in: self)
+            let accountState: AssistantSetup.State =
+                switch status.tone {
+                case .positive: .connected
+                case .critical: .failed
+                case .caution: .missing
+                default: .filled
+                }
+            return AssistantSetup.Account(name: String(name.prefix(64)), environment: account.environment, state: accountState)
+        }
+        return AssistantSetup(
+            saved: savedTradingConfiguration != nil,
+            copying: tradingStatus?.state == .running || tradingStatus?.state == .degraded,
+            unsavedChanges: hasUnsavedSetupChanges,
+            discord: state(ConnectionStatus.discord(self), done: progress.isDone(.discord)),
+            interpreter: state(ConnectionStatus.interpreter(self), done: progress.isDone(.interpreter)),
+            accounts: accounts)
     }
 
     /// Every guru by the name the owner gave them: the saved setup's, else the one being set up.
@@ -70,18 +106,21 @@ extension AppModel {
         }
     }
 
-    /// Opens what an answer points at: the post in Activity, the account in Accounts, or the guru's sheet in People.
+    /// Opens what an answer points at: the post on the first account it reached, the account, or the guru.
     func follow(_ link: AssistantLink, activity: [SourceActivity], focusPost: (SourceActivity.ID) -> Void) {
         switch link.kind {
         case "post":
-            if let post = activity.first(where: { $0.sourceID == link.id }) { focusPost(post.id) }
-            selectedScreen = .activity
+            guard let post = activity.first(where: { $0.sourceID == link.id }) else { return }
+            focusPost(post.id)
+            if let accountID = post.destinations.first?.accountID {
+                selectedScreen = .account(accountID)
+            } else if let guruID = post.guruID {
+                selectedScreen = .guru(guruID)
+            }
         case "account":
-            requestedAccountID = link.id
-            selectedScreen = .accounts
+            selectedScreen = .account(link.id)
         case "guru":
-            requestedGuruID = link.id
-            selectedScreen = .people
+            selectedScreen = .guru(link.id)
         default:
             break
         }

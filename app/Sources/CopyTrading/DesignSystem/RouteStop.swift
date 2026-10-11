@@ -4,4 +4,6 @@ struct RouteStop: Identifiable {
     let state: String
     let tone: StatusTone
     var id: String { title }
+    /// A stop that wants the owner's eye says its state in ink.
+    var needsLook: Bool { tone == .caution || tone == .critical }
 }

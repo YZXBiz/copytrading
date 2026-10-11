@@ -40,11 +40,6 @@ struct ActivityCapturedEmbedView: View {
             }
         }
         .padding(.leading, 14)
-        .overlay(alignment: .leading) {
-            Rectangle()
-                .fill(Palette.hairline)
-                .frame(width: 1)
-        }
         .accessibilityElement(children: .contain)
     }
 }

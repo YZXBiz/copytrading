@@ -10,6 +10,10 @@ type EntryPermission = Literal["disabled", "enabled", "paused"]
 type RecoveryPreference = Literal["manual", "automatic"]
 
 
+class AccountOwnerClosed(RuntimeError):
+    """The account's executor is stopping or stopped; its retained ledger answers instead."""
+
+
 class AccountControlConflict(ValueError):
     """A stable command identity was reused with different content."""
 

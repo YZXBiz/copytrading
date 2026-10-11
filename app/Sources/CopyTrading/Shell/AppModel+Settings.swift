@@ -14,6 +14,6 @@ extension AppModel {
 
     func closeSettings() {
         settingsTrail.removeAll()
-        selectedScreen = screenBeforeSettings == .settings ? .today : screenBeforeSettings
+        selectedScreen = screenBeforeSettings == .settings ? homeScreen : screenBeforeSettings
     }
 }

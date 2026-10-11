@@ -7,8 +7,11 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+from copytrading_engine.execution.domain.market import Position
+from copytrading_engine.execution.domain.orders import OwnedLot
 from copytrading_engine.execution.domain.risk import (
     EntryFacts,
+    account_exposure,
     entry_budget,
     requested_entry_budget,
 )
@@ -149,3 +152,29 @@ def test_the_maximum_per_order_trims_a_buy_and_says_so():
         True,
     )
     assert not decide(limits, connection=connection, fraction=Decimal(1) / 6).trimmed
+
+
+def test_a_sold_lot_leaves_in_stocks_while_shares_held_outside_still_count():
+    sold = OwnedLot(
+        symbol="PM",
+        entry_price=Decimal("201"),
+        source_key="copy-pm",
+        original_qty=Decimal(1),
+        remaining_qty=Decimal(0),
+        average_price=Decimal("201.70"),
+        entry_remaining={"copy-pm": Decimal(0)},
+        entry_prices={"copy-pm": Decimal("201")},
+    )
+    outside = Position(
+        symbol="CBRS",
+        qty=Decimal(10),
+        market_value=Decimal("2086"),
+        currency="USD",
+        asset_class="us_equity",
+    )
+    closed = Position(symbol="PM", qty=Decimal(0), currency="USD", asset_class="us_equity")
+
+    exposure = account_exposure((outside, closed), (sold,), (), account_currency="USD")
+
+    assert exposure.by_symbol == {"CBRS": Decimal("2086")}
+    assert exposure.total == Decimal("2086")

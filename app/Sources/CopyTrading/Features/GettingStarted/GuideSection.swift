@@ -11,9 +11,10 @@ struct GuideSection<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 20) {
             Text(L10n.string(title))
                 .font(DesignTokens.documentHeading)
+                .tracking(DesignTokens.listHeadingTracking)
                 .foregroundStyle(Palette.ink)
                 .accessibilityAddTraits(.isHeader)
             content

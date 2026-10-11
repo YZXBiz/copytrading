@@ -71,7 +71,7 @@ struct OrderSteps: View {
                 .monospacedDigit()
             Spacer(minLength: 8)
             if let time {
-                Text(time, format: .dateTime.hour().minute().second())
+                Text(time, format: AppTime.style(.dateTime.hour().minute().second()))
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
             }

@@ -420,11 +420,10 @@ async def test_symbol_incident_blocks_only_affected_symbol_after_manual_resume(t
             NOW,
         )
 
-        # An AAPL share appears outside the app and stays: its incident is open while it lasts
-        # (one that matches again closes by itself).
+        # An AAPL share appears outside the app: its question is open until the next sync
+        # settles it from the filled count, and meanwhile only AAPL waits.
         broker.holdings["AAPL"] = Decimal("1")
-        await owner.cycle(NOW + dt.timedelta(seconds=1), halted=False)
-        observation = await owner.cycle(NOW + dt.timedelta(seconds=2), halted=False)
+        observation = await owner.cycle(NOW + dt.timedelta(seconds=1), halted=False)
         incidents = tuple(observation.ledger.ownership_incidents.values())
         assert any(incident.symbol == "AAPL" and not incident.resolved for incident in incidents)
 
@@ -695,7 +694,7 @@ def test_cancelled_manual_order_is_reconciled_before_a_new_preview(tmp_path):
     first = app.confirm(confirmation_request(), NOW + dt.timedelta(seconds=1))
     assert first.status == "accepted"
     assert first.client_id is not None
-    engine.cancel(engine.ledger.order(first.client_id), NOW + dt.timedelta(seconds=2))
+    engine.cancel(engine.ledger.order(first.client_id), NOW + dt.timedelta(seconds=2), "timeout")
 
     cancelled = app.confirm(confirmation_request(), NOW + dt.timedelta(seconds=3))
     assert cancelled.status == "cancelled"

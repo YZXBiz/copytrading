@@ -33,8 +33,8 @@ from copytrading_engine.execution.domain.ownership import (
     OwnershipResolution,
     OwnershipResolutionRequest,
 )
+from copytrading_engine.execution.presentation.account_feed import AccountFeedPage
 from copytrading_engine.execution.presentation.operator_views import (
-    AccountEventPage,
     AccountOverviewPage,
 )
 from copytrading_engine.host.installation import Installation
@@ -86,14 +86,14 @@ class _OperatorControl:
         fixture = contract("source-activity-response.json")
         return SourceActivityPage.model_validate_json(json.dumps(fixture["ok"]["activity"]))
 
-    async def account_events(
+    async def account_feed(
         self, account_id: str, before_seq: int | None, limit: int
-    ) -> AccountEventPage:
+    ) -> AccountFeedPage:
         assert account_id == "paper"
         assert before_seq is None
         assert limit == 50
-        fixture = contract("account-events-response.json")
-        return AccountEventPage.model_validate_json(json.dumps(fixture["ok"]["events"]))
+        fixture = contract("account-feed-response.json")
+        return AccountFeedPage.model_validate_json(json.dumps(fixture["ok"]["feed"]))
 
     async def equity_history(self, account_id: str, window: HistoryWindow) -> EquityHistory | None:
         if account_id != "paper":
@@ -154,12 +154,10 @@ async def test_account_operator_contract_fixtures_and_exact_request_schema(store
     assert accounts == contract("account-overviews-response.json")
     activity = decode(await server.handle_line(request_line("get_source_activity", "req-activity")))
     assert activity == contract("source-activity-response.json")
-    events = decode(
-        await server.handle_line(
-            request_line("get_account_events", "req-events", account_id="paper")
-        )
+    feed = decode(
+        await server.handle_line(request_line("get_account_feed", "req-feed", account_id="paper"))
     )
-    assert events == contract("account-events-response.json")
+    assert feed == contract("account-feed-response.json")
     history = decode(
         await server.handle_line(
             request_line(
@@ -180,7 +178,7 @@ async def test_account_operator_contract_fixtures_and_exact_request_schema(store
         request_line("get_accounts", "bad", before_account_id=""),
         request_line("get_accounts", "bad", before_account_id="a" * 65),
         request_line("get_source_activity", "bad", limit=True),
-        request_line("get_account_events", "bad", account_id="paper", before_seq=0),
+        request_line("get_account_feed", "bad", account_id="paper", before_seq=0),
         request_line(
             "get_equity_history",
             "bad",

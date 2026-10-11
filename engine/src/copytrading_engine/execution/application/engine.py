@@ -20,6 +20,7 @@ from copytrading_engine.execution.application.ports import (
 )
 from copytrading_engine.execution.domain.events import (
     BrokerAcknowledged,
+    CancelReason,
     CancelRequested,
     Exposure,
     JournalEvent,
@@ -32,6 +33,10 @@ from copytrading_engine.execution.domain.order_lifecycle import OrderStatus, is_
 from copytrading_engine.execution.domain.orders import OrderPlan, OrderRecord, OrderRequest
 from copytrading_engine.execution.domain.ownership import account_activity_reason
 from copytrading_engine.execution.domain.positions import PositionAudit, compare_positions
+from copytrading_engine.execution.domain.pricing import (
+    SELL_FLOOR_QUOTE_MAX_AGE_SECONDS,
+    quote_problem,
+)
 from copytrading_engine.execution.domain.progress import Pending
 from copytrading_engine.execution.domain.risk import (
     EntryFacts,
@@ -123,6 +128,19 @@ class _SubmissionGuard:
         return None, current
 
 
+# Buys blocked only while an account recovers after a restart wait for it instead of being
+# skipped: the next cycle tries again, and the signal age still decides when a post is too old.
+RECOVERY_WAITS = frozenset({"recovery_pending", "manual_resume_required"})
+# A sell at the market with no fresh bid yet waits and tries again each cycle: a thin market's
+# quotes can be minutes apart. The account's maximum signal age still ends the wait.
+QUOTE_WAITS = frozenset({"quote_stale", "quote_unavailable"})
+# What a held buy that aged out says instead of a bare "stale".
+_AGED_OUT_WAITING = {
+    "recovery_pending": "stale_during_recovery",
+    "manual_resume_required": "stale_waiting_for_resume",
+}
+
+
 class CopyEngine:
     def __init__(
         self,
@@ -197,7 +215,7 @@ class CopyEngine:
                 and is_cancelable(current.status)
                 and (now - current.created_at).total_seconds() >= self.config.order_timeout_seconds
             ):
-                self.cancel(current, now)
+                self.cancel(current, now, "timeout")
 
         # Operator-released IDs leave the ordinary pending set, but remain
         # under broker observation for their full audit history.
@@ -208,9 +226,24 @@ class CopyEngine:
             update = self.broker.lookup(client_id)
             if update is not None:
                 self.ledger.apply_order(client_id, update, now)
-        self.ledger.open_ownership_incidents(self.audit_positions(), now)
+        self.ledger.open_ownership_incidents(self.audit_positions(), now, self._outside_orders())
 
-    def cancel(self, order: OrderRecord, now: dt.datetime) -> None:
+    def _outside_orders(self) -> frozenset[str]:
+        """Stocks with an open broker order the app didn't place. Read only while a holdings
+        question is open, since only settling one needs it."""
+        if not any(
+            not incident.resolved
+            for incident in self.ledger.snapshot().ownership_incidents.values()
+        ):
+            return frozenset()
+        known = {order.client_id for order in self.pending()}
+        return frozenset(
+            order.symbol
+            for order in self.broker.open_orders()
+            if order.client_order_id not in known
+        )
+
+    def cancel(self, order: OrderRecord, now: dt.datetime, reason: CancelReason) -> None:
         if not order.broker_id or not is_cancelable(order.status):
             return
         try:
@@ -221,6 +254,7 @@ class CopyEngine:
                     payload=CancelRequested(
                         client_id=order.client_id,
                         message_id=order.message_id,
+                        reason=reason,
                     ),
                 )
             )
@@ -228,6 +262,19 @@ class CopyEngine:
             if exc.status not in {404, 422}:
                 raise
         # A later lookup must confirm cancellation before releasing the reservation.
+
+    def _market_bid(self, symbol: str, now: dt.datetime) -> tuple[Decimal | None, str]:
+        """The live bid for a sell at the market, or why there is none to sell against."""
+        if not isinstance(self.broker, QuoteBroker):
+            return None, "quote_unavailable"
+        try:
+            quote = self.broker.quote(symbol)
+        except BrokerError:
+            return None, "quote_unavailable"
+        problem = quote_problem(quote, quote.bid, now, SELL_FLOOR_QUOTE_MAX_AGE_SECONDS)
+        if problem is not None:
+            return None, problem
+        return quote.bid, "ready"
 
     def market_session(self, now: dt.datetime) -> Session:
         date = trade_date(now).isoformat()
@@ -275,7 +322,7 @@ class CopyEngine:
             if s.action != "buy" and not manual:
                 for order in active:
                     if order.message_id != message_id and is_cancelable(order.status):
-                        self.cancel(order, now)
+                        self.cancel(order, now, "replaced_by_sell")
             return TradeDecision(None, "wait_pending_order")
         session = self.market_session(now)
         if session == Session.CLOSED:
@@ -300,8 +347,15 @@ class CopyEngine:
                 return TradeDecision(None, "overnight_not_supported")
             if asset.overnight_halted or "overnight_halted" in asset.attributes:
                 return TradeDecision(None, "overnight_halted")
-        tick = Decimal("0.01") if s.price >= 1 else Decimal("0.0001")
-        if s.action == "buy" and s.price != s.price.quantize(tick):
+        source_price = s.price
+        if source_price is None:
+            # A sell at the market (ADR-0007): the live bid stands in for the guru's price, so
+            # the limit under it still bounds how low the copy can fill.
+            source_price, problem = self._market_bid(s.symbol, now)
+            if source_price is None:
+                return TradeDecision(None, problem)
+        tick = Decimal("0.01") if source_price >= 1 else Decimal("0.0001")
+        if s.action == "buy" and source_price != source_price.quantize(tick):
             return TradeDecision(None, "invalid_price_tick")
         lot_id = None
         limit_price = None
@@ -331,7 +385,7 @@ class CopyEngine:
         requested_usd = None
         budget_usd = None
         if s.action == "buy":
-            limit_price = c.entry_pricing.limit_price(s.price)
+            limit_price = c.entry_pricing.limit_price(source_price)
             # Every buy of a stock joins the guru's open lot of it (ADR-0010).
             open_lots = self.ledger.position_lots(source_key, s.symbol)
             joins_lot = open_lots[0][0] if open_lots else None
@@ -388,7 +442,7 @@ class CopyEngine:
             requested_usd = decision.requested
             budget_usd = decision.budget
             qty = (decision.budget / limit_price).quantize(STEP, rounding=ROUND_DOWN)
-            entry_price = s.price
+            entry_price = source_price
         else:
             if chosen_lot is not None:
                 lot = self.ledger.snapshot().lots.get(chosen_lot)
@@ -430,7 +484,7 @@ class CopyEngine:
                     qty = min(qty, held * s.fraction)
             qty = qty.quantize(STEP, rounding=ROUND_DOWN)
             # An exit is a limit order too, no lower than the allowance under the guru's price.
-            limit_price = c.entry_pricing.exit_limit_price(s.price)
+            limit_price = c.entry_pricing.exit_limit_price(source_price)
         if not asset.fractionable:
             qty = qty.quantize(Decimal(1), rounding=ROUND_DOWN)
         if qty <= 0:
@@ -467,7 +521,7 @@ class CopyEngine:
                 qty=qty,
                 type="limit",
                 limit_price=limit_price,
-                source_price=s.price,
+                source_price=source_price,
                 entry_tolerance_pct=c.entry_pricing.max_above_signal_pct
                 if s.action == "buy"
                 else c.entry_pricing.max_below_signal_pct,
@@ -533,14 +587,20 @@ class CopyEngine:
             market_session=self.market_session,
         )
         blocked, current = guard.check()
+        if self._held_for_recovery(instruction, blocked):
+            return
         if blocked is not None:
-            self.ledger.skip(message.key, index, blocked, current)
+            self.ledger.skip(
+                message.key, index, self._skip_reason(instruction, blocked, controls), current
+            )
             return
         with self.observer.span("risk_checks", message.key):
             decision = self.decide(
                 instruction, message.key, message.source_key, current, halted=controls.halted()
             )
         if decision.reason == "wait_pending_order":
+            return
+        if decision.plan is None and instruction.action != "buy" and decision.reason in QUOTE_WAITS:
             return
         if decision.plan is None:
             details = tuple(
@@ -561,11 +621,30 @@ class CopyEngine:
             )
             return
         blocked, current = guard.check(decision.plan)
+        if self._held_for_recovery(instruction, blocked):
+            return
         if blocked is not None:
-            self.ledger.skip(message.key, index, blocked, current)
+            self.ledger.skip(
+                message.key, index, self._skip_reason(instruction, blocked, controls), current
+            )
             return
         order = self.ledger.prepare(decision.plan, message.key, index, current)
         self._submit_prepared_order(message.key, order, guard)
+
+    @staticmethod
+    def _held_for_recovery(instruction: Instruction, blocked: str | None) -> bool:
+        """A buy that only waits for the account's restart recovery stays pending."""
+        return instruction.action == "buy" and blocked in RECOVERY_WAITS
+
+    @staticmethod
+    def _skip_reason(instruction: Instruction, blocked: str, controls: _ProcessControls) -> str:
+        """A buy that aged out while its account recovered says why it waited, not just that it
+        is old."""
+        if instruction.action == "buy" and blocked == "stale":
+            waiting = controls.entry_block_reason()
+            if waiting in _AGED_OUT_WAITING:
+                return _AGED_OUT_WAITING[waiting]
+        return blocked
 
     def _submit_prepared_order(
         self,

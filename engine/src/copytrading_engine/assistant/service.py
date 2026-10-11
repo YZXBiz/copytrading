@@ -49,6 +49,35 @@ class AskGuru(BaseModel):
     name: str = Field(min_length=1, max_length=100)
 
 
+MAX_SETUP_ACCOUNTS = 20
+
+type SetupState = Literal["connected", "filled", "missing", "failed"]
+
+
+class AskSetupAccount(BaseModel):
+    """An account in Connections: its name, paper or live, and how far it is set up. No keys."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    name: str = Field(min_length=1, max_length=64)
+    environment: Literal["paper", "live"]
+    state: SetupState
+
+
+class AskSetup(BaseModel):
+    """What Connections holds, which may not be saved yet, so the assistant can tell an account
+    that is set up but not started from no account at all. It never carries a key or a token."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    saved: bool
+    copying: bool
+    unsaved_changes: bool
+    discord: SetupState
+    interpreter: SetupState
+    accounts: tuple[AskSetupAccount, ...] = Field(default=(), max_length=MAX_SETUP_ACCOUNTS)
+
+
 class AskContext(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -67,6 +96,7 @@ class AskContext(BaseModel):
     selected_guru_id: str | None = None
     language: Literal["en", "zh-Hans"] = "en"
     gurus: tuple[AskGuru, ...] = Field(default=(), max_length=MAX_GURUS)
+    setup: AskSetup | None = None
 
     def guru_names(self) -> dict[str, str]:
         return {guru.id: guru.name for guru in self.gurus}

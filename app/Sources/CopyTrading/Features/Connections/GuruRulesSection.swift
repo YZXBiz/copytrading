@@ -7,30 +7,28 @@ struct GuruRulesSection: View {
     @Binding var route: TradingRouteDraft
 
     var body: some View {
-        Section {
-            Toggle(isOn: skipsReposts) {
-                Text(L10n.string("Skip re-posted calls"))
-                Text(L10n.string(Self.repostHint(route.repeatWindowMinutes)))
+        SheetSection(L10n.string("Re-posted calls"), detail: L10n.string("When the guru posts the same call again.")) {
+            SheetRow(title: L10n.string("Skip re-posted calls"), hint: L10n.string(Self.repostHint(route.repeatWindowMinutes))) {
+                Toggle(L10n.string("Skip re-posted calls"), isOn: skipsReposts)
+                    .labelsHidden()
+                    .compactSwitch()
             }
-            .compactSwitch()
-            .accessibilityLabel(Text(L10n.string("Skip re-posted calls")))
             if route.repeatWindowMinutes != nil {
-                LabeledContent(L10n.string("Counts as a re-post within")) {
+                SheetRow(title: L10n.string("Counts as a re-post within")) {
                     HStack(spacing: 6) {
-                        TextField(L10n.string("Minutes"), value: repeatMinutes, format: .number)
+                        // The control's own title is what VoiceOver reads, once.
+                        TextField(L10n.string("Re-post window in minutes"), value: repeatMinutes, format: .number)
                             .labelsHidden()
                             .multilineTextAlignment(.trailing)
-                            .frame(width: 56)
-                            .accessibilityLabel(Text(L10n.string("Minutes")))
+                            .monospacedDigit()
+                            .underlineField()
+                            .frame(width: 48)
                         Text(L10n.string("minutes"))
-                            .foregroundStyle(.secondary)
-                        Stepper(L10n.string("Minutes"), value: repeatMinutes, in: TradingRouteConfiguration.repeatWindowRange)
-                            .labelsHidden()
+                            .foregroundStyle(Palette.tertiaryInk)
+                            .accessibilityHidden(true)
                     }
                 }
             }
-        } header: {
-            SetupSectionHeader(title: "Re-posted calls", detail: "When the guru posts the same call again.")
         }
     }
 

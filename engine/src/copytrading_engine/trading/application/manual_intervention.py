@@ -65,7 +65,9 @@ class ManualInterventionService:
             )
             if evidence.source_id != request.source_id:
                 raise ValueError("Manual source evidence identity mismatch")
-            snapshots = await self._manual_snapshots()
+            # Every ledger on disk numbers the post's corrections; only the selected accounts must
+            # read. An account from an earlier setup whose ledger no longer reads is skipped.
+            snapshots = await self._manual_snapshots(required=request.selected_account_ids)
             by_id = [
                 correction
                 for snapshot in snapshots.values()
@@ -287,12 +289,20 @@ class ManualInterventionService:
         return supervisor, supervisor.owner
 
     async def _manual_snapshots(
-        self, account_ids: Collection[str] | None = None
+        self,
+        account_ids: Collection[str] | None = None,
+        *,
+        required: Collection[str] | None = None,
     ) -> dict[str, LedgerSnapshot]:
+        """The ledgers of `account_ids`, or of every retained account. With `required`, only those
+        accounts must read; any other ledger that fails is left out."""
         paths = self._access.retained_paths()
-        selected_ids = sorted(paths) if account_ids is None else sorted(set(account_ids))
+        must_read = set(required or ())
+        selected_ids = (
+            sorted(set(paths) | must_read) if account_ids is None else sorted(set(account_ids))
+        )
 
-        async def read_one(account_id: str) -> tuple[str, LedgerSnapshot]:
+        async def read_one(account_id: str) -> tuple[str, LedgerSnapshot] | None:
             database = paths.get(account_id)
             supervisor = self._access.supervisors().get(account_id)
             if (
@@ -312,9 +322,12 @@ class ManualInterventionService:
                 log.warning(
                     "manual_ledger_read_failed account=%s type=%s", account_id, type(exc).__name__
                 )
+                if required is not None and account_id not in must_read:
+                    return None
                 raise RuntimeError("Manual correction revision evidence is unavailable") from exc
 
-        return dict(await asyncio.gather(*(read_one(account_id) for account_id in selected_ids)))
+        read = await asyncio.gather(*(read_one(account_id) for account_id in selected_ids))
+        return dict(item for item in read if item is not None)
 
     @staticmethod
     def _correction_copies_complete(

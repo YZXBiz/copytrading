@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// A dollar amount, or a signed change that always carries its sign, arrow, and color.
+/// A dollar amount, or a signed change that always carries its sign, arrow, and color. A new value
+/// rolls its digits into place, the way a trading screen ticks, unless motion is reduced.
 struct MoneyText: View {
     enum Style {
         case amount
@@ -10,11 +11,19 @@ struct MoneyText: View {
     let value: Decimal
     var style: Style = .amount
     var font: Font = .body
+    /// Whole dollars for round figures such as a limit; cents when nil.
+    var fractionDigits: Int? = nil
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        content
+            .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: value)
+    }
+
+    @ViewBuilder private var content: some View {
         switch style {
         case .amount:
-            Text(value, format: .currency(code: "USD"))
+            Text(value, format: amountFormat)
                 .font(font)
                 .monospacedDigit()
                 .contentTransition(.numericText(value: value.doubleValue))
@@ -37,4 +46,9 @@ struct MoneyText: View {
     }
 
     private var direction: ChangeDirection { ChangeDirection(value) }
+
+    private var amountFormat: Decimal.FormatStyle.Currency {
+        let currency = Decimal.FormatStyle.Currency(code: "USD")
+        return fractionDigits.map { currency.precision(.fractionLength($0)) } ?? currency
+    }
 }

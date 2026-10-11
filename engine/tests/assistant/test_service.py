@@ -4,10 +4,18 @@ import asyncio
 
 import pytest
 from pydantic import SecretStr, ValidationError
-from pydantic_ai.messages import ModelRequest, ModelResponse, TextPart, ToolCallPart, UserPromptPart
+from pydantic_ai.messages import (
+    ModelRequest,
+    ModelResponse,
+    RetryPromptPart,
+    TextPart,
+    ToolCallPart,
+    UserPromptPart,
+)
 from pydantic_ai.models.function import FunctionModel
 
-from copytrading_engine.assistant.service import AskContext, AskGuru
+from copytrading_engine.assistant.agent import INSTRUCTIONS
+from copytrading_engine.assistant.service import AskContext, AskGuru, AskSetup, AskSetupAccount
 from copytrading_engine.trading.domain.config import ProviderConfiguration
 
 from .scripted import assistant, scripted, settle, streamed
@@ -31,10 +39,12 @@ async def test_a_question_reads_with_a_tool_and_streams_the_answer():
     assert registered == ["test-only"]
 
 
-async def test_the_prompt_carries_the_app_language_and_the_selection():
+async def test_the_question_stays_as_typed_and_the_app_state_rides_in_the_instructions():
     prompts: list[str] = []
+    instructions: list[str] = []
 
     def reply(messages, info):
+        instructions.append(info.instructions or "")
         prompts.extend(
             str(part.content)
             for message in messages
@@ -53,11 +63,98 @@ async def test_the_prompt_carries_the_app_language_and_the_selection():
     )
     question = "这条帖子为什么被跳过了？"  # noqa: RUF001 - Chinese ends a question with a full-width mark
     await settle(svc, await svc.ask("c-1", question, context, PROVIDER, KEY))
-    assert prompts == [
-        f"{question}\n\n"
+    assert prompts == [question]
+    assert (
         "(Screen: activity; app language: zh-Hans; selected_source_id=discord:calls:7)\n"
         "Gurus: Zhao (guru-1a2b3c4d), Ana (guru-5e6f7a8b)"
-    ]
+    ) in instructions[0]
+
+
+async def test_the_setup_rides_in_the_instructions_so_an_unstarted_account_is_not_missing():
+    prompts: list[str] = []
+    instructions: list[str] = []
+
+    def reply(messages, info):
+        instructions.append(info.instructions or "")
+        prompts.extend(
+            str(part.content)
+            for message in messages
+            if isinstance(message, ModelRequest)
+            for part in message.parts
+            if isinstance(part, UserPromptPart)
+        )
+        return ModelResponse(parts=[TextPart("primary is set up; press Start Copying.")])
+
+    svc, _, _ = assistant(streamed(reply))
+    setup = AskSetup(
+        saved=False,
+        copying=False,
+        unsaved_changes=True,
+        discord="connected",
+        interpreter="connected",
+        accounts=(AskSetupAccount(name="primary", environment="paper", state="connected"),),
+    )
+    question = "What's in my paper account?"
+    await settle(
+        svc, await svc.ask("c-1", question, AskContext(screen="today", setup=setup), PROVIDER, KEY)
+    )
+    assert prompts == [question]
+    assert (
+        "Setup: not started yet (nothing saved), with changes not applied yet; Discord connected; "
+        "interpreter connected; accounts: primary (paper, connected)"
+    ) in instructions[0]
+    assert "Never say there\n  are no accounts when the Setup line lists one." in INSTRUCTIONS
+
+
+async def test_an_unknown_account_is_sent_back_with_the_real_names():
+    told: list[str] = []
+
+    def reply(messages, info):
+        told.extend(
+            str(part.content)
+            for message in messages
+            if isinstance(message, ModelRequest)
+            for part in message.parts
+            if isinstance(part, RetryPromptPart)
+        )
+        if told:
+            return ModelResponse(parts=[TextPart("paper has no events yet.")])
+        return ModelResponse(parts=[ToolCallPart("list_account_events", {"account_id": "papr"})])
+
+    svc, _, _ = assistant(streamed(reply))
+    await settle(
+        svc, await svc.ask("c-1", "Show papr history.", AskContext(screen="today"), PROVIDER, KEY)
+    )
+    assert told
+    assert "There is no account named 'papr'. Accounts: paper." in told[0]
+
+
+async def test_the_app_help_loads_only_when_asked_for():
+    loaded: list[bool] = []
+
+    def reply(messages, info):
+        loaded.append("Developer Mode" in (info.instructions or ""))
+        return ModelResponse(parts=[TextPart("Copying is running.")])
+
+    svc, _, _ = assistant(streamed(reply))
+    await settle(
+        svc, await svc.ask("c-1", "Is copying running?", AskContext(screen="today"), PROVIDER, KEY)
+    )
+    assert loaded == [False]
+
+
+def test_the_setup_never_takes_a_key():
+    with pytest.raises(ValidationError):
+        AskSetup.model_validate(
+            {
+                "saved": True,
+                "copying": True,
+                "unsaved_changes": False,
+                "discord": "connected",
+                "interpreter": "connected",
+                "provider_api_key": "sk-anything",
+            }
+        )
 
 
 async def test_a_gurus_record_is_named_as_the_owner_knows_them():

@@ -30,9 +30,11 @@ from copytrading_engine.execution.application.ports import (
     ExecutionObserver,
     NoOpObserver,
 )
+from copytrading_engine.execution.domain.events import LimitChange
 from copytrading_engine.execution.domain.lifecycle import (
     AccountControlCommand,
     AccountControlResult,
+    AccountOwnerClosed,
 )
 from copytrading_engine.execution.domain.lot_sales import (
     LotSaleConfirmation,
@@ -61,6 +63,7 @@ from copytrading_engine.execution.domain.recovery import (
 )
 from copytrading_engine.execution.domain.signals import CopyConfig
 from copytrading_engine.execution.domain.sizing import DestinationSignal
+from copytrading_engine.execution.presentation.account_feed import AccountFeedPage
 from copytrading_engine.execution.presentation.operator_views import (
     AccountEventPage,
     AccountOverview,
@@ -198,7 +201,7 @@ class ExecutionOwner:
     ) -> _ResultT:
         async with self._gate:
             if self._closing or self._closed or self._unusable or self._resource is None:
-                raise RuntimeError("Execution owner is closed or unusable")
+                raise AccountOwnerClosed("Execution owner is closed or unusable")
             future = self._executor.submit(operation, self._resource)
             result, cancelled, failure = await self._drain(future)
             if cancelled:
@@ -348,6 +351,10 @@ class ExecutionOwner:
     ) -> AccountControlResult:
         return await self._submit(lambda resource: resource.control_account(command, now))
 
+    async def update_config(self, config: CopyConfig, now: dt.datetime) -> tuple[LimitChange, ...]:
+        """Swap the limits between two cycles: the worker runs one operation at a time."""
+        return await self._submit(lambda resource: resource.update_config(config, now))
+
     async def account_status(self) -> AccountRuntimeView:
         return await self._submit(lambda resource: resource.account_status())
 
@@ -359,6 +366,9 @@ class ExecutionOwner:
 
     async def event_page(self, before_seq: int | None, limit: int) -> AccountEventPage:
         return await self._submit(lambda resource: resource.event_page(before_seq, limit))
+
+    async def feed_page(self, before_seq: int | None, limit: int) -> AccountFeedPage:
+        return await self._submit(lambda resource: resource.feed_page(before_seq, limit))
 
     async def equity_history(self, window: HistoryWindow, now: dt.datetime) -> EquityHistory:
         return await self._submit(lambda resource: resource.equity_history(window, now))

@@ -40,19 +40,15 @@ func checkActivitySourceReadingRepresentation() throws {
     )
 
     try requireActivityReading(
-        PeopleSourcePreview.text(for: withEmbed) == capturedContent,
-        "People preview repeated canonical embed text instead of the captured message"
-    )
-    try requireActivityReading(
         withEmbed.readableText() == capturedContent,
         "The shared post-row preview repeated flattened embed content instead of the captured message"
     )
     let formattedPost = try activityWithSourceText("**Buy NVDA** @here\n[chart](https://example.com/chart)")
-    let personPreview = PeopleSourcePreview.text(for: formattedPost)
-    let formatted = PeopleSourcePreview.formatted(personPreview)
+    let personPreview = formattedPost.readableText()
+    let formatted = ActivitySourceText.formattedPreview(personPreview)
     try requireActivityReading(
         String(formatted.characters) == "Buy NVDA chart" && formatted.runs.allSatisfy { $0.link == nil },
-        "People preview lost inline source formatting or retained an interactive link inside the card button"
+        "Guru feed preview lost inline source formatting or retained an interactive link inside the card button"
     )
 
     let embedOnly = try activityWithSourceText(flattenedText, eventContent: "", embeds: [embed])
@@ -62,8 +58,8 @@ func checkActivitySourceReadingRepresentation() throws {
     )
 
     try requireActivityReading(
-        PeopleSourcePreview.text(for: embedOnly) == "NVDA thesis Captured target. Target $140",
-        "An embed-only People preview did not use captured source evidence in order"
+        embedOnly.readableText() == "NVDA thesis Captured target. Target $140",
+        "An embed-only Guru feed preview did not use captured source evidence in order"
     )
     let mentionOnlyWithEmbed = try activityWithSourceText(
         "NVDA thesis Captured target. Target $140",
@@ -71,17 +67,17 @@ func checkActivitySourceReadingRepresentation() throws {
         embeds: [embed]
     )
     try requireActivityReading(
-        PeopleSourcePreview.text(for: mentionOnlyWithEmbed) == "NVDA thesis Captured target. Target $140",
-        "A mention-only captured People message suppressed readable embed evidence"
+        mentionOnlyWithEmbed.readableText() == "NVDA thesis Captured target. Target $140",
+        "A mention-only captured guru feed message suppressed readable embed evidence"
     )
     let mentionOnly = try activityWithSourceText("@here\n  ")
     try requireActivityReading(
-        PeopleSourcePreview.text(for: mentionOnly).isEmpty,
-        "A mention-only People post invented source text without embed evidence"
+        mentionOnly.readableText().isEmpty,
+        "A mention-only guru feed post invented source text without embed evidence"
     )
     try requireActivityReading(
-        PeopleSourcePreview.text(for: blank).isEmpty,
-        "A blank People post invented source text"
+        blank.readableText().isEmpty,
+        "A blank guru feed post invented source text"
     )
 
     let legacy = try activityWithSourceText(
@@ -95,8 +91,8 @@ func checkActivitySourceReadingRepresentation() throws {
     )
 
     try requireActivityReading(
-        PeopleSourcePreview.text(for: legacy) == "Legacy source",
-        "People preview stopped falling back to missing legacy source evidence"
+        legacy.readableText() == "Legacy source",
+        "Guru feed preview stopped falling back to missing legacy source evidence"
     )
 
     let oversized = try activityWithSourceText(

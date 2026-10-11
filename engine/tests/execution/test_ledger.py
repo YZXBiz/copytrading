@@ -263,7 +263,7 @@ def test_manual_sale_cannot_hide_a_pending_order_or_duplicate_changed_evidence()
     deliver(engine, event("exit", "reduce", "27", "25"))
     with pytest.raises(ValueError, match="pending"):
         engine.ledger.record_manual_sale(sale)
-    engine.cancel(engine.pending()[0], NOW)
+    engine.cancel(engine.pending()[0], NOW, "timeout")
     engine.reconcile(NOW)
     engine.ledger.record_manual_sale(sale)
     with pytest.raises(ValueError, match="different evidence"):

@@ -32,8 +32,8 @@ from copytrading_engine.execution.domain.ownership import (
     OwnershipResolutionRequest,
 )
 from copytrading_engine.execution.domain.sizing import RouteConnection
+from copytrading_engine.execution.presentation.account_feed import AccountFeedPage
 from copytrading_engine.execution.presentation.operator_views import (
-    AccountEventPage,
     AccountOverviewPage,
 )
 from copytrading_engine.trading.adapters.activation import TradingActivationStatus
@@ -41,6 +41,7 @@ from copytrading_engine.trading.adapters.capabilities import (
     CapabilityCheck,
     TradingCapabilityReport,
 )
+from copytrading_engine.trading.application.paused_reader import ReadKeys
 from copytrading_engine.trading.domain.config import (
     ConnectionCheck,
     ProviderConfiguration,
@@ -76,6 +77,8 @@ class TradingLifecycle(Protocol):
 
     async def pause(self) -> TradingStatus: ...
 
+    async def update_account_limits(self, configuration: TradingConfiguration) -> str: ...
+
     def register_restore_secrets(self, values: tuple[str, ...]) -> None: ...
 
 
@@ -86,9 +89,9 @@ class OperatorReads(Protocol):
 
     async def source_activity(self, before_seq: int | None, limit: int) -> SourceActivityPage: ...
 
-    async def account_events(
+    async def account_feed(
         self, account_id: str, before_seq: int | None, limit: int
-    ) -> AccountEventPage: ...
+    ) -> AccountFeedPage: ...
 
     async def equity_history(
         self, account_id: str, window: HistoryWindow
@@ -97,6 +100,10 @@ class OperatorReads(Protocol):
     async def list_manual_commands(
         self, request: ManualCommandPageRequest
     ) -> ManualCommandPage: ...
+
+    def attach_readers(self, keys: tuple[ReadKeys, ...]) -> None: ...
+
+    def detach_readers(self) -> None: ...
 
 
 class ManualIntervention(Protocol):
@@ -160,6 +167,7 @@ class ProfileReview(Protocol):
         provider: ProviderConfiguration,
         provider_api_key: SecretStr,
         profile: ProfileRevision,
+        destinations: list[RouteConnection],
     ) -> ProfileReplay: ...
 
 

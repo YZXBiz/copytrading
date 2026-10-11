@@ -58,6 +58,10 @@ class AlpacaPosition(AlpacaValue):
     symbol: Identifier
     qty: Money
     market_value: Money | None = None
+    avg_entry_price: Money | None = None
+    current_price: Money | None = None
+    unrealized_pl: Money | None = None
+    unrealized_plpc: Money | None = None
     asset_class: str = Field(alias="asset_class")
     currency: str | None = None
 

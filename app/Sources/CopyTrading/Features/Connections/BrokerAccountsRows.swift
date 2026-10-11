@@ -7,7 +7,7 @@ struct BrokerAccountsRows: View {
     @Bindable var model: AppModel
 
     var body: some View {
-        SettingsSection(dividerInset: 56) {
+        SettingsSection {
             if model.setupDraft.accounts.isEmpty {
                 ConnectionServiceRow(
                     brand: "alpaca",

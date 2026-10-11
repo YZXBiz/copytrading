@@ -9,38 +9,38 @@ struct ValidationResultsSection: View {
     var useModel: (String) -> Void = { _ in }
 
     var body: some View {
-        Section {
+        SheetSection(L10n.string("Connection checks")) {
             ForEach(report.checks) { check in
                 HStack(alignment: .firstTextBaseline) {
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 3) {
                         Text(L10n.string(check.title))
+                            .font(DesignTokens.rowTitle)
+                            .foregroundStyle(Palette.ink)
                         if let detail = detail(for: check) {
                             Text(detail)
-                                .font(.callout)
-                                .foregroundStyle(check.state == .failed ? .red : .secondary)
+                                .font(DesignTokens.caption)
+                                .foregroundStyle(check.state == .failed ? StatusTone.critical.color : Palette.tertiaryInk)
                         }
                         if let suggestion = check.suggestion {
                             HStack(spacing: 8) {
                                 Text(L10n.string("Did you mean “%@”?", suggestion))
-                                    .font(.callout)
+                                    .font(DesignTokens.caption)
                                 Button(L10n.string("Use %@", suggestion)) { useModel(suggestion) }
-                                    .controlSize(.small)
+                                    .buttonStyle(SheetQuietButtonStyle())
+                                    .font(DesignTokens.caption)
                             }
                         }
                     }
                     Spacer(minLength: 12)
                     StatusBadge(summary(for: check.state), tone: StatusTone(check.state))
                 }
+                .padding(.vertical, 12)
                 .accessibilityElement(children: .combine)
             }
-        } header: {
-            HStack {
-                Label(L10n.string("Connection checks"), systemImage: "checklist")
-                Spacer()
-                StatusBadge(
-                    L10n.string(report.activatable ? "Ready to start" : "Needs attention"), tone: report.activatable ? .positive : .critical
-                )
-            }
+        } accessory: {
+            StatusBadge(
+                L10n.string(report.activatable ? "Ready to start" : "Needs attention"), tone: report.activatable ? .positive : .critical
+            )
         } footer: {
             Text(L10n.string(report.costNotice))
         }

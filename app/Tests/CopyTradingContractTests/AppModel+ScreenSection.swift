@@ -1,1 +1,0 @@
-../../Sources/CopyTrading/Shell/AppModel+ScreenSection.swift

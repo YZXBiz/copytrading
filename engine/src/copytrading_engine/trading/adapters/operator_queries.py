@@ -10,10 +10,13 @@ from typing import Literal
 from copytrading_engine.execution.adapters.sqlite_ledger import (
     EXECUTION_SCHEMA,
     decode_ledger_snapshot,
+    feed_events,
+    message_events,
 )
 from copytrading_engine.execution.domain.events import JournalEvent
 from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
 from copytrading_engine.execution.domain.manual_commands import ManualSourceEvidence
+from copytrading_engine.execution.presentation.account_feed import AccountFeedPage, account_feed
 from copytrading_engine.execution.presentation.operator_views import (
     AccountEventPage,
     AccountOverview,
@@ -42,6 +45,16 @@ def _has_table(db: sqlite3.Connection, name: str) -> bool:
     return row is not None
 
 
+def _moment(value: object) -> dt.datetime | None:
+    """A stored time as an aware moment: ISO text, or epoch seconds from older rows."""
+    if value is None:
+        return None
+    if isinstance(value, int | float):
+        return dt.datetime.fromtimestamp(value, dt.UTC)
+    moment = dt.datetime.fromisoformat(str(value))
+    return moment if moment.tzinfo else moment.replace(tzinfo=dt.UTC)
+
+
 def source_page(
     database: Path,
     *,
@@ -60,7 +73,8 @@ def source_page(
         rows = db.execute(
             "SELECT capture.seq,capture.id,capture.payload,capture.source_at,"
             "capture.captured_at,capture.mode,capture.confirmed,parser.result,"
-            "delivery.delivered_at,event.event_payload,event.capture_status,event.payload_bytes "
+            "delivery.delivered_at,event.event_payload,event.capture_status,event.payload_bytes,"
+            "parser.enqueued_at,parser.completed_at "
             "FROM source_captures capture LEFT JOIN parser_inbox parser ON parser.id=capture.id "
             "LEFT JOIN parser_signal_deliveries delivery ON delivery.message_id=capture.id "
             "LEFT JOIN source_event_evidence event ON event.source_id=capture.id "
@@ -145,6 +159,8 @@ def source_page(
         event_payload,
         event_status,
         event_bytes,
+        read_started_at,
+        read_at,
     ) in rows:
         source = RawMessage.model_validate_json(raw)
         decision = StockSignal.model_validate_json(parsed) if parsed else None
@@ -191,6 +207,9 @@ def source_page(
                 profile_revision=decision.profile_revision if decision else None,
                 source_event=source_event,
                 destinations=destinations.get(source_id, ()),
+                read_started_at=_moment(read_started_at),
+                read_at=_moment(read_at),
+                delivered_at=_moment(delivered_at),
             )
         )
     return SourceActivityPage(
@@ -350,6 +369,32 @@ def historical_source_message(database: Path, source_id: str) -> RawMessage:
     return source
 
 
+def _retained_snapshot(db: sqlite3.Connection) -> LedgerSnapshot:
+    revision = db.execute(
+        "SELECT revision FROM copytrading_engine_schema_revisions WHERE component='execution'"
+    ).fetchone()
+    if revision != (EXECUTION_SCHEMA.revision,):
+        raise RuntimeError("Unsupported retained execution schema revision")
+    identity = db.execute(
+        "SELECT environment,account_id FROM identity WHERE singleton=1"
+    ).fetchone()
+    row = db.execute("SELECT data FROM snapshot WHERE singleton=1").fetchone()
+    if identity is None or row is None:
+        raise RuntimeError("Retained account evidence is incomplete")
+    snapshot = decode_ledger_snapshot(row[0])
+    if (snapshot.environment, snapshot.account_id) != identity:
+        raise RuntimeError("Retained account identity mismatch")
+    return snapshot
+
+
+def retained_feed(path: Path, *, before_seq: int | None, limit: int) -> AccountFeedPage:
+    """A retained account's feed, read without binding a broker or a writer."""
+    with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)) as db:
+        snapshot = _retained_snapshot(db)
+        rows = feed_events(db, before_seq, limit)
+    return account_feed(path.parent.name, snapshot, rows, limit)
+
+
 def retained_account(
     path: Path, *, before_seq: int | None = None, limit: int = 50
 ) -> tuple[AccountOverview, LedgerSnapshot, AccountEventPage]:
@@ -357,20 +402,7 @@ def retained_account(
     if not 1 <= limit <= 100 or (before_seq is not None and before_seq < 1):
         raise ValueError("Invalid account event page")
     with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)) as db:
-        revision = db.execute(
-            "SELECT revision FROM copytrading_engine_schema_revisions WHERE component='execution'"
-        ).fetchone()
-        if revision != (EXECUTION_SCHEMA.revision,):
-            raise RuntimeError("Unsupported retained execution schema revision")
-        identity = db.execute(
-            "SELECT environment,account_id FROM identity WHERE singleton=1"
-        ).fetchone()
-        row = db.execute("SELECT data FROM snapshot WHERE singleton=1").fetchone()
-        if identity is None or row is None:
-            raise RuntimeError("Retained account evidence is incomplete")
-        snapshot = decode_ledger_snapshot(row[0])
-        if (snapshot.environment, snapshot.account_id) != identity:
-            raise RuntimeError("Retained account identity mismatch")
+        snapshot = _retained_snapshot(db)
         rows = db.execute(
             "SELECT id,event FROM journal WHERE (? IS NULL OR id < ?) ORDER BY id DESC LIMIT ?",
             (before_seq, before_seq, limit),
@@ -408,6 +440,15 @@ class SQLiteOperatorEvidence:
         self, path: Path, *, before_seq: int | None = None, limit: int = 50
     ) -> tuple[AccountOverview, LedgerSnapshot, AccountEventPage]:
         return retained_account(path, before_seq=before_seq, limit=limit)
+
+    def retained_feed(self, path: Path, *, before_seq: int | None, limit: int) -> AccountFeedPage:
+        return retained_feed(path, before_seq=before_seq, limit=limit)
+
+    def retained_message_events(
+        self, path: Path, message_ids: set[str]
+    ) -> tuple[JournalEvent, ...]:
+        with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)) as db:
+            return message_events(db, message_ids)
 
     def manual_source_evidence(self, database: Path, source_id: str) -> ManualSourceEvidence:
         return manual_source_evidence(database, source_id)

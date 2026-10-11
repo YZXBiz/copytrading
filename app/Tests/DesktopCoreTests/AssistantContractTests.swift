@@ -11,7 +11,10 @@ func runAssistantContractTests() throws {
                 conversationID: "c-0123456789ab",
                 text: "Why was the last call skipped?",
                 context: AssistantAskContext(
-                    screen: "accounts", language: "en", gurus: [AssistantGuru(id: "guru-1a2b3c4d", name: "Zhao")]),
+                    screen: "accounts", language: "en", gurus: [AssistantGuru(id: "guru-1a2b3c4d", name: "Zhao")],
+                    setup: AssistantSetup(
+                        saved: false, copying: false, unsavedChanges: true, discord: .connected, interpreter: .connected,
+                        accounts: [AssistantSetup.Account(name: "primary", environment: .paper, state: .connected)])),
                 provider: TradingProviderConfiguration(name: .deepseek, model: "deepseek-flash"),
                 providerAPIKey: "test-only")),
         as: "assistant-ask-request.json")

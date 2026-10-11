@@ -6,7 +6,7 @@ struct GuruRows: View {
     @Bindable var model: AppModel
 
     var body: some View {
-        SettingsSection(dividerInset: 56) {
+        SettingsSection {
             ForEach(model.setupDraft.routes) { route in
                 let status = ConnectionStatus.guru(route, in: model)
                 ConnectionServiceRow(

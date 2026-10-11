@@ -13,6 +13,7 @@ from copytrading_engine.execution.application.ports import (
     BrokerError,
     ExecutionObservation,
 )
+from copytrading_engine.execution.domain.events import LimitChange
 from copytrading_engine.execution.domain.lifecycle import (
     AccountControlCommand,
     AccountControlResult,
@@ -37,7 +38,9 @@ from copytrading_engine.execution.domain.ownership import (
     OwnershipResolution,
     OwnershipResolutionRequest,
 )
+from copytrading_engine.execution.domain.signals import CopyConfig
 from copytrading_engine.execution.domain.sizing import DestinationSignal, DestinationTerms
+from copytrading_engine.execution.presentation.account_feed import AccountFeedPage
 from copytrading_engine.execution.presentation.operator_views import (
     AccountEventPage,
     AccountOverview,
@@ -103,6 +106,10 @@ class AccountOwner(Protocol):
 
     async def observation(self) -> ExecutionObservation: ...
 
+    async def update_config(
+        self, config: CopyConfig, now: dt.datetime
+    ) -> tuple[LimitChange, ...]: ...
+
     async def account_status(self) -> AccountRuntimeView: ...
 
     async def operator_overview(self) -> AccountOverview: ...
@@ -110,6 +117,8 @@ class AccountOwner(Protocol):
     async def destination_views(self, source_ids: set[str]) -> dict[str, DestinationView]: ...
 
     async def event_page(self, before_seq: int | None, limit: int) -> AccountEventPage: ...
+
+    async def feed_page(self, before_seq: int | None, limit: int) -> AccountFeedPage: ...
 
     async def equity_history(self, window: HistoryWindow, now: dt.datetime) -> EquityHistory: ...
 

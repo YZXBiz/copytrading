@@ -55,6 +55,21 @@ public struct EngineActions: Sendable {
         return try await client.pauseTrading()
     }
 
+    public func updateAccountLimits(configuration: TradingConfiguration) async throws -> String {
+        let client = try await supervisor.engineClient()
+        return try await client.updateAccountLimits(configuration: configuration)
+    }
+
+    public func attachAccountReaders(_ accounts: [AccountReadKeys]) async throws {
+        let client = try await supervisor.engineClient()
+        try await client.attachAccountReaders(accounts)
+    }
+
+    public func detachAccountReaders() async throws {
+        let client = try await supervisor.engineClient()
+        try await client.detachAccountReaders()
+    }
+
     public func createBackup(destination: URL) async throws -> BackupManifestView {
         let client = try await supervisor.engineClient()
         return try await client.createBackup(destination: destination)
@@ -147,11 +162,11 @@ public struct EngineActions: Sendable {
         return try await client.replayGuruPosts(replay)
     }
 
-    public func accountEvents(
+    public func accountFeed(
         accountID: String, beforeSeq: Int? = nil, limit: Int = 50
-    ) async throws -> AccountEventPage {
+    ) async throws -> AccountFeedPage {
         let client = try await supervisor.engineClient()
-        return try await client.accountEvents(accountID: accountID, beforeSeq: beforeSeq, limit: limit)
+        return try await client.accountFeed(accountID: accountID, beforeSeq: beforeSeq, limit: limit)
     }
 
     public func equityHistory(

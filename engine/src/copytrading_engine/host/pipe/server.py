@@ -44,7 +44,7 @@ from copytrading_engine.host.pipe.requests import (
     ControlAccountRequest,
     CreateBackupRequest,
     EvaluateHistoricalProfileRequest,
-    GetAccountEventsRequest,
+    GetAccountFeedRequest,
     GetAccountsRequest,
     GetEquityHistoryRequest,
     GetManualCommandRequest,
@@ -69,6 +69,7 @@ from copytrading_engine.host.pipe.requests import (
     StartTradingRequest,
     StopRequest,
     SubmitRequest,
+    UpdateAccountLimitsRequest,
     ValidateTradingRequest,
 )
 from copytrading_engine.host.pipe.responses import ErrorCode, reply, workflow_payload
@@ -200,6 +201,14 @@ class PipeServer:
                 type(exc).__name__,
                 str(exc)[:160] if owner_facing else "",
             )
+            if isinstance(exc, OwnerFacingError):
+                # A sentence written for the owner is said as written, whatever was asked.
+                return reply(
+                    request.version,
+                    request.request_id,
+                    error="invalid_request",
+                    message=str(exc),
+                )
             if isinstance(
                 request,
                 (
@@ -253,6 +262,7 @@ class PipeServer:
                     StartTradingRequest,
                     ValidateTradingRequest,
                     CheckConnectionRequest,
+                    UpdateAccountLimitsRequest,
                     ControlAccountRequest,
                     ResolveOwnershipRequest,
                 ),
@@ -268,15 +278,27 @@ class PipeServer:
             UnknownSchemaVersion,
         ):
             code = "unavailable"
-        except Exception:
+        except Exception as exc:
+            # One request's failure is answered, never fatal: a correction or a manual order that
+            # trips on bad local state must not take copying down with it. Messages may carry
+            # input, so only the type is recorded.
+            log.error(
+                "request_failed operation=%s error=%s", type(request).__name__, type(exc).__name__
+            )
             if not isinstance(
                 request,
                 (
+                    SaveManualCorrectionRequest,
+                    PreviewManualOrderRequest,
+                    ConfirmManualOrdersRequest,
+                    GetManualCommandRequest,
+                    ListManualCommandsRequest,
                     GetTradingStatusRequest,
                     StartTradingRequest,
                     ValidateTradingRequest,
                     CheckConnectionRequest,
                     PauseTradingRequest,
+                    UpdateAccountLimitsRequest,
                     ControlAccountRequest,
                     ResolveOwnershipRequest,
                     GetAccountsRequest,
@@ -284,7 +306,7 @@ class PipeServer:
                     EvaluateHistoricalProfileRequest,
                     LearnGuruPlaybookRequest,
                     ReplayGuruPostsRequest,
-                    GetAccountEventsRequest,
+                    GetAccountFeedRequest,
                     GetEquityHistoryRequest,
                     CreateBackupRequest,
                     PreviewRestoreRequest,

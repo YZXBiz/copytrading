@@ -31,7 +31,7 @@ async def test_reads_answer_with_the_contract_and_say_what_they_looked_at():
     turn = Turn("t-1")
     assistant, _, audit = tools(turn)
     accounts = await assistant.list_accounts()
-    assert accounts["items"][0]["account_id"] == "paper"
+    assert accounts["accounts"][0]["account"] == "paper"
     assert [e.text for e in turn.events(0)] == ["Looked at your accounts"]
     [entry] = await audit.recent(1)
     assert (entry.actor, entry.caller_path) == ("agent", ASSISTANT_CALLER)
@@ -42,7 +42,7 @@ async def test_pausing_runs_now():
     turn = Turn("t-1")
     assistant, engine, _ = tools(turn)
     result = await assistant.pause_account("paper")
-    assert result["type"] == "account_control"
+    assert (result["account"], result["entries"]) == ("paper", "paused")
     # The fake engine's actions() leaves pausing out, so read the raw call record.
     paused = [
         value.action
@@ -56,7 +56,8 @@ async def test_resuming_only_asks_the_owner():
     turn = Turn("t-1")
     assistant, engine, _ = tools(turn)
     result = await assistant.propose_resume_account("paper")
-    assert result["state"] == "pending"
+    assert result["state"] == "waiting for the owner's approval with Touch ID in the app"
+    assert result["asks_to"] == "resume entries for paper"
     assert engine.actions() == []
     assert [e.kind for e in turn.events(0)] == ["step", "proposal"]
 
@@ -66,7 +67,10 @@ async def test_a_refused_proposal_returns_its_code_and_says_it_could_not_ask():
     assistant, _, _ = tools(turn)
     await assistant.propose_resume_account("paper")
     again = await assistant.propose_resume_account("paper")
-    assert again == {"refused": "proposal_limit"}
+    assert again == {
+        "refused": "proposal_limit",
+        "why": "There is already a request waiting for the owner's approval.",
+    }
     assert [(e.kind, e.text) for e in turn.events(0)] == [
         ("step", "Asked you to approve resuming paper"),
         ("proposal", None),
@@ -88,7 +92,7 @@ async def test_a_refused_pause_never_reads_as_paused():
 async def test_a_post_that_is_not_found_says_so():
     turn = Turn("t-1")
     assistant, _, _ = tools(turn)
-    assert await assistant.explain_skip("discord:calls:404") == {"refused": "not_found"}
+    assert (await assistant.explain_skip("discord:calls:404"))["refused"] == "not_found"
     assert [e.text for e in turn.events(0)] == ["Couldn't find that post"]
 
 
@@ -97,7 +101,7 @@ async def test_a_guru_is_named_by_display_name_whether_asked_by_id_or_name():
         turn = Turn("t-1")
         assistant, _, _ = tools(turn)
         record = await assistant.guru_record(asked)
-        assert (record["guru_id"], record["guru_name"]) == (ZHAO, "Zhao")
+        assert (record["guru_id"], record["guru"]) == (ZHAO, "Zhao")
         events = turn.events(0)
         assert [e.text for e in events if e.kind == "step"] == ["Added up Zhao's calls"]
         assert [e.link for e in events if e.link] == [
@@ -117,11 +121,14 @@ async def test_a_cancelled_turn_cannot_reach_the_engine():
     turn = Turn("t-1")
     assistant, engine, _ = tools(turn)
     turn.cancel()
-    assert await assistant.pause_processing() == {"refused": "cancelled"}
-    assert await assistant.propose_resume_account("paper") == {"refused": "cancelled"}
-    assert await assistant.list_accounts() == {"refused": "cancelled"}
-    assert await assistant.guru_record("g-1") == {"refused": "cancelled"}
-    assert await assistant.explain_skip("s-1") == {"refused": "cancelled"}
+    for call in (
+        assistant.pause_processing(),
+        assistant.propose_resume_account("paper"),
+        assistant.list_accounts(),
+        assistant.guru_record("g-1"),
+        assistant.explain_skip("s-1"),
+    ):
+        assert (await call)["refused"] == "cancelled"
     assert engine.actions() == []
     assert engine.calls == []
     assert [e.kind for e in turn.events(0)] == ["done"]

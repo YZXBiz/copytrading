@@ -26,6 +26,7 @@ from copytrading_engine.parsing.extraction import (
     ReadingOutput,
     check_reading,
     check_references,
+    check_summary_language,
 )
 from copytrading_engine.parsing.history import RecentCall
 from copytrading_engine.parsing.learning import PlaybookProposal
@@ -177,7 +178,9 @@ def _checked(context: RunContext[ReadingInput], output: ReadingOutput) -> Readin
         check_reading(output.reading, context.deps.text, context.deps.route)
     except GroundingError as exc:
         raise ModelRetry(f"{exc.issue.path}: {exc}") from None
-    problem = check_references(output.reading, context.deps.recent, retried=context.retry > 0)
+    problem = check_references(
+        output.reading, context.deps.recent, retried=context.retry > 0
+    ) or check_summary_language(output.reading, context.deps.text, retried=context.retry > 0)
     if problem is not None:
         raise ModelRetry(problem)
     return output

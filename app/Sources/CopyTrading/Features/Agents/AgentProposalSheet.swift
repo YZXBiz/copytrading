@@ -8,34 +8,40 @@ struct AgentProposalSheet: View {
     @State private var isDeciding = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Label(proposal.approvalHeading, systemImage: "hand.raised")
-                .font(.title3.bold())
-            Text(proposal.summary)
-                .font(.title2)
-            if let environment = proposal.environment {
-                LabeledContent(L10n.string("Account")) { EnvironmentBadge(environment: environment) }
+        SheetScaffold(
+            kind: L10n.string("Agent request"), title: proposal.summary, lede: proposal.approvalHeading, scrolls: false
+        ) {
+            SheetSection(L10n.string("The request")) {
+                if let environment = proposal.environment {
+                    SheetRow(title: L10n.string("Account")) { EnvironmentBadge(environment: environment) }
+                }
+                SheetRow(title: L10n.string("Requested by")) { value(proposal.requester) }
+                SheetRow(title: L10n.string("Expires")) { value(Humanize.timestamp(proposal.expiresAt)) }
             }
-            LabeledContent(L10n.string("Requested by"), value: proposal.requester)
-            LabeledContent(L10n.string("Expires"), value: Humanize.timestamp(proposal.expiresAt))
             Callout(
                 L10n.string(
                     "Approve only if you asked for this. Agents read messages written by other people, so a request can come from text you have never seen."
                 ),
                 tone: .caution
             )
-            HStack {
-                Spacer()
-                Button(L10n.string("Reject"), role: .destructive) { decide(approve: false) }
-                    .disabled(isDeciding)
-                Button(L10n.string("Approve…")) { decide(approve: true) }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(isDeciding)
-            }
+        } actions: {
+            Button(L10n.string("Reject"), role: .destructive) { decide(approve: false) }
+                .buttonStyle(SheetButtonStyle())
+                .disabled(isDeciding)
+            Button(L10n.string("Approve…")) { decide(approve: true) }
+                .buttonStyle(SheetButtonStyle(isPrimary: true))
+                .keyboardShortcut(.defaultAction)
+                .disabled(isDeciding)
         }
-        .padding(24)
-        .frame(width: 440)
+        .frame(width: 500)
         .interactiveDismissDisabled()
+    }
+
+    private func value(_ text: String) -> some View {
+        Text(text)
+            .font(DesignTokens.bodyText)
+            .foregroundStyle(Palette.secondaryInk)
+            .multilineTextAlignment(.trailing)
     }
 
     private func decide(approve: Bool) {

@@ -13,7 +13,7 @@ struct StatusBanner: View {
                     // The message reads as one element; Dismiss stays its own button.
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                         Image(systemName: "info.circle.fill")
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(Palette.secondaryInk)
                         Text(message)
                             .textSelection(.enabled)
                             .fixedSize(horizontal: false, vertical: true)

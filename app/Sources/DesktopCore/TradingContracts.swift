@@ -490,6 +490,48 @@ public struct TradingConfiguration: Codable, Equatable, Sendable {
     }
 }
 
+extension TradingConfiguration {
+    /// This setup with `other`'s account limits, account by account; an account `other` doesn't
+    /// have keeps its own.
+    public func withPolicies(of other: TradingConfiguration) -> TradingConfiguration {
+        var copy = self
+        for index in copy.accounts.indices {
+            if let policy = other.accounts.first(where: { $0.id == copy.accounts[index].id })?.policy {
+                copy.accounts[index].policy = policy
+            }
+        }
+        return copy
+    }
+
+    /// The accounts whose limits differ from `saved` when limits are all that differ, which copying
+    /// takes without a pause; nil when anything else changed, or nothing did.
+    public func limitOnlyChanges(from saved: TradingConfiguration) -> [String]? {
+        guard self != saved, withPolicies(of: saved) == saved else { return nil }
+        return zip(accounts, saved.accounts).filter { $0.policy != $1.policy }.map(\.0.id)
+    }
+}
+
+/// One account's broker keys, for the engine to read it while copying is paused. Sent when the
+/// owner unlocks and forgotten when they lock; the engine keeps them in memory only.
+public struct AccountReadKeys: Codable, Equatable, Sendable {
+    public var accountID: String
+    public var environment: TradingEnvironment
+    public var key: String
+    public var secret: String
+
+    public init(accountID: String, environment: TradingEnvironment, key: String, secret: String) {
+        self.accountID = accountID
+        self.environment = environment
+        self.key = key
+        self.secret = secret
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case accountID = "account_id"
+        case environment, key, secret
+    }
+}
+
 public struct TradingBrokerCredentials: Codable, Equatable, Sendable {
     public var accountID: String
     public var key: String
@@ -824,10 +866,13 @@ public struct GuruReplayRequest: Equatable, Sendable {
     public var provider: TradingProviderConfiguration
     public var providerAPIKey: String
     public var profile: TradingProfileRevision
+    /// The guru's accounts, so each replayed buy says how much it would spend.
+    public var destinations: [TradingRouteConnection]
 
     public init(
         channelID: String, authorID: String?, discordToken: String,
-        provider: TradingProviderConfiguration, providerAPIKey: String, profile: TradingProfileRevision
+        provider: TradingProviderConfiguration, providerAPIKey: String, profile: TradingProfileRevision,
+        destinations: [TradingRouteConnection]
     ) {
         self.channelID = channelID
         self.authorID = authorID
@@ -835,6 +880,7 @@ public struct GuruReplayRequest: Equatable, Sendable {
         self.provider = provider
         self.providerAPIKey = providerAPIKey
         self.profile = profile
+        self.destinations = destinations
     }
 }
 
@@ -846,6 +892,8 @@ public struct ReplayedPost: Codable, Equatable, Sendable {
     public let reading: PostReading?
     public let instructions: [SourceInstruction]
     public let suggested: [SourceInstruction]
+    /// What each of the guru's accounts would spend, before the account's maximum per order.
+    public let destinations: [ProfileDestinationEvaluation]
 }
 
 public struct GuruReplay: Codable, Equatable, Sendable {
@@ -923,20 +971,21 @@ public struct ProfileExampleReviewRequest: Codable, Equatable, Sendable {
 public struct ProfileInstructionEvaluation: Codable, Equatable, Sendable {
     public var action: TradingInstructionAction
     public var symbol: String
-    public var price: String
+    /// The guru's price; nil for a sell at the market (ADR-0007).
+    public var price: String?
     public var fraction: String?
     /// For a sell, the buy price it names; nil when it sells from every buy.
     public var entryPrice: String?
     public var exitBasis: TradingExitBasis?
     public var actionEvidence: String
     public var symbolEvidence: String
-    public var priceEvidence: String
+    public var priceEvidence: String?
     public var fractionEvidence: String?
 
     public init(
-        action: TradingInstructionAction, symbol: String, price: String,
+        action: TradingInstructionAction, symbol: String, price: String?,
         fraction: String?, entryPrice: String? = nil, exitBasis: TradingExitBasis?, actionEvidence: String,
-        symbolEvidence: String, priceEvidence: String, fractionEvidence: String?
+        symbolEvidence: String, priceEvidence: String?, fractionEvidence: String?
     ) {
         self.action = action
         self.symbol = symbol

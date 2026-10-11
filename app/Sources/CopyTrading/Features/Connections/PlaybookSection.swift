@@ -7,10 +7,13 @@ struct PlaybookSection: View {
     let learn: (TradingRouteDraft) async throws -> LearnedGuruPlaybook
     @State private var isLearning = false
     @State private var learned: LearnedGuruPlaybook?
+    /// How many of the learned examples were new to this guru.
+    @State private var addedExamples = 0
     @State private var failure: String?
+    @FocusState private var isEditing: Bool
 
     var body: some View {
-        Section {
+        SheetSection(L10n.string("Playbook")) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 Button(action: start) {
                     Label(
@@ -18,17 +21,18 @@ struct PlaybookSection: View {
                         systemImage: "sparkles"
                     )
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(SheetQuietButtonStyle())
                 .disabled(isLearning)
                 .accessibilityIdentifier("playbook.learn")
                 if isLearning {
                     ProgressView()
                         .controlSize(.small)
                     Text(L10n.string("Reading recent posts…"))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Palette.tertiaryInk)
                 }
                 Spacer(minLength: 0)
             }
+            .padding(.vertical, 12)
             if let learned {
                 Callout(learnedSummary(learned), tone: .positive)
                     .accessibilityIdentifier("playbook.summary")
@@ -37,20 +41,22 @@ struct PlaybookSection: View {
                 Callout(failure, tone: .critical)
                     .accessibilityIdentifier("playbook.failure")
             }
+            // No box: the text on a writing line, like every field in the sheet.
             TextEditor(text: $route.playbook)
-                .font(.body)
-                .frame(minHeight: 180)
+                .font(DesignTokens.bodyText)
+                .frame(minHeight: 110)
                 .scrollContentBackground(.hidden)
-                .padding(6)
-                .background(Palette.group, in: .rect(cornerRadius: DesignTokens.blockCornerRadius))
+                .focused($isEditing)
+                .padding(.bottom, 8)
+                .overlay(alignment: .bottom) { WritingLine(isActive: isEditing) }
                 .accessibilityLabel(L10n.string("Playbook"))
                 .accessibilityIdentifier("playbook.text")
             Text(L10n.string("%@ of %@ characters", route.playbook.count.formatted(), tradingPlaybookMaxLength.formatted()))
-                .font(.caption)
-                .foregroundStyle(route.playbook.count > tradingPlaybookMaxLength ? .red : .secondary)
+                .font(DesignTokens.caption)
+                .foregroundStyle(route.playbook.count > tradingPlaybookMaxLength ? .red : Palette.tertiaryInk)
                 .monospacedDigit()
-        } header: {
-            Text(L10n.string("Playbook"))
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.top, 6)
         } footer: {
             Text(
                 L10n.string(
@@ -61,16 +67,21 @@ struct PlaybookSection: View {
         }
     }
 
+    /// What Learn did, truthfully: the playbook is drafted, and examples are named only when some
+    /// were added beside the owner's own.
     @MainActor
     private func learnedSummary(_ learned: LearnedGuruPlaybook) -> String {
-        let examples =
-            learned.examples.count == 1
-            ? L10n.string("1 example")
-            : L10n.string("%lld examples", Int64(learned.examples.count))
-        return L10n.string(
-            "Read %lld posts with %@. %@ Filled in the playbook, exit basis, and %@; review them before validating.",
-            Int64(learned.postsRead), learned.model, learned.summary, examples
-        )
+        var sentences = [
+            L10n.string("Read %lld posts with %@.", Int64(learned.postsRead), learned.model),
+            learned.summary,
+            L10n.string("The playbook is drafted; read it over before you start copying."),
+        ]
+        if addedExamples == 1 {
+            sentences.append(L10n.string("Added 1 example post below yours."))
+        } else if addedExamples > 1 {
+            sentences.append(L10n.string("Added %lld example posts below yours.", Int64(addedExamples)))
+        }
+        return L10n.sentences(sentences.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty })
     }
 
     private func start() {
@@ -81,7 +92,7 @@ struct PlaybookSection: View {
             do {
                 let result = try await learn(route)
                 route.playbook = result.playbook
-                route.examples = result.examples.map(TradingProfileExampleDraft.init(example:))
+                addedExamples = route.addLearnedExamples(result.examples)
                 learned = result
             } catch {
                 learned = nil

@@ -1,8 +1,10 @@
 """Accounts, activity, history, and the owner's account controls."""
 
 from copytrading_engine.host.pipe.requests import (
+    AttachAccountReadersRequest,
     ControlAccountRequest,
-    GetAccountEventsRequest,
+    DetachAccountReadersRequest,
+    GetAccountFeedRequest,
     GetAccountsRequest,
     GetEquityHistoryRequest,
     GetSourceActivityRequest,
@@ -12,6 +14,7 @@ from copytrading_engine.host.pipe.requests import (
 )
 from copytrading_engine.host.pipe.responses import reply
 from copytrading_engine.host.pipe.services import TradingServices
+from copytrading_engine.trading.application.paused_reader import ReadKeys
 
 
 class AccountHandlers:
@@ -26,9 +29,33 @@ class AccountHandlers:
             ResolveOwnershipRequest: self._on_resolve_ownership,
             GetAccountsRequest: self._on_get_accounts,
             GetSourceActivityRequest: self._on_get_source_activity,
-            GetAccountEventsRequest: self._on_get_account_events,
+            GetAccountFeedRequest: self._on_get_account_feed,
             GetEquityHistoryRequest: self._on_get_equity_history,
+            AttachAccountReadersRequest: self._on_attach_account_readers,
+            DetachAccountReadersRequest: self._on_detach_account_readers,
         }
+
+    async def _on_attach_account_readers(self, request: AttachAccountReadersRequest) -> bytes:
+        if self._trading is None:
+            return reply(request.version, request.request_id, error="unavailable")
+        self._trading.operator.attach_readers(
+            tuple(
+                ReadKeys(
+                    account_id=item.account_id,
+                    environment=item.environment,
+                    key=item.key,
+                    secret=item.secret,
+                )
+                for item in request.accounts
+            )
+        )
+        return reply(request.version, request.request_id, ok={"type": "account_readers"})
+
+    async def _on_detach_account_readers(self, request: DetachAccountReadersRequest) -> bytes:
+        if self._trading is None:
+            return reply(request.version, request.request_id, error="unavailable")
+        self._trading.operator.detach_readers()
+        return reply(request.version, request.request_id, ok={"type": "account_readers"})
 
     async def _on_control_account(self, request: ControlAccountRequest) -> bytes:
         if self._trading is None:
@@ -80,16 +107,16 @@ class AccountHandlers:
             ok={"type": "source_activity", "activity": page.model_dump(mode="json")},
         )
 
-    async def _on_get_account_events(self, request: GetAccountEventsRequest) -> bytes:
+    async def _on_get_account_feed(self, request: GetAccountFeedRequest) -> bytes:
         if self._trading is None:
             return reply(request.version, request.request_id, error="unavailable")
-        page = await self._trading.operator.account_events(
+        page = await self._trading.operator.account_feed(
             request.account_id, request.before_seq, request.limit
         )
         return reply(
             request.version,
             request.request_id,
-            ok={"type": "account_events", "events": page.model_dump(mode="json")},
+            ok={"type": "account_feed", "feed": page.model_dump(mode="json")},
         )
 
     async def _on_get_equity_history(self, request: GetEquityHistoryRequest) -> bytes:

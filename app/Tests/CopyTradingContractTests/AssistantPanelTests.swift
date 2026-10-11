@@ -25,28 +25,31 @@ private func verifyPanel(_ condition: Bool, _ message: String) throws {
 
 @MainActor
 private func suggestionsLeadWithTheScreen() throws {
-    for screen in AppModel.Screen.allCases {
-        let suggestions = AssistantSuggestions.suggestions(for: screen, guru: "Zhao")
-        try verifyPanel(suggestions.count == 4, "\(screen) did not offer four suggestions")
-        try verifyPanel(Set(suggestions).count == 4, "\(screen) repeated a suggestion")
+    let screens: [AppModel.Screen] = [.account("primary"), .guru("zhao")] + AppModel.Screen.pages
+    for screen in screens {
+        for selected in [false, true] {
+            let suggestions = AssistantSuggestions.suggestions(for: screen, guru: "Zhao", hasSelectedPost: selected)
+            try verifyPanel(suggestions.count == 4, "\(screen) did not offer four suggestions")
+            try verifyPanel(Set(suggestions).count == 4, "\(screen) repeated a suggestion")
+        }
     }
     try verifyPanel(
-        AssistantSuggestions.suggestions(for: .activity, guru: nil).first == "Why was this post skipped?",
-        "Activity did not lead with the selected post")
+        AssistantSuggestions.suggestions(for: .account("primary"), guru: nil, hasSelectedPost: true).first == "Why was this post skipped?",
+        "A selected post did not lead")
     try verifyPanel(
-        AssistantSuggestions.suggestions(for: .people, guru: "Zhao").first == "How did Zhao do this week?",
-        "People did not lead with the guru")
+        AssistantSuggestions.suggestions(for: .guru("zhao"), guru: "Zhao").first == "How did Zhao do this week?",
+        "A guru's page did not lead with the guru")
     try verifyPanel(
-        AssistantSuggestions.suggestions(for: .people, guru: nil).first == "How did my gurus do this week?",
-        "People without a guru named one")
+        AssistantSuggestions.suggestions(for: .guru("zhao"), guru: nil).first == "How did my gurus do this week?",
+        "A guru's page without a name named one")
     try verifyPanel(
-        AssistantSuggestions.suggestions(for: .accounts, guru: nil).first == "What's in my paper account?",
-        "Accounts did not lead with the account")
+        AssistantSuggestions.suggestions(for: .account("primary"), guru: nil).first == "What's in my paper account?",
+        "An account's page did not lead with the account")
     try verifyPanel(
-        AssistantSuggestions.suggestions(for: .today, guru: nil).first == "How do I add Telegram alerts?",
-        "Today did not lead with setting up alerts")
+        AssistantSuggestions.suggestions(for: .connections, guru: nil).first == "How do I add Telegram alerts?",
+        "Connections did not lead with setting up alerts")
     try verifyPanel(
-        !AssistantSuggestions.suggestions(for: .today, guru: nil).contains("Why was this post skipped?"),
+        !AssistantSuggestions.suggestions(for: .connections, guru: nil).contains("Why was this post skipped?"),
         "A screen without a selected post asked about this post")
 }
 
@@ -54,14 +57,18 @@ private func suggestionsLeadWithTheScreen() throws {
 private func theContextNamesWhatIsSelected() throws {
     let model = AppModel()
     let post = try assistantPost(sequence: 7, sourceID: "discord:calls:7")
-    model.selectedScreen = .activity
-    let onActivity = model.assistantContext(selectedPost: post)
+    model.selectedScreen = .account("paper-main")
+    let onAccount = model.assistantContext(selectedPost: post)
     try verifyPanel(
-        onActivity == AssistantAskContext(screen: "activity", selectedSourceID: "discord:calls:7"),
-        "Activity did not send its selected post: \(onActivity)")
-    model.selectedScreen = .today
-    let onToday = model.assistantContext(selectedPost: post)
-    try verifyPanel(onToday == AssistantAskContext(screen: "today"), "Today sent a post that is not on screen: \(onToday)")
+        onAccount
+            == AssistantAskContext(
+                screen: "accounts", selectedSourceID: "discord:calls:7", selectedAccountID: "paper-main", setup: model.assistantSetup),
+        "The account page did not send its account and selected post: \(onAccount)")
+    model.selectedScreen = .connections
+    let onConnections = model.assistantContext(selectedPost: nil)
+    try verifyPanel(
+        onConnections == AssistantAskContext(screen: "connections", setup: model.assistantSetup),
+        "Connections sent a selection that is not on screen: \(onConnections)")
     model.selectedScreen = .gettingStarted
     try verifyPanel(
         model.assistantContext(selectedPost: nil).screen == "gettingStarted", "The screen was not named as the engine expects")
@@ -76,22 +83,22 @@ private func theContextNamesTheGurusAndTheOneThatIsOpen() throws {
         TradingRouteDraft(guruID: "guru-1a2b3c4d", displayName: "Zhao"),
         TradingRouteDraft(guruID: "guru-00000000", displayName: "  "),
     ]
-    model.selectedScreen = .people
+    model.selectedScreen = .connections
     let nothingOpen = model.assistantContext(selectedPost: nil)
     try verifyPanel(
         nothingOpen.gurus == [
             AssistantGuru(id: "guru-1a2b3c4d", name: "Zhao"), AssistantGuru(id: "guru-5e6f7a8b", name: "Ana"),
         ],
         "The setup's gurus were not named once each: \(nothingOpen.gurus)")
-    try verifyPanel(nothingOpen.selectedGuruID == nil, "People with no guru open still named one: \(nothingOpen)")
+    try verifyPanel(nothingOpen.selectedGuruID == nil, "A page with no guru open still named one: \(nothingOpen)")
 
-    model.openGuruID = "guru-5e6f7a8b"
+    model.selectedScreen = .guru("guru-5e6f7a8b")
+    let onGuru = model.assistantContext(selectedPost: nil)
     try verifyPanel(
-        model.assistantContext(selectedPost: nil).selectedGuruID == "guru-5e6f7a8b",
-        "People did not send the guru whose sheet is open")
-    model.selectedScreen = .today
+        onGuru.selectedGuruID == "guru-5e6f7a8b" && onGuru.screen == "people", "The guru's page did not send its guru")
+    model.selectedScreen = .account("paper-main")
     try verifyPanel(
-        model.assistantContext(selectedPost: nil).selectedGuruID == nil, "Today sent a guru that is not on screen")
+        model.assistantContext(selectedPost: nil).selectedGuruID == nil, "An account's page sent a guru that is not on screen")
 }
 
 @MainActor
@@ -113,27 +120,29 @@ private func linksOpenThePostAccountOrGuru() throws {
     let model = AppModel()
     let post = try assistantPost(sequence: 7, sourceID: "discord:calls:7")
     var focused: SourceActivity.ID?
-    model.follow(AssistantLink(kind: "post", id: "discord:calls:7", title: "Open in Activity"), activity: [post]) {
+    model.follow(AssistantLink(kind: "post", id: "discord:calls:7", title: "Open the post"), activity: [post]) {
         focused = $0
     }
-    try verifyPanel(model.selectedScreen == .activity && focused == 7, "A post link did not select the post in Activity")
+    let reached = post.destinations.first?.accountID
+    try verifyPanel(
+        focused == 7 && (reached.map { model.selectedScreen == .account($0) } ?? true),
+        "A post link did not select the post on its account")
 
     focused = nil
-    model.selectedScreen = .today
-    model.follow(AssistantLink(kind: "post", id: "discord:calls:99", title: "Open in Activity"), activity: [post]) {
+    model.selectedScreen = .connections
+    model.follow(AssistantLink(kind: "post", id: "discord:calls:99", title: "Open the post"), activity: [post]) {
         focused = $0
     }
-    try verifyPanel(model.selectedScreen == .activity && focused == nil, "A post that is not loaded selected another one")
+    try verifyPanel(model.selectedScreen == .connections && focused == nil, "A post that is not loaded moved the window")
 
     model.follow(AssistantLink(kind: "account", id: "paper-main", title: "paper-main"), activity: []) { _ in }
-    try verifyPanel(
-        model.selectedScreen == .accounts && model.requestedAccountID == "paper-main", "An account link did not open Accounts at it")
+    try verifyPanel(model.selectedScreen == .account("paper-main"), "An account link did not open the account")
 
     model.follow(AssistantLink(kind: "guru", id: "zhao", title: "zhao"), activity: []) { _ in }
-    try verifyPanel(model.selectedScreen == .people && model.requestedGuruID == "zhao", "A guru link did not open their card")
+    try verifyPanel(model.selectedScreen == .guru("zhao"), "A guru link did not open the guru")
 
     model.follow(AssistantLink(kind: "elsewhere", id: "x", title: "x"), activity: []) { _ in }
-    try verifyPanel(model.selectedScreen == .people, "An unknown link moved the window")
+    try verifyPanel(model.selectedScreen == .guru("zhao"), "An unknown link moved the window")
 }
 
 @MainActor
@@ -142,7 +151,7 @@ private func inSimplifiedChineseTheAssistantAsksAndShowsItsWorkInChinese() throw
     let original = preference.language
     defer { preference.select(original) }
     let model = AppModel()
-    model.selectedScreen = .people
+    model.selectedScreen = .guru("zhao")
 
     preference.select(.english)
     try verifyPanel(model.assistantContext(selectedPost: nil).language == "en", "English did not send en")
@@ -150,10 +159,10 @@ private func inSimplifiedChineseTheAssistantAsksAndShowsItsWorkInChinese() throw
     preference.select(.simplifiedChinese)
     try verifyPanel(
         model.assistantContext(selectedPost: nil).language == "zh-Hans", "简体中文 did not send zh-Hans")
-    let suggestions = AssistantSuggestions.suggestions(for: .people, guru: "Zhao")
+    let suggestions = AssistantSuggestions.suggestions(for: .guru("zhao"), guru: "Zhao")
     try verifyPanel(suggestions.first == "Zhao 这周表现怎么样？", "People's first suggestion was \(suggestions)")
     try verifyPanel(
-        AssistantSuggestions.suggestions(for: .people, guru: nil).first == "我的信号源这周表现怎么样？",
+        AssistantSuggestions.suggestions(for: .guru("zhao"), guru: nil).first == "我的信号源这周表现怎么样？",
         "Gurus were not called 信号源")
     for (engine, shown) in [
         ("Looked at your accounts", "已查看你的账户"),

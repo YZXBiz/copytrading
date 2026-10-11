@@ -1,11 +1,13 @@
 """Replaying a guru's recent posts shows what each would have done, before they are switched on."""
 
+from decimal import Decimal
 from pathlib import Path
 from typing import cast
 
 import pytest
 from pydantic import SecretStr
 
+from copytrading_engine.execution.domain.sizing import RouteConnection
 from copytrading_engine.parsing.extraction import DecodeError
 from copytrading_engine.shared.owner_facing import OwnerFacingError
 from copytrading_engine.trading.application.ports import OperatorEvidence
@@ -64,7 +66,13 @@ async def _replay(tmp_path: Path, posts: tuple[str, ...], reader: _Reader):
         _History(posts),
     )
     return await service.replay_posts(
-        "123", None, SecretStr("discord"), PROVIDER, SecretStr("model"), PROFILE
+        "123",
+        None,
+        SecretStr("discord"),
+        PROVIDER,
+        SecretStr("model"),
+        PROFILE,
+        [RouteConnection(account_id="primary", full_position_usd=Decimal("600"))],
     )
 
 
@@ -83,6 +91,15 @@ async def test_each_recent_post_says_what_it_would_have_done(tmp_path):
         ("review", "invalid_model_output"),
     ]
     assert replay.posts[0].instructions[0].fraction == 0.5
+    # Half the guru's $600 position in primary; chatter and a failed read buy nothing.
+    [sized] = replay.posts[0].destinations
+    assert (sized.account_id, sized.budget_usd, sized.reason) == (
+        "primary",
+        Decimal("300.00"),
+        "ready",
+    )
+    assert replay.posts[1].destinations == ()
+    assert replay.posts[2].destinations == ()
     # The draft's own guru reads the posts, and the reader is closed afterwards.
     assert {route.guru_id for route in reader.routes} == {"zhao"}
     assert reader.closed

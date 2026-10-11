@@ -15,10 +15,19 @@ extension AppModel {
         return edited != saved
     }
 
+    /// Limits are all the draft changes, so they save when the account sheet closes and never
+    /// wait on Apply Changes; once a save is refused they wait like any other change.
+    var hasOnlyLimitChanges: Bool {
+        guard !limitsSaveRefused, !setupDraft.hasTypedSecrets, let saved = savedTradingConfiguration,
+            let edited = try? setupDraft.submission().0
+        else { return false }
+        return edited.limitOnlyChanges(from: saved) != nil
+    }
+
     /// Connections shows its start card while there is something to set up, check, or start.
     var hasSetupToStart: Bool {
         savedTradingConfiguration == nil
-            || hasUnsavedSetupChanges || isValidatingTrading || isActivatingTrading || tradingValidation != nil
+            || (hasUnsavedSetupChanges && !hasOnlyLimitChanges) || isValidatingTrading || isActivatingTrading || tradingValidation != nil
             || !profileExampleReviews.isEmpty
     }
 
@@ -70,6 +79,7 @@ extension AppModel {
     func syncSetupDraftWithSaved() {
         guard let saved = savedTradingConfiguration, saved != setupDraftSource else { return }
         setupEditor = nil
+        limitsSaveRefused = false
         setupDraft.load(saved)
         setupDraft.clearSecrets()
         setupDraftSource = saved
@@ -106,8 +116,9 @@ extension AppModel {
         setupEditor = .route(route.id)
     }
 
-    func editAccount(named accountID: String) {
+    func editAccount(named accountID: String, focus: AccountEditorFocus? = nil) {
         guard let account = setupDraft.accounts.first(where: { $0.name.trimmed == accountID }) else { return }
+        accountEditorFocus = focus
         setupEditor = .account(account.id)
     }
 
@@ -129,6 +140,7 @@ extension AppModel {
     /// in the draft, so a failed check never makes the owner type them again. When only the
     /// readings are left to look over, it shows them, and pressed beside them it approves them.
     func checkAndStartCopying() {
+        guard !isApplyingChanges else { return }
         if isCopyingSavedSetup {
             applyChangesWhileCopying()
             return
@@ -157,7 +169,7 @@ extension AppModel {
     /// setup (then the button applies the changes), and no check or start is under way.
     var canCheckAndStart: Bool {
         isFilledInToCheck && (tradingStatus?.state == .paused || isCopyingSavedSetup)
-            && !isValidatingTrading && !isActivatingTrading && !isTradingCommandPending
+            && !isValidatingTrading && !isActivatingTrading && !isTradingCommandPending && !isApplyingChanges
     }
 
     /// Everything a check needs is filled in. A connection whose last check failed doesn't
@@ -174,8 +186,11 @@ extension AppModel {
         savedTradingConfiguration != nil && [.running, .degraded].contains(tradingStatus?.state)
     }
 
-    /// The engine takes a new setup only while paused: pause, check, and start the new setup.
-    /// Posts that arrive meanwhile are read when copying starts again.
+    /// The engine takes a new setup only while paused, so the pause is kept as short as the
+    /// check and the start. The examples are read first, while copying runs on; when they need a
+    /// look, the readings wait for the owner with copying still running, and pressing Start
+    /// Copying beside them pauses, checks, and starts. Posts that arrive during the pause are read
+    /// when copying starts again.
     private func applyChangesWhileCopying() {
         let submission: (TradingConfiguration, TradingSecrets)
         do {
@@ -184,17 +199,45 @@ extension AppModel {
             message = Self.setupProblem(for: error)
             return
         }
+        let readingsShown =
+            checkedSetupSignature == setupDraft.signature && !profileExampleReviews.isEmpty
+            && profileExampleReviews.values.allSatisfy(\.automaticActivationAllowed)
+        if readingsShown && !isShowingSetupCheck {
+            isShowingSetupCheck = true
+            return
+        }
         checkedSetupSignature = setupDraft.signature
-        isPausedToApplyChanges = true
-        Task { [weak self] in
+        applyChangesTask?.cancel()
+        isApplyingChanges = true
+        applyChangesTask = Task { [weak self] in
             guard let self else { return }
+            defer { self.isApplyingChanges = false }
+            let reviews: [String: ProfileExampleReview]
+            if readingsShown {
+                // Pressed beside the readings: the owner's yes to them.
+                self.profileExamplesAcknowledged = true
+                reviews = self.profileExampleReviews
+            } else {
+                let read = await self.validateTradingSettings(
+                    submission.0, enteredSecrets: submission.1, reviewOnly: true)
+                guard read, !Task.isCancelled else { return }
+                guard self.profileExampleReviews.isEmpty else {
+                    self.isShowingSetupCheck = true
+                    return
+                }
+                reviews = [:]
+            }
+            self.isPausedToApplyChanges = true
             await self.pauseTrading()
             guard await self.waitUntilPaused() else {
+                guard !Task.isCancelled else { return }
                 self.isPausedToApplyChanges = false
                 self.message = L10n.string("Copying didn't pause, so your changes weren't applied. Try again.")
                 return
             }
-            await self.checkThenStart(submission.0, enteredSecrets: submission.1)
+            guard !Task.isCancelled else { return }
+            await self.checkThenStart(submission.0, enteredSecrets: submission.1, reviewed: reviews)
+            guard !Task.isCancelled else { return }
             await self.resumeSavedSetupIfPausedForChanges()
         }
     }
@@ -204,25 +247,39 @@ extension AppModel {
         guard let control = connectionChecker else { return false }
         for _ in 0..<120 {
             if tradingStatus?.state == .paused { return true }
-            guard [.pausing, .running, .degraded].contains(tradingStatus?.state) else { return false }
+            guard [.pausing, .running, .degraded].contains(tradingStatus?.state), !Task.isCancelled else { return false }
             try? await Task.sleep(for: .milliseconds(500))
             if let status = try? await control.tradingStatus() { tradingStatus = status }
         }
         return tradingStatus?.state == .paused
     }
 
-    /// Copying paused only to apply changes that did not start: the saved setup copies again,
-    /// and the rows in Connections keep what each check found.
+    /// Changes that did not start leave the saved setup copying again. What the check found stays
+    /// readable in Setup Check, and the rows in Connections keep each connection's result.
     func resumeSavedSetupIfPausedForChanges() async {
-        guard isPausedToApplyChanges, !isValidatingTrading, !isActivatingTrading, !isShowingSetupCheck,
-            tradingStatus?.state == .paused
+        guard isPausedToApplyChanges, !isValidatingTrading, !isActivatingTrading, tradingStatus?.state == .paused
         else { return }
         isPausedToApplyChanges = false
+        let failedCheck = tradingValidation.flatMap { $0.report.activatable ? nil : $0 }
         cancelTradingActivation()
-        await startTrading()
+        await startTrading(resumingSavedSetup: true)
+        if let failedCheck, tradingStatus?.state != .paused {
+            tradingValidation = failedCheck
+            isShowingSetupCheck = true
+        }
         if message == nil {
             message = L10n.string("Your changes weren't saved, so copying continues with the saved setup.")
         }
+    }
+
+    /// Locking or closing the window while changes are applied: the apply stops, and once copying
+    /// has finished pausing the saved setup copies again, before access is gone.
+    func finishInterruptedApply(_ applying: Task<Void, Never>?) async {
+        guard let applying else { return }
+        await applying.value
+        guard isPausedToApplyChanges else { return }
+        _ = await waitUntilPaused()
+        await resumeSavedSetupIfPausedForChanges()
     }
 
     /// Start Copying must save exactly what was checked, so any later edit discards the check.
@@ -264,7 +321,41 @@ extension AppModel {
         }
         message = nil
         copyingStartedAt = .now
-        selectedScreen = .today
+        selectedScreen = homeScreen
+    }
+
+    /// Fills the setup from a file the owner chose in the open panel. Only the draft changes:
+    /// Connect and Start Copying check everything before it is saved. Nothing from the file is
+    /// logged or kept, and the summary names fields, never values.
+    func importSetup(from url: URL) {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size <= SetupImport.maximumBytes,
+            let data = try? Data(contentsOf: url), let text = String(data: data, encoding: .utf8)
+        else {
+            message = L10n.string("That file isn't a setup CopyTrading can read. Choose a small text file with your keys.")
+            return
+        }
+        let setup = SetupImport(text: text)
+        guard !setup.isEmpty else {
+            message = L10n.string("Nothing in that file looks like a setup: no Discord, model, or Alpaca lines.")
+            return
+        }
+        setupEditor = nil
+        setup.apply(to: &setupDraft)
+        selectedScreen = .connections
+        setupImportResult = SetupImportResult(fileURL: url, filled: setup.filled, missing: setup.missing)
+    }
+
+    /// The imported file to the Trash, once its keys are in the setup.
+    func trashImportedFile() {
+        guard let url = setupImportResult?.fileURL else { return }
+        setupImportResult = nil
+        do {
+            try FileManager.default.trashItem(at: url, resultingItemURL: nil)
+        } catch {
+            message = L10n.string("CopyTrading couldn't move the file to the Trash. Delete it yourself once you've started copying.")
+        }
     }
 
     /// Starts the setup tour on Connections, at the first thing still to do.

@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.8/CopyTrading-0.1.0-alpha.8.dmg"><img src="https://img.shields.io/badge/Download_for_macOS-0.1.0--alpha.8-1d1d1f?style=for-the-badge&logo=apple&logoColor=white" alt="Download CopyTrading for macOS" height="36"></a>
+  <a href="https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.9/CopyTrading-0.1.0-alpha.9.dmg"><img src="https://img.shields.io/badge/Download_for_macOS-0.1.0--alpha.9-1d1d1f?style=for-the-badge&logo=apple&logoColor=white" alt="Download CopyTrading for macOS" height="36"></a>
 </p>
 
 <p align="center">
@@ -36,7 +36,7 @@ CopyTrading is a native macOS app that reads the stock calls traders post on Dis
 > **Developer preview.** CopyTrading has not been qualified for live trading. Start with an Alpaca paper account, and see [validation](docs/validation.md) for what has and has not been proven.
 
 <p align="center">
-  <a href="docs/assets/today.png"><img src="docs/assets/today.png" alt="Today: the day's change, the equity curve, what happened to each post, and limit usage (sample data)" width="860"></a>
+  <a href="docs/assets/account.png"><img src="docs/assets/account.png" alt="An account: its balance and the day's change, the equity curve, cash and buying power beside today's loss and what is in stocks against their limits, and each position with whose shares they are (sample data)" width="860"></a>
 </p>
 
 <details>
@@ -44,14 +44,14 @@ CopyTrading is a native macOS app that reads the stock calls traders post on Dis
 <br>
 <table>
   <tr>
-    <td width="33%"><a href="docs/assets/accounts.png"><img src="docs/assets/accounts.png" alt="Accounts: balance, limits, and positions opened into the posts that bought them (sample data)"></a></td>
-    <td width="33%"><a href="docs/assets/people.png"><img src="docs/assets/people.png" alt="People: each trader's latest call, how their recent posts went, and the accounts that copy them (sample data)"></a></td>
-    <td width="33%"><a href="docs/assets/connections.png"><img src="docs/assets/connections.png" alt="Connections: Discord, the model that reads posts, and alerts (sample data)"></a></td>
+    <td width="33%"><a href="docs/assets/guru.png"><img src="docs/assets/guru.png" alt="A guru: today's numbers and every post on one timeline, with what each account did (sample data)"></a></td>
+    <td width="33%"><a href="docs/assets/guru-sheet.png"><img src="docs/assets/guru-sheet.png" alt="A guru's settings: where they post, the account they copy into with what each call buys, and their playbook (sample data)"></a></td>
+    <td width="33%"><a href="docs/assets/connections.png"><img src="docs/assets/connections.png" alt="Connections: Discord, the model that reads posts, broker accounts, and gurus (sample data)"></a></td>
   </tr>
   <tr>
-    <td align="center"><sub><b>Accounts</b>: every position traces to its posts</sub></td>
-    <td align="center"><sub><b>People</b>: who you copy and how it went</sub></td>
-    <td align="center"><sub><b>Connections</b>: Discord, the model, alerts</sub></td>
+    <td align="center"><sub><b>A guru</b>: every post and what came of it</sub></td>
+    <td align="center"><sub><b>A guru's settings</b>: what each call buys</sub></td>
+    <td align="center"><sub><b>Connections</b>: set up top to bottom</sub></td>
   </tr>
 </table>
 </details>
@@ -61,7 +61,10 @@ CopyTrading is a native macOS app that reads the stock calls traders post on Dis
 - **Posts become exact orders.** A model you choose reads each post, and every ticker, price, and fraction must appear in the post itself, so it cannot invent a number.
 - **Your limits, per account.** Daily loss, per-order, per-symbol, and total exposure limits are checked before every copied buy. New accounts start with entries off.
 - **Many traders, many accounts.** Each trader-to-account link has its own sizing, and paper and live accounts sit side by side.
-- **Every position traces to its post.** Each copied buy is kept as a lot that names the post behind it, and you can sell any lot on its own.
+- **Every position traces to its post.** Each copied buy is kept as a lot that names the post behind it, and you can sell any lot on its own. Shares you trade yourself in Alpaca are counted as yours on the next sync.
+- **Always live.** Balances, positions, and the equity curve are read from your broker even while copying is paused. Fills arrive as notifications, the menu bar shows today's change, and after time away a recap says what happened.
+- **Room to change your mind.** A sale or a confirmed copy waits a few seconds with Undo before it leaves, and a skipped call can be brought back.
+- **Fast to get around.** Accounts and gurus are the sidebar; ⌘K finds any page, action, or post; Control-1 and Control-2 switch a page's tabs.
 - **An assistant that cannot trade on its own.** ⌘J answers from your real posts and accounts. Anything that could place an order waits for your Touch ID.
 - **Private by design.** Keys stay in the macOS Keychain. The app talks to Discord, your model provider, and your broker, plus Telegram if you turn on alerts and GitHub when you check for updates.
 
@@ -71,7 +74,7 @@ Works with a dozen hosted model services, local models through Ollama, or any Op
 
 You need an Apple silicon Mac running macOS 26 or later.
 
-1. **[Download CopyTrading for macOS](https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.8/CopyTrading-0.1.0-alpha.8.dmg)** (55 MB).
+1. **[Download CopyTrading for macOS](https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.9/CopyTrading-0.1.0-alpha.9.dmg)** (55 MB).
 2. Open the DMG and drag **CopyTrading** into **Applications**.
 3. Open CopyTrading. Preview builds are not yet notarized by Apple, so the first time macOS blocks it: go to **System Settings → Privacy & Security** and choose **Open Anyway**. You only do this once.
 
@@ -89,17 +92,17 @@ make app
 
 ## Get started
 
-The app opens on **Getting Started**, a checklist that ticks itself as you go. Nothing is saved or traded until you press **Start Copying**.
+A first launch opens on **Connections** with a short tour that points at each next step. Nothing is saved or traded until you press **Start Copying**.
 
 Everything is set up in **Connections**, top to bottom:
 
 1. **Discord**: the channels to read and your Discord token.
 2. **Interpreter**: the model that reads posts, and its API key.
 3. **Broker accounts**: an Alpaca **paper** account.
-4. **Gurus**: press **Learn from Channel**, review the playbook it drafts, and set how much each account puts in.
+4. **Gurus**: choose the account each guru copies into (its max per stock is the guru's full position), press **Learn from Channel**, and review the playbook it drafts.
 5. Press **Start Copying**. It checks every connection first, and starts only when they all pass.
 
-Every field that needs a key or an ID has a **Where do I find this?** link. When you are ready, turn on entries in **Accounts** and watch the first post arrive in **Activity**.
+Every field that needs a key or an ID has a **Where do I find this?** link. When you are ready, press **Resume Entries** on the account's page and watch the first post arrive on the guru's page.
 
 ## How it works
 
@@ -142,7 +145,7 @@ The engine also runs without the app, on a Mac or a Linux server, so copying con
 
 ## Contributing
 
-Run `make doctor` to check your Mac, then `make check` for the engine's 1,200+ tests, Ruff, and Ty. [CONTRIBUTING.md](CONTRIBUTING.md) covers the native app checks and conventions. Ask questions in [Discussions](https://github.com/YZXBiz/copytrading/discussions), report bugs with the [issue forms](https://github.com/YZXBiz/copytrading/issues/new/choose), and report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+Run `make doctor` to check your Mac, then `make check` for the engine's 1,500+ tests, Ruff, and Ty. [CONTRIBUTING.md](CONTRIBUTING.md) covers the native app checks and conventions. Ask questions in [Discussions](https://github.com/YZXBiz/copytrading/discussions), report bugs with the [issue forms](https://github.com/YZXBiz/copytrading/issues/new/choose), and report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 
 ## License
 

@@ -101,6 +101,18 @@ class TradingActivationJournal:
         self._replace(record)
         return record
 
+    def adopt(self, activation_id: str, revision: str) -> ActivationRecord:
+        """The running activation now copies `revision`: limits changed while copying."""
+        record = self._matching(activation_id)
+        if record.phase not in {"starting", "ready"}:
+            raise ValueError("activation_not_running")
+        update = {"candidate_revision": revision}
+        if record.committed_activation_id == record.activation_id:
+            update["committed_revision"] = revision
+        record = record.model_copy(update=update)
+        self._replace(record)
+        return record
+
     def mark_failed(self, activation_id: str, error_code: str) -> ActivationRecord:
         record = self._matching(activation_id)
         if record.phase == "failed":

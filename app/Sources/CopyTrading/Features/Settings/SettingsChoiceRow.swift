@@ -14,7 +14,7 @@ struct SettingsChoiceRow: View {
             SettingsRow(title: title, detail: detail) {
                 Image(systemName: "checkmark")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Palette.accent)
+                    .foregroundStyle(Palette.ink)
                     .opacity(isSelected ? 1 : 0)
                     .accessibilityHidden(true)
             }

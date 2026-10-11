@@ -50,16 +50,16 @@ struct MenuBarView: View {
         }
         .padding(14)
         .frame(width: 320)
-        .tint(Palette.accent)
+        .tint(Palette.ink)
     }
 
     private var header: some View {
         HStack(spacing: 9) {
             Image(systemName: "arrow.triangle.branch")
                 .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Palette.page)
                 .frame(width: 24, height: 24)
-                .background(Palette.accent.gradient, in: .rect(cornerRadius: 6))
+                .background(Palette.ink, in: .rect(cornerRadius: 6))
                 .accessibilityHidden(true)
             Text(L10n.string("CopyTrading"))
                 .font(.system(size: 14, weight: .semibold))

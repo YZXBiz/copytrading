@@ -287,6 +287,9 @@ public enum EngineResult: Equatable, Sendable {
     case tradingActivation(TradingActivationStatus)
     case tradingValidation(TradingValidation)
     case connectionCheck(TradingCapabilityCheck)
+    /// The engine's revision of a setup whose changed account limits copying now uses.
+    case accountLimits(revision: String)
+    case accountReaders
     case accountControl(AccountControlResult)
     case ownershipResolution(OwnershipResolution)
     case accounts(AccountOverviewPage)
@@ -295,7 +298,7 @@ public enum EngineResult: Equatable, Sendable {
     case profileExampleReview(ProfileExampleReview)
     case learnedPlaybook(LearnedGuruPlaybook)
     case guruReplay(GuruReplay)
-    case accountEvents(AccountEventPage)
+    case accountFeed(AccountFeedPage)
     case equityHistory(accountID: String, history: EquityHistory?)
     case manualCorrection(ManualCorrectionOutcome)
     case manualPreview(ManualOrderPreview)
@@ -397,7 +400,7 @@ public struct EngineSuccess: Decodable, Equatable, Sendable {
         case resolution
         case accounts
         case activity
-        case events
+        case feed
         case correction
         case preview
         case commands
@@ -422,6 +425,7 @@ public struct EngineSuccess: Decodable, Equatable, Sendable {
         case accountID = "account_id"
         case history
         case turnID = "turn_id"
+        case revision
         case cancelled
     }
 
@@ -446,6 +450,10 @@ public struct EngineSuccess: Decodable, Equatable, Sendable {
                 ))
         case "connection_check":
             result = .connectionCheck(try container.decode(TradingCapabilityCheck.self, forKey: .check))
+        case "account_limits":
+            result = .accountLimits(revision: try container.decode(String.self, forKey: .revision))
+        case "account_readers":
+            result = .accountReaders
         case "account_control":
             result = .accountControl(try container.decode(AccountControlResult.self, forKey: .control))
         case "ownership_resolution":
@@ -466,8 +474,8 @@ public struct EngineSuccess: Decodable, Equatable, Sendable {
             )
         case "guru_replay":
             result = .guruReplay(try container.decode(GuruReplay.self, forKey: .replay))
-        case "account_events":
-            result = .accountEvents(try container.decode(AccountEventPage.self, forKey: .events))
+        case "account_feed":
+            result = .accountFeed(try container.decode(AccountFeedPage.self, forKey: .feed))
         case "equity_history":
             result = .equityHistory(
                 accountID: try container.decode(String.self, forKey: .accountID),
@@ -562,6 +570,7 @@ enum EngineOperation: Sendable {
         TradingConfiguration, TradingSecrets, validationToken: String, activationID: String
     )
     case pauseTrading
+    case updateAccountLimits(TradingConfiguration)
     case createBackup(String)
     case previewRestore(String)
     case prepareRestoreCandidate(String)
@@ -577,8 +586,10 @@ enum EngineOperation: Sendable {
     case reviewProfileExamples(ProfileExampleReviewRequest)
     case learnGuruPlaybook(GuruPlaybookLearningRequest)
     case replayGuruPosts(GuruReplayRequest)
-    case accountEvents(accountID: String, beforeSeq: Int?, limit: Int)
+    case accountFeed(accountID: String, beforeSeq: Int?, limit: Int)
     case equityHistory(accountID: String, window: EquityHistoryWindow)
+    case attachAccountReaders([AccountReadKeys])
+    case detachAccountReaders
     case saveManualCorrection(ManualCorrectionRequest)
     case previewManualOrder(ManualPreviewRequest)
     case confirmManualOrders([ManualConfirmationRequest])
@@ -689,6 +700,9 @@ struct EngineRequest: Encodable, Sendable {
             try container.encode(activationID, forKey: .activationID)
         case .pauseTrading:
             try container.encode("pause_trading", forKey: .operation)
+        case .updateAccountLimits(let configuration):
+            try container.encode("update_account_limits", forKey: .operation)
+            try container.encode(configuration, forKey: .configuration)
         case .createBackup(let destination):
             try container.encode("create_backup", forKey: .operation)
             try container.encode(destination, forKey: .destination)
@@ -754,8 +768,9 @@ struct EngineRequest: Encodable, Sendable {
             try container.encode(replay.provider, forKey: .provider)
             try container.encode(replay.providerAPIKey, forKey: .providerAPIKey)
             try container.encode(replay.profile, forKey: .profile)
-        case .accountEvents(let accountID, let beforeSeq, let limit):
-            try container.encode("get_account_events", forKey: .operation)
+            try container.encode(replay.destinations, forKey: .destinations)
+        case .accountFeed(let accountID, let beforeSeq, let limit):
+            try container.encode("get_account_feed", forKey: .operation)
             try container.encode(accountID, forKey: .accountID)
             try container.encodeIfPresent(beforeSeq, forKey: .beforeSeq)
             try container.encode(limit, forKey: .limit)
@@ -763,6 +778,11 @@ struct EngineRequest: Encodable, Sendable {
             try container.encode("get_equity_history", forKey: .operation)
             try container.encode(accountID, forKey: .accountID)
             try container.encode(window, forKey: .window)
+        case .attachAccountReaders(let accounts):
+            try container.encode("attach_account_readers", forKey: .operation)
+            try container.encode(accounts, forKey: .accounts)
+        case .detachAccountReaders:
+            try container.encode("detach_account_readers", forKey: .operation)
         case .saveManualCorrection(let correction):
             try container.encode("save_manual_correction", forKey: .operation)
             try container.encode(correction, forKey: .correction)

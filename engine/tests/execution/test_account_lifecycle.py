@@ -13,7 +13,7 @@ from copytrading_engine.execution.domain.lifecycle import (
     AccountControlConflict,
 )
 from copytrading_engine.execution.domain.market import EquityHistory, HistoryWindow
-from copytrading_engine.execution.domain.progress import OrderLinked
+from copytrading_engine.execution.domain.progress import OrderLinked, Pending
 from copytrading_engine.execution.domain.signals import CopyConfig
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore
 from copytrading_engine.shared.raw_message import RawMessage
@@ -222,6 +222,9 @@ async def test_retained_account_and_source_page_show_real_evidence_without_broke
     events = await runtime.operator.account_events("paper", None, 2)
     assert events.account_id == "paper"
     assert len(events.items) == 2
+    feed = await runtime.operator.account_feed("paper", None, 50)
+    assert feed.account_id == "paper"
+    assert feed.next_before_seq is None
 
 
 async def test_retained_account_overviews_use_stable_bounded_keyset_pages(tmp_path):
@@ -334,3 +337,139 @@ def test_account_history_says_which_control_the_owner_changed():
         ("account_control_changed", "set_recovery", "automatic"),
         ("account_control_changed", "resume", None),
     ]
+
+
+async def _restarted_with_entries_on(tmp_path, broker, preference, monkeypatch):
+    """An account whose entries were on, opened again as after a restart, during regular hours."""
+    datetime_type = dt.datetime
+    clock = {"at": datetime_type(2026, 1, 5, 15, 0, tzinfo=dt.UTC)}
+
+    class MovableDateTime(datetime_type):
+        @classmethod
+        def now(cls, tz=None):
+            at = clock["at"]
+            return at if tz is None else at.astimezone(tz)
+
+    monkeypatch.setattr(dt, "datetime", MovableDateTime)
+    now = clock["at"]
+    owner = await _open(tmp_path, broker)
+    try:
+        await owner.recover_account(now)
+        await owner.control_account(_command("pref", "set_recovery", preference), now)
+        await owner.control_account(_command("enable", "resume"), now)
+    finally:
+        await owner.close()
+    return await _open(tmp_path, broker), now, clock
+
+
+async def test_a_buy_during_manual_recovery_waits_for_resume_instead_of_being_dropped(
+    tmp_path, monkeypatch
+):
+    broker = FakeBroker()
+    owner, now, clock = await _restarted_with_entries_on(tmp_path, broker, "manual", monkeypatch)
+    try:
+        await owner.recover_account(now)
+        assert (await owner.account_status()).readiness == "manual_resume_required"
+        buy = StockSignal.model_validate(event("after-restart", price="25.10", timestamp=now))
+        await owner.receive(destination_signal(buy, account_id="paper"), now)
+        await owner.cycle(now, halted=False)
+        assert broker.calls == 0
+        part = (await owner.observation()).ledger.messages["discord:demo:after-restart"].parts[0]
+        assert isinstance(part, Pending), part
+
+        # The owner resumes within the signal's age: the buy goes through the normal rules.
+        later = now + dt.timedelta(seconds=30)
+        clock["at"] = later
+        await owner.control_account(_command("resume-after-restart", "resume"), later)
+        await owner.cycle(later, halted=False)
+        assert broker.calls == 1
+        bought = (await owner.observation()).ledger.messages["discord:demo:after-restart"]
+        assert isinstance(bought.parts[0], OrderLinked)
+    finally:
+        await owner.close()
+
+
+async def test_a_buy_that_ages_out_waiting_for_resume_says_it_waited_for_the_owner(
+    tmp_path, monkeypatch
+):
+    broker = FakeBroker()
+    owner, now, clock = await _restarted_with_entries_on(tmp_path, broker, "manual", monkeypatch)
+    try:
+        await owner.recover_account(now)
+        buy = StockSignal.model_validate(event("too-late", price="25.10", timestamp=now))
+        await owner.receive(destination_signal(buy, account_id="paper"), now)
+        await owner.cycle(now, halted=False)
+        clock["at"] = now + dt.timedelta(minutes=5)
+        await owner.cycle(clock["at"], halted=False)
+        assert broker.calls == 0
+        part = (await owner.observation()).ledger.messages["discord:demo:too-late"].parts[0]
+        assert part.reason == "stale_waiting_for_resume"
+    finally:
+        await owner.close()
+
+
+async def test_a_buy_during_automatic_recovery_trades_once_the_checks_pass(tmp_path, monkeypatch):
+    broker = FakeBroker()
+    owner, now, clock = await _restarted_with_entries_on(tmp_path, broker, "automatic", monkeypatch)
+    try:
+        # The post lands before this session's recovery checks ran.
+        buy = StockSignal.model_validate(event("early", price="25.10", timestamp=now))
+        await owner.receive(destination_signal(buy, account_id="paper"), now)
+        await owner.cycle(now, halted=False)
+        assert broker.calls == 0
+        part = (await owner.observation()).ledger.messages["discord:demo:early"].parts[0]
+        assert isinstance(part, Pending), part
+
+        clock["at"] = now + dt.timedelta(seconds=5)
+        await owner.recover_account(clock["at"])
+        await owner.cycle(clock["at"], halted=False)
+        assert broker.calls == 1
+    finally:
+        await owner.close()
+
+
+async def test_changed_limits_size_the_next_order_and_are_journaled(tmp_path, monkeypatch):
+    datetime_type = dt.datetime
+
+    class FixedDateTime(datetime_type):
+        @classmethod
+        def now(cls, tz=None):
+            fixed = cls(2026, 1, 5, 15, 0, tzinfo=dt.UTC)
+            return fixed if tz is None else fixed.astimezone(tz)
+
+    monkeypatch.setattr(dt, "datetime", FixedDateTime)
+    now = FixedDateTime(2026, 1, 5, 15, 0, tzinfo=dt.UTC)
+    broker = FakeBroker()
+    owner = await _open(tmp_path, broker)
+    try:
+        await owner.recover_account(now)
+        await owner.control_account(_command("enable-1", "resume"), now)
+        bigger = CopyConfig(sources=("discord:demo",), max_order_usd=Decimal("300"))
+        [change] = await owner.update_config(bigger, now)
+        assert (change.setting, change.before, change.after) == ("max_order_usd", "100", "300")
+        assert await owner.update_config(bigger, now) == ()
+        buy = StockSignal.model_validate(event("bigger", price="25", timestamp=now))
+        # A sixth of $3,000 asks for $500: the new $300 cap trims it, where $100 did before.
+        signal = destination_signal(buy, account_id="paper", full_position_usd="3000")
+        await owner.receive(signal, now)
+        await owner.cycle(now, halted=False)
+        [order] = broker.orders.values()
+        assert Decimal(order["qty"]) * Decimal(order["limit_price"]) == Decimal("300")
+        with pytest.raises(ValueError, match="sources"):
+            await owner.update_config(CopyConfig(sources=("discord:other",)), now)
+    finally:
+        await owner.close()
+
+    owner = await _open(tmp_path, broker)
+    try:
+        page = await owner.event_page(None, 50)
+        [changed] = [item for item in page.items if item.kind == "limits_changed"]
+        assert [(item.setting, item.before, item.after) for item in changed.changes] == [
+            ("max_order_usd", "100", "300")
+        ]
+        feed = await owner.feed_page(None, 50)
+        [row] = [item for item in feed.items if item.kind == "limits_changed"]
+        assert row.source == "you"
+        assert row.changes == changed.changes
+    finally:
+        await owner.close()

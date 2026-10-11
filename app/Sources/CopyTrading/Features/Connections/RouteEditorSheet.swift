@@ -17,84 +17,89 @@ struct RouteEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
-            Form {
-                SheetTitle(
-                    kind: L10n.string("Guru"),
-                    name: route.displayName.trimmed.isEmpty ? L10n.string("New") : route.displayName.trimmed)
-                Section {
-                    TextField(L10n.string("Name"), text: $route.displayName, prompt: Text(L10n.string("How you refer to this guru")))
-                        .accessibilityLabel(L10n.string("Name"))
-                } header: {
-                    SetupSectionHeader(title: "Guru", detail: "The trader whose calls CopyTrading copies.")
-                }
+        SheetScaffold(
+            kind: L10n.string("Guru"),
+            title: route.displayName.trimmed.isEmpty ? L10n.string("New") : route.displayName.trimmed,
+            lede: L10n.string("The trader whose calls CopyTrading copies.")
+        ) {
+            // The name sits right under the title it fills in; the header already says "Guru".
+            SheetField(title: L10n.string("Name")) {
+                TextField(
+                    L10n.string("Name"), text: $route.displayName,
+                    prompt: Text(L10n.string("How you refer to this guru")).foregroundStyle(Palette.tertiaryInk)
+                )
+                .accessibilityLabel(L10n.string("Name"))
+            }
 
-                Section {
-                    if channelIDs.isEmpty {
-                        Text(L10n.string("Add the channel they post in under Discord in Connections first."))
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Picker(L10n.string("Discord channel"), selection: $route.channelID) {
-                            Text(L10n.string("First channel in Connections (%@)", channelIDs[0])).tag("")
-                            ForEach(channelChoices, id: \.self) { channelID in
-                                Text(channelID).tag(channelID)
-                            }
-                        }
+            SheetSection(
+                L10n.string("Where they post"),
+                detail: L10n.string("The channel and, in a shared channel, the guru's Discord user ID.")
+            ) {
+                if channelIDs.isEmpty {
+                    Text(L10n.string("Add the channel they post in under Discord in Connections first."))
+                        .foregroundStyle(Palette.tertiaryInk)
+                        .padding(.vertical, 12)
+                } else {
+                    SheetRow(title: L10n.string("Discord channel")) {
+                        SheetMenu(
+                            label: L10n.string("Discord channel"),
+                            choices: [("", L10n.string("First channel in Connections (%@)", channelIDs[0]))]
+                                + channelChoices.map { ($0, $0) },
+                            selection: $route.channelID)
                     }
+                }
+                SheetField(title: L10n.string("Author ID")) {
                     TextField(
-                        L10n.string("Author ID"), text: $route.authorID, prompt: Text(L10n.string("Needed when several people post there"))
+                        L10n.string("Author ID"), text: $route.authorID,
+                        prompt: Text(L10n.string("Needed when several people post there")).foregroundStyle(Palette.tertiaryInk)
                     )
                     .accessibilityLabel(L10n.string("Author ID"))
-                } header: {
-                    SetupSectionHeader(
-                        title: "Where they post", detail: "The channel and, in a shared channel, the guru's Discord user ID.",
-                        help: [SetupHelp.channelID, SetupHelp.userID])
                 }
+            } accessory: {
+                HelpPopoverButton(articles: [SetupHelp.channelID, SetupHelp.userID])
+            }
 
-                PlaybookSection(route: $route, learn: learn)
+            DestinationEditorSection(
+                connection: $route.connection,
+                accountIDs: accountIDs,
+                policy: route.connection.flatMap { policies[$0.accountID.trimmed] }
+            )
 
-                ForEach($route.examples) { $example in
-                    ExampleEditorSection(
-                        example: $example,
-                        index: route.examples.firstIndex { $0.id == example.id } ?? 0,
-                        remove: { removeExample(example.id) }
-                    )
-                }
-                Section {
-                    Button(L10n.string("Add Example"), systemImage: "plus", action: addExample)
-                        .buttonStyle(.borderless)
-                } footer: {
-                    Text(
-                        L10n.string(
-                            "Start Copying first reads each example with the interpreter. A different reading stops copying from starting.")
-                    )
-                }
+            PlaybookSection(route: $route, learn: learn)
 
-                GuruRulesSection(route: $route)
-
-                GuruReplaySection(route: route, replay: replay)
-
-                DestinationEditorSection(
-                    connection: $route.connection,
-                    accountIDs: accountIDs,
-                    policy: route.connection.flatMap { policies[$0.accountID.trimmed] }
+            ForEach($route.examples) { $example in
+                ExampleEditorSection(
+                    example: $example,
+                    index: route.examples.firstIndex { $0.id == example.id } ?? 0,
+                    remove: { removeExample(example.id) }
                 )
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                Button(L10n.string("Add Example"), systemImage: "plus", action: addExample)
+                    .buttonStyle(SheetQuietButtonStyle())
+                Text(
+                    L10n.string(
+                        "Start Copying first reads each example with the interpreter. A different reading stops copying from starting.")
+                )
+                .font(DesignTokens.caption)
+                .foregroundStyle(Palette.tertiaryInk)
+                .fixedSize(horizontal: false, vertical: true)
+            }
 
-                Section {
-                    Button(L10n.string("Remove Guru"), role: .destructive, action: removeGuru)
-                        .buttonStyle(.borderless)
-                } footer: {
-                    Text(L10n.string("Removing takes effect when the setup is checked and copying starts."))
-                }
-            }
-            .formStyle(.grouped)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.string("Done"), action: dismiss.callAsFunction)
-                }
-            }
+            GuruRulesSection(route: $route)
+
+            GuruReplaySection(route: route, policies: policies, replay: replay)
+
+        } leading: {
+            Button(L10n.string("Remove Guru"), role: .destructive, action: removeGuru)
+                .buttonStyle(SheetQuietButtonStyle(isDestructive: true))
+                .help(L10n.string("Removing takes effect when the setup is checked and copying starts."))
+        } actions: {
+            Button(L10n.string("Done"), action: dismiss.callAsFunction)
+                .buttonStyle(SheetButtonStyle(isPrimary: true))
+                .keyboardShortcut(.defaultAction)
         }
-        .frame(minWidth: 600, idealWidth: 640, minHeight: 680, idealHeight: 760)
+        .frame(minWidth: 620, idealWidth: 660, minHeight: 680, idealHeight: 780)
     }
 
     private var channelChoices: [String] {

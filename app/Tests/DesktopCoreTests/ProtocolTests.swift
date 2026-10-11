@@ -185,6 +185,24 @@ private func checkAccountValuationFixturesDecode() throws {
     }
     try #require(lot.sourceID == "discord:demo:1", "a lot lost the post that bought it")
     try #require(lot.remainingQty == "2" && lot.averagePrice == "25.10", "a lot's shares or price changed while decoding")
+    try #require(page.items.first?.positions.first?.currentPrice == nil, "an unread broker produced a price")
+
+    // A position the broker valued: cost, price, value, and gain, for the position and its lot.
+    let valued = try JSONDecoder().decode(
+        AccountPositionView.self,
+        from: Data(
+            """
+            {"symbol":"PM","owned_qty":"1","external_qty":"0","broker_qty":"1",
+             "avg_entry_price":"199.59","current_price":"200.96","market_value":"200.96",
+             "unrealized_pl":"1.37","unrealized_plpc":"0.0069",
+             "lots":[{"lot_id":"l1","source_id":null,"guru_id":null,"posted_at":null,"excerpt":null,
+               "bought_at":null,"original_qty":"1","remaining_qty":"1","average_price":"199.59",
+               "unrealized_pl":"1.37"}]}
+            """.utf8))
+    try #require(valued.avgEntryPrice == "199.59" && valued.currentPrice == "200.96", "a position's prices did not decode")
+    try #require(valued.marketValue == "200.96" && valued.unrealizedPL == "1.37", "a position's value or gain did not decode")
+    try #require(valued.unrealizedPLPercent == "0.0069", "a position's gain percent did not decode")
+    try #require(valued.lots.first?.unrealizedPL == "1.37", "a lot's gain did not decode")
 
     let activity = try JSONDecoder().decode(
         EngineResponse.self, from: contractFixture("manual-source-activity-response.json")

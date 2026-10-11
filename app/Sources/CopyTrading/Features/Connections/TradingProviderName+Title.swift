@@ -21,7 +21,7 @@ extension TradingProviderName {
         }
     }
 
-    /// The name where space is short: a tile, or a panel's serif title.
+    /// The name where space is short: a tile, or a panel's title.
     var shortTitle: String {
         switch self {
         case .moonshotai: "Moonshot AI"

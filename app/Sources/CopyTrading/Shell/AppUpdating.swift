@@ -8,6 +8,12 @@ public protocol AppUpdating: AnyObject {
     var canCheckForUpdates: Bool { get }
     var checksAutomatically: Bool { get set }
     func checkForUpdates()
+    /// A newer version found by a scheduled check, which the banner offers.
+    var offer: UpdateOffer { get }
+    /// Shows the update to install it: release notes, then Install and Relaunch.
+    func installOfferedUpdate()
+    /// Runs just before the updater quits the app to relaunch it.
+    var willRelaunch: (@MainActor () -> Void)? { get set }
 }
 
 /// Previews and tests: nothing to check.
@@ -16,4 +22,7 @@ final class NoUpdates: AppUpdating {
     var canCheckForUpdates: Bool { false }
     var checksAutomatically = false
     func checkForUpdates() {}
+    let offer = UpdateOffer()
+    func installOfferedUpdate() {}
+    var willRelaunch: (@MainActor () -> Void)?
 }

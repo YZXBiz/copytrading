@@ -10,6 +10,8 @@ struct MainSplitView: View {
     @State private var previousScreens: [AppModel.Screen] = []
     @State private var nextScreens: [AppModel.Screen] = []
     @State private var isHistoryNavigation = false
+    /// Lock asks first when it would drop setup changes that aren't saved yet.
+    @State private var confirmsLock = false
     /// Activity's filter and selection, here so the assistant knows which post "this post" is.
     @State private var activityState = ActivityScreenState()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -44,6 +46,7 @@ struct MainSplitView: View {
             }
             VStack(spacing: 0) {
                 workspaceToolbar
+                UpdateAvailableBanner(model: model)
                 EngineStoppedBanner(model: model)
                 StatusBanner(model: model)
                 ScreenDetailView(model: model, accountFeature: accountFeature, activityState: activityState)
@@ -62,15 +65,30 @@ struct MainSplitView: View {
             }
         }
         .animation(reduceMotion ? .easeOut(duration: 0.2) : .smooth(duration: 0.34), value: model.assistant.isOpen)
+        .overlay(alignment: .top) {
+            if model.isShowingPalette {
+                ZStack(alignment: .top) {
+                    Color.black.opacity(0.08)
+                        .ignoresSafeArea()
+                        .onTapGesture { model.isShowingPalette = false }
+                        .accessibilityHidden(true)
+                    CommandPalette(model: model, accountFeature: accountFeature)
+                        .padding(.top, 96)
+                }
+                .transition(.opacity)
+            }
+        }
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: model.isShowingPalette)
         .background(Palette.canvas)
         // Seat the window buttons inside the sidebar panel, level with its header row
         // (panel inset 8 + half the 40-point header); without the sidebar, level with the toolbar.
         .background(WindowButtonPlacement(leading: 20, centerY: showsSidebar ? 28 : 26))
         .ignoresSafeArea(.container)
-        .tint(Palette.accent)
+        .tint(Palette.ink)
         .sheet(item: pendingAgentProposal) { proposal in
             AgentProposalSheet(model: model, proposal: proposal)
         }
+        .environment(\.postProgressContext, progressContext)
         .task(id: refreshTrigger) {
             await liveRefresh()
         }
@@ -117,11 +135,22 @@ struct MainSplitView: View {
                 .buttonStyle(.glass)
                 .buttonBorderShape(.capsule)
             AssistantToolbarButton(assistant: model.assistant)
-            Button(L10n.string("Lock"), systemImage: "lock", action: lock)
+            Button(L10n.string("Lock"), systemImage: "lock", action: requestLock)
                 .labelStyle(.iconOnly)
                 .buttonStyle(.glass)
                 .buttonBorderShape(.circle)
-                .help(L10n.string("Lock CopyTrading"))
+                .help(
+                    L10n.string(
+                        model.hasUnsavedSetupChanges ? "Lock CopyTrading. Unsaved setup changes are discarded." : "Lock CopyTrading")
+                )
+                .confirmationDialog(
+                    L10n.string("Lock and discard your unsaved setup changes?"), isPresented: $confirmsLock, titleVisibility: .visible
+                ) {
+                    Button(L10n.string("Discard and Lock"), role: .destructive, action: lock)
+                    Button(L10n.string("Cancel"), role: .cancel) {}
+                } message: {
+                    Text(L10n.string("What you typed in Connections is dropped, keys included. Your saved setup stays."))
+                }
         }
         // Reserve the window buttons (seated 20 points in) when the sidebar is collapsed.
         .padding(.leading, showsSidebar ? 0 : 80)
@@ -171,7 +200,7 @@ struct MainSplitView: View {
             }
         } label: {
             Label(
-                L10n.string(isShowingSettings ? model.settingsPage.title : model.selectedScreen.title),
+                isShowingSettings ? L10n.string(model.settingsPage.title) : model.title(of: model.selectedScreen),
                 systemImage: isShowingSettings ? model.settingsPage.symbol : model.selectedScreen.symbol
             )
             .labelStyle(.titleAndIcon)
@@ -184,21 +213,9 @@ struct MainSplitView: View {
         .accessibilityIdentifier("toolbar.pages")
     }
 
-    @ViewBuilder
     private var screenMenuItems: some View {
-        ForEach(AppModel.ScreenSection.allCases) { section in
-            if section != AppModel.ScreenSection.allCases.first {
-                Divider()
-            }
-            ForEach(section.screens) { screen in
-                Button(L10n.string(screen.title), systemImage: screen == model.selectedScreen ? "checkmark" : screen.symbol) {
-                    model.selectedScreen = screen
-                }
-            }
-        }
-        Divider()
-        ForEach(AppModel.sidebarFooterScreens) { screen in
-            Button(L10n.string(screen.title), systemImage: screen == model.selectedScreen ? "checkmark" : screen.symbol) {
+        ForEach(model.navigableScreens, id: \.self) { screen in
+            Button(model.title(of: screen), systemImage: screen == model.selectedScreen ? "checkmark" : screen.symbol) {
                 model.selectedScreen = screen
             }
         }
@@ -243,15 +260,41 @@ struct MainSplitView: View {
         Binding(get: { model.pendingAgentProposal }, set: { _ in })
     }
 
+    /// The saved setup's reader and order timeouts, for each post's live step.
+    private var progressContext: PostProgress.Context {
+        let setup = model.savedTradingConfiguration
+        return PostProgress.Context(
+            readerModel: setup?.provider.model,
+            orderTimeouts: Dictionary(
+                (setup?.accounts ?? []).map { ($0.id, TimeInterval($0.policy.orderTimeoutSeconds)) },
+                uniquingKeysWith: { first, _ in first }))
+    }
+
+    /// Everything every 15 s; while a post is in flight, its newest posts every second between.
     private func liveRefresh() async {
+        var lastFull = Date.distantPast
         while !Task.isCancelled {
-            await accountFeature.refresh(using: model.accountActions())
-            await accountFeature.refreshHistories(using: model.accountActions())
+            if Date.now.timeIntervalSince(lastFull) >= ActivityRefreshCadence.settled {
+                await accountFeature.refresh(using: model.accountActions())
+                await accountFeature.refreshHistories(using: model.accountActions())
+                await accountFeature.refreshFeeds(using: model.accountActions())
+                lastFull = .now
+            } else {
+                await accountFeature.refreshActivity(using: model.accountActions())
+            }
             do {
-                try await Task.sleep(for: .seconds(15))
+                try await Task.sleep(for: .seconds(ActivityRefreshCadence.interval(for: accountFeature.activity)))
             } catch {
                 return
             }
+        }
+    }
+
+    private func requestLock() {
+        if model.hasUnsavedSetupChanges {
+            confirmsLock = true
+        } else {
+            lock()
         }
     }
 

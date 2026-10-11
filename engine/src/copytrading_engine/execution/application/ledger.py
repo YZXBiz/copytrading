@@ -68,6 +68,8 @@ from copytrading_engine.execution.domain.ownership import (
     OwnershipIncident,
     OwnershipResolution,
     OwnershipResolutionRequest,
+    allocate,
+    sync_reason,
 )
 from copytrading_engine.execution.domain.positions import PositionAudit
 from copytrading_engine.execution.domain.progress import (
@@ -637,10 +639,24 @@ class TradingLedger:
                 ),
             )
 
-    def open_ownership_incidents(self, audit: PositionAudit, now: dt.datetime) -> None:
-        self._close_matched_incidents(audit, now)
+    def open_ownership_incidents(
+        self,
+        audit: PositionAudit,
+        now: dt.datetime,
+        outside_orders: frozenset[str] = frozenset(),
+    ) -> None:
+        """Open a question for each stock whose broker count left what the ledger expects, and
+        settle every earlier one whose count has held still since (ADR-0011). `outside_orders` are
+        the stocks with an open broker order the app didn't place; those wait, since that order
+        can still move the count."""
+        # The audit predates what was just settled, so those stocks wait for the next one.
+        settled = self._settle_incidents(audit, now, outside_orders)
         for comparison in audit.positions:
-            if not comparison.mismatched or self.unresolved_ownership(comparison.symbol):
+            if (
+                not comparison.mismatched
+                or comparison.symbol in settled
+                or self.unresolved_ownership(comparison.symbol)
+            ):
                 continue
             revision = sum(
                 incident.symbol == comparison.symbol
@@ -667,48 +683,69 @@ class TradingLedger:
                 JournalEvent(at=now, payload=OwnershipIncidentOpened(incident=incident)),
             )
 
-    def _close_matched_incidents(self, audit: PositionAudit, now: dt.datetime) -> None:
-        """A mismatch closes by itself once the broker holds exactly what the app expects again,
-        as when shares bought outside the app are sold again: nothing is left to allocate, and
-        an open incident would keep refusing every call for the stock."""
+    def _settle_incidents(
+        self, audit: PositionAudit, now: dt.datetime, outside_orders: frozenset[str]
+    ) -> set[str]:
+        """Settle each open question from the broker's filled count, once that count has held
+        still for a sync and no order in the stock is in flight (the app's own, an uncertain one,
+        or one placed outside). Copied shares the broker still holds stay copied and the rest
+        count as the owner's own; a broker count below the copied shares means copied shares were
+        sold outside the app, oldest buys first, the way the app's own sells take them."""
         account_id = self.account_id
+        settled: set[str] = set()
         if account_id is None:
-            return
+            return settled
         compared = {comparison.symbol: comparison for comparison in audit.positions}
         for incident in tuple(self._snapshot.ownership_incidents.values()):
-            if incident.resolved:
+            if incident.resolved or now <= incident.observed_at:
                 continue
-            comparison = compared.get(incident.symbol)
-            if comparison is not None and comparison.actual != comparison.expected:
-                continue
-            if self.pending(incident.symbol) or any(
-                item.symbol == incident.symbol and item.unresolved
-                for item in self._snapshot.late_order_incidents.values()
+            symbol = incident.symbol
+            if (
+                symbol in outside_orders
+                or self.pending(symbol)
+                or any(
+                    item.symbol == symbol and item.unresolved
+                    for item in self._snapshot.late_order_incidents.values()
+                )
             ):
                 continue
+            lots = self._lots_oldest_first(symbol)
+            comparison = compared.get(symbol)
             broker_qty = comparison.actual if comparison is not None else Decimal(0)
-            lots = {
-                key: lot.remaining_qty
-                for key, lot in self._snapshot.lots.items()
-                if lot.symbol == incident.symbol
-            }
-            external_qty = broker_qty - sum(lots.values(), Decimal(0))
-            if external_qty < 0 or now <= incident.observed_at:
-                continue
+            expected = comparison.expected if comparison is not None else broker_qty
+            allocation = allocate(broker_qty, lots)
+            reason = sync_reason(broker_qty, expected, sum((held for _, held in lots), Decimal(0)))
             self.resolve_ownership(
                 OwnershipResolutionRequest(
-                    resolution_id=f"matched-{incident.incident_id}",
+                    resolution_id=f"synced-{incident.incident_id}",
                     incident_id=incident.incident_id,
                     account_id=account_id,
-                    symbol=incident.symbol,
+                    symbol=symbol,
                     actor="copytrading",
-                    reason="broker_matches_again",
+                    reason=reason,
                     broker_qty=broker_qty,
-                    external_qty=external_qty,
-                    lot_remaining=lots,
+                    external_qty=allocation.external_qty,
+                    lot_remaining=allocation.lot_remaining,
                 ),
                 now,
             )
+            settled.add(symbol)
+        return settled
+
+    def _lots_oldest_first(self, symbol: str) -> list[tuple[str, Decimal]]:
+        """A stock's copied lots and what each still holds, in the order their first buys were
+        placed, which is the order an outside sale takes them in."""
+        snapshot = self._snapshot
+        lots = [(key, lot) for key, lot in snapshot.lots.items() if lot.symbol == symbol]
+
+        def opened(item: tuple[str, object]) -> tuple[dt.datetime, str]:
+            order = snapshot.orders.get(item[0])
+            return (
+                order.created_at if order is not None else dt.datetime.max.replace(tzinfo=dt.UTC),
+                item[0],
+            )
+
+        return [(key, lot.remaining_qty) for key, lot in sorted(lots, key=opened)]
 
     def resolve_ownership(
         self, request: OwnershipResolutionRequest, checked_at: dt.datetime
@@ -918,12 +955,12 @@ class TradingLedger:
             if instruction.entry_price is not None
             else plan.entry_price
         )
-        if (plan.symbol, plan.side, plan.source_price, plan.entry_price) != (
+        # A sell at the market has no guru's price; its plan carries the bid it was priced from.
+        if (plan.symbol, plan.side, plan.entry_price) != (
             instruction.symbol,
             side,
-            instruction.price,
             entry_price,
-        ):
+        ) or instruction.price not in (None, plan.source_price):
             raise RuntimeError("Order plan differs from its source instruction")
         if plan.side == "buy" and self._snapshot.entry_halted:
             raise RuntimeError("Unresolved late-order incidents halt new buy orders")

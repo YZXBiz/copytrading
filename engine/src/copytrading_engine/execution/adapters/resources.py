@@ -22,6 +22,7 @@ from copytrading_engine.execution.application.engine import CopyEngine
 from copytrading_engine.execution.application.lot_sales import LotSaleApplication
 from copytrading_engine.execution.application.manual_commands import ManualTradingApplication
 from copytrading_engine.execution.application.ports import (
+    AccountOpenRefused,
     AccountRuntimeView,
     Broker,
     BrokerError,
@@ -30,7 +31,12 @@ from copytrading_engine.execution.application.ports import (
     ExecutionObserver,
 )
 from copytrading_engine.execution.application.recovery import RecoveryApplication
-from copytrading_engine.execution.domain.events import JournalEvent, SignalRejected
+from copytrading_engine.execution.domain.events import (
+    JournalEvent,
+    LimitChange,
+    LimitsChanged,
+    SignalRejected,
+)
 from copytrading_engine.execution.domain.lifecycle import (
     AccountControlCommand,
     AccountControlResult,
@@ -64,6 +70,7 @@ from copytrading_engine.execution.domain.recovery import (
 from copytrading_engine.execution.domain.signals import CopyConfig
 from copytrading_engine.execution.domain.sizing import DestinationSignal
 from copytrading_engine.execution.domain.values import BrokerAccountNumber
+from copytrading_engine.execution.presentation.account_feed import AccountFeedPage, account_feed
 from copytrading_engine.execution.presentation.operator_views import (
     AccountEventPage,
     AccountOverview,
@@ -73,6 +80,7 @@ from copytrading_engine.execution.presentation.operator_views import (
     destination_views,
     event_page,
 )
+from copytrading_engine.shared.owner_facing import OwnerFacingError
 
 # A ledger not yet bound to a broker account matches no broker account, so manual orders and
 # lot sales refuse until the account has connected.
@@ -105,7 +113,7 @@ def _reserve_identity(environment: Environment, account_id: str) -> Callable[[],
     identity = (environment, account_id)
     with _identity_guard:
         if identity in _active_identities:
-            raise RuntimeError("Another executor owns this broker account")
+            raise AccountOpenRefused("account_in_use")
         _active_identities.add(identity)
 
     def release() -> None:
@@ -113,6 +121,11 @@ def _reserve_identity(environment: Environment, account_id: str) -> Callable[[],
             _active_identities.remove(identity)
 
     return release
+
+
+# Entries the owner turned off or paused skip a buy at once. A restart's recovery only holds it:
+# each cycle tries again, and the signal-age check decides when a post is too old.
+_DELIBERATE_BLOCKS = frozenset({"account_paused", "account_disabled"})
 
 
 @dataclass
@@ -186,7 +199,9 @@ class ExecutionResources:
         )
 
     def destination_views(self, source_ids: set[str]) -> dict[str, DestinationView]:
-        return destination_views(self.engine.ledger.snapshot(), source_ids)
+        return destination_views(
+            self.engine.ledger.snapshot(), source_ids, self.store.message_events(source_ids)
+        )
 
     def equity_history(self, window: HistoryWindow, now: dt.datetime) -> EquityHistory:
         """The broker's curve, fetched at most once a minute so charts never crowd out trading."""
@@ -202,6 +217,14 @@ class ExecutionResources:
     def event_page(self, before_seq: int | None, limit: int) -> AccountEventPage:
         return event_page(self.data_dir.name, self.store.event_page(before_seq, limit), limit)
 
+    def feed_page(self, before_seq: int | None, limit: int) -> AccountFeedPage:
+        return account_feed(
+            self.data_dir.name,
+            self.engine.ledger.snapshot(),
+            self.store.feed_events(before_seq, limit),
+            limit,
+        )
+
     def entry_block_reason(self) -> str | None:
         control = self.engine.ledger.snapshot().control
         if control.entry_permission == "paused":
@@ -209,7 +232,12 @@ class ExecutionResources:
         if control.entry_permission == "disabled":
             return "account_disabled"
         if not self.runtime_entries_ready:
-            return "recovery_pending"
+            # Manual recovery waits for the owner's Resume; automatic waits for the checks.
+            return (
+                "manual_resume_required"
+                if control.recovery_preference == "manual"
+                else "recovery_pending"
+            )
         return None
 
     def recover_account(self, now: dt.datetime) -> OwnershipInspection:
@@ -224,10 +252,11 @@ class ExecutionResources:
             and control.recovery_preference == "automatic"
             and self._inspection_ready(inspection)
         )
-        if not self.runtime_entries_ready:
-            self.engine.ledger.skip_unpermitted_buys(
-                now, self.entry_block_reason() or "recovery_pending"
-            )
+        # A deliberate pause or entries left off skip queued buys; recovery only holds them, and
+        # each cycle's signal-age check decides when one is too old.
+        reason = self.entry_block_reason()
+        if reason in _DELIBERATE_BLOCKS:
+            self.engine.ledger.skip_unpermitted_buys(now, reason)
         return inspection
 
     def _inspection_ready(self, inspection: OwnershipInspection) -> bool:
@@ -238,6 +267,16 @@ class ExecutionResources:
             and inspection.account_activity_status == "ready"
             and not self.engine.ledger.snapshot().buy_halted
         )
+
+    def _resume_refusal(self, inspection: OwnershipInspection) -> str:
+        """Why new buys can't resume yet, as a code the app words in the owner's language."""
+        if inspection.account_activity_reason == "unresolved_account_order":
+            return "resume_blocked_outside_order"
+        if not self.account.active:
+            return "resume_blocked_account_inactive"
+        if self.engine.ledger.snapshot().buy_halted:
+            return "resume_blocked_order_unclear"
+        return "resume_blocked_unreadable"
 
     def control_account(
         self, command: AccountControlCommand, now: dt.datetime
@@ -254,8 +293,7 @@ class ExecutionResources:
             self.account = self.broker.account()
             self.account_observed_at = now
             if not self._inspection_ready(inspection):
-                raise RuntimeError("Account reconciliation or risk is unavailable")
-            self.engine.ledger.skip_unpermitted_buys(now, "recovery_pending")
+                raise OwnerFacingError(self._resume_refusal(inspection))
         result = self.engine.ledger.account_control(
             command, now, local_account_id=self.data_dir.name
         )
@@ -264,6 +302,22 @@ class ExecutionResources:
         elif command.action == "resume":
             self._recovery_ready = True
         return result
+
+    def update_config(self, config: CopyConfig, now: dt.datetime) -> tuple[LimitChange, ...]:
+        """Copy with new limits from the next cycle on, and journal what changed."""
+        before, after = _flat_limits(self.engine.config), _flat_limits(config)
+        changes = tuple(
+            LimitChange(setting=name, before=_text(before[name]), after=_text(value))
+            for name, value in after.items()
+            if before[name] != value
+        )
+        if config.sources != self.engine.config.sources:
+            raise ValueError("A limits update cannot change the account's sources")
+        if not changes:
+            return ()
+        self.engine.ledger.record(JournalEvent(at=now, payload=LimitsChanged(changes=changes)))
+        self.engine.config = config
+        return changes
 
     def observation(self) -> ExecutionObservation:
         return ExecutionObservation(
@@ -289,6 +343,11 @@ class ExecutionResources:
             entry_block_reason=self.entry_block_reason,
             stopping=stopping.is_set,
         )
+        # Orders this cycle placed can fill before it ends: book those fills before the broker is
+        # read, so a buy shows as copied and a sale as gone in the same cycle, never as shares at
+        # the broker nobody copied or shares sold that still count. With nothing pending this
+        # costs no broker call.
+        self.engine.reconcile(now)
         self.position_audit = self.engine.audit_positions()
         self.account = self.broker.account()
         self.account_observed_at = now
@@ -297,7 +356,7 @@ class ExecutionResources:
 
     def receive(self, delivery: DestinationSignal, now: dt.datetime) -> None:
         self.engine.receive(delivery, now)
-        if (reason := self.entry_block_reason()) is not None:
+        if (reason := self.entry_block_reason()) in _DELIBERATE_BLOCKS:
             self.engine.ledger.skip_unpermitted_buys(now, reason)
 
     def record_rejection(self, payload_hash: str, reason: str, now: dt.datetime) -> None:
@@ -467,7 +526,7 @@ class ExecutionResources:
             now = dt.datetime.now(dt.UTC)
             for order in self.engine.pending():
                 try:
-                    self.engine.cancel(order, now)
+                    self.engine.cancel(order, now, "copying_stopped")
                 except BrokerError as exc:
                     log.warning("shutdown_cancel_unconfirmed error=%s", type(exc).__name__)
             try:
@@ -509,7 +568,7 @@ def build_resources(
         try:
             fcntl.flock(identity_lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError:
-            raise RuntimeError("Another executor owns this broker account") from None
+            raise AccountOpenRefused("account_in_use") from None
         store = Store(data_dir / "execution.sqlite3")
         stack.callback(store.close)
         store.bind_identity(account.id, environment)
@@ -521,3 +580,14 @@ def build_resources(
     except BaseException:
         stack.close()
         raise
+
+
+def _flat_limits(config: CopyConfig) -> dict[str, object]:
+    """Every limit by its account policy name, the entry pricing ones included."""
+    return (
+        config.model_dump(exclude={"sources", "entry_pricing"}) | config.entry_pricing.model_dump()
+    )
+
+
+def _text(value: object) -> str:
+    return str(value).lower() if isinstance(value, bool) else str(value)

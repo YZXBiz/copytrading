@@ -9,14 +9,21 @@ from copytrading_engine.execution.domain.market import Quote
 
 # A quote older than this is not the market now.
 QUOTE_MAX_AGE_SECONDS = 30
+# A sell at the market only takes its floor from the bid: an older bid can leave the order resting
+# but never fill it worse, since a limit sell fills at the market's better price. Outside regular
+# hours the free feed stops updating at the close, so the day's last bid is the bid there is; at
+# worst the sell rests until its timeout and the shares stay.
+SELL_FLOOR_QUOTE_MAX_AGE_SECONDS = 6 * 3600
 
 
-def quote_problem(quote: Quote, price: Decimal | None, now: dt.datetime) -> str | None:
+def quote_problem(
+    quote: Quote, price: Decimal | None, now: dt.datetime, max_age: float = QUOTE_MAX_AGE_SECONDS
+) -> str | None:
     """Why a quote's price cannot stand for the market now, if it cannot."""
     if quote.timestamp is None or price is None or price <= 0:
         return "quote_unavailable"
     age = (now - quote.timestamp).total_seconds()
-    if age < -5 or age > QUOTE_MAX_AGE_SECONDS:
+    if age < -5 or age > max_age:
         return "quote_stale"
     return None
 

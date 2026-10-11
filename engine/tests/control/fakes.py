@@ -51,6 +51,28 @@ from ..contracts import CONTRACTS
 NOW = dt.datetime(2026, 9, 26, 15, 0, 10, tzinfo=dt.UTC)
 BROKER_IDENTITIES = ("broker-123", "broker-paper")
 
+# The raw journal an agent reads through the control socket; the app reads the feed instead.
+ACCOUNT_EVENTS = {
+    "account_id": "paper",
+    "items": [
+        {
+            "sequence": 10,
+            "at": "2026-09-26T15:02:00Z",
+            "kind": "account_control_changed",
+            "reason": "set_recovery",
+            "status": "automatic",
+        },
+        {
+            "sequence": 9,
+            "at": "2026-09-26T14:59:00Z",
+            "kind": "skipped",
+            "message_id": "discord:demo:signal-7",
+            "reason": "account_paused",
+        },
+    ],
+    "next_before_seq": 9,
+}
+
 
 def fixture(name: str, key: str) -> dict[str, Any]:
     return json.loads((CONTRACTS / f"{name}.json").read_text())["ok"][key]
@@ -107,9 +129,7 @@ class FakeEngine:
     ) -> AccountEventPage:
         if account_id != "paper":
             raise KeyError(account_id)
-        return AccountEventPage.model_validate_json(
-            json.dumps(fixture("account-events-response", "events"))
-        )
+        return AccountEventPage.model_validate_json(json.dumps(ACCOUNT_EVENTS))
 
     async def list_manual_commands(self, request: ManualCommandPageRequest) -> ManualCommandPage:
         return ManualCommandPage.model_validate_json(

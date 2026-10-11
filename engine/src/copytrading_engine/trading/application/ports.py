@@ -4,8 +4,10 @@ import datetime as dt
 from pathlib import Path
 from typing import Protocol
 
+from copytrading_engine.execution.domain.events import JournalEvent
 from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
 from copytrading_engine.execution.domain.manual_commands import ManualSourceEvidence
+from copytrading_engine.execution.presentation.account_feed import AccountFeedPage
 from copytrading_engine.execution.presentation.operator_views import (
     AccountEventPage,
     AccountOverview,
@@ -39,6 +41,14 @@ class OperatorEvidence(Protocol):
     def retained_account(
         self, path: Path, *, before_seq: int | None = None, limit: int = 50
     ) -> tuple[AccountOverview, LedgerSnapshot, AccountEventPage]: ...
+
+    def retained_feed(
+        self, path: Path, *, before_seq: int | None, limit: int
+    ) -> AccountFeedPage: ...
+
+    def retained_message_events(
+        self, path: Path, message_ids: set[str]
+    ) -> tuple[JournalEvent, ...]: ...
 
     def manual_source_evidence(self, database: Path, source_id: str) -> ManualSourceEvidence: ...
 

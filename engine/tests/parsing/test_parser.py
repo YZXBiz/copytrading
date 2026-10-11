@@ -19,6 +19,7 @@ from copytrading_engine.parsing.providers.anthropic import build_decoder as buil
 from copytrading_engine.parsing.routes import Route
 from copytrading_engine.shared.model_providers import ProviderConfig
 from copytrading_engine.shared.reading import (
+    All,
     AtMarket,
     Batch,
     Buy,
@@ -26,12 +27,15 @@ from copytrading_engine.shared.reading import (
     Exact,
     Fraction,
     NotGiven,
+    NotSaid,
     Range,
+    Sell,
     Stock,
     Suggestion,
     TradeMade,
     Unclear,
 )
+from copytrading_engine.shared.signals import Evidence, Instruction
 
 from ..readings import buy, commentary, sell, trade
 from .builders import TEXT, raw
@@ -277,6 +281,119 @@ async def test_a_post_with_one_unplaceable_call_places_none_of_them():
     result = await read("25加了abc sco 20减仓", reading)
 
     assert (result.decision, result.instructions) == ("review", ())
+
+
+def _market_sell(said: str, ticker_said: str, share, price=None) -> Sell:
+    """A sell the post gives no price: the guru is getting out now."""
+    return Sell(
+        action_words=said,
+        stock=Stock(ticker="WMT", words=ticker_said),
+        price=price or NotGiven(),
+        share=share,
+        sell_from=NotSaid(),
+    )
+
+
+@pytest.mark.parametrize(
+    ("post", "call", "action", "fraction"),
+    [
+        pytest.param(
+            "sell wmt half",
+            _market_sell("sell", "wmt", Fraction(value=Decimal("0.5"), words="half")),
+            "reduce",
+            Decimal("0.5"),
+            id="sell-x-half",
+        ),
+        pytest.param(
+            "sell half wmt",
+            _market_sell("sell", "wmt", Fraction(value=Decimal("0.5"), words="half")),
+            "reduce",
+            Decimal("0.5"),
+            id="sell-half-x",
+        ),
+        pytest.param(
+            "wmt卖出三分之一",
+            _market_sell("卖出", "wmt", Fraction(value=Decimal(1) / 3, words="三分之一")),
+            "reduce",
+            Decimal(1) / 3,
+            id="a-third-in-chinese",
+        ),
+        pytest.param(
+            "close wmt",
+            _market_sell("close", "wmt", All(words="close")),
+            "close",
+            Decimal(1),
+            id="close-x",
+        ),
+        pytest.param(
+            "wmt 跑路了",
+            _market_sell("跑路了", "wmt", All(words="跑路了")),
+            "close",
+            Decimal(1),
+            id="out-in-chinese",
+        ),
+        pytest.param(
+            "sell wmt half now",
+            _market_sell(
+                "sell",
+                "wmt",
+                Fraction(value=Decimal("0.5"), words="half"),
+                AtMarket(words="now"),
+            ),
+            "reduce",
+            Decimal("0.5"),
+            id="at-the-market",
+        ),
+    ],
+)
+async def test_a_sell_with_no_price_sells_at_the_market(post, call, action, fraction):
+    """A plain sell of a held stock needs no price: the guru is getting out now, so the copy
+    sells at the market, as a limit just under the live bid (ADR-0007). Only a buy needs the
+    guru's price."""
+    result = await read(post, trade(call))
+
+    assert (result.decision, result.suggested) == ("trade", ())
+    [instruction] = result.instructions
+    assert instruction == Instruction(
+        action=action,
+        symbol="WMT",
+        price=None,
+        fraction=fraction,
+        exit_basis="remaining_position",
+    )
+    [evidence] = result.evidence
+    assert (evidence.price, evidence.price_evidence, evidence.fraction_evidence) == (
+        None,
+        None,
+        call.share.words,
+    )
+
+
+async def test_a_waiting_sell_with_no_price_suggests_a_sell_at_the_market():
+    call = _market_sell("卖一半", "wmt", Fraction(value=Decimal("0.5"), words="一半"))
+    reading = Conditional(summary="Sell half if it breaks", condition="如果破了", calls=(call,))
+
+    result = await read("如果破了wmt卖一半", reading)
+
+    assert (result.decision, result.reason) == ("review", "conditional")
+    assert [(i.action, i.symbol, i.price, i.fraction) for i in result.suggested] == [
+        ("reduce", "WMT", None, Decimal("0.5"))
+    ]
+
+
+def test_only_a_sell_may_have_no_price():
+    with pytest.raises(ValueError, match="A buy needs the guru's price"):
+        Instruction(action="buy", symbol="WMT", price=None)
+    with pytest.raises(ValueError, match="A stated price needs its words"):
+        Evidence(
+            action="reduce",
+            symbol="WMT",
+            price=None,
+            fraction=Decimal("0.5"),
+            action_evidence="sell",
+            symbol_evidence="wmt",
+            price_evidence="113",
+        )
 
 
 async def test_every_post_in_the_channel_is_read_whole():

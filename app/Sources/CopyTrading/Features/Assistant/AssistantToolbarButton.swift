@@ -9,7 +9,7 @@ struct AssistantToolbarButton: View {
             assistant.isOpen.toggle()
         }
         .labelStyle(.iconOnly)
-        .foregroundStyle(assistant.isOpen ? Palette.accent : Palette.ink)
+        .foregroundStyle(Palette.ink)
         .buttonStyle(.glass)
         .buttonBorderShape(.circle)
         .help(L10n.string(assistant.isOpen ? "Close the Assistant" : "Ask the Assistant (⌘J)"))

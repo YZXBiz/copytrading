@@ -46,20 +46,50 @@ enum ReadAsText {
         return repeats == nil ? said : L10n.string("%@ A re-post of an earlier call.", said)
     }
 
-    static func facts(_ call: ReadCall) -> [String] {
+    /// A call as the card's headline and the phrase under it: "Buy WMT at $110" and "A sixth of a
+    /// full position". The sentence `line` gives the same facts in one breath.
+    static func headline(_ call: ReadCall) -> (title: String, detail: String?) {
         switch call {
         case .buy(let buy):
-            [L10n.string("Buy"), buy.stock.ticker, priceFact(buy.price), sizeFact(buy.size)]
+            let title = L10n.string("Buy %@ %@", buy.stock.ticker, price(buy.price))
+            switch buy.size {
+            case .fraction(let value, _): return (title, capitalized(L10n.string("%@ of a full position", portion(value))))
+            case .batch(let number, _): return (title, L10n.string("Batch %lld", Int64(number)))
+            case .notGiven: return (title, nil)
+            }
         case .sell(let sell):
-            [
-                L10n.string("Sell"), sell.stock.ticker, priceFact(sell.price), shareFact(sell.share),
-                {
-                    if case .lot(let buyPrice, _) = sell.sellFrom {
-                        return L10n.string("from the %@ buy", Humanize.dollars(buyPrice))
-                    }
-                    return L10n.string("no buy named")
-                }(),
-            ]
+            let title: String
+            if case .lot(let buyPrice, _) = sell.sellFrom {
+                title = L10n.string("Sell %@ of the %@ bought at %@", share(sell.share), sell.stock.ticker, Humanize.dollars(buyPrice))
+            } else {
+                title = L10n.string("Sell %@ of %@", share(sell.share), sell.stock.ticker)
+            }
+            return (title, capitalized(price(sell.price)))
+        }
+    }
+
+    /// The reader took the call for a re-post of one the guru already made.
+    static func isRepost(_ call: ReadCall) -> Bool {
+        switch call {
+        case .buy(let buy): buy.repeats != nil
+        case .sell(let sell): sell.repeats != nil
+        }
+    }
+
+    private static func capitalized(_ text: String) -> String {
+        text.prefix(1).uppercased() + text.dropFirst()
+    }
+
+    /// What a call's sentence leaves implicit, said once under it: a buy with no size buys a full
+    /// position (trimmed by the account's limits), and a sell naming no buy sells from every buy.
+    static func note(_ call: ReadCall) -> String? {
+        switch call {
+        case .buy(let buy):
+            if case .notGiven = buy.size { return L10n.string("no size given, so a full position") }
+            return nil
+        case .sell(let sell):
+            if case .lot = sell.sellFrom { return nil }
+            return L10n.string("from every buy of it")
         }
     }
 
@@ -99,27 +129,4 @@ enum ReadAsText {
         }
     }
 
-    private static func priceFact(_ price: ReadPrice) -> String {
-        switch price {
-        case .exact(let value, _): Humanize.dollars(value)
-        case .range(let low, let high, _, _): "\(Humanize.dollars(low))–\(Humanize.dollars(high))"
-        case .atMarket: L10n.string("market price")
-        case .notGiven: L10n.string("no price")
-        }
-    }
-
-    private static func sizeFact(_ size: ReadSize) -> String {
-        switch size {
-        case .fraction(let value, _): Humanize.fraction(value)
-        case .batch(let number, _): L10n.string("batch %lld", Int64(number))
-        case .notGiven: L10n.string("no size")
-        }
-    }
-
-    private static func shareFact(_ share: ReadShare) -> String {
-        switch share {
-        case .all: L10n.string("all")
-        case .fraction(let value, _): Humanize.fraction(value)
-        }
-    }
 }

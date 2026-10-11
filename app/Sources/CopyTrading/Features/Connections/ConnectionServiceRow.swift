@@ -51,7 +51,11 @@ struct ConnectionServiceRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 if let action {
                     Text(action)
-                        .foregroundStyle(Palette.accent)
+                        .font(DesignTokens.caption.weight(.medium))
+                        .foregroundStyle(Palette.ink)
+                        .padding(.horizontal, 14)
+                        .frame(minHeight: 28)
+                        .background(Palette.well, in: .capsule)
                 } else {
                     Image(systemName: chevron.symbol)
                         .font(.system(size: 12, weight: .semibold))
@@ -59,8 +63,8 @@ struct ConnectionServiceRow: View {
                 }
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .frame(minHeight: 52)
+            .padding(.vertical, 12)
+            .frame(minHeight: 56)
             .contentShape(.rect)
             .background(Palette.ink.opacity(isHovered ? 0.04 : 0))
         }
