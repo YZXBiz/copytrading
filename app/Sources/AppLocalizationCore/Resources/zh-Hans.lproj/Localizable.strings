@@ -2200,3 +2200,7 @@
 "Buy %@ of %@ %@" = "买入 %@ 的 %@，%@";
 ", %@ worth" = "，金额 %@";
 "%@ cash  ·  %@ buying power" = "现金 %@  ·  购买力 %@";
+"No quote for %@" = "%@ 暂无报价";
+"%lld min old" = "%lld 分钟前";
+"%lld hr old" = "%lld 小时前";
+"Buy %@ of %@ ≈ %@ at %@" = "买入 %@ 的 %@，约 %@，价格 %@";

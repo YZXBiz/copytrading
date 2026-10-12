@@ -1,11 +1,13 @@
 """Operator pages name accounts they could not read instead of showing them as empty."""
 
 import asyncio
+from decimal import Decimal
 from types import SimpleNamespace
 
+import pytest
 from pydantic import SecretStr
 
-from copytrading_engine.execution.domain.market import EquityHistory, HistoryWindow
+from copytrading_engine.execution.domain.market import EquityHistory, HistoryWindow, Quote
 from copytrading_engine.execution.presentation.operator_views import AccountUnavailable
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore
 from copytrading_engine.sources.sqlite import SQLiteSourceStore
@@ -91,6 +93,9 @@ async def test_chart_is_read_from_the_broker_when_the_stopped_owner_cannot_answe
         def equity_history(self, asked: HistoryWindow) -> EquityHistory:
             return curve
 
+        def quote(self, symbol: str) -> Quote:
+            return Quote(feed="iex", bid=Decimal("10"), ask=Decimal("10.02"), timestamp=None)
+
         def close(self) -> None:
             pass
 
@@ -119,3 +124,8 @@ async def test_chart_is_read_from_the_broker_when_the_stopped_owner_cannot_answe
     )
 
     assert await service.equity_history("primary", window) == curve
+    quoted = await service.quote("primary", "F")
+    assert quoted is not None
+    assert quoted.ask == Decimal("10.02")
+    with pytest.raises(KeyError):
+        await service.quote("ira", "F")

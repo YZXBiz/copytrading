@@ -259,4 +259,30 @@ private func checkAccountValuationFixturesDecode() throws {
         window?["range"] as? String == "three_months" && window?["day"] == nil,
         "history window did not encode"
     )
+
+    let quoted = try JSONDecoder().decode(EngineResponse.self, from: contractFixture("quote-response.json"))
+    guard case .quote("paper", "AAPL", let quote?) = try quoted.successValue() else {
+        throw VerificationFailure(description: "a quote did not decode")
+    }
+    try #require(
+        quote == MarketQuote(feed: "iex", bid: "226.5", ask: "226.56", timestamp: "2026-09-26T15:53:20Z"),
+        "a quote's sides or time changed"
+    )
+    let unquoted = try JSONDecoder().decode(
+        EngineResponse.self, from: contractFixture("quote-missing-response.json")
+    )
+    guard case .quote("paper", "ZZZZ", nil) = try unquoted.successValue() else {
+        throw VerificationFailure(description: "a symbol with no quote did not decode as none")
+    }
+    let quoteRequest =
+        try JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(
+                EngineRequest(requestID: "req-quote", operation: .quote(accountID: "paper", symbol: "AAPL"))
+            )
+        ) as? [String: Any]
+    try #require(
+        quoteRequest?["operation"] as? String == "get_quote" && quoteRequest?["symbol"] as? String == "AAPL"
+            && quoteRequest?["account_id"] as? String == "paper",
+        "the quote request did not encode"
+    )
 }

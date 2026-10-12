@@ -26,7 +26,7 @@ from copytrading_engine.execution.domain.manual_commands import (
     ManualOrderPreview,
     ManualPreviewRequest,
 )
-from copytrading_engine.execution.domain.market import EquityHistory, HistoryWindow
+from copytrading_engine.execution.domain.market import EquityHistory, HistoryWindow, Quote
 from copytrading_engine.execution.domain.ownership import (
     OwnershipResolution,
     OwnershipResolutionRequest,
@@ -96,6 +96,8 @@ class OperatorReads(Protocol):
     async def equity_history(
         self, account_id: str, window: HistoryWindow
     ) -> EquityHistory | None: ...
+
+    async def quote(self, account_id: str, symbol: str) -> Quote | None: ...
 
     async def list_manual_commands(
         self, request: ManualCommandPageRequest

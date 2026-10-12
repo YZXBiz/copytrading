@@ -10,6 +10,8 @@ struct ManualInstructionEditor: View {
     let holdings: [ManualHolding]
     /// The last price of every stock any account holds, by symbol.
     let marketPrices: [String: Decimal]
+    /// The broker's latest quote for the chosen stock; nil until one is asked for and answered.
+    let quote: LiveQuote?
     /// A full position for this guru in the one chosen account; nil when several are chosen.
     let fullPosition: TradingRouteConnection?
     /// "Trade 2 of 3" with Remove, when the sheet holds more than one.
@@ -20,7 +22,11 @@ struct ManualInstructionEditor: View {
 
     private var symbol: String { draft.symbol.trimmed.uppercased() }
     private var holding: ManualHolding? { holdings.first { $0.symbol == symbol } }
-    private var marketPrice: Decimal? { holding?.price ?? marketPrices[symbol] }
+    /// The live quote's ask for a buy or bid for a sell; a held stock's last price until it comes.
+    private var marketPrice: Decimal? {
+        if let quote { return quote.price(isSell: draft.isSell) }
+        return holding?.price ?? marketPrices[symbol]
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -44,8 +50,17 @@ struct ManualInstructionEditor: View {
             if draft.isSell, !buyPrices.isEmpty {
                 FormRow(label: L10n.string("From")) { buys }
             }
-            FormRow(label: L10n.string("Price")) { price }
+            TimelineView(.periodic(from: .now, by: 10)) { context in
+                FormRow(label: L10n.string("Price"), note: noQuote) { price(now: context.date) }
+            }
         }
+        .onChange(of: quote) { refreshMarketPrice() }
+    }
+
+    /// The broker had no quote for the typed stock.
+    @MainActor private var noQuote: String? {
+        guard let quote, quote.price(isSell: draft.isSell) == nil else { return nil }
+        return quote.detail(isSell: draft.isSell)
     }
 
     /// What is held of the chosen stock, under the Stock row of a sell.
@@ -166,7 +181,7 @@ struct ManualInstructionEditor: View {
 
     // MARK: Price
 
-    @ViewBuilder private var price: some View {
+    @ViewBuilder private func price(now: Date) -> some View {
         let post = Decimal(string: draft.postPrice.trimmed)
         let sent = Decimal(string: draft.price.trimmed)
         // A sell at the market sends no price; a buy at the market sends the last price.
@@ -183,7 +198,7 @@ struct ManualInstructionEditor: View {
             if draft.isSell || marketPrice != nil {
                 FormChoice(
                     title: L10n.string("Market"),
-                    detail: marketDetail,
+                    detail: marketDetail(now: now),
                     isOn: !typesPrice && atMarket
                 ) {
                     typesPrice = false
@@ -215,8 +230,10 @@ struct ManualInstructionEditor: View {
         }
     }
 
-    /// A sell at the market goes just under the live bid; a buy at the last price.
-    @MainActor private var marketDetail: String? {
+    /// A sell at the market goes just under the live bid; a buy at the ask. The live quote says
+    /// when it was quoted; a held stock's last price, until it comes, says only the price.
+    @MainActor private func marketDetail(now: Date) -> String? {
+        if let quote, marketPrice != nil { return quote.detail(isSell: draft.isSell, now: now) }
         guard let marketPrice else { return draft.isSell ? L10n.string("At the bid") : nil }
         return L10n.string("≈ %@", Humanize.usd(marketPrice))
     }

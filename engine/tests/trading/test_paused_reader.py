@@ -6,7 +6,7 @@ from decimal import Decimal
 from pydantic import SecretStr
 
 from copytrading_engine.execution.application.ports import BrokerError
-from copytrading_engine.execution.domain.market import HistoryWindow, Position
+from copytrading_engine.execution.domain.market import HistoryWindow, Position, Quote
 from copytrading_engine.execution.presentation.operator_views import (
     AccountOverview,
     PositionView,
@@ -29,6 +29,16 @@ class ReadOnly(FakeBroker):
         self.closed = False
         self.failing = False
         self.holdings["ABC"] = Decimal("4")
+        self.quotes = 0
+        self.quoted: Quote | None = Quote(
+            feed="iex", bid=Decimal("226.5"), ask=Decimal("226.56"), timestamp=NOW
+        )
+
+    def quote(self, symbol: str) -> Quote:
+        self.quotes += 1
+        if self.quoted is None:
+            raise BrokerError(404)
+        return self.quoted
 
     def account(self):
         self.reads += 1
@@ -126,3 +136,30 @@ def test_live_facts_value_the_ledgers_positions_and_add_the_owners_own():
     assert live.total_exposure_usd == Decimal("150")
     assert live.balance is not None
     assert live.balance.observed_at == NOW
+
+
+async def test_a_quote_is_reused_for_two_seconds_then_asked_again():
+    broker, clock = ReadOnly(), [NOW]
+    reader = _reader(broker, clock)
+    first = await reader.quote("primary", "AAPL")
+    assert first is not None
+    assert first.ask == Decimal("226.56")
+    await reader.quote("primary", "AAPL")
+    assert broker.quotes == 1
+    await reader.quote("primary", "MSFT")
+    assert broker.quotes == 2
+    clock[0] = NOW + dt.timedelta(seconds=3)
+    await reader.quote("primary", "AAPL")
+    assert broker.quotes == 3
+
+
+async def test_an_unknown_symbol_or_an_empty_book_has_no_quote():
+    broker, clock = ReadOnly(), [NOW]
+    reader = _reader(broker, clock)
+    broker.quoted = None
+    assert await reader.quote("primary", "ZZZZ") is None
+    broker.quoted = Quote(feed="overnight", bid=None, ask=None, timestamp=None)
+    assert await reader.quote("primary", "EMPTY") is None
+    assert await reader.quote("ira", "AAPL") is None
+    reader.detach()
+    assert await reader.quote("primary", "AAPL") is None

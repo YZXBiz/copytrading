@@ -2200,3 +2200,7 @@
 "Buy %@ of %@ %@" = "Buy %@ of %@ %@";
 ", %@ worth" = ", %@ worth";
 "%@ cash  ·  %@ buying power" = "%@ cash  ·  %@ buying power";
+"No quote for %@" = "No quote for %@";
+"%lld min old" = "%lld min old";
+"%lld hr old" = "%lld hr old";
+"Buy %@ of %@ ≈ %@ at %@" = "Buy %@ of %@ ≈ %@ at %@";

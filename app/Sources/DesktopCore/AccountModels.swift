@@ -658,6 +658,22 @@ public struct EquityHistory: Codable, Equatable, Sendable {
     }
 }
 
+/// A stock's latest quote from the account's broker market data; the sides are decimal strings.
+public struct MarketQuote: Codable, Equatable, Sendable {
+    public let feed: String
+    public let bid: String?
+    public let ask: String?
+    /// When the broker quoted it, ISO 8601; nil when the feed gave no time.
+    public let timestamp: String?
+
+    public init(feed: String, bid: String?, ask: String?, timestamp: String?) {
+        self.feed = feed
+        self.bid = bid
+        self.ask = ask
+        self.timestamp = timestamp
+    }
+}
+
 extension AccountOverview {
     /// Whether the broker can be asked for this account's curve: it is in the running setup, or
     /// its balance is read live while copying is stopped.
