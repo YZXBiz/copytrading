@@ -31,7 +31,11 @@ enum ReadAsText {
         let repeats: String?
         switch call {
         case .buy(let buy):
-            said = L10n.string("Buy %@ %@%@.", buy.stock.ticker, price(buy.price), size(buy.size))
+            if case .dollars(let amount, _) = buy.size {
+                said = L10n.string("Buy %@ of %@ %@.", Humanize.dollars(amount), buy.stock.ticker, price(buy.price))
+            } else {
+                said = L10n.string("Buy %@ %@%@.", buy.stock.ticker, price(buy.price), size(buy.size))
+            }
             repeats = buy.repeats
         case .sell(let sell):
             if case .lot(let buyPrice, _) = sell.sellFrom {
@@ -55,6 +59,8 @@ enum ReadAsText {
             switch buy.size {
             case .fraction(let value, _): return (title, capitalized(L10n.string("%@ of a full position", portion(value))))
             case .batch(let number, _): return (title, L10n.string("Batch %lld", Int64(number)))
+            case .dollars(let amount, _):
+                return (L10n.string("Buy %@ of %@ %@", Humanize.dollars(amount), buy.stock.ticker, price(buy.price)), nil)
             case .notGiven: return (title, nil)
             }
         case .sell(let sell):
@@ -106,6 +112,7 @@ enum ReadAsText {
         switch size {
         case .fraction(let value, _): L10n.string(", %@ of a full position", portion(value))
         case .batch(let number, _): L10n.string(", batch %lld", Int64(number))
+        case .dollars(let amount, _): L10n.string(", %@ worth", Humanize.dollars(amount))
         case .notGiven: ""
         }
     }

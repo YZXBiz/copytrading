@@ -170,10 +170,12 @@ def _placeable(call: r.Call) -> tuple[Instruction, Evidence]:
     instruction = _instruction(call, owner=False)
     if isinstance(call, r.Buy):
         fraction_words = call.size.words if isinstance(call.size, r.Fraction) else None
+        usd_words = call.size.words if isinstance(call.size, r.Dollars) else None
         entry_words = None
     else:
         assert not isinstance(call.share, r.NotGiven)  # _instruction waits on it
         fraction_words = call.share.words
+        usd_words = None
         entry_words = (
             call.sell_from.words
             if instruction.entry_price is not None and isinstance(call.sell_from, r.Lot)
@@ -187,6 +189,7 @@ def _placeable(call: r.Call) -> tuple[Instruction, Evidence]:
         price_evidence=call.price.words if isinstance(call.price, r.Exact) else None,
         entry_evidence=entry_words,
         fraction_evidence=fraction_words,
+        usd_amount_evidence=usd_words,
     )
     return instruction, evidence
 
@@ -237,7 +240,14 @@ def _instruction(call: r.Call, *, owner: bool) -> Instruction:
         if isinstance(call.size, r.Batch) and not owner:
             raise _Wait("batch_size_not_given")
         fraction = call.size.value if isinstance(call.size, r.Fraction) else None
-        return Instruction(action="buy", symbol=call.stock.ticker, price=price, fraction=fraction)
+        usd_amount = call.size.value if isinstance(call.size, r.Dollars) else None
+        return Instruction(
+            action="buy",
+            symbol=call.stock.ticker,
+            price=price,
+            fraction=fraction,
+            usd_amount=usd_amount,
+        )
     if isinstance(call.share, r.NotGiven):
         raise _Wait("sell_share_not_given")
     share = Decimal(1) if isinstance(call.share, r.All) else call.share.value

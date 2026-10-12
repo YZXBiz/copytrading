@@ -13,6 +13,8 @@ public struct ManualInstruction: Codable, Equatable, Sendable {
     public let price: String?
     public let entryPrice: String?
     public let fraction: String?
+    /// A buy of this many dollars instead of a share of the full position.
+    public let usdAmount: String?
     public let exitBasis: String?
 
     public init(
@@ -21,6 +23,7 @@ public struct ManualInstruction: Codable, Equatable, Sendable {
         price: String?,
         entryPrice: String? = nil,
         fraction: String? = nil,
+        usdAmount: String? = nil,
         exitBasis: String? = nil
     ) {
         self.action = action
@@ -28,12 +31,14 @@ public struct ManualInstruction: Codable, Equatable, Sendable {
         self.price = price
         self.entryPrice = entryPrice
         self.fraction = fraction
+        self.usdAmount = usdAmount
         self.exitBasis = exitBasis
     }
 
     enum CodingKeys: String, CodingKey {
         case action, symbol, price, fraction
         case entryPrice = "entry_price"
+        case usdAmount = "usd_amount"
         case exitBasis = "exit_basis"
     }
 
@@ -45,6 +50,7 @@ public struct ManualInstruction: Codable, Equatable, Sendable {
         try container.encode(price, forKey: .price)
         try container.encodeIfPresent(entryPrice, forKey: .entryPrice)
         try container.encodeIfPresent(fraction, forKey: .fraction)
+        try container.encodeIfPresent(usdAmount, forKey: .usdAmount)
         try container.encodeIfPresent(exitBasis, forKey: .exitBasis)
     }
 }

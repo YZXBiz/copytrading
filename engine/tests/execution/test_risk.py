@@ -40,8 +40,8 @@ FACTS = EntryFacts(
 FIXED = RouteConnection(account_id="paper-demo", full_position_usd=Decimal(100))
 
 
-def decide(limits=None, facts=FACTS, connection=FIXED, fraction=None):
-    return entry_budget(limits or Limits(), facts, connection, fraction)
+def decide(limits=None, facts=FACTS, connection=FIXED, fraction=None, usd=None):
+    return entry_budget(limits or Limits(), facts, connection, fraction, usd)
 
 
 @pytest.mark.parametrize(
@@ -178,3 +178,16 @@ def test_a_sold_lot_leaves_in_stocks_while_shares_held_outside_still_count():
 
     assert exposure.by_symbol == {"CBRS": Decimal("2086")}
     assert exposure.total == Decimal("2086")
+
+
+def test_a_dollar_size_buys_that_amount_never_more_than_the_full_position():
+    assert decide(ROOMY, connection=FULL_3000, usd=Decimal(200)).budget == Decimal("200.00")
+    assert decide(ROOMY, connection=FULL_3000, usd=Decimal(9000)).budget == Decimal("3000.00")
+
+
+def test_a_dollar_size_is_still_trimmed_by_the_maximum_per_order():
+    limits = replace(ROOMY, max_order_usd=Decimal(150))
+
+    decision = decide(limits, connection=FULL_3000, usd=Decimal(200))
+
+    assert (decision.budget, decision.requested) == (Decimal(150), Decimal("200.00"))

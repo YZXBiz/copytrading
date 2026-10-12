@@ -473,11 +473,14 @@ public struct SourceInstruction: Codable, Equatable, Sendable {
     public let price: String?
     public let entryPrice: String?
     public let fraction: String?
+    /// A buy the post sized in dollars ("$200 of NFLX").
+    public let usdAmount: String?
     public let exitBasis: String?
 
     enum CodingKeys: String, CodingKey {
         case action, symbol, price, fraction
         case entryPrice = "entry_price"
+        case usdAmount = "usd_amount"
         case exitBasis = "exit_basis"
     }
 }

@@ -159,6 +159,9 @@ class InstructionEvaluation(BaseModel):
     symbol_evidence: str
     price_evidence: str | None
     fraction_evidence: str | None
+    # A buy sized in dollars ("$200 of NFLX"), and the post's words for it.
+    usd_amount: Decimal | None = None
+    usd_amount_evidence: str | None = None
 
 
 class DestinationEvaluation(BaseModel):
@@ -184,7 +187,9 @@ def size_destinations(
         for instruction in instructions:
             if instruction.action == "buy":
                 assert instruction.price is not None  # a buy always has the guru's price
-                sized = requested_entry_budget(connection, instruction.fraction)
+                sized = requested_entry_budget(
+                    connection, instruction.fraction, instruction.usd_amount
+                )
                 quantity = (
                     (sized.budget / instruction.price).quantize(
                         Decimal("0.000001"), rounding=ROUND_DOWN
@@ -451,12 +456,14 @@ class ProfileEvaluationService:
                 symbol=item.symbol,
                 price=item.price,
                 fraction=item.fraction,
+                usd_amount=item.usd_amount,
                 entry_price=item.entry_price,
                 exit_basis=item.exit_basis,
                 action_evidence=item.action_evidence,
                 symbol_evidence=item.symbol_evidence,
                 price_evidence=item.price_evidence,
                 fraction_evidence=item.fraction_evidence,
+                usd_amount_evidence=item.usd_amount_evidence,
             )
             for item in signal.evidence
         )

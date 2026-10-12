@@ -22,6 +22,8 @@ struct ManualInstructionDraft: Identifiable, Equatable {
     /// A buy's share of the full position (empty buys the full position), or the share to sell
     /// ("1" sells all of it).
     var fraction = ""
+    /// A buy's dollar amount, as the post named it ("$200 of NFLX"); empty sizes by `fraction`.
+    var usdAmount = ""
     var exitBasis: String?
 
     init() {}
@@ -35,6 +37,7 @@ struct ManualInstructionDraft: Identifiable, Equatable {
         price = call.price ?? ""
         entryPrice = call.entryPrice ?? ""
         fraction = action == .close ? "1" : call.fraction ?? ""
+        usdAmount = call.usdAmount ?? ""
         exitBasis = call.exitBasis
     }
 
@@ -59,6 +62,7 @@ struct ManualInstructionDraft: Identifiable, Equatable {
             price: sellsAtMarket ? nil : price.trimmed,
             entryPrice: isSell ? entryPrice.trimmed.nilIfEmpty : nil,
             fraction: action == .close ? "1" : fraction.trimmed.nilIfEmpty,
+            usdAmount: isSell ? nil : usdAmount.trimmed.nilIfEmpty,
             exitBasis: isSell ? exitBasis : nil
         )
     }

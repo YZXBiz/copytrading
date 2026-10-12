@@ -11,6 +11,7 @@ from copytrading_engine.shared.reading import (
     Buy,
     Commentary,
     Conditional,
+    Dollars,
     Exact,
     NotGiven,
     PostReading,
@@ -80,6 +81,15 @@ def examples() -> list:
         ),
         Commentary(summary="TSLA 373 is still resistance today"),
         Unclear(summary="Cannot tell"),
+        trade(
+            Buy(
+                action_words="buy",
+                stock=Stock(ticker="NFLX", words="nflx"),
+                price=Exact(value=71, words="71"),
+                size=Dollars(value=200, words="200$ of"),
+            ),
+            summary="Bought $200 of NFLX",
+        ),
     ]
 
 

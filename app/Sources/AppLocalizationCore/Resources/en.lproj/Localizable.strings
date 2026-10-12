@@ -2172,3 +2172,6 @@
 "Pre-market" = "Pre-market";
 "After hours" = "After hours";
 "·  %@ cash  ·  %@ buying power" = "·  %@ cash  ·  %@ buying power";
+"Buy %@ of %@ %@." = "Buy %@ of %@ %@.";
+"Buy %@ of %@ %@" = "Buy %@ of %@ %@";
+", %@ worth" = ", %@ worth";
