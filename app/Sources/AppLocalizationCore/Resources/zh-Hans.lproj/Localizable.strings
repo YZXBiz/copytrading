@@ -2178,3 +2178,6 @@
 "Selling %@ of %@ at %@ or more" = "正在卖出 %@ %@，最低 %@";
 "Buying %@ of %@ at up to %@" = "正在买入 %@ %@，最高 %@";
 "A notification with a sound when each copied buy or sell goes out and again when it fills, saying what and from whose post." = "每笔跟单买卖发出时和成交时各通知一次并响铃，说明是什么、来自谁的帖子。";
+"Guru's price" = "老师的价格";
+"%@ + %@ allowed" = "%@，允许高出 %@";
+"%@ − %@ allowed" = "%@，允许低于 %@";

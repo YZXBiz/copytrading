@@ -2178,3 +2178,6 @@
 "Selling %@ of %@ at %@ or more" = "Selling %@ of %@ at %@ or more";
 "Buying %@ of %@ at up to %@" = "Buying %@ of %@ at up to %@";
 "A notification with a sound when each copied buy or sell goes out and again when it fills, saying what and from whose post." = "A notification with a sound when each copied buy or sell goes out and again when it fills, saying what and from whose post.";
+"Guru's price" = "Guru's price";
+"%@ + %@ allowed" = "%@ + %@ allowed";
+"%@ − %@ allowed" = "%@ − %@ allowed";

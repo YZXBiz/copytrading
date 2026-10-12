@@ -11,6 +11,7 @@ func runActivityCardTests() throws {
     try aRepeatedNumberIsMarkedBesideTheOtherCitedWords()
     try aTrimmedBuyIsTradedSmallerAndSaysByHowMuch()
     try aLotSoldByHandStaysTheOwners()
+    try aBuyNamesTheGurusPriceAndTheAllowanceItsLimitUsed()
     try aSkipNamesTheLimitWithItsNumbers()
     try aCallHeldForApprovalAsksToBeApproved()
     try aBuyHeldForAResumeAsksToResumeByItsDeadline()
@@ -175,6 +176,28 @@ private func aLotSoldByHandStaysTheOwners() throws {
         "summary was \(DestinationOutcome(destination))")
     let headlines = ActivityCardOutcome(source, skipped: false).accounts.first?.results.map(\.headline) ?? []
     try #require(headlines == ["Bought $245.70 of SOUN", "You sold $256.20 of SOUN"], "headlines were \(headlines)")
+}
+
+/// A buy that ran past a 1% allowance says the guru's price and the 1%, so a changed limit shows.
+@MainActor
+private func aBuyNamesTheGurusPriceAndTheAllowanceItsLimitUsed() throws {
+    let source = try soun()
+        .destination(
+            "zhao-paper", status: "done", outcomes: ["order_linked"],
+            orders: [
+                [
+                    "client_id": "copy-1", "symbol": "SOUN", "side": "buy", "status": "canceled", "quantity": "42",
+                    "filled_quantity": "0", "limit_price": "5.91", "broker_id": "b1",
+                    "created_at": "2026-10-05T14:30:01Z", "instruction_index": 0, "source_price": "5.85",
+                    "entry_tolerance_pct": "1", "quote_ask": "5.97", "cancel_reason": "timeout",
+                ]
+            ]
+        )
+        .build()
+    let result = try #require(ActivityCardOutcome(source, skipped: false).accounts.first?.results.first)
+    try #require(result.headline == "Not bought: the price ran above your limit", "headline was \(result.headline)")
+    try #require(
+        result.facts.first == .init(label: "Guru's price", value: "$5.85 + 1% allowed"), "facts were \(result.facts)")
 }
 
 @MainActor
