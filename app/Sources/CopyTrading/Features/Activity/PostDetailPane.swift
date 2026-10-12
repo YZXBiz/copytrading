@@ -42,7 +42,7 @@ struct PostDetailPane: View {
                 resume: ResumeWait(
                     item, waiting: ResumeWait.waitingAccounts(feature.accounts),
                     signalAge: ResumeWait.signalAge(in: model.savedTradingConfiguration)),
-                resumeEntries: resumeEntries
+                startCopying: startCopying
             )
         }
         .sheet(item: $selectedSheet, onDismiss: reviewFeature.clearPrivateEvidence) { selected in
@@ -70,8 +70,8 @@ struct PostDetailPane: View {
         model.selectedScreen = .account(accountID)
     }
 
-    private func resumeEntries(_ accountID: String) {
+    private func startCopying(_ accountID: String) {
         let environment = feature.accounts.first { $0.accountID == accountID }?.environment
-        Task { await model.resumeEntries(accountID: accountID, environment: environment, feature: feature) }
+        Task { await model.startCopying(into: accountID, environment: environment, feature: feature) }
     }
 }

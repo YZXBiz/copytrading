@@ -70,7 +70,7 @@ enum SetupHelp {
             "Copy the **Key** and the **Secret** into this account. The secret is shown only once.",
         ],
         caution:
-            "Anyone with these keys can trade your real money. Set small limits below. New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**.",
+            "Anyone with these keys can trade your real money. Set small limits below. Live accounts ask for Touch ID before copying starts.",
         destination: .init(title: "Open Alpaca", url: URL(literal: "https://app.alpaca.markets"))
     )
 
@@ -134,7 +134,7 @@ enum SetupHelp {
         steps: [
             "Choose **Start Copying**. CopyTrading first signs in to Discord, your interpreter, and Alpaca, and reads each example the way it will read real posts.",
             "If anything is marked, choose **Review…**, fix it, then choose **Start Copying** again.",
-            "New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**.",
+            "To stop copying into one account, open it and choose **Stop Copying**. Sells of what it copied still follow.",
         ]
     )
 

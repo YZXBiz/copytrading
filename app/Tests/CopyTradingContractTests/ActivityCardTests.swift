@@ -211,11 +211,11 @@ private func aBuyHeldForAResumeAsksToResumeByItsDeadline() throws {
     let account = try #require(waiting.accounts.first)
     try #require(account.awaitsResume, "the account did not ask for a resume")
     let result = try #require(account.results.first)
-    try #require(result.headline == "Waiting for you to resume entries", "headline was \(result.headline)")
-    try #require(result.facts.first?.label == "Resume by", "facts were \(result.facts)")
+    try #require(result.headline == "Waiting for Start Copying", "headline was \(result.headline)")
+    try #require(result.facts.first?.label == "Start by", "facts were \(result.facts)")
     let late = ActivityCardOutcome(source, skipped: false, resume: resume, now: posted.addingTimeInterval(300))
     try #require(
-        late.accounts.first?.results.first?.note?.hasPrefix("Resume now") == true,
+        late.accounts.first?.results.first?.note?.hasPrefix("Start Copying now") == true,
         "a late resume read \(late.accounts.first?.results.first?.note ?? "nil")")
 
     // Without a waiting account, or once an order went out, nothing asks for a resume.

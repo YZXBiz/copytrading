@@ -486,6 +486,11 @@ final class AppModel {
     var limitsSavedAccountIDs: Set<String> = []
     /// The engine refused the draft's limits, so they wait for the full check like other changes.
     var limitsSaveRefused = false
+    /// Limits edited while copying was starting; they save as soon as the start settles.
+    var limitsAwaitingStart = false
+    /// Accounts and activity, shared with the window and the menu bar; an account's own Start
+    /// Copying turns its buys on through it.
+    var accountFeature: AccountFeatureModel?
     /// A connection the guide asked to open; Connections opens its panel and clears it.
     var requestedConnection: ConnectionKind?
     /// The draft as it stood when the current check began; Start Copying needs it unchanged.
@@ -979,6 +984,7 @@ final class AppModel {
                 engineGeneration.accepts(currentEngineGeneration)
             else { return }
             await reconcilePendingTradingActivation(using: engineActions)
+            await saveLimitsAwaitingStart()
             guard runtimeGeneration.accepts(currentRuntimeGeneration),
                 engineGeneration.accepts(currentEngineGeneration)
             else { return }
@@ -1371,6 +1377,7 @@ final class AppModel {
                 tradingValidation = nil
                 syncSetupDraftWithSaved()
                 didStartCopyingNewSetup()
+                await saveLimitsAwaitingStart()
                 return
             }
 
@@ -1382,6 +1389,7 @@ final class AppModel {
                 try tradingConfigurationStore.rollbackValidatedActivation(
                     activationID: pending.activationID
                 )
+                let before = savedTradingConfiguration
                 let saved = try tradingConfigurationStore.load()
                 savedTradingConfiguration = saved?.configuration
                 hasTradingSecrets = saved != nil
@@ -1389,10 +1397,12 @@ final class AppModel {
                 tradingValidation = nil
                 syncSetupDraftWithSaved()
                 let why = status.errorCode.map(Reason.text) ?? L10n.string("The engine stopped while starting")
+                // Starting the saved setup again is not a new setup, so there is nothing to keep.
                 message =
-                    saved == nil
-                    ? L10n.string("Copying didn't start: %@.", why)
+                    saved == nil || saved?.configuration == before
+                    ? L10n.string("Copying didn't start: %@. Try again.", why)
                     : L10n.string("The new setup didn't start, so your previous setup is still in place: %@.", why)
+                await saveLimitsAwaitingStart()
                 return
             }
             // An activation the engine is still committing is progress, even with accounts already
@@ -1406,7 +1416,8 @@ final class AppModel {
                 message = Self.pendingSetupMessage
             }
         } catch {
-            message = L10n.string("Configuration activation is pending; engine status is unavailable. Credentials are retained.")
+            // The next status check asks again; the owner only needs to know it is still going.
+            message = L10n.string("Checking whether copying started…")
         }
     }
 
@@ -1497,10 +1508,18 @@ final class AppModel {
             let edited = try? setupDraft.submission().0,
             let changed = edited.limitOnlyChanges(from: saved),
             let tradingConfigurationStore,
-            let control: (any TradingStarting) = tradingStarter ?? engineActions,
-            !isTradingCommandPending, !isValidatingTrading, !isActivatingTrading, pendingTradingActivation == nil,
-            (try? tradingConfigurationStore.pendingActivation()) == nil
+            let control: (any TradingStarting) = tradingStarter ?? engineActions
         else { return nil }
+        // A start in flight owns the saved setup; the limits wait for it and save right after,
+        // whether copying started or not.
+        guard !isTradingCommandPending, !isValidatingTrading, !isActivatingTrading, pendingTradingActivation == nil,
+            (try? tradingConfigurationStore.pendingActivation()) == nil
+        else {
+            limitsAwaitingStart = true
+            limitsSavedAccountIDs.formUnion(changed)
+            return true
+        }
+        limitsAwaitingStart = false
         isTradingCommandPending = true
         defer { isTradingCommandPending = false }
         do {
@@ -1519,6 +1538,13 @@ final class AppModel {
             message = Self.userMessage(for: error)
             return false
         }
+    }
+
+    /// Limits edited while a start was in flight, saved once it settles.
+    func saveLimitsAwaitingStart() async {
+        guard limitsAwaitingStart, !isTradingCommandPending else { return }
+        limitsAwaitingStart = false
+        await saveLimitOnlyChanges()
     }
 
     /// While unlocked, the engine may read every saved account live, so a paused account still

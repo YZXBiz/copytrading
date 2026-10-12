@@ -2,6 +2,12 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
+## Unreleased
+
+- **One switch per account.** Each account's page has one **Start Copying** or **Stop Copying**. Start Copying starts copying if it isn't running and copies into that account; Stop Copying stops its buys, and sells of what it already copied still follow the guru. The sidebar says which accounts copy, and the toolbar only offers **Stop All** (**Stop Copying** with one account) while copying runs. "Entries" are gone: there is no Enable, Pause, or Resume Entries any more, and a finished setup copies into every account it saved.
+- **Limits always save.** A limit changed while copying was starting used to wait as "Changed — not saved yet"; it now saves the moment the start settles, and the account page shows the new limits right away.
+- **A start that fails says why in plain words**, such as "Copying didn't start: Discord could not be reached. Try again.", instead of an engine message.
+
 ## 0.1.0-alpha.9 — developer preview
 
 A new look, accounts and gurus as the app's two places, and copying that keeps going when you trade by hand.

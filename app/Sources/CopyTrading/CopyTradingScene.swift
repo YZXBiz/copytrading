@@ -29,6 +29,7 @@ public struct CopyTradingScene: Scene {
                 .containerBackground(Palette.canvas, for: .window)
                 .task {
                     lifecycle.model = model
+                    model.accountFeature = accountFeature
                     updater.willRelaunch = { [model] in model.rememberCopyingForRelaunch() }
                     accountFeature.onFills = { [model] fills in
                         FillNotifications.post(fills, directory: GuruDirectory(model.savedTradingConfiguration))

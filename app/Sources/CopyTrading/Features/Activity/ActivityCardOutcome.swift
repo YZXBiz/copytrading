@@ -125,17 +125,17 @@ struct ActivityCardOutcome {
             results.append(Result(headline: L10n.string("Not copied"), note: Reason.text(destination.status)))
         }
         if results.isEmpty, let resumeBy {
-            // Entries wait for the owner after a restart; the buy waits with them while it is fresh.
+            // After a restart an account waits for its Start Copying; the buy waits with it while it is fresh.
             // A two-minute window: to the second, with the zone.
             let time = "\(resumeBy.formatted(AppTime.style(.dateTime.hour().minute().second()))) \(AppTime.shortName())"
             results.append(
                 resumeBy > now
                     ? Result(
-                        headline: L10n.string("Waiting for you to resume entries"),
-                        facts: [Fact(label: L10n.string("Resume by"), value: time)])
+                        headline: L10n.string("Waiting for Start Copying"),
+                        facts: [Fact(label: L10n.string("Start by"), value: time)])
                     : Result(
-                        headline: L10n.string("Waiting for you to resume entries"),
-                        note: L10n.string("Resume now: after %@ it is too old to copy.", time)))
+                        headline: L10n.string("Waiting for Start Copying"),
+                        note: L10n.string("Start Copying now: after %@ it is too old to copy.", time)))
         }
         if results.isEmpty {
             results.append(Result(headline: DestinationOutcome(destination).detail))

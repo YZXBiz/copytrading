@@ -1931,15 +1931,21 @@ struct TradingSettingsSaveTests {
             "Lock retained the equity curve or its freshness"
         )
         print("CopyTradingContractTests: account pause failure, retry, resume, and status refresh passed")
-        // A held buy's Resume Entries runs the same resume as Accounts' button: one resume command.
+        // An account's one switch: Stop Copying turns its buys off, Start Copying turns them back
+        // on, and Start Copying on an account that already copies sends nothing.
         let model = AppModel()
         feature.authorizePrivateEvidence()
         let before = await actions.recordedCommands().count
-        await model.resumeEntries(accountID: "paper", environment: .paper, feature: feature, using: actions)
-        let resumed = await actions.recordedCommands().dropFirst(before)
+        await model.stopCopying(into: "paper", feature: feature, using: actions)
+        await model.startCopying(into: "paper", environment: .paper, feature: feature, using: actions)
+        let switched = await actions.recordedCommands().dropFirst(before)
         try check(
-            resumed.map(\.action) == [.resume] && resumed.first?.accountID == "paper",
-            "Resume Entries did not send one resume for paper: \(resumed.map(\.action))")
+            switched.map(\.action) == [.pause, .resume] && switched.allSatisfy { $0.accountID == "paper" },
+            "Stop and Start Copying did not send pause then resume for paper: \(switched.map(\.action))")
+        let copying = await actions.recordedCommands().count
+        await model.startCopying(into: "paper", environment: .paper, feature: feature, using: actions)
+        let again = await actions.recordedCommands().count
+        try check(again == copying, "Start Copying on an account that already copies sent a command")
     }
 
     private static func checkAccountFeatureLockInterleavings() async throws {

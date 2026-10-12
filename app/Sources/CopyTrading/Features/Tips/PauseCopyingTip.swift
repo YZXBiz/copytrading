@@ -14,12 +14,13 @@ struct PauseCopyingTip: Tip {
     @MainActor
     init(generation: Int) {
         self.generation = generation
-        title = Text(L10n.string("Pause from anywhere"))
+        title = Text(L10n.string("Stop from anywhere"))
         message = Text(
-            L10n.string("Pause Copying stops reading new posts and placing orders for every account. Start Copying picks up again."))
+            L10n.string(
+                "Stop Copying stops reading new posts and placing orders for every account. Each account's Start Copying picks up again."))
     }
 
-    var image: Image? { Image(systemName: "pause.circle") }
+    var image: Image? { Image(systemName: "stop.circle") }
 
     var rules: [Rule] {
         #Rule(Self.copyingStarted) { $0.donations.count >= 1 }

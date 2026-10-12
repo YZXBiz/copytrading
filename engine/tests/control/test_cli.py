@@ -84,7 +84,7 @@ async def test_resume_waits_for_the_owner(app):
     relay, _, engine = app
     code, out, _ = await run(relay, "accounts", "resume", "paper")
     assert code == cli.EXIT_APPROVAL_PENDING
-    assert out.startswith("Waiting for approval in CopyTrading: resume entries for paper.")
+    assert out.startswith("Waiting for approval in CopyTrading: start copying into paper.")
     assert engine.actions() == []
 
 

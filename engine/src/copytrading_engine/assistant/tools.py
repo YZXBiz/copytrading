@@ -23,8 +23,8 @@ STEP = {
     "list_account_events": "Read {account_id}'s history",
     "list_proposals": "Checked what is waiting for you",
     "pause_processing": "Paused copying",
-    "pause_account": "Paused new entries for {account_id}",
-    "propose_resume_account": "Asked you to approve resuming {account_id}",
+    "pause_account": "Stopped copying into {account_id}",
+    "propose_resume_account": "Asked you to approve copying into {account_id}",
     "propose_recovery_preference": "Asked you to approve {account_id}'s after-restart setting",
     "guru_record": "Added up {guru}'s calls",
     "explain_skip": "Looked at that post",
@@ -38,8 +38,8 @@ REFUSED_STEP = {
     "list_account_events": "Couldn't read {account_id}'s history",
     "list_proposals": "Couldn't check what is waiting for you",
     "pause_processing": "Couldn't pause copying",
-    "pause_account": "Couldn't pause new entries for {account_id}",
-    "propose_resume_account": "Couldn't ask you to approve resuming {account_id}",
+    "pause_account": "Couldn't stop copying into {account_id}",
+    "propose_resume_account": "Couldn't ask you to approve copying into {account_id}",
     "propose_recovery_preference": (
         "Couldn't ask you to approve {account_id}'s after-restart setting"
     ),

@@ -24,6 +24,15 @@ extension AppModel {
         return edited.limitOnlyChanges(from: saved) != nil
     }
 
+    /// The limits an account page shows: the edited ones while they wait for a start to settle,
+    /// so a change never looks lost.
+    func shownPolicy(accountID: String) -> TradingAccountPolicy? {
+        if limitsAwaitingStart, let draft = setupDraft.accounts.first(where: { $0.name.trimmed == accountID }) {
+            return draft.policy
+        }
+        return savedTradingConfiguration?.accounts.first { $0.id == accountID }?.policy
+    }
+
     /// Connections shows its start card while there is something to set up, check, or start.
     var hasSetupToStart: Bool {
         savedTradingConfiguration == nil
@@ -322,6 +331,9 @@ extension AppModel {
         message = nil
         copyingStartedAt = .now
         selectedScreen = homeScreen
+        if let accountFeature {
+            Task { await turnOnEveryAccount(feature: accountFeature) }
+        }
     }
 
     /// Fills the setup from a file the owner chose in the open panel. Only the draft changes:

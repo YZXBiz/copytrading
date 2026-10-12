@@ -59,7 +59,7 @@ CopyTrading is a native macOS app that reads the stock calls traders post on Dis
 ## Features
 
 - **Posts become exact orders.** A model you choose reads each post, and every ticker, price, and fraction must appear in the post itself, so it cannot invent a number.
-- **Your limits, per account.** Daily loss, per-order, per-symbol, and total exposure limits are checked before every copied buy. New accounts start with entries off.
+- **Your limits, per account.** Daily loss, per-order, per-symbol, and total exposure limits are checked before every copied buy. Each account has its own **Start Copying** and **Stop Copying**.
 - **Many traders, many accounts.** Each trader-to-account link has its own sizing, and paper and live accounts sit side by side.
 - **Every position traces to its post.** Each copied buy is kept as a lot that names the post behind it, and you can sell any lot on its own. Shares you trade yourself in Alpaca are counted as yours on the next sync.
 - **Always live.** Balances, positions, and the equity curve are read from your broker even while copying is paused. Fills arrive as notifications, the menu bar shows today's change, and after time away a recap says what happened.
@@ -102,7 +102,7 @@ Everything is set up in **Connections**, top to bottom:
 4. **Gurus**: choose the account each guru copies into (its max per stock is the guru's full position), press **Learn from Channel**, and review the playbook it drafts.
 5. Press **Start Copying**. It checks every connection first, and starts only when they all pass.
 
-Every field that needs a key or an ID has a **Where do I find this?** link. When you are ready, press **Resume Entries** on the account's page and watch the first post arrive on the guru's page.
+Every field that needs a key or an ID has a **Where do I find this?** link. When you are ready, press **Start Copying** on the account's page and watch the first post arrive on the guru's page.
 
 ## How it works
 

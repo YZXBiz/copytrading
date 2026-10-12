@@ -142,7 +142,7 @@ struct MenuBarView: View {
             MenuRow(title: "Open CopyTrading", symbol: "macwindow", action: openMainWindow)
             if model.savedTradingConfiguration != nil, model.tradingStatus != nil, model.isTradingUnlocked {
                 if isCopying {
-                    MenuRow(title: "Pause Copying", symbol: "pause", action: pause)
+                    MenuRow(title: "Stop Copying", symbol: "stop", action: pause)
                         .disabled(model.isTradingCommandPending)
                 } else if !model.hasLiveAccounts {
                     MenuRow(title: "Start Copying", symbol: "play", action: start)
@@ -166,9 +166,9 @@ struct MenuBarView: View {
         case .running: return L10n.string("Copying")
         case .degraded: return L10n.string("Needs attention")
         case .starting: return L10n.string("Starting")
-        case .pausing: return L10n.string("Pausing")
+        case .pausing: return L10n.string("Stopping")
         case .failed: return L10n.string("Stopped")
-        case .paused, nil: return L10n.string("Paused")
+        case .paused, nil: return L10n.string("Not copying")
         }
     }
 
@@ -186,7 +186,7 @@ struct MenuBarView: View {
         openMainWindow()
     }
 
-    private func start() { Task { await model.startTrading() } }
+    private func start() { Task { await model.startCopyingEverywhere(feature: accountFeature) } }
     private func pause() { Task { await model.pauseTrading() } }
     private func quit() { NSApplication.shared.terminate(nil) }
 }

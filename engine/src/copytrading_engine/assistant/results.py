@@ -191,7 +191,7 @@ def account_events(page: wire.AccountEventsPage) -> dict:
 def _asks_to(subject: wire.ProposalSubject) -> str:
     match subject:
         case wire.ResumeAccountSubject():
-            return f"resume entries for {subject.account_id}"
+            return f"start copying into {subject.account_id}"
         case wire.RecoverySubject():
             return (
                 f"set {subject.account_id} so that after a restart it "

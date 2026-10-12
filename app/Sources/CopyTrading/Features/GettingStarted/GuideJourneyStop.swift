@@ -31,7 +31,7 @@ struct GuideJourneyStop: Hashable {
             symbol: "gauge.with.needle", title: "Limits check", example: "1/6 of $600",
             headline: "Your limits check it", gist: "Sized as the guru's share of your max per stock.",
             setting: "Every limit, per account", screen: .connections,
-            caution: "New accounts start with entries off."),
+            caution: "Stop Copying on an account stops its buys."),
         GuideJourneyStop(
             symbol: "paperplane.fill", title: "Order fills", example: "17 at $5.85",
             headline: "The order goes to Alpaca", gist: "A limit order, never above the guru's price plus your allowance.",

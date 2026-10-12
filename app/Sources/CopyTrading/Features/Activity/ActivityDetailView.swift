@@ -20,7 +20,7 @@ struct ActivityDetailView: View {
     /// Accounts that hold this post's buy until the owner resumes their entries after a restart.
     var resume: ResumeWait = .none
     /// Resumes an account's entries, as Accounts' button does.
-    var resumeEntries: (String) -> Void = { _ in }
+    var startCopying: (String) -> Void = { _ in }
     /// The one account Activity is showing, or every account.
     var accountID: String?
     @State private var readerPosition = ScrollPosition(edge: .top)
@@ -268,10 +268,10 @@ struct ActivityDetailView: View {
                 waitingActions(waiting)
             }
             if account.awaitsResume {
-                Button(L10n.string("Resume Entries")) { resumeEntries(account.id) }
+                Button(L10n.string("Start Copying")) { startCopying(account.id) }
                     .buttonStyle(PageButtonStyle(isProminent: true))
-                    .accessibilityIdentifier("activity.resumeEntries")
-                    .accessibilityHint(L10n.string("Allows new entries in this account, so the held buy can be copied."))
+                    .accessibilityIdentifier("activity.startCopying")
+                    .accessibilityHint(L10n.string("Copies into this account again, so the held buy can be copied."))
             }
             if heldByHoldings(account.id) {
                 Button(L10n.string("Review in Accounts")) { reviewHoldings(account.id) }

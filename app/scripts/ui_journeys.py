@@ -847,11 +847,10 @@ def j4_every_screen(app: AppDriver) -> None:
 
 
 def j20_toolbar(app: AppDriver) -> None:
-    """With nothing set up, copying cannot start and the freshness label says so."""
+    """With nothing set up, the toolbar offers no Stop and the freshness label says so."""
     snapshot = app.open_screen("gettingStarted")
-    copying = snapshot.find("toolbar.copying")
-    if copying is None or copying.enabled:
-        raise JourneyFailure("Start Copying must be present and disabled before setup")
+    if snapshot.find("toolbar.copying") is not None:
+        raise JourneyFailure("the toolbar offered Stop Copying before setup")
     app.expect(snapshot, "Not copying")
     app.click("toolbar.refresh")
     app.open_screen("connections")
@@ -1262,7 +1261,7 @@ def j31_agent_approval(app: AppDriver) -> None:
 
     # Rejecting: the agent learns the outcome and the account never changes.
     resume = _agent_result(app, 10, "accounts", "resume", "primary")
-    app.wait_for("Resume new entries in primary", timeout=30, name="resume-sheet")
+    app.wait_for("Start copying into primary", timeout=30, name="resume-sheet")
     app.click("Reject", outcome_checked=True)
     rejected = _agent_result(app, 7, "proposals", "wait", resume["proposal_id"], "--timeout", "60")
     if rejected["state"] != "rejected":
@@ -1284,10 +1283,7 @@ def j40_live_limits(app: AppDriver) -> None:
     if app.state_root is None:
         raise JourneySkipped("needs the run's state root")
     _paper_setup()
-    app.open_screen("account.primary")
-    toolbar = app.see().find("toolbar.copying")
-    if toolbar is not None and "Start" in toolbar.label:
-        app.click("toolbar.copying")
+    _start_copying_primary(app)
     _wait_for_account(app, "primary", timeout=180)
 
     # Edit Limits, under the balance, opens the account sheet scrolled to its limits.
@@ -1312,7 +1308,7 @@ def j40_live_limits(app: AppDriver) -> None:
             app.see("live-limits-pending")
             raise JourneyFailure("a limit change still waits for Apply Changes")
         toolbar = snapshot.find("toolbar.copying")
-        if toolbar is None or "Pause" not in toolbar.label:
+        if toolbar is None or "Stop" not in toolbar.label:
             app.see("live-limits-paused")
             raise JourneyFailure("changing a limit stopped copying")
         if f"${target}" in texts and "You changed limits" in texts:
@@ -1562,12 +1558,9 @@ def _post_test_call(setup: dict[str, str], text: str) -> None:
 
 def _copying_with_entries(app: AppDriver) -> None:
     """Copying on, automatic recovery, and entries on, asking the owner where the app asks."""
-    # Copying is paused after a restore; start it again from the toolbar. The button toggles, so
-    # it is pressed only when it offers Start: an earlier journey may have left copying on.
-    app.open_screen("account.primary")
-    toolbar = app.see().find("toolbar.copying")
-    if toolbar is not None and "Start" in toolbar.label:
-        app.click("toolbar.copying")
+    # Copying is paused after a restore; the account's own Start Copying starts it again and turns
+    # its buys on. It is pressed only when it offers Start: an earlier journey may have left it on.
+    _start_copying_primary(app)
     _wait_for_account(app, "primary", timeout=180)
 
     # A restored account waits for the owner to choose automatic recovery again.
@@ -1582,11 +1575,19 @@ def _copying_with_entries(app: AppDriver) -> None:
     # Entries start off after setup and after a restore; turning them on asks the owner.
     if _wait_for_account(app, "primary", timeout=10)["entry_permission"] != "enabled":
         resume = _agent_result(app, 10, "accounts", "resume", "primary")
-        app.wait_for("Resume new entries in primary", timeout=30, name="resume-sheet")
+        app.wait_for("Start copying into primary", timeout=30, name="resume-sheet")
         app.click("Approve…", outcome_checked=True)
         done = _agent_result(app, 0, "proposals", "wait", resume["proposal_id"], "--timeout", "60")
         if done["state"] != "succeeded":
             raise JourneyFailure(f"resuming entries ended {done['state']}")
+
+
+def _start_copying_primary(app: AppDriver) -> None:
+    """The primary account's one switch, pressed only when it offers Start Copying."""
+    app.open_screen("account.primary")
+    switch = app.see().find("account.copying")
+    if switch is not None and "Start" in switch.label:
+        app.click("account.copying")
 
 
 def _trading_hours() -> bool:
@@ -1611,9 +1612,7 @@ def _set_ask_before_orders(app: AppDriver, on: bool) -> None:
     if start is not None and start.enabled:
         app.click("setup.startCopying")
     else:
-        toolbar = app.see().find("toolbar.copying")
-        if toolbar is not None and "Start" in toolbar.label:
-            app.click("toolbar.copying")
+        _start_copying_primary(app)
     _wait_for_account(app, "primary", timeout=180)
 
 

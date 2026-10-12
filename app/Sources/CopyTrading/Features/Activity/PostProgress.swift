@@ -114,10 +114,10 @@ struct PostProgress: Equatable {
             return L10n.string("Handing to your accounts… %@", time)
         case .heldForResume(_, let until?):
             return L10n.string(
-                "Held · waiting for you to resume entries · %@, copies until %@", time,
+                "Held · waiting for Start Copying · %@, copies until %@", time,
                 until.formatted(AppTime.style(.dateTime.hour().minute().second())))
         case .heldForResume(_, nil):
-            return L10n.string("Held · waiting for you to resume entries · %@", time)
+            return L10n.string("Held · waiting for Start Copying · %@", time)
         case .nextCycle:
             return L10n.string("Waiting for the next account cycle… %@", time)
         case .awaitingFill(_, _, let timeout?):
