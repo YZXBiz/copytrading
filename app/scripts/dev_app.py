@@ -50,8 +50,9 @@ def read_labelled(path: Path) -> dict[str, str]:
     return values
 
 
-def prefill(values: dict[str, str], provider: str, guru: str) -> dict[str, str]:
-    """The fields the app fills; a missing one is named, never shown."""
+def prefill(values: dict[str, str], provider: str, guru: str) -> dict[str, str | None]:
+    """The fields the app fills; a missing one is named, never shown. The OpenAI key, for the
+    chat filter, is optional."""
 
     def find(*words: str) -> str:
         for label, value in values.items():
@@ -68,6 +69,7 @@ def prefill(values: dict[str, str], provider: str, guru: str) -> dict[str, str]:
         "alpaca_key": find("alpaca", "key"),
         "alpaca_secret": find("alpaca", "secret"),
         "guru_name": guru,
+        "triage_api_key": values.get("openaikey"),
     }
 
 

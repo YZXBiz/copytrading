@@ -33,6 +33,16 @@ extension SourceActivity {
     var isHistorical: Bool {
         captureStatus == "historical"
     }
+
+    /// The chat filter settled the post before the reader (ADR-0012), and how sure it was:
+    /// "sorted by OpenAI · 98% sure"; nil for a post the reader read.
+    @MainActor
+    var sortedBy: String? {
+        guard let sortedConfidence, let model = interpretedBy else { return nil }
+        let filter = model == TradingTriageConfiguration.openAIDecisions.model ? TradingTriageProvider.openAIDecisions.title : model
+        let percent = Int((min(max(sortedConfidence, 0), 1) * 100).rounded())
+        return L10n.string("sorted by %@ · %lld%% sure", filter, Int64(percent))
+    }
 }
 
 extension SourceActivity {
@@ -41,6 +51,7 @@ extension SourceActivity {
     var headline: String {
         guard let first = instructions.first else {
             if enteredByOwner { return L10n.string("You entered the trade") }
+            if reading == .chatter { return L10n.string("Just chat, nothing to trade") }
             switch decision {
             case "ignore": return L10n.string("Not a trade")
             case "review": return L10n.string("Needs your review")

@@ -37,6 +37,7 @@ extension AppModel {
                 switch check.name {
                 case .source: .discord
                 case .model: .interpreter
+                case .triage: check.state == .notConfigured ? nil : .triage
                 case .notification: check.state == .notConfigured ? nil : .alerts
                 case .broker: check.subject.map(ConnectionCheckSubject.account)
                 default: nil
@@ -66,6 +67,12 @@ extension AppModel {
                 !key.isEmpty || !provider.name.requiresAPIKey
             else { return nil }
             return .model(provider, apiKey: key)
+        case .triage:
+            let triage = draft.triage ?? .openAIDecisions
+            guard let key = Self.triageKey(entered: draft.triageAPIKey, for: triage, saved: saved), !key.isEmpty else {
+                return nil
+            }
+            return .triage(triage, apiKey: key)
         case .alerts:
             guard draft.notificationsEnabled else { return nil }
             let sameService = saved?.configuration.notification?.service == draft.notificationService
@@ -105,6 +112,10 @@ extension AppModel {
             hasher.combine(draft.modelName.trimmed)
             hasher.combine(draft.providerBaseURL.trimmed)
             hasher.combine(draft.providerAPIKey)
+        case .triage:
+            hasher.combine(draft.triage?.provider)
+            hasher.combine(draft.triage?.model)
+            hasher.combine(draft.triageAPIKey)
         case .alerts:
             hasher.combine(draft.notificationsEnabled)
             hasher.combine(draft.notificationService)

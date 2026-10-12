@@ -502,6 +502,9 @@ public struct SourceActivity: Codable, Equatable, Identifiable, Sendable {
     public let parserReason: String?
     public let parserProfile: String?
     public let interpretedBy: String?
+    /// How sure the decision model was when it settled the post itself, 0 to 1 (ADR-0012): "Sorted
+    /// as chat (98% sure)". Nil when the reader read it.
+    public let sortedConfidence: Double?
     public let instructions: [SourceInstruction]
     /// For a post that waits for the owner: what Copy places (ADR-0007).
     public let suggested: [SourceInstruction]
@@ -532,6 +535,7 @@ public struct SourceActivity: Codable, Equatable, Identifiable, Sendable {
         case parserReason = "parser_reason"
         case parserProfile = "parser_profile"
         case interpretedBy = "interpreted_by"
+        case sortedConfidence = "sorted_confidence"
         case instructions
         case suggested
         case reading

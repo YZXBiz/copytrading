@@ -12,6 +12,7 @@ enum ReadAsText {
         case .conditional: L10n.string("a condition")
         case .suggestion: L10n.string("a suggestion")
         case .commentary: L10n.string("talk, nothing to trade")
+        case .chatter: L10n.string("just chat")
         case .unclear: L10n.string("unclear")
         }
     }
@@ -20,6 +21,7 @@ enum ReadAsText {
     static func lines(_ reading: PostReading) -> [String] {
         switch reading {
         case .commentary(let summary): [summary]
+        case .chatter: [L10n.string("Just chat, nothing to trade")]
         case .unclear: [L10n.string("The reader couldn't tell what this post means.")]
         default: reading.calls.map(line)
         }

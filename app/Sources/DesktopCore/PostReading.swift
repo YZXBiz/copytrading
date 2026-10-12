@@ -9,6 +9,8 @@ public enum PostReading: Codable, Equatable, Sendable {
     case conditional(summary: String, condition: String, calls: [ReadCall])
     case suggestion(summary: String, calls: [ReadCall])
     case commentary(summary: String)
+    /// Small talk with nothing about the market; it carries no words, so it has no summary.
+    case chatter
     case unclear(summary: String)
 
     public var summary: String {
@@ -16,6 +18,7 @@ public enum PostReading: Codable, Equatable, Sendable {
         case .tradeMade(let summary, _), .instruction(let summary, _), .conditional(let summary, _, _),
             .suggestion(let summary, _), .commentary(let summary), .unclear(let summary):
             summary
+        case .chatter: ""
         }
     }
 
@@ -24,7 +27,7 @@ public enum PostReading: Codable, Equatable, Sendable {
         case .tradeMade(_, let calls), .instruction(_, let calls), .conditional(_, _, let calls),
             .suggestion(_, let calls):
             calls
-        case .commentary, .unclear: []
+        case .commentary, .chatter, .unclear: []
         }
     }
 
@@ -40,8 +43,13 @@ public enum PostReading: Codable, Equatable, Sendable {
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: Key.self)
+        let kind = try container.decode(String.self, forKey: .kind)
+        if kind == "chatter" {
+            self = .chatter
+            return
+        }
         let summary = try container.decode(String.self, forKey: .summary)
-        switch try container.decode(String.self, forKey: .kind) {
+        switch kind {
         case "trade_made": self = .tradeMade(summary: summary, calls: try container.decode([ReadCall].self, forKey: .calls))
         case "instruction": self = .instruction(summary: summary, calls: try container.decode([ReadCall].self, forKey: .calls))
         case "conditional":
@@ -58,6 +66,10 @@ public enum PostReading: Codable, Equatable, Sendable {
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: Key.self)
+        if case .chatter = self {
+            try container.encode("chatter", forKey: .kind)
+            return
+        }
         try container.encode(summary, forKey: .summary)
         switch self {
         case .tradeMade(_, let calls): try container.encode("trade_made", forKey: .kind); try container.encode(calls, forKey: .calls)
@@ -68,6 +80,7 @@ public enum PostReading: Codable, Equatable, Sendable {
             try container.encode(calls, forKey: .calls)
         case .suggestion(_, let calls): try container.encode("suggestion", forKey: .kind); try container.encode(calls, forKey: .calls)
         case .commentary: try container.encode("commentary", forKey: .kind)
+        case .chatter: try container.encode("chatter", forKey: .kind)
         case .unclear: try container.encode("unclear", forKey: .kind)
         }
     }
