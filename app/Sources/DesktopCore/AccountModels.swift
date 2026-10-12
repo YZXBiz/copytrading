@@ -650,3 +650,9 @@ public struct EquityHistory: Codable, Equatable, Sendable {
         case points
     }
 }
+
+extension AccountOverview {
+    /// Whether the broker can be asked for this account's curve: it is in the running setup, or
+    /// its balance is read live while copying is stopped.
+    public var readsBrokerCurve: Bool { activeConfiguration || balance != nil }
+}

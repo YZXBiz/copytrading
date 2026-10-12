@@ -102,7 +102,7 @@ final class AccountFeatureModel {
         return newest + current.filter { $0.id < oldest }
     }
 
-    /// Reads each loaded account's equity curve; an account with no running owner has none.
+    /// Reads the equity curve of each loaded account the broker can be asked about.
     func refreshHistories(
         window: EquityHistoryWindow? = nil, using actions: (any AccountOperations)?
     ) async {
@@ -112,7 +112,7 @@ final class AccountFeatureModel {
             historyWindow = window
             histories = [:]
         }
-        for account in accounts where account.activeConfiguration {
+        for account in accounts where account.readsBrokerCurve {
             do {
                 let history = try await actions.equityHistory(accountID: account.accountID, window: window)
                 guard isCurrent(generation), historyWindow == window else { return }

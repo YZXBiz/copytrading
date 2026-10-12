@@ -215,6 +215,25 @@ private func checkAccountValuationFixturesDecode() throws {
     try #require(order.averageFillPrice == "12.30", "average fill price did not decode")
     try #require(order.limitPrice == "12.34", "limit price did not decode")
 
+    guard
+        case .accounts(let overviews) = try JSONDecoder().decode(
+            EngineResponse.self, from: contractFixture("account-overviews-response.json")
+        ).successValue(), let read = overviews.items.first,
+        case .accounts(let archived) = try JSONDecoder().decode(
+            EngineResponse.self, from: contractFixture("account-overviews-next-page-response.json")
+        ).successValue(), let archive = archived.items.first
+    else {
+        throw VerificationFailure(description: "account overviews did not decode")
+    }
+    // After a failed start the account leaves the running setup but its balance is still read.
+    var stopped = try JSONSerialization.jsonObject(with: JSONEncoder().encode(read)) as? [String: Any] ?? [:]
+    stopped["active_configuration"] = false
+    let stoppedAccount = try JSONDecoder().decode(
+        AccountOverview.self, from: JSONSerialization.data(withJSONObject: stopped)
+    )
+    try #require(stoppedAccount.readsBrokerCurve, "a stopped account read live did not ask for its curve")
+    try #require(!archive.readsBrokerCurve, "an archived account asked the broker for its curve")
+
     let history = try JSONDecoder().decode(
         EngineResponse.self, from: contractFixture("equity-history-response.json")
     )
