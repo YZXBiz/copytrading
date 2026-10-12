@@ -2185,3 +2185,14 @@
 "Waiting for you to copy it." = "Waiting for you to copy it.";
 "CopyTrading couldn't read a trade in this post." = "CopyTrading couldn't read a trade in this post.";
 "Limit price" = "Limit price";
+"%@, start to finish" = "%@, start to finish";
+"Result" = "Result";
+"Bought %@ at %@" = "Bought %@ at %@";
+"Added %@ at %@" = "Added %@ at %@";
+"You sold %@ at %@" = "You sold %@ at %@";
+"Sold %@ at %@" = "Sold %@ at %@";
+"You sold all %@ at %@" = "You sold all %@ at %@";
+"Sold all %@ at %@" = "Sold all %@ at %@";
+"This post · %@" = "This post · %@";
+"You, from the account page · %@" = "You, from the account page · %@";
+"%@ · %@ · “%@”" = "%@ · %@ · “%@”";

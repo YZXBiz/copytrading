@@ -2185,3 +2185,14 @@
 "Waiting for you to copy it." = "等待你跟单。";
 "CopyTrading couldn't read a trade in this post." = "CopyTrading 没能从这条帖子读出交易。";
 "Limit price" = "限价";
+"%@, start to finish" = "%@，从买入到卖出";
+"Result" = "结果";
+"Bought %@ at %@" = "买入 %@，价格 %@";
+"Added %@ at %@" = "加仓 %@，价格 %@";
+"You sold %@ at %@" = "你卖出 %@，价格 %@";
+"Sold %@ at %@" = "卖出 %@，价格 %@";
+"You sold all %@ at %@" = "你全部卖出 %@，价格 %@";
+"Sold all %@ at %@" = "全部卖出 %@，价格 %@";
+"This post · %@" = "这条帖子 · %@";
+"You, from the account page · %@" = "你在账户页卖出 · %@";
+"%@ · %@ · “%@”" = "%@ · %@ · “%@”";

@@ -23,6 +23,13 @@ struct ActivityDetailView: View {
     var startCopying: (String) -> Void = { _ in }
     /// The one account Activity is showing, or every account.
     var accountID: String?
+    /// Each account's story of the holding this post's buy opened or joined, when it has more than
+    /// this one buy: the buys that joined it and the sales of it (ADR-0010).
+    var stories: [String: PositionStory] = [:]
+    /// Names the gurus in a story.
+    var directory = GuruDirectory(nil)
+    /// The words of another post Activity still holds, for the story's steps.
+    var postText: (String) -> String? = { _ in nil }
     @State private var readerPosition = ScrollPosition(edge: .top)
     /// The post this card watched in flight, so its fill can end the live moment with a hop.
     @State private var watchedInFlight: String?
@@ -260,9 +267,14 @@ struct ActivityDetailView: View {
                     text: L10n.string(environment == .live ? "Live" : "Paper"),
                     color: environment == .live ? .orange : Palette.tertiaryInk)
             }
+            if let story = stories[account.id] {
+                PositionStoryView(story: story, directory: directory, postText: postText)
+            }
             ForEach(Array(account.results.enumerated()), id: \.offset) { index, result in
-                resultBlock(result, tone: tone(of: index, in: account), account: account.id)
-                    .padding(.top, index == 0 ? 0 : 14)
+                if !toldInStory(index, of: account) {
+                    resultBlock(result, tone: tone(of: index, in: account), account: account.id)
+                        .padding(.top, index == 0 ? 0 : 14)
+                }
             }
             if account.waits, let waiting = WaitingCall(item) {
                 waitingActions(waiting)
@@ -282,6 +294,14 @@ struct ActivityDetailView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.string("Account %@", account.id))
+    }
+
+    /// An order that traded is one step of the account's story, when it has one, so its own result
+    /// is not repeated.
+    private func toldInStory(_ index: Int, of account: ActivityCardOutcome.Account) -> Bool {
+        guard stories[account.id] != nil else { return false }
+        let orders = item.destinations.first { $0.accountID == account.id }?.orders ?? []
+        return orders.indices.contains(index) && ["filled", "partially_filled"].contains(orders[index].status)
     }
 
     /// How one result ended, for its mark: an order's own outcome; otherwise waiting on the owner,

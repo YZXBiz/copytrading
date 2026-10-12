@@ -19,6 +19,7 @@
           "guru_id": null,
           "message_id": "discord:demo:signal-7",
           "order_id": "lotsale-04ddab63a704",
+          "lot_id": "copy-03f1d76c308cc50",
           "changes": [],
           "reason": null
         },
@@ -35,6 +36,7 @@
           "guru_id": null,
           "message_id": null,
           "order_id": null,
+          "lot_id": null,
           "changes": [
             {
               "setting": "max_order_usd",
@@ -57,6 +59,7 @@
           "guru_id": null,
           "message_id": null,
           "order_id": null,
+          "lot_id": null,
           "changes": [],
           "reason": null
         },
@@ -73,6 +76,7 @@
           "guru_id": "tradez",
           "message_id": "discord:demo:signal-8",
           "order_id": "copy-70232af77bde23e",
+          "lot_id": null,
           "changes": [],
           "reason": null
         },
@@ -89,6 +93,7 @@
           "guru_id": "tradez",
           "message_id": "discord:demo:signal-7",
           "order_id": "copy-03f1d76c308cc50",
+          "lot_id": "copy-03f1d76c308cc50",
           "changes": [],
           "reason": null
         }

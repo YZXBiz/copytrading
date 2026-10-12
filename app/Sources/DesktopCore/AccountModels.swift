@@ -570,6 +570,9 @@ public struct AccountFeedItem: Codable, Equatable, Identifiable, Sendable {
     public let guruID: String?
     public let messageID: String?
     public let orderID: String?
+    /// The holding a trade belongs to: the lot a buy opened or joined, or the lot a sell sold
+    /// from, so every buy and sale of one position can be told as one story.
+    public let lotID: String?
     /// The limits the owner changed, for a `limits_changed` row.
     public let changes: [AccountLimitChange]
     /// Why a `settled` row's holdings count was settled: the owner answered, or the broker's
@@ -582,6 +585,7 @@ public struct AccountFeedItem: Codable, Equatable, Identifiable, Sendable {
         case guruID = "guru_id"
         case messageID = "message_id"
         case orderID = "order_id"
+        case lotID = "lot_id"
     }
 }
 
