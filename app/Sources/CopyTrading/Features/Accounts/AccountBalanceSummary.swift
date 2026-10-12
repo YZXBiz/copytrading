@@ -15,37 +15,57 @@ struct AccountBalanceSummary: View {
                     MoneyText(value: Decimal(engine: balance.equity) ?? 0, font: DesignTokens.balanceDisplay)
                         .tracking(DesignTokens.balanceTracking)
                         .foregroundStyle(Palette.ink)
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        MoneyText(
-                            value: Decimal(engine: balance.dayChangeUSD) ?? 0, style: .change,
-                            font: DesignTokens.bodyText.weight(.semibold))
-                        if let percent = dayChangeFraction(balance) {
-                            Text(percent.formatted(.percent.precision(.fractionLength(2)).sign(strategy: .always(includingZero: false))))
+                    // One line when it fits; on a narrow page cash and buying power take their own line.
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            change(balance)
+                            Text(L10n.string("·  %@ cash  ·  %@ buying power", money(balance.cash), money(balance.buyingPower)))
                                 .font(DesignTokens.bodyText)
                                 .monospacedDigit()
-                                .foregroundStyle(ChangeDirection(Decimal(engine: balance.dayChangeUSD) ?? 0).color)
+                                .foregroundStyle(Palette.tertiaryInk)
+                            freshness(balance)
                         }
-                        Text(L10n.string("today"))
-                            .font(DesignTokens.bodyText)
-                            .foregroundStyle(Palette.tertiaryInk)
-                        Text(
-                            L10n.string(
-                                "·  %@ cash  ·  %@ buying power", money(balance.cash), money(balance.buyingPower))
-                        )
-                        .font(DesignTokens.bodyText)
-                        .monospacedDigit()
-                        .foregroundStyle(Palette.tertiaryInk)
-                        AccountFreshness(
-                            observedAt: balance.observedAt,
-                            isRefreshing: feature.isRefreshing,
-                            engineStopped: model.runtimeState == .stopped || model.runtimeState == .failed,
-                            refresh: { Task { await feature.refresh(using: model.accountActions()) } }
-                        )
-                        .padding(.leading, 14)
+                        .fixedSize()
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                change(balance)
+                                freshness(balance)
+                            }
+                            Text(L10n.string("%@ cash  ·  %@ buying power", money(balance.cash), money(balance.buyingPower)))
+                                .font(DesignTokens.bodyText)
+                                .monospacedDigit()
+                                .foregroundStyle(Palette.tertiaryInk)
+                        }
                     }
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func change(_ balance: AccountBalance) -> some View {
+        MoneyText(
+            value: Decimal(engine: balance.dayChangeUSD) ?? 0, style: .change,
+            font: DesignTokens.bodyText.weight(.semibold))
+        if let percent = dayChangeFraction(balance) {
+            Text(percent.formatted(.percent.precision(.fractionLength(2)).sign(strategy: .always(includingZero: false))))
+                .font(DesignTokens.bodyText)
+                .monospacedDigit()
+                .foregroundStyle(ChangeDirection(Decimal(engine: balance.dayChangeUSD) ?? 0).color)
+        }
+        Text(L10n.string("today"))
+            .font(DesignTokens.bodyText)
+            .foregroundStyle(Palette.tertiaryInk)
+    }
+
+    private func freshness(_ balance: AccountBalance) -> some View {
+        AccountFreshness(
+            observedAt: balance.observedAt,
+            isRefreshing: feature.isRefreshing,
+            engineStopped: model.runtimeState == .stopped || model.runtimeState == .failed,
+            refresh: { Task { await feature.refresh(using: model.accountActions()) } }
+        )
+        .padding(.leading, 14)
     }
 
     private func money(_ value: String?) -> String {

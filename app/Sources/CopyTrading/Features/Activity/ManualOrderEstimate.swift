@@ -26,9 +26,9 @@ struct ManualOrderEstimate {
     /// The button: "Sell 0.442 WMT", "Buy $100 of WMT", "Approve", or "Copy".
     @MainActor var action: String {
         if mode == .approve { return L10n.string("Approve") }
-        guard drafts.count == 1, let draft = drafts.first, !draft.symbol.trimmed.isEmpty else {
-            return L10n.string("Copy Calls")
-        }
+        guard drafts.count == 1, let draft = drafts.first else { return L10n.string("Copy Calls") }
+        // No stock chosen yet: the button still names the side, so it never reads as something else.
+        guard !draft.symbol.trimmed.isEmpty else { return L10n.string(draft.isSell ? "Sell" : "Buy") }
         let symbol = draft.symbol.trimmed.uppercased()
         if accounts.count == 1, let account = accounts.first {
             if draft.isSell, let shares = shares(draft, in: account), shares > 0 {
