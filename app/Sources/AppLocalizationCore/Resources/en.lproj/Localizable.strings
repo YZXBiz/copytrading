@@ -2196,3 +2196,6 @@
 "This post · %@" = "This post · %@";
 "You, from the account page · %@" = "You, from the account page · %@";
 "%@ · %@ · “%@”" = "%@ · %@ · “%@”";
+"Buy %@ of %@ %@." = "Buy %@ of %@ %@.";
+"Buy %@ of %@ %@" = "Buy %@ of %@ %@";
+", %@ worth" = ", %@ worth";

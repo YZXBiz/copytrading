@@ -78,7 +78,10 @@ struct ManualOrderEstimate {
     }
 
     func budget(_ draft: ManualInstructionDraft, in account: AccountOverview) -> Decimal? {
-        connections[account.accountID]?.copiedBudgetUSD(sourceFraction: Decimal(string: draft.fraction.trimmed))
+        connections[account.accountID]?.copiedBudgetUSD(
+            sourceFraction: Decimal(string: draft.fraction.trimmed),
+            sourceUSD: draft.isSell ? nil : Decimal(string: draft.usdAmount.trimmed)
+        )
     }
 
     private func currentPrice(_ symbol: String, in account: AccountOverview) -> Decimal? {

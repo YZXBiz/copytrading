@@ -21,8 +21,11 @@ Each call is a buy or a sell, with the stock and the price:
 - price is exact (one number), range (a zone, low and high), at_market (the post says now
   without a number), or not_given.
 - A buy's size is a fraction of a full position (6分之一 is 1/6, half is 1/2), a batch
-  (第二批 is batch 2), or not_given. Never infer a size. When the guru playbook gives the post's
-  own words a size ("第二批 means 1/3"), use that fraction with those words.
+  (第二批 is batch 2), dollars when the post says how many dollars to put in ($200 of NFLX,
+  200$ of nflx, 200 dollars, 两百刀 are 200 with those words), or not_given. A dollar sign on
+  the stock's price ("at $71") is the price, never a size. Never infer a size. When the guru
+  playbook gives the post's own words a size ("第二批 means 1/3"), use that fraction with
+  those words.
 - A sell's share is a fraction, all, or not_given when the post states no share (a vague trim
   such as 减仓 or "took some off"); when the playbook gives those words a size ("减仓 means 1/2"),
   use that fraction with those words. counts_from says whether the fraction is of the original

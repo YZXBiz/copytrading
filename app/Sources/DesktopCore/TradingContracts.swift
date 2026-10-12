@@ -146,8 +146,16 @@ public struct TradingRouteConnection: Codable, Equatable, Identifiable, Sendable
     /// What a call asks for before the account's limits: its share of the full position. The
     /// engine's rule exactly (`requested_entry_budget`): the product's repeating digits settle at
     /// ten places, then it rounds down to the cent, so a third of $3000 is $1000 and six sixths
-    /// never pass the full position. `sizing-examples.json` holds both sides to it.
-    public func copiedBudgetUSD(sourceFraction: Decimal?) -> Decimal? {
+    /// never pass the full position. `sizing-examples.json` holds both sides to it. A call sized in
+    /// dollars asks for that amount, never more than the full position.
+    public func copiedBudgetUSD(sourceFraction: Decimal?, sourceUSD: Decimal? = nil) -> Decimal? {
+        if let sourceUSD {
+            guard let full = Decimal(string: fullPositionUSD), full > 0, sourceUSD > 0 else { return nil }
+            var usd = min(sourceUSD, full)
+            var cents = Decimal()
+            NSDecimalRound(&cents, &usd, 2, .down)
+            return cents > 0 ? cents : nil
+        }
         // A call that names no size asks for the full position (ADR-0010).
         let fraction = sourceFraction ?? 1
         guard let full = Decimal(string: fullPositionUSD), full > 0, fraction > 0, fraction <= 1

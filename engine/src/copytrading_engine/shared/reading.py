@@ -90,7 +90,15 @@ class Batch(_Part):
     words: Words
 
 
-type Size = Annotated[Fraction | Batch | NotGiven, Field(discriminator="kind")]
+class Dollars(_Part):
+    """A dollar amount to put in, as written: $200 of, 200$, 200 dollars, 两百刀."""
+
+    kind: Literal["dollars"] = "dollars"
+    value: Money
+    words: Words
+
+
+type Size = Annotated[Fraction | Batch | Dollars | NotGiven, Field(discriminator="kind")]
 
 
 class All(_Part):

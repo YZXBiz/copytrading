@@ -108,8 +108,13 @@ struct ManualInstructionEditor: View {
             ForEach(options, id: \.self) { option in
                 FormChoice(title: shareTitle(option), detail: buyDetail(option), isOn: isChosen(option)) {
                     draft.fraction = option
+                    draft.usdAmount = ""
                 }
                 .accessibilityIdentifier("review.amount.\(Humanize.fraction(option.isEmpty ? "1" : option))")
+            }
+            // A dollar amount the post named.
+            if !draft.isSell, !draft.usdAmount.isEmpty {
+                ChoiceWord(title: Humanize.dollars(draft.usdAmount), isOn: true) {}
             }
             // A size the post named that isn't one of the usual ones.
             if !draft.fraction.isEmpty, !options.contains(where: { isChosen($0) }) {
@@ -119,7 +124,8 @@ struct ManualInstructionEditor: View {
     }
 
     private func isChosen(_ option: String) -> Bool {
-        option.isEmpty ? draft.fraction.trimmed.isEmpty : ManualInstructionDraft.sameShare(option, draft.fraction)
+        guard draft.isSell || draft.usdAmount.isEmpty else { return false }
+        return option.isEmpty ? draft.fraction.trimmed.isEmpty : ManualInstructionDraft.sameShare(option, draft.fraction)
     }
 
     @MainActor private func shareTitle(_ option: String) -> String {
@@ -226,6 +232,7 @@ struct ManualInstructionEditor: View {
         guard draft.isSell != sell else { return }
         draft.isSell = sell
         draft.entryPrice = ""
+        draft.usdAmount = ""
         draft.exitBasis = nil
         // The stock stays what the post named, or empty for the owner to pick: choosing Sell never
         // fills in a stock the post didn't name.

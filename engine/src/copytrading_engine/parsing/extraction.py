@@ -18,6 +18,7 @@ from copytrading_engine.shared.reading import (
     Buy,
     Call,
     Conditional,
+    Dollars,
     Exact,
     Fraction,
     Instruction,
@@ -31,7 +32,7 @@ from copytrading_engine.shared.reading import (
     TradeMade,
 )
 
-PROMPT_VERSION = "stock-reading-v4"
+PROMPT_VERSION = "stock-reading-v5"
 
 # Chinese characters and ASCII letters both count as Unicode word characters.
 # Match complete numeric tokens and bound English words by ASCII letters so
@@ -223,6 +224,55 @@ NONCURRENT = re.compile(
     r"如果|假如|计划|附近|突破.*再|昨天.*加了|\b(if|would|might|yesterday)\b", re.I
 )
 
+# An amount as written: 1,500, 200, 2.5, 两百, 一千五.
+_AMOUNT = (
+    r"(?P<{name}>\d{{1,3}}(?:,\d{{3}})+(?:\.\d+)?|\d+(?:\.\d+)?"
+    r"|[一二两三四五六七八九十百千万]+)"
+)
+# A dollar amount to put in, as a size: "$200 of", "200$ of", "$200 worth", "200 dollars",
+# "200 bucks", 200刀, 两百刀, 200美元, 200美金, 200块. A bare "$71" is a price, never a size.
+DOLLAR_SIZE = re.compile(
+    r"\$\s*" + _AMOUNT.format(name="before") + r"\s+(?:of|worth|in)\b"
+    r"|(?<![\d.,])" + _AMOUNT.format(name="after") + r"\s*\$\s*(?:of|worth|in)\b"
+    r"|(?<![\d.,])" + _AMOUNT.format(name="word") + r"\s*(?:dollars?|bucks|usd|刀|美元|美金|块)",
+    re.I,
+)
+_CHINESE_UNITS = {"十": 10, "百": 100, "千": 1000, "万": 10000}
+
+
+def _chinese_amount(words: str) -> Decimal | None:
+    """两百 is 200, 一千五 is 1500, 五百 is 500; None when it is not a plain amount."""
+    total, current = 0, 0
+    for char in words:
+        if char in _CHINESE_DIGITS and _CHINESE_DIGITS[char] < 10:
+            current = _CHINESE_DIGITS[char]
+        elif char in _CHINESE_UNITS:
+            total += (current or 1) * _CHINESE_UNITS[char]
+            current = 0
+        else:
+            return None
+    if current:
+        # A trailing digit after a unit is one step down: 一千五 is 1500.
+        last_unit = next((_CHINESE_UNITS[c] for c in reversed(words) if c in _CHINESE_UNITS), 10)
+        total += current * (last_unit // 10 if total else 1)
+    return Decimal(total) if total else None
+
+
+def _dollar_value(match: re.Match[str]) -> Decimal | None:
+    raw = next(group for group in match.groups() if group)
+    if re.fullmatch(r"[\d,.]+", raw):
+        return Decimal(raw.replace(",", ""))
+    return _chinese_amount(raw)
+
+
+def dollars_are_grounded(value: Decimal, evidence: str | None, text: str) -> bool:
+    """The cited words are in the post and hold exactly one dollar amount, of that value."""
+    if not evidence or evidence not in text:
+        return False
+    found = list(DOLLAR_SIZE.finditer(evidence))
+    return len(found) == 1 and _dollar_value(found[0]) == value
+
+
 # The batch number as written: 第二批, 第2批, batch 2.
 BATCH_NUMBER = re.compile(r"第\s*(\d+|[一二两三四五六七八九十])\s*批|batch\s*(\d+)", re.I)
 _CHINESE_DIGITS = dict(zip("一二三四五六七八九十", range(1, 11), strict=True)) | {"两": 2}
@@ -304,8 +354,17 @@ def _check_size(buy: Buy, text: str, playbook: str, path: str) -> None:
             number = int(written) if written.isdigit() else _CHINESE_DIGITS.get(written)
         if number != size.number:
             raise GroundingError("batch_not_grounded", path, "The batch number is not in the post")
+    elif isinstance(size, Dollars):
+        if not dollars_are_grounded(size.value, size.words, text):
+            raise GroundingError(
+                "dollars_not_grounded",
+                path,
+                "words must be the post's dollar amount, such as $200 of or 200 dollars",
+            )
     elif isinstance(size, NotGiven) and EXPLICIT_ALLOCATION.search(text):
         raise GroundingError("source_fraction_omitted", path, "The post states a size")
+    elif isinstance(size, NotGiven) and DOLLAR_SIZE.search(text):
+        raise GroundingError("source_dollars_omitted", path, "The post states a dollar amount")
 
 
 def _check_share(sell: Sell, text: str, playbook: str, path: str) -> None:

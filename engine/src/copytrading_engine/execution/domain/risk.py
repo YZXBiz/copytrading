@@ -65,9 +65,20 @@ class BudgetDecision:
 def requested_entry_budget(
     connection: RouteConnection,
     source_fraction: Decimal | None,
+    source_usd: Decimal | None = None,
 ) -> BudgetDecision:
-    """The call's share of the guru's full position, before account facts and limits. A call
-    that states no size asks for the full position; the maximum per order trims it (ADR-0010)."""
+    """What the call asks for, before account facts and limits: the dollars the post names, never
+    more than the full position; else its share of the full position. A call that states no size
+    asks for the full position; the maximum per order trims it (ADR-0010)."""
+    if source_usd is not None:
+        if not source_usd.is_finite() or source_usd <= 0:
+            raise ValueError("A dollar size must be positive")
+        requested = min(source_usd, connection.full_position_usd).quantize(
+            Decimal("0.01"), rounding=ROUND_DOWN
+        )
+        if requested <= 0:
+            return BudgetDecision(None, "below_minimum_budget")
+        return BudgetDecision(requested, "ready", requested=requested)
     fraction = source_fraction if source_fraction is not None else Decimal(1)
     if not fraction.is_finite() or not 0 < fraction <= 1:
         raise ValueError("Source fraction must be between zero and one")
@@ -131,6 +142,7 @@ def entry_budget(
     facts: EntryFacts,
     connection: RouteConnection,
     source_fraction: Decimal | None,
+    source_usd: Decimal | None = None,
 ) -> BudgetDecision:
     """Each buy gets its destination's budget once; limits apply to that result."""
     if not facts.account_active:
@@ -139,7 +151,7 @@ def entry_budget(
         return BudgetDecision(None, "daily_loss_cap")
     if facts.entries_today >= config.max_entries_per_day:
         return BudgetDecision(None, "daily_entry_cap")
-    asked = requested_entry_budget(connection, source_fraction)
+    asked = requested_entry_budget(connection, source_fraction, source_usd)
     if asked.budget is None:
         return asked
     requested = asked.budget

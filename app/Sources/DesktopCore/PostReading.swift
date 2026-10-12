@@ -249,11 +249,13 @@ public enum ReadPrice: Codable, Equatable, Sendable {
 public enum ReadSize: Codable, Equatable, Sendable {
     case fraction(value: String, words: String)
     case batch(number: Int, words: String)
+    /// A dollar amount to put in: "$200 of NFLX".
+    case dollars(value: String, words: String)
     case notGiven
 
     public var words: [String] {
         switch self {
-        case .fraction(_, let words), .batch(_, let words): [words]
+        case .fraction(_, let words), .batch(_, let words), .dollars(_, let words): [words]
         case .notGiven: []
         }
     }
@@ -266,6 +268,8 @@ public enum ReadSize: Codable, Equatable, Sendable {
         case "fraction":
             self = .fraction(value: try c.decode(String.self, forKey: .value), words: try c.decode(String.self, forKey: .words))
         case "batch": self = .batch(number: try c.decode(Int.self, forKey: .number), words: try c.decode(String.self, forKey: .words))
+        case "dollars":
+            self = .dollars(value: try c.decode(String.self, forKey: .value), words: try c.decode(String.self, forKey: .words))
         default: self = .notGiven
         }
     }
@@ -277,6 +281,8 @@ public enum ReadSize: Codable, Equatable, Sendable {
             try c.encode("fraction", forKey: .kind); try c.encode(value, forKey: .value); try c.encode(words, forKey: .words)
         case .batch(let number, let words):
             try c.encode("batch", forKey: .kind); try c.encode(number, forKey: .number); try c.encode(words, forKey: .words)
+        case .dollars(let value, let words):
+            try c.encode("dollars", forKey: .kind); try c.encode(value, forKey: .value); try c.encode(words, forKey: .words)
         case .notGiven: try c.encode("not_given", forKey: .kind)
         }
     }
