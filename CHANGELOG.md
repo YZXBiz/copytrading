@@ -8,6 +8,7 @@ User-visible changes for each release are recorded here. Every GitHub release's 
 - **Limits always save.** A limit changed while copying was starting used to wait as "Changed — not saved yet"; it now saves the moment the start settles, and the account page shows the new limits right away.
 - **An edited Discord post no longer stops copying.** A post edited after CopyTrading first read it used to stop the Discord connection on every start ("Discord could not be reached"). The first version is the one that counts and is never copied twice; the edit is noted and reading carries on.
 - **Apply Changes keeps your accounts copying.** Applying a change restarts copying; every account that was copying before copies again afterwards.
+- **A lot you sold by hand stays yours.** A post whose lot you later sold from the account page no longer reads "Bought … and 1 more"; the sale shows as "You sold …".
 - **A start that fails says why in plain words**, such as "Copying didn't start: Discord could not be reached. Try again.", instead of an engine message.
 
 ## 0.1.0-alpha.9 — developer preview

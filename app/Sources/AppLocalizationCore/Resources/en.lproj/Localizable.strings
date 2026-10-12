@@ -2169,3 +2169,4 @@
 "To stop copying into one account, open it and choose **Stop Copying**. Sells of what it copied still follow." = "To stop copying into one account, open it and choose **Stop Copying**. Sells of what it copied still follow.";
 "Waited for the account's Start Copying after the restart, and got too old" = "Waited for the account's Start Copying after the restart, and got too old";
 "start copying into %@" = "start copying into %@";
+"You sold %@" = "You sold %@";

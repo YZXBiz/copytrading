@@ -2169,3 +2169,4 @@
 "To stop copying into one account, open it and choose **Stop Copying**. Sells of what it copied still follow." = "要停止跟单某个账户，打开它并选择 **停止跟单**。已跟单的持仓仍会跟随卖出。";
 "Waited for the account's Start Copying after the restart, and got too old" = "重启后一直在等账户点“开始跟单”，已经过时";
 "start copying into %@" = "开始跟单到 %@";
+"You sold %@" = "你手动卖出了 %@";

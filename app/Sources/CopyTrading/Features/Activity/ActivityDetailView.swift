@@ -248,18 +248,21 @@ struct ActivityDetailView: View {
         }
     }
 
-    /// One account's result: each order printed as a receipt with its outcome, the price ruler,
-    /// and the numbers behind it, then at most one thing to do.
+    /// One account's result: whose it is, then for each order the outcome as one big sentence with
+    /// its mark, the price ruler, the numbers behind it, and at most one thing to do.
     private func accountRow(_ account: ActivityCardOutcome.Account) -> some View {
         let environment = TradingEnvironment(rawValue: account.environment) ?? .paper
         return VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 0) {
+                ActivityLabel(text: account.id)
+                ActivityLabel(text: " · ")
+                ActivityLabel(
+                    text: L10n.string(environment == .live ? "Live" : "Paper"),
+                    color: environment == .live ? .orange : Palette.tertiaryInk)
+            }
             ForEach(Array(account.results.enumerated()), id: \.offset) { index, result in
-                PostReceipt(
-                    account: account.id, isLive: environment == .live, result: result,
-                    tone: tone(of: index, in: account)
-                )
-                .padding(.top, index == 0 ? 0 : 14)
-                suggestion(result, account: account.id)
+                resultBlock(result, tone: tone(of: index, in: account), account: account.id)
+                    .padding(.top, index == 0 ? 0 : 14)
             }
             if account.waits, let waiting = WaitingCall(item) {
                 waitingActions(waiting)
@@ -291,14 +294,36 @@ struct ActivityDetailView: View {
         return account.waits || account.awaitsResume ? .caution : .inactive
     }
 
-    @ViewBuilder
-    private func suggestion(_ result: ActivityCardOutcome.Result, account: String) -> some View {
-        if result.suggestion == .allowAboveGuru {
-            Button(L10n.string("Allow 1% above the guru's price")) { editLimits(account) }
-                .buttonStyle(QuietTextButtonStyle())
-                .accessibilityIdentifier("activity.allowAboveGuru")
-                .accessibilityHint(
-                    L10n.string("Opens this account's limits at Maximum above signal price. Nothing changes until you save."))
+    private func resultBlock(_ result: ActivityCardOutcome.Result, tone: StatusTone, account: String) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 12) {
+                OutcomeMark(tone: tone)
+                    .padding(.top, 4)
+                Text(result.headline)
+                    .font(DisplayFont.font(size: 22, weight: .medium, relativeTo: .title3))
+                    .foregroundStyle(Palette.ink)
+                    .monospacedDigit()
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if let prices = result.prices {
+                PriceRuler(points: prices)
+            }
+            if !result.facts.isEmpty {
+                ActivityFactPairs(facts: result.facts)
+            }
+            if let note = result.note {
+                Text(note)
+                    .font(DesignTokens.activityBody)
+                    .foregroundStyle(Palette.secondaryInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if result.suggestion == .allowAboveGuru {
+                Button(L10n.string("Allow 1% above the guru's price")) { editLimits(account) }
+                    .buttonStyle(QuietTextButtonStyle())
+                    .accessibilityIdentifier("activity.allowAboveGuru")
+                    .accessibilityHint(
+                        L10n.string("Opens this account's limits at Maximum above signal price. Nothing changes until you save."))
+            }
         }
     }
 
