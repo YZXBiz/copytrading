@@ -211,8 +211,8 @@ class OperatorQueryService:
         )
 
     async def equity_history(self, account_id: str, window: HistoryWindow) -> EquityHistory | None:
-        """The account's broker curve: from its running owner, or while paused from the read
-        keys the app attached; None when neither can ask."""
+        """The account's broker curve: from its running owner, else (paused, or an owner that
+        cannot answer) from the read keys the app attached; None when neither can ask."""
         configuration = self._access.configuration()
         configured = configuration is not None and account_id in {
             item.id for item in configuration.accounts
@@ -220,12 +220,13 @@ class OperatorQueryService:
         if not configured and not self._reader.holds(account_id):
             raise KeyError(account_id)
         supervisor = self._access.supervisors().get(account_id)
-        if supervisor is None or supervisor.owner is None or supervisor.state == "failed":
-            return await self._reader.equity_history(account_id, window)
-        history = await bounded_owner_read(
-            supervisor.owner.equity_history(window, dt.datetime.now(dt.UTC))
-        )
-        return None if isinstance(history, OwnerUnavailable) else history
+        if supervisor is not None and supervisor.owner is not None and supervisor.state != "failed":
+            history = await bounded_owner_read(
+                supervisor.owner.equity_history(window, dt.datetime.now(dt.UTC))
+            )
+            if not isinstance(history, OwnerUnavailable):
+                return history
+        return await self._reader.equity_history(account_id, window)
 
     async def source_activity(self, before_seq: int | None, limit: int) -> SourceActivityPage:
         page = await asyncio.wait_for(

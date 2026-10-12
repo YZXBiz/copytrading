@@ -1,7 +1,11 @@
 """Operator pages name accounts they could not read instead of showing them as empty."""
 
 import asyncio
+from types import SimpleNamespace
 
+from pydantic import SecretStr
+
+from copytrading_engine.execution.domain.market import EquityHistory, HistoryWindow
 from copytrading_engine.execution.presentation.operator_views import AccountUnavailable
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore
 from copytrading_engine.sources.sqlite import SQLiteSourceStore
@@ -13,6 +17,7 @@ from copytrading_engine.trading.application.account_access import (
     bounded_owner_read,
 )
 from copytrading_engine.trading.application.operator_service import OperatorQueryService
+from copytrading_engine.trading.application.paused_reader import PausedAccountReader, ReadKeys
 
 
 def _service(data_dir) -> OperatorQueryService:
@@ -76,3 +81,41 @@ async def test_failed_owner_read_is_reported_as_read_failed():
         raise OSError("worker lost")
 
     assert await bounded_owner_read(failing()) == OwnerUnavailable("read_failed")
+
+
+async def test_chart_is_read_from_the_broker_when_the_stopped_owner_cannot_answer(tmp_path):
+    window = HistoryWindow(range="day")
+    curve = EquityHistory(window=window, base_value=None, points=())
+
+    class Broker:
+        def equity_history(self, asked: HistoryWindow) -> EquityHistory:
+            return curve
+
+        def close(self) -> None:
+            pass
+
+    class Owner:
+        async def equity_history(self, asked, now):
+            raise OSError("owner closed")
+
+    supervisor = SimpleNamespace(owner=Owner(), state="stopped", error_code=None)
+    reader = PausedAccountReader(lambda _: Broker())
+    reader.attach(
+        (
+            ReadKeys(
+                account_id="primary", environment="paper", key=SecretStr("k"), secret=SecretStr("s")
+            ),
+        )
+    )
+    service = OperatorQueryService(
+        AccountAccess(
+            tmp_path,
+            lambda: {"primary": supervisor},
+            configuration=lambda: None,
+            runtime_state=lambda: "paused",
+            evidence=SQLiteOperatorEvidence(),
+        ),
+        reader,
+    )
+
+    assert await service.equity_history("primary", window) == curve
