@@ -2172,3 +2172,6 @@
 "Pre-market" = "盘前";
 "After hours" = "盘后";
 "·  %@ cash  ·  %@ buying power" = "·  现金 %@  ·  购买力 %@";
+"Guru's price" = "老师的价格";
+"%@ + %@ allowed" = "%@，允许高出 %@";
+"%@ − %@ allowed" = "%@，允许低于 %@";

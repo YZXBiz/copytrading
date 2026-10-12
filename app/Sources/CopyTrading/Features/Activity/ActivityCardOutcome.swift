@@ -197,6 +197,10 @@ struct ActivityCardOutcome {
                 suggestion = .allowAboveGuru
             }
         }
+        if prices != nil, let guru = guruPrice(order) {
+            // The ruler shows the limit; this says where it came from, so a changed allowance shows.
+            facts.insert(Fact(label: L10n.string("Guru's price"), value: guru), at: 0)
+        }
         if let budget = Decimal(engine: order.budgetUSD) {
             facts.append(
                 wasTrimmed(order)
@@ -207,6 +211,16 @@ struct ActivityCardOutcome {
                     : Fact(label: L10n.string("Order"), value: OrderAmount.dollars(budget)))
         }
         return Result(headline: headline, facts: Array(facts.prefix(4)), suggestion: suggestion, prices: prices)
+    }
+
+    /// The guru's price and the allowance the limit added to it: "$69.80 + 1% allowed" for a buy,
+    /// "$69.80 − 1% allowed" for a sell. Nil with no allowance, where the limit is the guru's price.
+    private static func guruPrice(_ order: OrderActivity) -> String? {
+        guard let source = money(order.sourcePrice),
+            let allowance = Decimal(engine: order.entryTolerancePct), allowance > 0
+        else { return nil }
+        let percent = (allowance / 100).formatted(.percent.precision(.fractionLength(0...2)))
+        return L10n.string(order.side == "sell" ? "%@ − %@ allowed" : "%@ + %@ allowed", source, percent)
     }
 
     /// Why an order ended unfilled, in a few words after "Not bought:".

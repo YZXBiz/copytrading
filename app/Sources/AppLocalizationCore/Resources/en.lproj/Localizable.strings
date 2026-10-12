@@ -2172,3 +2172,6 @@
 "Pre-market" = "Pre-market";
 "After hours" = "After hours";
 "·  %@ cash  ·  %@ buying power" = "·  %@ cash  ·  %@ buying power";
+"Guru's price" = "Guru's price";
+"%@ + %@ allowed" = "%@ + %@ allowed";
+"%@ − %@ allowed" = "%@ − %@ allowed";
