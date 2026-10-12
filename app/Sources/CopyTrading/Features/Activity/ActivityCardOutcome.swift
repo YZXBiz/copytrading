@@ -156,7 +156,8 @@ struct ActivityCardOutcome {
         let limitPrice = Decimal(engine: order.limitPrice)
         switch DestinationOutcome.order(order, count: 1) {
         case .filled:
-            headline = L10n.string(buying ? "Bought %@" : "Sold %@", OrderAmount.filled(order) ?? planned)
+            headline = L10n.string(
+                order.isOwnerSale ? "You sold %@" : buying ? "Bought %@" : "Sold %@", OrderAmount.filled(order) ?? planned)
             if let limitPrice, let fill = Decimal(engine: order.averageFillPrice) {
                 prices = PricePoints(limit: limitPrice, market: fill, marketLabel: L10n.string("Filled at"), buying: buying)
             } else {

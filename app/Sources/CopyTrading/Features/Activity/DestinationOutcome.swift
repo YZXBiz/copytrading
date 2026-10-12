@@ -15,8 +15,10 @@ enum DestinationOutcome: Equatable {
 
     @MainActor
     init(_ destination: DestinationActivity) {
-        if let order = destination.orders.first {
-            self = Self.order(order, count: destination.orders.count)
+        // What the post itself did; a lot the owner later sold by hand is theirs, not the post's.
+        let copied = destination.orders.filter { !$0.isOwnerSale }
+        if let order = copied.first {
+            self = Self.order(order, count: copied.count)
             return
         }
         if destination.status == "review_required" {
