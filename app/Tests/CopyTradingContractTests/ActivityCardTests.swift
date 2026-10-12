@@ -10,6 +10,7 @@ func runActivityCardTests() throws {
     try readAsSaysEachCallInPlainWords()
     try aRepeatedNumberIsMarkedBesideTheOtherCitedWords()
     try aTrimmedBuyIsTradedSmallerAndSaysByHowMuch()
+    try aLotSoldByHandStaysTheOwners()
     try aSkipNamesTheLimitWithItsNumbers()
     try aCallHeldForApprovalAsksToBeApproved()
     try aBuyHeldForAResumeAsksToResumeByItsDeadline()
@@ -149,6 +150,30 @@ private func aTrimmedBuyIsTradedSmallerAndSaysByHowMuch() throws {
     try #require(
         result.prices == PricePoints(limit: 5.85, market: 5.85, marketLabel: "Filled at", buying: true),
         "prices were \(String(describing: result.prices))")
+}
+
+/// A buy whose lot the owner later sold from the account page: the post bought it, the owner sold it.
+@MainActor
+private func aLotSoldByHandStaysTheOwners() throws {
+    let order: (String, String, String) -> [String: Any] = { id, side, price in
+        [
+            "client_id": id, "symbol": "SOUN", "side": side, "status": "filled", "quantity": "42",
+            "filled_quantity": "42", "limit_price": price, "average_fill_price": price, "broker_id": id,
+            "created_at": "2026-10-05T14:30:01Z", "instruction_index": 0,
+        ]
+    }
+    let source = try soun()
+        .destination(
+            "zhao-paper", status: "done", outcomes: ["order_linked"],
+            orders: [order("copy-1", "buy", "5.85"), order("lotsale-1", "sell", "6.10")]
+        )
+        .build()
+    let destination = try #require(source.destinations.first)
+    try #require(
+        DestinationOutcome(destination) == .filled("Bought $245.70 of SOUN"),
+        "summary was \(DestinationOutcome(destination))")
+    let headlines = ActivityCardOutcome(source, skipped: false).accounts.first?.results.map(\.headline) ?? []
+    try #require(headlines == ["Bought $245.70 of SOUN", "You sold $256.20 of SOUN"], "headlines were \(headlines)")
 }
 
 @MainActor
