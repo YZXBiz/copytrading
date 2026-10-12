@@ -70,6 +70,8 @@ struct ConnectionsView: View {
                 .padding(.bottom, 48)
                 .frame(maxWidth: 880, alignment: .leading)
                 .frame(maxWidth: .infinity)
+                // Under an open panel's veil the page is out of reach; VoiceOver reads the panel.
+                .accessibilityHidden(panel != nil)
             }
             .scrollEdgeEffectHidden(true, for: .top)
             .background(Palette.page)

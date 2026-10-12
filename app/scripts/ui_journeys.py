@@ -260,38 +260,42 @@ def peekaboo(*args: str, timeout: float = 60) -> dict[str, Any]:
 
 # Text whose box is at least this many points on a side; a shorter one is a hairline or an icon.
 _MIN_TEXT_SIDE = 4.0
+# Visible words only: buttons and fields can be invisible tap targets laid over text on purpose.
+_TEXT_ROLES = {"AXStaticText"}
 
 
-def layout_problems(snapshot: dict[str, Any]) -> list[str]:
-    """Where text on a captured screen collides: two labels whose boxes overlap without one holding
-    the other, or text reaching past the window's edge. Reads the frames Peekaboo recorded for the
-    capture (its `snapshot.json`), so every named screenshot is checked, not only the ones a
-    person looks at."""
-    elements = [
-        e
-        for e in (snapshot.get("uiMap") or {}).values()
-        if e.get("role") in {"AXStaticText", "AXButton", "AXTextField", "AXLink"}
-        and (e.get("label") or e.get("title") or e.get("value"))
-        and e.get("frame")
-    ]
+def layout_problems(capture: dict[str, Any]) -> list[str]:
+    """Where text on a captured screen may collide: two labels whose boxes overlap without one
+    holding the other, or text cut off at the window's left or right edge. Reads the frames in
+    Peekaboo's `see` output, so every named screenshot is checked, not only the ones a person
+    looks at. A capture with no frames at all is itself a problem: the check must never pass by
+    seeing nothing."""
     boxes = []
-    for e in elements:
-        (x, y), (w, h) = e["frame"]
+    for e in capture.get("ui_elements", []):
+        bounds = e.get("bounds") or {}
+        name = str(e.get("label") or e.get("title") or e.get("value") or "")
+        if e.get("ax_role") not in _TEXT_ROLES or not name or not bounds:
+            continue
+        # A scroll bar's page and arrow parts lie over the content by design.
+        if name.endswith(("page button", "arrow button")):
+            continue
+        x, y, w, h = (float(bounds.get(k, 0)) for k in ("x", "y", "width", "height"))
         if w >= _MIN_TEXT_SIDE and h >= _MIN_TEXT_SIDE:
-            name = str(e.get("label") or e.get("title") or e.get("value"))[:40]
-            boxes.append((name, x, y, x + w, y + h))
+            boxes.append((name[:40], x, y, x + w, y + h))
+    if capture.get("ui_elements") and not boxes:
+        return ["no text frames in the capture; the layout check saw nothing"]
     problems = []
-    window = snapshot.get("windowBounds")
+    window = (capture.get("coordinate_context") or {}).get("logical_bounds")
     if window:
         (left, _), (width, _) = window
+        right = left + width
         for name, x0, _, x1, _ in boxes:
-            if x0 < left - 1 or x1 > left + width + 1:
-                problems.append(f"{name!r} reaches past the window's edge")
+            # Text wholly outside is hidden, parked off-screen; text across an edge is cut off.
+            if (x0 < left - 1 < x1) or (x0 < right + 1 < x1):
+                problems.append(f"{name!r} is cut off at the window's edge")
     for i, (a, ax0, ay0, ax1, ay1) in enumerate(boxes):
         for b, bx0, by0, bx1, by1 in boxes[i + 1 :]:
-            width = min(ax1, bx1) - max(ax0, bx0)
-            height = min(ay1, by1) - max(ay0, by0)
-            if width <= 1 or height <= 1:
+            if min(ax1, bx1) - max(ax0, bx0) <= 1 or min(ay1, by1) - max(ay0, by0) <= 1:
                 continue
             inside = (ax0 <= bx0 and ay0 <= by0 and ax1 >= bx1 and ay1 >= by1) or (
                 bx0 <= ax0 and by0 <= ay0 and bx1 >= ax1 and by1 >= ay1
@@ -306,7 +310,7 @@ class AppDriver:
     screenshots: Path
     state_root: Path | None = None
     shot_count: int = 0
-    # Text collisions found on named screenshots this run, by screenshot.
+    # Possible text collisions on named screenshots this run, by screenshot, for a person to check.
     layout: dict[str, list[str]] = field(default_factory=dict)
 
     def see(self, name: str | None = None) -> Snapshot:
@@ -334,7 +338,8 @@ class AppDriver:
                 time.sleep(1)
         if name is not None:
             self._capture_sheets(f"{self.shot_count:02d}-{name}")
-            self._check_layout(f"{self.shot_count:02d}-{name}", str(data.get("snapshot_id", "")))
+            if problems := layout_problems(data):
+                self.layout[f"{self.shot_count:02d}-{name}"] = problems
         elements = [
             Element(
                 id=str(raw.get("id", "")),
@@ -348,14 +353,6 @@ class AppDriver:
             for raw in data.get("ui_elements", [])
         ]
         return Snapshot(id=str(data.get("snapshot_id", "")), elements=elements)
-
-    def _check_layout(self, stem: str, snapshot_id: str) -> None:
-        """Record any text collision on this screen; the run fails on them at the end."""
-        path = Path.home() / ".peekaboo" / "snapshots" / snapshot_id / "snapshot.json"
-        with contextlib.suppress(OSError, ValueError):
-            problems = layout_problems(json.loads(path.read_text()))
-            if problems:
-                self.layout[stem] = problems
 
     def _capture_sheets(self, stem: str) -> None:
         """A sheet is a window of its own, missing from the main window's capture: save each one
@@ -2304,9 +2301,20 @@ def main() -> int:
         else:
             shutil.rmtree(state_root, ignore_errors=True)
 
-    for stem, problems in runner.driver.layout.items():
-        runner.results.append(Result(f"Layout {stem}", "failed", "; ".join(problems[:6])))
-        print(f"FAILED   Layout {stem}: {'; '.join(problems[:6])}")
+    # A report to read beside the screenshots, not a gate: Peekaboo lists every window and sheet
+    # of the app in one flat list, so text in a sheet and the page behind it look like a collision.
+    report = screenshots.parent / "layout-report.txt"
+    report.write_text(
+        "".join(
+            f"{stem}\n" + "".join(f"  {p}\n" for p in found)
+            for stem, found in runner.driver.layout.items()
+        )
+    )
+    if runner.driver.layout:
+        print(
+            f"layout: {len(runner.driver.layout)} screenshots with text to check by eye, "
+            f"in {report.relative_to(ROOT)}"
+        )
     failed = [r for r in runner.results if r.status == "failed"]
     print(
         f"\n{len(runner.results) - len(failed)} of {len(runner.results)} journeys did not fail; "
