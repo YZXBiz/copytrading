@@ -210,10 +210,6 @@ class TradingConfiguration(BaseModel):
 
     @model_validator(mode="after")
     def validate_references(self) -> Self:
-        # The decision model hands the reader the step through a tool call, which only the
-        # DeepSeek reader is set up to answer (ADR-0012).
-        if self.triage is not None and self.provider.name != "deepseek":
-            raise ValueError("Triage works with the DeepSeek interpreter")
         accounts = {account.id: account for account in self.accounts}
         if len(accounts) != len(self.accounts):
             raise ValueError("account identifiers must be unique")

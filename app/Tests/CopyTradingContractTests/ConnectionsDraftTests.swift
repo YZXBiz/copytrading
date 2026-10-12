@@ -31,8 +31,9 @@ private func theChatFilterTravelsOnlyWhileOn() throws {
     try #require(secrets.triageAPIKey == "typed-openai-key", "The typed key was not sent")
     draft.provider = .anthropic
     let (other, otherSecrets) = try draft.submission()
-    try #require(other.triage == nil && otherSecrets.triageAPIKey == nil, "The filter was sent for another interpreter")
-    draft.provider = .deepseek
+    try #require(
+        other.triage == .openAIDecisions && otherSecrets.triageAPIKey == "typed-openai-key",
+        "The filter was dropped for another interpreter")
     draft.clearSecrets()
     try #require(draft.triageAPIKey.isEmpty, "Clearing secrets kept the OpenAI key")
     var reloaded = ConnectionsDraft()

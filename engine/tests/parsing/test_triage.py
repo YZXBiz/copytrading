@@ -1,14 +1,15 @@
-"""The decision model first, the reader behind it (ADR-0012): the labelled posts in
-`triage_cases` through the triaged reader, with a fake decision model and a scripted reader. No
-network: the decision model is a `DecisionModel` subclass, the reader a `FunctionModel`."""
+"""The decision model in front of any reader (ADR-0012): the labelled posts in `triage_cases`
+through a sorted decoder, with a fake decision model and a scripted reader. No network: the
+decision model is a `DecisionModel` subclass, the reader a `FunctionModel`."""
 
 import json
 import unicodedata
 
 import pytest
+from pydantic import SecretStr
 from pydantic_ai import Agent
 from pydantic_ai.exceptions import ModelHTTPError
-from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart
+from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart
 from pydantic_ai.models.decision import (
     ChoiceAnswer,
     ChoiceQuestion,
@@ -23,13 +24,11 @@ from pydantic_ai.models.test import TestModel
 
 from copytrading_engine.parsing.application import transform
 from copytrading_engine.parsing.extraction import DecodeError
-from copytrading_engine.parsing.providers.pydantic_ai import (
-    PydanticAIDecoder,
-    reading_agent,
-    triaged_reading_agent,
-)
-from copytrading_engine.parsing.providers.triage import probe
+from copytrading_engine.parsing.providers.pydantic_ai import PydanticAIDecoder, reading_agent
+from copytrading_engine.parsing.providers.registry import ProviderRegistry
+from copytrading_engine.parsing.providers.triage import SortedDecoder, probe, sorting_agent
 from copytrading_engine.parsing.routes import Route
+from copytrading_engine.shared.model_providers import ProviderConfig, TriageConfig
 
 from .builders import raw
 from .triage_cases import CASES
@@ -120,24 +119,32 @@ class ScriptedReader:
         post = _post(sent)
         answers = self.readings[post or ""]
         reading = answers[min(self.calls, len(answers)) - 1]
-        names = {tool.name for tool in info.output_tools}
-        if reading is None:
-            name = next(n for n in names if "chat" in n.lower())
-            return ModelResponse(parts=[ToolCallPart(tool_name=name, args={})])
-        name = next(n for n in names if "chat" not in n.lower())
-        return ModelResponse(parts=[ToolCallPart(tool_name=name, args={"reading": reading})])
+        # The reader answers in its own output mode, JSON in the text, whatever sorts in front.
+        result = (
+            {"kind": "JustChat", "data": {}}
+            if reading is None
+            else {"kind": "ReadingOutput", "data": {"reading": reading}}
+        )
+        return ModelResponse(parts=[TextPart(json.dumps({"result": result}))])
 
 
 class _NoClient:
+    def __init__(self) -> None:
+        self.closed = False
+
     async def close(self) -> None:
-        pass
+        self.closed = True
 
 
-def _decoder(decider: DecisionModel, reader: ScriptedReader) -> PydanticAIDecoder:
-    return PydanticAIDecoder(
-        triaged_reading_agent(decider, FunctionModel(reader, model_name="deepseek-flash")),
-        Agent(TestModel()),
-        _NoClient(),
+def _reader(model: FunctionModel, client: _NoClient | None = None) -> PydanticAIDecoder:
+    return PydanticAIDecoder(reading_agent(model, {}), Agent(TestModel()), client or _NoClient(), 5)
+
+
+def _decoder(decider: DecisionModel, reader: ScriptedReader) -> SortedDecoder:
+    return SortedDecoder(
+        _reader(FunctionModel(reader, model_name="deepseek-flash")),
+        sorting_agent(decider),
+        _NoClient().close,
         5,
     )
 
@@ -186,31 +193,6 @@ async def test_unsure_chat_and_every_reading_go_to_the_reader():
         assert (result.model, result.sorted_confidence) == ("deepseek-flash", None)
 
 
-async def test_chat_on_the_retry_after_a_failed_reading_waits_for_the_owner():
-    post = "buy 1/6 nflx at 73"
-    [case] = [c for c in CASES if c.post == post]
-    wrong = json.loads(json.dumps(case.reading).replace('"73"', '"74"'))
-    decider = FakeDecider({post: 0.2})
-    # Unguarded, the retry would end as chat and the post would be let go; the reader's second,
-    # right answer is never reached.
-    reader = ScriptedReader({post: [wrong, case.reading]})
-    # The second request goes to the decision model first; it now finds the post chat.
-    original = decider.decide
-
-    async def chat_on_retry(request, settings):
-        if decider.requests >= 1:
-            decider.chat[post] = 0.99
-        return await original(request, settings)
-
-    decider.decide = chat_on_retry  # ty: ignore[invalid-assignment]
-
-    with pytest.raises(DecodeError) as raised:
-        await transform(raw(post), Route(), _decoder(decider, reader), "deepseek-flash")
-
-    assert raised.value.reason == "invalid_model_output"
-    assert reader.calls == 1
-
-
 @pytest.mark.parametrize("outage", [503, "timeout"])
 async def test_a_decision_service_outage_hands_the_post_to_the_reader(outage):
     [case] = [c for c in CASES if c.post == "sell half wmt"]
@@ -224,7 +206,7 @@ async def test_a_decision_service_outage_hands_the_post_to_the_reader(outage):
     assert (reader.calls, result.model, result.sorted_confidence) == (1, "deepseek-flash", None)
 
 
-async def test_a_reading_retried_behind_the_decision_model_stays_within_its_budget():
+async def test_the_decision_model_sorts_each_post_once_however_often_the_reader_retries():
     post = "buy 1/6 nflx at 73"
     [case] = [c for c in CASES if c.post == post]
     wrong = json.loads(json.dumps(case.reading).replace('"73"', '"74"'))
@@ -234,18 +216,15 @@ async def test_a_reading_retried_behind_the_decision_model_stays_within_its_budg
     result = await transform(raw(post), Route(), _decoder(decider, reader), "deepseek-flash")
 
     assert result.decision == "trade"
-    assert (decider.requests, reader.calls) == (2, 2)
+    assert (decider.requests, reader.calls) == (1, 2)
 
 
 async def test_a_reader_failure_behind_the_decision_model_keeps_its_reason():
     def rejected(messages, info):
         raise ModelHTTPError(401, "deepseek-flash")
 
-    decoder = PydanticAIDecoder(
-        triaged_reading_agent(FakeDecider({}), FunctionModel(rejected)),
-        Agent(TestModel()),
-        _NoClient(),
-        5,
+    decoder = SortedDecoder(
+        _reader(FunctionModel(rejected)), sorting_agent(FakeDecider({})), _NoClient().close, 5
     )
 
     with pytest.raises(DecodeError) as raised:
@@ -267,14 +246,36 @@ async def test_the_reader_alone_says_chat_through_its_own_output():
             parts=[TextPart(json.dumps({"result": {"kind": "JustChat", "data": {}}}))]
         )
 
-    decoder = PydanticAIDecoder(
-        reading_agent(FunctionModel(chat, model_name="deepseek-flash"), {}),
-        Agent(TestModel()),
-        _NoClient(),
-        5,
-    )
+    decoder = _reader(FunctionModel(chat, model_name="deepseek-flash"))
 
     result = await transform(raw("hi"), Route(), decoder, "deepseek-flash")
 
     assert (result.decision, result.reason, result.model) == ("ignore", "chatter", "deepseek-flash")
     assert result.sorted_confidence is None
+
+
+@pytest.mark.parametrize("provider", ["anthropic", "deepseek", "ollama"])
+async def test_any_reader_gets_the_decision_model_in_front_and_closes_both(provider):
+    client = _NoClient()
+
+    async def create(config):
+        return _reader(FunctionModel(ScriptedReader({}), model_name="reader"), client)
+
+    triage = TriageConfig(
+        provider="openai-decisions",
+        model="gpt-6-luna",
+        api_key=SecretStr("test"),
+        route_threshold=0.9,
+        timeout=5,
+    )
+    config = ProviderConfig(api_key=SecretStr("test"), model="m", timeout=5, triage=triage)
+
+    decoder = await ProviderRegistry({provider: create}).create(provider, config)
+    plain = await ProviderRegistry({provider: create}).create(
+        provider, config.model_copy(update={"triage": None})
+    )
+    await decoder.close()
+
+    assert isinstance(decoder, SortedDecoder)
+    assert not isinstance(plain, SortedDecoder)
+    assert client.closed

@@ -30,6 +30,14 @@ struct ConnectionSummary: Equatable {
                 status: ConnectionStatus.interpreter(model)
                     ?? draftStatus(hasKey: model.interpreterHasKey, missing: "Needs an API key")
             )
+        case .chatFilter:
+            guard let triage = draft.triage else { return nil }
+            return ConnectionSummary(
+                title: triage.provider.title,
+                detail: triage.model,
+                status: ConnectionStatus.chatFilter(model)
+                    ?? draftStatus(hasKey: model.hasSavedTriageKey || !draft.triageAPIKey.isEmpty, missing: "Needs an OpenAI key")
+            )
         case .alerts:
             guard draft.notificationsEnabled else { return nil }
             let savedSecret = savedKeys && model.savedTradingConfiguration?.notification?.service == draft.notificationService

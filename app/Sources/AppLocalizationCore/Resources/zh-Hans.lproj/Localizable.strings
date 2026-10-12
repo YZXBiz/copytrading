@@ -742,8 +742,6 @@
 "Saved" = "已保存";
 "Saved guru" = "已保存的信号源";
 "Saved in Keychain — leave blank to keep" = "已保存到钥匙串——留空即可保留";
-"Sort out chat first" = "先筛掉闲聊";
-"An OpenAI key skips small talk for about 15¢ per 1,000 posts, so %@ only reads calls." = "填入 OpenAI 密钥，闲聊先被筛掉，每 1,000 条约 15 美分，%@ 只读喊单。";
 "OpenAI key" = "OpenAI 密钥";
 "sorted by %@ · %lld%% sure" = "由 %@ 分拣 · 把握 %lld%%";
 "Saved." = "已保存。";
@@ -2213,3 +2211,14 @@
 "Buy %@ of %@ ≈ %@ at %@" = "买入 %@ 的 %@，约 %@，价格 %@";
 "Just chat, nothing to trade" = "只是闲聊，没有交易";
 "just chat" = "闲聊";
+"Chat filter" = "闲聊过滤";
+"Skips small talk before the interpreter reads it, whichever one you use. About 15¢ per 1,000 posts on your OpenAI key." = "AI 模型读帖前先筛掉闲聊，用哪个模型都行。用你的 OpenAI 密钥，每 1,000 条约 15 美分。";
+"Sorts chat out before %@ reads" = "%@ 读帖前先筛掉闲聊";
+"Turn Off Chat Filter" = "关闭闲聊过滤";
+"the chat filter" = "闲聊过滤";
+"Needs an OpenAI key" = "需要 OpenAI 密钥";
+"Get an OpenAI API key" = "获取 OpenAI API 密钥";
+"OpenAI's decision model sorts each post before the interpreter reads it. Small talk it is sure of is skipped; everything else is read as before." = "AI 模型读帖前，OpenAI 的决策模型先给每条帖子分类。确定是闲聊的直接跳过，其余照旧读取。";
+"Paste it into **OpenAI key**. OpenAI bills your account, about 15¢ per 1,000 posts." = "粘贴到 **OpenAI 密钥**。OpenAI 向你的账户收费，每 1,000 条约 15 美分。";
+"Sign in at **platform.openai.com** and open **API keys**." = "登录 **platform.openai.com**，打开 **API keys**。";
+"Open OpenAI API keys" = "打开 OpenAI API 密钥";

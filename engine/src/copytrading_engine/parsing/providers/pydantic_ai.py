@@ -2,23 +2,19 @@
 
 import asyncio
 import json
-from collections.abc import AsyncIterable, AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterable, AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Protocol
+from typing import Any, Protocol
 
 import pydantic_ai
-from pydantic_ai import Agent, ModelRetry, PromptedOutput, RunContext, ToolOutput
+from pydantic_ai import Agent, ModelRetry, PromptedOutput, RunContext
 from pydantic_ai.exceptions import (
-    FallbackExceptionGroup,
     ModelAPIError,
     ModelHTTPError,
     UnexpectedModelBehavior,
     UsageLimitExceeded,
 )
 from pydantic_ai.models import Model
-from pydantic_ai.models.decision import DecisionModel
-from pydantic_ai.models.fallback import FallbackModel
-from pydantic_ai.output import OutputSpec
 from pydantic_ai.settings import ModelSettings
 from pydantic_ai.usage import UsageLimits
 
@@ -91,18 +87,14 @@ class PydanticAIDecoder:
         timeout: float,
         *,
         connection_errors: tuple[type[Exception], ...] = (),
-        close_triage: Callable[[], Awaitable[None]] | None = None,
     ) -> None:
         self.agent = agent
         self.learner = learner
         self.client = client
         self.timeout = timeout
         self.connection_errors = connection_errors
-        self.close_triage = close_triage
 
     async def answer(self, text: str, route: Route, recent: tuple[RecentCall, ...] = ()) -> Answer:
-        """The reading, and the decision model's name and confidence when it settled the post
-        itself (ADR-0012)."""
         async with _translated_errors(self.connection_errors):
             async with asyncio.timeout(self.timeout):
                 # A reading that fails a check goes back once with the reason, then to review.
@@ -112,17 +104,7 @@ class PydanticAIDecoder:
                     usage_limits=UsageLimits(request_limit=2, output_tokens_limit=6000),
                 )
         output = result.output
-        reading = Chatter() if isinstance(output, JustChat) else output.reading
-        response = result.response
-        picked = (response.provider_details or {}).get("route")
-        if not isinstance(picked, dict):
-            return Answer(reading)
-        probability = picked.get("probabilities", {}).get(picked.get("choice"))
-        return Answer(
-            reading,
-            response.model_name,
-            float(probability) if isinstance(probability, int | float) else None,
-        )
+        return Answer(Chatter() if isinstance(output, JustChat) else output.reading)
 
     async def learn(self, posts: tuple[str, ...]) -> PlaybookProposal:
         async with _translated_errors(self.connection_errors):
@@ -147,11 +129,7 @@ class PydanticAIDecoder:
                 return tuple(names)
 
     async def close(self) -> None:
-        try:
-            await self.client.close()
-        finally:
-            if self.close_triage is not None:
-                await self.close_triage()
+        await self.client.close()
 
 
 def _rejection(exc: ModelHTTPError) -> str:
@@ -169,44 +147,29 @@ def _rejection(exc: ModelHTTPError) -> str:
 
 def reading_agent(model: Model, model_settings: ModelSettings) -> ReaderAgent:
     """The reader every provider shares: one reading per post, held to the post's own words, or
-    chat, which carries nothing. The answer is JSON asked for in the prompt (ADR-0012). Its fixed
-    instructions come first, then the guru's playbook, then the guru's recent calls, so a
-    provider can cache the part that does not change from post to post."""
-    output = PromptedOutput[ReadingOutput | JustChat]([ReadingOutput, JustChat])
-    return _reader(model, output, model_settings)
-
-
-def triaged_reading_agent(decision: DecisionModel, reader: Model) -> ReaderAgent:
-    """The decision model first, the reader behind it (ADR-0012). Chat, which has nothing to
-    fill, is settled by the decision model when it is sure; a reading, whose words a decision
-    model cannot write, or any pick below the route threshold, goes to the reader. Both answer
-    through tool calls, the one output mode a decision model takes. The reader carries its own
-    settings, so none of them reach the decision model's backend."""
-    return _reader(
-        # A timeout of the decision service hands the reader the step like any other failure.
-        FallbackModel(decision, reader, fallback_on=(ModelAPIError, TimeoutError)),
-        [
-            ToolOutput(JustChat, name="JustChat"),
-            ToolOutput(ReadingOutput, name="ReadingOutput"),
-        ],
-        None,
+    chat, which carries nothing. The answer is JSON asked for in the prompt (ADR-0012)."""
+    agent: ReaderAgent = framed(
+        Agent[ReadingInput, ReadingOutput | JustChat](
+            model,
+            name="post_reader",
+            output_type=PromptedOutput[ReadingOutput | JustChat]([ReadingOutput, JustChat]),
+            deps_type=ReadingInput,
+            retries=1,
+            model_settings=model_settings,
+        )
     )
+    agent.output_validator(_checked)
+    return agent
 
 
-def _reader(
-    model: Model,
-    output_type: OutputSpec[ReadingOutput | JustChat],
-    model_settings: ModelSettings | None,
-) -> ReaderAgent:
-    agent: ReaderAgent = Agent[ReadingInput, ReadingOutput | JustChat](
-        model,
-        name="post_reader",
-        output_type=output_type,
-        instructions=INSTRUCTIONS,
-        deps_type=ReadingInput,
-        retries=1,
-        model_settings=model_settings,
-    )
+def framed[A: Agent[ReadingInput, Any]](agent: A) -> A:
+    """The question every read of a post is asked in: the fixed instructions first, then the
+    guru's playbook, then the guru's recent calls, so a provider can cache the part that does not
+    change from post to post."""
+
+    @agent.instructions
+    def instructions() -> str:
+        return INSTRUCTIONS
 
     @agent.instructions
     def playbook(context: RunContext[ReadingInput]) -> str | None:
@@ -216,7 +179,6 @@ def _reader(
     def recent_calls(context: RunContext[ReadingInput]) -> str | None:
         return recent_calls_instructions(context.deps.recent)
 
-    agent.output_validator(_checked)
     return agent
 
 
@@ -248,12 +210,7 @@ async def _translated_errors(
 ) -> AsyncIterator[None]:
     """Turn provider failures into DecodeError without keeping responses or secrets."""
     try:
-        try:
-            yield
-        except FallbackExceptionGroup as group:
-            # The decision model handed the step on and the reader failed too: the reader's
-            # failure is the one that says what went wrong.
-            raise group.exceptions[-1] from None
+        yield
     except DecodeError:
         raise
     except ModelHTTPError as exc:

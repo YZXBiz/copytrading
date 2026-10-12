@@ -53,9 +53,9 @@ def test_a_malformed_triage_section_is_refused(triage):
         _with(triage)
 
 
-def test_triage_sits_in_front_of_the_deepseek_reader_only():
-    with pytest.raises(ValidationError, match="DeepSeek"):
-        _with(TRIAGE, provider="anthropic")
+@pytest.mark.parametrize("provider", ["anthropic", "deepseek", "openai"])
+def test_triage_sits_in_front_of_any_reader(provider):
+    assert _with(TRIAGE, provider=provider).triage is not None
 
 
 def test_the_triage_key_travels_with_the_other_secrets_and_is_required():

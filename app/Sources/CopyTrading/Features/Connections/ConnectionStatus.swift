@@ -31,6 +31,13 @@ struct ConnectionStatus: Equatable {
         return saved.notification == nil ? .init(text: "Off", tone: .inactive) : .init(text: "On", tone: .positive)
     }
 
+    @MainActor
+    static func chatFilter(_ model: AppModel) -> ConnectionStatus? {
+        if let checked = checked(.triage, in: model) { return checked }
+        guard let saved = model.savedTradingConfiguration, saved.triage == model.setupDraft.triage else { return nil }
+        return saved.triage == nil ? nil : .init(text: "On", tone: .positive)
+    }
+
     /// A broker account: its keys, and whether it is saved as it reads now.
     @MainActor
     static func account(_ account: TradingAccountDraft, in model: AppModel) -> ConnectionStatus {

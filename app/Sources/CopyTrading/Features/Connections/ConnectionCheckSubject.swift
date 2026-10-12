@@ -11,6 +11,7 @@ enum ConnectionCheckSubject: Hashable {
         switch kind {
         case .discord: self = .discord
         case .interpreter: self = .interpreter
+        case .chatFilter: self = .triage
         case .alerts: self = .alerts
         }
     }

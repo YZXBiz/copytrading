@@ -742,8 +742,6 @@
 "Saved" = "Saved";
 "Saved guru" = "Saved guru";
 "Saved in Keychain — leave blank to keep" = "Saved in Keychain — leave blank to keep";
-"Sort out chat first" = "Sort out chat first";
-"An OpenAI key skips small talk for about 15¢ per 1,000 posts, so %@ only reads calls." = "An OpenAI key skips small talk for about 15¢ per 1,000 posts, so %@ only reads calls.";
 "OpenAI key" = "OpenAI key";
 "sorted by %@ · %lld%% sure" = "sorted by %@ · %lld%% sure";
 "Saved." = "Saved.";
@@ -2213,3 +2211,14 @@
 "Buy %@ of %@ ≈ %@ at %@" = "Buy %@ of %@ ≈ %@ at %@";
 "Just chat, nothing to trade" = "Just chat, nothing to trade";
 "just chat" = "just chat";
+"Chat filter" = "Chat filter";
+"Skips small talk before the interpreter reads it, whichever one you use. About 15¢ per 1,000 posts on your OpenAI key." = "Skips small talk before the interpreter reads it, whichever one you use. About 15¢ per 1,000 posts on your OpenAI key.";
+"Sorts chat out before %@ reads" = "Sorts chat out before %@ reads";
+"Turn Off Chat Filter" = "Turn Off Chat Filter";
+"the chat filter" = "the chat filter";
+"Needs an OpenAI key" = "Needs an OpenAI key";
+"Get an OpenAI API key" = "Get an OpenAI API key";
+"OpenAI's decision model sorts each post before the interpreter reads it. Small talk it is sure of is skipped; everything else is read as before." = "OpenAI's decision model sorts each post before the interpreter reads it. Small talk it is sure of is skipped; everything else is read as before.";
+"Paste it into **OpenAI key**. OpenAI bills your account, about 15¢ per 1,000 posts." = "Paste it into **OpenAI key**. OpenAI bills your account, about 15¢ per 1,000 posts.";
+"Sign in at **platform.openai.com** and open **API keys**." = "Sign in at **platform.openai.com** and open **API keys**.";
+"Open OpenAI API keys" = "Open OpenAI API keys";

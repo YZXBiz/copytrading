@@ -1,6 +1,6 @@
 """A labelled set of real-style posts, English and Chinese (ADR-0012): how sure a decent decision
 model is that each one is chat, the reading the reader gives it when it is handed the post, and
-what the engine must do with it. `test_triage.py` drives them through the triaged reader with a
+what the engine must do with it. `test_triage.py` drives them through a sorted decoder with a
 fake decision model and a scripted reader."""
 
 from dataclasses import dataclass

@@ -24,13 +24,6 @@ struct ConnectionsDraft {
     /// Its key, as typed and not saved yet.
     var triageAPIKey = ""
 
-    /// The chat filter sorts posts for the DeepSeek interpreter only; the engine refuses it for
-    /// any other, so with another interpreter it is neither shown nor saved.
-    var offersTriage: Bool { provider == .deepseek }
-
-    /// The chat filter as it would be saved: nil while it is off or the interpreter can't use it.
-    var triageConfiguration: TradingTriageConfiguration? { offersTriage ? triage : nil }
-
     var hasLiveAccounts: Bool {
         accounts.contains { $0.environment == .live }
     }
@@ -169,7 +162,7 @@ struct ConnectionsDraft {
             notification: notificationsEnabled
                 ? TradingNotificationConfiguration(service: notificationService, chatID: notificationChatID.trimmed)
                 : nil,
-            triage: triageConfiguration
+            triage: triage
         )
         let secrets = TradingSecrets(
             discordToken: discordToken,
@@ -178,7 +171,7 @@ struct ConnectionsDraft {
                 TradingBrokerCredentials(accountID: $0.name.trimmed, key: $0.key, secret: $0.secret)
             },
             notificationToken: notificationsEnabled ? notificationToken : nil,
-            triageAPIKey: triageConfiguration == nil ? nil : triageAPIKey
+            triageAPIKey: triage == nil ? nil : triageAPIKey
         )
         return (configuration, secrets)
     }

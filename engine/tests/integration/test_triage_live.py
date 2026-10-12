@@ -2,12 +2,12 @@
 
 Runs only when COPYTRADING_TEST_OPENAI_KEY is set (COPYTRADING_TEST_TRIAGE_MODEL picks the model,
 default gpt-6-luna; COPYTRADING_TEST_TRIAGE_THRESHOLD the route threshold, default 0.9). Each post
-goes through `triaged_reading_agent`, the agent copying uses, with the reader's instructions, a
-guru playbook, and recent calls, since they frame the route question. The reader behind the
-decision model is a stub that never answers, so only the decision model is paid for and DeepSeek
-is never called. It asserts that no post labelled trade, market talk, or unclear is taken as chat
-at or above the threshold, and prints each post's chat probability, the input tokens it cost, and
-how close the worst one came. The key is never printed: it only travels inside a SecretStr.
+goes through `sorting_agent`, the sorter copying uses, with the reader's instructions, a guru
+playbook, and recent calls, since they frame the route question. No reader is called, so only
+the decision model is paid for. It asserts that no post labelled trade, market talk, or unclear
+is taken as chat at or above the threshold, and prints each post's chat probability, the input
+tokens it cost, and how close the worst one came. The key is never printed: it only travels
+inside a SecretStr.
 """
 
 import datetime as dt
@@ -17,14 +17,11 @@ from decimal import Decimal
 
 import pytest
 from pydantic import SecretStr
-from pydantic_ai.exceptions import FallbackExceptionGroup, ModelAPIError
 from pydantic_ai.models.decision import UnsureRoute
-from pydantic_ai.models.function import FunctionModel
 
 from copytrading_engine.parsing.extraction import ReadingInput, normalize
 from copytrading_engine.parsing.history import RecentCall
-from copytrading_engine.parsing.providers.pydantic_ai import triaged_reading_agent
-from copytrading_engine.parsing.providers.triage import decision_model
+from copytrading_engine.parsing.providers.triage import decision_model, sorting_agent
 from copytrading_engine.parsing.routes import Route
 from copytrading_engine.shared.model_providers import TriageConfig
 
@@ -56,22 +53,14 @@ _RECENT = (
 )
 
 
-class _StubReader(ModelAPIError):
-    """The reader behind the decision model, which this check never pays for."""
-
-
-def _never(messages, info):
-    raise _StubReader("stub-reader", "the live triage eval never calls the reader")
-
-
 def _chat_probability(probabilities: dict[str, float]) -> float:
     return next(p for label, p in probabilities.items() if "chat" in label.lower())
 
 
 async def _sort(post: str) -> tuple[float, int]:
     """How likely the decision model finds the post chat, and the input tokens it was sent. Every
-    pick is held below a threshold of 1, so the decision model reports its probabilities and hands
-    the step to the stub."""
+    pick is held below a threshold of 1, so the decision model reports its probabilities as an
+    unsure pick."""
     model, close = decision_model(
         TriageConfig(
             provider="openai-decisions",
@@ -90,23 +79,17 @@ async def _sort(post: str) -> tuple[float, int]:
         return response
 
     model.decide = counted  # ty: ignore[invalid-assignment]
-    agent = triaged_reading_agent(model, FunctionModel(_never, model_name="stub-reader"))
+    agent = sorting_agent(model)
     text = normalize(post).strip()
-    unsure: list[UnsureRoute] = []
     try:
         result = await agent.run(
             json.dumps({"message": text}, ensure_ascii=False),
             deps=ReadingInput(text=text, route=_ROUTE, recent=_RECENT),
         )
-    except FallbackExceptionGroup as group:
-        unsure = [e for e in group.exceptions if isinstance(e, UnsureRoute)]
-        result = None
+    except UnsureRoute as unsure:
+        return _chat_probability(unsure.probabilities), sum(tokens)
     finally:
         await close()
-    if result is None:
-        if not unsure:
-            pytest.fail(f"the decision model failed on {post!r}")
-        return _chat_probability(unsure[0].probabilities), sum(tokens)
     # A pick of probability 1 is taken even at a threshold of 1.
     picked = (result.response.provider_details or {})["route"]
     return _chat_probability(picked["probabilities"]), sum(tokens)
