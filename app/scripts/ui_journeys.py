@@ -1307,8 +1307,8 @@ def j40_live_limits(app: AppDriver) -> None:
         if "not saved yet" in texts or "Apply Changes" in texts:
             app.see("live-limits-pending")
             raise JourneyFailure("a limit change still waits for Apply Changes")
-        toolbar = snapshot.find("toolbar.copying")
-        if toolbar is None or "Stop" not in toolbar.label:
+        switch = snapshot.find("account.copying")
+        if switch is None or "Stop" not in switch.label:
             app.see("live-limits-paused")
             raise JourneyFailure("changing a limit stopped copying")
         if f"${target}" in texts and "You changed limits" in texts:
