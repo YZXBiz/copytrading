@@ -2172,3 +2172,14 @@
 "Pre-market" = "Pre-market";
 "After hours" = "After hours";
 "·  %@ cash  ·  %@ buying power" = "·  %@ cash  ·  %@ buying power";
+"%@, start to finish" = "%@, start to finish";
+"Result" = "Result";
+"Bought %@ at %@" = "Bought %@ at %@";
+"Added %@ at %@" = "Added %@ at %@";
+"You sold %@ at %@" = "You sold %@ at %@";
+"Sold %@ at %@" = "Sold %@ at %@";
+"You sold all %@ at %@" = "You sold all %@ at %@";
+"Sold all %@ at %@" = "Sold all %@ at %@";
+"This post · %@" = "This post · %@";
+"You, from the account page · %@" = "You, from the account page · %@";
+"%@ · %@ · “%@”" = "%@ · %@ · “%@”";

@@ -15,6 +15,7 @@ from copytrading_engine.execution.domain.events import (
     OwnershipResolved,
 )
 from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
+from copytrading_engine.execution.domain.orders import OrderRecord
 from copytrading_engine.execution.domain.values import Value
 
 FeedKind = Literal[
@@ -50,6 +51,9 @@ class AccountFeedItem(Value):
     guru_id: str | None = None
     message_id: str | None = None
     order_id: str | None = None
+    # The holding a trade belongs to (ADR-0010): the lot a buy opened or joined, or the lot a sell
+    # sold from, so every buy and sale of one position reads as one story.
+    lot_id: str | None = None
     # The limits the owner changed, for a limits_changed row.
     changes: tuple[LimitChange, ...] = ()
     # Why a holdings count was settled, for a settled row: the owner answered, or the broker's
@@ -96,6 +100,7 @@ def _item(seq: int, event: JournalEvent, snapshot: LedgerSnapshot) -> AccountFee
                 price=price,
                 amount=None if price is None else order.filled_qty * price,
                 order_id=order.client_order_id,
+                lot_id=sale.lot_id,
             )
         case OwnershipResolved(resolution=resolution):
             request = resolution.request
@@ -159,4 +164,16 @@ def _order_item(
         guru_id=None if owner or message is None else message.guru_id,
         message_id=order.message_id,
         order_id=update.client_id,
+        lot_id=_lot_of(order, snapshot),
     )
+
+
+def _lot_of(order: OrderRecord, snapshot: LedgerSnapshot) -> str | None:
+    """The lot a sell sold from, or the lot a buy's fills went into; none for a buy that never
+    filled."""
+    if order.lot_id is not None:
+        return order.lot_id
+    for key, lot in snapshot.lots.items():
+        if order.client_id in lot.entries(key):
+            return key
+    return None
