@@ -53,6 +53,12 @@ extension AppModel {
         hasTradingSecrets && savedTradingConfiguration?.provider.name == setupDraft.provider
     }
 
+    /// The chat filter's key is in the Keychain: a saved setup with the filter on always saved one.
+    var hasSavedTriageKey: Bool {
+        hasTradingSecrets && savedTradingConfiguration?.triage?.provider == setupDraft.triage?.provider
+            && savedTradingConfiguration?.triage != nil
+    }
+
     /// The interpreter has what it needs to read: a typed key, a saved one, or none required.
     var interpreterHasKey: Bool {
         !setupDraft.provider.requiresAPIKey || !setupDraft.providerAPIKey.isEmpty || hasSavedProviderKey

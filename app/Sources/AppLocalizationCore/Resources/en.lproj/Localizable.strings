@@ -742,6 +742,10 @@
 "Saved" = "Saved";
 "Saved guru" = "Saved guru";
 "Saved in Keychain — leave blank to keep" = "Saved in Keychain — leave blank to keep";
+"Sort out chat first" = "Sort out chat first";
+"An OpenAI key skips small talk for about 2¢ per 1,000 posts, so %@ only reads calls." = "An OpenAI key skips small talk for about 2¢ per 1,000 posts, so %@ only reads calls.";
+"OpenAI key" = "OpenAI key";
+"sorted by %@ · %lld%% sure" = "sorted by %@ · %lld%% sure";
 "Saved." = "Saved.";
 "Saved. Applies when the engine next starts." = "Saved. Applies when the engine next starts.";
 "Saves the log as a file you choose. Nothing is sent anywhere." = "Saves the log as a file you choose. Nothing is sent anywhere.";

@@ -1948,6 +1948,13 @@ def j28_connections_panel(app: AppDriver) -> None:
     time.sleep(0.8)
     local = app.see("connections-ollama")
     app.expect(local, "Connect to Ollama", "Base URL", "API key")
+    if local.has("connections.triageKey"):
+        raise JourneyFailure("the chat filter was offered for a local model")
+    app.click("connections.close")
+    # The chat filter is offered under DeepSeek, the interpreter it sorts posts for.
+    app.click("connections.provider.deepseek")
+    time.sleep(0.8)
+    app.expect(app.see("connections-deepseek"), "SORT OUT CHAT FIRST", "connections.triageKey")
     app.click("connections.close")
     app.click("connections.alerts")
     time.sleep(0.8)

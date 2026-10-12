@@ -742,6 +742,10 @@
 "Saved" = "已保存";
 "Saved guru" = "已保存的信号源";
 "Saved in Keychain — leave blank to keep" = "已保存到钥匙串——留空即可保留";
+"Sort out chat first" = "先筛掉闲聊";
+"An OpenAI key skips small talk for about 2¢ per 1,000 posts, so %@ only reads calls." = "填入 OpenAI 密钥，闲聊先被筛掉，每 1,000 条约 2 美分，%@ 只读喊单。";
+"OpenAI key" = "OpenAI 密钥";
+"sorted by %@ · %lld%% sure" = "由 %@ 分拣 · 把握 %lld%%";
 "Saved." = "已保存。";
 "Saved. Applies when the engine next starts." = "已保存。下次启动引擎时生效。";
 "Saves the log as a file you choose. Nothing is sent anywhere." = "将日志保存为你选择的文件。不会将任何内容发送到其他地方。";

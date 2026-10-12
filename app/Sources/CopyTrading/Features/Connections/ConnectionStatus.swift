@@ -87,7 +87,7 @@ struct ConnectionStatus: Equatable {
             return !draft.discordToken.isEmpty || (try? draft.submission().0.source) != saved.source
         case .interpreter:
             return !draft.providerAPIKey.isEmpty || draft.providerConfiguration != saved.provider
-        case .alerts, .account:
+        case .alerts, .triage, .account:
             return false
         }
     }

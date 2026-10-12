@@ -31,6 +31,10 @@ public struct SourceActivityBuilder {
     public func reading(_ reading: PostReading) throws -> Self {
         setting("reading", try JSONSerialization.jsonObject(with: JSONEncoder().encode(reading)))
     }
+    /// A post the chat filter settled before the reader (ADR-0012): its model and how sure it was.
+    public func sorted(by model: String, confidence: Double) -> Self {
+        setting("interpreted_by", model).setting("sorted_confidence", confidence)
+    }
     /// When the reader took the post, finished, and handed the reading to the accounts.
     public func read(started: String, finished: String, delivered: String) -> Self {
         setting("read_started_at", started).setting("read_at", finished).setting("delivered_at", delivered)
