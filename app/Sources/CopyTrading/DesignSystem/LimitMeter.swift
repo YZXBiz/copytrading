@@ -52,7 +52,8 @@ struct LimitMeter: View {
                     .font(DesignTokens.caption)
                     .foregroundStyle(Palette.tertiaryInk)
                     .monospacedDigit()
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
         }
         .accessibilityElement(children: .ignore)

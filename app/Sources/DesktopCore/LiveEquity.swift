@@ -3,7 +3,7 @@ import Foundation
 /// Brings a broker equity curve up to the moment the account balance was read.
 ///
 /// The broker records equity in one-minute bars, so the newest bar trails the live balance by up
-/// to five minutes. Shown side by side, "Balance $9,438.26" and a chart ending at $9,447.76 name two
+/// to a minute. Shown side by side, "Balance $9,438.26" and a chart ending at $9,447.76 name two
 /// values for one quantity. The curve therefore ends at the balance, stamped with the time it was read.
 public enum LiveEquity {
     public typealias AccountHistory = (accountID: String, history: EquityHistory)

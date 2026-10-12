@@ -1,17 +1,17 @@
 import DesktopCore
 import SwiftUI
 
-/// The account under its curve in two short rows. Cash and buying power first; then every limit in
-/// one place under a "Limits" title, with Edit Limits beside it: today's loss and what is in stocks,
-/// each against its cap with a meter, and the most an order and a stock may take. Each figure has
-/// the same shape, a label over a number, so the row reads straight across. Nothing else on the
-/// page edits limits.
+/// The account under its curve as one row across the full width: cash and buying power, then each
+/// limit, every figure the same shape (a label over a number, a meter under a capped one) in equal
+/// columns, and Edit Limits at the row's end. A narrow window folds it into two rows of three.
+/// Nothing else on the page edits limits.
 struct AccountFacts: View {
     let account: AccountOverview
     let policy: TradingAccountPolicy?
     let editLimits: () -> Void
 
-    private static let column: CGFloat = 176
+    /// Room between columns, so a meter never runs into the next label.
+    private static let gutter: CGFloat = 28
 
     /// Nil until the account's balance has been read, so an unread account never shows as empty.
     private var lossToday: Decimal? {
@@ -20,67 +20,67 @@ struct AccountFacts: View {
         return -change
     }
 
+    private var exposure: Decimal? {
+        account.balance == nil ? nil : Decimal(engine: account.totalExposureUSD) ?? 0
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 34) {
+        ViewThatFits(in: .horizontal) {
             HStack(alignment: .top, spacing: 0) {
-                figure("Cash", Decimal(engine: account.balance?.cash), cents: true)
-                figure("Buying power", Decimal(engine: account.balance?.buyingPower), cents: true)
+                row(cells, columns: cells.count)
+                    .frame(minWidth: 820)
+                editButton
+                    .padding(.leading, 8)
             }
-            if let policy {
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack(alignment: .firstTextBaseline, spacing: 14) {
-                        Text(L10n.string("Limits"))
-                            .font(DesignTokens.cardTitle)
-                            .tracking(DesignTokens.listHeadingTracking)
-                            .foregroundStyle(Palette.ink)
-                            .accessibilityAddTraits(.isHeader)
-                        Button(L10n.string("Edit Limits"), action: editLimits)
-                            .buttonStyle(QuietTextButtonStyle())
-                            .accessibilityIdentifier("account.editLimits")
-                    }
-                    ViewThatFits(in: .horizontal) {
-                        HStack(alignment: .top, spacing: 0) { limits(policy) }
-                        Grid(alignment: .topLeading, horizontalSpacing: 0, verticalSpacing: 22) {
-                            let cells = limitCells(policy)
-                            GridRow {
-                                cells.0; cells.1
-                            }
-                            GridRow {
-                                cells.2; cells.3
-                            }
-                        }
-                    }
-                }
+            VStack(alignment: .leading, spacing: 24) {
+                row(Array(cells.prefix(3)), columns: 3)
+                row(Array(cells.dropFirst(3)), columns: 3)
+                editButton
             }
         }
         .accessibilityElement(children: .contain)
     }
 
-    @ViewBuilder
-    private func limits(_ policy: TradingAccountPolicy) -> some View {
-        let cells = limitCells(policy)
-        cells.0
-        cells.1
-        cells.2
-        cells.3
+    /// Equal columns, each figure's label on one line and its number on the next.
+    private func row(_ cells: [AnyView], columns: Int) -> some View {
+        HStack(alignment: .top, spacing: 0) {
+            ForEach(Array(cells.enumerated()), id: \.offset) { _, cell in
+                cell
+                    .padding(.trailing, Self.gutter)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            ForEach(0..<max(0, columns - cells.count), id: \.self) { _ in
+                Color.clear.frame(maxWidth: .infinity, maxHeight: 0)
+            }
+        }
     }
 
-    private func limitCells(_ policy: TradingAccountPolicy) -> (AnyView, AnyView, AnyView, AnyView) {
-        let exposure = account.balance == nil ? nil : Decimal(engine: account.totalExposureUSD) ?? 0
-        return (
-            meter("Loss today", used: lossToday, cap: Decimal(engine: policy.dailyLossCapUSD), note: nil),
-            meter("In stocks", used: exposure, cap: Decimal(engine: policy.maxTotalUSD), note: ExposureSplit.note(account)),
-            AnyView(figure("Each order", Decimal(engine: policy.maxOrderUSD), suffix: L10n.string("at most"))),
-            AnyView(figure("Each stock", Decimal(engine: policy.maxSymbolUSD), suffix: L10n.string("at most")))
-        )
+    private var cells: [AnyView] {
+        var cells: [AnyView] = [
+            AnyView(figure("Cash", Decimal(engine: account.balance?.cash), cents: true)),
+            AnyView(figure("Buying power", Decimal(engine: account.balance?.buyingPower), cents: true)),
+        ]
+        if let policy {
+            cells += [
+                meter("Loss today", used: lossToday, cap: Decimal(engine: policy.dailyLossCapUSD), note: nil),
+                meter("In stocks", used: exposure, cap: Decimal(engine: policy.maxTotalUSD), note: ExposureSplit.note(account)),
+                AnyView(figure("Each order", Decimal(engine: policy.maxOrderUSD), suffix: L10n.string("at most"))),
+                AnyView(figure("Each stock", Decimal(engine: policy.maxSymbolUSD), suffix: L10n.string("at most"))),
+            ]
+        }
+        return cells
+    }
+
+    private var editButton: some View {
+        Button(L10n.string("Edit Limits"), action: editLimits)
+            .buttonStyle(QuietTextButtonStyle())
+            .accessibilityIdentifier("account.editLimits")
+            .fixedSize()
     }
 
     private func meter(_ title: String, used: Decimal?, cap: Decimal?, note: String?) -> AnyView {
         guard let cap else { return AnyView(figure(title, nil)) }
-        return AnyView(
-            LimitMeter(title: title, used: used, limit: cap, note: note)
-                .frame(width: Self.column - 32, alignment: .leading)
-                .frame(width: Self.column, alignment: .leading))
+        return AnyView(LimitMeter(title: title, used: used, limit: cap, note: note))
     }
 
     /// A label over a number, with an optional quiet word after it: "$500 at most".
@@ -106,8 +106,8 @@ struct AccountFacts: View {
                         .foregroundStyle(Palette.tertiaryInk)
                 }
             }
+            .lineLimit(1)
         }
-        .frame(width: Self.column, alignment: .leading)
         .accessibilityElement(children: .combine)
     }
 }
