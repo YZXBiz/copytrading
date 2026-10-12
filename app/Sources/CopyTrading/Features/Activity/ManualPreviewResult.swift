@@ -37,7 +37,7 @@ struct ManualPreviewResult: View {
         guard let plan = preview?.plan else {
             return L10n.string("%@ · trade %lld", request.accountID, Int64(request.instructionIndex + 1))
         }
-        let quantity = Decimal(engine: plan.quantity).map(Humanize.shareCount) ?? plan.quantity
+        let quantity = Decimal(engine: plan.quantity).map { Humanize.shareCount($0) } ?? plan.quantity
         let limit = Decimal(engine: plan.limitPrice).map(Humanize.usd)
         let side = L10n.string(plan.side.lowercased() == "sell" ? "Sell" : "Buy")
         return limit.map { L10n.string("%@ %@ %@ at %@ in %@", side, quantity, plan.symbol, $0, request.accountID) }

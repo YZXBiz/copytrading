@@ -19,6 +19,7 @@ from copytrading_engine.execution.domain.pricing import EntryPricingPolicy
 from copytrading_engine.execution.domain.signals import CopyConfig
 from copytrading_engine.execution.domain.sizing import DestinationTerms
 from copytrading_engine.parsing.providers.registry import ManagedDecoder
+from copytrading_engine.parsing.providers.triage import SortedDecoder
 from copytrading_engine.parsing.readiness import probe_model
 from copytrading_engine.parsing.relay import deliver_notifications
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore
@@ -610,7 +611,12 @@ class TradingRuntime:
                 self._mark_source_failure(exc)
             self._status = replace(self._status, state="degraded")
             stage = "provider_unavailable"
-            await probe_model(decoder, worker.model_health)
+            # The interpreter itself must answer: with the chat filter in front, the decision
+            # model alone could settle the test post and say nothing about the reader.
+            await probe_model(
+                decoder.reader if isinstance(decoder, SortedDecoder) else decoder,
+                worker.model_health,
+            )
             stage = "processing_unavailable"
             await self._work_loop(configuration, source, parser, worker, notifier)
         except RoutingChangePending:

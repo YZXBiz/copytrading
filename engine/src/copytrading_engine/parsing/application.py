@@ -33,6 +33,7 @@ def outcome(
     reading: r.PostReading | None = None,
     suggested: Sequence[Instruction] = (),
     sorted_confidence: float | None = None,
+    sorted_by: str | None = None,
 ) -> StockSignal:
     return StockSignal(
         reading=reading,
@@ -46,6 +47,7 @@ def outcome(
         parser_profile=PROMPT_VERSION,
         model=model,
         sorted_confidence=sorted_confidence,
+        sorted_by=sorted_by,
         guru_id=guru_id,
         profile_revision=profile_revision,
         decision=decision,
@@ -104,6 +106,7 @@ async def transform(
         reason,
         model=answer.model or model,
         sorted_confidence=answer.sorted_confidence,
+        sorted_by=answer.sorted_by,
         instructions=tuple(call for call, _ in calls),
         evidence=tuple(evidence for _, evidence in calls),
         guru_id=route.guru_id,

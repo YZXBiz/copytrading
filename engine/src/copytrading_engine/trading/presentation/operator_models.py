@@ -83,8 +83,9 @@ class SourceActivity(Value):
     parser_reason: str | None
     parser_profile: str | None
     interpreted_by: str | None
-    # How sure the decision model was when it settled the post itself (ADR-0012): "Sorted as
-    # chat (98% sure)". None when the reader read it.
+    # The chat filter's decision model and how likely it found the post chat (ADR-0012); it
+    # settled the post when it is also `interpreted_by`. None without the filter.
+    sorted_by: str | None = None
     sorted_confidence: float | None = None
     # The calls the post trades, as the engine places them, before any account sizing.
     instructions: tuple[Instruction, ...]

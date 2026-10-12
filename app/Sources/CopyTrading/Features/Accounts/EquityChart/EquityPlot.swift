@@ -43,11 +43,11 @@ struct EquityPlot: View {
         let bounds = valueRange
         let axis = EquityValueAxis(lower: bounds.lower, upper: bounds.upper, count: 3)
         let scale = self.scale
-        let ticks = scale.ticks(in: AppTime.zone, locale: AppTime.locale, width: plotWidth)
-        let times = ticks.filter { !$0.isRegion }
-        let regions = ticks.filter(\.isRegion)
+        let times = scale.ticks(in: AppTime.zone, locale: AppTime.locale, width: plotWidth)
+        let domain = xDomain(on: scale)
         let runs = EquityLineRun.runs(curve.points, on: scale)
         Chart {
+            sessionBands(scale.extendedSessions, in: domain)
             referenceLine
             ForEach(runs) { run in
                 ForEach(run.points, id: \.at) { point in
@@ -73,7 +73,7 @@ struct EquityPlot: View {
         .chartXScale(domain: xDomain(on: scale), range: .plotDimension(startPadding: 4, endPadding: 14))
         .chartYScale(domain: bounds.lower...bounds.upper)
         .chartXAxis {
-            AxisMarks(values: times.map(\.x).filter { xDomain(on: scale).contains($0) }) { value in
+            AxisMarks(values: times.map(\.x).filter { domain.contains($0) }) { value in
                 AxisTick(centered: true, length: 4, stroke: StrokeStyle(lineWidth: 1))
                     .foregroundStyle(Palette.tertiaryInk.opacity(0.6))
                 AxisValueLabel(collisionResolution: .greedy) {
@@ -82,16 +82,6 @@ struct EquityPlot: View {
                             .font(.caption)
                             .monospacedDigit()
                             .foregroundStyle(Palette.tertiaryInk)
-                    }
-                }
-            }
-            AxisMarks(values: regions.map(\.x).filter { xDomain(on: scale).contains($0) }) { value in
-                AxisValueLabel {
-                    if let x = value.as(Double.self), let tick = regions.first(where: { abs($0.x - x) < 1e-9 }) {
-                        Text(tick.label.uppercased())
-                            .font(.system(size: 9, weight: .semibold))
-                            .tracking(1)
-                            .foregroundStyle(Palette.tertiaryInk.opacity(0.8))
                     }
                 }
             }
@@ -124,6 +114,29 @@ struct EquityPlot: View {
             $0.size.width
         } action: {
             plotWidth = $0 - valueAxisWidth
+        }
+    }
+
+    /// Pre-market and after hours as faint bands behind the line, each named at its top inside
+    /// the plot, so the names never share the time axis's row. A band cut by the visible span keeps
+    /// its name within the chart.
+    @ChartContentBuilder
+    private func sessionBands(_ sessions: [EquityChartScale.Session], in domain: ClosedRange<Double>) -> some ChartContent {
+        ForEach(sessions.filter { $0.end > domain.lowerBound && $0.start < domain.upperBound }, id: \.self) { session in
+            RectangleMark(
+                xStart: .value("From", max(session.start, domain.lowerBound)),
+                xEnd: .value("To", min(session.end, domain.upperBound))
+            )
+            .foregroundStyle(Palette.ink.opacity(0.035))
+            .annotation(position: .overlay, alignment: .top, spacing: 6, overflowResolution: .init(x: .fit(to: .chart), y: .disabled)) {
+                Text(session.name.uppercased())
+                    .font(.system(size: 9, weight: .semibold))
+                    .tracking(1)
+                    .foregroundStyle(Palette.tertiaryInk.opacity(0.8))
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            .accessibilityLabel(session.name)
         }
     }
 

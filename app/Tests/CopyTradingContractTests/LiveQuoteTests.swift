@@ -66,4 +66,13 @@ private func anEstimateUsesTheLiveQuote() throws {
     try #require(
         buying.summary?.order == "Buy $1,000 of XYZ ≈ 4 shares at $250.00",
         "a dollar budget in shares: \(buying.summary?.order ?? "nil")")
+
+    // A count that doesn't come out even still says "≈" once.
+    buy.price = "300"
+    let uneven = ManualOrderEstimate(
+        drafts: [buy], accounts: [account], connections: connections, mode: .enter,
+        quotes: ["XYZ": LiveQuote(symbol: "XYZ", quote: MarketQuote(feed: "iex", bid: "299", ask: "300", timestamp: nil))])
+    try #require(
+        uneven.summary?.order == "Buy $1,000 of XYZ ≈ 3.333 shares at $300.00",
+        "an uneven count: \(uneven.summary?.order ?? "nil")")
 }

@@ -258,11 +258,56 @@ def peekaboo(*args: str, timeout: float = 60) -> dict[str, Any]:
     raise AssertionError("unreachable")
 
 
+# Text whose box is at least this many points on a side; a shorter one is a hairline or an icon.
+_MIN_TEXT_SIDE = 4.0
+
+
+def layout_problems(snapshot: dict[str, Any]) -> list[str]:
+    """Where text on a captured screen collides: two labels whose boxes overlap without one holding
+    the other, or text reaching past the window's edge. Reads the frames Peekaboo recorded for the
+    capture (its `snapshot.json`), so every named screenshot is checked, not only the ones a
+    person looks at."""
+    elements = [
+        e
+        for e in (snapshot.get("uiMap") or {}).values()
+        if e.get("role") in {"AXStaticText", "AXButton", "AXTextField", "AXLink"}
+        and (e.get("label") or e.get("title") or e.get("value"))
+        and e.get("frame")
+    ]
+    boxes = []
+    for e in elements:
+        (x, y), (w, h) = e["frame"]
+        if w >= _MIN_TEXT_SIDE and h >= _MIN_TEXT_SIDE:
+            name = str(e.get("label") or e.get("title") or e.get("value"))[:40]
+            boxes.append((name, x, y, x + w, y + h))
+    problems = []
+    window = snapshot.get("windowBounds")
+    if window:
+        (left, _), (width, _) = window
+        for name, x0, _, x1, _ in boxes:
+            if x0 < left - 1 or x1 > left + width + 1:
+                problems.append(f"{name!r} reaches past the window's edge")
+    for i, (a, ax0, ay0, ax1, ay1) in enumerate(boxes):
+        for b, bx0, by0, bx1, by1 in boxes[i + 1 :]:
+            width = min(ax1, bx1) - max(ax0, bx0)
+            height = min(ay1, by1) - max(ay0, by0)
+            if width <= 1 or height <= 1:
+                continue
+            inside = (ax0 <= bx0 and ay0 <= by0 and ax1 >= bx1 and ay1 >= by1) or (
+                bx0 <= ax0 and by0 <= ay0 and bx1 >= ax1 and by1 >= ay1
+            )
+            if not inside:
+                problems.append(f"{a!r} overlaps {b!r}")
+    return problems
+
+
 @dataclass
 class AppDriver:
     screenshots: Path
     state_root: Path | None = None
     shot_count: int = 0
+    # Text collisions found on named screenshots this run, by screenshot.
+    layout: dict[str, list[str]] = field(default_factory=dict)
 
     def see(self, name: str | None = None) -> Snapshot:
         args = ["see", "--app", APP_NAME]
@@ -289,6 +334,7 @@ class AppDriver:
                 time.sleep(1)
         if name is not None:
             self._capture_sheets(f"{self.shot_count:02d}-{name}")
+            self._check_layout(f"{self.shot_count:02d}-{name}", str(data.get("snapshot_id", "")))
         elements = [
             Element(
                 id=str(raw.get("id", "")),
@@ -302,6 +348,14 @@ class AppDriver:
             for raw in data.get("ui_elements", [])
         ]
         return Snapshot(id=str(data.get("snapshot_id", "")), elements=elements)
+
+    def _check_layout(self, stem: str, snapshot_id: str) -> None:
+        """Record any text collision on this screen; the run fails on them at the end."""
+        path = Path.home() / ".peekaboo" / "snapshots" / snapshot_id / "snapshot.json"
+        with contextlib.suppress(OSError, ValueError):
+            problems = layout_problems(json.loads(path.read_text()))
+            if problems:
+                self.layout[stem] = problems
 
     def _capture_sheets(self, stem: str) -> None:
         """A sheet is a window of its own, missing from the main window's capture: save each one
@@ -2250,6 +2304,9 @@ def main() -> int:
         else:
             shutil.rmtree(state_root, ignore_errors=True)
 
+    for stem, problems in runner.driver.layout.items():
+        runner.results.append(Result(f"Layout {stem}", "failed", "; ".join(problems[:6])))
+        print(f"FAILED   Layout {stem}: {'; '.join(problems[:6])}")
     failed = [r for r in runner.results if r.status == "failed"]
     print(
         f"\n{len(runner.results) - len(failed)} of {len(runner.results)} journeys did not fail; "

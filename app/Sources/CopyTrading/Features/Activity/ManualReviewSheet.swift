@@ -37,6 +37,8 @@ struct ManualReviewSheet: View {
     @State private var approvalProblem: String?
     /// The broker's latest quote for each stock in the trades, by symbol.
     @State private var quotes: [String: LiveQuote] = [:]
+    /// Stocks whose quote is being asked for again.
+    @State private var refreshingQuotes: Set<String> = []
 
     init(
         source: SourceActivity,
@@ -169,6 +171,20 @@ struct ManualReviewSheet: View {
             footer
                 .background(Palette.canvas)
         }
+        .overlay(alignment: .topTrailing) {
+            // The corner ✕ every panel in the app has, as well as Close in the footer.
+            Button(L10n.string("Close"), systemImage: "xmark") { dismiss() }
+                .labelStyle(.iconOnly)
+                .buttonStyle(QuietPressButtonStyle())
+                .font(.body.weight(.medium))
+                .foregroundStyle(Palette.tertiaryInk)
+                .frame(width: 28, height: 28)
+                .contentShape(.rect)
+                .help(L10n.string("Close"))
+                .accessibilityIdentifier("review.closeCorner")
+                .padding(.top, 12)
+                .padding(.trailing, 14)
+        }
         .background(Palette.page)
         .frame(minWidth: 560, idealWidth: 620, minHeight: 600, idealHeight: 780)
         .confirmationDialog(
@@ -237,6 +253,8 @@ struct ManualReviewSheet: View {
                     holdings: holdings,
                     marketPrices: prices,
                     quote: quotes[instruction.symbol.trimmed.uppercased()],
+                    refreshQuote: refreshingQuotes.contains(instruction.symbol.trimmed.uppercased())
+                        ? nil : { refreshQuote(instruction.symbol.trimmed.uppercased()) },
                     fullPosition: single,
                     position: instructions.count > 1 ? (index, instructions.count) : nil,
                     remove: { instructions.removeAll { $0.id == instruction.id } }
@@ -503,6 +521,17 @@ struct ManualReviewSheet: View {
                 if Task.isCancelled { return }
                 continue
             }
+            quotes[symbol] = LiveQuote(symbol: symbol, quote: quote)
+        }
+    }
+
+    /// Asks the broker for one stock's quote again, now. A failed ask keeps the last one.
+    private func refreshQuote(_ symbol: String) {
+        guard let operations, let accountID = quotingAccountID, !refreshingQuotes.contains(symbol) else { return }
+        refreshingQuotes.insert(symbol)
+        Task {
+            defer { refreshingQuotes.remove(symbol) }
+            guard let quote = try? await operations.quote(accountID: accountID, symbol: symbol) else { return }
             quotes[symbol] = LiveQuote(symbol: symbol, quote: quote)
         }
     }

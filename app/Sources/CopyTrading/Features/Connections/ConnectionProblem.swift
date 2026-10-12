@@ -49,6 +49,15 @@ enum ConnectionProblem {
             return L10n.string("The bot can't reach that chat. Send the bot a message first, then try again.")
         case "notification_credentials_missing", "notification_identity_invalid", "notification_auth_or_chat_access_failed":
             return L10n.string("Couldn't reach the alert service. Check the token and the chat.")
+        case "account_ownership_pending":
+            return L10n.string(
+                "An account you renamed or removed still holds stocks CopyTrading bought. Keep its old name, or sell those stocks first.")
+        case "routing_change_pending":
+            return L10n.string("Posts are still being read or sent. Wait a moment, then check again.")
+        case "pause_before_configuration_change":
+            return L10n.string("Pause copying before changing the setup.")
+        case "broker_credential_mapping_invalid":
+            return L10n.string("An account is missing its Alpaca keys. Open it and add them.")
         default:
             return L10n.string("Couldn't check this connection. Try again in a moment.")
         }

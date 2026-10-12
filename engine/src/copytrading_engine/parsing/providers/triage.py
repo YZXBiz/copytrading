@@ -9,13 +9,14 @@ reader's own output mode: a reading, an unsure pick, and any failure of the deci
 import asyncio
 import json
 from collections.abc import Awaitable, Callable
+from dataclasses import replace
 
 import httpx2 as httpx
 from openai import AsyncOpenAI
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent, ToolOutput
 from pydantic_ai.exceptions import ModelAPIError, ModelHTTPError, UnexpectedModelBehavior
-from pydantic_ai.models.decision import DecisionModel, DecisionModelSettings
+from pydantic_ai.models.decision import DecisionModel, DecisionModelSettings, UnsureRoute
 from pydantic_ai.models.openai_decisions import OpenAIDecisionsModel
 from pydantic_ai.models.typesafe import TypeSafeModel
 from pydantic_ai.providers.openai_decisions import OpenAIDecisionsProvider
@@ -120,35 +121,46 @@ class SortedDecoder:
     """Any reader with the decision model in front of it (ADR-0012)."""
 
     def __init__(
-        self, reader: ManagedDecoder, sorter: SortingAgent, close_sorter: Close, timeout: float
+        self,
+        reader: ManagedDecoder,
+        sorter: SortingAgent,
+        close_sorter: Close,
+        timeout: float,
+        name: str,
     ) -> None:
         self.reader = reader
+        self.name = name
         self.sorter = sorter
         self.close_sorter = close_sorter
         self.timeout = timeout
 
     async def answer(self, text: str, route: Route, recent: tuple[RecentCall, ...] = ()) -> Answer:
-        """Chat the decision model is sure of, with its name and confidence; anything else as the
-        reader reads it."""
+        """Chat the decision model is sure of, settled there; anything else as the reader reads
+        it. Either way the answer says the decision model sorted it, and how likely it found the
+        post chat, so every post shows what the filter thought."""
         try:
             async with asyncio.timeout(self.timeout):
                 result = await self.sorter.run(
                     json.dumps({"message": text}, ensure_ascii=False),
                     deps=ReadingInput(text=text, route=route, recent=recent),
                 )
-        # `UnsureRoute` is a `ModelAPIError`: an unsure pick reads like an outage, and both go to
-        # the reader, as if there were no decision model.
+        # An unsure pick goes to the reader with the chance the decision model gave it.
+        except UnsureRoute as unsure:
+            return await self._read(text, route, recent, _chat(unsure.probabilities))
+        # An outage goes to the reader as if there were no decision model.
         except ModelAPIError, TimeoutError, UnexpectedModelBehavior:
-            return await self.reader.answer(text, route, recent)
-        if not isinstance(result.output, JustChat):
-            return await self.reader.answer(text, route, recent)
+            return await self._read(text, route, recent, None)
         picked = (result.response.provider_details or {}).get("route") or {}
-        probability = picked.get("probabilities", {}).get(picked.get("choice"))
-        return Answer(
-            Chatter(),
-            result.response.model_name,
-            float(probability) if isinstance(probability, int | float) else None,
-        )
+        chat = _chat(picked.get("probabilities") or {})
+        if not isinstance(result.output, JustChat):
+            return await self._read(text, route, recent, chat)
+        return Answer(Chatter(), result.response.model_name, chat, sorted_by=self.name)
+
+    async def _read(
+        self, text: str, route: Route, recent: tuple[RecentCall, ...], chat: float | None
+    ) -> Answer:
+        answer = await self.reader.answer(text, route, recent)
+        return replace(answer, sorted_confidence=chat, sorted_by=self.name)
 
     async def learn(self, posts: tuple[str, ...]) -> PlaybookProposal:
         return await self.reader.learn(posts)
@@ -167,4 +179,12 @@ def sorted_decoder(
     reader: ManagedDecoder, config: TriageConfig, *, diagnostics: PayloadCapture | None = None
 ) -> SortedDecoder:
     model, close = decision_model(config, diagnostics=diagnostics)
-    return SortedDecoder(reader, sorting_agent(model), close, config.timeout)
+    return SortedDecoder(reader, sorting_agent(model), close, config.timeout, model.model_name)
+
+
+def _chat(probabilities: object) -> float | None:
+    """How likely the decision model found the post chat, from its route probabilities."""
+    if not isinstance(probabilities, dict):
+        return None
+    chance = probabilities.get("JustChat")
+    return float(chance) if isinstance(chance, int | float) else None

@@ -62,8 +62,10 @@ struct ManualOrderEstimate {
         let at = ask.map(Humanize.usd) ?? "—"
         guard let budget = budget(draft, in: account) else { return L10n.string("Buy %@ at %@", symbol, at) }
         guard let ask else { return L10n.string("Buy %@ of %@ at %@", Humanize.dollars("\(budget)"), symbol, at) }
+        // The sentence says the count is an estimate; the count never adds a second "≈".
         return L10n.string(
-            "Buy %@ of %@ ≈ %@ at %@", Humanize.dollars("\(budget)"), symbol, Humanize.shares(budget / ask), at)
+            "Buy %@ of %@ ≈ %@ at %@", Humanize.dollars("\(budget)"), symbol,
+            Humanize.shares(budget / ask, marksRounding: false), at)
     }
 
     /// Shares to three places at most, as an order reads them: "0.442", "12".

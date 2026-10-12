@@ -102,7 +102,7 @@ class BrokerOrder(Value):
         return self
 
 
-type QuoteFeed = Literal["iex", "overnight"]
+type QuoteFeed = Literal["iex", "delayed_sip", "overnight"]
 
 
 class Quote(Value):

@@ -146,6 +146,7 @@ def _decoder(decider: DecisionModel, reader: ScriptedReader) -> SortedDecoder:
         sorting_agent(decider),
         _NoClient().close,
         5,
+        decider.model_name,
     )
 
 
@@ -180,7 +181,8 @@ async def test_sure_chat_is_settled_by_the_decision_model_alone():
     result, reader = await _run(case)
 
     assert reader.calls == 0
-    assert (result.model, result.sorted_confidence) == ("fake-decider", pytest.approx(0.97))
+    assert (result.model, result.sorted_by) == ("fake-decider", "fake-decider")
+    assert result.sorted_confidence == pytest.approx(0.97)
 
 
 async def test_unsure_chat_and_every_reading_go_to_the_reader():
@@ -190,7 +192,9 @@ async def test_unsure_chat_and_every_reading_go_to_the_reader():
         result, reader = await _run(case)
 
         assert reader.calls == 1
-        assert (result.model, result.sorted_confidence) == ("deepseek-flash", None)
+        # The reader read it, and the post still says what the filter thought of it.
+        assert (result.model, result.sorted_by) == ("deepseek-flash", "fake-decider")
+        assert result.sorted_confidence == pytest.approx(case.chat)
 
 
 @pytest.mark.parametrize("outage", [503, "timeout"])
@@ -204,6 +208,7 @@ async def test_a_decision_service_outage_hands_the_post_to_the_reader(outage):
 
     assert result.decision == "trade"
     assert (reader.calls, result.model, result.sorted_confidence) == (1, "deepseek-flash", None)
+    assert result.sorted_by == "fake-decider"
 
 
 async def test_the_decision_model_sorts_each_post_once_however_often_the_reader_retries():
@@ -224,7 +229,11 @@ async def test_a_reader_failure_behind_the_decision_model_keeps_its_reason():
         raise ModelHTTPError(401, "deepseek-flash")
 
     decoder = SortedDecoder(
-        _reader(FunctionModel(rejected)), sorting_agent(FakeDecider({})), _NoClient().close, 5
+        _reader(FunctionModel(rejected)),
+        sorting_agent(FakeDecider({})),
+        _NoClient().close,
+        5,
+        "fake-decider",
     )
 
     with pytest.raises(DecodeError) as raised:

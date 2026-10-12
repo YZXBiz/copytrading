@@ -2208,7 +2208,6 @@
 "No quote for %@" = "No quote for %@";
 "%lld min old" = "%lld min old";
 "%lld hr old" = "%lld hr old";
-"Buy %@ of %@ ≈ %@ at %@" = "Buy %@ of %@ ≈ %@ at %@";
 "Just chat, nothing to trade" = "Just chat, nothing to trade";
 "just chat" = "just chat";
 "Chat filter" = "Chat filter";
@@ -2222,3 +2221,13 @@
 "Paste it into **OpenAI key**. OpenAI bills your account, about 15¢ per 1,000 posts." = "Paste it into **OpenAI key**. OpenAI bills your account, about 15¢ per 1,000 posts.";
 "Sign in at **platform.openai.com** and open **API keys**." = "Sign in at **platform.openai.com** and open **API keys**.";
 "Open OpenAI API keys" = "Open OpenAI API keys";
+"An account you renamed or removed still holds stocks CopyTrading bought. Keep its old name, or sell those stocks first." = "An account you renamed or removed still holds stocks CopyTrading bought. Keep its old name, or sell those stocks first.";
+"Posts are still being read or sent. Wait a moment, then check again." = "Posts are still being read or sent. Wait a moment, then check again.";
+"Pause copying before changing the setup." = "Pause copying before changing the setup.";
+"An account is missing its Alpaca keys. Open it and add them." = "An account is missing its Alpaca keys. Open it and add them.";
+"%@ didn't answer · sent to %@" = "%@ didn't answer · sent to %@";
+"%@ · %lld%% chat · skipped" = "%@ · %lld%% chat · skipped";
+"%@ · %lld%% chat · sent to %@" = "%@ · %lld%% chat · sent to %@";
+"Get the latest price" = "Get the latest price";
+"Getting the latest price" = "Getting the latest price";
+"Buy %@ of %@ ≈ %@ at %@" = "Buy %@ of %@ ≈ %@ at %@";

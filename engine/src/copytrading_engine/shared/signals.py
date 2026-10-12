@@ -83,8 +83,10 @@ class StockSignal(BaseModel):
     # The model that answered: the decision model when it settled the post (ADR-0012), else the
     # reader.
     model: str
-    # How likely the decision model found the kind it settled the post as; None when the reader
-    # read it.
+    # The chat filter's decision model, when it sorted the post (ADR-0012): it settled the post
+    # when it is also `model`, and passed it to the reader otherwise. `sorted_confidence` is how
+    # likely it found the post chat; None when it didn't answer.
+    sorted_by: str | None = Field(default=None, max_length=128)
     sorted_confidence: float | None = Field(default=None, ge=0, le=1)
     guru_id: str | None = Field(default=None, pattern=r"^[a-zA-Z0-9_-]{1,64}$")
     profile_revision: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")

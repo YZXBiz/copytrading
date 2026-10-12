@@ -11,8 +11,13 @@ struct EquityChartScale {
     struct Tick: Hashable {
         let x: Double
         let label: String
-        /// A session strip's name ("Pre-market"), set under its middle with no tick mark.
-        var isRegion = false
+    }
+
+    /// A stretch of a day outside regular hours, shaded on the plot with its name inside.
+    struct Session: Hashable {
+        let start: Double
+        let end: Double
+        let name: String
     }
 
     static let preMarketShare = 0.12
@@ -75,15 +80,25 @@ struct EquityChartScale {
     /// The least room between two time marks, in points, so labels never touch.
     static let minimumTickSpacing: Double = 90
 
+    /// A day's pre-market and after-hours strips; none for longer ranges.
+    @MainActor
+    var extendedSessions: [Session] {
+        guard isDay else { return [] }
+        return [
+            Session(start: 0, end: Self.preMarketShare, name: L10n.string("Pre-market")),
+            Session(start: 1 - Self.afterHoursShare, end: 1, name: L10n.string("After hours")),
+        ]
+    }
+
     /// Time labels spaced for the range and the plot's width, in the zone and language the rest
-    /// of the app reads in. A day marks the opening bell and the close, the finest round step that
-    /// leaves room between labels (15, 30, or 60 minutes, then 2 hours), and names the pre-market
-    /// and after-hours strips; longer ranges mark days or months.
+    /// of the app reads in. A day marks the opening bell and the close and the finest round step
+    /// that leaves room between labels (15, 30, or 60 minutes, then 2 hours), with AM or PM where
+    /// the language uses them; longer ranges mark days or months.
     @MainActor
     func ticks(in zone: TimeZone, locale: Locale, width: Double) -> [Tick] {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = zone
-        var clock = Date.FormatStyle.dateTime.hour(.defaultDigits(amPM: .omitted)).minute().locale(locale)
+        var clock = Date.FormatStyle.dateTime.hour().minute().locale(locale)
         clock.timeZone = zone
         if isDay {
             let regularWidth = max(width, 1) * (1 - Self.preMarketShare - Self.afterHoursShare)
@@ -99,12 +114,8 @@ struct EquityChartScale {
                 }
                 minutes += step
             }
-            let regions = [
-                Tick(x: Self.preMarketShare / 2, label: L10n.string("Pre-market"), isRegion: true),
-                Tick(x: 1 - Self.afterHoursShare / 2, label: L10n.string("After hours"), isRegion: true),
-            ]
             return [Tick(x: x(open), label: open.formatted(clock))] + marks
-                + [Tick(x: x(close), label: close.formatted(clock))] + regions
+                + [Tick(x: x(close), label: close.formatted(clock))]
         }
         let span = end.timeIntervalSince(start)
         let (unit, step, format): (Calendar.Component, Int, Date.FormatStyle) =

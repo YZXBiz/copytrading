@@ -92,7 +92,16 @@ private func eachAccountSaysWhatItDidInAFewWords() throws {
     // Chat the reader read itself carries no filter line.
     let readChat = try post(4, guru: "zhao", at: "2026-10-05T14:33:00Z").decision("ignore", reason: "chatter")
         .reading(.chatter).build()
-    try #require(readChat.sortedBy == nil, "a read post said it was sorted")
+    try #require(readChat.sortedNote == nil && readChat.chatFilterVerdict == nil, "a read post said it was sorted")
+
+    // A post the filter passed on still says what the filter made of it, in Technical details.
+    let passed = try post(5, guru: "zhao", at: "2026-10-05T14:34:00Z").decision("trade")
+        .passed(by: "gpt-6-luna", chat: 0.12, to: "deepseek-flash").build()
+    try #require(passed.sortedNote == nil, "a post the reader read said it was sorted as chat")
+    try #require(
+        passed.chatFilterVerdict == "gpt-6-luna · 12% chat · sent to deepseek-flash",
+        "the filter's verdict read \(passed.chatFilterVerdict ?? "nil")")
+    try #require(smallTalk.chatFilterVerdict == "gpt-6-luna · 98% chat · skipped", "a skipped post's verdict was wrong")
 }
 
 @MainActor

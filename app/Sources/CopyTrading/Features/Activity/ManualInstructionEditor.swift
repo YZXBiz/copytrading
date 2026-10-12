@@ -12,6 +12,8 @@ struct ManualInstructionEditor: View {
     let marketPrices: [String: Decimal]
     /// The broker's latest quote for the chosen stock; nil until one is asked for and answered.
     let quote: LiveQuote?
+    /// Asks the broker again for the chosen stock's quote; nil while it is being asked.
+    var refreshQuote: (() -> Void)?
     /// A full position for this guru in the one chosen account; nil when several are chosen.
     let fullPosition: TradingRouteConnection?
     /// "Trade 2 of 3" with Remove, when the sheet holds more than one.
@@ -205,6 +207,7 @@ struct ManualInstructionEditor: View {
                     draft.price = draft.isSell ? "" : marketPrice.map { "\($0)" } ?? ""
                 }
                 .accessibilityIdentifier("review.price.market")
+                if quote != nil { refreshButton }
             }
             if post != nil || draft.isSell || marketPrice != nil {
                 FormChoice(title: L10n.string("Limit…"), isOn: other) {
@@ -227,6 +230,26 @@ struct ManualInstructionEditor: View {
                 .accessibilityLabel(L10n.string("Price in the post"))
                 .accessibilityIdentifier("review.price")
             }
+        }
+    }
+
+    /// Asks for the quote again, beside its age; a small spinner while the broker answers.
+    @ViewBuilder private var refreshButton: some View {
+        if let refreshQuote {
+            Button(action: refreshQuote) {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Palette.secondaryInk)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.borderless)
+            .help(L10n.string("Get the latest price"))
+            .accessibilityLabel(L10n.string("Get the latest price"))
+            .accessibilityIdentifier("review.price.refresh")
+        } else {
+            ProgressView()
+                .controlSize(.mini)
+                .accessibilityLabel(L10n.string("Getting the latest price"))
         }
     }
 

@@ -218,7 +218,7 @@ struct ActivityDetailView: View {
 
     /// Who read the post, under the first call; for chat the filter settled, who sorted it.
     private var readBy: String? {
-        item.sortedBy ?? item.interpretedBy.map { L10n.string("read by %@", $0) }
+        item.sortedNote ?? item.interpretedBy.map { L10n.string("read by %@", $0) }
     }
 
     /// The reading's quiet facts on one line: what kind of post it was, what the sentence leaves out.

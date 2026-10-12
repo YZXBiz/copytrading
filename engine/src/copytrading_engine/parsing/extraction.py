@@ -77,12 +77,14 @@ class JustChat(BaseModel):
 
 @dataclass(frozen=True)
 class Answer:
-    """A reading and the model that gave it. `sorted_confidence` is how likely the decision
-    model found the kind it settled the post as (ADR-0012); None when the reader read it."""
+    """A reading and the model that gave it. With the chat filter on (ADR-0012), `sorted_by` is
+    the decision model that sorted the post, whether it settled it or passed it to the reader,
+    and `sorted_confidence` how likely it found the post chat; None when it didn't answer."""
 
     reading: PostReading
     model: str | None = None
     sorted_confidence: float | None = None
+    sorted_by: str | None = None
 
 
 @dataclass(frozen=True)

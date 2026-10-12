@@ -36,7 +36,7 @@ private func dayGivesRegularHoursTheRoom() throws {
     try verifyScale(scale.isExtended(exchangeTime(8, 0)) && scale.isExtended(exchangeTime(17, 0)), "extended hours not recognized")
     try verifyScale(!scale.isExtended(exchangeTime(9, 30)) && !scale.isExtended(exchangeTime(16, 0)), "the open or close read as extended")
     try verifyScale(
-        scale.ticks(in: .current, locale: .current, width: 900).filter { !$0.isRegion }.map(\.x).allSatisfy {
+        scale.ticks(in: .current, locale: .current, width: 900).map(\.x).allSatisfy {
             $0 >= scale.openX && $0 <= scale.closeX
         },
         "a day tick fell outside regular hours")

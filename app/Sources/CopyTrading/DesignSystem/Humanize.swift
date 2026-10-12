@@ -121,14 +121,16 @@ enum Humanize {
 
     /// A share count as a person reads it: whole shares when within a hundredth of one ("1 share",
     /// "≈1 share"), otherwise to three decimals at most ("2.985 shares"). "≈" marks a rounded count.
+    /// `marksRounding: false` leaves the "≈" to a sentence that already says the count is an
+    /// estimate.
     @MainActor
-    static func shares(_ value: Decimal) -> String {
-        L10n.string(isOne(value) ? "%@ share" : "%@ shares", shareCount(value))
+    static func shares(_ value: Decimal, marksRounding: Bool = true) -> String {
+        L10n.string(isOne(value) ? "%@ share" : "%@ shares", shareCount(value, marksRounding: marksRounding))
     }
 
     /// The count alone, rounded as `shares` rounds it: "≈1", "2.985", "0".
     @MainActor
-    static func shareCount(_ value: Decimal) -> String {
+    static func shareCount(_ value: Decimal, marksRounding: Bool = true) -> String {
         var source = value
         var whole = Decimal()
         NSDecimalRound(&whole, &source, 0, .plain)
@@ -137,7 +139,7 @@ enum Humanize {
             NSDecimalRound(&shown, &source, 3, .plain)
         }
         let text = shown.formatted(.number.precision(.fractionLength(0...3)))
-        return shown == value ? text : L10n.string("≈%@", text)
+        return shown == value || !marksRounding ? text : L10n.string("≈%@", text)
     }
 
     /// "0 of ≈1 share", "5 of 12 shares": part of an amount of shares, as filled of an order.
