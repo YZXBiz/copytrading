@@ -2200,3 +2200,6 @@
 "Buy %@ of %@ %@" = "Buy %@ of %@ %@";
 ", %@ worth" = ", %@ worth";
 "%@ cash  ·  %@ buying power" = "%@ cash  ·  %@ buying power";
+"You bought %@" = "You bought %@";
+"You entered the trade" = "You entered the trade";
+"You entered the trade yourself." = "You entered the trade yourself.";

@@ -164,6 +164,9 @@ struct ActivityDetailView: View {
             if let reading = item.reading {
                 if reading.calls.isEmpty {
                     readLine(ReadAsText.lines(reading).first ?? "")
+                    if item.enteredByOwner {
+                        detailLine([L10n.string("You entered the trade yourself.")])
+                    }
                     subline([ReadAsText.kind(reading), readBy].compactMap(\.self))
                 } else {
                     ForEach(Array(reading.calls.enumerated()), id: \.offset) { index, call in

@@ -40,6 +40,7 @@ extension SourceActivity {
     @MainActor
     var headline: String {
         guard let first = instructions.first else {
+            if enteredByOwner { return L10n.string("You entered the trade") }
             switch decision {
             case "ignore": return L10n.string("Not a trade")
             case "review": return L10n.string("Needs your review")
@@ -49,6 +50,11 @@ extension SourceActivity {
         }
         let rest = instructions.count > 1 ? L10n.string(" and %lld more", Int64(instructions.count - 1)) : ""
         return first.phrase + rest
+    }
+
+    /// The owner placed a trade for this post by hand, so it no longer waits for them.
+    var enteredByOwner: Bool {
+        destinations.contains { $0.orders.contains(where: \.isOwnerEntry) }
     }
 
     var sourceDate: Date? { Humanize.date(sourceAt) }

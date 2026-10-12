@@ -2200,3 +2200,6 @@
 "Buy %@ of %@ %@" = "买入 %@ 的 %@，%@";
 ", %@ worth" = "，金额 %@";
 "%@ cash  ·  %@ buying power" = "现金 %@  ·  购买力 %@";
+"You bought %@" = "你手动买入了 %@";
+"You entered the trade" = "你手动下了这笔单";
+"You entered the trade yourself." = "这笔交易是你手动下的。";

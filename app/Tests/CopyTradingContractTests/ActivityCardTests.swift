@@ -11,6 +11,7 @@ func runActivityCardTests() throws {
     try aRepeatedNumberIsMarkedBesideTheOtherCitedWords()
     try aTrimmedBuyIsTradedSmallerAndSaysByHowMuch()
     try aLotSoldByHandStaysTheOwners()
+    try aPostTheOwnerTradedByHandReadsAsTheirs()
     try aBuyNamesTheGurusPriceAndTheAllowanceItsLimitUsed()
     try aSkipNamesTheLimitWithItsNumbers()
     try aCallHeldForApprovalAsksToBeApproved()
@@ -201,6 +202,39 @@ private func aBuyNamesTheGurusPriceAndTheAllowanceItsLimitUsed() throws {
     try #require(result.headline == "Not bought: the price ran above your limit", "headline was \(result.headline)")
     try #require(
         result.facts.first == .init(label: "Guru's price", value: "$5.85 + 1% allowed"), "facts were \(result.facts)")
+}
+
+/// "hm" read as unclear waits for the owner; they enter an NVDA buy by hand and it fills. The
+/// post is then the owner's trade: no "Needs your review", no skip, and one result, not "and 1 more".
+@MainActor
+private func aPostTheOwnerTradedByHandReadsAsTheirs() throws {
+    let order: [String: Any] = [
+        "client_id": "manual-d00bb87d4b756f6cc43d7b33036bd0f8dc7f1bf3", "symbol": "NVDA", "side": "buy",
+        "status": "filled", "quantity": "0.655537", "filled_quantity": "0.655537", "limit_price": "228.82",
+        "average_fill_price": "226.558", "broker_id": "b1", "created_at": "2026-10-05T14:31:50Z",
+        "instruction_index": 0, "requested_usd": "150", "budget_usd": "150",
+    ]
+    let source = try SourceActivityBuilder().text("hm").decision("review", reason: "unclear")
+        .destination("primary", status: "review_required", orders: [order])
+        .build()
+
+    try #require(source.headline == "You entered the trade", "headline was \(source.headline)")
+    // The owner closed the call from Needs You, so the app counts it as skipped too.
+    for skipped in [false, true] {
+        let outcome = ActivityCardOutcome(source, skipped: skipped, now: try Date("2026-10-05T14:33:00Z", strategy: .iso8601))
+        try #require(outcome.title == "Traded", "badge was \(outcome.title)")
+        let account = try #require(outcome.accounts.first)
+        try #require(!account.waits, "the account still waited for the owner")
+        try #require(
+            account.results.map(\.headline) == ["You bought $148.52 of NVDA"],
+            "results were \(account.results.map(\.headline))")
+        let row = GuruAccountOutcome.outcomes(of: source, skipped: skipped).map(\.summary)
+        try #require(row == ["You bought $148.52 of NVDA"], "the row read \(row)")
+    }
+    let destination = try #require(source.destinations.first)
+    try #require(
+        DestinationOutcome(destination) == .filled("You bought $148.52 of NVDA"),
+        "summary was \(DestinationOutcome(destination))")
 }
 
 @MainActor

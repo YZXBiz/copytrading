@@ -52,10 +52,13 @@ struct ActivityCardOutcome {
         zone: TimeZone? = nil, locale: Locale? = nil
     ) {
         let waiting = WaitingCall(source)
-        let open = waiting.map { !skipped && !$0.hasExpired(at: now) } ?? false
+        // A post the owner traded by hand is settled: it no longer waits for them.
+        let open = waiting.map { !skipped && !$0.hasExpired(at: now) && !source.enteredByOwner } ?? false
         let deadline = waiting?.deadline.map { TradingDeadlineText.text($0, now: now, zone: zone, locale: locale) } ?? ""
         accounts = source.destinations.map { destination in
-            let waits = waiting?.accountIDs.contains(destination.accountID) == true
+            let waits =
+                waiting?.accountIDs.contains(destination.accountID) == true
+                && !destination.orders.contains(where: \.isOwnerEntry)
             let resumeBy = resume.deadlines[destination.accountID]
             var account = Account(
                 id: destination.accountID, environment: destination.environment,
@@ -157,7 +160,9 @@ struct ActivityCardOutcome {
         switch DestinationOutcome.order(order, count: 1) {
         case .filled:
             headline = L10n.string(
-                order.isOwnerSale ? "You sold %@" : buying ? "Bought %@" : "Sold %@", OrderAmount.filled(order) ?? planned)
+                order.isOwnerSale || (order.isOwnerEntry && !buying)
+                    ? "You sold %@" : order.isOwnerEntry ? "You bought %@" : buying ? "Bought %@" : "Sold %@",
+                OrderAmount.filled(order) ?? planned)
             if let limitPrice, let fill = Decimal(engine: order.averageFillPrice) {
                 prices = PricePoints(limit: limitPrice, market: fill, marketLabel: L10n.string("Filled at"), buying: buying)
             } else {

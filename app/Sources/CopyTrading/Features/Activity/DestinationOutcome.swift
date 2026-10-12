@@ -44,7 +44,8 @@ enum DestinationOutcome: Equatable {
         let done = OrderAmount.filled(order) ?? planned
         switch order.status {
         case "filled":
-            var detail = L10n.string(selling ? "Sold %@" : "Bought %@", done)
+            var detail = L10n.string(
+                order.isOwnerEntry ? (selling ? "You sold %@" : "You bought %@") : (selling ? "Sold %@" : "Bought %@"), done)
             if count > 1 { detail = L10n.string("%@ and %lld more", detail, Int64(count - 1)) }
             return .filled(detail)
         case "partially_filled":
