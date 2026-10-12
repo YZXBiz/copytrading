@@ -36,7 +36,7 @@ CopyTrading 是一款原生 macOS 应用。它读取交易者在 Discord 上发�
 > **开发者预览版。** CopyTrading 尚未通过实盘交易的资格验证。请先使用 Alpaca 模拟盘账户；已验证和尚未验证的内容见 [validation](docs/validation.md)。
 
 <p align="center">
-  <a href="docs/assets/zh/account.png"><img src="docs/assets/zh/account.png" alt="账户：余额与当日变化、净值曲线、现金和购买力，以及对照限额的今日亏损和股票持仓，每笔持仓都注明归属（示例数据）" width="860"></a>
+  <a href="docs/assets/zh/account.png"><img src="docs/assets/zh/account.png" alt="账户：余额与当日变化、净值曲线、现金和购买力，“限额”标题下的今日亏损、股票持仓及各项上限，每笔持仓都注明归属（示例数据）" width="860"></a>
 </p>
 
 <details>
