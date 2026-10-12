@@ -2,6 +2,8 @@
 (ADR-0012)."""
 
 import asyncio
+import hashlib
+import json
 
 import pytest
 from pydantic import SecretStr, ValidationError
@@ -124,3 +126,14 @@ def test_the_native_probe_refuses_a_missing_key_without_a_request():
     result = asyncio.run(NativeCapabilityProbes().triage(TriageConfiguration(**TRIAGE), ""))
 
     assert (result.state, result.reason_code) == ("failed", "triage_key_missing")
+
+
+def test_a_setup_without_the_filter_keeps_its_revision_from_before_the_filter_existed():
+    configuration = _with(None)
+    before = configuration.model_dump(mode="json")
+    before.pop("triage", None)
+    canonical = json.dumps(before, sort_keys=True, separators=(",", ":"))
+
+    assert "triage" not in configuration.model_dump(mode="json")
+    assert configuration.revision() == hashlib.sha256(canonical.encode()).hexdigest()
+    assert _with(TRIAGE).revision() != configuration.revision()

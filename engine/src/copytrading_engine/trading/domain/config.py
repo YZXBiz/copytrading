@@ -194,8 +194,9 @@ class TradingConfiguration(BaseModel):
     profiles: tuple[ProfileRevision, ...] = Field(min_length=1)
     routes: tuple[RouteConfiguration, ...] = Field(min_length=1)
     notification: NotificationConfiguration | None = None
-    # Off when absent: the reader reads every post (ADR-0012).
-    triage: TriageConfiguration | None = None
+    # Off when absent: the reader reads every post (ADR-0012). Left out of every dump while off,
+    # so a setup saved before the filter existed keeps its revision.
+    triage: TriageConfiguration | None = Field(default=None, exclude_if=lambda value: value is None)
 
     def revision(self) -> str:
         return _fingerprint(self.model_dump(mode="json"))
