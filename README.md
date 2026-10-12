@@ -36,7 +36,7 @@ CopyTrading is a native macOS app that reads the stock calls traders post on Dis
 > **Developer preview.** CopyTrading has not been qualified for live trading. Start with an Alpaca paper account, and see [validation](docs/validation.md) for what has and has not been proven.
 
 <p align="center">
-  <a href="docs/assets/account.png"><img src="docs/assets/account.png" alt="An account: its balance and the day's change, the equity curve, cash and buying power beside today's loss and what is in stocks against their limits, and each position with whose shares they are (sample data)" width="860"></a>
+  <a href="docs/assets/account.png"><img src="docs/assets/account.png" alt="An account: its balance and the day's change, the equity curve, cash and buying power, every limit under one Limits title with today's loss and what is in stocks against their caps, and each position with whose shares they are (sample data)" width="860"></a>
 </p>
 
 <details>
