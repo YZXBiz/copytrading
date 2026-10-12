@@ -10,7 +10,6 @@ from pydantic_ai import Agent, PromptedOutput
 from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.providers.anthropic import AnthropicProvider
 
-from copytrading_engine.parsing.extraction import ReadingOutput
 from copytrading_engine.parsing.learning import LEARN_INSTRUCTIONS, PlaybookProposal
 from copytrading_engine.shared.cleanup import close_logged
 from copytrading_engine.shared.model_providers import ProviderConfig
@@ -41,7 +40,6 @@ def build_decoder(config: ProviderConfig, client: AsyncAnthropic) -> PydanticAID
     model = chat_model(config, client)
     agent = reading_agent(
         model,
-        PromptedOutput(ReadingOutput),
         {"temperature": 0, "max_tokens": 3000},
     )
     learner = Agent(

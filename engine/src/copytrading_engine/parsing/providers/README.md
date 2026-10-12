@@ -6,16 +6,18 @@ Providers are selected once during parser startup from the fixed `ProviderRegist
 
 ## Decoder contract
 
-Implement `Decoder.decode(text, route)` and `ManagedDecoder.close()`:
+Implement `Decoder.answer(text, route, recent)` and `ManagedDecoder.close()`:
 
 ```python
 class ExampleDecoder:
-    async def decode(self, text: str, route: Route) -> PostReading: ...
+    async def answer(
+        self, text: str, route: Route, recent: tuple[RecentCall, ...] = ()
+    ) -> Answer: ...
 
     async def close(self) -> None: ...
 ```
 
-`PostReading` (`shared/reading.py`, ADR-0007) is the one reading contract for every guru: a tagged union of `trade_made`, `instruction`, `conditional`, `suggestion`, `commentary`, and `unclear`, whose calls carry the post's own words beside every value. Build the agent with `reading_agent()` in `pydantic_ai.py`: it registers the output validator that runs `check_reading` and gives the model one retry with the reason. The parser runs the same checks again after decode and decides what to do with the reading, so a provider response alone cannot authorize an order.
+`Answer` carries the reading, and the model that gave it with its confidence when a triage decision model settled the post (ADR-0012). `PostReading` (`shared/reading.py`, ADR-0007) is the one reading contract for every guru: a tagged union of `trade_made`, `instruction`, `conditional`, `suggestion`, `commentary`, `chatter`, and `unclear`, whose calls carry the post's own words beside every value. The reader never writes `chatter`: it answers `JustChat`, which carries nothing, or a `ReadingOutput` of the other kinds, and the engine stores chat as `chatter`. Build the agent with `reading_agent()` in `pydantic_ai.py`: it registers the output validator that runs `check_reading` and gives the model one retry with the reason. The parser runs the same checks again and decides what to do with the reading, so a provider response alone cannot authorize an order. With a triage decision model set up, DeepSeek builds the agent with `triaged_reading_agent()` instead: the decision model (`triage.py`) settles chat it is sure of and hands everything else to the reader.
 
 Translate expected provider, timeout, and output-validation failures to `DecodeError(reason, retryable=..., issues=...)`. Use a stable sanitized reason and typed `ValidationIssue` values. Do not retain provider response bodies, prompts, API keys, or exception text in errors or diagnostics. Let cancellation propagate; it is lifecycle control, not a provider failure. The common PydanticAI adapter shows the existing timeout, bounded-output, and sanitized-error pattern.
 

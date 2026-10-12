@@ -2200,3 +2200,5 @@
 "Buy %@ of %@ %@" = "Buy %@ of %@ %@";
 ", %@ worth" = ", %@ worth";
 "%@ cash  ·  %@ buying power" = "%@ cash  ·  %@ buying power";
+"Just chat, nothing to trade" = "Just chat, nothing to trade";
+"just chat" = "just chat";

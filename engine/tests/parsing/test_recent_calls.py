@@ -2,6 +2,7 @@
 a re-post restates, and the owner's corrections in place of the reader's own reading."""
 
 import datetime as dt
+import json
 from decimal import Decimal
 
 import pytest
@@ -133,7 +134,9 @@ def _decoder(model):
 
 
 def _answer(reading) -> str:
-    return ReadingOutput(reading=reading).model_dump_json()
+    # The reader answers a reading or chat; a reading comes in the choice's envelope.
+    data = ReadingOutput(reading=reading).model_dump(mode="json")
+    return json.dumps({"result": {"kind": "ReadingOutput", "data": data}}, ensure_ascii=False)
 
 
 async def test_the_reader_gets_the_playbook_then_the_recent_calls_after_its_fixed_instructions():
@@ -149,11 +152,10 @@ async def test_the_reader_gets_the_playbook_then_the_recent_calls_after_its_fixe
     try:
         with model:
             assert (
-                await decoder.decode(
+                await decoder.answer(
                     "iren 39.5的 45出掉", Route(playbook="艾伦 means IREN"), recent
                 )
-                == reading
-            )
+            ).reading == reading
     finally:
         await decoder.close()
     [instructions] = shown
@@ -181,7 +183,7 @@ async def test_a_repeat_must_name_a_listed_call_or_the_reader_is_asked_again():
     decoder, model = _decoder(FunctionModel(reader, profile=JSON_OUTPUT))
     try:
         with model:
-            assert await decoder.decode("5.85加了soun", Route(), recent) == right
+            assert (await decoder.answer("5.85加了soun", Route(), recent)).reading == right
     finally:
         await decoder.close()
     assert len(told) == 1
@@ -206,7 +208,7 @@ async def test_a_sell_naming_a_buy_the_guru_does_not_hold_is_asked_about_once_th
     decoder, model = _decoder(FunctionModel(reader, profile=JSON_OUTPUT))
     try:
         with model:
-            assert await decoder.decode("iren 40的 45出掉", Route(), recent) == named
+            assert (await decoder.answer("iren 40的 45出掉", Route(), recent)).reading == named
     finally:
         await decoder.close()
     assert len(asked) == 1
@@ -420,7 +422,9 @@ async def test_an_english_post_read_with_a_chinese_summary_is_asked_about_once(s
     decoder, model = _decoder(FunctionModel(reader, profile=JSON_OUTPUT))
     try:
         with model:
-            assert await decoder.decode("sell wmt half", Route(), recent) == reading(second)
+            assert (await decoder.answer("sell wmt half", Route(), recent)).reading == reading(
+                second
+            )
     finally:
         await decoder.close()
     assert len(asked) == 1

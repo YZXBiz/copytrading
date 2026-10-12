@@ -17,6 +17,7 @@ from copytrading_engine.shared.reading import (
     Batch,
     Buy,
     Call,
+    Chatter,
     Conditional,
     Dollars,
     Exact,
@@ -26,13 +27,14 @@ from copytrading_engine.shared.reading import (
     NotGiven,
     PostReading,
     Range,
+    ReaderReading,
     Sell,
     Stock,
     Suggestion,
     TradeMade,
 )
 
-PROMPT_VERSION = "stock-reading-v5"
+PROMPT_VERSION = "stock-reading-v6"
 
 # Chinese characters and ASCII letters both count as Unicode word characters.
 # Match complete numeric tokens and bound English words by ASCII letters so
@@ -59,10 +61,28 @@ class DecodeError(Exception):
 
 
 class ReadingOutput(BaseModel):
-    """What the reader model returns: one reading of the post."""
+    """Anything about stocks or the market: a trade made or to make, a plan, market talk, or a
+    post about a trade that cannot be pinned down. One reading of the post."""
 
     model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
+    reading: ReaderReading
+
+
+class JustChat(BaseModel):
+    """Small talk with nothing about stocks or the market: a greeting, a reaction, an emoji,
+    such as "hi", "how's going", "早上好", or "👍"."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+
+@dataclass(frozen=True)
+class Answer:
+    """A reading and the model that gave it. `sorted_confidence` is how likely the decision
+    model found the kind it settled the post as (ADR-0012); None when the reader read it."""
+
     reading: PostReading
+    model: str | None = None
+    sorted_confidence: float | None = None
 
 
 @dataclass(frozen=True)
@@ -76,9 +96,9 @@ class ReadingInput:
 
 
 class Decoder(Protocol):
-    async def decode(
-        self, text: str, route: Route, recent: tuple[RecentCall, ...] = ()
-    ) -> PostReading: ...
+    async def answer(self, text: str, route: Route, recent: tuple[RecentCall, ...] = ()) -> Answer:
+        """The post read, and which model answered."""
+        ...
 
 
 def playbook_maps(playbook: str, phrase: str, symbol: str) -> bool:
@@ -410,7 +430,9 @@ def check_summary_language(reading: PostReading, text: str, *, retried: bool) ->
     """The summary is written in the post's own language. A post with no Chinese in it gets a
     summary with none either: the reader's examples are Chinese and can pull it there. Asked
     about once; a second answer stands, since a summary is read, never traded on."""
-    if retried or _has_chinese(text) or not _has_chinese(reading.summary):
+    if isinstance(reading, Chatter) or retried or _has_chinese(text):
+        return None
+    if not _has_chinese(reading.summary):
         return None
     return "summary: write it in the post's own language, which is English here, not Chinese"
 

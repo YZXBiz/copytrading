@@ -9,6 +9,7 @@ from copytrading_engine.shared.reading import (
     AtMarket,
     Batch,
     Buy,
+    Chatter,
     Commentary,
     Conditional,
     Dollars,
@@ -80,6 +81,7 @@ def examples() -> list:
             summary="Re-posts the SOUN buy",
         ),
         Commentary(summary="TSLA 373 is still resistance today"),
+        Chatter(),
         Unclear(summary="Cannot tell"),
         trade(
             Buy(

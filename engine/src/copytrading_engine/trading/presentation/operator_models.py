@@ -83,6 +83,9 @@ class SourceActivity(Value):
     parser_reason: str | None
     parser_profile: str | None
     interpreted_by: str | None
+    # How sure the decision model was when it settled the post itself (ADR-0012): "Sorted as
+    # chat (98% sure)". None when the reader read it.
+    sorted_confidence: float | None = None
     # The calls the post trades, as the engine places them, before any account sizing.
     instructions: tuple[Instruction, ...]
     # For a post that waits for the owner: what Copy places (ADR-0007).

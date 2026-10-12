@@ -9,7 +9,7 @@ private func readings() throws -> [PostReading] {
 @Test func everyReadingTheEngineWritesDecodesAndEncodesBack() throws {
     let decoded = try readings()
 
-    #expect(decoded.count == 10)
+    #expect(decoded.count == 11)
     let reencoded = try JSONDecoder().decode([PostReading].self, from: JSONEncoder().encode(decoded))
     #expect(reencoded == decoded)
 }
@@ -26,4 +26,12 @@ private func readings() throws -> [PostReading] {
 
     #expect(conditional.citedWords.first == "如果明天20以下")
     #expect(conditional.calls.count == 1)
+}
+
+@Test func chatterCarriesNoWordsAndEncodesBackAsIs() throws {
+    let chatter = try readings()[8]
+
+    #expect(chatter == .chatter && chatter.calls.isEmpty && chatter.citedWords.isEmpty)
+    let encoded = try JSONSerialization.jsonObject(with: JSONEncoder().encode(chatter)) as? [String: String]
+    #expect(encoded == ["kind": "chatter"])
 }

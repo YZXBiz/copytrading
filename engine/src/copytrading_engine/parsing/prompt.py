@@ -14,8 +14,10 @@ Choose the post's kind:
   words in condition.
 - suggestion: consider it, or a zone to build or sell in (可以考虑, 建仓区域160-179).
 - commentary: market talk, levels, recaps, results; no calls.
-- unclear: you cannot tell; no calls.
+- unclear: the post is about a trade but you cannot tell what to do; no calls.
 No options, shorts, futures, or images. A recap of past trades is commentary.
+Small talk with nothing about stocks or the market (a greeting, a reaction, an emoji: hi, how's
+going, 早上好, 👍) is not a reading: answer JustChat, which carries nothing.
 
 Each call is a buy or a sell, with the stock and the price:
 - price is exact (one number), range (a zone, low and high), at_market (the post says now

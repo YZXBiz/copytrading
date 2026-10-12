@@ -32,6 +32,7 @@ def outcome(
     profile_revision: str | None = None,
     reading: r.PostReading | None = None,
     suggested: Sequence[Instruction] = (),
+    sorted_confidence: float | None = None,
 ) -> StockSignal:
     return StockSignal(
         reading=reading,
@@ -44,6 +45,7 @@ def outcome(
         text=event.text,
         parser_profile=PROMPT_VERSION,
         model=model,
+        sorted_confidence=sorted_confidence,
         guru_id=guru_id,
         profile_revision=profile_revision,
         decision=decision,
@@ -79,7 +81,8 @@ async def transform(
     if local is not None:
         return local
     text = normalize(event.text).strip()
-    reading = await decoder.decode(text, route, recent)
+    answer = await decoder.answer(text, route, recent)
+    reading = answer.reading
     try:
         check_reading(reading, text, route)
     except GroundingError as exc:
@@ -99,7 +102,8 @@ async def transform(
         event,
         decision,
         reason,
-        model=model,
+        model=answer.model or model,
+        sorted_confidence=answer.sorted_confidence,
         instructions=tuple(call for call, _ in calls),
         evidence=tuple(evidence for _, evidence in calls),
         guru_id=route.guru_id,
@@ -148,10 +152,12 @@ def _act_on(
 ) -> tuple[Literal["trade", "ignore", "review"], str, tuple[tuple[Instruction, Evidence], ...]]:
     """Act or ask (ADR-0007): a trade made or an instruction with every call placeable trades;
     conditionals, suggestions, a range, a buy with no exact price, and a vague trim wait for the
-    owner; commentary is ignored."""
+    owner; commentary and chatter are ignored."""
     match reading:
         case r.Commentary():
             return "ignore", reading.summary, ()
+        case r.Chatter():
+            return "ignore", "chatter", ()
         case r.Unclear():
             return "review", "unclear", ()
         case r.Conditional() | r.Suggestion():

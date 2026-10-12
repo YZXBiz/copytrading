@@ -17,6 +17,8 @@ from copytrading_engine.shared.model_providers import (
     LOCAL_PROVIDERS,
     ModelProvider,
     ProviderConfig,
+    TriageConfig,
+    TriageProvider,
     endpoint_problem,
 )
 from copytrading_engine.trading.domain.profiles import ProfileRevision
@@ -63,12 +65,41 @@ class ProviderConfiguration(BaseModel):
                 raise ValueError(problem)
         return self
 
-    def reader(self, api_key: SecretStr, *, timeout: float) -> ProviderConfig:
+    def reader(
+        self, api_key: SecretStr, *, timeout: float, triage: TriageConfig | None = None
+    ) -> ProviderConfig:
         """The reader's configuration; a named cloud service always needs its key."""
         if not api_key.get_secret_value() and self.name not in LOCAL_PROVIDERS:
             raise ValueError("The model API key is required")
         return ProviderConfig(
-            api_key=api_key, model=self.model, timeout=timeout, base_url=self.base_url
+            api_key=api_key,
+            model=self.model,
+            timeout=timeout,
+            base_url=self.base_url,
+            triage=triage,
+        )
+
+
+class TriageConfiguration(BaseModel):
+    """A decision model that sorts each post before the reader (ADR-0012): chat it is sure of is
+    settled there, and everything else goes on to the reader. Its key is kept with the others."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
+
+    provider: TriageProvider
+    model: str = Field(min_length=1, max_length=128)
+    # How likely the pick has to be before the post is settled without the reader.
+    route_threshold: float = Field(default=0.9, ge=0.5, le=1, allow_inf_nan=False)
+
+    def config(self, api_key: SecretStr | None, *, timeout: float) -> TriageConfig:
+        if api_key is None or not api_key.get_secret_value():
+            raise ValueError("The triage model API key is required")
+        return TriageConfig(
+            provider=self.provider,
+            model=self.model,
+            api_key=api_key,
+            route_threshold=self.route_threshold,
+            timeout=timeout,
         )
 
 
@@ -163,6 +194,8 @@ class TradingConfiguration(BaseModel):
     profiles: tuple[ProfileRevision, ...] = Field(min_length=1)
     routes: tuple[RouteConfiguration, ...] = Field(min_length=1)
     notification: NotificationConfiguration | None = None
+    # Off when absent: the reader reads every post (ADR-0012).
+    triage: TriageConfiguration | None = None
 
     def revision(self) -> str:
         return _fingerprint(self.model_dump(mode="json"))
@@ -177,6 +210,10 @@ class TradingConfiguration(BaseModel):
 
     @model_validator(mode="after")
     def validate_references(self) -> Self:
+        # The decision model hands the reader the step through a tool call, which only the
+        # DeepSeek reader is set up to answer (ADR-0012).
+        if self.triage is not None and self.provider.name != "deepseek":
+            raise ValueError("Triage works with the DeepSeek interpreter")
         accounts = {account.id: account for account in self.accounts}
         if len(accounts) != len(self.accounts):
             raise ValueError("account identifiers must be unique")
@@ -233,6 +270,8 @@ class TradingSecrets(BaseModel):
     provider_api_key: SecretStr
     brokers: tuple[BrokerCredentials, ...]
     notification_token: SecretStr | None = None
+    # The triage decision model's key, when the configuration has one (ADR-0012).
+    triage_api_key: SecretStr | None = None
 
     @model_validator(mode="after")
     def validate_brokers(self) -> Self:
@@ -262,6 +301,19 @@ class ModelCheck(BaseModel):
 
     kind: Literal["model"]
     provider: ProviderConfiguration
+    api_key: SecretStr
+
+    def secret_values(self) -> tuple[str, ...]:
+        return (self.api_key.get_secret_value(),)
+
+
+class TriageCheck(BaseModel):
+    """The triage decision model, with its key (ADR-0012)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
+
+    kind: Literal["triage"]
+    triage: TriageConfiguration
     api_key: SecretStr
 
     def secret_values(self) -> tuple[str, ...]:
@@ -300,7 +352,7 @@ class NotificationCheck(BaseModel):
         return (self.token.get_secret_value(),)
 
 
-type ConnectionCheck = SourceCheck | ModelCheck | BrokerCheck | NotificationCheck
+type ConnectionCheck = SourceCheck | ModelCheck | TriageCheck | BrokerCheck | NotificationCheck
 
 
 def _fingerprint(value: object) -> str:

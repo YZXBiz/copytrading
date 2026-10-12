@@ -2200,3 +2200,5 @@
 "Buy %@ of %@ %@" = "买入 %@ 的 %@，%@";
 ", %@ worth" = "，金额 %@";
 "%@ cash  ·  %@ buying power" = "现金 %@  ·  购买力 %@";
+"Just chat, nothing to trade" = "只是闲聊，没有交易";
+"just chat" = "闲聊";

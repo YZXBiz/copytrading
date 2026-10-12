@@ -5,15 +5,19 @@ import sqlite3
 from pathlib import Path
 from types import SimpleNamespace
 
+from copytrading_engine.parsing.extraction import Answer
+
 from ...readings import buy, commentary, trade
 
 
 class Decoder:
-    async def decode(self, text, route, recent=()):
+    async def answer(self, text, route, recent=()):
         if text == "Market commentary only. No trade action.":
-            return commentary("No trade action")
+            return Answer(commentary("No trade action"))
         assert text == "Bought AAPL at 200"
-        return trade(buy("AAPL", "200", said="Bought", ticker_said="AAPL"), summary="Current buy")
+        return Answer(
+            trade(buy("AAPL", "200", said="Bought", ticker_said="AAPL"), summary="Current buy")
+        )
 
     async def close(self):
         pass
