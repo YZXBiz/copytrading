@@ -35,8 +35,10 @@ private func dayGivesRegularHoursTheRoom() throws {
         "the middle of regular hours is not the middle of their span")
     try verifyScale(scale.isExtended(exchangeTime(8, 0)) && scale.isExtended(exchangeTime(17, 0)), "extended hours not recognized")
     try verifyScale(!scale.isExtended(exchangeTime(9, 30)) && !scale.isExtended(exchangeTime(16, 0)), "the open or close read as extended")
-    try verifyScale(scale.ticks.map(\.x).allSatisfy { $0 >= scale.openX && $0 < scale.closeX }, "a day tick fell outside regular hours")
-    try verifyScale(scale.ticks.first?.x == scale.openX, "a day's labels did not start at the opening bell")
+    try verifyScale(
+        scale.ticks(in: .current, locale: .current).map(\.x).allSatisfy { $0 >= scale.openX && $0 <= scale.closeX },
+        "a day tick fell outside regular hours")
+    try verifyScale(scale.ticks(in: .current, locale: .current).first?.x == scale.openX, "a day's labels did not start at the opening bell")
 }
 
 @MainActor
@@ -56,7 +58,7 @@ private func longerRangesAreLinear() throws {
     let scale = EquityChartScale(range: .week, first: first, last: last)
     try verifyScale(abs(scale.x(first.addingTimeInterval(3.5 * 86_400)) - 0.5) < 1e-9, "a week is not linear in time")
     try verifyScale(!scale.isExtended(first.addingTimeInterval(-3_600 * 3)), "a week dimmed extended hours")
-    try verifyScale(!scale.ticks.isEmpty, "a week has no time labels")
+    try verifyScale(!scale.ticks(in: .current, locale: .current).isEmpty, "a week has no time labels")
 }
 
 @MainActor

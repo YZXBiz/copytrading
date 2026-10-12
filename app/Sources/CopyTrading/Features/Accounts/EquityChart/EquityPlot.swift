@@ -41,7 +41,7 @@ struct EquityPlot: View {
         let bounds = valueRange
         let axis = EquityValueAxis(lower: bounds.lower, upper: bounds.upper, count: 3)
         let scale = self.scale
-        let ticks = scale.ticks
+        let ticks = scale.ticks(in: AppTime.zone, locale: AppTime.locale)
         let runs = EquityLineRun.runs(curve.points, on: scale)
         Chart {
             referenceLine

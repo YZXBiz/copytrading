@@ -18,7 +18,6 @@
 "%@ at up to %@" = "%@，限价 %@";
 "%@ copied" = "已跟单%@条";
 "%@ done" = "%@ 已完成";
-"%@ ET" = "%@ 美东时间";
 "%@ held outside CopyTrading" = "CopyTrading 之外持有 %@";
 "%@ of %@" = "%@ / %@";
 "%@ of %@ characters" = "字符数：%@ / %@";

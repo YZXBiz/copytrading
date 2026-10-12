@@ -68,17 +68,27 @@ struct EquityChartScale {
         isDay && (date < open || date > close)
     }
 
-    /// Time labels spaced for the range: the opening bell and each hour of regular trading on a day,
-    /// so a morning drawn across the whole width still reads, then days or months.
-    var ticks: [Tick] {
+    /// Time labels spaced for the range, in the zone and language the rest of the app reads in.
+    /// A day marks the opening bell, every whole hour of regular trading at least 45 minutes clear
+    /// of the bell and the close, and the close, so the marks sit evenly; longer ranges mark days
+    /// or months.
+    func ticks(in zone: TimeZone, locale: Locale) -> [Tick] {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        var clock = Date.FormatStyle.dateTime.hour().minute().locale(locale)
+        clock.timeZone = zone
         if isDay {
-            var style = Date.FormatStyle.dateTime.hour().minute()
-            style.timeZone = Self.calendar.timeZone
-            let hours = (10...15).map { hour in
-                let date = Self.calendar.date(byAdding: .hour, value: hour, to: Self.calendar.startOfDay(for: open)) ?? open
-                return Tick(x: x(date), label: Self.hourLabel(date))
+            let clear: TimeInterval = 45 * 60
+            var hours: [Tick] = []
+            var hour = calendar.dateInterval(of: .hour, for: open)?.end ?? open
+            while hour < close {
+                if hour.timeIntervalSince(open) >= clear, close.timeIntervalSince(hour) >= clear {
+                    hours.append(Tick(x: x(hour), label: hour.formatted(clock)))
+                }
+                hour = hour.addingTimeInterval(3600)
             }
-            return [Tick(x: x(open), label: open.formatted(style))] + hours
+            return [Tick(x: x(open), label: open.formatted(clock))] + hours
+                + [Tick(x: x(close), label: close.formatted(clock))]
         }
         let span = end.timeIntervalSince(start)
         let (unit, step, format): (Calendar.Component, Int, Date.FormatStyle) =
@@ -90,33 +100,17 @@ struct EquityChartScale {
                     ? (.day, 14, .dateTime.month(.abbreviated).day())
                     : (.month, span > 200 * 86_400 ? 2 : 1, .dateTime.month(.abbreviated))
             }
-        var style = format
-        style.timeZone = Self.calendar.timeZone
+        var style = format.locale(locale)
+        style.timeZone = zone
         var ticks: [Tick] = []
-        var date = Self.calendar.startOfDay(for: start)
-        if unit == .month, let month = Self.calendar.dateInterval(of: .month, for: start)?.start { date = month }
+        var date = calendar.startOfDay(for: start)
+        if unit == .month, let month = calendar.dateInterval(of: .month, for: start)?.start { date = month }
         while date <= end {
             if date >= start { ticks.append(Tick(x: x(date), label: date.formatted(style))) }
-            guard let next = Self.calendar.date(byAdding: unit, value: step, to: date) else { break }
+            guard let next = calendar.date(byAdding: unit, value: step, to: date) else { break }
             date = next
         }
         return ticks
-    }
-
-    /// An hour as the reader's clock writes it: "10 AM" with AM and PM, "10:00" on a 24-hour clock.
-    static func hourLabel(_ date: Date) -> String {
-        let hour = calendar.component(.hour, from: date)
-        let template = DateFormatter.dateFormat(fromTemplate: "j", options: 0, locale: .current) ?? "h a"
-        guard template.contains("a") else { return "\(hour):00" }
-        let twelve = hour % 12 == 0 ? 12 : hour % 12
-        return "\(twelve) \(hour < 12 ? Calendar.current.amSymbol : Calendar.current.pmSymbol)"
-    }
-
-    /// Exchange time, so hour marks fall on New York hours wherever the Mac is.
-    static var calendar: Calendar {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = EquityChartTime.zone
-        return calendar
     }
 
     private static func fraction(of date: Date, from lower: Date, to upper: Date) -> Double {
