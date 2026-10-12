@@ -2172,3 +2172,6 @@
 "Pre-market" = "Pre-market";
 "After hours" = "After hours";
 "·  %@ cash  ·  %@ buying power" = "·  %@ cash  ·  %@ buying power";
+"%@ · your max per order" = "%@ · your max per order";
+"The call asked for" = "The call asked for";
+"%@ · your max per order (the call asked for %@)" = "%@ · your max per order (the call asked for %@)";

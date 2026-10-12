@@ -222,8 +222,9 @@ struct ManualInstructionEditor: View {
         draft.isSell = sell
         draft.entryPrice = ""
         draft.exitBasis = nil
+        // The stock stays what the post named, or empty for the owner to pick: choosing Sell never
+        // fills in a stock the post didn't name.
         if sell {
-            if holding == nil, let first = holdings.first { pick(first.symbol) }
             if draft.fraction.isEmpty { draft.fraction = "1" }
         } else if draft.fraction == "1" {
             draft.fraction = ""

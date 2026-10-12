@@ -198,13 +198,16 @@ struct ActivityCardOutcome {
             }
         }
         if let budget = Decimal(engine: order.budgetUSD) {
-            facts.append(
-                wasTrimmed(order)
-                    ? Fact(
-                        label: L10n.string("Order (max per order)"),
-                        value: L10n.string(
-                            "%@ of %@", Humanize.dollars(order.budgetUSD), Humanize.dollars(order.requestedUSD)))
-                    : Fact(label: L10n.string("Order"), value: OrderAmount.dollars(budget)))
+            if wasTrimmed(order) {
+                // Capped by the account's max per order: say so, and what the call asked for.
+                facts.append(
+                    Fact(
+                        label: L10n.string("Order"),
+                        value: L10n.string("%@ · your max per order", Humanize.dollars(order.budgetUSD))))
+                facts.append(Fact(label: L10n.string("The call asked for"), value: Humanize.dollars(order.requestedUSD)))
+            } else {
+                facts.append(Fact(label: L10n.string("Order"), value: OrderAmount.dollars(budget)))
+            }
         }
         return Result(headline: headline, facts: Array(facts.prefix(4)), suggestion: suggestion, prices: prices)
     }

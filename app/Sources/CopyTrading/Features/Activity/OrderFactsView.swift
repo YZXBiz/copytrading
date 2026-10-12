@@ -27,11 +27,20 @@ struct OrderFactsView: View {
         }
     }
 
-    /// "$200 of PM", or "$200 of PM · cut from $600" when the max per order trimmed it.
+    /// "$200 of PM", or "$200 of PM · your max per order (the call asked for $600)" when the max
+    /// per order capped it.
     private var size: String? {
         guard let planned = OrderAmount.planned(order) else { return nil }
         return ActivityCardOutcome.wasTrimmed(order)
-            ? L10n.string("%@ · cut from %@", planned, Humanize.dollars(order.requestedUSD)) : planned
+            ? L10n.string("%@ · your max per order (the call asked for %@)", planned, Humanize.dollars(order.requestedUSD))
+            : planned
+    }
+
+    /// The shares that filled; "of" the order's shares only while part of it is still missing.
+    private var filled: String {
+        let done = Decimal(engine: order.filledQuantity) ?? 0
+        let asked = Decimal(engine: order.quantity) ?? 0
+        return done < asked ? Humanize.shares(done, of: asked) : Humanize.shares(done)
     }
 
     var body: some View {
@@ -44,9 +53,7 @@ struct OrderFactsView: View {
             if let size {
                 TechnicalFactRow(label: "Size") { Text(size) }
             }
-            TechnicalFactRow(label: "Filled") {
-                Text(Humanize.shares(Decimal(engine: order.filledQuantity) ?? 0, of: Decimal(engine: order.quantity) ?? 0))
-            }
+            TechnicalFactRow(label: "Filled") { Text(filled) }
             if let limit = money(order.limitPrice) {
                 TechnicalFactRow(label: "Limit") {
                     if let tolerance = Decimal(engine: order.entryTolerancePct), order.side != "sell" {

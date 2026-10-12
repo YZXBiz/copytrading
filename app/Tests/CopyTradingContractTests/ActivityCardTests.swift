@@ -143,7 +143,8 @@ private func aTrimmedBuyIsTradedSmallerAndSaysByHowMuch() throws {
         result.facts
             == [
                 .init(label: "Shares", value: "42 shares"),
-                .init(label: "Order (max per order)", value: "$250 of $333.33"),
+                .init(label: "Order", value: "$250 · your max per order"),
+                .init(label: "The call asked for", value: "$333.33"),
             ],
         "facts were \(result.facts)")
     // The fill price is drawn beside the limit on the ruler rather than listed as a number.

@@ -2172,3 +2172,6 @@
 "Pre-market" = "盘前";
 "After hours" = "盘后";
 "·  %@ cash  ·  %@ buying power" = "·  现金 %@  ·  购买力 %@";
+"%@ · your max per order" = "%@ · 你的单笔上限";
+"The call asked for" = "喊单要求";
+"%@ · your max per order (the call asked for %@)" = "%@ · 你的单笔上限（喊单要求 %@）";
