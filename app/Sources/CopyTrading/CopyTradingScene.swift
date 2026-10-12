@@ -31,9 +31,11 @@ public struct CopyTradingScene: Scene {
                     lifecycle.model = model
                     model.accountFeature = accountFeature
                     updater.willRelaunch = { [model] in model.rememberCopyingForRelaunch() }
-                    accountFeature.onFills = { [model] fills in
-                        FillNotifications.post(fills, directory: GuruDirectory(model.savedTradingConfiguration))
+                    accountFeature.onOrders = { [model] news in
+                        FillNotifications.post(news, directory: GuruDirectory(model.savedTradingConfiguration))
                     }
+                    // Asked once, up front, so the first order sent is never the one that asks.
+                    FillNotifications.requestPermission()
                     model.startIfNeeded()
                 }
         }

@@ -27,11 +27,6 @@ struct ActivityTechnicalDetailsContent: View {
                 if let interpretedBy = item.interpretedBy {
                     TechnicalFactRow(label: "Read by") { Text(interpretedBy) }
                 }
-                if item.sourceRevision > 1 {
-                    TechnicalFactRow(label: "Edits") {
-                        Text(L10n.string("Edited %@ after posting", Humanize.count(item.sourceRevision - 1, "time")))
-                    }
-                }
                 if item.profileRevision != nil {
                     TechnicalFactRow(label: "Guru version") {
                         Text(Humanize.revision(item.profileRevision))

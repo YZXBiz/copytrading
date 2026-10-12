@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// What happens when CopyTrading opens: whether it asks for Touch ID, and whether copying starts
-/// on its own; whether the Mac stays awake while it copies, and whether each fill is announced.
+/// on its own; whether the Mac stays awake while it copies, and whether each copied order is announced.
 struct GeneralSettingsPage: View {
     let model: AppModel
     @State private var asksForOwner = true
@@ -39,7 +39,8 @@ struct GeneralSettingsPage: View {
                 )
                 SettingsToggleRow(
                     title: "Tell me when a trade fills",
-                    detail: "A notification with a sound for each copied buy or sell, saying what filled and from whose post.",
+                    detail:
+                        "A notification with a sound when each copied buy or sell goes out and again when it fills, saying what and from whose post.",
                     isOn: $notifiesFills,
                     identifier: "settings.notifiesFills"
                 )
