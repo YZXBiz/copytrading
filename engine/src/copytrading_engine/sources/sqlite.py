@@ -6,6 +6,7 @@ import asyncio
 import datetime as dt
 import hashlib
 import json
+import logging
 import sqlite3
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -47,9 +48,15 @@ from copytrading_engine.sources.recovery import (
     plain_json,
 )
 
+log = logging.getLogger(__name__)
 
-class SourceIdentityConflict(ValueError):
-    """One source identity was reused with different content."""
+
+def _seen_again(source_id: str, why: str) -> bool:
+    """A Discord message seen again with other content was edited after it was first seen. The
+    first version is the one that counts, since it may already be copied; the later one is only
+    logged, never copied again, and never stops reading the channel."""
+    log.warning("source_message_seen_again id=%s why=%s", source_id, why)
+    return False
 
 
 SOURCE_SCHEMA = SchemaComponent(
@@ -302,12 +309,10 @@ def _insert_capture(
     """Insert a capture and its evidence; False when the same content is already captured."""
     payload, digest = _serialize(event)
     if db.execute("SELECT 1 FROM source_rejected WHERE id=?", (event.identity,)).fetchone():
-        raise SourceIdentityConflict("Source ID was previously rejected")
+        return _seen_again(event.identity, "first_rejected")
     old = db.execute("SELECT hash FROM source_captures WHERE id=?", (event.identity,)).fetchone()
     if old:
-        if old[0] != digest:
-            raise SourceIdentityConflict("Source ID reused with different payload")
-        return False
+        return _seen_again(event.identity, "edited") if old[0] != digest else False
     db.execute(
         "INSERT INTO source_captures"
         "(id,hash,payload,source_at,captured_at,recovered,mode,workflow_id,trace_id) "
@@ -355,12 +360,10 @@ def _insert_rejection(
     payload = json.dumps(event, sort_keys=True, ensure_ascii=False)
     digest = hashlib.sha256(payload.encode()).hexdigest()
     if db.execute("SELECT 1 FROM source_captures WHERE id=?", (key,)).fetchone():
-        raise SourceIdentityConflict("Source ID was previously captured")
+        return _seen_again(key, "first_captured")
     old = db.execute("SELECT hash FROM source_rejected WHERE id=?", (key,)).fetchone()
     if old:
-        if old[0] != digest:
-            raise SourceIdentityConflict("Rejected source ID reused with different payload")
-        return False
+        return _seen_again(key, "edited") if old[0] != digest else False
     db.execute(
         "INSERT INTO source_rejected VALUES (?,?,?,?,?)",
         (key, digest, payload, reason, rejected_at.isoformat()),

@@ -237,6 +237,8 @@ extension AppModel {
                 reviews = [:]
             }
             self.isPausedToApplyChanges = true
+            self.accountsCopyingBeforeApply = Set(
+                (self.accountFeature?.accounts ?? []).filter { AccountCopyState($0).isCopying }.map(\.accountID))
             await self.pauseTrading()
             guard await self.waitUntilPaused() else {
                 guard !Task.isCancelled else { return }
@@ -272,6 +274,7 @@ extension AppModel {
         let failedCheck = tradingValidation.flatMap { $0.report.activatable ? nil : $0 }
         cancelTradingActivation()
         await startTrading(resumingSavedSetup: true)
+        turnOnAccountsCopyingBeforeApply()
         if let failedCheck, tradingStatus?.state != .paused {
             tradingValidation = failedCheck
             isShowingSetupCheck = true
@@ -326,6 +329,7 @@ extension AppModel {
         profileExamplesAcknowledged = false
         guard !appliedChanges else {
             message = L10n.string("Your changes are saved, and copying uses them now.")
+            turnOnAccountsCopyingBeforeApply()
             return
         }
         message = nil

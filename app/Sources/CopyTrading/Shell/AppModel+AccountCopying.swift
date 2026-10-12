@@ -55,11 +55,24 @@ extension AppModel {
         await turnOnEveryAccount(feature: feature)
     }
 
+    /// Applying changes restarts copying, and a restarted account waits for its Start Copying;
+    /// the accounts that were copying before the apply copy again without asking.
+    func turnOnAccountsCopyingBeforeApply() {
+        let ids = accountsCopyingBeforeApply
+        accountsCopyingBeforeApply = []
+        guard !ids.isEmpty, isCopyingRunning, let accountFeature else { return }
+        Task { await turnOn(ids.sorted(), feature: accountFeature) }
+    }
+
     /// After a start from Connections or the menu bar the owner already approved copying into
     /// every account in the setup, live ones included, so each one's buys go on without asking again.
     func turnOnEveryAccount(feature: AccountFeatureModel) async {
+        await turnOn(savedTradingConfiguration?.accounts.map(\.id) ?? [], feature: feature)
+    }
+
+    private func turnOn(_ accountIDs: [String], feature: AccountFeatureModel) async {
         let operations = accountActions()
-        for id in savedTradingConfiguration?.accounts.map(\.id) ?? [] {
+        for id in accountIDs {
             guard let account = await heldAccount(id, feature: feature, using: operations),
                 !AccountCopyState(account).isCopying
             else { continue }

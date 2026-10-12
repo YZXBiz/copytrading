@@ -6,6 +6,8 @@ User-visible changes for each release are recorded here. Every GitHub release's 
 
 - **One switch per account.** Each account's page has one **Start Copying** or **Stop Copying**. Start Copying starts copying if it isn't running and copies into that account; Stop Copying stops its buys, and sells of what it already copied still follow the guru. The sidebar says which accounts copy, and the toolbar only offers **Stop All** (**Stop Copying** with one account) while copying runs. "Entries" are gone: there is no Enable, Pause, or Resume Entries any more, and a finished setup copies into every account it saved.
 - **Limits always save.** A limit changed while copying was starting used to wait as "Changed — not saved yet"; it now saves the moment the start settles, and the account page shows the new limits right away.
+- **An edited Discord post no longer stops copying.** A post edited after CopyTrading first read it used to stop the Discord connection on every start ("Discord could not be reached"). The first version is the one that counts and is never copied twice; the edit is noted and reading carries on.
+- **Apply Changes keeps your accounts copying.** Applying a change restarts copying; every account that was copying before copies again afterwards.
 - **A start that fails says why in plain words**, such as "Copying didn't start: Discord could not be reached. Try again.", instead of an engine message.
 
 ## 0.1.0-alpha.9 — developer preview

@@ -87,6 +87,9 @@ final class AppModel {
     /// Copying was paused only to apply setup changes; anything short of starting the new setup
     /// resumes the saved one, so copying never stays paused by surprise.
     var isPausedToApplyChanges = false
+    /// The accounts that were copying when Apply Changes paused; they copy again afterwards,
+    /// whether the new setup started or the saved one came back.
+    var accountsCopyingBeforeApply: Set<String> = []
     /// An apply is under way, from reading the examples to copying again. Start Copying waits for
     /// it: a second press would cancel it halfway and leave copying paused.
     var isApplyingChanges = false
