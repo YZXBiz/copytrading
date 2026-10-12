@@ -100,7 +100,13 @@ class ParseWorker:
         if result is not None:
             await self.store.finish(key, result)
             self.on_decision(result.decision)
-            log.info("decoded id=%s decision=%s", key, result.decision)
+            log.info(
+                "decoded id=%s decision=%s model=%s sorted_confidence=%s",
+                key,
+                result.decision,
+                result.model,
+                result.sorted_confidence,
+            )
         return True
 
     async def _decode(

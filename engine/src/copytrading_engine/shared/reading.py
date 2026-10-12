@@ -209,6 +209,13 @@ class Commentary(_Part):
     summary: Summary
 
 
+class Chatter(_Part):
+    """Small talk with nothing about stocks or the market: a greeting, a reaction, an emoji. It
+    has no words to cite, so a decision model can sort a post here on its own."""
+
+    kind: Literal["chatter"] = "chatter"
+
+
 class Unclear(_Part):
     """The reader cannot tell what the post means; a person should look."""
 
@@ -216,7 +223,14 @@ class Unclear(_Part):
     summary: Summary
 
 
-type PostReading = Annotated[
+type ReaderReading = Annotated[
     TradeMade | Instruction | Conditional | Suggestion | Commentary | Unclear,
+    Field(discriminator="kind"),
+]
+"""What the reader writes. Chat is not a reading: the reader says it through its own output,
+which carries nothing, and the engine stores it as `Chatter` (ADR-0012)."""
+
+type PostReading = Annotated[
+    TradeMade | Instruction | Conditional | Suggestion | Commentary | Chatter | Unclear,
     Field(discriminator="kind"),
 ]

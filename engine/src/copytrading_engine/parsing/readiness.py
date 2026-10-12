@@ -24,7 +24,7 @@ class ModelReadiness:
 async def probe_model(decoder: Decoder, health: ModelReadiness) -> None:
     revision = health.revision
     try:
-        result = await decoder.decode("Market commentary only. No trade action.", Route())
+        result = (await decoder.answer("Market commentary only. No trade action.", Route())).reading
         error = None if isinstance(result, Commentary) else "unexpected_probe_output"
     except DecodeError as exc:
         error = exc.reason

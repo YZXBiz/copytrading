@@ -4,7 +4,7 @@ import pytest
 from pydantic import SecretStr, ValidationError
 from pydantic_ai.exceptions import ModelHTTPError, UsageLimitExceeded
 
-from copytrading_engine.parsing.extraction import DecodeError
+from copytrading_engine.parsing.extraction import Answer, DecodeError
 from copytrading_engine.parsing.providers.pydantic_ai import PydanticAIDecoder
 from copytrading_engine.parsing.providers.registry import ProviderRegistry, builtin_registry
 from copytrading_engine.parsing.routes import Route
@@ -44,9 +44,9 @@ async def test_fake_provider_can_register_decode_and_close_without_worker_change
         def __init__(self):
             self.close_calls = 0
 
-        async def decode(self, text, route, recent=()):
+        async def answer(self, text, route, recent=()):
             calls.append((text, route))
-            return commentary("fake")
+            return Answer(commentary("fake"))
 
         async def close(self):
             self.close_calls += 1
@@ -64,7 +64,7 @@ async def test_fake_provider_can_register_decode_and_close_without_worker_change
     assert registry.names() == ("fake",)
     registered = await registry.create("fake", config())
     route = Route()
-    reading = await registered.decode("message", route)
+    reading = (await registered.answer("message", route)).reading
     await registered.close()
 
     assert reading.kind == "commentary"
@@ -128,7 +128,7 @@ def test_prompt_bytes_match_the_pre_adapter_prompt():
 
     assert (
         hashlib.sha256(INSTRUCTIONS.encode()).hexdigest()
-        == "5bc066f809f94eaf7e31bafd64a138f2fc15f21709a4fe54d6e15bf7509fef8e"
+        == "b90301eb54b1d26580e3d61a0bd92a2f3ea854ad173876864e294377f6212004"
     )
 
 
@@ -140,7 +140,7 @@ async def test_budget_exhaustion_is_translated_without_provider_text():
     decoder = PydanticAIDecoder(FailedAgent(), FailedAgent(), CloseOnlyClient(), timeout=1)
 
     with pytest.raises(DecodeError) as failure:
-        await decoder.decode("source", Route())
+        await decoder.answer("source", Route())
 
     assert failure.value.reason == "model_output_budget_exceeded"
     assert not failure.value.retryable
@@ -160,7 +160,7 @@ async def test_rejected_key_does_not_leak_http_body():
     decoder = PydanticAIDecoder(FailedAgent(), FailedAgent(), CloseOnlyClient(), timeout=1)
 
     with pytest.raises(DecodeError) as failure:
-        await decoder.decode("source", Route())
+        await decoder.answer("source", Route())
 
     assert failure.value.reason == "provider_key_rejected"
     assert not failure.value.retryable
@@ -213,7 +213,7 @@ async def test_rejections_name_the_key_or_the_model(status, body, reason):
     decoder = PydanticAIDecoder(FailedAgent(), FailedAgent(), CloseOnlyClient(), timeout=1)
 
     with pytest.raises(DecodeError) as failure:
-        await decoder.decode("source", Route())
+        await decoder.answer("source", Route())
 
     assert failure.value.reason == reason
 

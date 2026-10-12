@@ -2,26 +2,32 @@
 
 import asyncio
 import json
-from collections.abc import AsyncIterable, AsyncIterator
+from collections.abc import AsyncIterable, AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from typing import Protocol
 
 import pydantic_ai
-from pydantic_ai import Agent, ModelRetry, NativeOutput, PromptedOutput, RunContext
+from pydantic_ai import Agent, ModelRetry, PromptedOutput, RunContext, ToolOutput
 from pydantic_ai.exceptions import (
+    FallbackExceptionGroup,
     ModelAPIError,
     ModelHTTPError,
     UnexpectedModelBehavior,
     UsageLimitExceeded,
 )
 from pydantic_ai.models import Model
+from pydantic_ai.models.decision import DecisionModel
+from pydantic_ai.models.fallback import FallbackModel
+from pydantic_ai.output import OutputSpec
 from pydantic_ai.settings import ModelSettings
 from pydantic_ai.usage import UsageLimits
 
 from copytrading_engine.parsing.diagnostics import validation_issues
 from copytrading_engine.parsing.extraction import (
+    Answer,
     DecodeError,
     GroundingError,
+    JustChat,
     ReadingInput,
     ReadingOutput,
     check_reading,
@@ -36,7 +42,7 @@ from copytrading_engine.parsing.prompt import (
     recent_calls_instructions,
 )
 from copytrading_engine.parsing.routes import Route
-from copytrading_engine.shared.reading import PostReading
+from copytrading_engine.shared.reading import Chatter
 
 # The engine owns its output: its stdout and stderr are the app's pipe and log. The library
 # leaves the flag unannotated, so its type is inferred as the literal True.
@@ -73,25 +79,30 @@ _UNKNOWN_MODEL = (
 _MODEL_NAME_LIMIT = 2000
 
 
+type ReaderAgent = Agent[ReadingInput, ReadingOutput | JustChat]
+
+
 class PydanticAIDecoder:
     def __init__(
         self,
-        agent: Agent[ReadingInput, ReadingOutput],
+        agent: ReaderAgent,
         learner: Agent[None, PlaybookProposal],
         client: _ProviderClient,
         timeout: float,
         *,
         connection_errors: tuple[type[Exception], ...] = (),
+        close_triage: Callable[[], Awaitable[None]] | None = None,
     ) -> None:
         self.agent = agent
         self.learner = learner
         self.client = client
         self.timeout = timeout
         self.connection_errors = connection_errors
+        self.close_triage = close_triage
 
-    async def decode(
-        self, text: str, route: Route, recent: tuple[RecentCall, ...] = ()
-    ) -> PostReading:
+    async def answer(self, text: str, route: Route, recent: tuple[RecentCall, ...] = ()) -> Answer:
+        """The reading, and the decision model's name and confidence when it settled the post
+        itself (ADR-0012)."""
         async with _translated_errors(self.connection_errors):
             async with asyncio.timeout(self.timeout):
                 # A reading that fails a check goes back once with the reason, then to review.
@@ -100,7 +111,18 @@ class PydanticAIDecoder:
                     deps=ReadingInput(text=text, route=route, recent=recent),
                     usage_limits=UsageLimits(request_limit=2, output_tokens_limit=6000),
                 )
-            return result.output.reading
+        output = result.output
+        reading = Chatter() if isinstance(output, JustChat) else output.reading
+        response = result.response
+        picked = (response.provider_details or {}).get("route")
+        if not isinstance(picked, dict):
+            return Answer(reading)
+        probability = picked.get("probabilities", {}).get(picked.get("choice"))
+        return Answer(
+            reading,
+            response.model_name,
+            float(probability) if isinstance(probability, int | float) else None,
+        )
 
     async def learn(self, posts: tuple[str, ...]) -> PlaybookProposal:
         async with _translated_errors(self.connection_errors):
@@ -125,7 +147,11 @@ class PydanticAIDecoder:
                 return tuple(names)
 
     async def close(self) -> None:
-        await self.client.close()
+        try:
+            await self.client.close()
+        finally:
+            if self.close_triage is not None:
+                await self.close_triage()
 
 
 def _rejection(exc: ModelHTTPError) -> str:
@@ -141,15 +167,38 @@ def _rejection(exc: ModelHTTPError) -> str:
     return "provider_rejected"
 
 
-def reading_agent(
-    model: Model,
-    output_type: NativeOutput[ReadingOutput] | PromptedOutput[ReadingOutput],
-    model_settings: ModelSettings,
-) -> Agent[ReadingInput, ReadingOutput]:
-    """The reader every provider shares: one reading per post, held to the post's own words. Its
-    fixed instructions come first, then the guru's playbook, then the guru's recent calls, so a
+def reading_agent(model: Model, model_settings: ModelSettings) -> ReaderAgent:
+    """The reader every provider shares: one reading per post, held to the post's own words, or
+    chat, which carries nothing. The answer is JSON asked for in the prompt (ADR-0012). Its fixed
+    instructions come first, then the guru's playbook, then the guru's recent calls, so a
     provider can cache the part that does not change from post to post."""
-    agent = Agent(
+    output = PromptedOutput[ReadingOutput | JustChat]([ReadingOutput, JustChat])
+    return _reader(model, output, model_settings)
+
+
+def triaged_reading_agent(decision: DecisionModel, reader: Model) -> ReaderAgent:
+    """The decision model first, the reader behind it (ADR-0012). Chat, which has nothing to
+    fill, is settled by the decision model when it is sure; a reading, whose words a decision
+    model cannot write, or any pick below the route threshold, goes to the reader. Both answer
+    through tool calls, the one output mode a decision model takes. The reader carries its own
+    settings, so none of them reach the decision model's backend."""
+    return _reader(
+        # A timeout of the decision service hands the reader the step like any other failure.
+        FallbackModel(decision, reader, fallback_on=(ModelAPIError, TimeoutError)),
+        [
+            ToolOutput(JustChat, name="JustChat"),
+            ToolOutput(ReadingOutput, name="ReadingOutput"),
+        ],
+        None,
+    )
+
+
+def _reader(
+    model: Model,
+    output_type: OutputSpec[ReadingOutput | JustChat],
+    model_settings: ModelSettings | None,
+) -> ReaderAgent:
+    agent: ReaderAgent = Agent[ReadingInput, ReadingOutput | JustChat](
         model,
         name="post_reader",
         output_type=output_type,
@@ -171,9 +220,16 @@ def reading_agent(
     return agent
 
 
-def _checked(context: RunContext[ReadingInput], output: ReadingOutput) -> ReadingOutput:
+def _checked(
+    context: RunContext[ReadingInput], output: ReadingOutput | JustChat
+) -> ReadingOutput | JustChat:
     """Holds the model to the post's own words and to the calls it was shown; a failure gives it
-    one retry with the reason."""
+    one retry with the reason. Chat on the retry would let go a post the reader already took for
+    something, so it ends the run instead, and the post waits for the owner."""
+    if isinstance(output, JustChat):
+        if context.retry > 0:
+            raise UnexpectedModelBehavior("A post read as something was answered as chat on retry")
+        return output
     try:
         check_reading(output.reading, context.deps.text, context.deps.route)
     except GroundingError as exc:
@@ -192,7 +248,12 @@ async def _translated_errors(
 ) -> AsyncIterator[None]:
     """Turn provider failures into DecodeError without keeping responses or secrets."""
     try:
-        yield
+        try:
+            yield
+        except FallbackExceptionGroup as group:
+            # The decision model handed the step on and the reader failed too: the reader's
+            # failure is the one that says what went wrong.
+            raise group.exceptions[-1] from None
     except DecodeError:
         raise
     except ModelHTTPError as exc:

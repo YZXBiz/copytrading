@@ -115,6 +115,7 @@ enum Reason {
         "conditional": "The guru would trade only if something happens",
         "suggestion": "The guru suggested it but didn't trade",
         "unclear": "The post's meaning wasn't clear",
+        "chatter": "Just chat, nothing to trade",
         "price_range": "The guru gave a price range",
         "price_at_market": "The guru said to trade at the market price",
         "price_not_given": "The post gave no price",

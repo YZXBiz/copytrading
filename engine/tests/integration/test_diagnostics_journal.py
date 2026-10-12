@@ -60,7 +60,12 @@ async def test_a_workflow_journals_its_source_model_and_destination_records_reda
     source_raw = envelope(message)
     requests: list[httpx.Request] = []
     response_text = json.dumps(
-        {"reading": {"kind": "commentary", "summary": "provider-response-marker"}}
+        {
+            "result": {
+                "kind": "ReadingOutput",
+                "data": {"reading": {"kind": "commentary", "summary": "provider-response-marker"}},
+            }
+        }
     )
 
     def provider_handler(request: httpx.Request) -> httpx.Response:

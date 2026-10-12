@@ -1,5 +1,6 @@
 """A reading trades only when every value it states is the post's own words (ADR-0007)."""
 
+import json
 from decimal import Decimal
 
 import pytest
@@ -622,7 +623,9 @@ JSON_OUTPUT = ModelProfile(supports_json_schema_output=True)
 
 
 def _answer(reading) -> str:
-    return ReadingOutput(reading=reading).model_dump_json()
+    # The reader answers a reading or chat; a reading comes in the choice's envelope.
+    data = ReadingOutput(reading=reading).model_dump(mode="json")
+    return json.dumps({"result": {"kind": "ReadingOutput", "data": data}}, ensure_ascii=False)
 
 
 async def test_the_adapter_returns_the_models_reading():
@@ -630,7 +633,7 @@ async def test_the_adapter_returns_the_models_reading():
     decoder, model = _decoder(TestModel(custom_output_text=_answer(reading), profile=JSON_OUTPUT))
     try:
         with model:
-            assert await decoder.decode(TEXT, Route()) == reading
+            assert (await decoder.answer(TEXT, Route())).reading == reading
     finally:
         await decoder.close()
 
@@ -652,7 +655,7 @@ async def test_an_ungrounded_reading_goes_back_once_with_its_reason():
     decoder, model = _decoder(FunctionModel(reader, profile=JSON_OUTPUT))
     try:
         with model:
-            assert await decoder.decode(TEXT, Route()) == right
+            assert (await decoder.answer(TEXT, Route())).reading == right
     finally:
         await decoder.close()
     assert len(told) == 1
@@ -664,7 +667,7 @@ async def test_a_reading_still_ungrounded_after_the_retry_fails():
     decoder, model = _decoder(TestModel(custom_output_text=_answer(wrong), profile=JSON_OUTPUT))
     try:
         with model, pytest.raises(DecodeError) as raised:
-            await decoder.decode(TEXT, Route())
+            await decoder.answer(TEXT, Route())
     finally:
         await decoder.close()
     assert raised.value.reason in {"invalid_model_output", "model_output_budget_exceeded"}

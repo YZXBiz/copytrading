@@ -2207,3 +2207,5 @@
 "%lld min old" = "%lld 分钟前";
 "%lld hr old" = "%lld 小时前";
 "Buy %@ of %@ ≈ %@ at %@" = "买入 %@ 的 %@，约 %@，价格 %@";
+"Just chat, nothing to trade" = "只是闲聊，没有交易";
+"just chat" = "闲聊";

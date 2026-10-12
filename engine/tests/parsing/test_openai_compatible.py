@@ -17,7 +17,12 @@ from copytrading_engine.shared.model_providers import (
 )
 from copytrading_engine.trading.domain.config import ProviderConfiguration
 
-IGNORE = {"reading": {"kind": "commentary", "summary": "No trade action"}}
+IGNORE = {
+    "result": {
+        "kind": "ReadingOutput",
+        "data": {"reading": {"kind": "commentary", "summary": "No trade action"}},
+    }
+}
 
 
 def reply(content: dict) -> dict:
@@ -68,7 +73,7 @@ async def test_each_named_service_is_asked_at_its_own_address(requests, name):
         name, ProviderConfig(api_key=SecretStr("test-only"), model=model, timeout=5)
     )
     try:
-        result = await decoder.decode("Market commentary only. No trade action.", Route())
+        result = (await decoder.answer("Market commentary only. No trade action.", Route())).reading
     finally:
         await decoder.close()
 
@@ -96,7 +101,7 @@ async def test_a_custom_service_is_asked_at_the_owners_address_without_a_key(req
         ),
     )
     try:
-        await decoder.decode("Market commentary only. No trade action.", Route())
+        await decoder.answer("Market commentary only. No trade action.", Route())
     finally:
         await decoder.close()
     [request] = requests
@@ -111,7 +116,7 @@ async def test_ollama_can_be_moved_to_another_port(requests):
         ),
     )
     try:
-        await decoder.decode("Market commentary only. No trade action.", Route())
+        await decoder.answer("Market commentary only. No trade action.", Route())
     finally:
         await decoder.close()
     assert str(requests[0].url) == "http://localhost:9999/v1/chat/completions"

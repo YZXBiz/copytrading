@@ -2207,3 +2207,5 @@
 "%lld min old" = "%lld min old";
 "%lld hr old" = "%lld hr old";
 "Buy %@ of %@ ≈ %@ at %@" = "Buy %@ of %@ ≈ %@ at %@";
+"Just chat, nothing to trade" = "Just chat, nothing to trade";
+"just chat" = "just chat";

@@ -11,7 +11,7 @@ dependencies = [
     "httpx2>=2.13,<3",
     "httpx>=0.28,<1",
     "pydantic>=2.12,<3",
-    "pydantic-ai-slim[anthropic,openai]>=2.49.0,<3",
+    "pydantic-ai-slim[anthropic,openai,typesafe]>=2.55.0,<3",
     "mcp>=2.2,<3",
     "aiohttp>=3.14,<4",
 ]

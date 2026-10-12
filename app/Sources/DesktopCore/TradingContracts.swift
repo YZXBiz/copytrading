@@ -459,6 +459,31 @@ public struct TradingNotificationConfiguration: Codable, Equatable, Sendable {
     }
 }
 
+/// A decision model that sorts each post before the reader (ADR-0012). Its key is kept with the
+/// other keys, never here.
+public enum TradingTriageProvider: String, Codable, Equatable, Sendable, CaseIterable {
+    case openAIDecisions = "openai-decisions"
+    case typeSafe = "typesafe"
+}
+
+/// Chat the decision model is at least `routeThreshold` sure of is settled without the reader.
+public struct TradingTriageConfiguration: Codable, Equatable, Sendable {
+    public var provider: TradingTriageProvider
+    public var model: String
+    public var routeThreshold: Double
+
+    public init(provider: TradingTriageProvider, model: String, routeThreshold: Double = 0.9) {
+        self.provider = provider
+        self.model = model
+        self.routeThreshold = routeThreshold
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case provider, model
+        case routeThreshold = "route_threshold"
+    }
+}
+
 /// Saved to application support. This type deliberately contains no credentials.
 public struct TradingConfiguration: Codable, Equatable, Sendable {
     /// Matches the engine's CONFIGURATION_VERSION; older saved files are rejected, never migrated.
@@ -470,6 +495,8 @@ public struct TradingConfiguration: Codable, Equatable, Sendable {
     public var profiles: [TradingProfileRevision]
     public var routes: [TradingRouteConfiguration]
     public var notification: TradingNotificationConfiguration?
+    /// Off when nil: the reader reads every post.
+    public var triage: TradingTriageConfiguration?
 
     public init(
         source: TradingSourceConfiguration,
@@ -477,7 +504,8 @@ public struct TradingConfiguration: Codable, Equatable, Sendable {
         accounts: [TradingAccountConfiguration],
         profiles: [TradingProfileRevision],
         routes: [TradingRouteConfiguration],
-        notification: TradingNotificationConfiguration? = nil
+        notification: TradingNotificationConfiguration? = nil,
+        triage: TradingTriageConfiguration? = nil
     ) {
         self.source = source
         self.provider = provider
@@ -485,6 +513,7 @@ public struct TradingConfiguration: Codable, Equatable, Sendable {
         self.profiles = profiles
         self.routes = routes
         self.notification = notification
+        self.triage = triage
     }
 
     enum CodingKeys: String, CodingKey {
@@ -495,6 +524,7 @@ public struct TradingConfiguration: Codable, Equatable, Sendable {
         case profiles
         case routes
         case notification
+        case triage
     }
 }
 
@@ -562,11 +592,12 @@ public struct TradingBrokerCredentials: Codable, Equatable, Sendable {
 public enum TradingConnectionCheck: Encodable, Equatable, Sendable {
     case source(TradingSourceConfiguration, token: String)
     case model(TradingProviderConfiguration, apiKey: String)
+    case triage(TradingTriageConfiguration, apiKey: String)
     case broker(TradingAccountConfiguration, credentials: TradingBrokerCredentials)
     case notification(TradingNotificationConfiguration, token: String)
 
     enum CodingKeys: String, CodingKey {
-        case kind, source, token, provider, account, credentials, notification
+        case kind, source, token, provider, triage, account, credentials, notification
         case apiKey = "api_key"
     }
 
@@ -580,6 +611,10 @@ public enum TradingConnectionCheck: Encodable, Equatable, Sendable {
         case .model(let provider, let apiKey):
             try container.encode("model", forKey: .kind)
             try container.encode(provider, forKey: .provider)
+            try container.encode(apiKey, forKey: .apiKey)
+        case .triage(let triage, let apiKey):
+            try container.encode("triage", forKey: .kind)
+            try container.encode(triage, forKey: .triage)
             try container.encode(apiKey, forKey: .apiKey)
         case .broker(let account, let credentials):
             try container.encode("broker", forKey: .kind)
@@ -599,17 +634,21 @@ public struct TradingSecrets: Codable, Equatable, Sendable {
     public var providerAPIKey: String
     public var brokers: [TradingBrokerCredentials]
     public var notificationToken: String?
+    /// The triage decision model's key, when the setup has one (ADR-0012).
+    public var triageAPIKey: String?
 
     public init(
         discordToken: String,
         providerAPIKey: String,
         brokers: [TradingBrokerCredentials],
-        notificationToken: String? = nil
+        notificationToken: String? = nil,
+        triageAPIKey: String? = nil
     ) {
         self.discordToken = discordToken
         self.providerAPIKey = providerAPIKey
         self.brokers = brokers
         self.notificationToken = notificationToken
+        self.triageAPIKey = triageAPIKey
     }
 
     enum CodingKeys: String, CodingKey {
@@ -617,6 +656,7 @@ public struct TradingSecrets: Codable, Equatable, Sendable {
         case providerAPIKey = "provider_api_key"
         case brokers
         case notificationToken = "notification_token"
+        case triageAPIKey = "triage_api_key"
     }
 }
 
@@ -731,6 +771,7 @@ public enum TradingCapabilityState: String, Codable, Sendable {
 public enum TradingCapabilityName: String, Codable, Sendable {
     case source
     case model
+    case triage
     case broker
     case notification
     case configuration

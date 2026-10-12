@@ -25,7 +25,6 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.providers.openrouter import OpenRouterProvider
 from pydantic_ai.providers.together import TogetherProvider
 
-from copytrading_engine.parsing.extraction import ReadingOutput
 from copytrading_engine.parsing.learning import LEARN_INSTRUCTIONS, PlaybookProposal
 from copytrading_engine.shared.cleanup import close_logged
 from copytrading_engine.shared.model_providers import OLLAMA_ENDPOINT, ModelProvider, ProviderConfig
@@ -112,7 +111,6 @@ def build_decoder(
     model = chat_model(service, config, client)
     agent = reading_agent(
         model,
-        PromptedOutput(ReadingOutput),
         {"temperature": 0, "max_tokens": 3000},
     )
     learner = Agent(

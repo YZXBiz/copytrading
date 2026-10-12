@@ -2990,6 +2990,7 @@ private actor RecordingTradingStarter: TradingStarting {
             switch connection {
             case .source: .source
             case .model: .model
+            case .triage: .triage
             case .broker: .broker
             case .notification: .notification
             }
