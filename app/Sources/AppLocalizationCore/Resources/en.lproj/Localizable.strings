@@ -308,8 +308,6 @@
 "Earlier message" = "Earlier message";
 "Earlier outcomes" = "Earlier outcomes";
 "Edit Guru…" = "Edit Guru…";
-"Edited %@ after posting" = "Edited %@ after posting";
-"Edits" = "Edits";
 "Edits and typed keys since your last saved setup are dropped. Your saved setup stays as it is." = "Edits and typed keys since your last saved setup are dropped. Your saved setup stays as it is.";
 "Enable Entries" = "Enable Entries";
 "Engine" = "Engine";
@@ -2172,3 +2170,8 @@
 "Pre-market" = "Pre-market";
 "After hours" = "After hours";
 "·  %@ cash  ·  %@ buying power" = "·  %@ cash  ·  %@ buying power";
+"Selling %@ of %@" = "Selling %@ of %@";
+"Buying %@ of %@" = "Buying %@ of %@";
+"Selling %@ of %@ at %@ or more" = "Selling %@ of %@ at %@ or more";
+"Buying %@ of %@ at up to %@" = "Buying %@ of %@ at up to %@";
+"A notification with a sound when each copied buy or sell goes out and again when it fills, saying what and from whose post." = "A notification with a sound when each copied buy or sell goes out and again when it fills, saying what and from whose post.";

@@ -308,8 +308,6 @@
 "Earlier message" = "较早的消息";
 "Earlier outcomes" = "先前结果";
 "Edit Guru…" = "编辑信号源…";
-"Edited %@ after posting" = "发布后编辑了 %@";
-"Edits" = "修改次数";
 "Edits and typed keys since your last saved setup are dropped. Your saved setup stays as it is." = "将丢弃上次保存后所做的修改和输入的密钥。已保存的设置不会改变。";
 "Enable Entries" = "启用开仓";
 "Engine" = "引擎";
@@ -2172,3 +2170,8 @@
 "Pre-market" = "盘前";
 "After hours" = "盘后";
 "·  %@ cash  ·  %@ buying power" = "·  现金 %@  ·  购买力 %@";
+"Selling %@ of %@" = "正在卖出 %@ %@";
+"Buying %@ of %@" = "正在买入 %@ %@";
+"Selling %@ of %@ at %@ or more" = "正在卖出 %@ %@，最低 %@";
+"Buying %@ of %@ at up to %@" = "正在买入 %@ %@，最高 %@";
+"A notification with a sound when each copied buy or sell goes out and again when it fills, saying what and from whose post." = "每笔跟单买卖发出时和成交时各通知一次并响铃，说明是什么、来自谁的帖子。";
