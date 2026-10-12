@@ -35,6 +35,8 @@ struct ManualReviewSheet: View {
     /// Confirmed orders wait here a few seconds before they leave, so they can be undone.
     @State private var isHolding = false
     @State private var approvalProblem: String?
+    /// The broker's latest quote for each stock in the trades, by symbol.
+    @State private var quotes: [String: LiveQuote] = [:]
 
     init(
         source: SourceActivity,
@@ -103,7 +105,17 @@ struct ManualReviewSheet: View {
     private var chosenAccounts: [AccountOverview] { accounts.filter { selectedAccountIDs.contains($0.accountID) } }
 
     private var estimate: ManualOrderEstimate {
-        ManualOrderEstimate(drafts: instructions, accounts: chosenAccounts, connections: connections, mode: mode)
+        ManualOrderEstimate(
+            drafts: instructions, accounts: chosenAccounts, connections: connections, mode: mode, quotes: quotes)
+    }
+
+    /// The account whose read keys quote the stocks: the first chosen, else the first listed.
+    private var quotingAccountID: String? { (chosenAccounts.first ?? accounts.first)?.accountID }
+
+    /// What to quote: the stocks typed so far through one account; a change starts a new ask.
+    private var quoteRequest: [String] {
+        let symbols = Set(instructions.map { $0.symbol.trimmed.uppercased() }.filter(LiveQuote.canQuote))
+        return [quotingAccountID ?? ""] + symbols.sorted()
     }
 
     private var isChecking: Bool {
@@ -176,6 +188,7 @@ struct ManualReviewSheet: View {
             let accountIDs = Set(accounts.map(\.accountID) + source.destinations.map(\.accountID))
             await feature.recoverCommands(sourceID: source.sourceID, accountIDs: accountIDs, using: operations)
         }
+        .task(id: quoteRequest) { await fetchQuotes() }
         .onDisappear { feature.clearPrivateEvidence() }
     }
 
@@ -223,6 +236,7 @@ struct ManualReviewSheet: View {
                     draft: $instruction,
                     holdings: holdings,
                     marketPrices: prices,
+                    quote: quotes[instruction.symbol.trimmed.uppercased()],
                     fullPosition: single,
                     position: instructions.count > 1 ? (index, instructions.count) : nil,
                     remove: { instructions.removeAll { $0.id == instruction.id } }
@@ -469,6 +483,27 @@ struct ManualReviewSheet: View {
                     confirmationRequests[action.preview.previewID] = action.confirmation
                 }
             }
+        }
+    }
+
+    /// Asks the engine for each typed stock's latest quote once typing pauses, read-only. A
+    /// failed ask leaves the stock on its last known price; a stock with no quote says so.
+    private func fetchQuotes() async {
+        guard let operations, let accountID = quotingAccountID else { return }
+        do {
+            try await Task.sleep(for: .milliseconds(400))
+        } catch {
+            return
+        }
+        for symbol in quoteRequest.dropFirst() {
+            let quote: MarketQuote?
+            do {
+                quote = try await operations.quote(accountID: accountID, symbol: symbol)
+            } catch {
+                if Task.isCancelled { return }
+                continue
+            }
+            quotes[symbol] = LiveQuote(symbol: symbol, quote: quote)
         }
     }
 

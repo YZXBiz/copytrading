@@ -300,6 +300,8 @@ public enum EngineResult: Equatable, Sendable {
     case guruReplay(GuruReplay)
     case accountFeed(AccountFeedPage)
     case equityHistory(accountID: String, history: EquityHistory?)
+    /// A stock's latest quote; nil when the broker has none for the symbol.
+    case quote(accountID: String, symbol: String, quote: MarketQuote?)
     case manualCorrection(ManualCorrectionOutcome)
     case manualPreview(ManualOrderPreview)
     case lotSalePreview(LotSalePreview)
@@ -424,6 +426,8 @@ public struct EngineSuccess: Decodable, Equatable, Sendable {
         case entries
         case accountID = "account_id"
         case history
+        case symbol
+        case quote
         case turnID = "turn_id"
         case revision
         case cancelled
@@ -480,6 +484,12 @@ public struct EngineSuccess: Decodable, Equatable, Sendable {
             result = .equityHistory(
                 accountID: try container.decode(String.self, forKey: .accountID),
                 history: try container.decodeIfPresent(EquityHistory.self, forKey: .history)
+            )
+        case "quote":
+            result = .quote(
+                accountID: try container.decode(String.self, forKey: .accountID),
+                symbol: try container.decode(String.self, forKey: .symbol),
+                quote: try container.decodeIfPresent(MarketQuote.self, forKey: .quote)
             )
         case "manual_correction":
             result = .manualCorrection(
@@ -588,6 +598,7 @@ enum EngineOperation: Sendable {
     case replayGuruPosts(GuruReplayRequest)
     case accountFeed(accountID: String, beforeSeq: Int?, limit: Int)
     case equityHistory(accountID: String, window: EquityHistoryWindow)
+    case quote(accountID: String, symbol: String)
     case attachAccountReaders([AccountReadKeys])
     case detachAccountReaders
     case saveManualCorrection(ManualCorrectionRequest)
@@ -661,6 +672,7 @@ struct EngineRequest: Encodable, Sendable {
         case proposalID = "proposal_id"
         case digest
         case window
+        case symbol
         case conversationID = "conversation_id"
         case text
         case turnID = "turn_id"
@@ -778,6 +790,10 @@ struct EngineRequest: Encodable, Sendable {
             try container.encode("get_equity_history", forKey: .operation)
             try container.encode(accountID, forKey: .accountID)
             try container.encode(window, forKey: .window)
+        case .quote(let accountID, let symbol):
+            try container.encode("get_quote", forKey: .operation)
+            try container.encode(accountID, forKey: .accountID)
+            try container.encode(symbol, forKey: .symbol)
         case .attachAccountReaders(let accounts):
             try container.encode("attach_account_readers", forKey: .operation)
             try container.encode(accounts, forKey: .accounts)

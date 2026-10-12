@@ -2203,3 +2203,7 @@
 "You bought %@" = "You bought %@";
 "You entered the trade" = "You entered the trade";
 "You entered the trade yourself." = "You entered the trade yourself.";
+"No quote for %@" = "No quote for %@";
+"%lld min old" = "%lld min old";
+"%lld hr old" = "%lld hr old";
+"Buy %@ of %@ ≈ %@ at %@" = "Buy %@ of %@ ≈ %@ at %@";

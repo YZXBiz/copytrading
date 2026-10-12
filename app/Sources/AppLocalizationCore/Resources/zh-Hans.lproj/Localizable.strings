@@ -2203,3 +2203,7 @@
 "You bought %@" = "你手动买入了 %@";
 "You entered the trade" = "你手动下了这笔单";
 "You entered the trade yourself." = "这笔交易是你手动下的。";
+"No quote for %@" = "%@ 暂无报价";
+"%lld min old" = "%lld 分钟前";
+"%lld hr old" = "%lld 小时前";
+"Buy %@ of %@ ≈ %@ at %@" = "买入 %@ 的 %@，约 %@，价格 %@";

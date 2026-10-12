@@ -255,6 +255,16 @@ public actor EngineClient {
         return history
     }
 
+    public func quote(accountID: String, symbol: String) async throws -> MarketQuote? {
+        let result = try await request(.quote(accountID: accountID, symbol: symbol))
+        guard case .quote(let resultAccountID, let resultSymbol, let quote) = result,
+            resultAccountID == accountID, resultSymbol == symbol
+        else {
+            throw EngineContractError.missingResult
+        }
+        return quote
+    }
+
     public func saveManualCorrection(
         _ correction: ManualCorrectionRequest
     ) async throws -> ManualCorrectionOutcome {

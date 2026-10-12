@@ -7,6 +7,7 @@ from copytrading_engine.host.pipe.requests import (
     GetAccountFeedRequest,
     GetAccountsRequest,
     GetEquityHistoryRequest,
+    GetQuoteRequest,
     GetSourceActivityRequest,
     PipeRequest,
     RequestHandler,
@@ -31,9 +32,26 @@ class AccountHandlers:
             GetSourceActivityRequest: self._on_get_source_activity,
             GetAccountFeedRequest: self._on_get_account_feed,
             GetEquityHistoryRequest: self._on_get_equity_history,
+            GetQuoteRequest: self._on_get_quote,
             AttachAccountReadersRequest: self._on_attach_account_readers,
             DetachAccountReadersRequest: self._on_detach_account_readers,
         }
+
+    async def _on_get_quote(self, request: GetQuoteRequest) -> bytes:
+        """A quote is read-only market data; an account with no read keys here is not found."""
+        if self._trading is None:
+            return reply(request.version, request.request_id, error="unavailable")
+        quote = await self._trading.operator.quote(request.account_id, request.symbol)
+        return reply(
+            request.version,
+            request.request_id,
+            ok={
+                "type": "quote",
+                "account_id": request.account_id,
+                "symbol": request.symbol,
+                "quote": None if quote is None else quote.model_dump(mode="json"),
+            },
+        )
 
     async def _on_attach_account_readers(self, request: AttachAccountReadersRequest) -> bytes:
         if self._trading is None:

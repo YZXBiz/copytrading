@@ -254,6 +254,14 @@ class GetEquityHistoryRequest(PipeRequest):
     window: HistoryWindow
 
 
+class GetQuoteRequest(PipeRequest):
+    """The latest quote for a stock the owner typed into the trade sheet."""
+
+    operation: Literal["get_quote"]
+    account_id: str = Field(min_length=1, max_length=64)
+    symbol: str = Field(pattern=r"^[A-Z][A-Z0-9.]{0,9}$")
+
+
 class SaveManualCorrectionRequest(PipeRequest):
     operation: Literal["save_manual_correction"]
     correction: ManualCorrectionRequest
@@ -378,6 +386,7 @@ RequestType = Annotated[
     | ReplayGuruPostsRequest
     | GetAccountFeedRequest
     | GetEquityHistoryRequest
+    | GetQuoteRequest
     | AttachAccountReadersRequest
     | DetachAccountReadersRequest
     | SaveManualCorrectionRequest
