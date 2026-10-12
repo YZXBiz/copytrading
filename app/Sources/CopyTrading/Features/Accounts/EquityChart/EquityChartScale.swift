@@ -11,6 +11,8 @@ struct EquityChartScale {
     struct Tick: Hashable {
         let x: Double
         let label: String
+        /// A session strip's name ("Pre-market"), set under its middle with no tick mark.
+        var isRegion = false
     }
 
     static let preMarketShare = 0.12
@@ -68,27 +70,41 @@ struct EquityChartScale {
         isDay && (date < open || date > close)
     }
 
-    /// Time labels spaced for the range, in the zone and language the rest of the app reads in.
-    /// A day marks the opening bell, every whole hour of regular trading at least 45 minutes clear
-    /// of the bell and the close, and the close, so the marks sit evenly; longer ranges mark days
-    /// or months.
-    func ticks(in zone: TimeZone, locale: Locale) -> [Tick] {
+    /// The steps a day's marks may take, finest first.
+    static let dayStepsMinutes = [15, 30, 60, 120]
+    /// The least room between two time marks, in points, so labels never touch.
+    static let minimumTickSpacing: Double = 58
+
+    /// Time labels spaced for the range and the plot's width, in the zone and language the rest
+    /// of the app reads in. A day marks the opening bell and the close, the finest round step that
+    /// leaves room between labels (15, 30, or 60 minutes, then 2 hours), and names the pre-market
+    /// and after-hours strips; longer ranges mark days or months.
+    @MainActor
+    func ticks(in zone: TimeZone, locale: Locale, width: Double) -> [Tick] {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = zone
-        var clock = Date.FormatStyle.dateTime.hour().minute().locale(locale)
+        var clock = Date.FormatStyle.dateTime.hour(.defaultDigits(amPM: .omitted)).minute().locale(locale)
         clock.timeZone = zone
         if isDay {
-            let clear: TimeInterval = 45 * 60
-            var hours: [Tick] = []
-            var hour = calendar.dateInterval(of: .hour, for: open)?.end ?? open
-            while hour < close {
-                if hour.timeIntervalSince(open) >= clear, close.timeIntervalSince(hour) >= clear {
-                    hours.append(Tick(x: x(hour), label: hour.formatted(clock)))
+            let regularWidth = max(width, 1) * (1 - Self.preMarketShare - Self.afterHoursShare)
+            let pointsPerMinute = regularWidth / max(close.timeIntervalSince(open) / 60, 1)
+            let step = Self.dayStepsMinutes.first { Double($0) * pointsPerMinute >= Self.minimumTickSpacing } ?? 120
+            let clear = Double(step) * 0.75 * 60
+            var marks: [Tick] = []
+            let startOfDay = calendar.startOfDay(for: open)
+            var minutes = Int(open.timeIntervalSince(startOfDay) / 60) / step * step + step
+            while let mark = calendar.date(byAdding: .minute, value: minutes, to: startOfDay), mark < close {
+                if mark.timeIntervalSince(open) >= clear, close.timeIntervalSince(mark) >= clear {
+                    marks.append(Tick(x: x(mark), label: mark.formatted(clock)))
                 }
-                hour = hour.addingTimeInterval(3600)
+                minutes += step
             }
-            return [Tick(x: x(open), label: open.formatted(clock))] + hours
-                + [Tick(x: x(close), label: close.formatted(clock))]
+            let regions = [
+                Tick(x: Self.preMarketShare / 2, label: L10n.string("Pre-market"), isRegion: true),
+                Tick(x: 1 - Self.afterHoursShare / 2, label: L10n.string("After hours"), isRegion: true),
+            ]
+            return [Tick(x: x(open), label: open.formatted(clock))] + marks
+                + [Tick(x: x(close), label: close.formatted(clock))] + regions
         }
         let span = end.timeIntervalSince(start)
         let (unit, step, format): (Calendar.Component, Int, Date.FormatStyle) =

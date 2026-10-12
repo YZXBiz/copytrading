@@ -44,8 +44,8 @@ from copytrading_engine.execution.domain.sessions import ET
 _ORDERS_PAGE_SIZE = 500
 # Alpaca serves intraday points for at most 30 days, so longer ranges use daily points.
 _HISTORY_PARAMS: dict[HistoryRange, dict[str, str]] = {
-    "day": {"period": "1D", "timeframe": "5Min", "intraday_reporting": "extended_hours"},
-    "week": {"period": "1W", "timeframe": "1H", "intraday_reporting": "market_hours"},
+    "day": {"period": "1D", "timeframe": "1Min", "intraday_reporting": "extended_hours"},
+    "week": {"period": "1W", "timeframe": "15Min", "intraday_reporting": "market_hours"},
     "month": {"period": "1M", "timeframe": "1D"},
     "three_months": {"period": "3M", "timeframe": "1D"},
     "year": {"period": "1A", "timeframe": "1D"},

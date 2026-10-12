@@ -12,6 +12,8 @@ struct EquityPlot: View {
     @Binding var selection: EquitySelection
     @Environment(\.colorSchemeContrast) private var contrast
     @ScaledMetric(relativeTo: .caption) private var valueAxisWidth = 84
+    /// The plot's width, so time marks are as fine as the room allows.
+    @State private var plotWidth: Double = 800
 
     private var reference: Double { stats.reference }
     private var scale: EquityChartScale { EquityChartScale(range: range, first: stats.open.at, last: stats.last.at) }
@@ -41,7 +43,9 @@ struct EquityPlot: View {
         let bounds = valueRange
         let axis = EquityValueAxis(lower: bounds.lower, upper: bounds.upper, count: 3)
         let scale = self.scale
-        let ticks = scale.ticks(in: AppTime.zone, locale: AppTime.locale)
+        let ticks = scale.ticks(in: AppTime.zone, locale: AppTime.locale, width: plotWidth)
+        let times = ticks.filter { !$0.isRegion }
+        let regions = ticks.filter(\.isRegion)
         let runs = EquityLineRun.runs(curve.points, on: scale)
         Chart {
             referenceLine
@@ -69,13 +73,25 @@ struct EquityPlot: View {
         .chartXScale(domain: xDomain(on: scale), range: .plotDimension(startPadding: 4, endPadding: 14))
         .chartYScale(domain: bounds.lower...bounds.upper)
         .chartXAxis {
-            AxisMarks(values: ticks.map(\.x).filter { xDomain(on: scale).contains($0) }) { value in
+            AxisMarks(values: times.map(\.x).filter { xDomain(on: scale).contains($0) }) { value in
+                AxisTick(centered: true, length: 4, stroke: StrokeStyle(lineWidth: 1))
+                    .foregroundStyle(Palette.tertiaryInk.opacity(0.6))
                 AxisValueLabel(collisionResolution: .greedy) {
-                    if let x = value.as(Double.self), let tick = ticks.first(where: { abs($0.x - x) < 1e-9 }) {
+                    if let x = value.as(Double.self), let tick = times.first(where: { abs($0.x - x) < 1e-9 }) {
                         Text(tick.label)
                             .font(.caption)
                             .monospacedDigit()
                             .foregroundStyle(Palette.tertiaryInk)
+                    }
+                }
+            }
+            AxisMarks(values: regions.map(\.x).filter { xDomain(on: scale).contains($0) }) { value in
+                AxisValueLabel {
+                    if let x = value.as(Double.self), let tick = regions.first(where: { abs($0.x - x) < 1e-9 }) {
+                        Text(tick.label.uppercased())
+                            .font(.system(size: 9, weight: .semibold))
+                            .tracking(1)
+                            .foregroundStyle(Palette.tertiaryInk.opacity(0.8))
                     }
                 }
             }
@@ -103,6 +119,11 @@ struct EquityPlot: View {
         }
         .chartOverlay { proxy in
             EquityPointerLayer(proxy: proxy, scale: scale, selection: $selection, measures: true)
+        }
+        .onGeometryChange(for: Double.self) {
+            $0.size.width
+        } action: {
+            plotWidth = $0 - valueAxisWidth
         }
     }
 

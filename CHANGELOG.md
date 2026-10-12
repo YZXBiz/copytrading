@@ -9,6 +9,7 @@ User-visible changes for each release are recorded here. Every GitHub release's 
 - **An edited Discord post no longer stops copying.** A post edited after CopyTrading first read it used to stop the Discord connection on every start ("Discord could not be reached"). The first version is the one that counts and is never copied twice; the edit is noted and reading carries on.
 - **Apply Changes keeps your accounts copying.** Applying a change restarts copying; every account that was copying before copies again afterwards.
 - **A lot you sold by hand stays yours.** A post whose lot you later sold from the account page no longer reads "Bought … and 1 more"; the sale shows as "You sold …".
+- **A finer curve.** The day chart draws a point a minute instead of every five, and the week every 15 minutes instead of hourly. Its time marks are as fine as the width allows (every 15 or 30 minutes on a wide window), and the pre-market and after-hours strips are named.
 - **The day chart reads in your time.** Its hour marks and readouts use the same time zone and clock as the rest of the app (Settings → General), the opening bell and the close are marked, and no hour crowds them.
 - **A start that fails says why in plain words**, such as "Copying didn't start: Discord could not be reached. Try again.", instead of an engine message.
 
