@@ -85,7 +85,7 @@ def _parser() -> argparse.ArgumentParser:
         "pause", parents=[output], help="stop copying into an account"
     ).add_argument("account_id")
     account_actions.add_parser(
-        "resume", parents=[output], help="propose resuming entries"
+        "resume", parents=[output], help="propose copying into an account again"
     ).add_argument("account_id")
     recovery = account_actions.add_parser(
         "recovery", parents=[output], help="propose a recovery preference"
