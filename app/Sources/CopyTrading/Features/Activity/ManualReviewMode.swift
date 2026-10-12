@@ -15,15 +15,6 @@ enum ManualReviewMode: Equatable {
         self = copying.awaitsApproval ? .approve : .copy
     }
 
-    /// The tracked label over the post.
-    var label: String {
-        switch self {
-        case .approve: "Approve a call"
-        case .copy: "Copy a call"
-        case .enter: "Enter the trade"
-        }
-    }
-
     /// What the correction records as its reason, in the owner's words.
     var reason: String {
         switch self {

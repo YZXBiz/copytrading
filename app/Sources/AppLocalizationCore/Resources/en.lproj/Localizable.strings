@@ -1696,12 +1696,10 @@
 "New York (market time)" = "New York (market time)";
 "City or time zone" = "City or time zone";
 "Price in the post" = "Price in the post";
-"The guru's price" = "The guru's price";
 "Save and Preview Order" = "Save and Preview Order";
 "Save and Preview Orders" = "Save and Preview Orders";
 "Try Again" = "Try Again";
 "CopyTrading's engine isn't running, so this can't be saved or placed yet." = "CopyTrading's engine isn't running, so this can't be saved or placed yet.";
-"Before anything is placed, CopyTrading checks each account's limits and what it holds." = "Before anything is placed, CopyTrading checks each account's limits and what it holds.";
 "Not copying right now" = "Not copying right now";
 "Avg cost" = "Avg cost";
 "Price" = "Price";
@@ -1989,7 +1987,6 @@
 "Trade %lld of %lld" = "Trade %lld of %lld";
 "Stock" = "Stock";
 "From" = "From";
-"Order price" = "Order price";
 "Nothing CopyTrading bought is held in these accounts." = "Nothing CopyTrading bought is held in these accounts.";
 "Not held" = "Not held";
 "Ticker" = "Ticker";
@@ -1998,7 +1995,6 @@
 "The buy at %@" = "The buy at %@";
 "≈ %@" = "≈ %@";
 "Other" = "Other";
-"What should happen" = "What should happen";
 "A post with no words" = "A post with no words";
 "Another trade" = "Another trade";
 "Checked just now" = "Checked just now";
@@ -2018,12 +2014,9 @@
 "posted %@ ago" = "posted %@ ago";
 "Checking" = "Checking";
 "Can't send" = "Can't send";
-"Approve a call" = "Approve a call";
-"Copy a call" = "Copy a call";
 "Enter the trade" = "Enter the trade";
 "Entered the trade the post asked for" = "Entered the trade the post asked for";
 "Filled in from the post's words. Check it, then send." = "Filled in from the post's words. Check it, then send.";
-"Say what this post should do, then send it." = "Say what this post should do, then send it.";
 "At the bid" = "At the bid";
 "Agent request" = "Agent request";
 "The request" = "The request";
@@ -2181,3 +2174,14 @@
 "Guru's price" = "Guru's price";
 "%@ + %@ allowed" = "%@ + %@ allowed";
 "%@ − %@ allowed" = "%@ − %@ allowed";
+"Type a ticker" = "Type a ticker";
+"You hold %@" = "You hold %@";
+"How much" = "How much";
+"Limit…" = "Limit…";
+"the guru's price" = "the guru's price";
+"+ Another trade" = "+ Another trade";
+"%@ · checks your limits first" = "%@ · checks your limits first";
+"Waiting for your approval." = "Waiting for your approval.";
+"Waiting for you to copy it." = "Waiting for you to copy it.";
+"CopyTrading couldn't read a trade in this post." = "CopyTrading couldn't read a trade in this post.";
+"Limit price" = "Limit price";

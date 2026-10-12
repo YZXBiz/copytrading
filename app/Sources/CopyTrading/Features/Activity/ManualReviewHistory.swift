@@ -1,7 +1,7 @@
 import DesktopCore
 import SwiftUI
 
-/// What already came of the post, folded under HISTORY: each account's earlier outcome, then the
+/// What already came of the post, folded under a quiet History row: each account's earlier outcome, then the
 /// trades sent by hand for it before.
 struct ManualReviewHistory: View {
     let source: SourceActivity
@@ -22,9 +22,11 @@ struct ManualReviewHistory: View {
                 isOpen.toggle()
             } label: {
                 HStack(spacing: 6) {
-                    Eyebrow(L10n.string("History"))
+                    Text(L10n.string("History"))
+                        .font(DesignTokens.caption)
+                        .foregroundStyle(Palette.tertiaryInk)
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.system(size: 9, weight: .semibold))
                         .foregroundStyle(Palette.tertiaryInk)
                         .rotationEffect(.degrees(isOpen ? 90 : 0))
                 }

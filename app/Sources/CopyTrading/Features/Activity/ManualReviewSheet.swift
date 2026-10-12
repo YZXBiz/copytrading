@@ -1,9 +1,9 @@
 import DesktopCore
 import SwiftUI
 
-/// The owner says what a post should do and sends it: the post in big type, then plain choices
-/// (buy or sell, the stock, how much, the price, the accounts), a one-line preview of the order,
-/// and one button. Underneath it is the engine's manual correction: saved, previewed fresh in
+/// The owner says what a post should do and sends it: the post in big type with one quiet line
+/// under it, then one calm form (Buy or Sell, then a row each for the stock, how much, the price,
+/// and the accounts), and a footer that always shows the order it makes and one button. Underneath it is the engine's manual correction: saved, previewed fresh in
 /// each account, then confirmed (ADR-0007).
 struct ManualReviewSheet: View {
     let source: SourceActivity
@@ -139,13 +139,12 @@ struct ManualReviewSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 34) {
+                VStack(alignment: .leading, spacing: 26) {
                     header
-                    VStack(alignment: .leading, spacing: 14) {
-                        Eyebrow(L10n.string("What should happen"))
+                    VStack(alignment: .leading, spacing: 0) {
                         trades
+                        accountChoices
                     }
-                    accountChoices
                     if correctionRequest != nil { results }
                     ManualReviewHistory(source: source, feature: feature, operations: operations)
                 }
@@ -156,6 +155,7 @@ struct ManualReviewSheet: View {
             }
             .scrollEdgeEffectStyle(.soft, for: .bottom)
             footer
+                .background(Palette.canvas)
         }
         .background(Palette.page)
         .frame(minWidth: 560, idealWidth: 620, minHeight: 600, idealHeight: 780)
@@ -180,8 +180,7 @@ struct ManualReviewSheet: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Eyebrow(L10n.string(mode.label))
+        VStack(alignment: .leading, spacing: 8) {
             let text = source.readableText()
             Text(text.isEmpty ? L10n.string("A post with no words") : "“\(text)”")
                 .font(DisplayFont.font(size: text.count > 90 ? 24 : 34, weight: .medium, relativeTo: .title))
@@ -191,29 +190,30 @@ struct ManualReviewSheet: View {
                 .textSelection(.enabled)
                 .accessibilityIdentifier("review.post")
             Text(lede)
-                .font(DesignTokens.lede)
-                .tracking(DesignTokens.ledeTracking)
+                .font(DesignTokens.caption)
                 .foregroundStyle(Palette.tertiaryInk)
-            if mode == .enter {
-                Text(
-                    L10n.string(
-                        guessed
-                            ? "Filled in from the post's words. Check it, then send."
-                            : "Say what this post should do, then send it.")
-                )
-                .font(DesignTokens.bodyText)
-                .foregroundStyle(Palette.secondaryInk)
-                .padding(.top, 2)
-            }
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
+    /// Who posted, when, and why the sheet is open, on one quiet line.
     @MainActor private var lede: String {
-        [guruName, Humanize.postTime(source.sourceAt)].compactMap { $0 }.joined(separator: " · ")
+        [guruName, Humanize.postTime(source.sourceAt), L10n.string(why)].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    private var why: String {
+        switch mode {
+        case .approve: "Waiting for your approval."
+        case .copy: "Waiting for you to copy it."
+        case .enter:
+            guessed
+                ? "Filled in from the post's words. Check it, then send."
+                : "CopyTrading couldn't read a trade in this post."
+        }
     }
 
     private var trades: some View {
-        VStack(alignment: .leading, spacing: 30) {
+        VStack(alignment: .leading, spacing: 22) {
             let holdings = ManualHolding.holdings(in: accounts, accountIDs: selectedAccountIDs)
             let prices = Self.marketPrices(in: accounts)
             let single = chosenAccounts.count == 1 ? chosenAccounts.first.flatMap { connections[$0.accountID] } : nil
@@ -232,8 +232,8 @@ struct ManualReviewSheet: View {
                 Button {
                     instructions.append(ManualInstructionDraft())
                 } label: {
-                    Label(L10n.string("Another trade"), systemImage: "plus")
-                        .font(DesignTokens.caption.weight(.medium))
+                    Text(L10n.string("+ Another trade"))
+                        .font(DesignTokens.caption)
                         .foregroundStyle(Palette.secondaryInk)
                 }
                 .buttonStyle(QuietPressButtonStyle())
@@ -243,19 +243,18 @@ struct ManualReviewSheet: View {
         .disabled(correctionRequest != nil)
     }
 
-    @ViewBuilder private var accountChoices: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Eyebrow(L10n.string("Accounts"))
+    private var accountChoices: some View {
+        FormRow(label: L10n.string("Account")) {
             if accounts.isEmpty {
                 Text(L10n.string("No account status is loaded"))
                     .font(DesignTokens.bodyText)
                     .foregroundStyle(Palette.tertiaryInk)
             }
-            FlowRow(spacing: 26, lineSpacing: 14) {
+            FlowRow(spacing: 22, lineSpacing: 12) {
                 ForEach(accounts) { account in
-                    ChoiceWord(
+                    FormChoice(
                         title: account.accountID,
-                        detail: L10n.string(account.environment == .live ? "Live" : "Paper"),
+                        detail: account.environment == .live ? L10n.string("Live") : nil,
                         detailTint: account.environment == .live ? .orange : nil,
                         isOn: selectedAccountIDs.contains(account.accountID)
                     ) {
@@ -270,10 +269,8 @@ struct ManualReviewSheet: View {
                 }
             }
             .disabled(correctionRequest != nil)
-            Text(L10n.string("Before anything is placed, CopyTrading checks each account's limits and what it holds."))
-                .font(DesignTokens.caption)
-                .foregroundStyle(Palette.tertiaryInk)
         }
+        .padding(.top, 2)
     }
 
     // MARK: After saving
@@ -335,13 +332,16 @@ struct ManualReviewSheet: View {
                             // The order the choices make, marked by the bead, which hops when it changes.
                             InkBead(hop: summary.order.hashValue)
                                 .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
-                            VStack(alignment: .leading, spacing: 5) {
+                            VStack(alignment: .leading, spacing: 4) {
                                 Text(summary.order)
                                     .font(DesignTokens.bodyEmphasis)
                                     .foregroundStyle(Palette.ink)
                                     .monospacedDigit()
                                     .lineLimit(1)
-                                Eyebrow(summary.place)
+                                Text(L10n.string("%@ · checks your limits first", summary.place))
+                                    .font(DesignTokens.caption)
+                                    .foregroundStyle(Palette.tertiaryInk)
+                                    .lineLimit(1)
                             }
                         }
                         .accessibilityElement(children: .combine)
@@ -358,6 +358,7 @@ struct ManualReviewSheet: View {
         }
         .padding(.horizontal, 40)
         .padding(.vertical, 18)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder private var primaryButton: some View {

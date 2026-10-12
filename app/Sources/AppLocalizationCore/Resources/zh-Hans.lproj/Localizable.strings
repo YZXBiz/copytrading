@@ -1696,12 +1696,10 @@
 "New York (market time)" = "纽约（市场时间）";
 "City or time zone" = "城市或时区";
 "Price in the post" = "帖子里的价格";
-"The guru's price" = "导师给出的价格";
 "Save and Preview Order" = "保存并预览订单";
 "Save and Preview Orders" = "保存并预览订单";
 "Try Again" = "重试";
 "CopyTrading's engine isn't running, so this can't be saved or placed yet." = "CopyTrading 的引擎没有运行，暂时无法保存或下单。";
-"Before anything is placed, CopyTrading checks each account's limits and what it holds." = "下单前，CopyTrading 会检查每个账户的限额和持仓。";
 "Not copying right now" = "目前未在跟单";
 "Avg cost" = "平均成本";
 "Price" = "现价";
@@ -1989,7 +1987,6 @@
 "Trade %lld of %lld" = "第 %lld 笔，共 %lld 笔";
 "Stock" = "股票";
 "From" = "卖出哪几笔";
-"Order price" = "下单价格";
 "Nothing CopyTrading bought is held in these accounts." = "这些账户里没有 CopyTrading 买入的持仓。";
 "Not held" = "未持有";
 "Ticker" = "代码";
@@ -1998,7 +1995,6 @@
 "The buy at %@" = "%@ 的那笔买入";
 "≈ %@" = "约 %@";
 "Other" = "其他";
-"What should happen" = "该怎么做";
 "A post with no words" = "一条没有文字的帖子";
 "Another trade" = "再加一笔";
 "Checked just now" = "刚刚检查";
@@ -2018,12 +2014,9 @@
 "posted %@ ago" = "%@前发布";
 "Checking" = "检查中";
 "Can't send" = "无法发送";
-"Approve a call" = "批准一条信号";
-"Copy a call" = "跟一条信号";
 "Enter the trade" = "录入交易";
 "Entered the trade the post asked for" = "按帖子的意思录入了交易";
 "Filled in from the post's words. Check it, then send." = "已按帖子的文字填好。核对后发送。";
-"Say what this post should do, then send it." = "说明这条帖子该怎么做，然后发送。";
 "At the bid" = "按买一价";
 "Agent request" = "代理请求";
 "The request" = "请求内容";
@@ -2181,3 +2174,14 @@
 "Guru's price" = "老师的价格";
 "%@ + %@ allowed" = "%@，允许高出 %@";
 "%@ − %@ allowed" = "%@，允许低于 %@";
+"Type a ticker" = "输入股票代码";
+"You hold %@" = "你持有 %@";
+"How much" = "数量";
+"Limit…" = "限价…";
+"the guru's price" = "老师的价格";
+"+ Another trade" = "+ 再加一笔";
+"%@ · checks your limits first" = "%@ · 先检查你的限额";
+"Waiting for your approval." = "等待你批准。";
+"Waiting for you to copy it." = "等待你跟单。";
+"CopyTrading couldn't read a trade in this post." = "CopyTrading 没能从这条帖子读出交易。";
+"Limit price" = "限价";

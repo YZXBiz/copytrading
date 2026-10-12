@@ -1,8 +1,9 @@
 import DesktopCore
 import SwiftUI
 
-/// What should happen, as plain choices: buy or sell, the stock (for a sell, one CopyTrading
-/// holds), how much, which buys a sell takes from, and the price.
+/// What should happen, as one calm form: Buy or Sell on top, the only butter; then a row each for
+/// the stock (for a sell, one CopyTrading holds, with what is held as a note), how much, which buys
+/// a sell takes from, and the price.
 struct ManualInstructionEditor: View {
     @Binding var draft: ManualInstructionDraft
     /// What CopyTrading holds in the chosen accounts.
@@ -22,37 +23,35 @@ struct ManualInstructionEditor: View {
     private var marketPrice: Decimal? { holding?.price ?? marketPrices[symbol] }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: 0) {
             if let position {
                 HStack {
-                    Eyebrow(L10n.string("Trade %lld of %lld", Int64(position.index + 1), Int64(position.count)))
+                    Text(L10n.string("Trade %lld of %lld", Int64(position.index + 1), Int64(position.count)))
+                        .font(DesignTokens.caption.weight(.semibold))
+                        .foregroundStyle(Palette.secondaryInk)
                     Spacer()
                     Button(L10n.string("Remove"), action: remove)
                         .buttonStyle(QuietPressButtonStyle())
                         .font(DesignTokens.caption)
                         .foregroundStyle(Palette.secondaryInk)
                 }
+                .padding(.bottom, 10)
             }
-            HStack(alignment: .firstTextBaseline, spacing: 30) {
-                ChoiceWord(title: L10n.string("Buy"), large: true, isOn: !draft.isSell) { setSell(false) }
-                    .accessibilityIdentifier("review.buy")
-                ChoiceWord(title: L10n.string("Sell"), large: true, isOn: draft.isSell) { setSell(true) }
-                    .accessibilityIdentifier("review.sell")
-            }
-            choice(L10n.string("Stock")) { stock }
-            choice(L10n.string(draft.isSell ? "How much to sell" : "How much to buy")) { amount }
+            TradeSideSwitch(isSell: draft.isSell, choose: setSell)
+                .padding(.bottom, 8)
+            FormRow(label: L10n.string("Stock"), note: holdingNote) { stock }
+            FormRow(label: L10n.string("How much")) { amount }
             if draft.isSell, !buyPrices.isEmpty {
-                choice(L10n.string("From")) { buys }
+                FormRow(label: L10n.string("From")) { buys }
             }
-            choice(L10n.string("Order price")) { price }
+            FormRow(label: L10n.string("Price")) { price }
         }
     }
 
-    private func choice(_ label: String, @ViewBuilder content: () -> some View) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Eyebrow(label)
-            content()
-        }
+    /// What is held of the chosen stock, under the Stock row of a sell.
+    @MainActor private var holdingNote: String? {
+        guard draft.isSell, let holding else { return nil }
+        return L10n.string("You hold %@", detail(of: holding))
     }
 
     // MARK: Stock
@@ -65,30 +64,33 @@ struct ManualInstructionEditor: View {
                     .font(DesignTokens.bodyText)
                     .foregroundStyle(Palette.secondaryInk)
             } else {
-                FlowRow(spacing: 26, lineSpacing: 14) {
+                FlowRow(spacing: 22, lineSpacing: 12) {
                     ForEach(holdings) { held in
-                        ChoiceWord(title: held.symbol, detail: detail(of: held), isOn: held.symbol == symbol) {
+                        FormChoice(title: held.symbol, isOn: held.symbol == symbol) {
                             pick(held.symbol)
                         }
                         .accessibilityIdentifier("review.stock.\(held.symbol)")
                     }
                     if named {
-                        ChoiceWord(title: symbol, detail: L10n.string("Not held"), isOn: true) {}
+                        FormChoice(title: symbol, detail: L10n.string("Not held"), isOn: true) {}
                     }
                 }
             }
         } else {
-            TextField(L10n.string("Ticker"), text: $draft.symbol, prompt: Text(L10n.string("Ticker")).foregroundStyle(Palette.tertiaryInk))
-                .textFieldStyle(.plain)
-                .font(DisplayFont.font(size: 22, weight: .medium, relativeTo: .title3))
-                .foregroundStyle(Palette.ink)
-                .padding(.bottom, 6)
-                .frame(width: 170)
-                .focused($focusedField, equals: "symbol")
-                .overlay(alignment: .bottom) { fieldLine(focusedField == "symbol" || draft.symbol.trimmed.isEmpty) }
-                .accessibilityLabel(L10n.string("Symbol"))
-                .accessibilityIdentifier("review.symbol")
-                .onChange(of: draft.symbol) { refreshMarketPrice() }
+            TextField(
+                L10n.string("Ticker"), text: $draft.symbol,
+                prompt: Text(L10n.string("Type a ticker")).foregroundStyle(Palette.tertiaryInk)
+            )
+            .textFieldStyle(.plain)
+            .font(draft.symbol.trimmed.isEmpty ? DesignTokens.bodyText : DesignTokens.bodyText.weight(.semibold))
+            .foregroundStyle(Palette.ink)
+            .padding(.bottom, 5)
+            .frame(width: 200)
+            .focused($focusedField, equals: "symbol")
+            .overlay(alignment: .bottom) { fieldLine(focusedField == "symbol" || draft.symbol.trimmed.isEmpty) }
+            .accessibilityLabel(L10n.string("Symbol"))
+            .accessibilityIdentifier("review.symbol")
+            .onChange(of: draft.symbol) { refreshMarketPrice() }
         }
     }
 
@@ -102,16 +104,16 @@ struct ManualInstructionEditor: View {
 
     @ViewBuilder private var amount: some View {
         let options = draft.isSell ? ManualInstructionDraft.sellShares : ManualInstructionDraft.buySizes
-        FlowRow(spacing: 26, lineSpacing: 14) {
+        FlowRow(spacing: 22, lineSpacing: 12) {
             ForEach(options, id: \.self) { option in
-                ChoiceWord(title: shareTitle(option), detail: buyDetail(option), isOn: isChosen(option)) {
+                FormChoice(title: shareTitle(option), detail: buyDetail(option), isOn: isChosen(option)) {
                     draft.fraction = option
                 }
                 .accessibilityIdentifier("review.amount.\(Humanize.fraction(option.isEmpty ? "1" : option))")
             }
             // A size the post named that isn't one of the usual ones.
             if !draft.fraction.isEmpty, !options.contains(where: { isChosen($0) }) {
-                ChoiceWord(title: shareTitle(draft.fraction), detail: buyDetail(draft.fraction), isOn: true) {}
+                FormChoice(title: shareTitle(draft.fraction), detail: buyDetail(draft.fraction), isOn: true) {}
             }
         }
     }
@@ -145,10 +147,10 @@ struct ManualInstructionEditor: View {
     }
 
     private var buys: some View {
-        FlowRow(spacing: 26, lineSpacing: 14) {
-            ChoiceWord(title: L10n.string("Every buy"), isOn: draft.entryPrice.trimmed.isEmpty) { draft.entryPrice = "" }
+        FlowRow(spacing: 22, lineSpacing: 12) {
+            FormChoice(title: L10n.string("Every buy"), isOn: draft.entryPrice.trimmed.isEmpty) { draft.entryPrice = "" }
             ForEach(buyPrices, id: \.self) { price in
-                ChoiceWord(
+                FormChoice(
                     title: L10n.string("The buy at %@", Humanize.dollars("\(price)")),
                     isOn: Decimal(string: draft.entryPrice.trimmed) == price
                 ) { draft.entryPrice = "\(price)" }
@@ -165,15 +167,15 @@ struct ManualInstructionEditor: View {
         let atMarket = draft.isSell ? draft.price.trimmed.isEmpty : marketPrice != nil && sent == marketPrice && sent != post
         let atPost = post != nil && sent == post
         let other = typesPrice || (!atMarket && !atPost)
-        FlowRow(spacing: 26, lineSpacing: 14) {
+        FlowRow(spacing: 22, lineSpacing: 12) {
             if let post {
-                ChoiceWord(title: Humanize.dollars("\(post)"), detail: L10n.string("The guru's price"), isOn: !typesPrice && atPost) {
+                FormChoice(title: Humanize.dollars("\(post)"), detail: L10n.string("the guru's price"), isOn: !typesPrice && atPost) {
                     typesPrice = false
                     draft.price = draft.postPrice
                 }
             }
             if draft.isSell || marketPrice != nil {
-                ChoiceWord(
+                FormChoice(
                     title: L10n.string("Market"),
                     detail: marketDetail,
                     isOn: !typesPrice && atMarket
@@ -184,22 +186,25 @@ struct ManualInstructionEditor: View {
                 .accessibilityIdentifier("review.price.market")
             }
             if post != nil || draft.isSell || marketPrice != nil {
-                ChoiceWord(title: L10n.string("Other"), isOn: other) {
+                FormChoice(title: L10n.string("Limit…"), isOn: other) {
                     typesPrice = true
                     if draft.isSell, draft.price.trimmed.isEmpty { draft.price = marketPrice.map { "\($0)" } ?? "" }
                 }
             }
             if other {
-                TextField(L10n.string("Price"), text: $draft.price, prompt: Text(L10n.string("Price")).foregroundStyle(Palette.tertiaryInk))
-                    .textFieldStyle(.plain)
-                    .font(DesignTokens.bodyEmphasis)
-                    .monospacedDigit()
-                    .padding(.bottom, 4)
-                    .frame(width: 96)
-                    .focused($focusedField, equals: "price")
-                    .overlay(alignment: .bottom) { fieldLine(focusedField == "price" || draft.price.trimmed.isEmpty) }
-                    .accessibilityLabel(L10n.string("Price in the post"))
-                    .accessibilityIdentifier("review.price")
+                TextField(
+                    L10n.string("Price"), text: $draft.price,
+                    prompt: Text(L10n.string("Limit price")).foregroundStyle(Palette.tertiaryInk)
+                )
+                .textFieldStyle(.plain)
+                .font(DesignTokens.bodyEmphasis)
+                .monospacedDigit()
+                .padding(.bottom, 4)
+                .frame(width: 96)
+                .focused($focusedField, equals: "price")
+                .overlay(alignment: .bottom) { fieldLine(focusedField == "price" || draft.price.trimmed.isEmpty) }
+                .accessibilityLabel(L10n.string("Price in the post"))
+                .accessibilityIdentifier("review.price")
             }
         }
     }
