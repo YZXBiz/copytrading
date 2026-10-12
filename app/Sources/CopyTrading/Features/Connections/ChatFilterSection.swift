@@ -31,7 +31,7 @@ struct ChatFilterSection: View {
             } else {
                 Text(
                     L10n.string(
-                        "An OpenAI key skips small talk for about 2¢ per 1,000 posts, so %@ only reads calls.",
+                        "An OpenAI key skips small talk for about 15¢ per 1,000 posts, so %@ only reads calls.",
                         model.setupDraft.provider.shortTitle)
                 )
                 .font(DesignTokens.caption)

@@ -60,7 +60,7 @@ struct ValidationResultsSection: View {
             return L10n.string("%@ answered as %@", provider, parts[1])
         case .broker:
             return L10n.string(check.environment == .live ? "Alpaca live account found" : "Alpaca paper account found")
-        case .triage, .notification, .configuration:
+        case .notification, .configuration:
             return nil
         }
     }
