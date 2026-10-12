@@ -1,10 +1,10 @@
 import DesktopCore
 import SwiftUI
 
-/// The account under its curve in two short rows. Cash and buying power first; then every limit in
-/// one place under a "Limits" title, with Edit Limits beside it: today's loss and what is in stocks,
-/// each against its cap with a meter, and the most an order and a stock may take. Each figure has
-/// the same shape, a label over a number, so the row reads straight across. Nothing else on the
+/// The account's rules under its curve: every limit in one place under a "Limits" title, with Edit
+/// Limits beside it: today's loss and what is in stocks, each against its cap with a meter, and the
+/// most an order and a stock may take. Each figure has the same shape, a label over a number, so the
+/// row reads straight across. Cash and buying power sit with the balance above. Nothing else on the
 /// page edits limits.
 struct AccountFacts: View {
     let account: AccountOverview
@@ -22,10 +22,6 @@ struct AccountFacts: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 34) {
-            HStack(alignment: .top, spacing: 0) {
-                figure("Cash", Decimal(engine: account.balance?.cash), cents: true)
-                figure("Buying power", Decimal(engine: account.balance?.buyingPower), cents: true)
-            }
             if let policy {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack(alignment: .firstTextBaseline, spacing: 14) {
@@ -84,14 +80,14 @@ struct AccountFacts: View {
     }
 
     /// A label over a number, with an optional quiet word after it: "$500 at most".
-    private func figure(_ title: String, _ amount: Decimal?, cents: Bool = false, suffix: String? = nil) -> some View {
+    private func figure(_ title: String, _ amount: Decimal?, suffix: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Eyebrow(L10n.string(title))
             HStack(alignment: .firstTextBaseline, spacing: 5) {
                 if let amount {
                     MoneyText(
                         value: amount, font: DesignTokens.statValue,
-                        fractionDigits: cents ? nil : 0
+                        fractionDigits: 0
                     )
                     .foregroundStyle(Palette.ink)
                     if let suffix {

@@ -2171,3 +2171,4 @@
 "You sold %@" = "你手动卖出了 %@";
 "Pre-market" = "盘前";
 "After hours" = "盘后";
+"·  %@ cash  ·  %@ buying power" = "·  现金 %@  ·  购买力 %@";

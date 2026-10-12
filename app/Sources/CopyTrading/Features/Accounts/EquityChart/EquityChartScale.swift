@@ -73,7 +73,7 @@ struct EquityChartScale {
     /// The steps a day's marks may take, finest first.
     static let dayStepsMinutes = [15, 30, 60, 120]
     /// The least room between two time marks, in points, so labels never touch.
-    static let minimumTickSpacing: Double = 44
+    static let minimumTickSpacing: Double = 90
 
     /// Time labels spaced for the range and the plot's width, in the zone and language the rest
     /// of the app reads in. A day marks the opening bell and the close, the finest round step that

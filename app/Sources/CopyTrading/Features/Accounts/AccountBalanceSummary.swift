@@ -1,7 +1,8 @@
 import DesktopCore
 import SwiftUI
 
-/// What the account is worth, in the display face, and how today went under it with when it was read.
+/// What the account is worth, in the display face, and under it how today went, its cash and buying
+/// power, and when it was read.
 struct AccountBalanceSummary: View {
     let account: AccountOverview
     let model: AppModel
@@ -27,6 +28,13 @@ struct AccountBalanceSummary: View {
                         Text(L10n.string("today"))
                             .font(DesignTokens.bodyText)
                             .foregroundStyle(Palette.tertiaryInk)
+                        Text(
+                            L10n.string(
+                                "·  %@ cash  ·  %@ buying power", money(balance.cash), money(balance.buyingPower))
+                        )
+                        .font(DesignTokens.bodyText)
+                        .monospacedDigit()
+                        .foregroundStyle(Palette.tertiaryInk)
                         AccountFreshness(
                             observedAt: balance.observedAt,
                             isRefreshing: feature.isRefreshing,
@@ -38,6 +46,10 @@ struct AccountBalanceSummary: View {
                 }
             }
         }
+    }
+
+    private func money(_ value: String?) -> String {
+        (Decimal(engine: value) ?? 0).formatted(.currency(code: "USD"))
     }
 
     /// Today's change against yesterday's close, the equity less the change.
