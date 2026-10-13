@@ -13,6 +13,8 @@ struct ManualReviewSheet: View {
     let guruName: String?
     /// This guru's full position in each account it copies to, by account.
     let connections: [String: TradingRouteConnection]
+    /// Each account's max per order, which caps any one buy.
+    let maxOrderUSD: [String: Decimal]
     /// Asks for Touch ID when an order goes to a live account or one that asks to approve orders.
     let confirmOrders: (Set<String>) async throws -> Void
     /// The engine isn't running, so nothing can be saved or placed until it starts.
@@ -48,6 +50,7 @@ struct ManualReviewSheet: View {
         feature: ManualReviewFeatureModel,
         guruName: String? = nil,
         connections: [TradingRouteConnection] = [],
+        maxOrderUSD: [String: Decimal] = [:],
         confirmOrders: @escaping (Set<String>) async throws -> Void,
         engineStopped: Bool = false,
         startEngine: @escaping () -> Void = {}
@@ -58,6 +61,7 @@ struct ManualReviewSheet: View {
         self.feature = feature
         self.guruName = guruName
         self.connections = Dictionary(connections.map { ($0.accountID, $0) }, uniquingKeysWith: { first, _ in first })
+        self.maxOrderUSD = maxOrderUSD
         self.confirmOrders = confirmOrders
         self.engineStopped = engineStopped
         self.startEngine = startEngine
@@ -246,6 +250,7 @@ struct ManualReviewSheet: View {
             let holdings = ManualHolding.holdings(in: accounts, accountIDs: selectedAccountIDs)
             let prices = Self.marketPrices(in: accounts)
             let single = chosenAccounts.count == 1 ? chosenAccounts.first.flatMap { connections[$0.accountID] } : nil
+            let cap = chosenAccounts.count == 1 ? chosenAccounts.first.flatMap { maxOrderUSD[$0.accountID] } : nil
             ForEach($instructions) { $instruction in
                 let index = instructions.firstIndex { $0.id == instruction.id } ?? 0
                 ManualInstructionEditor(
@@ -256,6 +261,7 @@ struct ManualReviewSheet: View {
                     refreshQuote: refreshingQuotes.contains(instruction.symbol.trimmed.uppercased())
                         ? nil : { refreshQuote(instruction.symbol.trimmed.uppercased()) },
                     fullPosition: single,
+                    maxOrderUSD: cap,
                     position: instructions.count > 1 ? (index, instructions.count) : nil,
                     remove: { instructions.removeAll { $0.id == instruction.id } }
                 )
@@ -365,26 +371,30 @@ struct ManualReviewSheet: View {
                             InkBead(hop: summary.order.hashValue)
                                 .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
                             VStack(alignment: .leading, spacing: 4) {
+                                // Wrapped, never cut off: the order is what the owner is about to send.
                                 Text(summary.order)
                                     .font(DesignTokens.bodyEmphasis)
                                     .foregroundStyle(Palette.ink)
                                     .monospacedDigit()
-                                    .lineLimit(1)
+                                    .fixedSize(horizontal: false, vertical: true)
                                 Text(L10n.string("%@ · checks your limits first", summary.place))
                                     .font(DesignTokens.caption)
                                     .foregroundStyle(Palette.tertiaryInk)
-                                    .lineLimit(1)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
                         }
                         .accessibilityElement(children: .combine)
                         .accessibilityIdentifier("review.estimate")
                     }
                     Spacer(minLength: 12)
+                    // The buttons keep their whole labels; the summary beside them wraps instead.
                     Button(L10n.string("Close")) { dismiss() }
                         .buttonStyle(InkActionButtonStyle(isProminent: false))
                         .keyboardShortcut(.cancelAction)
                         .accessibilityIdentifier("review.close")
+                        .fixedSize()
                     primaryButton
+                        .fixedSize()
                 }
             }
         }

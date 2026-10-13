@@ -16,6 +16,8 @@ struct ManualInstructionEditor: View {
     var refreshQuote: (() -> Void)?
     /// A full position for this guru in the one chosen account; nil when several are chosen.
     let fullPosition: TradingRouteConnection?
+    /// That account's max per order, which caps any one buy; nil when several are chosen.
+    let maxOrderUSD: Decimal?
     /// "Trade 2 of 3" with Remove, when the sheet holds more than one.
     let position: (index: Int, count: Int)?
     let remove: () -> Void
@@ -121,21 +123,28 @@ struct ManualInstructionEditor: View {
 
     @ViewBuilder private var amount: some View {
         let options = draft.isSell ? ManualInstructionDraft.sellShares : ManualInstructionDraft.buySizes
-        FlowRow(spacing: 22, lineSpacing: 12) {
-            ForEach(options, id: \.self) { option in
-                FormChoice(title: shareTitle(option), detail: buyDetail(option), isOn: isChosen(option)) {
-                    draft.fraction = option
-                    draft.usdAmount = ""
+        VStack(alignment: .leading, spacing: 8) {
+            FlowRow(spacing: 22, lineSpacing: 12) {
+                ForEach(options, id: \.self) { option in
+                    FormChoice(title: shareTitle(option), detail: buyDetail(option), isOn: isChosen(option)) {
+                        draft.fraction = option
+                        draft.usdAmount = ""
+                    }
+                    .accessibilityIdentifier("review.amount.\(Humanize.fraction(option.isEmpty ? "1" : option))")
                 }
-                .accessibilityIdentifier("review.amount.\(Humanize.fraction(option.isEmpty ? "1" : option))")
+                // A dollar amount the post named.
+                if !draft.isSell, !draft.usdAmount.isEmpty {
+                    ChoiceWord(title: Humanize.dollars(draft.usdAmount), isOn: true) {}
+                }
+                // A size the post named that isn't one of the usual ones.
+                if !draft.fraction.isEmpty, !options.contains(where: { isChosen($0) }) {
+                    FormChoice(title: shareTitle(draft.fraction), detail: buyDetail(draft.fraction), isOn: true) {}
+                }
             }
-            // A dollar amount the post named.
-            if !draft.isSell, !draft.usdAmount.isEmpty {
-                ChoiceWord(title: Humanize.dollars(draft.usdAmount), isOn: true) {}
-            }
-            // A size the post named that isn't one of the usual ones.
-            if !draft.fraction.isEmpty, !options.contains(where: { isChosen($0) }) {
-                FormChoice(title: shareTitle(draft.fraction), detail: buyDetail(draft.fraction), isOn: true) {}
+            if let cap = maxOrderUSD, !draft.isSell, options.contains(where: { asked($0).map { $0 > cap } ?? false }) {
+                Text(L10n.string("Your max per order, %@, caps any one buy.", Humanize.dollars("\(cap)")))
+                    .font(DesignTokens.caption)
+                    .foregroundStyle(Palette.tertiaryInk)
             }
         }
     }
@@ -153,12 +162,17 @@ struct ManualInstructionEditor: View {
         return glyphs[fraction] ?? fraction
     }
 
-    /// What a buy of this size asks for in the one chosen account, before its limits.
+    /// What a buy of this size asks for in the one chosen account, before the max per order.
+    private func asked(_ option: String) -> Decimal? {
+        guard !draft.isSell, let fullPosition else { return nil }
+        return fullPosition.copiedBudgetUSD(sourceFraction: option.isEmpty ? nil : Decimal(string: option))
+    }
+
+    /// What a buy of this size spends in the one chosen account: its share of the full position,
+    /// cut to the max per order, as the engine cuts it.
     @MainActor private func buyDetail(_ option: String) -> String? {
-        guard !draft.isSell, let fullPosition,
-            let budget = fullPosition.copiedBudgetUSD(sourceFraction: option.isEmpty ? nil : Decimal(string: option))
-        else { return nil }
-        return Humanize.dollars("\(budget)")
+        guard let budget = asked(option) else { return nil }
+        return Humanize.dollars("\(maxOrderUSD.map { min(budget, $0) } ?? budget)")
     }
 
     // MARK: Buys
