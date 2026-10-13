@@ -5,7 +5,7 @@ import queue
 import re
 import threading
 import time
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 
@@ -78,6 +78,34 @@ def journal_line(event: JournalEvent) -> str:
     return json.dumps(
         {"kind": kind, "at": at, **asdict(event)}, ensure_ascii=False, separators=(",", ":")
     )
+
+
+_FACT_PATTERNS = {
+    "symbol": r"[A-Z][A-Z0-9.\-]{0,9}",
+    "side": r"buy|sell",
+    "qty": r"\d{1,12}(\.\d{1,10})?",
+    "limit_price": r"\d{1,12}(\.\d{1,10})?",
+    "source_price": r"\d{1,12}(\.\d{1,10})?",
+    "status": r"[a-z_]{1,40}",
+    "filled_qty": r"\d{1,12}(\.\d{1,10})?",
+    "filled_avg_price": r"\d{1,12}(\.\d{1,10})?",
+    "reason": r"[a-z_]{1,64}",
+}
+
+
+def trading_facts(facts: Mapping[str, object] | None) -> dict[str, str]:
+    """The trading facts worth reading in a ledger event, each kept only when it is the plain
+    value its pattern allows, so no free text can ride along."""
+    if not facts:
+        return {}
+    kept = {}
+    for name, pattern in _FACT_PATTERNS.items():
+        value = facts.get(name)
+        if isinstance(value, (str, int, float)) and not isinstance(value, bool):
+            text = str(value)
+            if re.fullmatch(pattern, text):
+                kept[name] = text
+    return kept
 
 
 class LocalTelemetry:
@@ -278,10 +306,13 @@ class LocalTelemetry:
         workflow_id: str | None = None,
         destination_id: str | None = None,
         attempt: int | None = None,
+        facts: Mapping[str, object] | None = None,
     ) -> None:
-        """Queue only finite labels and opaque correlation, never source/model text."""
+        """Queue only finite labels, opaque correlation, and plain trading facts that match
+        their patterns, never source/model text."""
         self._enqueue(
             TradingDiagnosticEvent(
+                **trading_facts(facts),
                 operation=operation if operation in _TRADING_OPERATIONS else "other",
                 outcome=outcome if outcome in _TRADING_OUTCOMES else "other",
                 trace_id=validated_hex_id(trace_id, 32),

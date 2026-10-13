@@ -188,14 +188,14 @@ class QuoteBroker(Protocol):
 
 class ExecutionObserver(Protocol):
     def span(self, name: str, message_id: str) -> AbstractContextManager: ...
-    def event(self, name: str) -> None: ...
+    def event(self, name: str, facts: Mapping[str, object] | None = None) -> None: ...
 
 
 class NoOpObserver:
     def span(self, name: str, message_id: str) -> AbstractContextManager:
         return nullcontext()
 
-    def event(self, name: str) -> None:
+    def event(self, name: str, facts: Mapping[str, object] | None = None) -> None:
         pass
 
 

@@ -77,3 +77,13 @@ class TradingDiagnosticEvent:
     workflow_id: str | None = None
     destination_id: str | None = None
     attempt: int | None = None
+    # What a ledger event was about, kept only when each value passes its pattern.
+    symbol: str | None = None
+    side: str | None = None
+    qty: str | None = None
+    limit_price: str | None = None
+    source_price: str | None = None
+    status: str | None = None
+    filled_qty: str | None = None
+    filled_avg_price: str | None = None
+    reason: str | None = None

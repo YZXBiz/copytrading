@@ -1,6 +1,6 @@
 """Private observations for explicitly activated trading work, recorded in the local journal."""
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Mapping
 from contextlib import AbstractContextManager, contextmanager
 from hashlib import sha256
 
@@ -67,14 +67,17 @@ class TradingTelemetry:
     def source_span(self) -> AbstractContextManager[None]:
         return self._scope("source.forward")
 
-    def event(self, name: str) -> None:
-        ledger_event = safe_ledger_event(name)
-        with self._scope(
+    def event(self, name: str, facts: Mapping[str, object] | None = None) -> None:
+        """A ledger event, with the plain trading facts that say what it was about (the stock,
+        side, shares, prices, order status, skip reason); the journal keeps only those."""
+        self._record(
             "execution.ledger_event",
-            ledger_event=ledger_event,
-            correlation=current_workflow_attempt(),
-        ):
-            pass
+            "returned",
+            None,
+            safe_ledger_event(name),
+            current_workflow_attempt(),
+            facts,
+        )
 
     def _record(
         self,
@@ -83,6 +86,7 @@ class TradingTelemetry:
         signal_ref: str | None,
         ledger_event: str | None,
         correlation: WorkflowAttempt | None,
+        facts: Mapping[str, object] | None = None,
     ) -> None:
         if self._sink is None:
             return
@@ -96,6 +100,7 @@ class TradingTelemetry:
                 workflow_id=correlation.workflow_id if correlation else None,
                 destination_id=correlation.destination_id if correlation else None,
                 attempt=correlation.attempt if correlation else None,
+                facts=facts,
             )
         except Exception:  # noqa: BLE001 - observer failure must not reach trading
             self._report_observer_failure()

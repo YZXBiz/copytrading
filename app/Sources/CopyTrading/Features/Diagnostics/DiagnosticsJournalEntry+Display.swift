@@ -1,3 +1,4 @@
+import Foundation
 import DesktopCore
 
 extension DiagnosticsJournalEntry {
@@ -73,6 +74,7 @@ extension DiagnosticsJournalEntry {
     @MainActor
     var displayFields: [(label: String, value: String)] {
         let shown: [String] = [
+            "symbol", "qty", "limit_price", "source_price", "status", "filled_qty", "filled_avg_price", "reason",
             "previous_stage", "provider", "command_id", "workflow_id", "trace_id",
             "destination_id", "attempt", "signal_ref", "payload_bytes", "redacted_fields",
         ]
@@ -80,6 +82,17 @@ extension DiagnosticsJournalEntry {
         return shown.compactMap { name in
             guard let value = byName[name] else { return nil }
             switch name {
+            // What a ledger event was about: the order and its outcome, or why it was skipped.
+            case "symbol":
+                let side = byName["side"].map { L10n.string($0 == "sell" ? "Sell" : "Buy") }
+                return (L10n.string("Stock"), [side, value].compactMap { $0 }.joined(separator: " "))
+            case "qty": return (L10n.string("Shares"), Decimal(engine: value).map { Humanize.shareCount($0) } ?? value)
+            case "limit_price": return (L10n.string("Limit price"), Decimal(engine: value).map(Humanize.usd) ?? value)
+            case "source_price": return (L10n.string("Guru's price"), Decimal(engine: value).map(Humanize.usd) ?? value)
+            case "status": return (L10n.string("Status"), Humanize.code(value))
+            case "filled_qty": return (L10n.string("Filled"), Decimal(engine: value).map { Humanize.shareCount($0) } ?? value)
+            case "filled_avg_price": return (L10n.string("Average fill"), Decimal(engine: value).map(Humanize.usd) ?? value)
+            case "reason": return (L10n.string("Reason"), Reason.text(value))
             case "previous_stage": return (L10n.string("After"), Humanize.code(value))
             case "provider": return (L10n.string("Provider"), TradingProviderName(rawValue: value)?.title ?? Humanize.code(value))
             case "command_id": return (L10n.string("Command"), value)

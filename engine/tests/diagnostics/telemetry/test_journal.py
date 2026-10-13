@@ -20,6 +20,45 @@ from copytrading_engine.diagnostics.telemetry.local import LocalTelemetry
 from .builders import event, journal_records, journal_text
 
 
+def test_a_ledger_event_keeps_its_plain_trading_facts_and_nothing_else(tmp_path):
+    """A skip says why and an order says what it was, so the journal can be read on its own; a
+    value that isn't the plain fact its name allows, or any other field, is left out."""
+    directory = tmp_path / "diagnostics"
+    sink = LocalTelemetry(TelemetryConfig(journal_directory=directory))
+    try:
+        sink.record_trading_operation(
+            operation="execution.ledger_event",
+            outcome="returned",
+            ledger_event="order_prepared",
+            facts={
+                "symbol": "F",
+                "side": "buy",
+                "qty": "13.000000",
+                "limit_price": "12.26",
+                "source_price": "12.14",
+                "message_id": "discord:1:2",
+                "parser_reason": "Bought F at 12.14",
+            },
+        )
+        sink.record_trading_operation(
+            operation="execution.ledger_event",
+            outcome="returned",
+            ledger_event="skipped",
+            facts={"reason": "approval_required", "symbol": "free text; DROP"},
+        )
+        assert sink.flush(timeout_seconds=5)
+    finally:
+        sink.close(timeout_seconds=5)
+
+    order, skip = journal_records(directory)
+    assert (order["symbol"], order["side"], order["qty"]) == ("F", "buy", "13.000000")
+    assert (order["limit_price"], order["source_price"]) == ("12.26", "12.14")
+    assert "message_id" not in order
+    assert "parser_reason" not in order
+    assert skip["reason"] == "approval_required"
+    assert skip["symbol"] is None
+
+
 def test_each_record_is_one_self_describing_json_line(tmp_path):
     directory = tmp_path / "diagnostics"
     sink = LocalTelemetry(TelemetryConfig(journal_directory=directory))

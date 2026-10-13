@@ -429,7 +429,7 @@ async def test_owner_uses_injected_observer_on_worker(tmp_path):
             spans.append((name, message_id))
             yield
 
-        def event(self, name):
+        def event(self, name, facts=None):
             thread_ids.append(threading.get_ident())
             events.append(name)
 

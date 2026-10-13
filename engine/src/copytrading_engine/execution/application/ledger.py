@@ -250,7 +250,7 @@ class TradingLedger:
         # an alias to the state we publish (including when save raises).
         self._repository.save(state.model_copy(deep=True), event)
         self._snapshot = state
-        self._observer.event(event.payload.kind)
+        self._observer.event(event.payload.kind, event.payload.model_dump(mode="json"))
         log.info("%s %s", event.payload.kind, event.payload.model_dump(mode="json"))
 
     def record(self, event: JournalEvent) -> None:
