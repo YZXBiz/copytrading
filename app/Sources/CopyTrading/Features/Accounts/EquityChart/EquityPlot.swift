@@ -3,8 +3,9 @@ import DesktopCore
 import SwiftUI
 
 /// The combined curve, drawn on the app's chart paper: one smooth line in the day's color over a
-/// soft wash, filling the width from its first point to now, and an axis tag while reading a point
-/// or span.
+/// soft wash, and an axis tag while reading a point or span. A day always spans its whole session,
+/// as Stocks and most brokers draw it: the line stops at the latest balance and the rest of the
+/// day stays blank, so regular hours keep most of the width and the time marks stay put.
 struct EquityPlot: View {
     let curve: EquityCurve
     let stats: EquityCurveStats
@@ -56,10 +57,9 @@ struct EquityPlot: View {
         let axis = EquityValueAxis(lower: bounds.lower, upper: bounds.upper, count: 3)
         let scale = self.scale
         let times = scale.ticks(in: AppTime.zone, locale: AppTime.locale, width: plotWidth)
-        let domain = xDomain(on: scale)
         let runs = EquityLineRun.runs(curve.points, on: scale)
         Chart {
-            sessionBands(scale.extendedSessions, in: domain)
+            sessionBands(scale.extendedSessions)
             referenceLine
             ForEach(runs) { run in
                 ForEach(run.points, id: \.at) { point in
@@ -82,13 +82,13 @@ struct EquityPlot: View {
                 .foregroundStyle(Palette.ink)
                 .accessibilityHidden(true)
         }
-        .chartXScale(domain: xDomain(on: scale), range: .plotDimension(startPadding: 4, endPadding: 14))
+        .chartXScale(domain: 0...1, range: .plotDimension(startPadding: 4, endPadding: 14))
         .chartYScale(domain: plotRange)
         .chartXAxis {
-            AxisMarks(values: times.map(\.x).filter { domain.contains($0) }) { value in
+            AxisMarks(values: times.map(\.x)) { value in
                 AxisTick(centered: true, length: 4, stroke: StrokeStyle(lineWidth: 1))
                     .foregroundStyle(Palette.tertiaryInk.opacity(0.6))
-                AxisValueLabel(collisionResolution: .greedy) {
+                AxisValueLabel(anchor: .top, collisionResolution: .greedy) {
                     if let x = value.as(Double.self), let tick = times.first(where: { abs($0.x - x) < 1e-9 }) {
                         Text(tick.label)
                             .font(.caption)
@@ -134,11 +134,9 @@ struct EquityPlot: View {
     /// that the line stays below, so the names never share the time axis's row or cross the line.
     /// A band too narrow for its name stays unnamed rather than spilling past its edges.
     @ChartContentBuilder
-    private func sessionBands(_ sessions: [EquityChartScale.Session], in domain: ClosedRange<Double>) -> some ChartContent {
-        ForEach(sessions.filter { $0.end > domain.lowerBound && $0.start < domain.upperBound }, id: \.self) { session in
-            let from = max(session.start, domain.lowerBound)
-            let to = min(session.end, domain.upperBound)
-            RectangleMark(xStart: .value("From", from), xEnd: .value("To", to))
+    private func sessionBands(_ sessions: [EquityChartScale.Session]) -> some ChartContent {
+        ForEach(sessions, id: \.self) { session in
+            RectangleMark(xStart: .value("From", session.start), xEnd: .value("To", session.end))
                 .foregroundStyle(Palette.ink.opacity(0.035))
                 .annotation(position: .overlay, alignment: .top, spacing: 5) {
                     // One line, else a word to a line, else no name.
@@ -149,7 +147,7 @@ struct EquityPlot: View {
                             .multilineTextAlignment(.center)
                         Color.clear.frame(width: 0, height: 0)
                     }
-                    .frame(width: max(plotWidth * (to - from) / (domain.upperBound - domain.lowerBound) - 4, 0))
+                    .frame(width: max(plotWidth * (session.end - session.start) - 4, 0))
                 }
                 .accessibilityLabel(session.name)
         }
@@ -211,15 +209,5 @@ struct EquityPlot: View {
             .symbolSize(50)
             .foregroundStyle(tone(point.value))
             .accessibilityHidden(true)
-    }
-
-    /// A day fills the width from its first point to a little past the latest, never less than an
-    /// hour, so a morning's line is not squeezed into a corner of an empty afternoon. Longer ranges
-    /// keep their whole span.
-    private func xDomain(on scale: EquityChartScale) -> ClosedRange<Double> {
-        guard scale.isDay else { return 0...1 }
-        let start = scale.x(stats.open.at)
-        let end = scale.x(max(stats.last.at, stats.open.at.addingTimeInterval(3_600)))
-        return start...max(end, start + 0.05)
     }
 }
