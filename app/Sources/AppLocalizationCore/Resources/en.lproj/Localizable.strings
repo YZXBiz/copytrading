@@ -860,7 +860,7 @@
 "Cancel the orders open at Alpaca first" = "Cancel the orders open at Alpaca first";
 "Alpaca has not activated this account" = "Alpaca has not activated this account";
 "The AI model that turns each post into an exact order." = "The AI model that turns each post into an exact order.";
-"The balance appears once copying is on and the broker has been read." = "The balance appears once copying is on and the broker has been read.";
+"The balance appears once the broker has been read." = "The balance appears once the broker has been read.";
 "The biggest fall from a high to a later low in this window." = "The biggest fall from a high to a later low in this window.";
 "The broker accepted an order" = "The broker accepted an order";
 "The broker blocked this account" = "The broker blocked this account";
@@ -2112,7 +2112,6 @@
 "The new setup didn't start, so your previous setup is still in place: %@." = "The new setup didn't start, so your previous setup is still in place: %@.";
 "The engine stopped while starting" = "The engine stopped while starting";
 "Another CopyTrading on this Mac is copying into this account" = "Another CopyTrading on this Mac is copying into this account";
-"Updated %@" = "Updated %@";
 "Not updating since %@: the engine is stopped" = "Not updating since %@: the engine is stopped";
 "Not updating since %@" = "Not updating since %@";
 "Each order" = "Each order";
