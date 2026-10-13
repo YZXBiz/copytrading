@@ -2073,6 +2073,7 @@
 "A 1/6 call" = "A 1/6 call";
 "A 1/2 call" = "A 1/2 call";
 "No size given" = "No size given";
+"cut from %@" = "cut from %@";
 "Your max per order, %@, caps any one buy." = "Your max per order, %@, caps any one buy.";
 
 "From %@'s post · %@" = "From %@'s post · %@";

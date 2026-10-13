@@ -8,8 +8,9 @@ struct SizingSummary: Equatable {
     struct Figure: Equatable, Identifiable {
         let label: String
         let amount: String
-        /// The per-order limit cut this one down.
-        let isTrimmed: Bool
+        /// What the call asked for, when the per-order limit cut it down to `amount`.
+        let cutFrom: String?
+        var isTrimmed: Bool { cutFrom != nil }
         var id: String { label }
     }
 
@@ -31,10 +32,12 @@ struct SizingSummary: Equatable {
         let cap = policy.flatMap { Decimal(string: $0.maxOrderUSD.trimmed) }.flatMap { $0 > 0 ? $0 : nil }
         func figure(_ label: String, _ asked: Decimal) -> Figure {
             let trimmed = cap.map { asked > $0 } ?? false
-            return Figure(label: L10n.string(label), amount: dollars(trimmed ? cap ?? asked : asked), isTrimmed: trimmed)
+            return Figure(
+                label: L10n.string(label), amount: dollars(trimmed ? cap ?? asked : asked),
+                cutFrom: trimmed ? dollars(asked) : nil)
         }
         let figures = [
-            Figure(label: L10n.string("Full position"), amount: dollars(maximum), isTrimmed: false),
+            Figure(label: L10n.string("Full position"), amount: dollars(maximum), cutFrom: nil),
             figure("A 1/6 call", sixth),
             figure("A 1/2 call", half),
             figure("No size given", whole),
