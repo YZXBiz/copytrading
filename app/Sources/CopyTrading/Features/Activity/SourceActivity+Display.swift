@@ -122,7 +122,11 @@ extension SourceActivity {
         }
     }
 
-    @MainActor var isToday: Bool { sourceDate.map(AppTime.calendar.isDateInToday) ?? false }
+    /// Whether the post was made on the same day as `now`, in the app's zone. Views pass the time
+    /// from a `TimelineView`, so a count of today's posts starts over at midnight.
+    @MainActor func isPosted(onDayOf now: Date) -> Bool {
+        sourceDate.map { AppTime.calendar.isDate($0, inSameDayAs: now) } ?? false
+    }
 
     @MainActor var outcomes: [(accountID: String, outcome: DestinationOutcome)] {
         destinations.map { ($0.accountID, DestinationOutcome($0)) }

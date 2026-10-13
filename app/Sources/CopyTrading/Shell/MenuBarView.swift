@@ -82,28 +82,30 @@ struct MenuBarView: View {
     private var hero: some View {
         let change = balances.compactMap { Decimal(engine: $0.dayChangeUSD) }.reduce(0, +)
         let equity = balances.compactMap { Decimal(engine: $0.equity) }.reduce(0, +)
-        let posts = accountFeature.activity.filter(\.isToday).count
-        return VStack(alignment: .leading, spacing: 3) {
-            Text(L10n.string("Today"))
+        return TimelineView(.everyMinute) { context in
+            let posts = accountFeature.activity.filter { $0.isPosted(onDayOf: context.date) }.count
+            VStack(alignment: .leading, spacing: 3) {
+                Text(L10n.string("Today"))
+                    .font(.system(size: 12))
+                    .foregroundStyle(Palette.tertiaryInk)
+                if balances.isEmpty {
+                    Text("—")
+                        .font(.system(size: 26, weight: .semibold))
+                        .foregroundStyle(Palette.tertiaryInk)
+                } else {
+                    MoneyText(value: change, style: .change, font: .system(size: 26, weight: .semibold))
+                }
+                Text(
+                    balances.isEmpty
+                        ? L10n.string("%@ today", Humanize.count(posts, "post"))
+                        : L10n.string("Balance %@ · %@ today", equity.formatted(.currency(code: "USD")), Humanize.count(posts, "post"))
+                )
                 .font(.system(size: 12))
                 .foregroundStyle(Palette.tertiaryInk)
-            if balances.isEmpty {
-                Text("—")
-                    .font(.system(size: 26, weight: .semibold))
-                    .foregroundStyle(Palette.tertiaryInk)
-            } else {
-                MoneyText(value: change, style: .change, font: .system(size: 26, weight: .semibold))
+                .monospacedDigit()
             }
-            Text(
-                balances.isEmpty
-                    ? L10n.string("%@ today", Humanize.count(posts, "post"))
-                    : L10n.string("Balance %@ · %@ today", equity.formatted(.currency(code: "USD")), Humanize.count(posts, "post"))
-            )
-            .font(.system(size: 12))
-            .foregroundStyle(Palette.tertiaryInk)
-            .monospacedDigit()
+            .accessibilityElement(children: .combine)
         }
-        .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder

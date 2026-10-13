@@ -20,6 +20,21 @@ func runActivityCardTests() throws {
     try theTimeZoneSettingMovesADeadline()
     try activityShowsOnlyTheChosenAccount()
     try aSellWithNoPriceReadsAsAtTheMarket()
+    try yesterdaysPostsStopCountingAsTodayAtMidnight()
+}
+
+/// A count of today's posts asks about the moment it is drawn, so an app left open overnight stops
+/// counting yesterday's posts at midnight in the owner's zone.
+@MainActor
+private func yesterdaysPostsStopCountingAsTodayAtMidnight() throws {
+    let preference = AppTimeZonePreference.shared
+    let before = preference.chosen
+    defer { preference.select(before) }
+    preference.select("America/Los_Angeles")
+    let post = try SourceActivityBuilder().posted(at: "2026-10-12T22:50:00Z").build()
+
+    try #require(post.isPosted(onDayOf: try Date("2026-10-13T06:00:00Z", strategy: .iso8601)), "11 PM was not the same day")
+    try #require(!post.isPosted(onDayOf: try Date("2026-10-13T14:40:00Z", strategy: .iso8601)), "the next morning still counted it")
 }
 
 /// "sell wmt half" names no price: the engine sends the call with none, and sells at the market
