@@ -48,11 +48,16 @@ struct LimitMeter: View {
             .frame(height: 6)
             .accessibilityHidden(true)
             if let note {
-                Text(note)
-                    .font(DesignTokens.caption)
-                    .foregroundStyle(Palette.tertiaryInk)
-                    .monospacedDigit()
-                    .fixedSize(horizontal: false, vertical: true)
+                // One line when it fits; otherwise each part on its own line, never a dot left
+                // hanging at a line's end.
+                ViewThatFits(in: .horizontal) {
+                    Text(note).fixedSize()
+                    Text(note.replacingOccurrences(of: " · ", with: "\n"))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .font(DesignTokens.caption)
+                .foregroundStyle(Palette.tertiaryInk)
+                .monospacedDigit()
             }
         }
         .accessibilityElement(children: .ignore)
