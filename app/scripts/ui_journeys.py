@@ -188,6 +188,8 @@ class Element:
     value: str
     enabled: bool
     secure: bool = False
+    # Where it is on screen, (x, y, width, height); empty when Peekaboo gave no bounds.
+    bounds: tuple[float, ...] = ()
 
     @property
     def text(self) -> str:
@@ -349,6 +351,12 @@ class AppDriver:
                 value=str(raw.get("value") or ""),
                 enabled=bool(raw.get("is_enabled", True)),
                 secure="secure" in str(raw.get("role_description") or ""),
+                bounds=tuple(
+                    round(float((raw.get("bounds") or {}).get(k, 0)))
+                    for k in ("x", "y", "width", "height")
+                )
+                if raw.get("bounds")
+                else (),
             )
             for raw in data.get("ui_elements", [])
         ]
@@ -391,6 +399,17 @@ class AppDriver:
         for attempt in range(3):
             snapshot = self.see()
             element = snapshot.find(text, role=role)
+            if real:
+                # A real click goes to a point on screen: wait for a sheet that is still sliding in
+                # to settle, or the click lands where the button was a moment ago.
+                for _ in range(10):
+                    if element is None or not element.bounds:
+                        break
+                    time.sleep(0.25)
+                    snapshot, before = self.see(), element.bounds
+                    element = snapshot.find(text, role=role)
+                    if element is not None and element.bounds == before:
+                        break
             if element is None:
                 raise JourneyFailure(f"no element matching {text!r}")
             if not element.enabled:
