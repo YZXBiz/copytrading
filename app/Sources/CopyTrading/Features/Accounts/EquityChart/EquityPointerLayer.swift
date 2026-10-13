@@ -1,14 +1,17 @@
 import Charts
 import SwiftUI
+import TipKit
 
-/// Hover scrubs a point, a drag measures a span, and a click clears a settled span.
+/// Hover scrubs a point, a drag measures a span, and a click clears a settled span. It writes the
+/// pointer and never reads it while drawing, so moving the pointer does not redraw this layer.
 struct EquityPointerLayer: View {
     let proxy: ChartProxy
     /// Positions on the plot are fractions of the session; the scale turns them back into times.
     let scale: EquityChartScale
-    @Binding var selection: EquitySelection
+    let pointer: EquityPointer
     /// The by-account view reads points only; measuring a span belongs to the total.
     let measures: Bool
+    @Environment(\.tipGeneration) private var tipGeneration
 
     var body: some View {
         GeometryReader { geometry in
@@ -16,12 +19,12 @@ struct EquityPointerLayer: View {
                 .contentShape(.rect)
                 .onContinuousHover { phase in
                     // A span being dragged or settled keeps the pointer until it is clicked away.
-                    if selection.span != nil { return }
+                    if pointer.selection.span != nil { return }
                     switch phase {
                     case .active(let location):
-                        selection = date(at: location, in: geometry).map(EquitySelection.point) ?? .none
+                        pointer.selection = date(at: location, in: geometry).map(EquitySelection.point) ?? .none
                     case .ended:
-                        selection = .none
+                        pointer.selection = .none
                     }
                 }
                 .gesture(
@@ -31,13 +34,14 @@ struct EquityPointerLayer: View {
                                 let start = date(at: drag.startLocation, in: geometry),
                                 let end = date(at: drag.location, in: geometry)
                             else { return }
-                            selection = .span(start, end, settled: false)
+                            pointer.selection = .span(start, end, settled: false)
                         }
                         .onEnded { drag in
-                            if case .span(let start, let end, _) = selection, abs(drag.translation.width) > 3 {
-                                selection = .span(start, end, settled: true)
+                            if case .span(let start, let end, _) = pointer.selection, abs(drag.translation.width) > 3 {
+                                pointer.selection = .span(start, end, settled: true)
+                                MeasureChartTip(generation: tipGeneration).invalidate(reason: .actionPerformed)
                             } else {
-                                selection = date(at: drag.location, in: geometry).map(EquitySelection.point) ?? .none
+                                pointer.selection = date(at: drag.location, in: geometry).map(EquitySelection.point) ?? .none
                             }
                         }
                 )

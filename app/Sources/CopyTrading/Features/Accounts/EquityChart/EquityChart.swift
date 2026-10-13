@@ -12,7 +12,7 @@ struct EquityChart: View {
     /// Tall on its own, short while a detail pane shares the page.
     var plotHeight: CGFloat = 176
     @State private var day = Date.now
-    @State private var selection = EquitySelection.none
+    @State private var pointer = EquityPointer()
     /// Bumped by Draw It Again to draw the line in once more.
     @State private var drawing = 0
     @FocusState private var isChartFocused: Bool
@@ -52,7 +52,7 @@ struct EquityChart: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center, spacing: 12) {
                 if let stats {
-                    EquityReadout(title: window.heading, range: window.range, curve: curve, stats: stats, selection: selection)
+                    EquityReadout(title: window.heading, range: window.range, curve: curve, stats: stats, pointer: pointer)
                 } else {
                     Text(window.heading)
                         .font(DesignTokens.caption)
@@ -82,7 +82,7 @@ struct EquityChart: View {
             day = window.chosenDay
         }
         .onChange(of: window) { _, chosen in
-            selection = .none
+            pointer.selection = .none
             drawing += 1
             if chosen.range == .day { day = chosen.chosenDay }
         }
@@ -99,16 +99,11 @@ struct EquityChart: View {
 
     @ViewBuilder
     private func plot(curve: EquityCurve, stats: EquityCurveStats) -> some View {
-        EquityPlot(curve: curve, stats: stats, range: window.range, selection: $selection)
+        EquityPlot(curve: curve, stats: stats, range: window.range, pointer: pointer)
             .drawsIn(token: drawing)
             .popoverTip(MeasureChartTip(generation: tipGeneration), arrowEdge: .bottom)
             .task {
                 await MeasureChartTip.chartViewed.donate()
-            }
-            .onChange(of: selection) { _, chosen in
-                if case .span(_, _, settled: true) = chosen {
-                    MeasureChartTip(generation: tipGeneration).invalidate(reason: .actionPerformed)
-                }
             }
             .accessibilityElement(children: .contain)
             .accessibilityLabel(window.title)
@@ -138,7 +133,7 @@ struct EquityChart: View {
             }
             .onExitCommand {
                 focusCameFromPointer = false
-                selection = .none
+                pointer.selection = .none
             }
             .accessibilityAdjustableAction { direction in
                 switch direction {
@@ -167,9 +162,9 @@ struct EquityChart: View {
     /// Moves the keyboard cursor to the next or previous recorded point.
     private func step(through points: [EquityCurvePoint], forward: Bool) {
         guard !points.isEmpty else { return }
-        let current = selection.point.flatMap { date in points.firstIndex { $0.at >= date } }
+        let current = pointer.selection.point.flatMap { date in points.firstIndex { $0.at >= date } }
         let index = current ?? (forward ? -1 : points.count)
-        selection = .point(points[min(max(index + (forward ? 1 : -1), 0), points.count - 1)].at)
+        pointer.selection = .point(points[min(max(index + (forward ? 1 : -1), 0), points.count - 1)].at)
     }
 
     @MainActor private func summary(_ stats: EquityCurveStats) -> String {

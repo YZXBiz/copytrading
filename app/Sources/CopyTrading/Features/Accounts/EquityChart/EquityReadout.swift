@@ -8,7 +8,10 @@ struct EquityReadout: View {
     let range: EquityHistoryRange
     let curve: EquityCurve
     let stats: EquityCurveStats
-    let selection: EquitySelection
+    /// Read here, not by the chart around it, so a hover redraws only this line and the marks.
+    let pointer: EquityPointer
+
+    private var selection: EquitySelection { pointer.selection }
 
     private var focused: EquityCurvePoint? { selection.point.flatMap(curve.nearest(to:)) }
     private var measure: EquityCurveMeasure? {
@@ -72,7 +75,7 @@ struct EquityReadout: View {
     /// Signed dollars and percent, coloured by direction; never shortened to "-$28…".
     private func change(_ change: Double, fraction: Double?) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
-            MoneyText(value: Decimal(change), style: .change, font: DesignTokens.caption.weight(.medium))
+            MoneyText(value: Decimal(change), style: .change, font: DesignTokens.caption.weight(.medium), rolls: false)
             if let fraction {
                 Text(fraction.formatted(.percent.precision(.fractionLength(2)).sign(strategy: .always(includingZero: false))))
                     .foregroundStyle(ChangeDirection(Decimal(change)).color)

@@ -3,14 +3,15 @@ import DesktopCore
 import SwiftUI
 
 /// The combined curve, drawn on the app's chart paper: one smooth line in the day's color over a
-/// soft wash, and an axis tag while reading a point or span. A day always spans its whole session,
+/// soft wash, with the marks for a point or span the pointer reads drawn over it. The line never
+/// reads the pointer, so a hover redraws only those marks. A day always spans its whole session,
 /// as Stocks and most brokers draw it: the line stops at the latest balance and the rest of the
 /// day stays blank, so regular hours keep most of the width and the time marks stay put.
 struct EquityPlot: View {
     let curve: EquityCurve
     let stats: EquityCurveStats
     let range: EquityHistoryRange
-    @Binding var selection: EquitySelection
+    let pointer: EquityPointer
     @Environment(\.colorSchemeContrast) private var contrast
     @ScaledMetric(relativeTo: .caption) private var valueAxisWidth = 84
     /// The plot's size, so time marks are as fine as the room allows and session names get a
@@ -19,21 +20,11 @@ struct EquityPlot: View {
     @State private var plotHeight: Double = 176
     /// The strip at the top of a day kept clear of the line for the session names.
     private static let sessionNameStrip: Double = 28
+    /// The gap between the plot and the value axis's labels.
+    private static let axisSpacing: CGFloat = 6
 
     private var reference: Double { stats.reference }
     private var scale: EquityChartScale { EquityChartScale(range: range, first: stats.open.at, last: stats.last.at) }
-    private var focused: EquityCurvePoint? { selection.point.flatMap(curve.nearest(to:)) }
-    private var measure: EquityCurveMeasure? { selection.span.flatMap { curve.measure(from: $0.start, to: $0.end) } }
-
-    /// The whole line takes the day's direction: green when it ends above its reference, red below,
-    /// grey when it has not moved. Crossings stay readable against the dotted reference.
-
-    private func tone(_ value: Double) -> Color {
-        value > reference ? EquityTone.of(true) : value < reference ? EquityTone.of(false) : Palette.tertiaryInk
-    }
-
-    /// The latest point is the balance just read, so it pulses while the day is still being written.
-
     private var valueRange: (lower: Double, upper: Double) {
         let low = min(stats.low.value, reference)
         let high = max(stats.high.value, reference)
@@ -49,9 +40,6 @@ struct EquityPlot: View {
         return lower...(upper + (upper - lower) * Self.sessionNameStrip / (plotHeight - Self.sessionNameStrip))
     }
 
-    /// The value the axis tag shows: the point being read, else the latest.
-    private var tagged: EquityCurvePoint { focused ?? measure?.end ?? stats.last }
-
     var body: some View {
         let bounds = valueRange
         let axis = EquityValueAxis(lower: bounds.lower, upper: bounds.upper, count: 3)
@@ -61,22 +49,15 @@ struct EquityPlot: View {
         Chart {
             sessionBands(scale.extendedSessions)
             referenceLine
-            ForEach(runs) { run in
-                ForEach(run.points, id: \.at) { point in
-                    LineMark(
-                        x: .value("Time", scale.x(point.at)),
-                        y: .value("Equity", point.value),
-                        series: .value("Run", run.id)
-                    )
-                    .foregroundStyle(Palette.ink.opacity(run.isExtended ? 0.35 : 1))
-                    .interpolationMethod(.monotone)
-                    .lineStyle(StrokeStyle(lineWidth: contrast == .increased ? 2.25 : 1.75, lineCap: .round, lineJoin: .round))
-                    .accessibilityLabel(EquityChartTime.point(point.at, in: range))
-                    .accessibilityValue(point.value.formatted(.currency(code: "USD")))
-                }
-            }
-            measureMarks(on: scale)
-            focusMarks(on: scale)
+            // One vectorized plot for the whole line, a series per run, so the chart lays it out
+            // once instead of a mark per point.
+            LinePlot(
+                runs.flatMap(\.plotted), x: .value("Time", \.x), y: .value("Equity", \.value),
+                series: .value("Run", \.run)
+            )
+            .foregroundStyle(by: .value("Session", \.session))
+            .interpolationMethod(.monotone)
+            .lineStyle(StrokeStyle(lineWidth: contrast == .increased ? 2.25 : 1.75, lineCap: .round, lineJoin: .round))
             PointMark(x: .value("Time", scale.x(stats.last.at)), y: .value("Equity", stats.last.value))
                 .symbolSize(30)
                 .foregroundStyle(Palette.ink)
@@ -84,6 +65,11 @@ struct EquityPlot: View {
         }
         .chartXScale(domain: 0...1, range: .plotDimension(startPadding: 4, endPadding: 14))
         .chartYScale(domain: plotRange)
+        .chartForegroundStyleScale(
+            domain: [EquityLineRun.regularSession, EquityLineRun.extendedSession],
+            range: [Palette.ink, Palette.ink.opacity(0.35)]
+        )
+        .chartLegend(.hidden)
         .chartXAxis {
             AxisMarks(values: times.map(\.x)) { value in
                 AxisTick(centered: true, length: 4, stroke: StrokeStyle(lineWidth: 1))
@@ -99,8 +85,8 @@ struct EquityPlot: View {
             }
         }
         .chartYAxis {
-            AxisMarks(position: .trailing, values: axis.ticks(clearOf: selection == .none ? nil : tagged.value)) { value in
-                AxisValueLabel(horizontalSpacing: 6) {
+            AxisMarks(position: .trailing, values: axis.ticks) { value in
+                AxisValueLabel(horizontalSpacing: Self.axisSpacing) {
                     if let amount = value.as(Double.self) {
                         Text(axis.money(amount))
                             .font(.caption)
@@ -110,17 +96,15 @@ struct EquityPlot: View {
                     }
                 }
             }
-            if selection != .none {
-                AxisMarks(position: .trailing, values: [tagged.value]) { _ in
-                    AxisValueLabel(horizontalSpacing: 6) {
-                        ValueTag(text: tagged.value.formatted(.currency(code: "USD")), color: tone(tagged.value))
-                            .frame(minWidth: valueAxisWidth, alignment: .leading)
-                    }
-                }
-            }
         }
         .chartOverlay { proxy in
-            EquityPointerLayer(proxy: proxy, scale: scale, selection: $selection, measures: true)
+            ZStack {
+                EquitySelectionMarks(
+                    proxy: proxy, scale: scale, curve: curve, reference: reference, pointer: pointer,
+                    namesStrip: scale.isDay ? Self.sessionNameStrip : 0,
+                    axisTicks: axis.ticks, axisWidth: valueAxisWidth, axisSpacing: Self.axisSpacing)
+                EquityPointerLayer(proxy: proxy, scale: scale, pointer: pointer, measures: true)
+            }
         }
         .onGeometryChange(for: CGSize.self) {
             $0.size
@@ -167,47 +151,5 @@ struct EquityPlot: View {
             .lineStyle(StrokeStyle(lineWidth: 1, dash: [2, 4]))
             .accessibilityLabel(curve.baseline == nil ? "Start" : "Previous close")
             .accessibilityValue(reference.formatted(.currency(code: "USD")))
-    }
-
-    @ChartContentBuilder
-    private func measureMarks(on scale: EquityChartScale) -> some ChartContent {
-        if let measure {
-            let tone = EquityTone.of(change: measure.change)
-            RectangleMark(xStart: .value("From", scale.x(measure.start.at)), xEnd: .value("To", scale.x(measure.end.at)))
-                .foregroundStyle(tone.opacity(0.08))
-                .accessibilityHidden(true)
-            ForEach([measure.start, measure.end], id: \.at) { point in
-                RuleMark(x: .value("Time", scale.x(point.at)))
-                    .foregroundStyle(tone.opacity(0.6))
-                    .lineStyle(StrokeStyle(lineWidth: 1))
-                    .accessibilityHidden(true)
-            }
-            ringedDot(at: measure.start, on: scale)
-            ringedDot(at: measure.end, on: scale)
-        }
-    }
-
-    @ChartContentBuilder
-    private func focusMarks(on scale: EquityChartScale) -> some ChartContent {
-        if let focused {
-            RuleMark(x: .value("Time", scale.x(focused.at)))
-                .foregroundStyle(Palette.secondaryInk.opacity(0.55))
-                .lineStyle(StrokeStyle(lineWidth: 1))
-                .accessibilityHidden(true)
-            ringedDot(at: focused, on: scale)
-        }
-    }
-
-    /// A filled dot with a ring in the page color, so it stays legible where it crosses the line.
-    @ChartContentBuilder
-    private func ringedDot(at point: EquityCurvePoint, on scale: EquityChartScale) -> some ChartContent {
-        PointMark(x: .value("Time", scale.x(point.at)), y: .value("Equity", point.value))
-            .symbolSize(120)
-            .foregroundStyle(Palette.page)
-            .accessibilityHidden(true)
-        PointMark(x: .value("Time", scale.x(point.at)), y: .value("Equity", point.value))
-            .symbolSize(50)
-            .foregroundStyle(tone(point.value))
-            .accessibilityHidden(true)
     }
 }
