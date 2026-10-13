@@ -286,17 +286,19 @@ async def test_provider_transport_captures_actual_serialized_wire_payloads_redac
         sink.close(timeout_seconds=5)
 
 
-@pytest.mark.parametrize("encoding", ["gzip", "deflate"])
+@pytest.mark.parametrize("encoding", ["zstd", "gzip", "deflate"])
 async def test_a_compressed_reply_is_journaled_as_the_text_it_carries(tmp_path, encoding):
     """Servers compress replies; the wire capture sits under the client's decoding, so the journal
     undoes the content encoding itself. Otherwise the reply is unreadable and its secrets can't be
     found to redact."""
     import gzip
     import zlib
+    from compression import zstd
 
     secret = "compressed-secret-0123456789"
     body = json.dumps({"answer": secret, "kind": "commentary"}).encode()
-    wire = gzip.compress(body) if encoding == "gzip" else zlib.compress(body)
+    # DeepSeek answers with zstd.
+    wire = {"zstd": zstd.compress, "gzip": gzip.compress, "deflate": zlib.compress}[encoding](body)
 
     def handler(request):
         return httpx.Response(

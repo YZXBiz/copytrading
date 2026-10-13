@@ -892,6 +892,7 @@
 "The order was below the minimum size" = "The order was below the minimum size";
 "The order would be different now" = "The order would be different now";
 "The original message is never changed. Your correction is recorded separately." = "The original message is never changed. Your correction is recorded separately.";
+"This reply was kept still compressed by an earlier version, so it can't be shown. Replies since are kept as text." = "This reply was kept still compressed by an earlier version, so it can't be shown. Replies since are kept as text.";
 "The payload was not kept: %@." = "The payload was not kept: %@.";
 "The price check ran out before you confirmed" = "The price check ran out before you confirmed";
 "The ask is %@ (bid %@)" = "The ask is %@ (bid %@)";

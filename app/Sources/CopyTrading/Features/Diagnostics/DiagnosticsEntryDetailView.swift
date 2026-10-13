@@ -58,6 +58,12 @@ struct DiagnosticsEntryDetailView: View {
                             .background(Palette.group, in: .rect(cornerRadius: DesignTokens.blockCornerRadius))
                             .accessibilityLabel(L10n.string("Redacted payload"))
                     }
+                } else if entry.payloadUnreadable {
+                    Callout(
+                        L10n.string(
+                            "This reply was kept still compressed by an earlier version, so it can't be shown. Replies since are kept as text."
+                        ),
+                        tone: .caution)
                 } else if entry.kind == .payload {
                     Callout(L10n.string("The payload was not kept: %@.", L10n.string(entry.outcomeTitle.lowercased())), tone: .caution)
                 }
