@@ -439,13 +439,23 @@ def check_summary_language(reading: PostReading, text: str, *, retried: bool) ->
     return "summary: write it in the post's own language, which is English here, not Chinese"
 
 
+def _side(action: str) -> str:
+    return "buy" if action == "buy" else "sell"
+
+
+def same_side(earlier: RecentCall, call: Buy | Sell) -> bool:
+    """Whether a call can restate `earlier`: a buy restates a buy, a sell restates a sell or a
+    close. A sell is never a repeat of the buy it sells."""
+    return _side(earlier.action) == call.action
+
+
 def check_references(
     reading: PostReading, recent: tuple[RecentCall, ...], *, retried: bool
 ) -> str | None:
     """What is wrong with how a reading names the guru's recent calls, if anything. A repeat
-    must name a listed call of the same stock. A sell naming a buy price none of the guru's open
-    buys of that stock has is asked about once: the guru may hold buys from before CopyTrading
-    started, so a second answer stands."""
+    must name a listed call of the same stock and kind, buy or sell. A sell naming a buy price
+    none of the guru's open buys of that stock has is asked about once: the guru may hold buys
+    from before CopyTrading started, so a second answer stands."""
     if not isinstance(reading, TradeMade | Instruction | Conditional | Suggestion):
         return None
     by_ref = {call.ref: call for call in recent}
@@ -461,6 +471,12 @@ def check_references(
                 return (
                     f"calls.{index}.repeats: {call.repeats} is {earlier.symbol}, not "
                     f"{call.stock.ticker}; a repeat restates a call of the same stock."
+                )
+            if not same_side(earlier, call):
+                return (
+                    f"calls.{index}.repeats: {call.repeats} is a {_side(earlier.action)} and "
+                    f"this call is a {call.action}; a repeat restates a call of the same kind, "
+                    "so leave repeats empty."
                 )
         if retried or not isinstance(call, Sell) or not isinstance(call.sell_from, Lot):
             continue

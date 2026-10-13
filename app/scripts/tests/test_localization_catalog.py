@@ -74,7 +74,9 @@ def test_every_text_the_app_asks_for_is_in_the_catalogs():
         found |= {
             (path.name, multiline_text(match.group(1))) for match in MULTILINE.finditer(source)
         }
-        found |= {(path.name, text) for match in TERNARY.finditer(source) for text in match.groups()}
+        found |= {
+            (path.name, text) for match in TERNARY.finditer(source) for text in match.groups()
+        }
     missing = sorted(
         f"{name}: {text}" for name, text in found if "\\(" not in text and text not in english
     )

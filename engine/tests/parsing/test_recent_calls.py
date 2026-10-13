@@ -190,6 +190,34 @@ async def test_a_repeat_must_name_a_listed_call_or_the_reader_is_asked_again():
     assert "c9 is not one of the listed calls" in told[0]
 
 
+async def test_a_sell_marked_as_repeating_a_buy_is_asked_about_again():
+    # A live paper run read "Sold all F at 12.00" as a repeat of "Bought F at 12.00".
+    recent = recent_calls(_past("p1", 1, _buy("F", "12")))
+    right = trade(
+        sell("F", "12", bought_at=None, said="Sold all", ticker_said="F", price_said="12.00")
+    )
+    wrong = trade(right.calls[0].model_copy(update={"repeats": "c1"}))
+    told: list[str] = []
+
+    def reader(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        told.extend(
+            str(part.content)
+            for message in messages
+            for part in message.parts
+            if isinstance(part, RetryPromptPart)
+        )
+        return ModelResponse(parts=[TextPart(_answer(right if told else wrong))])
+
+    decoder, model = _decoder(FunctionModel(reader, profile=JSON_OUTPUT))
+    try:
+        with model:
+            assert (await decoder.answer("Sold all F at 12.00", Route(), recent)).reading == right
+    finally:
+        await decoder.close()
+    assert len(told) == 1
+    assert "c1 is a buy and this call is a sell" in told[0]
+
+
 async def test_a_sell_naming_a_buy_the_guru_does_not_hold_is_asked_about_once_then_believed():
     recent = recent_calls(_past("p1", 5, _buy("IREN", "39.5")))
     named = trade(sell("IREN", "45", bought_at="40", said="出掉"))
@@ -327,6 +355,17 @@ async def test_with_the_window_off_a_repost_is_copied_as_a_new_call():
 
     assert result.decision == "trade"
     assert [i.symbol for i in result.instructions] == ["SOUN"]
+
+
+async def test_a_sell_is_never_dropped_as_a_repeat_of_a_buy():
+    reading = trade(
+        sell("SOUN", "5.85", bought_at=None, said="出掉").model_copy(update={"repeats": "c1"})
+    )
+
+    result = await _read("5.85 soun 出掉", reading, window=10, minutes_after=1)
+
+    assert result.decision == "trade"
+    assert [(i.action, i.symbol) for i in result.instructions] == [("close", "SOUN")]
 
 
 async def test_a_post_with_a_repost_and_a_new_call_copies_only_the_new_one():

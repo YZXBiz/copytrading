@@ -13,6 +13,7 @@ from copytrading_engine.parsing.extraction import (
     GroundingError,
     check_reading,
     normalize,
+    same_side,
 )
 from copytrading_engine.parsing.history import RecentCall
 from copytrading_engine.parsing.routes import Route
@@ -133,7 +134,8 @@ def _without_repeats(
     kept = []
     for call in reading.calls:
         earlier = by_ref.get(call.repeats) if call.repeats is not None else None
-        if earlier is None:
+        # A sell is never a re-post of the buy it sells, whatever the reader says.
+        if earlier is None or not same_side(earlier, call):
             kept.append(call)
         elif (at - earlier.at).total_seconds() > window * 60:
             return reading, "review"
