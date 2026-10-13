@@ -157,8 +157,10 @@ class Sell(_Part):
     price: Price
     share: Share
     # Whether a share counts from the original buy or from what is left; None when the post does
-    # not say, which leaves it to the guru's playbook default.
+    # not say, which leaves it to the guru's playbook default. "original" departs from the
+    # default, so it carries the post's own words for it (counts_from_words).
     counts_from: Literal["original", "remaining"] | None = None
+    counts_from_words: Words | None = None
     sell_from: SellFrom
     repeats: CallRef | None = None
 

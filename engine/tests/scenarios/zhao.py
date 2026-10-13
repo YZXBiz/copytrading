@@ -51,7 +51,6 @@ def trim(
         ticker_said=symbol,
         fraction=fraction,
         fraction_said=fraction_said,
-        counts_from="original",
     )
 
 

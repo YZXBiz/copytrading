@@ -323,6 +323,17 @@ def _check_call(call: Call, text: str, route: Route, path: str) -> None:
         _check_size(call, text, route.playbook, f"{path}.size")
         return
     _check_share(call, text, route.playbook, f"{path}.share")
+    # "Half" is half of what is left (ADR-0010). A sell may count from the original buy only
+    # when the post's own words, or the playbook's, say so: the model reads, and never assumes.
+    if call.counts_from == "original":
+        if call.counts_from_words is None:
+            raise GroundingError(
+                "counts_from_not_grounded",
+                f"{path}.counts_from",
+                "counts_from original needs counts_from_words, the words of the post that say "
+                "the share is of the original buy; leave counts_from out when the post does not",
+            )
+        _words(call.counts_from_words, text, f"{path}.counts_from_words")
     if isinstance(call.sell_from, Lot):
         _number(call.sell_from.buy_price, call.sell_from.words, text, f"{path}.sell_from")
         if isinstance(call.price, Exact) and call.price.value == call.sell_from.buy_price:

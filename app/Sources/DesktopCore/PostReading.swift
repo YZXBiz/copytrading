@@ -173,6 +173,8 @@ public struct ReadSell: Codable, Equatable, Sendable {
     public let share: ReadShare
     /// Whether a share counts from the original buy or what is left; nil when the post doesn't say.
     public let countsFrom: String?
+    /// The post's own words for counting from the original buy, which that choice requires.
+    public let countsFromWords: String?
     public let sellFrom: ReadSellFrom
     /// The recent call of the guru's this one restates, as the reader named it (c1, c2, …).
     public let repeats: String?
@@ -182,6 +184,7 @@ public struct ReadSell: Codable, Equatable, Sendable {
         case actionWords = "action_words"
         case stock, price, share, repeats
         case countsFrom = "counts_from"
+        case countsFromWords = "counts_from_words"
         case sellFrom = "sell_from"
     }
 
@@ -192,6 +195,7 @@ public struct ReadSell: Codable, Equatable, Sendable {
         price = try container.decode(ReadPrice.self, forKey: .price)
         share = try container.decode(ReadShare.self, forKey: .share)
         countsFrom = try container.decodeIfPresent(String.self, forKey: .countsFrom)
+        countsFromWords = try container.decodeIfPresent(String.self, forKey: .countsFromWords)
         sellFrom = try container.decode(ReadSellFrom.self, forKey: .sellFrom)
         repeats = try container.decodeIfPresent(String.self, forKey: .repeats)
     }
@@ -204,6 +208,7 @@ public struct ReadSell: Codable, Equatable, Sendable {
         try container.encode(price, forKey: .price)
         try container.encode(share, forKey: .share)
         try container.encode(countsFrom, forKey: .countsFrom)
+        try container.encode(countsFromWords, forKey: .countsFromWords)
         try container.encode(sellFrom, forKey: .sellFrom)
         try container.encode(repeats, forKey: .repeats)
     }

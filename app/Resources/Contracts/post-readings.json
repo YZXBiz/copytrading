@@ -21,6 +21,7 @@
           "words": "一半"
         },
         "counts_from": null,
+        "counts_from_words": null,
         "sell_from": {
           "kind": "lot",
           "buy_price": "39.5",
@@ -76,6 +77,7 @@
           "words": "跑路了"
         },
         "counts_from": null,
+        "counts_from_words": null,
         "sell_from": {
           "kind": "not_said"
         },

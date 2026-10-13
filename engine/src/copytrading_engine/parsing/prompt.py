@@ -31,9 +31,11 @@ Each call is a buy or a sell, with the stock and the price:
 - A sell's share is a fraction, all, or not_given when the post states no share (a vague trim
   such as 减仓 or "took some off"); when the playbook gives those words a size ("减仓 means 1/2"),
   use that fraction with those words. counts_from says whether the fraction is of the original
-  buy or of what is left, when the post says so (剩下一半 is half of what is left) or the
-  playbook says how this guru counts sells; otherwise leave it out (what is left).
-  Selling the remaining half is share all, counts_from remaining.
+  buy or of what is left, only when the post says so (剩下一半 is half of what is left; 原仓的一半
+  is half of the original) or the playbook says how this guru counts sells; counts_from original
+  also needs counts_from_words, those words copied exactly. "Sold half KO" says neither, so leave
+  counts_from out: a plain half is half of what is left. Selling the remaining half is share all,
+  counts_from remaining.
 - A sell's sell_from is the lot it names by its buy price (出一半39.5的iren names 39.5), or
   not_said. Never reuse one number as both the current price and the buy price.
 - A buy-back (加回…卖出的那部分) is a buy; the sale price it mentions is context, not a lot.

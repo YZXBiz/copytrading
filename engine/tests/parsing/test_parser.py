@@ -638,6 +638,70 @@ async def test_the_adapter_returns_the_models_reading():
         await decoder.close()
 
 
+def test_a_plain_half_never_counts_from_the_original_buy():
+    """DeepSeek read "sold half KO" as half of the original position, twice, though the post
+    says nothing of the sort; the engine then sold everything that was left. A sell counts from
+    the original buy only on the post's own words for it (ADR-0010)."""
+    post = "sold half KO at 90.12"
+    claimed = sell(
+        "KO",
+        "90.12",
+        bought_at=None,
+        said="sold",
+        ticker_said="KO",
+        fraction="0.5",
+        fraction_said="half",
+        counts_from="original",
+    )
+    with pytest.raises(GroundingError) as raised:
+        check_reading(trade(claimed), post, Route())
+    assert raised.value.issue.code == "counts_from_not_grounded"
+
+    invented = sell(
+        "KO",
+        "90.12",
+        bought_at=None,
+        said="sold",
+        ticker_said="KO",
+        fraction="0.5",
+        fraction_said="half",
+        counts_from="original",
+        counts_from_said="of the original",
+    )
+    with pytest.raises(GroundingError) as raised:
+        check_reading(trade(invented), post, Route())
+    assert raised.value.issue.code == "words_not_in_post"
+
+
+def test_a_sell_counts_from_the_original_buy_when_the_post_says_so():
+    post = "sold half of the original KO at 90.12"
+    grounded = sell(
+        "KO",
+        "90.12",
+        bought_at=None,
+        said="sold",
+        ticker_said="KO",
+        fraction="0.5",
+        fraction_said="half",
+        counts_from="original",
+        counts_from_said="of the original",
+    )
+    check_reading(trade(grounded), post, Route())
+
+    # What is left needs no words: it is the default.
+    left = sell(
+        "KO",
+        "90.12",
+        bought_at=None,
+        said="sold",
+        ticker_said="KO",
+        fraction="0.5",
+        fraction_said="half",
+        counts_from="remaining",
+    )
+    check_reading(trade(left), "sold half KO at 90.12", Route())
+
+
 async def test_an_ungrounded_reading_goes_back_once_with_its_reason():
     wrong = trade(buy("ABC", "250", price_said="250", fraction=SIXTH, fraction_said="6分之一"))
     right = trade(buy("ABC", "25", fraction=SIXTH, fraction_said="6分之一"))
