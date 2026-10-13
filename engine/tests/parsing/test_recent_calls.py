@@ -2,6 +2,7 @@
 a re-post restates, and the owner's corrections in place of the reader's own reading."""
 
 import datetime as dt
+import json
 from decimal import Decimal
 
 import pytest
@@ -133,7 +134,9 @@ def _decoder(model):
 
 
 def _answer(reading) -> str:
-    return ReadingOutput(reading=reading).model_dump_json()
+    # The reader answers a reading or chat; a reading comes in the choice's envelope.
+    data = ReadingOutput(reading=reading).model_dump(mode="json")
+    return json.dumps({"result": {"kind": "ReadingOutput", "data": data}}, ensure_ascii=False)
 
 
 async def test_the_reader_gets_the_playbook_then_the_recent_calls_after_its_fixed_instructions():
@@ -149,11 +152,10 @@ async def test_the_reader_gets_the_playbook_then_the_recent_calls_after_its_fixe
     try:
         with model:
             assert (
-                await decoder.decode(
+                await decoder.answer(
                     "iren 39.5的 45出掉", Route(playbook="艾伦 means IREN"), recent
                 )
-                == reading
-            )
+            ).reading == reading
     finally:
         await decoder.close()
     [instructions] = shown
@@ -181,11 +183,39 @@ async def test_a_repeat_must_name_a_listed_call_or_the_reader_is_asked_again():
     decoder, model = _decoder(FunctionModel(reader, profile=JSON_OUTPUT))
     try:
         with model:
-            assert await decoder.decode("5.85加了soun", Route(), recent) == right
+            assert (await decoder.answer("5.85加了soun", Route(), recent)).reading == right
     finally:
         await decoder.close()
     assert len(told) == 1
     assert "c9 is not one of the listed calls" in told[0]
+
+
+async def test_a_sell_marked_as_repeating_a_buy_is_asked_about_again():
+    # A live paper run read "Sold all F at 12.00" as a repeat of "Bought F at 12.00".
+    recent = recent_calls(_past("p1", 1, _buy("F", "12")))
+    right = trade(
+        sell("F", "12", bought_at=None, said="Sold all", ticker_said="F", price_said="12.00")
+    )
+    wrong = trade(right.calls[0].model_copy(update={"repeats": "c1"}))
+    told: list[str] = []
+
+    def reader(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        told.extend(
+            str(part.content)
+            for message in messages
+            for part in message.parts
+            if isinstance(part, RetryPromptPart)
+        )
+        return ModelResponse(parts=[TextPart(_answer(right if told else wrong))])
+
+    decoder, model = _decoder(FunctionModel(reader, profile=JSON_OUTPUT))
+    try:
+        with model:
+            assert (await decoder.answer("Sold all F at 12.00", Route(), recent)).reading == right
+    finally:
+        await decoder.close()
+    assert len(told) == 1
+    assert "c1 is a buy and this call is a sell" in told[0]
 
 
 async def test_a_sell_naming_a_buy_the_guru_does_not_hold_is_asked_about_once_then_believed():
@@ -206,7 +236,7 @@ async def test_a_sell_naming_a_buy_the_guru_does_not_hold_is_asked_about_once_th
     decoder, model = _decoder(FunctionModel(reader, profile=JSON_OUTPUT))
     try:
         with model:
-            assert await decoder.decode("iren 40的 45出掉", Route(), recent) == named
+            assert (await decoder.answer("iren 40的 45出掉", Route(), recent)).reading == named
     finally:
         await decoder.close()
     assert len(asked) == 1
@@ -327,6 +357,17 @@ async def test_with_the_window_off_a_repost_is_copied_as_a_new_call():
     assert [i.symbol for i in result.instructions] == ["SOUN"]
 
 
+async def test_a_sell_is_never_dropped_as_a_repeat_of_a_buy():
+    reading = trade(
+        sell("SOUN", "5.85", bought_at=None, said="出掉").model_copy(update={"repeats": "c1"})
+    )
+
+    result = await _read("5.85 soun 出掉", reading, window=10, minutes_after=1)
+
+    assert result.decision == "trade"
+    assert [(i.action, i.symbol) for i in result.instructions] == [("close", "SOUN")]
+
+
 async def test_a_post_with_a_repost_and_a_new_call_copies_only_the_new_one():
     reading = trade(
         buy("SOUN", "5.85", fraction=SIXTH, fraction_said="6分之一").model_copy(
@@ -420,7 +461,9 @@ async def test_an_english_post_read_with_a_chinese_summary_is_asked_about_once(s
     decoder, model = _decoder(FunctionModel(reader, profile=JSON_OUTPUT))
     try:
         with model:
-            assert await decoder.decode("sell wmt half", Route(), recent) == reading(second)
+            assert (await decoder.answer("sell wmt half", Route(), recent)).reading == reading(
+                second
+            )
     finally:
         await decoder.close()
     assert len(asked) == 1

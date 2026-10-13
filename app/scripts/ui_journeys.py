@@ -188,6 +188,8 @@ class Element:
     value: str
     enabled: bool
     secure: bool = False
+    # Where it is on screen, (x, y, width, height); empty when Peekaboo gave no bounds.
+    bounds: tuple[float, ...] = ()
 
     @property
     def text(self) -> str:
@@ -258,11 +260,60 @@ def peekaboo(*args: str, timeout: float = 60) -> dict[str, Any]:
     raise AssertionError("unreachable")
 
 
+# Text whose box is at least this many points on a side; a shorter one is a hairline or an icon.
+_MIN_TEXT_SIDE = 4.0
+# Visible words only: buttons and fields can be invisible tap targets laid over text on purpose.
+_TEXT_ROLES = {"AXStaticText"}
+
+
+def layout_problems(capture: dict[str, Any]) -> list[str]:
+    """Where text on a captured screen may collide: two labels whose boxes overlap without one
+    holding the other, or text cut off at the window's left or right edge. Reads the frames in
+    Peekaboo's `see` output, so every named screenshot is checked, not only the ones a person
+    looks at. A capture with no frames at all is itself a problem: the check must never pass by
+    seeing nothing."""
+    boxes = []
+    for e in capture.get("ui_elements", []):
+        bounds = e.get("bounds") or {}
+        name = str(e.get("label") or e.get("title") or e.get("value") or "")
+        if e.get("ax_role") not in _TEXT_ROLES or not name or not bounds:
+            continue
+        # A scroll bar's page and arrow parts lie over the content by design.
+        if name.endswith(("page button", "arrow button")):
+            continue
+        x, y, w, h = (float(bounds.get(k, 0)) for k in ("x", "y", "width", "height"))
+        if w >= _MIN_TEXT_SIDE and h >= _MIN_TEXT_SIDE:
+            boxes.append((name[:40], x, y, x + w, y + h))
+    if capture.get("ui_elements") and not boxes:
+        return ["no text frames in the capture; the layout check saw nothing"]
+    problems = []
+    window = (capture.get("coordinate_context") or {}).get("logical_bounds")
+    if window:
+        (left, _), (width, _) = window
+        right = left + width
+        for name, x0, _, x1, _ in boxes:
+            # Text wholly outside is hidden, parked off-screen; text across an edge is cut off.
+            if (x0 < left - 1 < x1) or (x0 < right + 1 < x1):
+                problems.append(f"{name!r} is cut off at the window's edge")
+    for i, (a, ax0, ay0, ax1, ay1) in enumerate(boxes):
+        for b, bx0, by0, bx1, by1 in boxes[i + 1 :]:
+            if min(ax1, bx1) - max(ax0, bx0) <= 1 or min(ay1, by1) - max(ay0, by0) <= 1:
+                continue
+            inside = (ax0 <= bx0 and ay0 <= by0 and ax1 >= bx1 and ay1 >= by1) or (
+                bx0 <= ax0 and by0 <= ay0 and bx1 >= ax1 and by1 >= ay1
+            )
+            if not inside:
+                problems.append(f"{a!r} overlaps {b!r}")
+    return problems
+
+
 @dataclass
 class AppDriver:
     screenshots: Path
     state_root: Path | None = None
     shot_count: int = 0
+    # Possible text collisions on named screenshots this run, by screenshot, for a person to check.
+    layout: dict[str, list[str]] = field(default_factory=dict)
 
     def see(self, name: str | None = None) -> Snapshot:
         args = ["see", "--app", APP_NAME]
@@ -289,6 +340,8 @@ class AppDriver:
                 time.sleep(1)
         if name is not None:
             self._capture_sheets(f"{self.shot_count:02d}-{name}")
+            if problems := layout_problems(data):
+                self.layout[f"{self.shot_count:02d}-{name}"] = problems
         elements = [
             Element(
                 id=str(raw.get("id", "")),
@@ -298,6 +351,12 @@ class AppDriver:
                 value=str(raw.get("value") or ""),
                 enabled=bool(raw.get("is_enabled", True)),
                 secure="secure" in str(raw.get("role_description") or ""),
+                bounds=tuple(
+                    round(float((raw.get("bounds") or {}).get(k, 0)))
+                    for k in ("x", "y", "width", "height")
+                )
+                if raw.get("bounds")
+                else (),
             )
             for raw in data.get("ui_elements", [])
         ]
@@ -340,6 +399,17 @@ class AppDriver:
         for attempt in range(3):
             snapshot = self.see()
             element = snapshot.find(text, role=role)
+            if real:
+                # A real click goes to a point on screen: wait for a sheet that is still sliding in
+                # to settle, or the click lands where the button was a moment ago.
+                for _ in range(10):
+                    if element is None or not element.bounds:
+                        break
+                    time.sleep(0.25)
+                    snapshot, before = self.see(), element.bounds
+                    element = snapshot.find(text, role=role)
+                    if element is not None and element.bounds == before:
+                        break
             if element is None:
                 raise JourneyFailure(f"no element matching {text!r}")
             if not element.enabled:
@@ -847,11 +917,10 @@ def j4_every_screen(app: AppDriver) -> None:
 
 
 def j20_toolbar(app: AppDriver) -> None:
-    """With nothing set up, copying cannot start and the freshness label says so."""
+    """With nothing set up, the toolbar offers no Stop and the freshness label says so."""
     snapshot = app.open_screen("gettingStarted")
-    copying = snapshot.find("toolbar.copying")
-    if copying is None or copying.enabled:
-        raise JourneyFailure("Start Copying must be present and disabled before setup")
+    if snapshot.find("toolbar.copying") is not None:
+        raise JourneyFailure("the toolbar offered Stop Copying before setup")
     app.expect(snapshot, "Not copying")
     app.click("toolbar.refresh")
     app.open_screen("connections")
@@ -1262,7 +1331,7 @@ def j31_agent_approval(app: AppDriver) -> None:
 
     # Rejecting: the agent learns the outcome and the account never changes.
     resume = _agent_result(app, 10, "accounts", "resume", "primary")
-    app.wait_for("Resume new entries in primary", timeout=30, name="resume-sheet")
+    app.wait_for("Start copying into primary", timeout=30, name="resume-sheet")
     app.click("Reject", outcome_checked=True)
     rejected = _agent_result(app, 7, "proposals", "wait", resume["proposal_id"], "--timeout", "60")
     if rejected["state"] != "rejected":
@@ -1284,10 +1353,7 @@ def j40_live_limits(app: AppDriver) -> None:
     if app.state_root is None:
         raise JourneySkipped("needs the run's state root")
     _paper_setup()
-    app.open_screen("account.primary")
-    toolbar = app.see().find("toolbar.copying")
-    if toolbar is not None and "Start" in toolbar.label:
-        app.click("toolbar.copying")
+    _start_copying_primary(app)
     _wait_for_account(app, "primary", timeout=180)
 
     # Edit Limits, under the balance, opens the account sheet scrolled to its limits.
@@ -1311,8 +1377,8 @@ def j40_live_limits(app: AppDriver) -> None:
         if "not saved yet" in texts or "Apply Changes" in texts:
             app.see("live-limits-pending")
             raise JourneyFailure("a limit change still waits for Apply Changes")
-        toolbar = snapshot.find("toolbar.copying")
-        if toolbar is None or "Pause" not in toolbar.label:
+        switch = snapshot.find("account.copying")
+        if switch is None or "Stop" not in switch.label:
             app.see("live-limits-paused")
             raise JourneyFailure("changing a limit stopped copying")
         if f"${target}" in texts and "You changed limits" in texts:
@@ -1562,12 +1628,9 @@ def _post_test_call(setup: dict[str, str], text: str) -> None:
 
 def _copying_with_entries(app: AppDriver) -> None:
     """Copying on, automatic recovery, and entries on, asking the owner where the app asks."""
-    # Copying is paused after a restore; start it again from the toolbar. The button toggles, so
-    # it is pressed only when it offers Start: an earlier journey may have left copying on.
-    app.open_screen("account.primary")
-    toolbar = app.see().find("toolbar.copying")
-    if toolbar is not None and "Start" in toolbar.label:
-        app.click("toolbar.copying")
+    # Copying is paused after a restore; the account's own Start Copying starts it again and turns
+    # its buys on. It is pressed only when it offers Start: an earlier journey may have left it on.
+    _start_copying_primary(app)
     _wait_for_account(app, "primary", timeout=180)
 
     # A restored account waits for the owner to choose automatic recovery again.
@@ -1582,11 +1645,19 @@ def _copying_with_entries(app: AppDriver) -> None:
     # Entries start off after setup and after a restore; turning them on asks the owner.
     if _wait_for_account(app, "primary", timeout=10)["entry_permission"] != "enabled":
         resume = _agent_result(app, 10, "accounts", "resume", "primary")
-        app.wait_for("Resume new entries in primary", timeout=30, name="resume-sheet")
+        app.wait_for("Start copying into primary", timeout=30, name="resume-sheet")
         app.click("Approve…", outcome_checked=True)
         done = _agent_result(app, 0, "proposals", "wait", resume["proposal_id"], "--timeout", "60")
         if done["state"] != "succeeded":
             raise JourneyFailure(f"resuming entries ended {done['state']}")
+
+
+def _start_copying_primary(app: AppDriver) -> None:
+    """The primary account's one switch, pressed only when it offers Start Copying."""
+    app.open_screen("account.primary")
+    switch = app.see().find("account.copying")
+    if switch is not None and "Start" in switch.label:
+        app.click("account.copying")
 
 
 def _trading_hours() -> bool:
@@ -1611,9 +1682,7 @@ def _set_ask_before_orders(app: AppDriver, on: bool) -> None:
     if start is not None and start.enabled:
         app.click("setup.startCopying")
     else:
-        toolbar = app.see().find("toolbar.copying")
-        if toolbar is not None and "Start" in toolbar.label:
-            app.click("toolbar.copying")
+        _start_copying_primary(app)
     _wait_for_account(app, "primary", timeout=180)
 
 
@@ -1950,6 +2019,11 @@ def j28_connections_panel(app: AppDriver) -> None:
     local = app.see("connections-ollama")
     app.expect(local, "Connect to Ollama", "Base URL", "API key")
     app.click("connections.close")
+    # The chat filter is its own step, in front of whichever interpreter is picked.
+    app.click("connections.chatFilter")
+    time.sleep(0.8)
+    app.expect(app.see("connections-chat-filter"), "Connect to the chat filter", "OpenAI key")
+    app.click("connections.close")
     app.click("connections.alerts")
     time.sleep(0.8)
     app.expect(
@@ -2246,6 +2320,20 @@ def main() -> int:
         else:
             shutil.rmtree(state_root, ignore_errors=True)
 
+    # A report to read beside the screenshots, not a gate: Peekaboo lists every window and sheet
+    # of the app in one flat list, so text in a sheet and the page behind it look like a collision.
+    report = screenshots.parent / "layout-report.txt"
+    report.write_text(
+        "".join(
+            f"{stem}\n" + "".join(f"  {p}\n" for p in found)
+            for stem, found in runner.driver.layout.items()
+        )
+    )
+    if runner.driver.layout:
+        print(
+            f"layout: {len(runner.driver.layout)} screenshots with text to check by eye, "
+            f"in {report.relative_to(ROOT)}"
+        )
     failed = [r for r in runner.results if r.status == "failed"]
     print(
         f"\n{len(runner.results) - len(failed)} of {len(runner.results)} journeys did not fail; "

@@ -6,7 +6,10 @@ enum ConnectionProblem {
     @MainActor
     static func text(for check: TradingCapabilityCheck, modelName: String = "") -> String {
         let provider = TradingProviderName(rawValue: check.adapter)
-        let service = provider?.shortTitle ?? check.adapter
+        let service =
+            check.name == .triage
+            ? TradingTriageProvider(rawValue: check.adapter)?.title ?? check.adapter
+            : provider?.shortTitle ?? check.adapter
         switch check.reasonCode {
         case "source_channel_access_denied", "source_history_permission_denied", "source_channel_not_readable":
             return L10n.string("Your Discord account can't read one of these channels. Check the channel IDs.")
@@ -14,8 +17,12 @@ enum ConnectionProblem {
             return L10n.string("Discord didn't answer in time. Check your connection and try again.")
         case "source_identity_unavailable", "source_auth_or_channel_access", "source_history_read_failed":
             return L10n.string("Discord didn't accept the token, or can't find a channel. Check both.")
-        case "model_key_rejected":
+        case "model_key_rejected", "triage_key_rejected":
             return L10n.string("%@ didn't accept the API key.", service)
+        case "triage_model_not_found":
+            return L10n.string("%@ has no model called “%@”.", service, TradingTriageConfiguration.openAIDecisions.model)
+        case "triage_unreachable":
+            return L10n.string("%@ didn't answer. Check your connection and try again.", service)
         case "model_not_found":
             return L10n.string("%@ has no model called “%@”.", service, modelName.trimmed)
         case "model_probe_rejected":
@@ -30,6 +37,10 @@ enum ConnectionProblem {
             return L10n.string("Couldn't reach %@. Check the API key and your connection.", service)
         case "broker_account_not_tradeable":
             return L10n.string("Alpaca says this account can't trade yet. Check it on Alpaca's site.")
+        case "broker_keys_are_paper":
+            return L10n.string("These are paper keys. Choose Paper, or enter this account's live keys.")
+        case "broker_keys_are_live":
+            return L10n.string("These are live keys, for real money. Choose Live, or enter paper keys.")
         case "broker_auth_or_permissions_failed", "broker_credentials_missing":
             return L10n.string("Alpaca didn't accept these keys. Check that they are for a paper or live account as chosen.")
         case "notification_webhook_invalid":
@@ -42,6 +53,15 @@ enum ConnectionProblem {
             return L10n.string("The bot can't reach that chat. Send the bot a message first, then try again.")
         case "notification_credentials_missing", "notification_identity_invalid", "notification_auth_or_chat_access_failed":
             return L10n.string("Couldn't reach the alert service. Check the token and the chat.")
+        case "account_ownership_pending":
+            return L10n.string(
+                "An account you renamed or removed still holds stocks CopyTrading bought. Keep its old name, or sell those stocks first.")
+        case "routing_change_pending":
+            return L10n.string("Posts are still being read or sent. Wait a moment, then check again.")
+        case "pause_before_configuration_change":
+            return L10n.string("Pause copying before changing the setup.")
+        case "broker_credential_mapping_invalid":
+            return L10n.string("An account is missing its Alpaca keys. Open it and add them.")
         default:
             return L10n.string("Couldn't check this connection. Try again in a moment.")
         }

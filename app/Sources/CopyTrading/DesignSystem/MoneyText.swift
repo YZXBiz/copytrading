@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// A dollar amount, or a signed change that always carries its sign, arrow, and color. A new value
-/// rolls its digits into place, the way a trading screen ticks, unless motion is reduced.
+/// rolls its digits into place, the way a trading screen ticks, unless motion is reduced or the
+/// figure follows the pointer, where it must keep up with every move.
 struct MoneyText: View {
     enum Style {
         case amount
@@ -13,11 +14,13 @@ struct MoneyText: View {
     var font: Font = .body
     /// Whole dollars for round figures such as a limit; cents when nil.
     var fractionDigits: Int? = nil
+    /// Off where the figure follows the pointer, as a chart's readout does.
+    var rolls = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         content
-            .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: value)
+            .animation(reduceMotion || !rolls ? nil : .smooth(duration: 0.35), value: value)
     }
 
     @ViewBuilder private var content: some View {

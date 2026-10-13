@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 import discord
 import httpx
+import pytest
 from pydantic import SecretStr
 
 import copytrading_engine.trading.adapters.capabilities as capabilities
@@ -480,6 +481,64 @@ def test_native_broker_probe_reads_account_positions_and_orders_only(monkeypatch
     assert result.environment == "paper"
     assert result.identity == "broker-account-123"
     assert [name for name, _ in calls] == ["init", "account", "positions", "open_orders", "close"]
+
+
+@pytest.mark.parametrize(
+    ("chosen", "accepted_by", "reason"),
+    [
+        ("live", {"paper"}, "broker_keys_are_paper"),
+        ("paper", {"live"}, "broker_keys_are_live"),
+        ("live", set(), "broker_auth_or_permissions_failed"),
+    ],
+)
+def test_keys_refused_by_the_chosen_server_say_which_server_takes_them(
+    monkeypatch, chosen, accepted_by, reason
+):
+    """Alpaca's paper and live servers each accept only their own keys, so the other server's
+    answer to one account read says whether the owner picked the wrong kind of account."""
+    calls = []
+
+    class Account:
+        id = "broker-account-123"
+        active = True
+
+    class Broker:
+        def __init__(self, credentials, environment):
+            self.environment = environment
+
+        def account(self):
+            calls.append(("account", self.environment))
+            if self.environment not in accepted_by:
+                raise RuntimeError("401 unauthorized")
+            return Account()
+
+        def positions(self):
+            raise AssertionError("refused keys must not read positions")
+
+        def open_orders(self):
+            raise AssertionError("refused keys must not read orders")
+
+        def close(self):
+            calls.append(("close", self.environment))
+
+        def submit_order(self, *_args, **_kwargs):
+            raise AssertionError("a connection check must not submit an order")
+
+    monkeypatch.setattr(capabilities, "AlpacaBroker", Broker)
+    result = asyncio.run(
+        NativeCapabilityProbes().broker(
+            AccountConfiguration(id="second", environment=chosen),
+            BrokerCredentials(
+                account_id="second", key=SecretStr("broker-key"), secret=SecretStr("broker-secret")
+            ),
+        )
+    )
+
+    other = "paper" if chosen == "live" else "live"
+    assert (result.state, result.reason_code, result.environment) == ("failed", reason, chosen)
+    assert sorted(calls) == sorted(
+        [("account", chosen), ("close", chosen), ("account", other), ("close", other)]
+    )
 
 
 def test_native_discord_probe_reads_the_webhook_without_posting():

@@ -2,6 +2,20 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
+## 0.1.0-alpha.10 — developer preview
+
+One switch per account, Discord that survives an edited post, and a calmer account page.
+
+- **One switch per account.** Each account's page has one **Start Copying** or **Stop Copying**. Start Copying starts copying if it isn't running and copies into that account; Stop Copying stops its buys, and sells of what it already copied still follow the guru. The sidebar says which accounts copy, and with two or more accounts the toolbar offers **Stop All** while copying runs. "Entries" are gone: there is no Enable, Pause, or Resume Entries any more, and a finished setup copies into every account it saved.
+- **Limits always save.** A limit changed while copying was starting used to wait as "Changed — not saved yet"; it now saves the moment the start settles, and the account page shows the new limits right away.
+- **An edited Discord post no longer stops copying.** A post edited after CopyTrading first read it used to stop the Discord connection on every start ("Discord could not be reached"). The first version is the one that counts and is never copied twice; the edit is noted and reading carries on.
+- **Apply Changes keeps your accounts copying.** Applying a change restarts copying; every account that was copying before copies again afterwards.
+- **A lot you sold by hand stays yours.** A post whose lot you later sold from the account page no longer reads "Bought … and 1 more"; the sale shows as "You sold …".
+- **A finer curve.** The day chart draws a point a minute instead of every five, and the week every 15 minutes instead of hourly. Its time marks sit evenly on the hour, and the pre-market and after-hours strips are named.
+- **The day chart reads in your time.** Its hour marks and readouts use the same time zone and clock as the rest of the app (Settings → General), the opening bell and the close are marked, and no hour crowds them.
+- **Cash and buying power sit with the balance**, in the line under it, so the band under the chart holds only your limits.
+- **A start that fails says why in plain words**, such as "Copying didn't start: Discord could not be reached. Try again.", instead of an engine message.
+
 ## 0.1.0-alpha.9 — developer preview
 
 A new look, accounts and gurus as the app's two places, and copying that keeps going when you trade by hand.

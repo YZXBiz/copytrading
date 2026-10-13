@@ -42,11 +42,38 @@ struct PostDetailPane: View {
                 resume: ResumeWait(
                     item, waiting: ResumeWait.waitingAccounts(feature.accounts),
                     signalAge: ResumeWait.signalAge(in: model.savedTradingConfiguration)),
-                resumeEntries: resumeEntries
+                startCopying: startCopying,
+                stories: stories,
+                directory: GuruDirectory(model.savedTradingConfiguration),
+                postText: postText
             )
+            .task(id: item.sourceID) { await loadFeeds() }
         }
         .sheet(item: $selectedSheet, onDismiss: reviewFeature.clearPrivateEvidence) { selected in
             ActivitySheetContent(selected: selected, model: model, feature: feature, reviewFeature: reviewFeature)
+        }
+    }
+
+    /// Each account's story of the holding this post's buy opened or joined, from its activity.
+    private var stories: [String: PositionStory] {
+        var stories: [String: PositionStory] = [:]
+        for destination in item.destinations {
+            if let story = PositionStory(post: item.sourceID, feed: feature.feeds[destination.accountID] ?? []) {
+                stories[destination.accountID] = story
+            }
+        }
+        return stories
+    }
+
+    /// The words of another post, while Activity still holds it.
+    private func postText(_ sourceID: String) -> String? {
+        feature.activity.first { $0.sourceID == sourceID }?.text
+    }
+
+    /// A post opened from a guru page may come before its accounts' activity has been read.
+    private func loadFeeds() async {
+        for destination in item.destinations where feature.feeds[destination.accountID] == nil {
+            await feature.loadFeed(accountID: destination.accountID, using: model.accountActions())
         }
     }
 
@@ -70,8 +97,8 @@ struct PostDetailPane: View {
         model.selectedScreen = .account(accountID)
     }
 
-    private func resumeEntries(_ accountID: String) {
+    private func startCopying(_ accountID: String) {
         let environment = feature.accounts.first { $0.accountID == accountID }?.environment
-        Task { await model.resumeEntries(accountID: accountID, environment: environment, feature: feature) }
+        Task { await model.startCopying(into: accountID, environment: environment, feature: feature) }
     }
 }

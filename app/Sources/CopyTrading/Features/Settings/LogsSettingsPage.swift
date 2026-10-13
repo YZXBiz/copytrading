@@ -59,7 +59,7 @@ struct LogsSettingsPage: View {
                 SettingsPickerRow(
                     label: "Storage limit", selection: $storageLimitBytes, options: DiagnosticsSettings.supportedStorageLimits,
                     identifier: "settings.logs.storageLimit"
-                ) { $0.formatted(.byteCount(style: .memory)) }
+                ) { Humanize.bytes($0, style: .memory) }
                 if let warning = model.diagnosticsSettingsWarning {
                     SettingsNoteRow(text: warning, tone: .caution)
                 }
@@ -76,7 +76,8 @@ struct LogsSettingsPage: View {
 
             SettingsSection(title: "Support Export", subtitle: "Saves the log as a file you choose. Nothing is sent anywhere.") {
                 SettingsActionRow(
-                    title: "Save Log…", detail: exportMessage ?? "Local log, \(Humanize.bytes(model.diagnosticsJournalBytes))",
+                    title: "Save Log…",
+                    detail: exportMessage ?? L10n.string("Local log, %@", Humanize.bytes(model.diagnosticsJournalBytes)),
                     identifier: "settings.support.saveLog", action: saveLog
                 )
                 .disabled(model.diagnosticsJournalBytes == 0)

@@ -7,8 +7,8 @@ from openai import APIConnectionError, AsyncOpenAI
 from pydantic_ai import Agent, PromptedOutput
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.deepseek import DeepSeekProvider
+from pydantic_ai.settings import ModelSettings
 
-from copytrading_engine.parsing.extraction import ReadingOutput
 from copytrading_engine.parsing.learning import LEARN_INSTRUCTIONS, PlaybookProposal
 from copytrading_engine.shared.cleanup import close_logged
 from copytrading_engine.shared.model_providers import ProviderConfig
@@ -38,17 +38,16 @@ def chat_model(config: ProviderConfig, client: AsyncOpenAI) -> OpenAIChatModel:
     return OpenAIChatModel(config.model, provider=DeepSeekProvider(openai_client=client))
 
 
+_READING: ModelSettings = {
+    "temperature": 0,
+    "max_tokens": 3000,
+    "extra_body": {"thinking": {"type": "disabled"}},
+}
+
+
 def build_decoder(config: ProviderConfig, client: AsyncOpenAI) -> PydanticAIDecoder:
     model = chat_model(config, client)
-    agent = reading_agent(
-        model,
-        PromptedOutput(ReadingOutput),
-        {
-            "temperature": 0,
-            "max_tokens": 3000,
-            "extra_body": {"thinking": {"type": "disabled"}},
-        },
-    )
+    agent = reading_agent(model, _READING)
     learner = Agent(
         model,
         output_type=PromptedOutput(PlaybookProposal),

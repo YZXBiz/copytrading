@@ -13,6 +13,8 @@ public struct ManualInstruction: Codable, Equatable, Sendable {
     public let price: String?
     public let entryPrice: String?
     public let fraction: String?
+    /// A buy of this many dollars instead of a share of the full position.
+    public let usdAmount: String?
     public let exitBasis: String?
 
     public init(
@@ -21,6 +23,7 @@ public struct ManualInstruction: Codable, Equatable, Sendable {
         price: String?,
         entryPrice: String? = nil,
         fraction: String? = nil,
+        usdAmount: String? = nil,
         exitBasis: String? = nil
     ) {
         self.action = action
@@ -28,12 +31,14 @@ public struct ManualInstruction: Codable, Equatable, Sendable {
         self.price = price
         self.entryPrice = entryPrice
         self.fraction = fraction
+        self.usdAmount = usdAmount
         self.exitBasis = exitBasis
     }
 
     enum CodingKeys: String, CodingKey {
         case action, symbol, price, fraction
         case entryPrice = "entry_price"
+        case usdAmount = "usd_amount"
         case exitBasis = "exit_basis"
     }
 
@@ -45,6 +50,7 @@ public struct ManualInstruction: Codable, Equatable, Sendable {
         try container.encode(price, forKey: .price)
         try container.encodeIfPresent(entryPrice, forKey: .entryPrice)
         try container.encodeIfPresent(fraction, forKey: .fraction)
+        try container.encodeIfPresent(usdAmount, forKey: .usdAmount)
         try container.encodeIfPresent(exitBasis, forKey: .exitBasis)
     }
 }
@@ -249,6 +255,8 @@ public struct ManualOrderPreview: Codable, Equatable, Identifiable, Sendable {
     public let quote: ManualQuote?
     public let freshPrice: String?
     public let plan: ManualOrderPlan?
+    /// The limit the order would carry, kept when a check blocks it.
+    public let limitPrice: String?
     public let checks: [ManualCheck]
     public let reasons: [String]
     public let factsSHA256: String
@@ -265,6 +273,7 @@ public struct ManualOrderPreview: Codable, Equatable, Identifiable, Sendable {
         case createdAt = "created_at"
         case expiresAt = "expires_at"
         case freshPrice = "fresh_price"
+        case limitPrice = "limit_price"
         case factsSHA256 = "facts_sha256"
         case configurationSHA256 = "configuration_sha256"
     }

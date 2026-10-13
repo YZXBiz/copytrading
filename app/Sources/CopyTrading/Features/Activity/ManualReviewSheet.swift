@@ -1,9 +1,9 @@
 import DesktopCore
 import SwiftUI
 
-/// The owner says what a post should do and sends it: the post in big type, then plain choices
-/// (buy or sell, the stock, how much, the price, the accounts), a one-line preview of the order,
-/// and one button. Underneath it is the engine's manual correction: saved, previewed fresh in
+/// The owner says what a post should do and sends it: the post in big type with one quiet line
+/// under it, then one calm form (Buy or Sell, then a row each for the stock, how much, the price,
+/// and the accounts), and a footer that always shows the order it makes and one button. Underneath it is the engine's manual correction: saved, previewed fresh in
 /// each account, then confirmed (ADR-0007).
 struct ManualReviewSheet: View {
     let source: SourceActivity
@@ -13,6 +13,8 @@ struct ManualReviewSheet: View {
     let guruName: String?
     /// This guru's full position in each account it copies to, by account.
     let connections: [String: TradingRouteConnection]
+    /// Each account's max per order, which caps any one buy.
+    let maxOrderUSD: [String: Decimal]
     /// Asks for Touch ID when an order goes to a live account or one that asks to approve orders.
     let confirmOrders: (Set<String>) async throws -> Void
     /// The engine isn't running, so nothing can be saved or placed until it starts.
@@ -35,6 +37,10 @@ struct ManualReviewSheet: View {
     /// Confirmed orders wait here a few seconds before they leave, so they can be undone.
     @State private var isHolding = false
     @State private var approvalProblem: String?
+    /// The broker's latest quote for each stock in the trades, by symbol.
+    @State private var quotes: [String: LiveQuote] = [:]
+    /// Stocks whose quote is being asked for again.
+    @State private var refreshingQuotes: Set<String> = []
 
     init(
         source: SourceActivity,
@@ -44,6 +50,7 @@ struct ManualReviewSheet: View {
         feature: ManualReviewFeatureModel,
         guruName: String? = nil,
         connections: [TradingRouteConnection] = [],
+        maxOrderUSD: [String: Decimal] = [:],
         confirmOrders: @escaping (Set<String>) async throws -> Void,
         engineStopped: Bool = false,
         startEngine: @escaping () -> Void = {}
@@ -54,6 +61,7 @@ struct ManualReviewSheet: View {
         self.feature = feature
         self.guruName = guruName
         self.connections = Dictionary(connections.map { ($0.accountID, $0) }, uniquingKeysWith: { first, _ in first })
+        self.maxOrderUSD = maxOrderUSD
         self.confirmOrders = confirmOrders
         self.engineStopped = engineStopped
         self.startEngine = startEngine
@@ -103,7 +111,17 @@ struct ManualReviewSheet: View {
     private var chosenAccounts: [AccountOverview] { accounts.filter { selectedAccountIDs.contains($0.accountID) } }
 
     private var estimate: ManualOrderEstimate {
-        ManualOrderEstimate(drafts: instructions, accounts: chosenAccounts, connections: connections, mode: mode)
+        ManualOrderEstimate(
+            drafts: instructions, accounts: chosenAccounts, connections: connections, mode: mode, quotes: quotes)
+    }
+
+    /// The account whose read keys quote the stocks: the first chosen, else the first listed.
+    private var quotingAccountID: String? { (chosenAccounts.first ?? accounts.first)?.accountID }
+
+    /// What to quote: the stocks typed so far through one account; a change starts a new ask.
+    private var quoteRequest: [String] {
+        let symbols = Set(instructions.map { $0.symbol.trimmed.uppercased() }.filter(LiveQuote.canQuote))
+        return [quotingAccountID ?? ""] + symbols.sorted()
     }
 
     private var isChecking: Bool {
@@ -139,13 +157,12 @@ struct ManualReviewSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 34) {
+                VStack(alignment: .leading, spacing: 26) {
                     header
-                    VStack(alignment: .leading, spacing: 14) {
-                        Eyebrow(L10n.string("What should happen"))
+                    VStack(alignment: .leading, spacing: 0) {
                         trades
+                        accountChoices
                     }
-                    accountChoices
                     if correctionRequest != nil { results }
                     ManualReviewHistory(source: source, feature: feature, operations: operations)
                 }
@@ -156,6 +173,21 @@ struct ManualReviewSheet: View {
             }
             .scrollEdgeEffectStyle(.soft, for: .bottom)
             footer
+                .background(Palette.canvas)
+        }
+        .overlay(alignment: .topTrailing) {
+            // The corner ✕ every panel in the app has, as well as Close in the footer.
+            Button(L10n.string("Close"), systemImage: "xmark") { dismiss() }
+                .labelStyle(.iconOnly)
+                .buttonStyle(QuietPressButtonStyle())
+                .font(.body.weight(.medium))
+                .foregroundStyle(Palette.tertiaryInk)
+                .frame(width: 28, height: 28)
+                .contentShape(.rect)
+                .help(L10n.string("Close"))
+                .accessibilityIdentifier("review.closeCorner")
+                .padding(.top, 12)
+                .padding(.trailing, 14)
         }
         .background(Palette.page)
         .frame(minWidth: 560, idealWidth: 620, minHeight: 600, idealHeight: 780)
@@ -176,12 +208,12 @@ struct ManualReviewSheet: View {
             let accountIDs = Set(accounts.map(\.accountID) + source.destinations.map(\.accountID))
             await feature.recoverCommands(sourceID: source.sourceID, accountIDs: accountIDs, using: operations)
         }
+        .task(id: quoteRequest) { await fetchQuotes() }
         .onDisappear { feature.clearPrivateEvidence() }
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Eyebrow(L10n.string(mode.label))
+        VStack(alignment: .leading, spacing: 8) {
             let text = source.readableText()
             Text(text.isEmpty ? L10n.string("A post with no words") : "“\(text)”")
                 .font(DisplayFont.font(size: text.count > 90 ? 24 : 34, weight: .medium, relativeTo: .title))
@@ -191,39 +223,45 @@ struct ManualReviewSheet: View {
                 .textSelection(.enabled)
                 .accessibilityIdentifier("review.post")
             Text(lede)
-                .font(DesignTokens.lede)
-                .tracking(DesignTokens.ledeTracking)
+                .font(DesignTokens.caption)
                 .foregroundStyle(Palette.tertiaryInk)
-            if mode == .enter {
-                Text(
-                    L10n.string(
-                        guessed
-                            ? "Filled in from the post's words. Check it, then send."
-                            : "Say what this post should do, then send it.")
-                )
-                .font(DesignTokens.bodyText)
-                .foregroundStyle(Palette.secondaryInk)
-                .padding(.top, 2)
-            }
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
+    /// Who posted, when, and why the sheet is open, on one quiet line.
     @MainActor private var lede: String {
-        [guruName, Humanize.postTime(source.sourceAt)].compactMap { $0 }.joined(separator: " · ")
+        [guruName, Humanize.postTime(source.sourceAt), L10n.string(why)].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    private var why: String {
+        switch mode {
+        case .approve: "Waiting for your approval."
+        case .copy: "Waiting for you to copy it."
+        case .enter:
+            guessed
+                ? "Filled in from the post's words. Check it, then send."
+                : "CopyTrading couldn't read a trade in this post."
+        }
     }
 
     private var trades: some View {
-        VStack(alignment: .leading, spacing: 30) {
+        VStack(alignment: .leading, spacing: 22) {
             let holdings = ManualHolding.holdings(in: accounts, accountIDs: selectedAccountIDs)
             let prices = Self.marketPrices(in: accounts)
             let single = chosenAccounts.count == 1 ? chosenAccounts.first.flatMap { connections[$0.accountID] } : nil
+            let cap = chosenAccounts.count == 1 ? chosenAccounts.first.flatMap { maxOrderUSD[$0.accountID] } : nil
             ForEach($instructions) { $instruction in
                 let index = instructions.firstIndex { $0.id == instruction.id } ?? 0
                 ManualInstructionEditor(
                     draft: $instruction,
                     holdings: holdings,
                     marketPrices: prices,
+                    quote: quotes[instruction.symbol.trimmed.uppercased()],
+                    refreshQuote: refreshingQuotes.contains(instruction.symbol.trimmed.uppercased())
+                        ? nil : { refreshQuote(instruction.symbol.trimmed.uppercased()) },
                     fullPosition: single,
+                    maxOrderUSD: cap,
                     position: instructions.count > 1 ? (index, instructions.count) : nil,
                     remove: { instructions.removeAll { $0.id == instruction.id } }
                 )
@@ -232,8 +270,8 @@ struct ManualReviewSheet: View {
                 Button {
                     instructions.append(ManualInstructionDraft())
                 } label: {
-                    Label(L10n.string("Another trade"), systemImage: "plus")
-                        .font(DesignTokens.caption.weight(.medium))
+                    Text(L10n.string("+ Another trade"))
+                        .font(DesignTokens.caption)
                         .foregroundStyle(Palette.secondaryInk)
                 }
                 .buttonStyle(QuietPressButtonStyle())
@@ -243,19 +281,18 @@ struct ManualReviewSheet: View {
         .disabled(correctionRequest != nil)
     }
 
-    @ViewBuilder private var accountChoices: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Eyebrow(L10n.string("Accounts"))
+    private var accountChoices: some View {
+        FormRow(label: L10n.string("Account")) {
             if accounts.isEmpty {
                 Text(L10n.string("No account status is loaded"))
                     .font(DesignTokens.bodyText)
                     .foregroundStyle(Palette.tertiaryInk)
             }
-            FlowRow(spacing: 26, lineSpacing: 14) {
+            FlowRow(spacing: 22, lineSpacing: 12) {
                 ForEach(accounts) { account in
-                    ChoiceWord(
+                    FormChoice(
                         title: account.accountID,
-                        detail: L10n.string(account.environment == .live ? "Live" : "Paper"),
+                        detail: account.environment == .live ? L10n.string("Live") : nil,
                         detailTint: account.environment == .live ? .orange : nil,
                         isOn: selectedAccountIDs.contains(account.accountID)
                     ) {
@@ -270,10 +307,8 @@ struct ManualReviewSheet: View {
                 }
             }
             .disabled(correctionRequest != nil)
-            Text(L10n.string("Before anything is placed, CopyTrading checks each account's limits and what it holds."))
-                .font(DesignTokens.caption)
-                .foregroundStyle(Palette.tertiaryInk)
         }
+        .padding(.top, 2)
     }
 
     // MARK: After saving
@@ -335,29 +370,37 @@ struct ManualReviewSheet: View {
                             // The order the choices make, marked by the bead, which hops when it changes.
                             InkBead(hop: summary.order.hashValue)
                                 .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
-                            VStack(alignment: .leading, spacing: 5) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                // Wrapped, never cut off: the order is what the owner is about to send.
                                 Text(summary.order)
                                     .font(DesignTokens.bodyEmphasis)
                                     .foregroundStyle(Palette.ink)
                                     .monospacedDigit()
-                                    .lineLimit(1)
-                                Eyebrow(summary.place)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Text(L10n.string("%@ · checks your limits first", summary.place))
+                                    .font(DesignTokens.caption)
+                                    .foregroundStyle(Palette.tertiaryInk)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
                         }
                         .accessibilityElement(children: .combine)
                         .accessibilityIdentifier("review.estimate")
                     }
                     Spacer(minLength: 12)
+                    // The buttons keep their whole labels; the summary beside them wraps instead.
                     Button(L10n.string("Close")) { dismiss() }
                         .buttonStyle(InkActionButtonStyle(isProminent: false))
                         .keyboardShortcut(.cancelAction)
                         .accessibilityIdentifier("review.close")
+                        .fixedSize()
                     primaryButton
+                        .fixedSize()
                 }
             }
         }
         .padding(.horizontal, 40)
         .padding(.vertical, 18)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder private var primaryButton: some View {
@@ -468,6 +511,38 @@ struct ManualReviewSheet: View {
                     confirmationRequests[action.preview.previewID] = action.confirmation
                 }
             }
+        }
+    }
+
+    /// Asks the engine for each typed stock's latest quote once typing pauses, read-only. A
+    /// failed ask leaves the stock on its last known price; a stock with no quote says so.
+    private func fetchQuotes() async {
+        guard let operations, let accountID = quotingAccountID else { return }
+        do {
+            try await Task.sleep(for: .milliseconds(400))
+        } catch {
+            return
+        }
+        for symbol in quoteRequest.dropFirst() {
+            let quote: MarketQuote?
+            do {
+                quote = try await operations.quote(accountID: accountID, symbol: symbol)
+            } catch {
+                if Task.isCancelled { return }
+                continue
+            }
+            quotes[symbol] = LiveQuote(symbol: symbol, quote: quote)
+        }
+    }
+
+    /// Asks the broker for one stock's quote again, now. A failed ask keeps the last one.
+    private func refreshQuote(_ symbol: String) {
+        guard let operations, let accountID = quotingAccountID, !refreshingQuotes.contains(symbol) else { return }
+        refreshingQuotes.insert(symbol)
+        Task {
+            defer { refreshingQuotes.remove(symbol) }
+            guard let quote = try? await operations.quote(accountID: accountID, symbol: symbol) else { return }
+            quotes[symbol] = LiveQuote(symbol: symbol, quote: quote)
         }
     }
 

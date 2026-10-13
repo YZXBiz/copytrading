@@ -326,10 +326,12 @@ class ManualTradingApplication:
             if instruction.action == "buy":
                 assert fresh_price is not None
                 assert decision.plan.limit_price is not None
+                # The limit alone bounds a buy (ADR-0007): an ask above it, which a thin quote feed
+                # can show far from the market, warns that the order may not fill before its
+                # timeout cancels it, and never stops the owner from placing it.
                 if fresh_price > decision.plan.limit_price:
-                    reasons.append("quote_above_limit")
                     checks.append(
-                        ManualCheck(name="quote", status="blocked", reason="quote_above_limit")
+                        ManualCheck(name="quote", status="warning", reason="quote_above_limit")
                     )
                 else:
                     checks.append(ManualCheck(name="quote", status="passed"))
@@ -394,6 +396,9 @@ class ManualTradingApplication:
             quote=quote,
             fresh_price=fresh_price,
             plan=plan,
+            limit_price=decision.plan.limit_price
+            if decision is not None and decision.plan is not None
+            else None,
             checks=tuple(checks),
             reasons=tuple(sorted(set(reasons))),
             facts_sha256=facts_digest(facts),

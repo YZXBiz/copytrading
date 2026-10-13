@@ -12,7 +12,7 @@ Setup has five steps, all done in Connections, top to bottom. Each step's number
 2. **Choose an interpreter.** The interpreter is the AI model that turns each post into an exact order. Pick a service, make an API key, and enter a model name. A model on this Mac (Ollama) or any OpenAI-compatible server may need no key.
 3. **Add a broker account.** Orders go to an Alpaca account. Start with an Alpaca paper account: it trades pretend money at real prices.
 4. **Pick who to copy.** Add each guru, choose their channel, and learn how they write their calls with Learn from Channel. Choose how much each account puts into one of their calls.
-5. **Check and start copying.** Start Copying, at the foot of Connections, first tests every connection and reads the examples while you watch, and starts only when everything passes. Nothing is saved or traded before this. New accounts start with entries off, so nothing is bought until you choose Enable Entries in Accounts.
+5. **Check and start copying.** Start Copying, at the foot of Connections, first tests every connection and reads the examples while you watch, and starts only when everything passes. Nothing is saved or traded before this. Each account then has its own **Start Copying** and **Stop Copying** on its page.
 
 ## Find a channel ID
 
@@ -168,7 +168,7 @@ Live keys place real orders with real money. Alpaca gives them only to an approv
 3. On the home page, find **API Keys** and choose **Generate New Keys**.
 4. Copy the **Key** and the **Secret** into this account. The secret is shown only once.
 
-Anyone with these keys can trade your real money. Set small limits. New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**.
+Anyone with these keys can trade your real money. Set small limits. Live accounts ask for Touch ID before copying starts.
 
 ## Get Telegram alerts
 
@@ -195,4 +195,4 @@ CopyTrading posts each alert into a channel through a webhook: no bot, and no to
 
 1. Choose **Start Copying**. CopyTrading first signs in to Discord, your interpreter, and Alpaca, and reads each example the way it will read real posts.
 2. If anything is marked, choose **Review…**, fix it, then choose **Start Copying** again.
-3. New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**.
+3. To stop copying into one account, open it and choose **Stop Copying**. Sells of what it copied still follow. **Stop All** in the toolbar stops every account.

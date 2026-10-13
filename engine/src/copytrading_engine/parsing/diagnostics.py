@@ -30,6 +30,12 @@ class ValidationIssue(BaseModel):
     code: str
 
 
+def _from_reading(loc: tuple[int | str, ...]) -> tuple[int | str, ...]:
+    """A path from the reading on: the reader's answer wraps it in its output's own envelope
+    (the chat-or-reading choice, ADR-0012), which says nothing about what was wrong."""
+    return loc[loc.index("reading") :] if "reading" in loc else loc
+
+
 def validation_issues(error: Exception) -> tuple[ValidationIssue, ...]:
     """PydanticAI wraps validation failures; inspect causes without serializing exceptions."""
     seen: set[int] = set()
@@ -41,7 +47,7 @@ def validation_issues(error: Exception) -> tuple[ValidationIssue, ...]:
                 ValidationIssue(
                     path=".".join(
                         str(part) if isinstance(part, int) or part in FIELDS else "<extra>"
-                        for part in item["loc"]
+                        for part in _from_reading(item["loc"])
                     )
                     or "<root>",
                     code=item["type"],

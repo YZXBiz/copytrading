@@ -102,7 +102,7 @@ struct ConnectionsStartCard: View {
             return detail
         }
         if model.savedTradingConfiguration == nil && !status.isWorking {
-            return L10n.string("New accounts start with entries off, so nothing is bought until you allow it.")
+            return L10n.string("Live accounts ask for Touch ID before copying starts.")
         }
         return nil
     }

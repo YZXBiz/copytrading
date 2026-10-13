@@ -9,6 +9,7 @@ import discord
 import pytest
 
 from copytrading_engine.execution.application.ports import AccountOpenRefused, BrokerError
+from copytrading_engine.parsing.extraction import Answer
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore
 from copytrading_engine.shared.raw_message import RawMessage
 from copytrading_engine.sources.sqlite import SQLiteSourceStore
@@ -45,11 +46,11 @@ async def test_slow_decoder_does_not_block_broker_reconciliation(tmp_path):
     )
 
     class SlowDecoder(Decoder):
-        async def decode(self, text, route, recent=()):
+        async def answer(self, text, route, recent=()):
             if text != "Market commentary only. No trade action.":
                 entered_decode.set()
                 await release_decode.wait()
-            return await super().decode(text, route)
+            return await super().answer(text, route)
 
     opened: dict[str, Owner] = {}
 
@@ -337,21 +338,23 @@ async def test_slow_account_open_does_not_block_healthy_account_or_capture(tmp_p
 class _UngroundedThenBuyDecoder:
     """Reads the first post with a fraction the post never states, then a clean buy."""
 
-    async def decode(self, text, route, recent=()):
+    async def answer(self, text, route, recent=()):
         if text == "Sold AAPL at 210 from 200":
-            return trade(
-                sell(
-                    "AAPL",
-                    "210",
-                    bought_at="200",
-                    said="Sold",
-                    ticker_said="AAPL",
-                    fraction="0.5",
-                    fraction_said="half",
-                ),
-                summary="Close",
+            return Answer(
+                trade(
+                    sell(
+                        "AAPL",
+                        "210",
+                        bought_at="200",
+                        said="Sold",
+                        ticker_said="AAPL",
+                        fraction="0.5",
+                        fraction_said="half",
+                    ),
+                    summary="Close",
+                )
             )
-        return await Decoder().decode(text, route)
+        return await Decoder().answer(text, route)
 
     async def close(self):
         pass

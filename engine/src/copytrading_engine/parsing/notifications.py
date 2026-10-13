@@ -7,6 +7,7 @@ from pydantic import AwareDatetime, TypeAdapter
 
 from copytrading_engine.parsing.diagnostics import ValidationIssue
 from copytrading_engine.shared.notification_models import NotificationIntent, NotificationPayload
+from copytrading_engine.shared.reading import Chatter
 from copytrading_engine.shared.signals import Instruction, StockSignal
 
 _SOURCE_TIMESTAMP_SERIALIZER = TypeAdapter(AwareDatetime)
@@ -43,7 +44,12 @@ def waiting_notification(
     key: str, result: StockSignal, *, observed_at: datetime | None = None
 ) -> NotificationIntent:
     """A post that waits for the owner: what it says, why it waits, and what Copy places."""
-    summary = result.reading.summary if result.reading is not None else result.reason
+    reading = result.reading
+    summary = (
+        reading.summary
+        if reading is not None and not isinstance(reading, Chatter)
+        else result.reason
+    )
     copy = "; ".join(_call(instruction) for instruction in result.suggested)
     return NotificationIntent(
         key=key,

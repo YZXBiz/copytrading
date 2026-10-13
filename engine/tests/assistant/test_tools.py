@@ -57,7 +57,7 @@ async def test_resuming_only_asks_the_owner():
     assistant, engine, _ = tools(turn)
     result = await assistant.propose_resume_account("paper")
     assert result["state"] == "waiting for the owner's approval with Touch ID in the app"
-    assert result["asks_to"] == "resume entries for paper"
+    assert result["asks_to"] == "start copying into paper"
     assert engine.actions() == []
     assert [e.kind for e in turn.events(0)] == ["step", "proposal"]
 
@@ -72,9 +72,9 @@ async def test_a_refused_proposal_returns_its_code_and_says_it_could_not_ask():
         "why": "There is already a request waiting for the owner's approval.",
     }
     assert [(e.kind, e.text) for e in turn.events(0)] == [
-        ("step", "Asked you to approve resuming paper"),
+        ("step", "Asked you to approve copying into paper"),
         ("proposal", None),
-        ("step", "Couldn't ask you to approve resuming paper"),
+        ("step", "Couldn't ask you to approve copying into paper"),
     ]
 
 
@@ -85,7 +85,7 @@ async def test_a_refused_pause_never_reads_as_paused():
     result = await assistant.pause_account("paper")
     assert "refused" in result
     assert [(e.kind, e.text) for e in turn.events(0)] == [
-        ("step", "Couldn't pause new entries for paper")
+        ("step", "Couldn't stop copying into paper")
     ]
 
 

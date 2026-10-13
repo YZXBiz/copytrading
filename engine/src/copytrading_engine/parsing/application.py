@@ -13,6 +13,7 @@ from copytrading_engine.parsing.extraction import (
     GroundingError,
     check_reading,
     normalize,
+    same_side,
 )
 from copytrading_engine.parsing.history import RecentCall
 from copytrading_engine.parsing.routes import Route
@@ -32,6 +33,8 @@ def outcome(
     profile_revision: str | None = None,
     reading: r.PostReading | None = None,
     suggested: Sequence[Instruction] = (),
+    sorted_confidence: float | None = None,
+    sorted_by: str | None = None,
 ) -> StockSignal:
     return StockSignal(
         reading=reading,
@@ -44,6 +47,8 @@ def outcome(
         text=event.text,
         parser_profile=PROMPT_VERSION,
         model=model,
+        sorted_confidence=sorted_confidence,
+        sorted_by=sorted_by,
         guru_id=guru_id,
         profile_revision=profile_revision,
         decision=decision,
@@ -79,7 +84,8 @@ async def transform(
     if local is not None:
         return local
     text = normalize(event.text).strip()
-    reading = await decoder.decode(text, route, recent)
+    answer = await decoder.answer(text, route, recent)
+    reading = answer.reading
     try:
         check_reading(reading, text, route)
     except GroundingError as exc:
@@ -99,7 +105,9 @@ async def transform(
         event,
         decision,
         reason,
-        model=model,
+        model=answer.model or model,
+        sorted_confidence=answer.sorted_confidence,
+        sorted_by=answer.sorted_by,
         instructions=tuple(call for call, _ in calls),
         evidence=tuple(evidence for _, evidence in calls),
         guru_id=route.guru_id,
@@ -126,7 +134,8 @@ def _without_repeats(
     kept = []
     for call in reading.calls:
         earlier = by_ref.get(call.repeats) if call.repeats is not None else None
-        if earlier is None:
+        # A sell is never a re-post of the buy it sells, whatever the reader says.
+        if earlier is None or not same_side(earlier, call):
             kept.append(call)
         elif (at - earlier.at).total_seconds() > window * 60:
             return reading, "review"
@@ -148,10 +157,12 @@ def _act_on(
 ) -> tuple[Literal["trade", "ignore", "review"], str, tuple[tuple[Instruction, Evidence], ...]]:
     """Act or ask (ADR-0007): a trade made or an instruction with every call placeable trades;
     conditionals, suggestions, a range, a buy with no exact price, and a vague trim wait for the
-    owner; commentary is ignored."""
+    owner; commentary and chatter are ignored."""
     match reading:
         case r.Commentary():
             return "ignore", reading.summary, ()
+        case r.Chatter():
+            return "ignore", "chatter", ()
         case r.Unclear():
             return "review", "unclear", ()
         case r.Conditional() | r.Suggestion():
@@ -170,10 +181,12 @@ def _placeable(call: r.Call) -> tuple[Instruction, Evidence]:
     instruction = _instruction(call, owner=False)
     if isinstance(call, r.Buy):
         fraction_words = call.size.words if isinstance(call.size, r.Fraction) else None
+        usd_words = call.size.words if isinstance(call.size, r.Dollars) else None
         entry_words = None
     else:
         assert not isinstance(call.share, r.NotGiven)  # _instruction waits on it
         fraction_words = call.share.words
+        usd_words = None
         entry_words = (
             call.sell_from.words
             if instruction.entry_price is not None and isinstance(call.sell_from, r.Lot)
@@ -187,6 +200,7 @@ def _placeable(call: r.Call) -> tuple[Instruction, Evidence]:
         price_evidence=call.price.words if isinstance(call.price, r.Exact) else None,
         entry_evidence=entry_words,
         fraction_evidence=fraction_words,
+        usd_amount_evidence=usd_words,
     )
     return instruction, evidence
 
@@ -237,7 +251,14 @@ def _instruction(call: r.Call, *, owner: bool) -> Instruction:
         if isinstance(call.size, r.Batch) and not owner:
             raise _Wait("batch_size_not_given")
         fraction = call.size.value if isinstance(call.size, r.Fraction) else None
-        return Instruction(action="buy", symbol=call.stock.ticker, price=price, fraction=fraction)
+        usd_amount = call.size.value if isinstance(call.size, r.Dollars) else None
+        return Instruction(
+            action="buy",
+            symbol=call.stock.ticker,
+            price=price,
+            fraction=fraction,
+            usd_amount=usd_amount,
+        )
     if isinstance(call.share, r.NotGiven):
         raise _Wait("sell_share_not_given")
     share = Decimal(1) if isinstance(call.share, r.All) else call.share.value

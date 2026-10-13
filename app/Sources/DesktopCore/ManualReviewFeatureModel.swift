@@ -10,6 +10,8 @@ public protocol ManualReviewOperations: Sendable {
     func manualCommandPage(
         accountID: String, sourceID: String, beforeCommandID: String?, limit: Int
     ) async throws -> ManualCommandPage
+    /// A stock's latest quote through the account's read keys; nil when the broker has none.
+    func quote(accountID: String, symbol: String) async throws -> MarketQuote?
 }
 
 extension EngineClient: ManualReviewOperations {}

@@ -92,6 +92,7 @@ struct TradingSettingsSaveTests {
         try await checkProfileExampleReviewClientRequest(profile: profile)
         try await checkFailedActivationRestoresPriorRevision()
         try await checkLaunchStartRetriesAFailedCheck()
+        try await checkLaunchStartRetriesATimedOutRequest()
         try await checkPauseEndsLaunchStartRetries()
         try await checkAcceptedActivationWithLostResponseRemainsPending()
         try await checkPendingActivationReconcilesAfterAppReopen(configuration: configuration, secrets: credentials)
@@ -111,6 +112,7 @@ struct TradingSettingsSaveTests {
         try await checkLimitOnlyChangesApplyWithoutAPause(configuration: configuration, secrets: credentials)
         try await checkConnectionClientRequest(provider: configuration.provider)
         try await checkOneConnectionUsesSavedKeysAndFollowsEdits(configuration: configuration, secrets: credentials)
+        try await checkChatFilterKeyIsCheckedAndKeptOnlyWhileOn(configuration: configuration, secrets: credentials)
         try await checkConfigurationWriteFailureDoesNotStart()
         try checkOperatorWireFixtures()
         try await checkAccountPageClientRequest()
@@ -423,6 +425,24 @@ struct TradingSettingsSaveTests {
         let validations = await starter.validationCallCount()
         try check(validations >= 2, "Retry did not run the connection checks again")
         print("CopyTradingContractTests: launch start retried a failed connection check")
+    }
+
+    /// The engine reading the posts it missed can be slow to answer the first start; a request that
+    /// timed out is retried like a failed check, so copying does not stay paused until someone
+    /// notices.
+    private static func checkLaunchStartRetriesATimedOutRequest() async throws {
+        let (model, starter, directory) = try await launchStartFixture()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        await starter.setValidationActivatable(true)
+        await starter.setValidationTimesOut(1)
+        model.launchStartRetryDelays = [.milliseconds(40), .milliseconds(40), .milliseconds(40)]
+        await model.startCopyingOnLaunchIfWanted()
+        try check(model.tradingStatus?.state == .paused, "A timed out start must leave processing paused")
+        for _ in 0..<100 where model.tradingStatus?.state != .running { try await Task.sleep(for: .milliseconds(20)) }
+        try check(model.tradingStatus?.state == .running, "The launch start did not retry after the engine timed out")
+        let validations = await starter.validationCallCount()
+        try check(validations == 2, "Expected one timed out check and one retry, saw \(validations)")
+        print("CopyTradingContractTests: launch start retried a timed out request")
     }
 
     private static func checkPauseEndsLaunchStartRetries() async throws {
@@ -1284,6 +1304,65 @@ struct TradingSettingsSaveTests {
         print("CopyTradingContractTests: Connect checks one service with typed or saved keys and follows edits")
     }
 
+    /// The chat filter's OpenAI key is checked as typed, then kept from the Keychain while the
+    /// filter stays on; with the filter off no key travels at all (ADR-0012).
+    private static func checkChatFilterKeyIsCheckedAndKeptOnlyWhileOn(
+        configuration: TradingConfiguration, secrets: TradingSecrets
+    ) async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(
+            path: "app-model-chat-filter-\(UUID().uuidString)", directoryHint: .isDirectory
+        )
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var filtered = configuration
+        filtered.provider = TradingProviderConfiguration(name: .deepseek, model: "deepseek-flash")
+        filtered.triage = .openAIDecisions
+        var filteredSecrets = secrets
+        filteredSecrets.triageAPIKey = "saved-openai-key"
+        let store = TradingConfigurationStore(
+            url: directory.appending(path: "configuration.json"), secrets: TestSecretRevisions()
+        )
+        try store.save(
+            configuration: filtered, revision: fakeEngineRevision(filtered), secrets: filteredSecrets, when: .paused)
+        let starter = RecordingTradingStarter()
+        let model = AppModel(tradingConfigurationStore: store, tradingStarter: starter)
+        model.isTradingUnlocked = true
+        // As unlocking does: the saved setup and the fact its keys are in the Keychain.
+        model.savedTradingConfiguration = filtered
+        model.hasTradingSecrets = true
+        model.setupDraft.load(filtered)
+        try check(model.setupDraft.triage == .openAIDecisions, "A saved chat filter did not load into the draft")
+        try check(model.hasSavedTriageKey, "The saved chat-filter key was not counted")
+
+        _ = await model.checkConnection(.triage)
+        guard case .triage(let triage, let apiKey)? = await starter.checkedConnections().last else {
+            throw ContractFailure("Connect did not check the chat filter")
+        }
+        try check(triage == .openAIDecisions, "The chat filter was checked with another model")
+        try check(apiKey == "saved-openai-key", "A blank OpenAI key field did not fall back to the saved key")
+
+        model.setupDraft.triageAPIKey = "typed-openai-key"
+        try check(model.connectionCheckResult(.triage) == nil, "Typing a new key kept the old check")
+        await starter.setConnectionCheckFails(true)
+        let failed = await model.checkConnection(.triage)
+        guard case .triage(_, let typed)? = await starter.checkedConnections().last else {
+            throw ContractFailure("Connect did not check the typed chat-filter key")
+        }
+        try check(typed == "typed-openai-key", "A typed OpenAI key was not the one checked")
+        try check(failed?.state == .failed, "A failing chat-filter check was not returned")
+        await starter.setConnectionCheckFails(false)
+
+        let saved = try store.load()
+        try check(
+            AppModel.triageKey(entered: "", for: .openAIDecisions, saved: saved) == "saved-openai-key",
+            "Applying with a blank key dropped the saved OpenAI key")
+        try check(AppModel.triageKey(entered: "", for: nil, saved: saved) == nil, "A key travelled with the filter off")
+
+        model.setupDraft.triage = nil
+        let (off, offSecrets) = try model.setupDraft.submission()
+        try check(off.triage == nil && offSecrets.triageAPIKey == nil, "Removing the chat filter still sent it")
+        print("CopyTradingContractTests: the chat filter's key is checked, kept while on, and dropped when off")
+    }
+
     private static func checkSetupCheckKeepsKeysAndFollowsEdits(
         configuration: TradingConfiguration, secrets: TradingSecrets
     ) async throws {
@@ -1931,15 +2010,21 @@ struct TradingSettingsSaveTests {
             "Lock retained the equity curve or its freshness"
         )
         print("CopyTradingContractTests: account pause failure, retry, resume, and status refresh passed")
-        // A held buy's Resume Entries runs the same resume as Accounts' button: one resume command.
+        // An account's one switch: Stop Copying turns its buys off, Start Copying turns them back
+        // on, and Start Copying on an account that already copies sends nothing.
         let model = AppModel()
         feature.authorizePrivateEvidence()
         let before = await actions.recordedCommands().count
-        await model.resumeEntries(accountID: "paper", environment: .paper, feature: feature, using: actions)
-        let resumed = await actions.recordedCommands().dropFirst(before)
+        await model.stopCopying(into: "paper", feature: feature, using: actions)
+        await model.startCopying(into: "paper", environment: .paper, feature: feature, using: actions)
+        let switched = await actions.recordedCommands().dropFirst(before)
         try check(
-            resumed.map(\.action) == [.resume] && resumed.first?.accountID == "paper",
-            "Resume Entries did not send one resume for paper: \(resumed.map(\.action))")
+            switched.map(\.action) == [.pause, .resume] && switched.allSatisfy { $0.accountID == "paper" },
+            "Stop and Start Copying did not send pause then resume for paper: \(switched.map(\.action))")
+        let copying = await actions.recordedCommands().count
+        await model.startCopying(into: "paper", environment: .paper, feature: feature, using: actions)
+        let again = await actions.recordedCommands().count
+        try check(again == copying, "Start Copying on an account that already copies sent a command")
     }
 
     private static func checkAccountFeatureLockInterleavings() async throws {
@@ -2926,6 +3011,7 @@ private actor RecordingTradingStarter: TradingStarting {
     private var acceptStartAndLoseResponse = false
     private var validationActivatable = true
     private var validationSuspended = false
+    private var validationTimeouts = 0
     private var validations = 0
     private var connectionChecks: [TradingConnectionCheck] = []
     private var connectionCheckFails = false
@@ -2952,6 +3038,10 @@ private actor RecordingTradingStarter: TradingStarting {
         operationEvents.append("validate")
         validated = configuration
         validations += 1
+        if validationTimeouts > 0 {
+            validationTimeouts -= 1
+            throw EngineTransportError.requestTimedOut
+        }
         if validationSuspended { try await Task.sleep(for: .seconds(30)) }
         let validationActivatable = validationActivatable && configuration != failingConfiguration
         return TradingValidation(
@@ -2984,6 +3074,7 @@ private actor RecordingTradingStarter: TradingStarting {
             switch connection {
             case .source: .source
             case .model: .model
+            case .triage: .triage
             case .broker: .broker
             case .notification: .notification
             }
@@ -3207,6 +3298,8 @@ private actor RecordingTradingStarter: TradingStarting {
     func setStartFailure(_ value: Bool) { failStart = value }
     func setAcceptStartAndLoseResponse(_ value: Bool) { acceptStartAndLoseResponse = value }
     func setValidationActivatable(_ value: Bool) { validationActivatable = value }
+    /// The next `count` checks throw as an engine that does not answer in time.
+    func setValidationTimesOut(_ count: Int) { validationTimeouts = count }
     func setFailingConfiguration(_ value: TradingConfiguration?) { failingConfiguration = value }
     func setConnectionCheckFails(_ value: Bool) { connectionCheckFails = value }
     func checkedConnections() -> [TradingConnectionCheck] { connectionChecks }

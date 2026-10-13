@@ -82,28 +82,30 @@ struct MenuBarView: View {
     private var hero: some View {
         let change = balances.compactMap { Decimal(engine: $0.dayChangeUSD) }.reduce(0, +)
         let equity = balances.compactMap { Decimal(engine: $0.equity) }.reduce(0, +)
-        let posts = accountFeature.activity.filter(\.isToday).count
-        return VStack(alignment: .leading, spacing: 3) {
-            Text(L10n.string("Today"))
+        return TimelineView(.everyMinute) { context in
+            let posts = accountFeature.activity.filter { $0.isPosted(onDayOf: context.date) }.count
+            VStack(alignment: .leading, spacing: 3) {
+                Text(L10n.string("Today"))
+                    .font(.system(size: 12))
+                    .foregroundStyle(Palette.tertiaryInk)
+                if balances.isEmpty {
+                    Text("—")
+                        .font(.system(size: 26, weight: .semibold))
+                        .foregroundStyle(Palette.tertiaryInk)
+                } else {
+                    MoneyText(value: change, style: .change, font: .system(size: 26, weight: .semibold))
+                }
+                Text(
+                    balances.isEmpty
+                        ? L10n.string("%@ today", Humanize.count(posts, "post"))
+                        : L10n.string("Balance %@ · %@ today", equity.formatted(.currency(code: "USD")), Humanize.count(posts, "post"))
+                )
                 .font(.system(size: 12))
                 .foregroundStyle(Palette.tertiaryInk)
-            if balances.isEmpty {
-                Text("—")
-                    .font(.system(size: 26, weight: .semibold))
-                    .foregroundStyle(Palette.tertiaryInk)
-            } else {
-                MoneyText(value: change, style: .change, font: .system(size: 26, weight: .semibold))
+                .monospacedDigit()
             }
-            Text(
-                balances.isEmpty
-                    ? L10n.string("%@ today", Humanize.count(posts, "post"))
-                    : L10n.string("Balance %@ · %@ today", equity.formatted(.currency(code: "USD")), Humanize.count(posts, "post"))
-            )
-            .font(.system(size: 12))
-            .foregroundStyle(Palette.tertiaryInk)
-            .monospacedDigit()
+            .accessibilityElement(children: .combine)
         }
-        .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder
@@ -142,7 +144,7 @@ struct MenuBarView: View {
             MenuRow(title: "Open CopyTrading", symbol: "macwindow", action: openMainWindow)
             if model.savedTradingConfiguration != nil, model.tradingStatus != nil, model.isTradingUnlocked {
                 if isCopying {
-                    MenuRow(title: "Pause Copying", symbol: "pause", action: pause)
+                    MenuRow(title: "Stop Copying", symbol: "stop", action: pause)
                         .disabled(model.isTradingCommandPending)
                 } else if !model.hasLiveAccounts {
                     MenuRow(title: "Start Copying", symbol: "play", action: start)
@@ -166,9 +168,9 @@ struct MenuBarView: View {
         case .running: return L10n.string("Copying")
         case .degraded: return L10n.string("Needs attention")
         case .starting: return L10n.string("Starting")
-        case .pausing: return L10n.string("Pausing")
+        case .pausing: return L10n.string("Stopping")
         case .failed: return L10n.string("Stopped")
-        case .paused, nil: return L10n.string("Paused")
+        case .paused, nil: return L10n.string("Not copying")
         }
     }
 
@@ -186,7 +188,7 @@ struct MenuBarView: View {
         openMainWindow()
     }
 
-    private func start() { Task { await model.startTrading() } }
+    private func start() { Task { await model.startCopyingEverywhere(feature: accountFeature) } }
     private func pause() { Task { await model.pauseTrading() } }
     private func quit() { NSApplication.shared.terminate(nil) }
 }

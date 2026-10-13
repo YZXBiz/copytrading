@@ -48,7 +48,7 @@ struct AccountPage: View {
             VStack(alignment: .leading, spacing: 32) {
                 if let account {
                     AccountPageContent(
-                        account: account, policy: configuration?.policy, model: model, feature: feature,
+                        account: account, policy: model.shownPolicy(accountID: accountID), model: model, feature: feature,
                         isSharingWidth: isSharingWidth, selectedPostID: activityState.selectedActivityID,
                         sheet: $sheet, openPost: openPost)
                 } else {

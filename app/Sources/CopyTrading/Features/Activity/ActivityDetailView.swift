@@ -20,9 +20,16 @@ struct ActivityDetailView: View {
     /// Accounts that hold this post's buy until the owner resumes their entries after a restart.
     var resume: ResumeWait = .none
     /// Resumes an account's entries, as Accounts' button does.
-    var resumeEntries: (String) -> Void = { _ in }
+    var startCopying: (String) -> Void = { _ in }
     /// The one account Activity is showing, or every account.
     var accountID: String?
+    /// Each account's story of the holding this post's buy opened or joined, when it has more than
+    /// this one buy: the buys that joined it and the sales of it (ADR-0010).
+    var stories: [String: PositionStory] = [:]
+    /// Names the gurus in a story.
+    var directory = GuruDirectory(nil)
+    /// The words of another post Activity still holds, for the story's steps.
+    var postText: (String) -> String? = { _ in nil }
     @State private var readerPosition = ScrollPosition(edge: .top)
     /// The post this card watched in flight, so its fill can end the live moment with a hop.
     @State private var watchedInFlight: String?
@@ -157,6 +164,9 @@ struct ActivityDetailView: View {
             if let reading = item.reading {
                 if reading.calls.isEmpty {
                     readLine(ReadAsText.lines(reading).first ?? "")
+                    if item.enteredByOwner {
+                        detailLine([L10n.string("You entered the trade yourself.")])
+                    }
                     subline([ReadAsText.kind(reading), readBy].compactMap(\.self))
                 } else {
                     ForEach(Array(reading.calls.enumerated()), id: \.offset) { index, call in
@@ -206,9 +216,9 @@ struct ActivityDetailView: View {
         }
     }
 
-    /// Who read the post, under the first call.
+    /// Who read the post, under the first call; for chat the filter settled, who sorted it.
     private var readBy: String? {
-        item.interpretedBy.map { L10n.string("read by %@", $0) }
+        item.sortedNote ?? item.interpretedBy.map { L10n.string("read by %@", $0) }
     }
 
     /// The reading's quiet facts on one line: what kind of post it was, what the sentence leaves out.
@@ -260,18 +270,23 @@ struct ActivityDetailView: View {
                     text: L10n.string(environment == .live ? "Live" : "Paper"),
                     color: environment == .live ? .orange : Palette.tertiaryInk)
             }
+            if let story = stories[account.id] {
+                PositionStoryView(story: story, directory: directory, postText: postText)
+            }
             ForEach(Array(account.results.enumerated()), id: \.offset) { index, result in
-                resultBlock(result, tone: tone(of: index, in: account), account: account.id)
-                    .padding(.top, index == 0 ? 0 : 14)
+                if !toldInStory(index, of: account) {
+                    resultBlock(result, tone: tone(of: index, in: account), account: account.id)
+                        .padding(.top, index == 0 ? 0 : 14)
+                }
             }
             if account.waits, let waiting = WaitingCall(item) {
                 waitingActions(waiting)
             }
             if account.awaitsResume {
-                Button(L10n.string("Resume Entries")) { resumeEntries(account.id) }
+                Button(L10n.string("Start Copying")) { startCopying(account.id) }
                     .buttonStyle(PageButtonStyle(isProminent: true))
-                    .accessibilityIdentifier("activity.resumeEntries")
-                    .accessibilityHint(L10n.string("Allows new entries in this account, so the held buy can be copied."))
+                    .accessibilityIdentifier("activity.startCopying")
+                    .accessibilityHint(L10n.string("Copies into this account again, so the held buy can be copied."))
             }
             if heldByHoldings(account.id) {
                 Button(L10n.string("Review in Accounts")) { reviewHoldings(account.id) }
@@ -282,6 +297,14 @@ struct ActivityDetailView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.string("Account %@", account.id))
+    }
+
+    /// An order that traded is one step of the account's story, when it has one, so its own result
+    /// is not repeated.
+    private func toldInStory(_ index: Int, of account: ActivityCardOutcome.Account) -> Bool {
+        guard stories[account.id] != nil else { return false }
+        let orders = item.destinations.first { $0.accountID == account.id }?.orders ?? []
+        return orders.indices.contains(index) && ["filled", "partially_filled"].contains(orders[index].status)
     }
 
     /// How one result ended, for its mark: an order's own outcome; otherwise waiting on the owner,

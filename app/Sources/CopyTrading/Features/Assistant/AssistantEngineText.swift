@@ -5,9 +5,9 @@ enum AssistantEngineText {
     /// Step lines that name one account or guru, as catalog keys; a refused request has its own
     /// "Couldn't …" line.
     static let templates = [
-        "Couldn't read %@'s history", "Couldn't pause new entries for %@",
-        "Couldn't ask you to approve resuming %@", "Couldn't ask you to approve %@'s after-restart setting",
-        "Read %@'s history", "Paused new entries for %@", "Asked you to approve resuming %@",
+        "Couldn't read %@'s history", "Couldn't stop copying into %@",
+        "Couldn't ask you to approve copying into %@", "Couldn't ask you to approve %@'s after-restart setting",
+        "Read %@'s history", "Stopped copying into %@", "Asked you to approve copying into %@",
         "Asked you to approve %@'s after-restart setting", "Added up %@'s calls",
     ]
 

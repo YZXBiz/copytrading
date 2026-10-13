@@ -9,7 +9,7 @@ from pydantic import ValidationError
 
 from copytrading_engine.shared.raw_message import RawMessage
 from copytrading_engine.sources.recovery import RejectedCapture
-from copytrading_engine.sources.sqlite import SourceIdentityConflict, SQLiteSourceStore
+from copytrading_engine.sources.sqlite import SQLiteSourceStore
 
 
 def raw(message_id: int, *, age: int = 0, text: str = "signal") -> RawMessage:
@@ -30,8 +30,8 @@ async def test_live_capture_survives_restart_and_identity_is_stable(tmp_path):
     event = raw(42, age=3600)
     await source.add(event)
     await source.add(event)
-    with pytest.raises(SourceIdentityConflict):
-        await source.add(event.model_copy(update={"text": "different"}))
+    # An edit after capture keeps the first version and never stops the source.
+    await source.add(event.model_copy(update={"text": "different"}))
     await source.close()
 
     source = await SQLiteSourceStore.open(path)
@@ -59,16 +59,20 @@ async def test_recovery_page_and_cursor_are_atomic_and_history_is_audit_only(tmp
     assert (await source.recovery_start(7, 1)).last_id == 12
     assert await source.claim_batch() == ()
     assert await source.rejected_count() == 1
-    with pytest.raises(SourceIdentityConflict):
-        await source.capture_recovery_page(
-            7, [history.model_copy(update={"text": "changed"}), raw(13, age=3600)], [], 13
-        )
-    assert (await source.recovery_start(7, 1)).last_id == 12
+    # A post edited after it was captured comes back changed in the next catch-up: the first
+    # version stays, the cursor moves past it, and reading carries on.
+    await source.capture_recovery_page(
+        7, [history.model_copy(update={"text": "changed"}), raw(13, age=3600)], [], 13
+    )
+    assert (await source.recovery_start(7, 1)).last_id == 13
     await source.close()
 
     source = await SQLiteSourceStore.open(path)
-    assert (await source.recovery_start(7, 1)).last_id == 12
+    assert (await source.recovery_start(7, 1)).last_id == 13
     assert await source.claim_batch() == ()
+    with closing(sqlite3.connect(path)) as db:
+        stored = db.execute("SELECT payload FROM source_captures WHERE id=?", (history.identity,))
+        assert '"signal"' in stored.fetchone()[0]
     await source.close()
 
 

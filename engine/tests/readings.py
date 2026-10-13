@@ -52,6 +52,7 @@ def sell(
     fraction: str | None = None,
     fraction_said: str | None = None,
     counts_from: str | None = None,
+    counts_from_said: str | None = None,
 ) -> Sell:
     """A sell of everything, or of `fraction`, from the lot bought at `bought_at`."""
     return Sell(
@@ -64,6 +65,7 @@ def sell(
             else All(words=said)
         ),
         counts_from=counts_from,  # ty: ignore[invalid-argument-type]
+        counts_from_words=counts_from_said,
         sell_from=(
             Lot(buy_price=Decimal(bought_at), words=bought_at_said or bought_at)
             if bought_at is not None

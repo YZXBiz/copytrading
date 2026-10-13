@@ -8,7 +8,7 @@ import pytest
 from pydantic import SecretStr
 
 from copytrading_engine.execution.domain.sizing import RouteConnection
-from copytrading_engine.parsing.extraction import DecodeError
+from copytrading_engine.parsing.extraction import Answer, DecodeError
 from copytrading_engine.shared.owner_facing import OwnerFacingError
 from copytrading_engine.trading.application.ports import OperatorEvidence
 from copytrading_engine.trading.application.profile_review import ProfileReviewService
@@ -42,12 +42,12 @@ class _Reader:
         self.closed = False
         self.routes = []
 
-    async def decode(self, text, route, recent=()):
+    async def answer(self, text, route, recent=()):
         self.routes.append(route)
         if text.startswith("25加了"):
-            return trade(buy("ABC", "25", fraction="0.5", fraction_said="一半"))
+            return Answer(trade(buy("ABC", "25", fraction="0.5", fraction_said="一半")))
         if text == "今天大盘不错":
-            return commentary()
+            return Answer(commentary())
         raise DecodeError("invalid_model_output", retryable=False)
 
     async def close(self):

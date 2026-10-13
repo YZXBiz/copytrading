@@ -54,6 +54,8 @@ LOOKUPS = (
 
 
 MULTILINE = re.compile(r'L10n\.string\(\s*"""\n(.*?)"""', re.S)
+# A text chosen by a condition: `L10n.string(isSell ? "Sell %@" : "Buy %@", symbol)`.
+TERNARY = re.compile(r"L10n\.string\([^\"()\n]*\?\s*" + LITERAL + r"\s*:\s*" + LITERAL)
 
 
 def multiline_text(raw: str) -> str:
@@ -72,7 +74,26 @@ def test_every_text_the_app_asks_for_is_in_the_catalogs():
         found |= {
             (path.name, multiline_text(match.group(1))) for match in MULTILINE.finditer(source)
         }
+        found |= {
+            (path.name, text) for match in TERNARY.finditer(source) for text in match.groups()
+        }
     missing = sorted(
         f"{name}: {text}" for name, text in found if "\\(" not in text and text not in english
+    )
+    assert missing == []
+
+
+# An error's own words: shown through `AppModel.userMessage(for:)`, which looks them up.
+ERROR_TEXT = re.compile(r"var errorDescription: String\? \{\n(.*?)\n    \}\n", re.S)
+
+
+def test_every_error_the_app_can_show_is_in_the_catalogs():
+    english = load("en")
+    missing = sorted(
+        f"{path.name}: {text}"
+        for path in (SOURCES.parent).rglob("*.swift")
+        for body in ERROR_TEXT.finditer(path.read_text())
+        for text in re.findall(LITERAL, body.group(1))
+        if text and "\\(" not in text and text not in english
     )
     assert missing == []

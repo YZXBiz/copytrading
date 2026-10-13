@@ -21,7 +21,12 @@ from ..diagnostics.telemetry.builders import journal_events, journal_sink
 
 async def test_anthropic_reads_with_the_schema_in_its_instructions_and_no_tools():
     requests = []
-    payload = {"reading": {"kind": "commentary", "summary": "Commentary"}}
+    payload = {
+        "result": {
+            "kind": "ReadingOutput",
+            "data": {"reading": {"kind": "commentary", "summary": "Commentary"}},
+        }
+    }
 
     def handler(request):
         requests.append(json.loads(request.content))
@@ -49,7 +54,9 @@ async def test_anthropic_reads_with_the_schema_in_its_instructions_and_no_tools(
         client,
     )
     try:
-        result = await decoder.decode("Market commentary", Route(playbook="苹果 means AAPL"))
+        result = (
+            await decoder.answer("Market commentary", Route(playbook="苹果 means AAPL"))
+        ).reading
         assert result.kind == "commentary"
         assert len(requests) == 1
         # Anthropic compiles a strict output schema into a grammar too large for the reading, so
@@ -88,7 +95,17 @@ async def test_deepseek_stalled_response_obeys_total_deadline_without_sdk_retrie
                             "message": {
                                 "role": "assistant",
                                 "content": json.dumps(
-                                    {"reading": {"kind": "commentary", "summary": "Commentary"}}
+                                    {
+                                        "result": {
+                                            "kind": "ReadingOutput",
+                                            "data": {
+                                                "reading": {
+                                                    "kind": "commentary",
+                                                    "summary": "Commentary",
+                                                }
+                                            },
+                                        }
+                                    }
                                 ),
                             },
                         }
@@ -110,11 +127,11 @@ async def test_deepseek_stalled_response_obeys_total_deadline_without_sdk_retrie
         ProviderConfig(api_key="test-only", model="deepseek-flash", timeout=20), client
     )
     try:
-        assert (await decoder.decode("Warm up the SDK", Route())).kind == "commentary"
+        assert ((await decoder.answer("Warm up the SDK", Route())).reading).kind == "commentary"
         decoder.timeout = 2
         started_at = asyncio.get_running_loop().time()
         with pytest.raises(DecodeError) as failure:
-            await decoder.decode("Market commentary", Route())
+            await decoder.answer("Market commentary", Route())
         elapsed = asyncio.get_running_loop().time() - started_at
         assert failure.value.reason == "provider_timeout"
         assert failure.value.retryable
@@ -144,7 +161,17 @@ async def test_deepseek_uses_json_mode_without_executable_tools():
                         "message": {
                             "role": "assistant",
                             "content": json.dumps(
-                                {"reading": {"kind": "commentary", "summary": "Commentary"}}
+                                {
+                                    "result": {
+                                        "kind": "ReadingOutput",
+                                        "data": {
+                                            "reading": {
+                                                "kind": "commentary",
+                                                "summary": "Commentary",
+                                            }
+                                        },
+                                    }
+                                }
                             ),
                         },
                     }
@@ -163,7 +190,7 @@ async def test_deepseek_uses_json_mode_without_executable_tools():
         ProviderConfig(api_key="test-only", model="deepseek-flash", timeout=20), client
     )
     try:
-        result = await decoder.decode("Market commentary", Route())
+        result = (await decoder.answer("Market commentary", Route())).reading
         assert result.kind == "commentary"
         assert len(requests) == 1
         assert requests[0]["response_format"] == {"type": "json_object"}
@@ -193,7 +220,14 @@ async def test_provider_transport_captures_actual_serialized_wire_payloads_redac
                         "message": {
                             "role": "assistant",
                             "content": json.dumps(
-                                {"reading": {"kind": "commentary", "summary": secret}}
+                                {
+                                    "result": {
+                                        "kind": "ReadingOutput",
+                                        "data": {
+                                            "reading": {"kind": "commentary", "summary": secret}
+                                        },
+                                    }
+                                }
                             ),
                         },
                     }
@@ -228,7 +262,7 @@ async def test_provider_transport_captures_actual_serialized_wire_payloads_redac
     )
     try:
         with bind_workflow_attempt(context):
-            result = await decoder.decode("Market " + secret, Route())
+            result = (await decoder.answer("Market " + secret, Route())).reading
         assert result.kind == "commentary"
         assert len(requests) == 1
         assert sink.flush(timeout_seconds=5)
@@ -252,6 +286,40 @@ async def test_provider_transport_captures_actual_serialized_wire_payloads_redac
         sink.close(timeout_seconds=5)
 
 
+@pytest.mark.parametrize("encoding", ["zstd", "gzip", "deflate"])
+async def test_a_compressed_reply_is_journaled_as_the_text_it_carries(tmp_path, encoding):
+    """Servers compress replies; the wire capture sits under the client's decoding, so the journal
+    undoes the content encoding itself. Otherwise the reply is unreadable and its secrets can't be
+    found to redact."""
+    import gzip
+    import zlib
+    from compression import zstd
+
+    secret = "compressed-secret-0123456789"
+    body = json.dumps({"answer": secret, "kind": "commentary"}).encode()
+    # DeepSeek answers with zstd.
+    wire = {"zstd": zstd.compress, "gzip": gzip.compress, "deflate": zlib.compress}[encoding](body)
+
+    def handler(request):
+        return httpx.Response(
+            200, headers={"content-encoding": encoding}, stream=httpx.ByteStream(wire)
+        )
+
+    sink = journal_sink(tmp_path / "diagnostics", secrets=(secret,))
+    transport = DiagnosticHTTPTransport(httpx.MockTransport(handler), sink, provider="deepseek")
+    try:
+        async with httpx.AsyncClient(transport=transport) as client:
+            response = await client.post("https://api.deepseek.com/chat/completions", json={})
+        assert response.json()["kind"] == "commentary"
+        assert sink.flush(timeout_seconds=5)
+        reply = journal_events(tmp_path / "diagnostics")[-1]
+        assert reply.capture_kind == "model_response"
+        assert reply.payload["body"]["kind"] == "commentary"
+        assert secret not in json.dumps(reply.payload)
+    finally:
+        sink.close(timeout_seconds=5)
+
+
 async def test_anthropic_provider_transport_captures_sdk_wire_request_and_response(tmp_path):
     secret = "anthropic-wire-secret-123456"
     request_bodies = []
@@ -268,7 +336,14 @@ async def test_anthropic_provider_transport_captures_sdk_wire_request_and_respon
                 "content": [
                     {
                         "type": "text",
-                        "text": json.dumps({"reading": {"kind": "commentary", "summary": secret}}),
+                        "text": json.dumps(
+                            {
+                                "result": {
+                                    "kind": "ReadingOutput",
+                                    "data": {"reading": {"kind": "commentary", "summary": secret}},
+                                }
+                            }
+                        ),
                     }
                 ],
                 "stop_reason": "end_turn",
@@ -306,7 +381,7 @@ async def test_anthropic_provider_transport_captures_sdk_wire_request_and_respon
                 attempt=1,
             )
         ):
-            result = await decoder.decode("Commentary " + secret, Route())
+            result = (await decoder.answer("Commentary " + secret, Route())).reading
         assert result.kind == "commentary"
         assert len(request_bodies) == 1
         assert "output_config" not in request_bodies[0]
@@ -370,7 +445,7 @@ async def test_deepseek_answers_name_a_missing_model_or_a_rejected_key(status, b
     )
     try:
         with pytest.raises(DecodeError) as failure:
-            await decoder.decode("Commentary", Route())
+            await decoder.answer("Commentary", Route())
         assert failure.value.reason == reason
     finally:
         await decoder.close()
@@ -398,7 +473,7 @@ async def test_provider_http_error_body_is_captured_without_masking_safe_decode_
     )
     try:
         with pytest.raises(DecodeError) as failure:
-            await decoder.decode("Commentary", Route())
+            await decoder.answer("Commentary", Route())
         assert failure.value.reason == "provider_key_rejected"
         assert "provider-error-secret-9f6b" not in str(failure.value)
         assert sink.flush(timeout_seconds=5)
@@ -446,7 +521,7 @@ async def test_provider_cancellation_marks_partial_response_and_closes_stream(tm
     decoder.timeout = 0.05
     try:
         with pytest.raises(DecodeError) as failure:
-            await decoder.decode("Commentary", Route())
+            await decoder.answer("Commentary", Route())
         assert failure.value.reason == "provider_timeout"
         assert stream.closed
         assert sink.flush(timeout_seconds=5)
@@ -486,7 +561,7 @@ async def test_observer_failure_does_not_replace_provider_connection_failure():
     )
     try:
         with pytest.raises(DecodeError) as failure:
-            await decoder.decode("Commentary", Route())
+            await decoder.answer("Commentary", Route())
         assert failure.value.reason == "provider_timeout"
         assert failure.value.__cause__ is None
     finally:
@@ -512,23 +587,28 @@ async def test_a_buy_naming_a_lot_keeps_only_a_safe_schema_diagnostic():
                             "role": "assistant",
                             "content": json.dumps(
                                 {
-                                    "reading": {
-                                        "kind": "trade_made",
-                                        "summary": "PRIVATE_PROVIDER_TEXT",
-                                        "calls": [
-                                            {
-                                                "action": "buy",
-                                                "action_words": "加回",
-                                                "stock": {"ticker": "ABC", "words": "abc"},
-                                                "price": {
-                                                    "kind": "exact",
-                                                    "value": "25",
-                                                    "words": "25",
-                                                },
-                                                "size": {"kind": "not_given"},
-                                                "sell_from": {"kind": "not_said"},
+                                    "result": {
+                                        "kind": "ReadingOutput",
+                                        "data": {
+                                            "reading": {
+                                                "kind": "trade_made",
+                                                "summary": "PRIVATE_PROVIDER_TEXT",
+                                                "calls": [
+                                                    {
+                                                        "action": "buy",
+                                                        "action_words": "加回",
+                                                        "stock": {"ticker": "ABC", "words": "abc"},
+                                                        "price": {
+                                                            "kind": "exact",
+                                                            "value": "25",
+                                                            "words": "25",
+                                                        },
+                                                        "size": {"kind": "not_given"},
+                                                        "sell_from": {"kind": "not_said"},
+                                                    }
+                                                ],
                                             }
-                                        ],
+                                        },
                                     }
                                 }
                             ),
@@ -550,7 +630,7 @@ async def test_a_buy_naming_a_lot_keeps_only_a_safe_schema_diagnostic():
     )
     try:
         with pytest.raises(DecodeError) as failure:
-            await decoder.decode("25加回29卖出的abc", Route())
+            await decoder.answer("25加回29卖出的abc", Route())
         error = failure.value
         assert error.reason == "invalid_model_output"
         assert not error.retryable

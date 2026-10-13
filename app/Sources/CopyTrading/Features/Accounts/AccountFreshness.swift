@@ -1,8 +1,9 @@
 import DesktopCore
 import SwiftUI
 
-/// When the broker's numbers were read, as a quiet "Updated 9:01 AM" beside them. Numbers older
-/// than a minute say they stopped updating, with a butter dot and a way to read them again.
+/// Says so beside the numbers when the broker's numbers stop updating: after a minute without a new
+/// read it shows when they were last read, with a butter dot and a way to read them again. While
+/// they are current it shows nothing; the toolbar already says when everything was synced.
 struct AccountFreshness: View {
     let observedAt: String?
     let isRefreshing: Bool
@@ -13,13 +14,12 @@ struct AccountFreshness: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 15)) { context in
-            let stale = isStale(now: context.date)
-            HStack(spacing: 6) {
-                if stale { ToneDot(tone: .caution, size: 8) }
-                Text(text(stale: stale))
-                    .foregroundStyle(stale ? Palette.ink : Palette.tertiaryInk)
-                    .monospacedDigit()
-                if stale {
+            if let observed, isStale(observed, now: context.date) {
+                HStack(spacing: 6) {
+                    ToneDot(tone: .caution, size: 8)
+                    Text(text(observed))
+                        .foregroundStyle(Palette.ink)
+                        .monospacedDigit()
                     if isRefreshing {
                         ProgressView().controlSize(.mini)
                     } else {
@@ -28,22 +28,19 @@ struct AccountFreshness: View {
                             .accessibilityIdentifier("accounts.refresh")
                     }
                 }
+                .font(DesignTokens.caption)
             }
-            .font(DesignTokens.caption)
         }
     }
 
     private var observed: Date? { Humanize.date(observedAt) }
 
-    private func isStale(now: Date) -> Bool {
-        guard let observed else { return false }
-        return now.timeIntervalSince(observed) > Self.staleAfter
+    private func isStale(_ observed: Date, now: Date) -> Bool {
+        now.timeIntervalSince(observed) > Self.staleAfter
     }
 
-    private func text(stale: Bool) -> String {
-        guard let observed else { return "—" }
+    private func text(_ observed: Date) -> String {
         let time = observed.formatted(AppTime.style(.dateTime.hour().minute()))
-        guard stale else { return L10n.string("Updated %@", time) }
         return engineStopped
             ? L10n.string("Not updating since %@: the engine is stopped", time)
             : L10n.string("Not updating since %@", time)

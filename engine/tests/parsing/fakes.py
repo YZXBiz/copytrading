@@ -11,6 +11,7 @@ from copytrading_engine.parsing.contracts import (
     RequestReservation,
 )
 from copytrading_engine.parsing.diagnostics import ValidationIssue
+from copytrading_engine.parsing.extraction import Answer
 from copytrading_engine.parsing.history import PastCall
 from copytrading_engine.shared.signals import SourceIdentityConflict, StockSignal
 
@@ -140,6 +141,6 @@ class FakeDecoder:
         self.result = result
         self.calls = 0
 
-    async def decode(self, text, route, recent=()):
+    async def answer(self, text, route, recent=()):
         self.calls += 1
-        return self.result
+        return Answer(self.result)

@@ -3,7 +3,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 /// The one place CopyTrading is set up, top to bottom, on a white page: Discord, the interpreter,
-/// broker accounts, gurus, and alerts, each a numbered step that is checked when it is done, then
+/// the chat filter, broker accounts, gurus, and alerts, each a numbered step that is checked when it is done, then
 /// one Start Copying. Services open a frosted panel that grows out of their row; accounts and gurus open
 /// their editor. People and Accounts only show what this page set up.
 struct ConnectionsView: View {
@@ -33,19 +33,24 @@ struct ConnectionsView: View {
                     step(2, .interpreter) { section(.interpreter) }
                         .id(SetupTourTarget.interpreterServices)
                     SetupStepSection(
-                        number: 3, isDone: progress.isDone(.account), title: L10n.string("Broker accounts"),
+                        number: 3, isDone: model.setupDraft.triage != nil, isOptional: true,
+                        title: ConnectionKind.chatFilter.title, subtitle: ConnectionKind.chatFilter.explanation
+                    ) { section(.chatFilter) }
+                    .padding(.bottom, 36)
+                    SetupStepSection(
+                        number: 4, isDone: progress.isDone(.account), title: L10n.string("Broker accounts"),
                         subtitle: L10n.string("Where orders go. Start with paper: pretend money at real prices.")
                     ) { BrokerAccountsRows(model: model).setupTourTarget(.accounts) }
                     .padding(.bottom, 36)
                     .id(SetupTourTarget.accounts)
                     SetupStepSection(
-                        number: 4, isDone: progress.isDone(.guru), title: L10n.string("Gurus"),
+                        number: 5, isDone: progress.isDone(.guru), title: L10n.string("Gurus"),
                         subtitle: L10n.string("Who you copy, and the account each one copies into.")
                     ) { GuruRows(model: model).setupTourTarget(.gurus) }
                     .padding(.bottom, 36)
                     .id(SetupTourTarget.gurus)
                     SetupStepSection(
-                        number: 5, isDone: model.setupDraft.notificationsEnabled, isOptional: true,
+                        number: 6, isDone: model.setupDraft.notificationsEnabled, isOptional: true,
                         title: ConnectionKind.alerts.title, subtitle: ConnectionKind.alerts.explanation
                     ) { section(.alerts) }
                     .padding(.bottom, 36)
@@ -65,6 +70,8 @@ struct ConnectionsView: View {
                 .padding(.bottom, 48)
                 .frame(maxWidth: 880, alignment: .leading)
                 .frame(maxWidth: .infinity)
+                // Under an open panel's veil the page is out of reach; VoiceOver reads the panel.
+                .accessibilityHidden(panel != nil)
             }
             .scrollEdgeEffectHidden(true, for: .top)
             .background(Palette.page)
@@ -195,6 +202,11 @@ struct ConnectionsView: View {
                         kind, brand: "discord", summary: summary, title: L10n.string("Discord token and channels")
                     )
                     .setupTourTarget(.discordRow)
+                case .chatFilter:
+                    serviceRow(
+                        kind, brand: (model.setupDraft.triage ?? .openAIDecisions).provider.brand, summary: summary,
+                        title: L10n.string("OpenAI key"),
+                        detail: L10n.string("Sorts chat out before %@ reads", model.setupDraft.provider.shortTitle))
                 case .alerts:
                     if let summary {
                         serviceRow(kind, brand: model.setupDraft.notificationService.brandIcon, summary: summary, title: summary.title)
@@ -244,12 +256,12 @@ struct ConnectionsView: View {
 
     /// A service with its own editor: "Connect" before it is set up, its setting and status after.
     private func serviceRow(
-        _ kind: ConnectionKind, brand: String?, summary: ConnectionSummary?, title: String
+        _ kind: ConnectionKind, brand: String?, summary: ConnectionSummary?, title: String, detail: String? = nil
     ) -> some View {
         ConnectionServiceRow(
             brand: brand,
             title: summary?.title ?? title,
-            detail: summary.map { L10n.string("%@ · %@", $0.detail, $0.status.text) },
+            detail: summary.map { L10n.string("%@ · %@", $0.detail, $0.status.text) } ?? detail,
             tone: summary?.status.tone,
             action: L10n.string(summary == nil ? "Connect" : "Edit"),
             origin: .section(kind),

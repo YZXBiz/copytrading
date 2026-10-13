@@ -1,35 +1,25 @@
 import DesktopCore
 import SwiftUI
 
-/// The account's name and mode, whether it is taking entries, the switch that changes that, and
-/// the rest of its controls tucked behind ⋯.
+/// The account's name, its mode, whether CopyTrading copies into it, its one Start or Stop
+/// Copying, and its other controls tucked behind ⋯.
 struct AccountPageHeader: View {
     let account: AccountOverview
     let model: AppModel
     let feature: AccountFeatureModel
 
     private var isPending: Bool { feature.pendingAccounts.contains(account.accountID) }
-
-    /// Readiness values for an account that is not running, so there is nothing to control.
-    private static let notRunning: Set<String> = [
-        "account_unavailable", "processing_stopped", "outside_open_orders", "broker_account_inactive",
-        "account_in_use",
-    ]
-
-    private var canControl: Bool {
-        account.activeConfiguration && !Self.notRunning.contains(account.readiness) && !isPending
-    }
-
-    /// "disabled" is how every new account starts; "paused" is an owner pause. Both block entries.
-    /// After a restart with manual recovery, entries stay off until the owner resumes them, even
-    /// though the saved permission still says enabled.
-    private var entriesOff: Bool {
-        account.entryPermission != "enabled" || account.readiness == "manual_resume_required"
-    }
-    private var neverEnabled: Bool { account.entryPermission == "disabled" }
-    private var entryState: AccountEntryState { AccountEntryState(account) }
+    private var copyState: AccountCopyState { AccountCopyState(account) }
     private var isInSetup: Bool {
         model.setupDraft.accounts.contains { $0.name.trimmed == account.accountID }
+    }
+    private var isSaved: Bool {
+        model.savedTradingConfiguration?.accounts.contains { $0.id == account.accountID } == true
+    }
+
+    /// Settings like recovery only reach an account the engine holds.
+    private var canControl: Bool {
+        account.activeConfiguration && !AccountCopyState.unheld.contains(account.readiness) && !isPending
     }
 
     var body: some View {
@@ -54,28 +44,14 @@ struct AccountPageHeader: View {
                 HStack(spacing: 12) {
                     Label(pendingNote, systemImage: "pencil.circle")
                         .foregroundStyle(Palette.secondaryInk)
-                    Spacer(minLength: 12)
-                    StartCopyingButton(model: model)
-                        .controlSize(.small)
+                    Button(L10n.string("Review in Connections"), action: openConnections)
+                        .buttonStyle(QuietTextButtonStyle())
                 }
                 .font(DesignTokens.caption)
             } else if model.limitsSavedAccountIDs.contains(account.accountID) {
                 Label(L10n.string("Saved · applies to the next order"), systemImage: StatusTone.positive.symbol)
                     .foregroundStyle(StatusTone.positive.color)
                     .font(DesignTokens.caption)
-            }
-            if neverEnabled && account.activeConfiguration {
-                Label {
-                    Text(
-                        L10n.string(
-                            "New accounts start with entries off, so nothing is bought until you turn them on. Exits are still copied.")
-                    )
-                    .foregroundStyle(Palette.secondaryInk)
-                } icon: {
-                    Image(systemName: "lightbulb")
-                        .foregroundStyle(Palette.amber)
-                }
-                .font(DesignTokens.caption)
             }
         }
     }
@@ -92,7 +68,7 @@ struct AccountPageHeader: View {
         return edited || !draft.key.isEmpty || !draft.secret.isEmpty ? L10n.string("Changed — not saved yet") : nil
     }
 
-    /// The name, large and plain, with its mode and entry state in one grey line under it. Only a
+    /// The name, large and plain, with its mode and whether it copies in one grey line under it. Only a
     /// live account's mode carries colour, since it trades real money.
     private var identity: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -110,8 +86,8 @@ struct AccountPageHeader: View {
                 Text(verbatim: "·")
                     .foregroundStyle(Palette.tertiaryInk)
                     .accessibilityHidden(true)
-                Text(L10n.string(entryState.text))
-                    .foregroundStyle(entryState.tone == .caution ? Palette.amber : Palette.tertiaryInk)
+                Text(L10n.string(copyState.text))
+                    .foregroundStyle(copyState.tone == .caution ? Palette.amber : Palette.tertiaryInk)
             }
             .font(DesignTokens.lede)
             .tracking(DesignTokens.ledeTracking)
@@ -127,38 +103,43 @@ struct AccountPageHeader: View {
                     .controlSize(.small)
                     .help(L10n.string("Saving account command"))
             }
-            // Entries only mean something while the engine holds the account, so the switch waits
-            // until copying runs.
-            if account.activeConfiguration {
-                if entriesOff {
-                    Button(L10n.string(neverEnabled ? "Enable Entries" : "Resume Entries"), systemImage: "play.fill", action: toggleEntries)
-                        .buttonStyle(PageButtonStyle(isProminent: true))
-                        .disabled(!canControl)
-                        .help(L10n.string("Allow new entry orders for this account."))
-                        .labelStyle(.titleOnly)
-                        .accessibilityIdentifier("account.entries")
-                } else {
-                    Button(L10n.string("Pause Entries"), systemImage: "pause.fill", action: toggleEntries)
-                        .buttonStyle(PageButtonStyle())
-                        .disabled(!canControl)
-                        .help(L10n.string("Stop new entry orders. Exits still follow the account policy."))
-                        .labelStyle(.titleOnly)
-                        .accessibilityIdentifier("account.entries")
-                }
+            if copyState.isCopying {
+                Button(L10n.string("Stop Copying"), systemImage: "stop.fill", action: stop)
+                    .buttonStyle(PageButtonStyle())
+                    .disabled(isPending || model.isTradingCommandPending)
+                    .help(L10n.string("No new buys in this account. Sells of what it copied still follow the guru."))
+                    .labelStyle(.titleOnly)
+                    .accessibilityIdentifier("account.copying")
+            } else {
+                Button(
+                    L10n.string(account.environment == .live ? "Start Copying…" : "Start Copying"), systemImage: "play.fill",
+                    action: start
+                )
+                .buttonStyle(PageButtonStyle(isProminent: true))
+                .disabled(!isSaved || isPending || model.isTradingCommandPending || !model.isTradingUnlocked)
+                .help(
+                    L10n.string(
+                        isSaved
+                            ? "Copy the guru's buys and sells into this account."
+                            : "Save this account in Connections before copying into it.")
+                )
+                .labelStyle(.titleOnly)
+                .accessibilityIdentifier("account.copying")
             }
             AccountPageMenu(account: account, canControl: canControl, isInSetup: isInSetup, model: model, feature: feature)
         }
     }
 
-    /// Turning entries on in a live account lets it buy with real money on its own, so it asks for
-    /// Touch ID first. Pausing never asks.
-    private func toggleEntries() {
-        Task {
-            if entriesOff {
-                await model.resumeEntries(accountID: account.accountID, environment: account.environment, feature: feature)
-            } else {
-                await feature.control(accountID: account.accountID, action: .pause, using: model.accountActions())
-            }
-        }
+    private func start() {
+        Task { await model.startCopying(into: account.accountID, environment: account.environment, feature: feature) }
+    }
+
+    private func stop() {
+        Task { await model.stopCopying(into: account.accountID, feature: feature) }
+    }
+
+    private func openConnections() {
+        model.selectedScreen = .connections
+        model.editAccount(named: account.accountID)
     }
 }

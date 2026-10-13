@@ -168,7 +168,7 @@ def build_server(client: ControlClient) -> MCPServer:
 
     @server.tool(annotations=PAUSE)
     async def pause_account(account_id: str) -> wire.AccountControlView:
-        """Stop new entries in one account. Exits and recovery continue. Always safe."""
+        """Stop copying into one account: no new buys there. Sells continue. Always safe."""
         return await call(
             wire.PauseAccount(request_id=new_request_id(), account_id=account_id),
             wire.AccountControlView,
@@ -176,7 +176,7 @@ def build_server(client: ControlClient) -> MCPServer:
 
     @server.tool(annotations=PROPOSE)
     async def propose_resume_account(account_id: str) -> wire.ProposalView:
-        """Ask the owner to resume new entries in an account. Does nothing until approved."""
+        """Ask the owner to start copying into an account again. Does nothing until approved."""
         return await call(
             wire.ProposeResumeAccount(request_id=new_request_id(), account_id=account_id),
             wire.ProposalView,

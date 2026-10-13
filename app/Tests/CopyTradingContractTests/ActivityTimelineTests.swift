@@ -126,7 +126,8 @@ private func anUnfilledBuySaysWhyItWasCancelled() throws {
     try #require(
         result.facts
             == [
-                .init(label: "Waited", value: "1 min 2 s"), .init(label: "Order (max per order)", value: "$200 of $600"),
+                .init(label: "Waited", value: "1 min 2 s"), .init(label: "Order", value: "$200 · your max per order"),
+                .init(label: "The call asked for", value: "$600"),
             ],
         "facts were \(result.facts)")
     // The limit and the ask it met are drawn on the price ruler, the gap between them filled.

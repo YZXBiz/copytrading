@@ -13,7 +13,7 @@ from copytrading_engine.execution.domain.manual_commands import (
     ManualCommandPage,
     ManualCommandPageRequest,
 )
-from copytrading_engine.execution.domain.market import EquityHistory, HistoryWindow
+from copytrading_engine.execution.domain.market import EquityHistory, HistoryWindow, Quote
 from copytrading_engine.execution.presentation.account_feed import AccountFeedPage
 from copytrading_engine.execution.presentation.operator_views import (
     AccountEventPage,
@@ -227,6 +227,12 @@ class OperatorQueryService:
             if not isinstance(history, OwnerUnavailable):
                 return history
         return await self._reader.equity_history(account_id, window)
+
+    async def quote(self, account_id: str, symbol: str) -> Quote | None:
+        """A stock's latest quote through the account's read keys, for the trade sheet."""
+        if not self._reader.holds(account_id):
+            raise KeyError(account_id)
+        return await self._reader.quote(account_id, symbol)
 
     async def source_activity(self, before_seq: int | None, limit: int) -> SourceActivityPage:
         page = await asyncio.wait_for(

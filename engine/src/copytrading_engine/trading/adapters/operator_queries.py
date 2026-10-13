@@ -200,6 +200,8 @@ def source_page(
                 parser_reason=decision.reason if decision else None,
                 parser_profile=decision.parser_profile if decision else None,
                 interpreted_by=decision.model if decision else None,
+                sorted_by=decision.sorted_by if decision else None,
+                sorted_confidence=decision.sorted_confidence if decision else None,
                 instructions=decision.instructions if decision else (),
                 suggested=decision.suggested if decision else (),
                 reading=decision.reading if decision else None,

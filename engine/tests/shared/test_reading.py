@@ -195,5 +195,6 @@ def test_the_model_is_given_one_tagged_schema():
         "conditional",
         "suggestion",
         "commentary",
+        "chatter",
         "unclear",
     }

@@ -4,10 +4,10 @@ import asyncio
 import json
 from collections.abc import AsyncIterable, AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Protocol
+from typing import Any, Protocol
 
 import pydantic_ai
-from pydantic_ai import Agent, ModelRetry, NativeOutput, PromptedOutput, RunContext
+from pydantic_ai import Agent, ModelRetry, PromptedOutput, RunContext
 from pydantic_ai.exceptions import (
     ModelAPIError,
     ModelHTTPError,
@@ -20,8 +20,10 @@ from pydantic_ai.usage import UsageLimits
 
 from copytrading_engine.parsing.diagnostics import validation_issues
 from copytrading_engine.parsing.extraction import (
+    Answer,
     DecodeError,
     GroundingError,
+    JustChat,
     ReadingInput,
     ReadingOutput,
     check_reading,
@@ -36,7 +38,7 @@ from copytrading_engine.parsing.prompt import (
     recent_calls_instructions,
 )
 from copytrading_engine.parsing.routes import Route
-from copytrading_engine.shared.reading import PostReading
+from copytrading_engine.shared.reading import Chatter
 
 # The engine owns its output: its stdout and stderr are the app's pipe and log. The library
 # leaves the flag unannotated, so its type is inferred as the literal True.
@@ -73,10 +75,13 @@ _UNKNOWN_MODEL = (
 _MODEL_NAME_LIMIT = 2000
 
 
+type ReaderAgent = Agent[ReadingInput, ReadingOutput | JustChat]
+
+
 class PydanticAIDecoder:
     def __init__(
         self,
-        agent: Agent[ReadingInput, ReadingOutput],
+        agent: ReaderAgent,
         learner: Agent[None, PlaybookProposal],
         client: _ProviderClient,
         timeout: float,
@@ -89,9 +94,7 @@ class PydanticAIDecoder:
         self.timeout = timeout
         self.connection_errors = connection_errors
 
-    async def decode(
-        self, text: str, route: Route, recent: tuple[RecentCall, ...] = ()
-    ) -> PostReading:
+    async def answer(self, text: str, route: Route, recent: tuple[RecentCall, ...] = ()) -> Answer:
         async with _translated_errors(self.connection_errors):
             async with asyncio.timeout(self.timeout):
                 # A reading that fails a check goes back once with the reason, then to review.
@@ -100,7 +103,8 @@ class PydanticAIDecoder:
                     deps=ReadingInput(text=text, route=route, recent=recent),
                     usage_limits=UsageLimits(request_limit=2, output_tokens_limit=6000),
                 )
-            return result.output.reading
+        output = result.output
+        return Answer(Chatter() if isinstance(output, JustChat) else output.reading)
 
     async def learn(self, posts: tuple[str, ...]) -> PlaybookProposal:
         async with _translated_errors(self.connection_errors):
@@ -141,23 +145,31 @@ def _rejection(exc: ModelHTTPError) -> str:
     return "provider_rejected"
 
 
-def reading_agent(
-    model: Model,
-    output_type: NativeOutput[ReadingOutput] | PromptedOutput[ReadingOutput],
-    model_settings: ModelSettings,
-) -> Agent[ReadingInput, ReadingOutput]:
-    """The reader every provider shares: one reading per post, held to the post's own words. Its
-    fixed instructions come first, then the guru's playbook, then the guru's recent calls, so a
-    provider can cache the part that does not change from post to post."""
-    agent = Agent(
-        model,
-        name="post_reader",
-        output_type=output_type,
-        instructions=INSTRUCTIONS,
-        deps_type=ReadingInput,
-        retries=1,
-        model_settings=model_settings,
+def reading_agent(model: Model, model_settings: ModelSettings) -> ReaderAgent:
+    """The reader every provider shares: one reading per post, held to the post's own words, or
+    chat, which carries nothing. The answer is JSON asked for in the prompt (ADR-0012)."""
+    agent: ReaderAgent = framed(
+        Agent[ReadingInput, ReadingOutput | JustChat](
+            model,
+            name="post_reader",
+            output_type=PromptedOutput[ReadingOutput | JustChat]([ReadingOutput, JustChat]),
+            deps_type=ReadingInput,
+            retries=1,
+            model_settings=model_settings,
+        )
     )
+    agent.output_validator(_checked)
+    return agent
+
+
+def framed[A: Agent[ReadingInput, Any]](agent: A) -> A:
+    """The question every read of a post is asked in: the fixed instructions first, then the
+    guru's playbook, then the guru's recent calls, so a provider can cache the part that does not
+    change from post to post."""
+
+    @agent.instructions
+    def instructions() -> str:
+        return INSTRUCTIONS
 
     @agent.instructions
     def playbook(context: RunContext[ReadingInput]) -> str | None:
@@ -167,13 +179,19 @@ def reading_agent(
     def recent_calls(context: RunContext[ReadingInput]) -> str | None:
         return recent_calls_instructions(context.deps.recent)
 
-    agent.output_validator(_checked)
     return agent
 
 
-def _checked(context: RunContext[ReadingInput], output: ReadingOutput) -> ReadingOutput:
+def _checked(
+    context: RunContext[ReadingInput], output: ReadingOutput | JustChat
+) -> ReadingOutput | JustChat:
     """Holds the model to the post's own words and to the calls it was shown; a failure gives it
-    one retry with the reason."""
+    one retry with the reason. Chat on the retry would let go a post the reader already took for
+    something, so it ends the run instead, and the post waits for the owner."""
+    if isinstance(output, JustChat):
+        if context.retry > 0:
+            raise UnexpectedModelBehavior("A post read as something was answered as chat on retry")
+        return output
     try:
         check_reading(output.reading, context.deps.text, context.deps.route)
     except GroundingError as exc:

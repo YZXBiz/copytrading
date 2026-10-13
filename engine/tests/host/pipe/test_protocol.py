@@ -28,7 +28,7 @@ from copytrading_engine.execution.domain.lifecycle import (
     AccountControlCommand,
     AccountControlResult,
 )
-from copytrading_engine.execution.domain.market import EquityHistory, HistoryWindow
+from copytrading_engine.execution.domain.market import EquityHistory, HistoryWindow, Quote
 from copytrading_engine.execution.domain.ownership import (
     OwnershipResolution,
     OwnershipResolutionRequest,
@@ -102,6 +102,15 @@ class _OperatorControl:
         fixture = contract("equity-history-response.json")
         return EquityHistory.model_validate_json(json.dumps(fixture["ok"]["history"]))
 
+    async def quote(self, account_id: str, symbol: str) -> Quote | None:
+        if account_id != "paper":
+            raise KeyError(account_id)
+        if symbol == "ZZZZ":
+            return None
+        assert symbol == "AAPL"
+        fixture = contract("quote-response.json")
+        return Quote.model_validate_json(json.dumps(fixture["ok"]["quote"]))
+
 
 class _BackupRestore:
     def __init__(self, staging_root: Path) -> None:
@@ -173,7 +182,24 @@ async def test_account_operator_contract_fixtures_and_exact_request_schema(store
         "get_equity_history", "missing", account_id="other", window={"range": "day"}
     )
     assert decode(await server.handle_line(missing))["error"] == {"code": "not_found"}
+    quote = decode(
+        await server.handle_line(
+            request_line("get_quote", "req-quote", account_id="paper", symbol="AAPL")
+        )
+    )
+    assert quote == contract("quote-response.json")
+    no_quote = decode(
+        await server.handle_line(
+            request_line("get_quote", "req-quote-none", account_id="paper", symbol="ZZZZ")
+        )
+    )
+    assert no_quote == contract("quote-missing-response.json")
+    unheld = request_line("get_quote", "unheld", account_id="other", symbol="AAPL")
+    assert decode(await server.handle_line(unheld))["error"] == {"code": "not_found"}
     for invalid in (
+        request_line("get_quote", "bad", account_id="paper", symbol="aapl"),
+        request_line("get_quote", "bad", account_id="paper", symbol=""),
+        request_line("get_quote", "bad", account_id="paper", symbol="TOOLONGSYMBOL"),
         request_line("get_accounts", "bad", limit=True),
         request_line("get_accounts", "bad", before_account_id=""),
         request_line("get_accounts", "bad", before_account_id="a" * 65),

@@ -21,6 +21,7 @@
           "words": "一半"
         },
         "counts_from": null,
+        "counts_from_words": null,
         "sell_from": {
           "kind": "lot",
           "buy_price": "39.5",
@@ -76,6 +77,7 @@
           "words": "跑路了"
         },
         "counts_from": null,
+        "counts_from_words": null,
         "sell_from": {
           "kind": "not_said"
         },
@@ -186,7 +188,35 @@
     "summary": "TSLA 373 is still resistance today"
   },
   {
+    "kind": "chatter"
+  },
+  {
     "kind": "unclear",
     "summary": "Cannot tell"
+  },
+  {
+    "kind": "trade_made",
+    "summary": "Bought $200 of NFLX",
+    "calls": [
+      {
+        "action": "buy",
+        "action_words": "buy",
+        "stock": {
+          "ticker": "NFLX",
+          "words": "nflx"
+        },
+        "price": {
+          "kind": "exact",
+          "value": "71",
+          "words": "71"
+        },
+        "size": {
+          "kind": "dollars",
+          "value": "200",
+          "words": "200$ of"
+        },
+        "repeats": null
+      }
+    ]
   }
 ]

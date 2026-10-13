@@ -107,6 +107,16 @@ private func journalSkipsDamagedLinesAndReadsPayloads(_ root: URL) throws {
     try #require(entries[0].traceID == "abc", "the trace identity was lost")
     try #require(entries[0].payloadJSON?.contains("ignore [REDACTED]") == true, "the payload was not shown")
     try #require(entries[0].searchText.contains("ignore [redacted]"), "search must cover the payload")
+    // A compressed reply journaled as bytes reads as unreadable, never as replacement characters.
+    let garbled = line(
+        "payload", at: "2026-09-30T11:00:01.000+00:00",
+        #""capture_kind":"model_response","capture_status":"complete","payload":{"body":"(\ufffd/\ufffd\u0000H","status_code":200},"created_at_ns":5"#
+    )
+    try Data([garbled, ""].joined(separator: "\n").utf8).write(to: directory.appending(path: "diagnostics.jsonl"))
+    let unreadable = try DiagnosticsJournal(directory: directory).entries()
+    try #require(unreadable.count == 1 && unreadable[0].payloadUnreadable, "a garbled reply was not recognized")
+    try #require(unreadable[0].payloadJSON == nil, "a garbled reply was shown as text")
+    try #require(!entries[0].payloadUnreadable, "a readable payload was called unreadable")
     let absent = try DiagnosticsJournal(directory: root.appending(path: "absent")).entries()
     try #require(absent.isEmpty, "a journal that does not exist yet reads as empty")
 }

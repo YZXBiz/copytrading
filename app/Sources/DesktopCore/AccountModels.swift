@@ -473,11 +473,14 @@ public struct SourceInstruction: Codable, Equatable, Sendable {
     public let price: String?
     public let entryPrice: String?
     public let fraction: String?
+    /// A buy the post sized in dollars ("$200 of NFLX").
+    public let usdAmount: String?
     public let exitBasis: String?
 
     enum CodingKeys: String, CodingKey {
         case action, symbol, price, fraction
         case entryPrice = "entry_price"
+        case usdAmount = "usd_amount"
         case exitBasis = "exit_basis"
     }
 }
@@ -499,6 +502,11 @@ public struct SourceActivity: Codable, Equatable, Identifiable, Sendable {
     public let parserReason: String?
     public let parserProfile: String?
     public let interpretedBy: String?
+    /// The chat filter's decision model, when it sorted the post (ADR-0012). It settled the post
+    /// when it is also `interpretedBy`, and passed it to the reader otherwise.
+    public let sortedBy: String?
+    /// How likely the chat filter found the post chat, 0 to 1; nil when it didn't answer.
+    public let sortedConfidence: Double?
     public let instructions: [SourceInstruction]
     /// For a post that waits for the owner: what Copy places (ADR-0007).
     public let suggested: [SourceInstruction]
@@ -529,6 +537,8 @@ public struct SourceActivity: Codable, Equatable, Identifiable, Sendable {
         case parserReason = "parser_reason"
         case parserProfile = "parser_profile"
         case interpretedBy = "interpreted_by"
+        case sortedBy = "sorted_by"
+        case sortedConfidence = "sorted_confidence"
         case instructions
         case suggested
         case reading
@@ -570,6 +580,9 @@ public struct AccountFeedItem: Codable, Equatable, Identifiable, Sendable {
     public let guruID: String?
     public let messageID: String?
     public let orderID: String?
+    /// The holding a trade belongs to: the lot a buy opened or joined, or the lot a sell sold
+    /// from, so every buy and sale of one position can be told as one story.
+    public let lotID: String?
     /// The limits the owner changed, for a `limits_changed` row.
     public let changes: [AccountLimitChange]
     /// Why a `settled` row's holdings count was settled: the owner answered, or the broker's
@@ -582,6 +595,7 @@ public struct AccountFeedItem: Codable, Equatable, Identifiable, Sendable {
         case guruID = "guru_id"
         case messageID = "message_id"
         case orderID = "order_id"
+        case lotID = "lot_id"
     }
 }
 
@@ -648,6 +662,22 @@ public struct EquityHistory: Codable, Equatable, Sendable {
         case window
         case baseValue = "base_value"
         case points
+    }
+}
+
+/// A stock's latest quote from the account's broker market data; the sides are decimal strings.
+public struct MarketQuote: Codable, Equatable, Sendable {
+    public let feed: String
+    public let bid: String?
+    public let ask: String?
+    /// When the broker quoted it, ISO 8601; nil when the feed gave no time.
+    public let timestamp: String?
+
+    public init(feed: String, bid: String?, ask: String?, timestamp: String?) {
+        self.feed = feed
+        self.bid = bid
+        self.ask = ask
+        self.timestamp = timestamp
     }
 }
 

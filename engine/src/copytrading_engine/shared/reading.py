@@ -90,7 +90,15 @@ class Batch(_Part):
     words: Words
 
 
-type Size = Annotated[Fraction | Batch | NotGiven, Field(discriminator="kind")]
+class Dollars(_Part):
+    """A dollar amount to put in, as written: $200 of, 200$, 200 dollars, 两百刀."""
+
+    kind: Literal["dollars"] = "dollars"
+    value: Money
+    words: Words
+
+
+type Size = Annotated[Fraction | Batch | Dollars | NotGiven, Field(discriminator="kind")]
 
 
 class All(_Part):
@@ -149,8 +157,10 @@ class Sell(_Part):
     price: Price
     share: Share
     # Whether a share counts from the original buy or from what is left; None when the post does
-    # not say, which leaves it to the guru's playbook default.
+    # not say, which leaves it to the guru's playbook default. "original" departs from the
+    # default, so it carries the post's own words for it (counts_from_words).
     counts_from: Literal["original", "remaining"] | None = None
+    counts_from_words: Words | None = None
     sell_from: SellFrom
     repeats: CallRef | None = None
 
@@ -201,6 +211,13 @@ class Commentary(_Part):
     summary: Summary
 
 
+class Chatter(_Part):
+    """Small talk with nothing about stocks or the market: a greeting, a reaction, an emoji. It
+    has no words to cite, so a decision model can sort a post here on its own."""
+
+    kind: Literal["chatter"] = "chatter"
+
+
 class Unclear(_Part):
     """The reader cannot tell what the post means; a person should look."""
 
@@ -208,7 +225,14 @@ class Unclear(_Part):
     summary: Summary
 
 
-type PostReading = Annotated[
+type ReaderReading = Annotated[
     TradeMade | Instruction | Conditional | Suggestion | Commentary | Unclear,
+    Field(discriminator="kind"),
+]
+"""What the reader writes. Chat is not a reading: the reader says it through its own output,
+which carries nothing, and the engine stores it as `Chatter` (ADR-0012)."""
+
+type PostReading = Annotated[
+    TradeMade | Instruction | Conditional | Suggestion | Commentary | Chatter | Unclear,
     Field(discriminator="kind"),
 ]

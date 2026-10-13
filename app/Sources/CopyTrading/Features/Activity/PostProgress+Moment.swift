@@ -47,7 +47,7 @@ extension PostProgress {
         case .nextCycle(let account):
             return L10n.string("%@ picks it up on its next cycle · %@", account, time)
         case .heldForResume(let account, _):
-            return L10n.string("%@ holds new buys until you resume entries · %@", account, time)
+            return L10n.string("%@ holds new buys until its Start Copying · %@", account, time)
         case .awaitingFill(_, let symbol, _):
             return L10n.string("%@ is waiting for a fill", symbol)
         }

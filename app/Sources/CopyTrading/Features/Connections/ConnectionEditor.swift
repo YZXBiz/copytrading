@@ -50,6 +50,7 @@ struct ConnectionEditor: View {
         switch kind {
         case .discord: SetupHelp.discordToken
         case .interpreter: SetupHelp.interpreterKey(for: model.setupDraft.provider)
+        case .chatFilter: SetupHelp.chatFilterKey
         case .alerts: SetupHelp.alerts(for: model.setupDraft.notificationService)
         }
     }
@@ -87,6 +88,11 @@ struct ConnectionEditor: View {
                 .accessibilityIdentifier("connections.done")
                 if kind == .alerts, model.setupDraft.notificationsEnabled {
                     Button(L10n.string("Turn Off Alerts"), role: .destructive, action: turnOffAlerts)
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(.red)
+                }
+                if kind == .chatFilter, model.setupDraft.triage != nil {
+                    Button(L10n.string("Turn Off Chat Filter"), role: .destructive, action: turnOffChatFilter)
                         .buttonStyle(.borderless)
                         .foregroundStyle(.red)
                 }
@@ -139,6 +145,12 @@ struct ConnectionEditor: View {
                 row("API key") {
                     SecureField(L10n.string("API key"), text: $model.setupDraft.providerAPIKey, prompt: modelKeyPrompt)
                 }
+            }
+        case .chatFilter:
+            row("OpenAI key") {
+                SecureField(
+                    L10n.string("OpenAI key"), text: $model.setupDraft.triageAPIKey,
+                    prompt: Text(L10n.string(model.hasSavedTriageKey ? "Saved in Keychain — leave blank to keep" : "Required")))
             }
         case .alerts where model.setupDraft.notificationService == .discord:
             row("Webhook URL") {
@@ -195,6 +207,7 @@ struct ConnectionEditor: View {
         switch kind {
         case .discord: "Channel IDs"
         case .interpreter: "Model"
+        case .chatFilter: "OpenAI key"
         case .alerts: model.setupDraft.notificationService == .discord ? "Webhook URL" : "Chat ID"
         }
     }
@@ -212,13 +225,25 @@ struct ConnectionEditor: View {
             isChecking = true
             let check = await model.checkConnection(subject)
             isChecking = false
-            if check?.state != .failed { done() }
+            guard check?.state != .failed else { return }
+            // The filter turns on once its key checks out; with no key typed there is nothing to turn on.
+            if kind == .chatFilter, check != nil, model.setupDraft.triage == nil {
+                model.setupDraft.triage = .openAIDecisions
+            }
+            done()
         }
     }
 
     /// The alerts service's secret is in the Keychain from a saved setup for the same service.
     private var alertSecretSaved: Bool {
         model.hasTradingSecrets && model.savedTradingConfiguration?.notification?.service == model.setupDraft.notificationService
+    }
+
+    /// Every post goes to the interpreter again once the setup is applied.
+    private func turnOffChatFilter() {
+        model.setupDraft.triage = nil
+        model.setupDraft.triageAPIKey = ""
+        done()
     }
 
     /// Clears the chat and the bot token, which turns alerts off as the panel closes.

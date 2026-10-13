@@ -44,8 +44,8 @@ from copytrading_engine.execution.domain.sessions import ET
 _ORDERS_PAGE_SIZE = 500
 # Alpaca serves intraday points for at most 30 days, so longer ranges use daily points.
 _HISTORY_PARAMS: dict[HistoryRange, dict[str, str]] = {
-    "day": {"period": "1D", "timeframe": "5Min", "intraday_reporting": "extended_hours"},
-    "week": {"period": "1W", "timeframe": "1H", "intraday_reporting": "market_hours"},
+    "day": {"period": "1D", "timeframe": "1Min", "intraday_reporting": "extended_hours"},
+    "week": {"period": "1W", "timeframe": "15Min", "intraday_reporting": "market_hours"},
     "month": {"period": "1M", "timeframe": "1D"},
     "three_months": {"period": "3M", "timeframe": "1D"},
     "year": {"period": "1A", "timeframe": "1D"},
@@ -163,6 +163,17 @@ def quote_feed(now: dt.datetime) -> QuoteFeed:
     shows the last close, so a price read from it would be hours old."""
     hour = now.astimezone(ET).hour
     return "overnight" if hour >= 20 or hour < 4 else "iex"
+
+
+def quote_feeds(now: dt.datetime) -> tuple[QuoteFeed, ...]:
+    """The feeds worth asking at this hour, the venue trading first. In regular hours IEX is live.
+    Outside them IEX barely quotes, so its latest quote can be the close hours ago; the
+    consolidated tape, which the free plan gets 15 minutes late, is asked too and the newer
+    quote wins."""
+    new_york = now.astimezone(ET)
+    regular = dt.time(9, 30) <= new_york.time() < dt.time(16) and new_york.weekday() < 5
+    feed = quote_feed(now)
+    return (feed,) if regular and feed == "iex" else (feed, "delayed_sip")
 
 
 @dataclass(frozen=True, slots=True)
@@ -404,7 +415,19 @@ class AlpacaBroker:
         return self.decode_normalized(decode_broker_order, result)
 
     def quote(self, symbol: str) -> Quote:
-        feed = quote_feed(self.now())
+        """The freshest quote among the feeds worth asking now (`quote_feeds`). The venue trading
+        must answer; a later feed that fails only leaves its quote out."""
+        primary, *others = quote_feeds(self.now())
+        quotes = [self._quote(symbol, primary)]
+        for feed in others:
+            try:
+                quotes.append(self._quote(symbol, feed))
+            except BrokerError, BrokerResponseError:
+                continue
+        oldest = dt.datetime.min.replace(tzinfo=dt.UTC)
+        return max(quotes, key=lambda quote: quote.timestamp or oldest)
+
+    def _quote(self, symbol: str, feed: QuoteFeed) -> Quote:
         result = self.request(
             "GET",
             f"https://data.alpaca.markets/v2/stocks/{symbol}/quotes/latest",

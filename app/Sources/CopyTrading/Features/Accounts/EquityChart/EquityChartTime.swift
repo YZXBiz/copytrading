@@ -1,12 +1,10 @@
 import DesktopCore
 import Foundation
 
-/// Chart times read in exchange (New York) time, marked "ET", wherever the Mac is.
+/// Chart times in the zone and language the rest of the app reads in (the Mac's own by default).
+@MainActor
 enum EquityChartTime {
-    static let zone = MarketSession.timeZone
-
     /// When a recorded point was, at the precision its range records.
-    @MainActor
     static func point(_ date: Date, in range: EquityHistoryRange) -> String {
         switch range {
         case .day:
@@ -21,17 +19,13 @@ enum EquityChartTime {
         }
     }
 
-    /// A time of day, e.g. "11:35 AM ET".
-    @MainActor
+    /// A time of day, e.g. "8:35 AM".
     static func clock(_ date: Date) -> String {
-        L10n.string(
-            "%@ ET",
-            date.formatted(style(.dateTime.hour().minute()).locale(AppLanguagePreference.shared.language.locale))
-        )
+        date.formatted(AppTime.style(.dateTime.hour().minute()))
     }
 
     /// How long a measured span lasted, e.g. "2 hr, 35 min" or "12 days".
-    static func duration(_ seconds: TimeInterval, locale: Locale = .current) -> String {
+    nonisolated static func duration(_ seconds: TimeInterval, locale: Locale = .current) -> String {
         let formatter = DateComponentsFormatter()
         formatter.allowedUnits = seconds >= 2 * 86_400 ? [.day] : [.hour, .minute]
         formatter.unitsStyle = .short
@@ -42,8 +36,6 @@ enum EquityChartTime {
     }
 
     private static func style(_ format: Date.FormatStyle) -> Date.FormatStyle {
-        var format = format
-        format.timeZone = zone
-        return format
+        AppTime.style(format)
     }
 }

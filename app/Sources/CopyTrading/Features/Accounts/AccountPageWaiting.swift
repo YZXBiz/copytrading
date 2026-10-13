@@ -16,7 +16,7 @@ struct AccountPageWaiting: View {
         if model.runtimeState == .stopped || model.runtimeState == .failed {
             return L10n.string("The engine is stopped. The balance appears once it runs and the broker has been read.")
         }
-        return L10n.string("The balance appears once copying is on and the broker has been read.")
+        return L10n.string("The balance appears once the broker has been read.")
     }
 
     var body: some View {

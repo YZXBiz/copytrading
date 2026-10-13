@@ -2,6 +2,7 @@
 interpreter would. The reading is scripted, but the engine still checks that every price, ticker,
 and fraction it cites is in the post, exactly as it checks a real model's answer."""
 
+from copytrading_engine.parsing.extraction import Answer
 from copytrading_engine.shared.reading import (
     All,
     Buy,
@@ -50,7 +51,6 @@ def trim(
         ticker_said=symbol,
         fraction=fraction,
         fraction_said=fraction_said,
-        counts_from="original",
     )
 
 
@@ -79,11 +79,11 @@ class ZhaoReader:
     def expect(self, text: str, *calls: Buy | Sell) -> None:
         self.readings[text] = readings.trade(*calls) if calls else readings.commentary()
 
-    async def decode(self, text, route, recent=()):
+    async def answer(self, text, route, recent=()):
         if text == "Market commentary only. No trade action.":  # the runtime's readiness probe
-            return readings.commentary()
+            return Answer(readings.commentary())
         self.read.append(text)
-        return self.readings[text]
+        return Answer(self.readings[text])
 
     async def close(self):
         pass

@@ -42,7 +42,8 @@ struct DestinationEditorSection: View {
     }
 
     /// What each kind of call buys, as figures in a row: a tracked label over a clear amount. A
-    /// figure the per-order limit cut down carries a small marker and the note says why.
+    /// figure the per-order limit cut down carries a small marker and says what it was cut from,
+    /// and the note names the limit.
     private func sizingFigures(_ sizing: SizingSummary) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 28) {
@@ -54,6 +55,12 @@ struct DestinationEditorSection: View {
                             .monospacedDigit()
                             .foregroundStyle(Palette.ink)
                             .markerHighlight(figure.isTrimmed)
+                        if let asked = figure.cutFrom {
+                            Text(L10n.string("cut from %@", asked))
+                                .font(DesignTokens.caption)
+                                .monospacedDigit()
+                                .foregroundStyle(Palette.tertiaryInk)
+                        }
                     }
                     .fixedSize()
                 }

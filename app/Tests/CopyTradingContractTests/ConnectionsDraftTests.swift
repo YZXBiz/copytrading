@@ -14,6 +14,31 @@ func runConnectionsDraftTests() throws {
     try skippedCallsAreKeptAWeek()
     try orderTimeoutExampleUsesTheAccountsTolerance()
     try alertsSayWhatConnectStillNeeds()
+    try theChatFilterTravelsOnlyWhileOn()
+}
+
+/// The chat filter is part of the setup only while it is on, and its key with it (ADR-0012).
+@MainActor
+private func theChatFilterTravelsOnlyWhileOn() throws {
+    var draft = ConnectionsDraft()
+    draft.provider = .deepseek
+    draft.triageAPIKey = "typed-openai-key"
+    try #require(draft.hasTypedSecrets, "A typed OpenAI key did not count as unsaved")
+    try #require(try draft.submission().1.triageAPIKey == nil, "A key travelled with the filter off")
+    draft.triage = .openAIDecisions
+    let (configuration, secrets) = try draft.submission()
+    try #require(configuration.triage == .openAIDecisions, "The filter was not part of the setup")
+    try #require(secrets.triageAPIKey == "typed-openai-key", "The typed key was not sent")
+    draft.provider = .anthropic
+    let (other, otherSecrets) = try draft.submission()
+    try #require(
+        other.triage == .openAIDecisions && otherSecrets.triageAPIKey == "typed-openai-key",
+        "The filter was dropped for another interpreter")
+    draft.clearSecrets()
+    try #require(draft.triageAPIKey.isEmpty, "Clearing secrets kept the OpenAI key")
+    var reloaded = ConnectionsDraft()
+    reloaded.load(configuration)
+    try #require(reloaded.triage == .openAIDecisions, "A saved filter did not load back")
 }
 
 /// An alerts sheet names what is missing instead of closing; a secret saved for the same service

@@ -59,12 +59,12 @@ def test_equity_history_series_of_different_lengths_cannot_cross_the_adapter():
 @pytest.mark.parametrize(
     ("window", "expected"),
     [
-        (HistoryWindow(range="week"), {"period": "1W", "timeframe": "1H"}),
+        (HistoryWindow(range="week"), {"period": "1W", "timeframe": "15Min"}),
         (HistoryWindow(range="three_months"), {"period": "3M", "timeframe": "1D"}),
         (HistoryWindow(range="year"), {"period": "1A", "timeframe": "1D"}),
         (
             HistoryWindow(range="day", day=dt.date(2026, 9, 25)),
-            {"period": "1D", "timeframe": "5Min", "start": "2026-09-25T00:00:00-04:00"},
+            {"period": "1D", "timeframe": "1Min", "start": "2026-09-25T00:00:00-04:00"},
         ),
     ],
 )

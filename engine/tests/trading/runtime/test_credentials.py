@@ -6,6 +6,7 @@ import datetime as dt
 import pytest
 from pydantic import SecretStr, ValidationError
 
+from copytrading_engine.parsing.extraction import Answer
 from copytrading_engine.shared.raw_message import RawMessage
 from copytrading_engine.sources.sqlite import SQLiteSourceStore
 from copytrading_engine.trading.adapters.telemetry import TradingTelemetry
@@ -44,7 +45,7 @@ async def test_runtime_registers_all_loaded_credentials_before_source_and_model_
     )
 
     class _EchoDecoder:
-        async def decode(self, text, route, recent=()):
+        async def answer(self, text, route, recent=()):
             telemetry.record_payload(
                 capture_kind="model_response",
                 workflow_id=None,
@@ -54,7 +55,7 @@ async def test_runtime_registers_all_loaded_credentials_before_source_and_model_
                 provider="anthropic",
                 payload={"error": "provider rejected " + credential_values[1][1]},
             )
-            return commentary("synthetic probe")
+            return Answer(commentary("synthetic probe"))
 
         async def close(self):
             pass
@@ -119,7 +120,7 @@ async def test_redaction_registry_overflow_marks_gap_without_blocking_runtime(tm
     telemetry = TradingTelemetry(sink=sink)
 
     class _CaptureDecoder:
-        async def decode(self, text, route, recent=()):
+        async def answer(self, text, route, recent=()):
             telemetry.record_payload(
                 capture_kind="model_response",
                 workflow_id=None,
@@ -129,7 +130,7 @@ async def test_redaction_registry_overflow_marks_gap_without_blocking_runtime(tm
                 provider="anthropic",
                 payload={"error": "upstream echoed provider-secret"},
             )
-            return commentary("probe ok")
+            return Answer(commentary("probe ok"))
 
         async def close(self):
             pass

@@ -12,6 +12,7 @@ import pytest
 from pydantic import SecretStr, ValidationError
 
 from copytrading_engine.execution.domain.sizing import RouteConnection
+from copytrading_engine.parsing.extraction import Answer
 from copytrading_engine.shared.raw_message import RawMessage
 
 from ..readings import buy, sell, trade
@@ -102,16 +103,18 @@ def test_profile_examples_compare_expected_and_actual_without_execution():
     class Decoder:
         calls = 0
 
-        async def decode(self, text, route, recent=()):
+        async def answer(self, text, route, recent=()):
             self.calls += 1
-            return trade(
-                buy(
-                    _mapped(route, "Apple"),
-                    "200",
-                    said="Bought",
-                    ticker_said="Apple",
-                    fraction=SIXTH,
-                    fraction_said="1/6",
+            return Answer(
+                trade(
+                    buy(
+                        _mapped(route, "Apple"),
+                        "200",
+                        said="Bought",
+                        ticker_said="Apple",
+                        fraction=SIXTH,
+                        fraction_said="1/6",
+                    )
                 )
             )
 
@@ -168,15 +171,17 @@ def test_profile_example_mismatch_requires_settings_correction_and_rerun():
     )
 
     class Decoder:
-        async def decode(self, text, route, recent=()):
-            return trade(
-                buy(
-                    _mapped(route, "Apple"),
-                    "200",
-                    said="Bought",
-                    ticker_said="Apple",
-                    fraction=THIRD,
-                    fraction_said="1/3",
+        async def answer(self, text, route, recent=()):
+            return Answer(
+                trade(
+                    buy(
+                        _mapped(route, "Apple"),
+                        "200",
+                        said="Bought",
+                        ticker_said="Apple",
+                        fraction=THIRD,
+                        fraction_said="1/3",
+                    )
                 )
             )
 
@@ -201,15 +206,17 @@ def test_ungrounded_example_interpretation_returns_review_and_never_activates():
     )
 
     class Decoder:
-        async def decode(self, text, route, recent=()):
-            return trade(
-                buy(
-                    "MSFT",
-                    "200",
-                    said="Bought",
-                    ticker_said="Apple",
-                    fraction=SIXTH,
-                    fraction_said="1/6",
+        async def answer(self, text, route, recent=()):
+            return Answer(
+                trade(
+                    buy(
+                        "MSFT",
+                        "200",
+                        said="Bought",
+                        ticker_said="Apple",
+                        fraction=SIXTH,
+                        fraction_said="1/6",
+                    )
                 )
             )
 
@@ -251,16 +258,18 @@ def test_matching_exit_example_preserves_position_sizing_review_without_blocking
     )
 
     class Decoder:
-        async def decode(self, text, route, recent=()):
-            return trade(
-                sell(
-                    "AAPL",
-                    "200",
-                    bought_at="150",
-                    said="Sold",
-                    ticker_said="Apple",
-                    fraction="0.5",
-                    fraction_said="half",
+        async def answer(self, text, route, recent=()):
+            return Answer(
+                trade(
+                    sell(
+                        "AAPL",
+                        "200",
+                        bought_at="150",
+                        said="Sold",
+                        ticker_said="Apple",
+                        fraction="0.5",
+                        fraction_said="half",
+                    )
                 )
             )
 
@@ -316,16 +325,18 @@ def test_historical_evaluation_keeps_guru_revision_and_destination_sizing_indepe
     )
 
     class Decoder:
-        async def decode(self, text, route, recent=()):
+        async def answer(self, text, route, recent=()):
             mapped_symbol = _mapped(route, "Apple")
-            return trade(
-                buy(
-                    mapped_symbol,
-                    "200",
-                    said="Bought",
-                    ticker_said="Apple",
-                    fraction=SIXTH,
-                    fraction_said="1/6",
+            return Answer(
+                trade(
+                    buy(
+                        mapped_symbol,
+                        "200",
+                        said="Bought",
+                        ticker_said="Apple",
+                        fraction=SIXTH,
+                        fraction_said="1/6",
+                    )
                 )
             )
 
@@ -413,15 +424,17 @@ def test_runtime_historical_profile_action_does_not_open_execution_owners(tmp_pa
     calls = []
 
     class Decoder:
-        async def decode(self, text, route, recent=()):
-            return trade(
-                buy(
-                    _mapped(route, "Apple"),
-                    "200",
-                    said="Bought",
-                    ticker_said="Apple",
-                    fraction=SIXTH,
-                    fraction_said="1/6",
+        async def answer(self, text, route, recent=()):
+            return Answer(
+                trade(
+                    buy(
+                        _mapped(route, "Apple"),
+                        "200",
+                        said="Bought",
+                        ticker_said="Apple",
+                        fraction=SIXTH,
+                        fraction_said="1/6",
+                    )
                 )
             )
 

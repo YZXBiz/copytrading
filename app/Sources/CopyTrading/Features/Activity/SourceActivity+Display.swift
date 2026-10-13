@@ -33,6 +33,36 @@ extension SourceActivity {
     var isHistorical: Bool {
         captureStatus == "historical"
     }
+
+    /// The chat filter settled the post itself, without the reader (ADR-0012).
+    var isSortedAsChat: Bool { sortedBy != nil && sortedBy == interpretedBy }
+
+    /// The chat filter's chance the post is chat, as a whole percent.
+    private var chatPercent: Int64? {
+        sortedConfidence.map { Int64((min(max($0, 0), 1) * 100).rounded()) }
+    }
+
+    /// For chat the filter settled, who sorted it and how sure it was: "sorted by OpenAI · 98%
+    /// sure"; nil for a post the reader read.
+    @MainActor
+    var sortedNote: String? {
+        guard isSortedAsChat, let sortedBy, let chatPercent else { return nil }
+        let filter = sortedBy == TradingTriageConfiguration.openAIDecisions.model ? TradingTriageProvider.openAIDecisions.title : sortedBy
+        return L10n.string("sorted by %@ · %lld%% sure", filter, chatPercent)
+    }
+
+    /// What the chat filter made of the post, for Technical details: "gpt-6-luna · 12% chat ·
+    /// sent to deepseek-flash", "… · 99% chat · skipped", or that it didn't answer; nil without the
+    /// filter.
+    @MainActor
+    var chatFilterVerdict: String? {
+        guard let sortedBy else { return nil }
+        guard let chatPercent else {
+            return L10n.string("%@ didn't answer · sent to %@", sortedBy, interpretedBy ?? "—")
+        }
+        if isSortedAsChat { return L10n.string("%@ · %lld%% chat · skipped", sortedBy, chatPercent) }
+        return L10n.string("%@ · %lld%% chat · sent to %@", sortedBy, chatPercent, interpretedBy ?? "—")
+    }
 }
 
 extension SourceActivity {
@@ -40,6 +70,8 @@ extension SourceActivity {
     @MainActor
     var headline: String {
         guard let first = instructions.first else {
+            if enteredByOwner { return L10n.string("You entered the trade") }
+            if reading == .chatter { return L10n.string("Just chat, nothing to trade") }
             switch decision {
             case "ignore": return L10n.string("Not a trade")
             case "review": return L10n.string("Needs your review")
@@ -49,6 +81,11 @@ extension SourceActivity {
         }
         let rest = instructions.count > 1 ? L10n.string(" and %lld more", Int64(instructions.count - 1)) : ""
         return first.phrase + rest
+    }
+
+    /// The owner placed a trade for this post by hand, so it no longer waits for them.
+    var enteredByOwner: Bool {
+        destinations.contains { $0.orders.contains(where: \.isOwnerEntry) }
     }
 
     var sourceDate: Date? { Humanize.date(sourceAt) }
@@ -85,7 +122,11 @@ extension SourceActivity {
         }
     }
 
-    @MainActor var isToday: Bool { sourceDate.map(AppTime.calendar.isDateInToday) ?? false }
+    /// Whether the post was made on the same day as `now`, in the app's zone. Views pass the time
+    /// from a `TimelineView`, so a count of today's posts starts over at midnight.
+    @MainActor func isPosted(onDayOf now: Date) -> Bool {
+        sourceDate.map { AppTime.calendar.isDate($0, inSameDayAs: now) } ?? false
+    }
 
     @MainActor var outcomes: [(accountID: String, outcome: DestinationOutcome)] {
         destinations.map { ($0.accountID, DestinationOutcome($0)) }

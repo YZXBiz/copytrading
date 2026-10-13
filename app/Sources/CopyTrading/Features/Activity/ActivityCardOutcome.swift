@@ -52,10 +52,13 @@ struct ActivityCardOutcome {
         zone: TimeZone? = nil, locale: Locale? = nil
     ) {
         let waiting = WaitingCall(source)
-        let open = waiting.map { !skipped && !$0.hasExpired(at: now) } ?? false
+        // A post the owner traded by hand is settled: it no longer waits for them.
+        let open = waiting.map { !skipped && !$0.hasExpired(at: now) && !source.enteredByOwner } ?? false
         let deadline = waiting?.deadline.map { TradingDeadlineText.text($0, now: now, zone: zone, locale: locale) } ?? ""
         accounts = source.destinations.map { destination in
-            let waits = waiting?.accountIDs.contains(destination.accountID) == true
+            let waits =
+                waiting?.accountIDs.contains(destination.accountID) == true
+                && !destination.orders.contains(where: \.isOwnerEntry)
             let resumeBy = resume.deadlines[destination.accountID]
             var account = Account(
                 id: destination.accountID, environment: destination.environment,
@@ -125,17 +128,17 @@ struct ActivityCardOutcome {
             results.append(Result(headline: L10n.string("Not copied"), note: Reason.text(destination.status)))
         }
         if results.isEmpty, let resumeBy {
-            // Entries wait for the owner after a restart; the buy waits with them while it is fresh.
+            // After a restart an account waits for its Start Copying; the buy waits with it while it is fresh.
             // A two-minute window: to the second, with the zone.
             let time = "\(resumeBy.formatted(AppTime.style(.dateTime.hour().minute().second()))) \(AppTime.shortName())"
             results.append(
                 resumeBy > now
                     ? Result(
-                        headline: L10n.string("Waiting for you to resume entries"),
-                        facts: [Fact(label: L10n.string("Resume by"), value: time)])
+                        headline: L10n.string("Waiting for Start Copying"),
+                        facts: [Fact(label: L10n.string("Start by"), value: time)])
                     : Result(
-                        headline: L10n.string("Waiting for you to resume entries"),
-                        note: L10n.string("Resume now: after %@ it is too old to copy.", time)))
+                        headline: L10n.string("Waiting for Start Copying"),
+                        note: L10n.string("Start Copying now: after %@ it is too old to copy.", time)))
         }
         if results.isEmpty {
             results.append(Result(headline: DestinationOutcome(destination).detail))
@@ -156,7 +159,10 @@ struct ActivityCardOutcome {
         let limitPrice = Decimal(engine: order.limitPrice)
         switch DestinationOutcome.order(order, count: 1) {
         case .filled:
-            headline = L10n.string(buying ? "Bought %@" : "Sold %@", OrderAmount.filled(order) ?? planned)
+            headline = L10n.string(
+                order.isOwnerSale || (order.isOwnerEntry && !buying)
+                    ? "You sold %@" : order.isOwnerEntry ? "You bought %@" : buying ? "Bought %@" : "Sold %@",
+                OrderAmount.filled(order) ?? planned)
             if let limitPrice, let fill = Decimal(engine: order.averageFillPrice) {
                 prices = PricePoints(limit: limitPrice, market: fill, marketLabel: L10n.string("Filled at"), buying: buying)
             } else {
@@ -196,16 +202,33 @@ struct ActivityCardOutcome {
                 suggestion = .allowAboveGuru
             }
         }
+        if prices != nil, let guru = guruPrice(order) {
+            // The ruler shows the limit; this says where it came from, so a changed allowance shows.
+            facts.insert(Fact(label: L10n.string("Guru's price"), value: guru), at: 0)
+        }
         if let budget = Decimal(engine: order.budgetUSD) {
-            facts.append(
-                wasTrimmed(order)
-                    ? Fact(
-                        label: L10n.string("Order (max per order)"),
-                        value: L10n.string(
-                            "%@ of %@", Humanize.dollars(order.budgetUSD), Humanize.dollars(order.requestedUSD)))
-                    : Fact(label: L10n.string("Order"), value: OrderAmount.dollars(budget)))
+            if wasTrimmed(order) {
+                // Capped by the account's max per order: say so, and what the call asked for.
+                facts.append(
+                    Fact(
+                        label: L10n.string("Order"),
+                        value: L10n.string("%@ · your max per order", Humanize.dollars(order.budgetUSD))))
+                facts.append(Fact(label: L10n.string("The call asked for"), value: Humanize.dollars(order.requestedUSD)))
+            } else {
+                facts.append(Fact(label: L10n.string("Order"), value: OrderAmount.dollars(budget)))
+            }
         }
         return Result(headline: headline, facts: Array(facts.prefix(4)), suggestion: suggestion, prices: prices)
+    }
+
+    /// The guru's price and the allowance the limit added to it: "$69.80 + 1% allowed" for a buy,
+    /// "$69.80 − 1% allowed" for a sell. Nil with no allowance, where the limit is the guru's price.
+    private static func guruPrice(_ order: OrderActivity) -> String? {
+        guard let source = money(order.sourcePrice),
+            let allowance = Decimal(engine: order.entryTolerancePct), allowance > 0
+        else { return nil }
+        let percent = (allowance / 100).formatted(.percent.precision(.fractionLength(0...2)))
+        return L10n.string(order.side == "sell" ? "%@ − %@ allowed" : "%@ + %@ allowed", source, percent)
     }
 
     /// Why an order ended unfilled, in a few words after "Not bought:".

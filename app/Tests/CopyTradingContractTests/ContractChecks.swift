@@ -29,6 +29,8 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
     case guruFeed = "guru feed"
     case manualInstructionGuess = "manual instruction guess"
     case fillWatch = "fill notifications"
+    case positionStory = "position story"
+    case liveQuote = "live quote"
 
     var testDescription: String { rawValue }
 
@@ -60,6 +62,8 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
         case .guruFeed: try runGuruFeedTests()
         case .manualInstructionGuess: try runManualInstructionGuessTests()
         case .fillWatch: try runFillWatchTests()
+        case .positionStory: try runPositionStoryTests()
+        case .liveQuote: try runLiveQuoteTests()
         }
     }
 }

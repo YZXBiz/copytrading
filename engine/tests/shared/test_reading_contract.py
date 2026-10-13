@@ -9,8 +9,10 @@ from copytrading_engine.shared.reading import (
     AtMarket,
     Batch,
     Buy,
+    Chatter,
     Commentary,
     Conditional,
+    Dollars,
     Exact,
     NotGiven,
     PostReading,
@@ -79,7 +81,17 @@ def examples() -> list:
             summary="Re-posts the SOUN buy",
         ),
         Commentary(summary="TSLA 373 is still resistance today"),
+        Chatter(),
         Unclear(summary="Cannot tell"),
+        trade(
+            Buy(
+                action_words="buy",
+                stock=Stock(ticker="NFLX", words="nflx"),
+                price=Exact(value=71, words="71"),
+                size=Dollars(value=200, words="200$ of"),
+            ),
+            summary="Bought $200 of NFLX",
+        ),
     ]
 
 

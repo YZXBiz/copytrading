@@ -81,11 +81,11 @@ def _parser() -> argparse.ArgumentParser:
     accounts = commands.add_parser("accounts", parents=[output, paged], help="accounts")
     accounts.add_argument("--before", dest="before_account_id")
     account_actions = accounts.add_subparsers(dest="action")
-    account_actions.add_parser("pause", parents=[output], help="pause new entries").add_argument(
-        "account_id"
-    )
     account_actions.add_parser(
-        "resume", parents=[output], help="propose resuming entries"
+        "pause", parents=[output], help="stop copying into an account"
+    ).add_argument("account_id")
+    account_actions.add_parser(
+        "resume", parents=[output], help="propose copying into an account again"
     ).add_argument("account_id")
     recovery = account_actions.add_parser(
         "recovery", parents=[output], help="propose a recovery preference"
@@ -463,7 +463,7 @@ def _render_proposal(proposal: wire.ProposalView) -> str:
     subject = proposal.subject
     match subject:
         case wire.ResumeAccountSubject():
-            what = f"resume entries for {subject.account_id}"
+            what = f"start copying into {subject.account_id}"
         case wire.RecoverySubject():
             what = f"set recovery for {subject.account_id} to {subject.preference}"
         case wire.ManualOrderSubject():

@@ -10,6 +10,9 @@ func runActivityCardTests() throws {
     try readAsSaysEachCallInPlainWords()
     try aRepeatedNumberIsMarkedBesideTheOtherCitedWords()
     try aTrimmedBuyIsTradedSmallerAndSaysByHowMuch()
+    try aLotSoldByHandStaysTheOwners()
+    try aPostTheOwnerTradedByHandReadsAsTheirs()
+    try aBuyNamesTheGurusPriceAndTheAllowanceItsLimitUsed()
     try aSkipNamesTheLimitWithItsNumbers()
     try aCallHeldForApprovalAsksToBeApproved()
     try aBuyHeldForAResumeAsksToResumeByItsDeadline()
@@ -17,6 +20,21 @@ func runActivityCardTests() throws {
     try theTimeZoneSettingMovesADeadline()
     try activityShowsOnlyTheChosenAccount()
     try aSellWithNoPriceReadsAsAtTheMarket()
+    try yesterdaysPostsStopCountingAsTodayAtMidnight()
+}
+
+/// A count of today's posts asks about the moment it is drawn, so an app left open overnight stops
+/// counting yesterday's posts at midnight in the owner's zone.
+@MainActor
+private func yesterdaysPostsStopCountingAsTodayAtMidnight() throws {
+    let preference = AppTimeZonePreference.shared
+    let before = preference.chosen
+    defer { preference.select(before) }
+    preference.select("America/Los_Angeles")
+    let post = try SourceActivityBuilder().posted(at: "2026-10-12T22:50:00Z").build()
+
+    try #require(post.isPosted(onDayOf: try Date("2026-10-13T06:00:00Z", strategy: .iso8601)), "11 PM was not the same day")
+    try #require(!post.isPosted(onDayOf: try Date("2026-10-13T14:40:00Z", strategy: .iso8601)), "the next morning still counted it")
 }
 
 /// "sell wmt half" names no price: the engine sends the call with none, and sells at the market
@@ -93,8 +111,12 @@ private func readAsSaysEachCallInPlainWords() throws {
             "Buy SCO at the market price.",
             "Buy SOUN at $5.85, a sixth of a full position. A re-post of an earlier call.",
             "TSLA 373 is still resistance today",
+            "Just chat, nothing to trade",
             "The reader couldn't tell what this post means.",
+            "Buy $200 of NFLX at $71.",
         ], "Read as lines changed: \(lines)")
+    try #require(
+        try ReadAsText.note(readings()[10].calls[0]) == nil, "a dollar size has no full-position note")
     try #require(
         try ReadAsText.note(readings()[3].calls[0]) == "no size given, so a full position",
         "Read as note changed")
@@ -142,13 +164,93 @@ private func aTrimmedBuyIsTradedSmallerAndSaysByHowMuch() throws {
         result.facts
             == [
                 .init(label: "Shares", value: "42 shares"),
-                .init(label: "Order (max per order)", value: "$250 of $333.33"),
+                .init(label: "Order", value: "$250 · your max per order"),
+                .init(label: "The call asked for", value: "$333.33"),
             ],
         "facts were \(result.facts)")
     // The fill price is drawn beside the limit on the ruler rather than listed as a number.
     try #require(
         result.prices == PricePoints(limit: 5.85, market: 5.85, marketLabel: "Filled at", buying: true),
         "prices were \(String(describing: result.prices))")
+}
+
+/// A buy whose lot the owner later sold from the account page: the post bought it, the owner sold it.
+@MainActor
+private func aLotSoldByHandStaysTheOwners() throws {
+    let order: (String, String, String) -> [String: Any] = { id, side, price in
+        [
+            "client_id": id, "symbol": "SOUN", "side": side, "status": "filled", "quantity": "42",
+            "filled_quantity": "42", "limit_price": price, "average_fill_price": price, "broker_id": id,
+            "created_at": "2026-10-05T14:30:01Z", "instruction_index": 0,
+        ]
+    }
+    let source = try soun()
+        .destination(
+            "zhao-paper", status: "done", outcomes: ["order_linked"],
+            orders: [order("copy-1", "buy", "5.85"), order("lotsale-1", "sell", "6.10")]
+        )
+        .build()
+    let destination = try #require(source.destinations.first)
+    try #require(
+        DestinationOutcome(destination) == .filled("Bought $245.70 of SOUN"),
+        "summary was \(DestinationOutcome(destination))")
+    let headlines = ActivityCardOutcome(source, skipped: false).accounts.first?.results.map(\.headline) ?? []
+    try #require(headlines == ["Bought $245.70 of SOUN", "You sold $256.20 of SOUN"], "headlines were \(headlines)")
+}
+
+/// A buy that ran past a 1% allowance says the guru's price and the 1%, so a changed limit shows.
+@MainActor
+private func aBuyNamesTheGurusPriceAndTheAllowanceItsLimitUsed() throws {
+    let source = try soun()
+        .destination(
+            "zhao-paper", status: "done", outcomes: ["order_linked"],
+            orders: [
+                [
+                    "client_id": "copy-1", "symbol": "SOUN", "side": "buy", "status": "canceled", "quantity": "42",
+                    "filled_quantity": "0", "limit_price": "5.91", "broker_id": "b1",
+                    "created_at": "2026-10-05T14:30:01Z", "instruction_index": 0, "source_price": "5.85",
+                    "entry_tolerance_pct": "1", "quote_ask": "5.97", "cancel_reason": "timeout",
+                ]
+            ]
+        )
+        .build()
+    let result = try #require(ActivityCardOutcome(source, skipped: false).accounts.first?.results.first)
+    try #require(result.headline == "Not bought: the price ran above your limit", "headline was \(result.headline)")
+    try #require(
+        result.facts.first == .init(label: "Guru's price", value: "$5.85 + 1% allowed"), "facts were \(result.facts)")
+}
+
+/// "hm" read as unclear waits for the owner; they enter an NVDA buy by hand and it fills. The
+/// post is then the owner's trade: no "Needs your review", no skip, and one result, not "and 1 more".
+@MainActor
+private func aPostTheOwnerTradedByHandReadsAsTheirs() throws {
+    let order: [String: Any] = [
+        "client_id": "manual-d00bb87d4b756f6cc43d7b33036bd0f8dc7f1bf3", "symbol": "NVDA", "side": "buy",
+        "status": "filled", "quantity": "0.655537", "filled_quantity": "0.655537", "limit_price": "228.82",
+        "average_fill_price": "226.558", "broker_id": "b1", "created_at": "2026-10-05T14:31:50Z",
+        "instruction_index": 0, "requested_usd": "150", "budget_usd": "150",
+    ]
+    let source = try SourceActivityBuilder().text("hm").decision("review", reason: "unclear")
+        .destination("primary", status: "review_required", orders: [order])
+        .build()
+
+    try #require(source.headline == "You entered the trade", "headline was \(source.headline)")
+    // The owner closed the call from Needs You, so the app counts it as skipped too.
+    for skipped in [false, true] {
+        let outcome = ActivityCardOutcome(source, skipped: skipped, now: try Date("2026-10-05T14:33:00Z", strategy: .iso8601))
+        try #require(outcome.title == "Traded", "badge was \(outcome.title)")
+        let account = try #require(outcome.accounts.first)
+        try #require(!account.waits, "the account still waited for the owner")
+        try #require(
+            account.results.map(\.headline) == ["You bought $148.52 of NVDA"],
+            "results were \(account.results.map(\.headline))")
+        let row = GuruAccountOutcome.outcomes(of: source, skipped: skipped).map(\.summary)
+        try #require(row == ["You bought $148.52 of NVDA"], "the row read \(row)")
+    }
+    let destination = try #require(source.destinations.first)
+    try #require(
+        DestinationOutcome(destination) == .filled("You bought $148.52 of NVDA"),
+        "summary was \(DestinationOutcome(destination))")
 }
 
 @MainActor
@@ -211,11 +313,11 @@ private func aBuyHeldForAResumeAsksToResumeByItsDeadline() throws {
     let account = try #require(waiting.accounts.first)
     try #require(account.awaitsResume, "the account did not ask for a resume")
     let result = try #require(account.results.first)
-    try #require(result.headline == "Waiting for you to resume entries", "headline was \(result.headline)")
-    try #require(result.facts.first?.label == "Resume by", "facts were \(result.facts)")
+    try #require(result.headline == "Waiting for Start Copying", "headline was \(result.headline)")
+    try #require(result.facts.first?.label == "Start by", "facts were \(result.facts)")
     let late = ActivityCardOutcome(source, skipped: false, resume: resume, now: posted.addingTimeInterval(300))
     try #require(
-        late.accounts.first?.results.first?.note?.hasPrefix("Resume now") == true,
+        late.accounts.first?.results.first?.note?.hasPrefix("Start Copying now") == true,
         "a late resume read \(late.accounts.first?.results.first?.note ?? "nil")")
 
     // Without a waiting account, or once an order went out, nothing asks for a resume.

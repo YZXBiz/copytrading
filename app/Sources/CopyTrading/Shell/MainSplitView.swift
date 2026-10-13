@@ -131,7 +131,7 @@ struct MainSplitView: View {
             }
             Spacer(minLength: 12)
             ToolbarStatus(model: model, accountFeature: accountFeature)
-            CopyingControl(model: model)
+            CopyingControl(model: model, accountFeature: accountFeature)
                 .buttonStyle(.glass)
                 .buttonBorderShape(.capsule)
             AssistantToolbarButton(assistant: model.assistant)

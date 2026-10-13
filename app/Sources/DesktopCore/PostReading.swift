@@ -9,6 +9,8 @@ public enum PostReading: Codable, Equatable, Sendable {
     case conditional(summary: String, condition: String, calls: [ReadCall])
     case suggestion(summary: String, calls: [ReadCall])
     case commentary(summary: String)
+    /// Small talk with nothing about the market; it carries no words, so it has no summary.
+    case chatter
     case unclear(summary: String)
 
     public var summary: String {
@@ -16,6 +18,7 @@ public enum PostReading: Codable, Equatable, Sendable {
         case .tradeMade(let summary, _), .instruction(let summary, _), .conditional(let summary, _, _),
             .suggestion(let summary, _), .commentary(let summary), .unclear(let summary):
             summary
+        case .chatter: ""
         }
     }
 
@@ -24,7 +27,7 @@ public enum PostReading: Codable, Equatable, Sendable {
         case .tradeMade(_, let calls), .instruction(_, let calls), .conditional(_, _, let calls),
             .suggestion(_, let calls):
             calls
-        case .commentary, .unclear: []
+        case .commentary, .chatter, .unclear: []
         }
     }
 
@@ -40,8 +43,13 @@ public enum PostReading: Codable, Equatable, Sendable {
 
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: Key.self)
+        let kind = try container.decode(String.self, forKey: .kind)
+        if kind == "chatter" {
+            self = .chatter
+            return
+        }
         let summary = try container.decode(String.self, forKey: .summary)
-        switch try container.decode(String.self, forKey: .kind) {
+        switch kind {
         case "trade_made": self = .tradeMade(summary: summary, calls: try container.decode([ReadCall].self, forKey: .calls))
         case "instruction": self = .instruction(summary: summary, calls: try container.decode([ReadCall].self, forKey: .calls))
         case "conditional":
@@ -58,6 +66,10 @@ public enum PostReading: Codable, Equatable, Sendable {
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: Key.self)
+        if case .chatter = self {
+            try container.encode("chatter", forKey: .kind)
+            return
+        }
         try container.encode(summary, forKey: .summary)
         switch self {
         case .tradeMade(_, let calls): try container.encode("trade_made", forKey: .kind); try container.encode(calls, forKey: .calls)
@@ -68,6 +80,7 @@ public enum PostReading: Codable, Equatable, Sendable {
             try container.encode(calls, forKey: .calls)
         case .suggestion(_, let calls): try container.encode("suggestion", forKey: .kind); try container.encode(calls, forKey: .calls)
         case .commentary: try container.encode("commentary", forKey: .kind)
+        case .chatter: try container.encode("chatter", forKey: .kind)
         case .unclear: try container.encode("unclear", forKey: .kind)
         }
     }
@@ -160,6 +173,8 @@ public struct ReadSell: Codable, Equatable, Sendable {
     public let share: ReadShare
     /// Whether a share counts from the original buy or what is left; nil when the post doesn't say.
     public let countsFrom: String?
+    /// The post's own words for counting from the original buy, which that choice requires.
+    public let countsFromWords: String?
     public let sellFrom: ReadSellFrom
     /// The recent call of the guru's this one restates, as the reader named it (c1, c2, …).
     public let repeats: String?
@@ -169,6 +184,7 @@ public struct ReadSell: Codable, Equatable, Sendable {
         case actionWords = "action_words"
         case stock, price, share, repeats
         case countsFrom = "counts_from"
+        case countsFromWords = "counts_from_words"
         case sellFrom = "sell_from"
     }
 
@@ -179,6 +195,7 @@ public struct ReadSell: Codable, Equatable, Sendable {
         price = try container.decode(ReadPrice.self, forKey: .price)
         share = try container.decode(ReadShare.self, forKey: .share)
         countsFrom = try container.decodeIfPresent(String.self, forKey: .countsFrom)
+        countsFromWords = try container.decodeIfPresent(String.self, forKey: .countsFromWords)
         sellFrom = try container.decode(ReadSellFrom.self, forKey: .sellFrom)
         repeats = try container.decodeIfPresent(String.self, forKey: .repeats)
     }
@@ -191,6 +208,7 @@ public struct ReadSell: Codable, Equatable, Sendable {
         try container.encode(price, forKey: .price)
         try container.encode(share, forKey: .share)
         try container.encode(countsFrom, forKey: .countsFrom)
+        try container.encode(countsFromWords, forKey: .countsFromWords)
         try container.encode(sellFrom, forKey: .sellFrom)
         try container.encode(repeats, forKey: .repeats)
     }
@@ -249,11 +267,13 @@ public enum ReadPrice: Codable, Equatable, Sendable {
 public enum ReadSize: Codable, Equatable, Sendable {
     case fraction(value: String, words: String)
     case batch(number: Int, words: String)
+    /// A dollar amount to put in: "$200 of NFLX".
+    case dollars(value: String, words: String)
     case notGiven
 
     public var words: [String] {
         switch self {
-        case .fraction(_, let words), .batch(_, let words): [words]
+        case .fraction(_, let words), .batch(_, let words), .dollars(_, let words): [words]
         case .notGiven: []
         }
     }
@@ -266,6 +286,8 @@ public enum ReadSize: Codable, Equatable, Sendable {
         case "fraction":
             self = .fraction(value: try c.decode(String.self, forKey: .value), words: try c.decode(String.self, forKey: .words))
         case "batch": self = .batch(number: try c.decode(Int.self, forKey: .number), words: try c.decode(String.self, forKey: .words))
+        case "dollars":
+            self = .dollars(value: try c.decode(String.self, forKey: .value), words: try c.decode(String.self, forKey: .words))
         default: self = .notGiven
         }
     }
@@ -277,6 +299,8 @@ public enum ReadSize: Codable, Equatable, Sendable {
             try c.encode("fraction", forKey: .kind); try c.encode(value, forKey: .value); try c.encode(words, forKey: .words)
         case .batch(let number, let words):
             try c.encode("batch", forKey: .kind); try c.encode(number, forKey: .number); try c.encode(words, forKey: .words)
+        case .dollars(let value, let words):
+            try c.encode("dollars", forKey: .kind); try c.encode(value, forKey: .value); try c.encode(words, forKey: .words)
         case .notGiven: try c.encode("not_given", forKey: .kind)
         }
     }

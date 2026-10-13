@@ -38,7 +38,7 @@ enum SettingsPage: String, CaseIterable, Identifiable, Hashable {
     var symbol: String {
         switch self {
         case .general: "switch.2"
-        case .appearance: "textformat"
+        case .appearance: "circle.lefthalf.filled"
         case .updates: "arrow.down.circle"
         case .engine: "cpu"
         case .agents: "terminal"

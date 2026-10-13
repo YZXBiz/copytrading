@@ -22,6 +22,7 @@ private struct ReachedEngine: ManualReviewOperations {
     func manualCommandPage(
         accountID: String, sourceID: String, beforeCommandID: String?, limit: Int
     ) async throws -> ManualCommandPage { throw Reached() }
+    func quote(accountID: String, symbol: String) async throws -> MarketQuote? { throw Reached() }
 }
 
 /// Approve… on a call held for the owner sends its correction to the engine; the app used to

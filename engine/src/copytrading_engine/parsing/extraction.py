@@ -17,7 +17,9 @@ from copytrading_engine.shared.reading import (
     Batch,
     Buy,
     Call,
+    Chatter,
     Conditional,
+    Dollars,
     Exact,
     Fraction,
     Instruction,
@@ -25,13 +27,14 @@ from copytrading_engine.shared.reading import (
     NotGiven,
     PostReading,
     Range,
+    ReaderReading,
     Sell,
     Stock,
     Suggestion,
     TradeMade,
 )
 
-PROMPT_VERSION = "stock-reading-v4"
+PROMPT_VERSION = "stock-reading-v6"
 
 # Chinese characters and ASCII letters both count as Unicode word characters.
 # Match complete numeric tokens and bound English words by ASCII letters so
@@ -58,10 +61,30 @@ class DecodeError(Exception):
 
 
 class ReadingOutput(BaseModel):
-    """What the reader model returns: one reading of the post."""
+    """Anything about stocks or the market: a trade made or to make, a plan, market talk, or a
+    post about a trade that cannot be pinned down. One reading of the post."""
 
     model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
+    reading: ReaderReading
+
+
+class JustChat(BaseModel):
+    """Small talk with nothing about stocks or the market: a greeting, a reaction, an emoji,
+    such as "hi", "how's going", "早上好", or "👍"."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+
+@dataclass(frozen=True)
+class Answer:
+    """A reading and the model that gave it. With the chat filter on (ADR-0012), `sorted_by` is
+    the decision model that sorted the post, whether it settled it or passed it to the reader,
+    and `sorted_confidence` how likely it found the post chat; None when it didn't answer."""
+
     reading: PostReading
+    model: str | None = None
+    sorted_confidence: float | None = None
+    sorted_by: str | None = None
 
 
 @dataclass(frozen=True)
@@ -75,9 +98,9 @@ class ReadingInput:
 
 
 class Decoder(Protocol):
-    async def decode(
-        self, text: str, route: Route, recent: tuple[RecentCall, ...] = ()
-    ) -> PostReading: ...
+    async def answer(self, text: str, route: Route, recent: tuple[RecentCall, ...] = ()) -> Answer:
+        """The post read, and which model answered."""
+        ...
 
 
 def playbook_maps(playbook: str, phrase: str, symbol: str) -> bool:
@@ -223,6 +246,55 @@ NONCURRENT = re.compile(
     r"如果|假如|计划|附近|突破.*再|昨天.*加了|\b(if|would|might|yesterday)\b", re.I
 )
 
+# An amount as written: 1,500, 200, 2.5, 两百, 一千五.
+_AMOUNT = (
+    r"(?P<{name}>\d{{1,3}}(?:,\d{{3}})+(?:\.\d+)?|\d+(?:\.\d+)?"
+    r"|[一二两三四五六七八九十百千万]+)"
+)
+# A dollar amount to put in, as a size: "$200 of", "200$ of", "$200 worth", "200 dollars",
+# "200 bucks", 200刀, 两百刀, 200美元, 200美金, 200块. A bare "$71" is a price, never a size.
+DOLLAR_SIZE = re.compile(
+    r"\$\s*" + _AMOUNT.format(name="before") + r"\s+(?:of|worth|in)\b"
+    r"|(?<![\d.,])" + _AMOUNT.format(name="after") + r"\s*\$\s*(?:of|worth|in)\b"
+    r"|(?<![\d.,])" + _AMOUNT.format(name="word") + r"\s*(?:dollars?|bucks|usd|刀|美元|美金|块)",
+    re.I,
+)
+_CHINESE_UNITS = {"十": 10, "百": 100, "千": 1000, "万": 10000}
+
+
+def _chinese_amount(words: str) -> Decimal | None:
+    """两百 is 200, 一千五 is 1500, 五百 is 500; None when it is not a plain amount."""
+    total, current = 0, 0
+    for char in words:
+        if char in _CHINESE_DIGITS and _CHINESE_DIGITS[char] < 10:
+            current = _CHINESE_DIGITS[char]
+        elif char in _CHINESE_UNITS:
+            total += (current or 1) * _CHINESE_UNITS[char]
+            current = 0
+        else:
+            return None
+    if current:
+        # A trailing digit after a unit is one step down: 一千五 is 1500.
+        last_unit = next((_CHINESE_UNITS[c] for c in reversed(words) if c in _CHINESE_UNITS), 10)
+        total += current * (last_unit // 10 if total else 1)
+    return Decimal(total) if total else None
+
+
+def _dollar_value(match: re.Match[str]) -> Decimal | None:
+    raw = next(group for group in match.groups() if group)
+    if re.fullmatch(r"[\d,.]+", raw):
+        return Decimal(raw.replace(",", ""))
+    return _chinese_amount(raw)
+
+
+def dollars_are_grounded(value: Decimal, evidence: str | None, text: str) -> bool:
+    """The cited words are in the post and hold exactly one dollar amount, of that value."""
+    if not evidence or evidence not in text:
+        return False
+    found = list(DOLLAR_SIZE.finditer(evidence))
+    return len(found) == 1 and _dollar_value(found[0]) == value
+
+
 # The batch number as written: 第二批, 第2批, batch 2.
 BATCH_NUMBER = re.compile(r"第\s*(\d+|[一二两三四五六七八九十])\s*批|batch\s*(\d+)", re.I)
 _CHINESE_DIGITS = dict(zip("一二三四五六七八九十", range(1, 11), strict=True)) | {"两": 2}
@@ -251,6 +323,17 @@ def _check_call(call: Call, text: str, route: Route, path: str) -> None:
         _check_size(call, text, route.playbook, f"{path}.size")
         return
     _check_share(call, text, route.playbook, f"{path}.share")
+    # "Half" is half of what is left (ADR-0010). A sell may count from the original buy only
+    # when the post's own words, or the playbook's, say so: the model reads, and never assumes.
+    if call.counts_from == "original":
+        if call.counts_from_words is None:
+            raise GroundingError(
+                "counts_from_not_grounded",
+                f"{path}.counts_from",
+                "counts_from original needs counts_from_words, the words of the post that say "
+                "the share is of the original buy; leave counts_from out when the post does not",
+            )
+        _words(call.counts_from_words, text, f"{path}.counts_from_words")
     if isinstance(call.sell_from, Lot):
         _number(call.sell_from.buy_price, call.sell_from.words, text, f"{path}.sell_from")
         if isinstance(call.price, Exact) and call.price.value == call.sell_from.buy_price:
@@ -304,8 +387,17 @@ def _check_size(buy: Buy, text: str, playbook: str, path: str) -> None:
             number = int(written) if written.isdigit() else _CHINESE_DIGITS.get(written)
         if number != size.number:
             raise GroundingError("batch_not_grounded", path, "The batch number is not in the post")
+    elif isinstance(size, Dollars):
+        if not dollars_are_grounded(size.value, size.words, text):
+            raise GroundingError(
+                "dollars_not_grounded",
+                path,
+                "words must be the post's dollar amount, such as $200 of or 200 dollars",
+            )
     elif isinstance(size, NotGiven) and EXPLICIT_ALLOCATION.search(text):
         raise GroundingError("source_fraction_omitted", path, "The post states a size")
+    elif isinstance(size, NotGiven) and DOLLAR_SIZE.search(text):
+        raise GroundingError("source_dollars_omitted", path, "The post states a dollar amount")
 
 
 def _check_share(sell: Sell, text: str, playbook: str, path: str) -> None:
@@ -351,18 +443,30 @@ def check_summary_language(reading: PostReading, text: str, *, retried: bool) ->
     """The summary is written in the post's own language. A post with no Chinese in it gets a
     summary with none either: the reader's examples are Chinese and can pull it there. Asked
     about once; a second answer stands, since a summary is read, never traded on."""
-    if retried or _has_chinese(text) or not _has_chinese(reading.summary):
+    if isinstance(reading, Chatter) or retried or _has_chinese(text):
+        return None
+    if not _has_chinese(reading.summary):
         return None
     return "summary: write it in the post's own language, which is English here, not Chinese"
+
+
+def _side(action: str) -> str:
+    return "buy" if action == "buy" else "sell"
+
+
+def same_side(earlier: RecentCall, call: Buy | Sell) -> bool:
+    """Whether a call can restate `earlier`: a buy restates a buy, a sell restates a sell or a
+    close. A sell is never a repeat of the buy it sells."""
+    return _side(earlier.action) == call.action
 
 
 def check_references(
     reading: PostReading, recent: tuple[RecentCall, ...], *, retried: bool
 ) -> str | None:
     """What is wrong with how a reading names the guru's recent calls, if anything. A repeat
-    must name a listed call of the same stock. A sell naming a buy price none of the guru's open
-    buys of that stock has is asked about once: the guru may hold buys from before CopyTrading
-    started, so a second answer stands."""
+    must name a listed call of the same stock and kind, buy or sell. A sell naming a buy price
+    none of the guru's open buys of that stock has is asked about once: the guru may hold buys
+    from before CopyTrading started, so a second answer stands."""
     if not isinstance(reading, TradeMade | Instruction | Conditional | Suggestion):
         return None
     by_ref = {call.ref: call for call in recent}
@@ -378,6 +482,12 @@ def check_references(
                 return (
                     f"calls.{index}.repeats: {call.repeats} is {earlier.symbol}, not "
                     f"{call.stock.ticker}; a repeat restates a call of the same stock."
+                )
+            if not same_side(earlier, call):
+                return (
+                    f"calls.{index}.repeats: {call.repeats} is a {_side(earlier.action)} and "
+                    f"this call is a {call.action}; a repeat restates a call of the same kind, "
+                    "so leave repeats empty."
                 )
         if retried or not isinstance(call, Sell) or not isinstance(call.sell_from, Lot):
             continue

@@ -22,6 +22,9 @@ class Instruction(BaseModel):
     price: Decimal | None = Field(gt=0, le=100000)
     entry_price: Decimal | None = Field(default=None, gt=0, le=100000)
     fraction: Decimal | None = Field(default=None, gt=0, le=1, allow_inf_nan=False)
+    # A buy the post sizes in dollars ("$200 of NFLX"): that amount, never more than the account's
+    # full position for the guru, instead of a share of the full position.
+    usd_amount: Decimal | None = Field(default=None, gt=0, le=100000, allow_inf_nan=False)
     # An exit's share counts from what is left of the buys it sells from, unless the post or the
     # playbook says the original buy (ADR-0010).
     exit_basis: Literal["original_position", "remaining_position"] | None = None
@@ -40,6 +43,8 @@ class Instruction(BaseModel):
             raise ValueError("An exit requires an explicit fraction")
         if self.action == "close" and self.fraction != 1:
             raise ValueError("A close uses all remaining shares")
+        if self.usd_amount is not None and (self.action != "buy" or self.fraction is not None):
+            raise ValueError("Only a buy states a dollar amount, and never with a fraction")
         if self.action == "buy" and self.exit_basis is not None:
             raise ValueError("Entry instructions cannot carry an exit basis")
         return self
@@ -53,11 +58,14 @@ class Evidence(Instruction):
     price_evidence: str | None = Field(min_length=1, max_length=30)
     entry_evidence: str | None = Field(default=None, max_length=30)
     fraction_evidence: str | None = Field(default=None, max_length=30)
+    usd_amount_evidence: str | None = Field(default=None, max_length=30)
 
     @model_validator(mode="after")
     def validate_price_evidence(self) -> Self:
         if (self.price is None) != (self.price_evidence is None):
             raise ValueError("A stated price needs its words, and only a stated price has them")
+        if (self.usd_amount is None) != (self.usd_amount_evidence is None):
+            raise ValueError("A dollar amount needs its words, and only a dollar amount has them")
         return self
 
 
@@ -72,7 +80,14 @@ class StockSignal(BaseModel):
     timestamp: AwareDatetime
     text: str = Field(max_length=50000)
     parser_profile: str
+    # The model that answered: the decision model when it settled the post (ADR-0012), else the
+    # reader.
     model: str
+    # The chat filter's decision model, when it sorted the post (ADR-0012): it settled the post
+    # when it is also `model`, and passed it to the reader otherwise. `sorted_confidence` is how
+    # likely it found the post chat; None when it didn't answer.
+    sorted_by: str | None = Field(default=None, max_length=128)
+    sorted_confidence: float | None = Field(default=None, ge=0, le=1)
     guru_id: str | None = Field(default=None, pattern=r"^[a-zA-Z0-9_-]{1,64}$")
     profile_revision: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     decision: Literal["trade", "ignore", "review"]

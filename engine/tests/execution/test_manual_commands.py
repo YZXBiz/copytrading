@@ -504,6 +504,24 @@ def test_manual_preview_has_no_broker_mutation_and_confirm_is_durable_before_sub
     reopened.close()
 
 
+def test_an_ask_above_the_limit_warns_with_the_limit_and_still_lets_the_owner_buy(tmp_path):
+    """The limit alone bounds a buy (ADR-0007). A thin feed can quote an ask far above the market,
+    so an ask over the limit is a warning that carries the limit, never a reason to refuse."""
+    _engine, broker, _, app, correction = setup_manual(tmp_path)
+    broker.ask = Decimal("26.00")
+
+    preview = app.preview(preview_request(correction), NOW)
+
+    assert preview.reasons == ()
+    assert preview.plan is not None
+    assert preview.limit_price == preview.plan.limit_price
+    [quote] = [check for check in preview.checks if check.name == "quote"]
+    assert (quote.status, quote.reason) == ("warning", "quote_above_limit")
+    result = app.confirm(confirmation_request(), NOW + dt.timedelta(seconds=1))
+    assert result.status != "rejected"
+    assert broker.calls == 1
+
+
 def _assert_durable_intent(store, command_id):
     snapshot = store.load()
     command = snapshot.manual_commands[command_id]

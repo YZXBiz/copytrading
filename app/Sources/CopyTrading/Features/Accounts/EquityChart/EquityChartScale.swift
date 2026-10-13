@@ -13,6 +13,13 @@ struct EquityChartScale {
         let label: String
     }
 
+    /// A stretch of a day outside regular hours, shaded on the plot with its name inside.
+    struct Session: Hashable {
+        let start: Double
+        let end: Double
+        let name: String
+    }
+
     static let preMarketShare = 0.12
     static let afterHoursShare = 0.1
 
@@ -68,17 +75,50 @@ struct EquityChartScale {
         isDay && (date < open || date > close)
     }
 
-    /// Time labels spaced for the range: the opening bell and each hour of regular trading on a day,
-    /// so a morning drawn across the whole width still reads, then days or months.
-    var ticks: [Tick] {
+    /// The steps a day's marks may take, finest first.
+    static let dayStepsMinutes = [15, 30, 60, 120]
+    /// The least room between two time marks, in points, so labels never touch.
+    static let minimumTickSpacing: Double = 90
+    /// The least room between the opening bell or the close and the nearest round mark, in points.
+    static let minimumBellSpacing: Double = 70
+
+    /// A day's pre-market and after-hours strips; none for longer ranges.
+    @MainActor
+    var extendedSessions: [Session] {
+        guard isDay else { return [] }
+        return [
+            Session(start: 0, end: Self.preMarketShare, name: L10n.string("Pre-market")),
+            Session(start: 1 - Self.afterHoursShare, end: 1, name: L10n.string("After hours")),
+        ]
+    }
+
+    /// Time labels spaced for the range and the plot's width, in the zone and language the rest
+    /// of the app reads in. A day marks the opening bell and the close and the finest round step
+    /// that leaves room between labels (15, 30, or 60 minutes, then 2 hours), keeping round marks
+    /// clear of the two bells, with AM or PM where the language uses them; longer ranges mark days
+    /// or months.
+    @MainActor
+    func ticks(in zone: TimeZone, locale: Locale, width: Double) -> [Tick] {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        var clock = Date.FormatStyle.dateTime.hour().minute().locale(locale)
+        clock.timeZone = zone
         if isDay {
-            var style = Date.FormatStyle.dateTime.hour().minute()
-            style.timeZone = Self.calendar.timeZone
-            let hours = (10...15).map { hour in
-                let date = Self.calendar.date(byAdding: .hour, value: hour, to: Self.calendar.startOfDay(for: open)) ?? open
-                return Tick(x: x(date), label: Self.hourLabel(date))
+            let regularWidth = max(width, 1) * (1 - Self.preMarketShare - Self.afterHoursShare)
+            let pointsPerMinute = regularWidth / max(close.timeIntervalSince(open) / 60, 1)
+            let step = Self.dayStepsMinutes.first { Double($0) * pointsPerMinute >= Self.minimumTickSpacing } ?? 120
+            let clear = max(Double(step) * 0.75, Self.minimumBellSpacing / pointsPerMinute) * 60
+            var marks: [Tick] = []
+            let startOfDay = calendar.startOfDay(for: open)
+            var minutes = Int(open.timeIntervalSince(startOfDay) / 60) / step * step + step
+            while let mark = calendar.date(byAdding: .minute, value: minutes, to: startOfDay), mark < close {
+                if mark.timeIntervalSince(open) >= clear, close.timeIntervalSince(mark) >= clear {
+                    marks.append(Tick(x: x(mark), label: mark.formatted(clock)))
+                }
+                minutes += step
             }
-            return [Tick(x: x(open), label: open.formatted(style))] + hours
+            return [Tick(x: x(open), label: open.formatted(clock))] + marks
+                + [Tick(x: x(close), label: close.formatted(clock))]
         }
         let span = end.timeIntervalSince(start)
         let (unit, step, format): (Calendar.Component, Int, Date.FormatStyle) =
@@ -90,33 +130,17 @@ struct EquityChartScale {
                     ? (.day, 14, .dateTime.month(.abbreviated).day())
                     : (.month, span > 200 * 86_400 ? 2 : 1, .dateTime.month(.abbreviated))
             }
-        var style = format
-        style.timeZone = Self.calendar.timeZone
+        var style = format.locale(locale)
+        style.timeZone = zone
         var ticks: [Tick] = []
-        var date = Self.calendar.startOfDay(for: start)
-        if unit == .month, let month = Self.calendar.dateInterval(of: .month, for: start)?.start { date = month }
+        var date = calendar.startOfDay(for: start)
+        if unit == .month, let month = calendar.dateInterval(of: .month, for: start)?.start { date = month }
         while date <= end {
             if date >= start { ticks.append(Tick(x: x(date), label: date.formatted(style))) }
-            guard let next = Self.calendar.date(byAdding: unit, value: step, to: date) else { break }
+            guard let next = calendar.date(byAdding: unit, value: step, to: date) else { break }
             date = next
         }
         return ticks
-    }
-
-    /// An hour as the reader's clock writes it: "10 AM" with AM and PM, "10:00" on a 24-hour clock.
-    static func hourLabel(_ date: Date) -> String {
-        let hour = calendar.component(.hour, from: date)
-        let template = DateFormatter.dateFormat(fromTemplate: "j", options: 0, locale: .current) ?? "h a"
-        guard template.contains("a") else { return "\(hour):00" }
-        let twelve = hour % 12 == 0 ? 12 : hour % 12
-        return "\(twelve) \(hour < 12 ? Calendar.current.amSymbol : Calendar.current.pmSymbol)"
-    }
-
-    /// Exchange time, so hour marks fall on New York hours wherever the Mac is.
-    static var calendar: Calendar {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = EquityChartTime.zone
-        return calendar
     }
 
     private static func fraction(of date: Date, from lower: Date, to upper: Date) -> Double {

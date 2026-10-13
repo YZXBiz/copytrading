@@ -24,6 +24,15 @@ extension AppModel {
         return edited.limitOnlyChanges(from: saved) != nil
     }
 
+    /// The limits an account page shows: the edited ones while they wait for a start to settle,
+    /// so a change never looks lost.
+    func shownPolicy(accountID: String) -> TradingAccountPolicy? {
+        if limitsAwaitingStart, let draft = setupDraft.accounts.first(where: { $0.name.trimmed == accountID }) {
+            return draft.policy
+        }
+        return savedTradingConfiguration?.accounts.first { $0.id == accountID }?.policy
+    }
+
     /// Connections shows its start card while there is something to set up, check, or start.
     var hasSetupToStart: Bool {
         savedTradingConfiguration == nil
@@ -42,6 +51,12 @@ extension AppModel {
     /// The saved model key belongs to the provider the draft names, so a blank key field keeps it.
     var hasSavedProviderKey: Bool {
         hasTradingSecrets && savedTradingConfiguration?.provider.name == setupDraft.provider
+    }
+
+    /// The chat filter's key is in the Keychain: a saved setup with the filter on always saved one.
+    var hasSavedTriageKey: Bool {
+        hasTradingSecrets && savedTradingConfiguration?.triage?.provider == setupDraft.triage?.provider
+            && savedTradingConfiguration?.triage != nil
     }
 
     /// The interpreter has what it needs to read: a typed key, a saved one, or none required.
@@ -228,6 +243,8 @@ extension AppModel {
                 reviews = [:]
             }
             self.isPausedToApplyChanges = true
+            self.accountsCopyingBeforeApply = Set(
+                (self.accountFeature?.accounts ?? []).filter { AccountCopyState($0).isCopying }.map(\.accountID))
             await self.pauseTrading()
             guard await self.waitUntilPaused() else {
                 guard !Task.isCancelled else { return }
@@ -263,6 +280,7 @@ extension AppModel {
         let failedCheck = tradingValidation.flatMap { $0.report.activatable ? nil : $0 }
         cancelTradingActivation()
         await startTrading(resumingSavedSetup: true)
+        turnOnAccountsCopyingBeforeApply()
         if let failedCheck, tradingStatus?.state != .paused {
             tradingValidation = failedCheck
             isShowingSetupCheck = true
@@ -317,11 +335,15 @@ extension AppModel {
         profileExamplesAcknowledged = false
         guard !appliedChanges else {
             message = L10n.string("Your changes are saved, and copying uses them now.")
+            turnOnAccountsCopyingBeforeApply()
             return
         }
         message = nil
         copyingStartedAt = .now
         selectedScreen = homeScreen
+        if let accountFeature {
+            Task { await turnOnEveryAccount(feature: accountFeature) }
+        }
     }
 
     /// Fills the setup from a file the owner chose in the open panel. Only the draft changes:

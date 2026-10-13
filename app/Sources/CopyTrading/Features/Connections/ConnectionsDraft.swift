@@ -18,6 +18,11 @@ struct ConnectionsDraft {
     var notificationChatID = ""
     /// Telegram's bot token, or a Discord channel's webhook URL.
     var notificationToken = ""
+    /// The decision model that sorts small talk out before the interpreter reads (ADR-0012); nil
+    /// while it is off.
+    var triage: TradingTriageConfiguration?
+    /// Its key, as typed and not saved yet.
+    var triageAPIKey = ""
 
     var hasLiveAccounts: Bool {
         accounts.contains { $0.environment == .live }
@@ -27,12 +32,12 @@ struct ConnectionsDraft {
     var isEmpty: Bool {
         channels.trimmed.isEmpty && authors.trimmed.isEmpty && modelName.trimmed.isEmpty
             && providerBaseURL.trimmed.isEmpty
-            && accounts.isEmpty && routes.isEmpty && !notificationsEnabled && !hasTypedSecrets
+            && accounts.isEmpty && routes.isEmpty && !notificationsEnabled && triage == nil && !hasTypedSecrets
     }
 
     /// Keys typed into the draft that are not saved yet.
     var hasTypedSecrets: Bool {
-        !discordToken.isEmpty || !providerAPIKey.isEmpty || !notificationToken.isEmpty
+        !discordToken.isEmpty || !providerAPIKey.isEmpty || !notificationToken.isEmpty || !triageAPIKey.isEmpty
             || accounts.contains { !$0.key.isEmpty || !$0.secret.isEmpty }
     }
 
@@ -43,6 +48,7 @@ struct ConnectionsDraft {
         keys.combine(discordToken)
         keys.combine(providerAPIKey)
         keys.combine(notificationToken)
+        keys.combine(triageAPIKey)
         for account in accounts {
             keys.combine(account.key)
             keys.combine(account.secret)
@@ -100,12 +106,14 @@ struct ConnectionsDraft {
         notificationsEnabled = saved.notification != nil
         notificationService = saved.notification?.service ?? .telegram
         notificationChatID = saved.notification?.chatID ?? ""
+        triage = saved.triage
     }
 
     mutating func clearSecrets() {
         discordToken = ""
         providerAPIKey = ""
         notificationToken = ""
+        triageAPIKey = ""
         for index in accounts.indices {
             accounts[index].key = ""
             accounts[index].secret = ""
@@ -153,7 +161,8 @@ struct ConnectionsDraft {
             routes: convertedRoutes,
             notification: notificationsEnabled
                 ? TradingNotificationConfiguration(service: notificationService, chatID: notificationChatID.trimmed)
-                : nil
+                : nil,
+            triage: triage
         )
         let secrets = TradingSecrets(
             discordToken: discordToken,
@@ -161,7 +170,8 @@ struct ConnectionsDraft {
             brokers: accounts.map {
                 TradingBrokerCredentials(accountID: $0.name.trimmed, key: $0.key, secret: $0.secret)
             },
-            notificationToken: notificationsEnabled ? notificationToken : nil
+            notificationToken: notificationsEnabled ? notificationToken : nil,
+            triageAPIKey: triage == nil ? nil : triageAPIKey
         )
         return (configuration, secrets)
     }

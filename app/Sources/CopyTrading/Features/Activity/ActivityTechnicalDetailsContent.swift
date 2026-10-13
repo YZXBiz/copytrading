@@ -24,13 +24,11 @@ struct ActivityTechnicalDetailsContent: View {
             }
             VStack(alignment: .leading, spacing: 0) {
                 TechnicalSectionTitle(text: L10n.string("Reading"))
-                if let interpretedBy = item.interpretedBy {
-                    TechnicalFactRow(label: "Read by") { Text(interpretedBy) }
+                if let verdict = item.chatFilterVerdict {
+                    TechnicalFactRow(label: "Chat filter") { Text(verdict) }
                 }
-                if item.sourceRevision > 1 {
-                    TechnicalFactRow(label: "Edits") {
-                        Text(L10n.string("Edited %@ after posting", Humanize.count(item.sourceRevision - 1, "time")))
-                    }
+                if let interpretedBy = item.interpretedBy, !item.isSortedAsChat {
+                    TechnicalFactRow(label: "Read by") { Text(interpretedBy) }
                 }
                 if item.profileRevision != nil {
                     TechnicalFactRow(label: "Guru version") {

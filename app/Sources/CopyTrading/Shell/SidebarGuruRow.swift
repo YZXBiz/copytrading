@@ -13,16 +13,18 @@ struct SidebarGuruRow: View {
     var body: some View {
         let posts = accountFeature.activity.filter { $0.guruID == guru.id }
         let waiting = posts.filter { ActivityFilter.waiting.includes($0, skipped: model.skippedCalls) }.count
-        let today = posts.filter(\.isToday).count
-        SidebarEntityRow(
-            title: guru.name,
-            detail: detail(waiting: waiting, today: today),
-            detailTint: waiting > 0 ? Palette.amber : Palette.tertiaryInk,
-            identifier: screen.identifier,
-            isSelected: model.selectedScreen == screen,
-            select: select
-        ) {
-            GuruMonogram(name: guru.name, size: 20)
+        TimelineView(.everyMinute) { context in
+            let today = posts.filter { $0.isPosted(onDayOf: context.date) }.count
+            SidebarEntityRow(
+                title: guru.name,
+                detail: detail(waiting: waiting, today: today),
+                detailTint: waiting > 0 ? Palette.amber : Palette.tertiaryInk,
+                identifier: screen.identifier,
+                isSelected: model.selectedScreen == screen,
+                select: select
+            ) {
+                GuruMonogram(name: guru.name, size: 20)
+            }
         }
     }
 

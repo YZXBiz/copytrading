@@ -11,8 +11,12 @@ struct ManualOrderEstimate {
     /// This guru's full position in each account, by account.
     let connections: [String: TradingRouteConnection]
     let mode: ManualReviewMode
+    /// The broker's latest quote for each stock, by symbol: a sell is valued at the bid, and a buy
+    /// at the market is counted in shares at the ask.
+    var quotes: [String: LiveQuote] = [:]
 
-    /// The order as one line, "Sell 0.442 WMT ≈ $48.70", and the accounts it goes to, "primary ·
+    /// The order as one line, "Sell 0.442 WMT ≈ $48.70" or "Buy $1,000 of AAPL ≈ 4.414 shares at
+    /// $226.56", and the accounts it goes to, "primary ·
     /// Paper"; nil until a whole trade and an account are chosen.
     @MainActor var summary: (order: String, place: String)? {
         let valid = drafts.filter(\.isValid)
@@ -26,9 +30,9 @@ struct ManualOrderEstimate {
     /// The button: "Sell 0.442 WMT", "Buy $100 of WMT", "Approve", or "Copy".
     @MainActor var action: String {
         if mode == .approve { return L10n.string("Approve") }
-        guard drafts.count == 1, let draft = drafts.first, !draft.symbol.trimmed.isEmpty else {
-            return L10n.string("Copy Calls")
-        }
+        guard drafts.count == 1, let draft = drafts.first else { return L10n.string("Copy Calls") }
+        // No stock chosen yet: the button still names the side, so it never reads as something else.
+        guard !draft.symbol.trimmed.isEmpty else { return L10n.string(draft.isSell ? "Sell" : "Buy") }
         let symbol = draft.symbol.trimmed.uppercased()
         if accounts.count == 1, let account = accounts.first {
             if draft.isSell, let shares = shares(draft, in: account), shares > 0 {
@@ -48,14 +52,20 @@ struct ManualOrderEstimate {
             guard let shares = shares(draft, in: account) else {
                 return L10n.string("No %@ that CopyTrading bought is held", symbol)
             }
-            guard let value = (currentPrice(symbol, in: account) ?? price).map({ Humanize.usd($0 * shares) }) else {
+            let bid = quotes[symbol]?.bid ?? currentPrice(symbol, in: account) ?? price
+            guard let value = bid.map({ Humanize.usd($0 * shares) }) else {
                 return L10n.string("Sell %@ %@", Self.count(shares), symbol)
             }
             return L10n.string("Sell %@ %@ ≈ %@", Self.count(shares), symbol, value)
         }
-        let at = price.map(Humanize.usd) ?? "—"
+        let ask = price ?? quotes[symbol]?.ask
+        let at = ask.map(Humanize.usd) ?? "—"
         guard let budget = budget(draft, in: account) else { return L10n.string("Buy %@ at %@", symbol, at) }
-        return L10n.string("Buy %@ of %@ at %@", Humanize.dollars("\(budget)"), symbol, at)
+        guard let ask else { return L10n.string("Buy %@ of %@ at %@", Humanize.dollars("\(budget)"), symbol, at) }
+        // The sentence says the count is an estimate; the count never adds a second "≈".
+        return L10n.string(
+            "Buy %@ of %@ ≈ %@ at %@", Humanize.dollars("\(budget)"), symbol,
+            Humanize.shares(budget / ask, marksRounding: false), at)
     }
 
     /// Shares to three places at most, as an order reads them: "0.442", "12".
@@ -78,7 +88,10 @@ struct ManualOrderEstimate {
     }
 
     func budget(_ draft: ManualInstructionDraft, in account: AccountOverview) -> Decimal? {
-        connections[account.accountID]?.copiedBudgetUSD(sourceFraction: Decimal(string: draft.fraction.trimmed))
+        connections[account.accountID]?.copiedBudgetUSD(
+            sourceFraction: Decimal(string: draft.fraction.trimmed),
+            sourceUSD: draft.isSell ? nil : Decimal(string: draft.usdAmount.trimmed)
+        )
     }
 
     private func currentPrice(_ symbol: String, in account: AccountOverview) -> Decimal? {

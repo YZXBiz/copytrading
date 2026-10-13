@@ -176,6 +176,12 @@ public struct EngineActions: Sendable {
         return try await client.equityHistory(accountID: accountID, window: window)
     }
 
+    /// A stock's latest quote through the account's read keys; read-only, never an order.
+    public func quote(accountID: String, symbol: String) async throws -> MarketQuote? {
+        let client = try await supervisor.engineClient()
+        return try await client.quote(accountID: accountID, symbol: symbol)
+    }
+
     public func saveManualCorrection(
         _ correction: ManualCorrectionRequest
     ) async throws -> ManualCorrectionOutcome {

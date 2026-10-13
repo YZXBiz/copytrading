@@ -21,13 +21,14 @@ final class AccountFeatureModel {
     private(set) var isLoadingMoreAccounts = false
     private(set) var activity: [SourceActivity] = [] {
         didSet {
-            let fills = fillWatch.newFills(in: activity)
-            if !fills.isEmpty { onFills?(fills) }
+            let news = fillWatch.news(in: activity)
+            if !news.isEmpty { onOrders?(news) }
         }
     }
     private var fillWatch = FillWatch()
-    /// Told of each copied order that newly filled, once; the app turns them into notifications.
-    var onFills: (([FillWatch.Fill]) -> Void)?
+    /// Told of each copied order that newly went out or filled, once; the app turns them into
+    /// notifications.
+    var onOrders: ((FillWatch.News) -> Void)?
     private(set) var unavailableAccounts: [AccountUnavailable] = []
     private(set) var nextActivityCursor: Int?
     /// Each account's feed, newest first, and where its next older page starts.
@@ -76,7 +77,7 @@ final class AccountFeatureModel {
             lastUpdatedAt = .now
         } catch {
             guard isCurrent(generation) else { return }
-            errors["read"] = error.localizedDescription
+            errors["read"] = Reason.refusal(error)
         }
     }
 
@@ -92,7 +93,7 @@ final class AccountFeatureModel {
             lastUpdatedAt = .now
         } catch {
             guard isCurrent(generation) else { return }
-            errors["read"] = error.localizedDescription
+            errors["read"] = Reason.refusal(error)
         }
     }
 
@@ -121,7 +122,7 @@ final class AccountFeatureModel {
             } catch {
                 guard isCurrent(generation) else { return }
                 histories[account.accountID] = nil
-                errors["history:\(account.accountID)"] = error.localizedDescription
+                errors["history:\(account.accountID)"] = Reason.refusal(error)
             }
         }
     }
@@ -147,7 +148,7 @@ final class AccountFeatureModel {
             errors.removeValue(forKey: "read")
         } catch {
             guard isCurrent(generation) else { return }
-            errors["read"] = error.localizedDescription
+            errors["read"] = Reason.refusal(error)
         }
     }
 
@@ -164,7 +165,7 @@ final class AccountFeatureModel {
             errors.removeValue(forKey: "read")
         } catch {
             guard isCurrent(generation) else { return }
-            errors["read"] = error.localizedDescription
+            errors["read"] = Reason.refusal(error)
         }
     }
 
@@ -238,7 +239,7 @@ final class AccountFeatureModel {
         } catch {
             errors[accountID] = L10n.string(
                 "The holdings couldn't be settled: %@. Check the broker for open orders in %@, then try again.",
-                error.localizedDescription, fix.request.symbol)
+                Reason.refusal(error), fix.request.symbol)
             return
         }
         await refresh(using: actions)
@@ -264,7 +265,7 @@ final class AccountFeatureModel {
             errors.removeValue(forKey: "feed:\(accountID)")
         } catch {
             guard isCurrent(generation) else { return }
-            errors["feed:\(accountID)"] = error.localizedDescription
+            errors["feed:\(accountID)"] = Reason.refusal(error)
         }
     }
 

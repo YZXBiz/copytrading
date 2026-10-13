@@ -23,8 +23,11 @@ public struct DiagnosticsJournalEntry: Identifiable, Equatable, Sendable {
     public let workflowID: String?
     /// Every recorded field except the payload, sorted by name, as readable text.
     public let fields: [Field]
-    /// The redacted payload as indented JSON, when one was captured.
+    /// The redacted payload as indented JSON, when one was captured and is readable.
     public let payloadJSON: String?
+    /// A payload kept as undecodable bytes (a compressed reply journaled before the engine decoded
+    /// them), so the page says so instead of showing replacement characters.
+    public let payloadUnreadable: Bool
 
     public struct Field: Equatable, Sendable {
         public let name: String
@@ -122,8 +125,12 @@ public struct DiagnosticsJournal: Sendable {
             .filter { !hidden.contains($0.key) && !($0.value is NSNull) }
             .map { DiagnosticsJournalEntry.Field(name: $0.key, value: text($0.value)) }
             .sorted { $0.name < $1.name }
+        // A body of bytes that weren't text was journaled with every bad byte replaced by U+FFFD;
+        // no real reply carries that character.
+        let payloadUnreadable =
+            ((object["payload"] as? [String: Any])?["body"] as? String)?.contains("\u{FFFD}") == true
         let payloadJSON: String? = object["payload"].flatMap { payload in
-            guard !(payload is NSNull),
+            guard !payloadUnreadable, !(payload is NSNull),
                 let data = try? JSONSerialization.data(
                     withJSONObject: payload,
                     options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes, .fragmentsAllowed]
@@ -141,7 +148,8 @@ public struct DiagnosticsJournal: Sendable {
             traceID: object["trace_id"] as? String,
             workflowID: object["workflow_id"] as? String,
             fields: fields,
-            payloadJSON: payloadJSON
+            payloadJSON: payloadJSON,
+            payloadUnreadable: payloadUnreadable
         )
     }
 

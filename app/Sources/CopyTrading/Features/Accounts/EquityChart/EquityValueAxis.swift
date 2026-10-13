@@ -38,10 +38,4 @@ struct EquityValueAxis {
         let digits = step >= 0.01 ? 0 : step >= 0.001 ? 1 : 2
         return value.formatted(.percent.precision(.fractionLength(digits)).sign(strategy: .always(includingZero: false)))
     }
-
-    /// Ticks far enough from `value` that its tag does not cover their labels.
-    func ticks(clearOf value: Double?, within fraction: Double = 0.45) -> [Double] {
-        guard let value, step > 0 else { return ticks }
-        return ticks.filter { abs($0 - value) > step * fraction }
-    }
 }

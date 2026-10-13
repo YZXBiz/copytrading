@@ -40,6 +40,8 @@ private func closingWordsSellEverything() throws {
 private func aPostWithNoTradeLeavesTheChoicesEmpty() throws {
     try #require(ManualInstructionGuess.draft(from: "hi", held: ["WMT"]) == nil)
     try #require(ManualInstructionGuess.draft(from: "good morning everyone", held: []) == nil)
+    // A post that names no stock never borrows one the account holds.
+    try #require(ManualInstructionGuess.draft(from: "how's going", held: ["WMT"]) == nil)
 }
 
 private func theChoicesBuildTheEnginesInstruction() throws {

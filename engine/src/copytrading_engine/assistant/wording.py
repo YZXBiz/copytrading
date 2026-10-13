@@ -15,8 +15,8 @@ REASONS = {
     "related_manual_action": "A sale of these shares is already under way",
     "market_facts_unavailable": "The broker could not be reached",
     "preview_unavailable": "The sale could not be checked",
-    "account_disabled": "Entries are off for this account",
-    "account_paused": "Entries are paused for this account",
+    "account_disabled": "Copying into this account is off",
+    "account_paused": "Copying into this account is stopped",
     "account_blocked": "The broker blocked this account",
     "account_unavailable": "The account could not be reached",
     "outside_open_orders": "Cancel the orders open at Alpaca first",
@@ -26,10 +26,10 @@ REASONS = {
     "source_unauthorized": "Discord turned down the token",
     "account_risk_unavailable": "Risk could not be checked",
     "recovery_pending": "Still checking the account after a restart",
-    "manual_resume_required": "Entries wait for you to resume them after the restart",
+    "manual_resume_required": "This account waits for its Start Copying after the restart",
     "stale_during_recovery": "Too old by the time the account's restart checks finished",
     "stale_waiting_for_resume": (
-        "Waited for you to resume entries after the restart, and got too old"
+        "Waited for the account's Start Copying after the restart, and got too old"
     ),
     "outside_session": "The market was closed",
     "overnight_halted": "Overnight trading was halted",
@@ -91,6 +91,7 @@ REASONS = {
     "conditional": "The guru would trade only if something happens",
     "suggestion": "The guru suggested it but didn't trade",
     "unclear": "The post's meaning wasn't clear",
+    "chatter": "Just chat, nothing to trade",
     "price_range": "The guru gave a price range",
     "price_at_market": "The guru said to trade at the market price",
     "price_not_given": "The post gave no price",
@@ -113,11 +114,11 @@ OUTCOMES = {
 
 # Where an account stands, as the Accounts screen says it.
 READINESS = {
-    "enabled": "Taking entries",
-    "enabled_waiting_for_session": "Taking entries once the market opens",
-    "disabled": "Entries are off",
-    "paused": "Entries are paused",
-    "manual_resume_required": "Waiting for you to resume entries after a restart",
+    "enabled": "Copying",
+    "enabled_waiting_for_session": "Copying once the market opens",
+    "disabled": "Not copying yet",
+    "paused": "Copying stopped",
+    "manual_resume_required": "Waiting for its Start Copying after a restart",
     "recovery_pending": "Still checking the account after a restart",
     "reconciliation_unavailable": "The account couldn't be checked against the broker",
     "session_unavailable": "The market hours couldn't be read",
@@ -126,8 +127,8 @@ READINESS = {
 ENTRIES = {"enabled": "on", "disabled": "off", "paused": "paused"}
 
 AFTER_RESTART = {
-    "manual": "waits for you to resume entries",
-    "automatic": "resumes entries on its own",
+    "manual": "waits for its Start Copying",
+    "automatic": "starts copying again on its own",
 }
 
 COPYING = {

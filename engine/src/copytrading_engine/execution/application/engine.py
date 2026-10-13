@@ -436,7 +436,7 @@ class CopyEngine:
                 account_active=account.active,
             )
             connection = self.ledger.message(message_id).destination.connection
-            decision = entry_budget(c, facts, connection, s.fraction)
+            decision = entry_budget(c, facts, connection, s.fraction, s.usd_amount)
             if decision.budget is None:
                 return TradeDecision(None, decision.reason, decision.breaches)
             requested_usd = decision.requested

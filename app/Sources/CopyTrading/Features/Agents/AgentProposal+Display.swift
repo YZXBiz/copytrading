@@ -7,7 +7,7 @@ extension AgentProposal {
     var summary: String {
         switch subject {
         case .resumeAccount(let accountID):
-            return L10n.string("Resume new entries in %@", accountID)
+            return L10n.string("Start copying into %@", accountID)
         case .setRecovery(let accountID, let preference):
             let title = RecoveryPreference(rawValue: preference)?.title ?? Humanize.code(preference)
             return L10n.string("In %@, after a restart: %@", accountID, title)

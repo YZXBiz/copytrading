@@ -14,7 +14,7 @@ extension AppModel {
             agentAccess = try store.load()
         } catch {
             agentAccess = .off
-            agentAccessMessage = L10n.string("%@ Agent access stays off until you choose again.", error.localizedDescription)
+            agentAccessMessage = L10n.string("%@ Agent access stays off until you choose again.", Self.userMessage(for: error))
         }
     }
 
@@ -33,7 +33,7 @@ extension AppModel {
             agentRelay = relay
             isAgentRelayListening = true
         } catch {
-            agentAccessMessage = L10n.string("Agents cannot connect: %@", error.localizedDescription)
+            agentAccessMessage = L10n.string("Agents cannot connect: %@", Self.userMessage(for: error))
         }
     }
 
@@ -53,7 +53,7 @@ extension AppModel {
             try await confirmOwner(L10n.string(access == .off ? "Turn off agent access" : "Allow agents to use CopyTrading"))
             try store.save(access)
         } catch {
-            agentAccessMessage = error.localizedDescription
+            agentAccessMessage = Self.userMessage(for: error)
             return
         }
         agentAccess = access
@@ -87,7 +87,7 @@ extension AppModel {
             let result = try await operations.approveProposal(id: proposal.id, digest: proposal.digest)
             agentAccessMessage = result.resultMessage
         } catch {
-            agentAccessMessage = error.localizedDescription
+            agentAccessMessage = Self.userMessage(for: error)
         }
         await refreshAgentActivity()
     }
@@ -98,7 +98,7 @@ extension AppModel {
             _ = try await operations.rejectProposal(id: proposal.id)
             agentAccessMessage = nil
         } catch {
-            agentAccessMessage = error.localizedDescription
+            agentAccessMessage = Self.userMessage(for: error)
         }
         await refreshAgentActivity()
     }

@@ -87,6 +87,9 @@ final class AppModel {
     /// Copying was paused only to apply setup changes; anything short of starting the new setup
     /// resumes the saved one, so copying never stays paused by surprise.
     var isPausedToApplyChanges = false
+    /// The accounts that were copying when Apply Changes paused; they copy again afterwards,
+    /// whether the new setup started or the saved one came back.
+    var accountsCopyingBeforeApply: Set<String> = []
     /// An apply is under way, from reading the examples to copying again. Start Copying waits for
     /// it: a second press would cancel it halfway and leave copying paused.
     var isApplyingChanges = false
@@ -486,6 +489,11 @@ final class AppModel {
     var limitsSavedAccountIDs: Set<String> = []
     /// The engine refused the draft's limits, so they wait for the full check like other changes.
     var limitsSaveRefused = false
+    /// Limits edited while copying was starting; they save as soon as the start settles.
+    var limitsAwaitingStart = false
+    /// Accounts and activity, shared with the window and the menu bar; an account's own Start
+    /// Copying turns its buys on through it.
+    var accountFeature: AccountFeatureModel?
     /// A connection the guide asked to open; Connections opens its panel and clears it.
     var requestedConnection: ConnectionKind?
     /// The draft as it stood when the current check began; Start Copying needs it unchanged.
@@ -535,6 +543,8 @@ final class AppModel {
     /// How long the launch start waits before each retry after a failed connection check.
     @ObservationIgnored var launchStartRetryDelays: [Duration] = [.seconds(10), .seconds(30), .seconds(60)]
     @ObservationIgnored private var launchStartRetry: Task<Void, Never>?
+    /// The last start threw (the engine did not answer in time) instead of reporting failed checks.
+    @ObservationIgnored private var launchStartThrew = false
     private(set) var launchPreferences: LaunchPreferences
     @ObservationIgnored private let sleepGuard: SleepGuard
 
@@ -908,7 +918,7 @@ final class AppModel {
             diagnosticsSettings = settings
             diagnosticsSettingsWarning = nil
         } catch {
-            diagnosticsSettingsWarning = error.localizedDescription
+            diagnosticsSettingsWarning = Self.userMessage(for: error)
         }
     }
 
@@ -926,7 +936,7 @@ final class AppModel {
             diagnosticsJournalBytes = bytes
             diagnosticsJournalMessage = nil
         } catch {
-            diagnosticsJournalMessage = error.localizedDescription
+            diagnosticsJournalMessage = Self.userMessage(for: error)
         }
     }
 
@@ -979,6 +989,7 @@ final class AppModel {
                 engineGeneration.accepts(currentEngineGeneration)
             else { return }
             await reconcilePendingTradingActivation(using: engineActions)
+            await saveLimitsAwaitingStart()
             guard runtimeGeneration.accepts(currentRuntimeGeneration),
                 engineGeneration.accepts(currentEngineGeneration)
             else { return }
@@ -1149,18 +1160,20 @@ final class AppModel {
             let notificationToken =
                 enteredSecrets.notificationToken?.isEmpty == false
                 ? enteredSecrets.notificationToken : sameAlertService ? previous?.notificationToken : nil
+            let triageAPIKey = Self.triageKey(entered: enteredSecrets.triageAPIKey, for: configuration.triage, saved: stored)
             let missing = [
                 discordToken.isEmpty ? "the Discord token" : nil,
                 providerAPIKey.isEmpty && configuration.provider.name.requiresAPIKey ? "the model API key" : nil,
                 configuration.notification != nil && notificationToken?.isEmpty != false
                     ? (configuration.notification?.service == .discord ? "the Discord webhook URL" : "the Telegram bot token") : nil,
+                configuration.triage != nil && triageAPIKey?.isEmpty != false ? "the OpenAI key" : nil,
             ].compactMap(\.self)
             guard missing.isEmpty else {
                 throw TradingSettingsError.missingCredentials(L10n.list(missing))
             }
             let secrets = TradingSecrets(
                 discordToken: discordToken, providerAPIKey: providerAPIKey,
-                brokers: brokers, notificationToken: notificationToken
+                brokers: brokers, notificationToken: notificationToken, triageAPIKey: triageAPIKey
             )
             let profilesByRevision = Dictionary(
                 configuration.profiles.map { ($0.profileRevision, $0) },
@@ -1371,6 +1384,7 @@ final class AppModel {
                 tradingValidation = nil
                 syncSetupDraftWithSaved()
                 didStartCopyingNewSetup()
+                await saveLimitsAwaitingStart()
                 return
             }
 
@@ -1382,6 +1396,7 @@ final class AppModel {
                 try tradingConfigurationStore.rollbackValidatedActivation(
                     activationID: pending.activationID
                 )
+                let before = savedTradingConfiguration
                 let saved = try tradingConfigurationStore.load()
                 savedTradingConfiguration = saved?.configuration
                 hasTradingSecrets = saved != nil
@@ -1389,10 +1404,12 @@ final class AppModel {
                 tradingValidation = nil
                 syncSetupDraftWithSaved()
                 let why = status.errorCode.map(Reason.text) ?? L10n.string("The engine stopped while starting")
+                // Starting the saved setup again is not a new setup, so there is nothing to keep.
                 message =
-                    saved == nil
-                    ? L10n.string("Copying didn't start: %@.", why)
+                    saved == nil || saved?.configuration == before
+                    ? L10n.string("Copying didn't start: %@. Try again.", why)
                     : L10n.string("The new setup didn't start, so your previous setup is still in place: %@.", why)
+                await saveLimitsAwaitingStart()
                 return
             }
             // An activation the engine is still committing is progress, even with accounts already
@@ -1406,7 +1423,8 @@ final class AppModel {
                 message = Self.pendingSetupMessage
             }
         } catch {
-            message = L10n.string("Configuration activation is pending; engine status is unavailable. Credentials are retained.")
+            // The next status check asks again; the owner only needs to know it is still going.
+            message = L10n.string("Checking whether copying started…")
         }
     }
 
@@ -1432,6 +1450,7 @@ final class AppModel {
         guard !isTradingCommandPending else { return }
         isTradingCommandPending = true
         defer { isTradingCommandPending = false }
+        launchStartThrew = false
         do {
             if try tradingConfigurationStore.pendingActivation() != nil {
                 await reconcilePendingTradingActivation(using: starter)
@@ -1467,6 +1486,8 @@ final class AppModel {
             }
             await reconcilePendingTradingActivation(using: starter)
         } catch {
+            // The engine not answering in time is a failed start, which a launch start retries.
+            launchStartThrew = true
             message = Self.userMessage(for: error)
         }
     }
@@ -1497,10 +1518,18 @@ final class AppModel {
             let edited = try? setupDraft.submission().0,
             let changed = edited.limitOnlyChanges(from: saved),
             let tradingConfigurationStore,
-            let control: (any TradingStarting) = tradingStarter ?? engineActions,
-            !isTradingCommandPending, !isValidatingTrading, !isActivatingTrading, pendingTradingActivation == nil,
-            (try? tradingConfigurationStore.pendingActivation()) == nil
+            let control: (any TradingStarting) = tradingStarter ?? engineActions
         else { return nil }
+        // A start in flight owns the saved setup; the limits wait for it and save right after,
+        // whether copying started or not.
+        guard !isTradingCommandPending, !isValidatingTrading, !isActivatingTrading, pendingTradingActivation == nil,
+            (try? tradingConfigurationStore.pendingActivation()) == nil
+        else {
+            limitsAwaitingStart = true
+            limitsSavedAccountIDs.formUnion(changed)
+            return true
+        }
+        limitsAwaitingStart = false
         isTradingCommandPending = true
         defer { isTradingCommandPending = false }
         do {
@@ -1519,6 +1548,13 @@ final class AppModel {
             message = Self.userMessage(for: error)
             return false
         }
+    }
+
+    /// Limits edited while a start was in flight, saved once it settles.
+    func saveLimitsAwaitingStart() async {
+        guard limitsAwaitingStart, !isTradingCommandPending else { return }
+        limitsAwaitingStart = false
+        await saveLimitOnlyChanges()
     }
 
     /// While unlocked, the engine may read every saved account live, so a paused account still
@@ -1703,9 +1739,10 @@ final class AppModel {
         retryLaunchStartWhileHeldBack()
     }
 
-    /// A failed check right after launch is often the network still waking up, and a paused app
-    /// nobody is watching misses trades. The launch start tries again a few times; a start the
-    /// owner makes or a pause they choose ends the retries.
+    /// A failed check right after launch is often the network still waking up, and the engine may
+    /// still be reading the posts it missed; a paused app nobody is watching misses trades. The
+    /// launch start tries again a few times, whether a check failed or the engine was slow to
+    /// answer; a start the owner makes or a pause they choose ends the retries.
     private func retryLaunchStartWhileHeldBack() {
         guard isHeldBackAtLaunch else { return }
         launchStartRetry = Task { [weak self] in
@@ -1719,7 +1756,7 @@ final class AppModel {
 
     private var isHeldBackAtLaunch: Bool {
         wantsCopyingOnLaunch && isTradingUnlocked && tradingStatus?.state == .paused
-            && tradingValidation?.report.activatable == false
+            && (tradingValidation?.report.activatable == false || launchStartThrew)
     }
 
     static func failedChecksMessage(_ report: TradingCapabilityReport) -> String {
@@ -1805,6 +1842,18 @@ final class AppModel {
         guard entered.isEmpty else { return entered }
         guard let saved, saved.configuration.provider.name == provider else { return "" }
         return saved.secrets.providerAPIKey
+    }
+
+    /// The chat filter's key to use: what was typed, or the saved one while the filter stays on with
+    /// the same service; nil while the filter is off.
+    static func triageKey(
+        entered: String?, for triage: TradingTriageConfiguration?,
+        saved: (configuration: TradingConfiguration, secrets: TradingSecrets)?
+    ) -> String? {
+        guard let triage else { return nil }
+        if let entered, !entered.isEmpty { return entered }
+        guard let saved, saved.configuration.triage?.provider == triage.provider else { return nil }
+        return saved.secrets.triageAPIKey
     }
 
     private static func validateTradingConfiguration(
@@ -2099,6 +2148,11 @@ final class AppModel {
         }
         if let error = error as? LocalizedError, let description = error.errorDescription {
             return L10n.string(description)
+        }
+        // A file or network error from macOS already reads in the Mac's own words.
+        let system = error as NSError
+        if [NSCocoaErrorDomain, NSPOSIXErrorDomain, NSURLErrorDomain].contains(system.domain) {
+            return system.localizedDescription
         }
         return L10n.string("CopyTrading could not complete that local operation.")
     }
