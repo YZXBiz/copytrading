@@ -115,7 +115,10 @@ class DiagnosticHTTPTransport(httpx.AsyncBaseTransport):
             path=request.url.path,
         )
         response_bytes = _BoundedBytes(self._maximum_bytes)
+        # The wire carries the body as the server compressed it; the journal keeps it readable.
+        encoding = response.headers.get("content-encoding")
         if response.is_stream_consumed:
+            # Already read, so already decoded.
             response_bytes.append(response.content)
             response_bytes.finish()
             self._emit(
@@ -139,6 +142,7 @@ class DiagnosticHTTPTransport(httpx.AsyncBaseTransport):
                 method=request.method,
                 path=request.url.path,
                 status_code=response.status_code,
+                encoding=encoding,
             ),
             lambda: self._emit(
                 "model_response",
@@ -148,6 +152,7 @@ class DiagnosticHTTPTransport(httpx.AsyncBaseTransport):
                 method=request.method,
                 path=request.url.path,
                 status_code=response.status_code,
+                encoding=encoding,
             ),
         )
         return response
@@ -165,13 +170,16 @@ class DiagnosticHTTPTransport(httpx.AsyncBaseTransport):
         method: str | None = None,
         path: str | None = None,
         status_code: int | None = None,
+        encoding: str | None = None,
     ) -> None:
         if self._sink is None:
             return
         payload = (
             None
             if capture is None
-            else _wire_payload(capture.value(), status_code, method=method, path=path)
+            else _wire_payload(
+                _decoded(capture.value(), encoding), status_code, method=method, path=path
+            )
         )
         source_bytes = 0 if capture is None else capture.total
         try:
@@ -240,6 +248,18 @@ def _stream_status(capture: _BoundedBytes) -> CaptureStatus:
     if capture.complete:
         return "complete"
     return "incomplete" if capture.total else "missing"
+
+
+def _decoded(body: bytes | None, encoding: str | None) -> bytes | None:
+    """The body as the client read it: the content encoding the server applied (gzip, br, zstd)
+    undone by the HTTP client's own decoders, so secrets in it can be found and redacted. A body
+    that will not decode is kept as it came."""
+    if body is None or not encoding or encoding.strip().lower() == "identity":
+        return body
+    try:
+        return httpx.Response(200, headers={"content-encoding": encoding}, content=body).read()
+    except httpx.DecodingError:
+        return body
 
 
 def _wire_payload(

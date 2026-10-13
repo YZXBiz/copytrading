@@ -286,6 +286,38 @@ async def test_provider_transport_captures_actual_serialized_wire_payloads_redac
         sink.close(timeout_seconds=5)
 
 
+@pytest.mark.parametrize("encoding", ["gzip", "deflate"])
+async def test_a_compressed_reply_is_journaled_as_the_text_it_carries(tmp_path, encoding):
+    """Servers compress replies; the wire capture sits under the client's decoding, so the journal
+    undoes the content encoding itself. Otherwise the reply is unreadable and its secrets can't be
+    found to redact."""
+    import gzip
+    import zlib
+
+    secret = "compressed-secret-0123456789"
+    body = json.dumps({"answer": secret, "kind": "commentary"}).encode()
+    wire = gzip.compress(body) if encoding == "gzip" else zlib.compress(body)
+
+    def handler(request):
+        return httpx.Response(
+            200, headers={"content-encoding": encoding}, stream=httpx.ByteStream(wire)
+        )
+
+    sink = journal_sink(tmp_path / "diagnostics", secrets=(secret,))
+    transport = DiagnosticHTTPTransport(httpx.MockTransport(handler), sink, provider="deepseek")
+    try:
+        async with httpx.AsyncClient(transport=transport) as client:
+            response = await client.post("https://api.deepseek.com/chat/completions", json={})
+        assert response.json()["kind"] == "commentary"
+        assert sink.flush(timeout_seconds=5)
+        reply = journal_events(tmp_path / "diagnostics")[-1]
+        assert reply.capture_kind == "model_response"
+        assert reply.payload["body"]["kind"] == "commentary"
+        assert secret not in json.dumps(reply.payload)
+    finally:
+        sink.close(timeout_seconds=5)
+
+
 async def test_anthropic_provider_transport_captures_sdk_wire_request_and_response(tmp_path):
     secret = "anthropic-wire-secret-123456"
     request_bodies = []
