@@ -12,8 +12,12 @@ struct EquityPlot: View {
     @Binding var selection: EquitySelection
     @Environment(\.colorSchemeContrast) private var contrast
     @ScaledMetric(relativeTo: .caption) private var valueAxisWidth = 84
-    /// The plot's width, so time marks are as fine as the room allows.
+    /// The plot's size, so time marks are as fine as the room allows and session names get a
+    /// strip of their own.
     @State private var plotWidth: Double = 800
+    @State private var plotHeight: Double = 176
+    /// The strip at the top of a day kept clear of the line for the session names.
+    private static let sessionNameStrip: Double = 28
 
     private var reference: Double { stats.reference }
     private var scale: EquityChartScale { EquityChartScale(range: range, first: stats.open.at, last: stats.last.at) }
@@ -34,6 +38,14 @@ struct EquityPlot: View {
         let high = max(stats.high.value, reference)
         let margin = max((high - low) * 0.16, 1)
         return (low - margin, high + margin)
+    }
+
+    /// The values the plot spans: a day adds a strip on top that the line never climbs into, for
+    /// the session names; the value axis marks only `valueRange`, so no mark sits in the strip.
+    private var plotRange: ClosedRange<Double> {
+        let (lower, upper) = valueRange
+        guard scale.isDay, plotHeight > Self.sessionNameStrip * 2 else { return lower...upper }
+        return lower...(upper + (upper - lower) * Self.sessionNameStrip / (plotHeight - Self.sessionNameStrip))
     }
 
     /// The value the axis tag shows: the point being read, else the latest.
@@ -71,7 +83,7 @@ struct EquityPlot: View {
                 .accessibilityHidden(true)
         }
         .chartXScale(domain: xDomain(on: scale), range: .plotDimension(startPadding: 4, endPadding: 14))
-        .chartYScale(domain: bounds.lower...bounds.upper)
+        .chartYScale(domain: plotRange)
         .chartXAxis {
             AxisMarks(values: times.map(\.x).filter { domain.contains($0) }) { value in
                 AxisTick(centered: true, length: 4, stroke: StrokeStyle(lineWidth: 1))
@@ -110,34 +122,44 @@ struct EquityPlot: View {
         .chartOverlay { proxy in
             EquityPointerLayer(proxy: proxy, scale: scale, selection: $selection, measures: true)
         }
-        .onGeometryChange(for: Double.self) {
-            $0.size.width
+        .onGeometryChange(for: CGSize.self) {
+            $0.size
         } action: {
-            plotWidth = $0 - valueAxisWidth
+            plotWidth = $0.width - valueAxisWidth
+            plotHeight = $0.height - 24
         }
     }
 
-    /// Pre-market and after hours as faint bands behind the line, each named at its top inside
-    /// the plot, so the names never share the time axis's row. A band cut by the visible span keeps
-    /// its name within the chart.
+    /// Pre-market and after hours as faint bands behind the line, each named in a strip at its top
+    /// that the line stays below, so the names never share the time axis's row or cross the line.
+    /// A band too narrow for its name stays unnamed rather than spilling past its edges.
     @ChartContentBuilder
     private func sessionBands(_ sessions: [EquityChartScale.Session], in domain: ClosedRange<Double>) -> some ChartContent {
         ForEach(sessions.filter { $0.end > domain.lowerBound && $0.start < domain.upperBound }, id: \.self) { session in
-            RectangleMark(
-                xStart: .value("From", max(session.start, domain.lowerBound)),
-                xEnd: .value("To", min(session.end, domain.upperBound))
-            )
-            .foregroundStyle(Palette.ink.opacity(0.035))
-            .annotation(position: .overlay, alignment: .top, spacing: 6, overflowResolution: .init(x: .fit(to: .chart), y: .disabled)) {
-                Text(session.name.uppercased())
-                    .font(.system(size: 9, weight: .semibold))
-                    .tracking(1)
-                    .foregroundStyle(Palette.tertiaryInk.opacity(0.8))
-                    .lineLimit(1)
-                    .fixedSize()
-            }
-            .accessibilityLabel(session.name)
+            let from = max(session.start, domain.lowerBound)
+            let to = min(session.end, domain.upperBound)
+            RectangleMark(xStart: .value("From", from), xEnd: .value("To", to))
+                .foregroundStyle(Palette.ink.opacity(0.035))
+                .annotation(position: .overlay, alignment: .top, spacing: 5) {
+                    // One line, else a word to a line, else no name.
+                    ViewThatFits(in: .horizontal) {
+                        sessionName(session.name).fixedSize()
+                        sessionName(session.name.replacingOccurrences(of: " ", with: "\n").replacingOccurrences(of: "-", with: "-\n"))
+                            .fixedSize()
+                            .multilineTextAlignment(.center)
+                        Color.clear.frame(width: 0, height: 0)
+                    }
+                    .frame(width: max(plotWidth * (to - from) / (domain.upperBound - domain.lowerBound) - 4, 0))
+                }
+                .accessibilityLabel(session.name)
         }
+    }
+
+    private func sessionName(_ name: String) -> some View {
+        Text(name.uppercased())
+            .font(.system(size: 9, weight: .semibold))
+            .tracking(0.6)
+            .foregroundStyle(Palette.tertiaryInk.opacity(0.8))
     }
 
     @ChartContentBuilder

@@ -330,6 +330,7 @@
 "Equity over the year" = "近一年账户净值";
 "Equity this month" = "本月账户净值";
 "Equity this week" = "本周账户净值";
+"Equity" = "账户净值";
 "Equity today" = "今日账户净值";
 "Estimated budget %@ · quantity %@" = "预计预算 %@ · 数量 %@";
 "Evaluate Message" = "评估消息";
@@ -758,6 +759,9 @@
 "Self-Test" = "自检";
 "Self-test %@" = "自检：%@";
 "sell" = "卖出";
+"Buy %@" = "买入 %@";
+"Shown" = "已展开";
+"Hidden" = "已收起";
 "Sell %@" = "卖出 %@";
 "Sell %@ %@" = "卖出%@股 %@";
 "Sell %@ %@ with Touch ID" = "使用 Touch ID 卖出%@股 %@";

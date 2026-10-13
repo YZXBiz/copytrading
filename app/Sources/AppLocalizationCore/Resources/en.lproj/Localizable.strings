@@ -330,6 +330,7 @@
 "Equity over the year" = "Equity over the year";
 "Equity this month" = "Equity this month";
 "Equity this week" = "Equity this week";
+"Equity" = "Equity";
 "Equity today" = "Equity today";
 "Estimated budget %@ · quantity %@" = "Estimated budget %@ · quantity %@";
 "Evaluate Message" = "Evaluate Message";
@@ -758,6 +759,9 @@
 "Self-Test" = "Self-Test";
 "Self-test %@" = "Self-test %@";
 "sell" = "sell";
+"Buy %@" = "Buy %@";
+"Shown" = "Shown";
+"Hidden" = "Hidden";
 "Sell %@" = "Sell %@";
 "Sell %@ %@" = "Sell %@ %@";
 "Sell %@ %@ with Touch ID" = "Sell %@ %@ with Touch ID";

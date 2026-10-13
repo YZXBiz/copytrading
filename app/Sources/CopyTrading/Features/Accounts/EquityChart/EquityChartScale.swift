@@ -79,6 +79,8 @@ struct EquityChartScale {
     static let dayStepsMinutes = [15, 30, 60, 120]
     /// The least room between two time marks, in points, so labels never touch.
     static let minimumTickSpacing: Double = 90
+    /// The least room between the opening bell or the close and the nearest round mark, in points.
+    static let minimumBellSpacing: Double = 70
 
     /// A day's pre-market and after-hours strips; none for longer ranges.
     @MainActor
@@ -92,8 +94,9 @@ struct EquityChartScale {
 
     /// Time labels spaced for the range and the plot's width, in the zone and language the rest
     /// of the app reads in. A day marks the opening bell and the close and the finest round step
-    /// that leaves room between labels (15, 30, or 60 minutes, then 2 hours), with AM or PM where
-    /// the language uses them; longer ranges mark days or months.
+    /// that leaves room between labels (15, 30, or 60 minutes, then 2 hours), keeping round marks
+    /// clear of the two bells, with AM or PM where the language uses them; longer ranges mark days
+    /// or months.
     @MainActor
     func ticks(in zone: TimeZone, locale: Locale, width: Double) -> [Tick] {
         var calendar = Calendar(identifier: .gregorian)
@@ -104,7 +107,7 @@ struct EquityChartScale {
             let regularWidth = max(width, 1) * (1 - Self.preMarketShare - Self.afterHoursShare)
             let pointsPerMinute = regularWidth / max(close.timeIntervalSince(open) / 60, 1)
             let step = Self.dayStepsMinutes.first { Double($0) * pointsPerMinute >= Self.minimumTickSpacing } ?? 120
-            let clear = Double(step) * 0.75 * 60
+            let clear = max(Double(step) * 0.75, Self.minimumBellSpacing / pointsPerMinute) * 60
             var marks: [Tick] = []
             let startOfDay = calendar.startOfDay(for: open)
             var minutes = Int(open.timeIntervalSince(startOfDay) / 60) / step * step + step

@@ -28,6 +28,12 @@ extension EquityHistoryWindow {
         ) ?? .now
     }
 
+    /// The chart's heading. A chosen day's date is already on the day picker beside it, so the
+    /// heading doesn't repeat it; `title` keeps the date for VoiceOver.
+    @MainActor var heading: String {
+        range == .day && day != nil ? L10n.string("Equity") : title
+    }
+
     @MainActor var title: String {
         switch range {
         case .day:
