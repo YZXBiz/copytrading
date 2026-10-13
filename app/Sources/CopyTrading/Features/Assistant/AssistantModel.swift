@@ -79,7 +79,7 @@ final class AssistantModel {
             pollTask = Task { [weak self] in await self?.poll(turn: turn, using: operations, generation: started) }
         } catch {
             guard started == generation else { return }
-            fail(L10n.string("The assistant could not start: %@", error.localizedDescription))
+            fail(L10n.string("The assistant could not start: %@", AppModel.userMessage(for: error)))
         }
     }
 
@@ -110,7 +110,7 @@ final class AssistantModel {
                 page = try await operations.assistantTurn(turnID: turn, after: after)
             } catch {
                 guard !Task.isCancelled, started == generation else { return }
-                fail(L10n.string("The assistant stopped answering: %@", error.localizedDescription))
+                fail(L10n.string("The assistant stopped answering: %@", AppModel.userMessage(for: error)))
                 return
             }
             guard !Task.isCancelled, started == generation else { return }

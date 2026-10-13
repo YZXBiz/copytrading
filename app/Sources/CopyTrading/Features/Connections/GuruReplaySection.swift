@@ -137,8 +137,7 @@ struct GuruReplaySection: View {
             do {
                 result = try await replay(route)
             } catch {
-                failure =
-                    (error as? LocalizedError)?.errorDescription ?? L10n.string("The engine could not replay this channel. Try again.")
+                failure = AppModel.userMessage(for: error)
             }
         }
     }

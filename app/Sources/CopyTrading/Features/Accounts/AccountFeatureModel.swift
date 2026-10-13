@@ -77,7 +77,7 @@ final class AccountFeatureModel {
             lastUpdatedAt = .now
         } catch {
             guard isCurrent(generation) else { return }
-            errors["read"] = error.localizedDescription
+            errors["read"] = Reason.refusal(error)
         }
     }
 
@@ -93,7 +93,7 @@ final class AccountFeatureModel {
             lastUpdatedAt = .now
         } catch {
             guard isCurrent(generation) else { return }
-            errors["read"] = error.localizedDescription
+            errors["read"] = Reason.refusal(error)
         }
     }
 
@@ -122,7 +122,7 @@ final class AccountFeatureModel {
             } catch {
                 guard isCurrent(generation) else { return }
                 histories[account.accountID] = nil
-                errors["history:\(account.accountID)"] = error.localizedDescription
+                errors["history:\(account.accountID)"] = Reason.refusal(error)
             }
         }
     }
@@ -148,7 +148,7 @@ final class AccountFeatureModel {
             errors.removeValue(forKey: "read")
         } catch {
             guard isCurrent(generation) else { return }
-            errors["read"] = error.localizedDescription
+            errors["read"] = Reason.refusal(error)
         }
     }
 
@@ -165,7 +165,7 @@ final class AccountFeatureModel {
             errors.removeValue(forKey: "read")
         } catch {
             guard isCurrent(generation) else { return }
-            errors["read"] = error.localizedDescription
+            errors["read"] = Reason.refusal(error)
         }
     }
 
@@ -239,7 +239,7 @@ final class AccountFeatureModel {
         } catch {
             errors[accountID] = L10n.string(
                 "The holdings couldn't be settled: %@. Check the broker for open orders in %@, then try again.",
-                error.localizedDescription, fix.request.symbol)
+                Reason.refusal(error), fix.request.symbol)
             return
         }
         await refresh(using: actions)
@@ -265,7 +265,7 @@ final class AccountFeatureModel {
             errors.removeValue(forKey: "feed:\(accountID)")
         } catch {
             guard isCurrent(generation) else { return }
-            errors["feed:\(accountID)"] = error.localizedDescription
+            errors["feed:\(accountID)"] = Reason.refusal(error)
         }
     }
 

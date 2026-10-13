@@ -88,7 +88,7 @@ extension DiagnosticsJournalEntry {
             case "destination_id": return (L10n.string("Destination"), value)
             case "attempt": return (L10n.string("Attempt"), value)
             case "signal_ref": return (L10n.string("Signal"), value)
-            case "payload_bytes": return (L10n.string("Payload size"), Int64(value).map(Humanize.bytes) ?? value)
+            case "payload_bytes": return (L10n.string("Payload size"), Int64(value).map { Humanize.bytes($0) } ?? value)
             case "redacted_fields": return (L10n.string("Values redacted"), value)
             default: return nil
             }

@@ -11,12 +11,12 @@ enum Reason {
     }
 
     /// An engine refusal in the owner's words: a known code is worded here, in the app's language;
-    /// anything else is shown as the engine said it.
+    /// anything else goes through `AppModel.userMessage(for:)`.
     static func refusal(_ error: Error) -> String {
         if case .remote(_, let message?) = error as? EngineContractError, known[message] != nil {
             return text(message)
         }
-        return error.localizedDescription
+        return AppModel.userMessage(for: error)
     }
 
     /// Keeps parser identifiers out of the main explanation while preserving free readable text.

@@ -158,8 +158,10 @@ enum Humanize {
         abs(NSDecimalNumber(decimal: value).doubleValue - 1) < 0.01
     }
 
-    static func bytes(_ value: Int64) -> String {
-        value.formatted(.byteCount(style: .file))
+    /// A size on disk in the app's language: "0 KB", never "Zero kB".
+    @MainActor
+    static func bytes(_ value: Int64, style: ByteCountFormatStyle.Style = .file) -> String {
+        value.formatted(.byteCount(style: style, spellsOutZero: false).locale(AppTime.locale))
     }
 
     /// Long revision hashes are only useful as short, recognizable prefixes.

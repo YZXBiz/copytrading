@@ -96,9 +96,7 @@ struct PlaybookSection: View {
                 learned = result
             } catch {
                 learned = nil
-                failure =
-                    (error as? LocalizedError)?.errorDescription
-                    ?? L10n.string("CopyTrading could not learn from this channel.")
+                failure = AppModel.userMessage(for: error)
             }
         }
     }

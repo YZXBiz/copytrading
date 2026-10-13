@@ -916,7 +916,7 @@ final class AppModel {
             diagnosticsSettings = settings
             diagnosticsSettingsWarning = nil
         } catch {
-            diagnosticsSettingsWarning = error.localizedDescription
+            diagnosticsSettingsWarning = Self.userMessage(for: error)
         }
     }
 
@@ -934,7 +934,7 @@ final class AppModel {
             diagnosticsJournalBytes = bytes
             diagnosticsJournalMessage = nil
         } catch {
-            diagnosticsJournalMessage = error.localizedDescription
+            diagnosticsJournalMessage = Self.userMessage(for: error)
         }
     }
 
@@ -2142,6 +2142,11 @@ final class AppModel {
         }
         if let error = error as? LocalizedError, let description = error.errorDescription {
             return L10n.string(description)
+        }
+        // A file or network error from macOS already reads in the Mac's own words.
+        let system = error as NSError
+        if [NSCocoaErrorDomain, NSPOSIXErrorDomain, NSURLErrorDomain].contains(system.domain) {
+            return system.localizedDescription
         }
         return L10n.string("CopyTrading could not complete that local operation.")
     }
