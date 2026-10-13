@@ -92,6 +92,7 @@ struct TradingSettingsSaveTests {
         try await checkProfileExampleReviewClientRequest(profile: profile)
         try await checkFailedActivationRestoresPriorRevision()
         try await checkLaunchStartRetriesAFailedCheck()
+        try await checkLaunchStartRetriesATimedOutRequest()
         try await checkPauseEndsLaunchStartRetries()
         try await checkAcceptedActivationWithLostResponseRemainsPending()
         try await checkPendingActivationReconcilesAfterAppReopen(configuration: configuration, secrets: credentials)
@@ -424,6 +425,24 @@ struct TradingSettingsSaveTests {
         let validations = await starter.validationCallCount()
         try check(validations >= 2, "Retry did not run the connection checks again")
         print("CopyTradingContractTests: launch start retried a failed connection check")
+    }
+
+    /// The engine reading the posts it missed can be slow to answer the first start; a request that
+    /// timed out is retried like a failed check, so copying does not stay paused until someone
+    /// notices.
+    private static func checkLaunchStartRetriesATimedOutRequest() async throws {
+        let (model, starter, directory) = try await launchStartFixture()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        await starter.setValidationActivatable(true)
+        await starter.setValidationTimesOut(1)
+        model.launchStartRetryDelays = [.milliseconds(40), .milliseconds(40), .milliseconds(40)]
+        await model.startCopyingOnLaunchIfWanted()
+        try check(model.tradingStatus?.state == .paused, "A timed out start must leave processing paused")
+        for _ in 0..<100 where model.tradingStatus?.state != .running { try await Task.sleep(for: .milliseconds(20)) }
+        try check(model.tradingStatus?.state == .running, "The launch start did not retry after the engine timed out")
+        let validations = await starter.validationCallCount()
+        try check(validations == 2, "Expected one timed out check and one retry, saw \(validations)")
+        print("CopyTradingContractTests: launch start retried a timed out request")
     }
 
     private static func checkPauseEndsLaunchStartRetries() async throws {
@@ -2992,6 +3011,7 @@ private actor RecordingTradingStarter: TradingStarting {
     private var acceptStartAndLoseResponse = false
     private var validationActivatable = true
     private var validationSuspended = false
+    private var validationTimeouts = 0
     private var validations = 0
     private var connectionChecks: [TradingConnectionCheck] = []
     private var connectionCheckFails = false
@@ -3018,6 +3038,10 @@ private actor RecordingTradingStarter: TradingStarting {
         operationEvents.append("validate")
         validated = configuration
         validations += 1
+        if validationTimeouts > 0 {
+            validationTimeouts -= 1
+            throw EngineTransportError.requestTimedOut
+        }
         if validationSuspended { try await Task.sleep(for: .seconds(30)) }
         let validationActivatable = validationActivatable && configuration != failingConfiguration
         return TradingValidation(
@@ -3274,6 +3298,8 @@ private actor RecordingTradingStarter: TradingStarting {
     func setStartFailure(_ value: Bool) { failStart = value }
     func setAcceptStartAndLoseResponse(_ value: Bool) { acceptStartAndLoseResponse = value }
     func setValidationActivatable(_ value: Bool) { validationActivatable = value }
+    /// The next `count` checks throw as an engine that does not answer in time.
+    func setValidationTimesOut(_ count: Int) { validationTimeouts = count }
     func setFailingConfiguration(_ value: TradingConfiguration?) { failingConfiguration = value }
     func setConnectionCheckFails(_ value: Bool) { connectionCheckFails = value }
     func checkedConnections() -> [TradingConnectionCheck] { connectionChecks }

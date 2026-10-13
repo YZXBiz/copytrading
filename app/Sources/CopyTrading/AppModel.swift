@@ -543,6 +543,8 @@ final class AppModel {
     /// How long the launch start waits before each retry after a failed connection check.
     @ObservationIgnored var launchStartRetryDelays: [Duration] = [.seconds(10), .seconds(30), .seconds(60)]
     @ObservationIgnored private var launchStartRetry: Task<Void, Never>?
+    /// The last start threw (the engine did not answer in time) instead of reporting failed checks.
+    @ObservationIgnored private var launchStartThrew = false
     private(set) var launchPreferences: LaunchPreferences
     @ObservationIgnored private let sleepGuard: SleepGuard
 
@@ -1448,6 +1450,7 @@ final class AppModel {
         guard !isTradingCommandPending else { return }
         isTradingCommandPending = true
         defer { isTradingCommandPending = false }
+        launchStartThrew = false
         do {
             if try tradingConfigurationStore.pendingActivation() != nil {
                 await reconcilePendingTradingActivation(using: starter)
@@ -1483,6 +1486,8 @@ final class AppModel {
             }
             await reconcilePendingTradingActivation(using: starter)
         } catch {
+            // The engine not answering in time is a failed start, which a launch start retries.
+            launchStartThrew = true
             message = Self.userMessage(for: error)
         }
     }
@@ -1734,9 +1739,10 @@ final class AppModel {
         retryLaunchStartWhileHeldBack()
     }
 
-    /// A failed check right after launch is often the network still waking up, and a paused app
-    /// nobody is watching misses trades. The launch start tries again a few times; a start the
-    /// owner makes or a pause they choose ends the retries.
+    /// A failed check right after launch is often the network still waking up, and the engine may
+    /// still be reading the posts it missed; a paused app nobody is watching misses trades. The
+    /// launch start tries again a few times, whether a check failed or the engine was slow to
+    /// answer; a start the owner makes or a pause they choose ends the retries.
     private func retryLaunchStartWhileHeldBack() {
         guard isHeldBackAtLaunch else { return }
         launchStartRetry = Task { [weak self] in
@@ -1750,7 +1756,7 @@ final class AppModel {
 
     private var isHeldBackAtLaunch: Bool {
         wantsCopyingOnLaunch && isTradingUnlocked && tradingStatus?.state == .paused
-            && tradingValidation?.report.activatable == false
+            && (tradingValidation?.report.activatable == false || launchStartThrew)
     }
 
     static func failedChecksMessage(_ report: TradingCapabilityReport) -> String {
