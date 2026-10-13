@@ -487,8 +487,15 @@ public actor EngineClient {
                 do {
                     response = try JSONDecoder().decode(EngineResponse.self, from: line)
                 } catch {
-                    failAll(EngineTransportError.malformedResponse)
-                    return
+                    // A reply the app cannot read fails the request it answers, or every waiting
+                    // request when it names none. The reader keeps going: ending here would leave
+                    // each later request to time out against an engine that is answering.
+                    if let identity = try? JSONDecoder().decode(ResponseIdentity.self, from: line) {
+                        fail(requestID: identity.requestID, with: EngineTransportError.malformedResponse)
+                    } else {
+                        failAll(EngineTransportError.malformedResponse)
+                    }
+                    continue
                 }
                 guard let continuation = pending.removeValue(forKey: response.requestID) else {
                     continue
@@ -533,4 +540,12 @@ public actor EngineClient {
 private struct PendingWrite: Sendable {
     let requestID: String
     let line: Data
+}
+
+private struct ResponseIdentity: Decodable {
+    let requestID: String
+
+    enum CodingKeys: String, CodingKey {
+        case requestID = "request_id"
+    }
 }
