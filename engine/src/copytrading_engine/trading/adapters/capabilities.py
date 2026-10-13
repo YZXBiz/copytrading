@@ -84,6 +84,24 @@ class CapabilityProbes(Protocol):
     ) -> CapabilityCheck: ...
 
 
+def _refused_keys_reason(account: AccountConfiguration, credentials: BrokerCredentials) -> str:
+    """Why keys the chosen environment refused were refused. Alpaca serves paper and live from
+    separate servers that each accept only their own keys, so keys the other server accepts (one
+    read-only account read) are that environment's keys: "broker_keys_are_paper" or
+    "broker_keys_are_live". Otherwise the keys are simply refused."""
+    other = "live" if account.environment == "paper" else "paper"
+    broker = None
+    try:
+        broker = AlpacaBroker(AlpacaCredentials(credentials.key, credentials.secret), other)
+        broker.account()
+    except Exception:  # noqa: BLE001 - refused on both servers, or unreachable
+        return "broker_auth_or_permissions_failed"
+    finally:
+        if broker is not None:
+            broker.close()
+    return f"broker_keys_are_{other}"
+
+
 def _failed(
     name: CapabilityName,
     code: str,
@@ -436,7 +454,7 @@ class NativeCapabilityProbes:
         except Exception:  # noqa: BLE001 - any client failure becomes a failed capability check
             return _failed(
                 "broker",
-                "broker_auth_or_permissions_failed",
+                _refused_keys_reason(account, credentials),
                 subject=account.id,
                 environment=account.environment,
                 adapter="alpaca_read_only",

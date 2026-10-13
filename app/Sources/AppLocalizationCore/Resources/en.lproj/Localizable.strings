@@ -1308,6 +1308,8 @@
 "Choose **Start Copying**. CopyTrading first signs in to Discord, your interpreter, and Alpaca, and reads each example the way it will read real posts." = "Choose **Start Copying**. CopyTrading first signs in to Discord, your interpreter, and Alpaca, and reads each example the way it will read real posts.";
 "If anything is marked, choose **Review…**, fix it, then choose **Start Copying** again." = "If anything is marked, choose **Review…**, fix it, then choose **Start Copying** again.";
 "New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**." = "New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**.";
+"These are paper keys. Choose Paper, or enter this account's live keys." = "These are paper keys. Choose Paper, or enter this account's live keys.";
+"These are live keys, for real money. Choose Live, or enter paper keys." = "These are live keys, for real money. Choose Live, or enter paper keys.";
 "Alpaca didn't accept these keys. Check that they are for a paper or live account as chosen." = "Alpaca didn't accept these keys. Check that they are for a paper or live account as chosen.";
 "Alpaca says this account can't trade yet. Check it on Alpaca's site." = "Alpaca says this account can't trade yet. Check it on Alpaca's site.";
 "Couldn't check this connection. Try again in a moment." = "Couldn't check this connection. Try again in a moment.";

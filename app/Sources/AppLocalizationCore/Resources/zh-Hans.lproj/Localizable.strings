@@ -1308,6 +1308,8 @@
 "Choose **Start Copying**. CopyTrading first signs in to Discord, your interpreter, and Alpaca, and reads each example the way it will read real posts." = "选择 **开始跟单**。CopyTrading 会先登录 Discord、AI 模型和 Alpaca，并按处理真实帖子的方式解析每个示例。";
 "If anything is marked, choose **Review…**, fix it, then choose **Start Copying** again." = "如有标记的问题，请选择 **检查…**，修正后再次选择 **开始跟单**。";
 "New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**." = "新账户默认关闭开仓，在 **账户** 中选择 **启用开仓** 之前不会买入任何股票。";
+"These are paper keys. Choose Paper, or enter this account's live keys." = "这是模拟盘密钥。请选择“模拟盘”，或填写这个账户的实盘密钥。";
+"These are live keys, for real money. Choose Live, or enter paper keys." = "这是实盘密钥，会动用真钱。请选择“实盘”，或填写模拟盘密钥。";
 "Alpaca didn't accept these keys. Check that they are for a paper or live account as chosen." = "Alpaca 不接受这些密钥。请确认它们属于你选择的模拟盘或实盘账户。";
 "Alpaca says this account can't trade yet. Check it on Alpaca's site." = "Alpaca 显示此账户暂时无法交易。请在 Alpaca 网站上查看。";
 "Couldn't check this connection. Try again in a moment." = "无法检查此连接。请稍后再试。";

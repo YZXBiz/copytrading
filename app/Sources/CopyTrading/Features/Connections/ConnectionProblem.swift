@@ -37,6 +37,10 @@ enum ConnectionProblem {
             return L10n.string("Couldn't reach %@. Check the API key and your connection.", service)
         case "broker_account_not_tradeable":
             return L10n.string("Alpaca says this account can't trade yet. Check it on Alpaca's site.")
+        case "broker_keys_are_paper":
+            return L10n.string("These are paper keys. Choose Paper, or enter this account's live keys.")
+        case "broker_keys_are_live":
+            return L10n.string("These are live keys, for real money. Choose Live, or enter paper keys.")
         case "broker_auth_or_permissions_failed", "broker_credentials_missing":
             return L10n.string("Alpaca didn't accept these keys. Check that they are for a paper or live account as chosen.")
         case "notification_webhook_invalid":
