@@ -894,6 +894,9 @@
 "The original message is never changed. Your correction is recorded separately." = "原始消息不会被修改。你的更正会单独记录。";
 "The payload was not kept: %@." = "未保留载荷：%@。";
 "The price check ran out before you confirmed" = "确认前，价格检查已超时";
+"The ask is %@ (bid %@)" = "卖价 %@（买价 %@）";
+"The ask is %@" = "卖价 %@";
+"%@, above your limit of %@: %@ plus your %@. It may not fill, and is cancelled if it hasn't in time." = "%@，高于你的限价 %@：%@ 加上你设的 %@。可能无法成交，到时仍未成交就会取消。";
 "The price moved above your limit" = "价格已高于你的限价";
 "The price quote was too old" = "报价已过期";
 "The price was not a valid tick" = "价格不符合最小变动单位";
@@ -2018,7 +2021,8 @@
 "Buy %@ of %@ at %@" = "买入 %@ 的 %@，价格 %@";
 "%@ %@ %@ at %@ in %@" = "%@%@股 %@，价格 %@，账户 %@";
 "%@ %@ %@ in %@" = "%@%@股 %@，账户 %@";
-"Last price %@" = "最新价 %@";
+"Ask %@" = "卖价 %@";
+"Bid %@" = "买价 %@";
 "posted %@ ago" = "%@前发布";
 "Checking" = "检查中";
 "Can't send" = "无法发送";

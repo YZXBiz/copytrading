@@ -135,6 +135,9 @@ class ManualOrderPreview(Value):
     quote: Quote | None
     fresh_price: Positive | None
     plan: OrderPlan | None
+    # The limit the order would carry, kept when a check blocks it, so the owner sees the number
+    # the fresh price was held against.
+    limit_price: Positive | None = None
     checks: tuple[ManualCheck, ...]
     reasons: tuple[Identifier, ...]
     facts_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")

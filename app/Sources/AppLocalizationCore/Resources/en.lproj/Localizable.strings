@@ -894,6 +894,9 @@
 "The original message is never changed. Your correction is recorded separately." = "The original message is never changed. Your correction is recorded separately.";
 "The payload was not kept: %@." = "The payload was not kept: %@.";
 "The price check ran out before you confirmed" = "The price check ran out before you confirmed";
+"The ask is %@ (bid %@)" = "The ask is %@ (bid %@)";
+"The ask is %@" = "The ask is %@";
+"%@, above your limit of %@: %@ plus your %@. It may not fill, and is cancelled if it hasn't in time." = "%@, above your limit of %@: %@ plus your %@. It may not fill, and is cancelled if it hasn't in time.";
 "The price moved above your limit" = "The price moved above your limit";
 "The price quote was too old" = "The price quote was too old";
 "The price was not a valid tick" = "The price was not a valid tick";
@@ -2018,7 +2021,8 @@
 "Buy %@ of %@ at %@" = "Buy %@ of %@ at %@";
 "%@ %@ %@ at %@ in %@" = "%@ %@ %@ at %@ in %@";
 "%@ %@ %@ in %@" = "%@ %@ %@ in %@";
-"Last price %@" = "Last price %@";
+"Ask %@" = "Ask %@";
+"Bid %@" = "Bid %@";
 "posted %@ ago" = "posted %@ ago";
 "Checking" = "Checking";
 "Can't send" = "Can't send";

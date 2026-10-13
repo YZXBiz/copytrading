@@ -255,6 +255,8 @@ public struct ManualOrderPreview: Codable, Equatable, Identifiable, Sendable {
     public let quote: ManualQuote?
     public let freshPrice: String?
     public let plan: ManualOrderPlan?
+    /// The limit the order would carry, kept when a check blocks it.
+    public let limitPrice: String?
     public let checks: [ManualCheck]
     public let reasons: [String]
     public let factsSHA256: String
@@ -271,6 +273,7 @@ public struct ManualOrderPreview: Codable, Equatable, Identifiable, Sendable {
         case createdAt = "created_at"
         case expiresAt = "expires_at"
         case freshPrice = "fresh_price"
+        case limitPrice = "limit_price"
         case factsSHA256 = "facts_sha256"
         case configurationSHA256 = "configuration_sha256"
     }

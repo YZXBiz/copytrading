@@ -29,6 +29,9 @@ struct ManualPreviewResult: View {
             ForEach(problems, id: \.self) { problem in
                 Callout(problem, tone: .critical)
             }
+            ForEach(warnings, id: \.self) { warning in
+                Callout(warning, tone: .caution)
+            }
         }
         .padding(.vertical, 6)
     }
@@ -44,11 +47,15 @@ struct ManualPreviewResult: View {
             ?? L10n.string("%@ %@ %@ in %@", side, quantity, plan.symbol, request.accountID)
     }
 
+    /// The fresh price and the post's age, shown whether or not the order can go.
     @MainActor private var detail: String? {
-        guard let preview, preview.plan != nil else { return nil }
-        let quote = Decimal(engine: preview.freshPrice).map { L10n.string("Last price %@", Humanize.usd($0)) }
+        guard let preview else { return nil }
+        // A buy is checked against the ask and a sell against the bid.
+        let side = preview.instruction.action == .buy ? "Ask %@" : "Bid %@"
+        let quote = Decimal(engine: preview.freshPrice).map { L10n.string(side, Humanize.usd($0)) }
         let age = Duration.seconds(preview.sourceAgeSeconds).formatted(
-            .units(allowed: [.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1))
+            .units(allowed: [.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1)
+                .locale(AppTime.locale))
         return [quote, L10n.string("posted %@ ago", age)].compactMap { $0 }.joined(separator: " · ")
     }
 
@@ -76,5 +83,29 @@ struct ManualPreviewResult: View {
             if let error = feature.commandOutcomes[confirmation.commandID]?.error { problems.append(L10n.string(error)) }
         }
         return problems
+    }
+
+    /// What the owner should know before sending, without stopping them: an ask above the buy's
+    /// limit, with the numbers, since the quote feed can sit far from the market.
+    @MainActor private var warnings: [String] {
+        guard let preview else { return [] }
+        return preview.checks.filter { $0.status == "warning" && $0.reason == "quote_above_limit" }
+            .map { _ in aboveLimit(preview) }
+    }
+
+    /// The ask, the bid, the limit and what it is made of, and what happens if it doesn't fill.
+    @MainActor private func aboveLimit(_ preview: ManualOrderPreview) -> String {
+        guard let ask = Decimal(engine: preview.freshPrice), let limit = Decimal(engine: preview.limitPrice),
+            let price = Decimal(engine: preview.instruction.price), price > 0
+        else { return Reason.text("quote_above_limit") }
+        let allowance = ((limit / price - 1) as NSDecimalNumber).doubleValue
+            .formatted(.percent.precision(.fractionLength(0...2)))
+        let quote =
+            Decimal(engine: preview.quote?.bid).map {
+                L10n.string("The ask is %@ (bid %@)", Humanize.usd(ask), Humanize.usd($0))
+            } ?? L10n.string("The ask is %@", Humanize.usd(ask))
+        return L10n.string(
+            "%@, above your limit of %@: %@ plus your %@. It may not fill, and is cancelled if it hasn't in time.",
+            quote, Humanize.usd(limit), Humanize.usd(price), allowance)
     }
 }
