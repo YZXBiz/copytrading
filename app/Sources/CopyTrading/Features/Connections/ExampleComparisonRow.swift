@@ -33,7 +33,7 @@ struct ExampleComparisonRow: View {
                     Text(
                         L10n.string(
                             "%@ %@ · fraction %@",
-                            L10n.string(Humanize.code(example.expectedAction.rawValue)), example.expectedSymbol,
+                            example.expectedAction.title, example.expectedSymbol,
                             example.expectedFraction.map(Humanize.fraction) ?? L10n.string("none")
                         )
                     )

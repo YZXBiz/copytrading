@@ -1693,7 +1693,6 @@
 "Resume by %@ to copy it." = "Resume by %@ to copy it.";
 "Resume now: after %@ it is too old to copy." = "Resume now: after %@ it is too old to copy.";
 "Allows new entries in this account, so the held buy can be copied." = "Allows new entries in this account, so the held buy can be copied.";
-"%@ tomorrow" = "%@ tomorrow";
 "Approve it by %@, when trading ends." = "Approve it by %@, when trading ends.";
 "Copy it from here by %@, when trading ends." = "Copy it from here by %@, when trading ends.";
 "Also copy calls before and after regular hours, %@, with limit orders." = "Also copy calls before and after regular hours, %@, with limit orders.";
@@ -2092,7 +2091,6 @@
 "Bought %@ of %@" = "Bought %@ of %@";
 "Tell me when a trade fills" = "Tell me when a trade fills";
 "A notification with a sound for each copied buy or sell, saying what filled and from whose post." = "A notification with a sound for each copied buy or sell, saying what filled and from whose post.";
-"Holding %@ in %@ from these calls" = "Holding %@ in %@ from these calls";
 "While you were away" = "While you were away";
 "Here's what happened" = "Here's what happened";
 "Since %@" = "Since %@";
@@ -2299,3 +2297,10 @@
 "In %@: %@" = "In %@: %@";
 "Check for posts every (seconds)" = "Check for posts every (seconds)";
 "%@ → %@" = "%@ → %@";
+"Holding %@ in 1 stock from these calls" = "Holding %@ in 1 stock from these calls";
+"Holding %@ in %lld stocks from these calls" = "Holding %@ in %lld stocks from these calls";
+"Reduce a position" = "Reduce";
+"Close a position" = "Close";
+"Deadline today: %@ %@" = "%@ %@ today";
+"Deadline tomorrow: %@ %@" = "%@ %@ tomorrow";
+"Deadline on a weekday: %@ %@ %@" = "%@ %@ %@";

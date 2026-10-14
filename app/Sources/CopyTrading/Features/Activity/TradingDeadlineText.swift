@@ -11,15 +11,15 @@ enum TradingDeadlineText {
         calendar.timeZone = zone
         let clock = deadline.formatted(
             Date.FormatStyle(date: .omitted, time: .shortened, locale: locale, calendar: calendar, timeZone: zone))
-        let time = "\(clock) \(AppTime.shortName(zone, locale: locale))"
+        let zoneName = AppTime.shortName(zone, locale: locale)
         if calendar.isDate(deadline, inSameDayAs: now) {
-            return L10n.string("%@ today", time)
+            return L10n.string("Deadline today: %@ %@", clock, zoneName)
         }
         if let tomorrow = calendar.date(byAdding: .day, value: 1, to: now), calendar.isDate(deadline, inSameDayAs: tomorrow) {
-            return L10n.string("%@ tomorrow", time)
+            return L10n.string("Deadline tomorrow: %@ %@", clock, zoneName)
         }
         let day = deadline.formatted(
             Date.FormatStyle(locale: locale, calendar: calendar, timeZone: zone).weekday(.abbreviated))
-        return "\(day) \(time)"
+        return L10n.string("Deadline on a weekday: %@ %@ %@", day, clock, zoneName)
     }
 }

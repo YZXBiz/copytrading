@@ -21,6 +21,34 @@ func runActivityCardTests() throws {
     try activityShowsOnlyTheChosenAccount()
     try aSellWithNoPriceReadsAsAtTheMarket()
     try yesterdaysPostsStopCountingAsTodayAtMidnight()
+    try theGuruPageReadsInChinese()
+}
+
+/// In 简体中文 the guru page and its examples keep no English: an ignored post, the holdings line,
+/// an example's action, and a waiting call's deadline in Chinese word order.
+@MainActor
+private func theGuruPageReadsInChinese() throws {
+    let language = AppLanguagePreference.shared
+    let original = language.language
+    defer { language.select(original) }
+    language.select(.simplifiedChinese)
+
+    let ignored = try SourceActivityBuilder().decision("ignore").destination("primary", status: "ignored").build()
+    let outcome = GuruAccountOutcome.outcomes(of: ignored, skipped: false).map(\.summary)
+    try #require(outcome == ["已忽略"], "an ignored post read \(outcome)")
+
+    let holding = L10n.string("Holding %@ in %lld stocks from these calls", "$650", Int64(3))
+    try #require(holding == "这些信号目前持有 $650，共 3 只股票", "the holdings line read \(holding)")
+
+    let actions = TradingInstructionAction.allCases.map(\.title)
+    try #require(actions == ["买入", "减仓", "清仓"], "an example's actions read \(actions)")
+
+    let deadline = WaitingCall.endOfTradingDay(of: try Date("2026-10-05T15:00:00Z", strategy: .iso8601))
+    let morning = try Date("2026-10-05T15:00:00Z", strategy: .iso8601)
+    let zone = TimeZone(identifier: "America/New_York")!
+    let chinese = Locale(identifier: "zh-Hans")
+    let copyBy = L10n.string("Copy by %@", TradingDeadlineText.text(deadline, now: morning, zone: zone, locale: chinese))
+    try #require(copyBy == "请在今天 20:00（纽约时间）前复制", "the deadline read \(copyBy)")
 }
 
 /// A count of today's posts asks about the moment it is drawn, so an app left open overnight stops

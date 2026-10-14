@@ -91,6 +91,7 @@ enum Reason {
         "provider_model_not_found": "The model service has no model by that name",
         "out_of_order": "Arrived out of order",
         "review_required": "Needs your review",
+        "ignored": "Ignored",
         "halted": "Copying was halted",
         "session_changed": "The market session changed",
         "processing_stopped": "Copying is paused",

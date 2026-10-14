@@ -1693,7 +1693,6 @@
 "Resume by %@ to copy it." = "在 %@ 前恢复即可跟单。";
 "Resume now: after %@ it is too old to copy." = "请立即恢复：%@ 之后就太旧，无法跟单。";
 "Allows new entries in this account, so the held buy can be copied." = "允许这个账户开新仓，暂缓的买入就能跟单。";
-"%@ tomorrow" = "明天 %@";
 "Approve it by %@, when trading ends." = "请在交易结束前（%@）批准。";
 "Copy it from here by %@, when trading ends." = "请在交易结束前（%@）在这里复制。";
 "Also copy calls before and after regular hours, %@, with limit orders." = "在常规交易时段前后也复制（%@），使用限价单。";
@@ -1878,7 +1877,7 @@
 "Market %@" = "市价%@";
 "Limit %@" = "限价%@";
 "%lld need you" = "%lld 条等你处理";
-"Copy by %@" = "请在 %@ 前复制";
+"Copy by %@" = "请在%@前复制";
 "Edit Limits" = "修改限额";
 "Edit Limits…" = "修改限额…";
 "Enter the trade yourself" = "自己填写交易";
@@ -2092,7 +2091,6 @@
 "Bought %@ of %@" = "买入 %@（%@）";
 "Tell me when a trade fills" = "成交时通知我";
 "A notification with a sound for each copied buy or sell, saying what filled and from whose post." = "每笔复制的买卖成交时，发出带提示音的通知，说明成交内容和来源。";
-"Holding %@ in %@ from these calls" = "这些信号目前持有 %@，共 %@";
 "While you were away" = "你离开期间";
 "Here's what happened" = "发生了这些";
 "Since %@" = "自 %@ 起";
@@ -2299,3 +2297,10 @@
 "In %@: %@" = "在 %@：%@";
 "Check for posts every (seconds)" = "检查新帖子的间隔（秒）";
 "%@ → %@" = "%@ → %@";
+"Holding %@ in 1 stock from these calls" = "这些信号目前持有 %@，共 1 只股票";
+"Holding %@ in %lld stocks from these calls" = "这些信号目前持有 %@，共 %lld 只股票";
+"Reduce a position" = "减仓";
+"Close a position" = "清仓";
+"Deadline today: %@ %@" = "今天 %@（%@）";
+"Deadline tomorrow: %@ %@" = "明天 %@（%@）";
+"Deadline on a weekday: %@ %@ %@" = "%@ %@（%@）";

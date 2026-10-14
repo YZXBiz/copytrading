@@ -63,7 +63,7 @@ struct AccountFeedRow: View {
             }
         } trailing: {
             if item.isTrade, let amount = Decimal(engine: item.amount) {
-                Text(amount, format: .currency(code: "USD"))
+                Text(Humanize.usd(amount))
                     .font(Self.figure)
                     .monospacedDigit()
                     .foregroundStyle(Palette.ink)

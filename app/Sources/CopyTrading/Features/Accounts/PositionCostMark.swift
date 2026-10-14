@@ -48,12 +48,12 @@ struct PositionCostMark: View {
             }
             .frame(height: 14)
             HStack(spacing: 4) {
-                Text(cost, format: .currency(code: "USD"))
+                Text(Humanize.usd(cost))
                     .foregroundStyle(Palette.tertiaryInk)
                 Image(systemName: "arrow.right")
                     .imageScale(.small)
                     .foregroundStyle(Palette.tertiaryInk)
-                Text(price, format: .currency(code: "USD"))
+                Text(Humanize.usd(price))
                     .foregroundStyle(Palette.ink)
             }
             .font(DesignTokens.caption)
