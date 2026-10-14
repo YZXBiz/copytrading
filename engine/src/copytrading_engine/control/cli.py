@@ -132,6 +132,11 @@ def _parser() -> argparse.ArgumentParser:
     manual_confirm.add_argument("account_id")
     manual_confirm.add_argument("--preview", dest="preview_id", required=True)
 
+    commands.add_parser(
+        "start",
+        parents=[output],
+        help="propose starting copying with Start Copying's checks (approved in the app)",
+    )
     commands.add_parser("pause", parents=[output], help="pause all processing")
 
     proposals = commands.add_parser("proposals", parents=[output], help="owner approvals")
@@ -209,6 +214,8 @@ def request_for(args: argparse.Namespace) -> wire.Request:
             return wire.ProposeManualOrder(
                 request_id=request_id, account_id=args.account_id, preview_id=args.preview_id
             )
+        case "start", _:
+            return wire.ProposeStartProcessing(request_id=request_id)
         case "pause", _:
             return wire.PauseProcessing(request_id=request_id)
         case "proposals", None:
@@ -504,6 +511,8 @@ def _render_proposal(proposal: wire.ProposalView) -> str:
             what = f"start copying into {subject.account_id}"
         case wire.RecoverySubject():
             what = f"set recovery for {subject.account_id} to {subject.preference}"
+        case wire.StartProcessingSubject():
+            what = "start copying"
         case wire.LimitsSubject():
             what = f"change {subject.account_id}: " + ", ".join(
                 f"{_words(change.field)} = {change.value}" for change in subject.changes

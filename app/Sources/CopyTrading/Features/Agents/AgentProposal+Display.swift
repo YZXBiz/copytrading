@@ -11,6 +11,8 @@ extension AgentProposal {
         case .setRecovery(let accountID, let preference):
             let title = RecoveryPreference(rawValue: preference)?.title ?? Humanize.code(preference)
             return L10n.string("In %@, after a restart: %@", accountID, title)
+        case .startProcessing:
+            return L10n.string("Start copying")
         case .setAccountLimits(let accountID, let changes):
             let parts = changes.map { "\(Self.limitTitle($0.field)) \(Self.limitValue($0.field, $0.value))" }
             return L10n.string("In %@: %@", accountID, parts.joined(separator: ", "))

@@ -34,6 +34,7 @@ from copytrading_engine.control.proposals import (
     ResumeAccount,
     SetAccountLimits,
     SetRecovery,
+    StartProcessing,
     Subject,
 )
 from copytrading_engine.execution.domain.lifecycle import (
@@ -344,6 +345,7 @@ class ControlService:
                 | wire.ProposeRecoveryPreference()
                 | wire.ProposeManualOrder()
                 | wire.ProposeSetAccountLimits()
+                | wire.ProposeStartProcessing()
             ):
                 raise ValueError("Approval-tier requests are proposed, never run directly")
 
@@ -379,6 +381,12 @@ class ControlService:
                     raise ProposalRefused("unavailable")
                 self._require_account(account_id)
                 subject = SetAccountLimits(account_id, _validated_limits(changes))
+            case wire.ProposeStartProcessing():
+                if not app_actions:
+                    raise ProposalRefused("unavailable")
+                if self._processing.status().state in ("starting", "running", "degraded"):
+                    raise ProposalRefused("conflict")  # already copying
+                subject = StartProcessing()
             case _:
                 raise ValueError("Only approval-tier requests become proposals")
         return self._book.propose(subject, caller, expires_by=expires_by)
@@ -414,8 +422,8 @@ class ControlService:
                     )
                 )
                 return _manual_outcome(outcome, account_id, proposal.command_id)
-            case SetAccountLimits():
-                raise ValueError("The app performs a limits change; the engine does not")
+            case SetAccountLimits() | StartProcessing():
+                raise ValueError("The app performs this change; the engine does not")
 
     def _require_account(self, account_id: str) -> None:
         if all(account.id != account_id for account in self._processing.status().accounts):

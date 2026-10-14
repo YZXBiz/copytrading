@@ -205,6 +205,14 @@ def build_server(client: ControlClient) -> MCPServer:
         )
 
     @server.tool(annotations=PROPOSE)
+    async def propose_start_processing() -> wire.ProposalView:
+        """Ask the owner to start copying the saved setup, with the same checks as Start Copying.
+        Does nothing until the owner approves it in the app."""
+        return await call(
+            wire.ProposeStartProcessing(request_id=new_request_id()), wire.ProposalView
+        )
+
+    @server.tool(annotations=PROPOSE)
     async def propose_set_account_limits(
         account_id: str, changes: dict[wire.LimitField, str]
     ) -> wire.ProposalView:

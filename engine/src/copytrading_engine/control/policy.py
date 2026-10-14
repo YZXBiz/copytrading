@@ -36,6 +36,7 @@ def tier(operation: Operation) -> Tier:
             | "propose_recovery_preference"
             | "propose_manual_order"
             | "propose_set_account_limits"
+            | "propose_start_processing"
         ):
             return "approval"
         case _:
