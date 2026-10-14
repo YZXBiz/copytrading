@@ -46,6 +46,17 @@ one.
   request runs only after the owner approves it, once, and that a rejected one
   changes nothing ([acceptance](acceptance.md)).
 
+- **Live Discord to Alpaca paper, two gurus:** on October 13–14, 2026, about 650
+  posts were sent through a real Discord channel pair into the released app, during
+  the overnight session and regular hours: one guru into one paper account, then
+  two gurus at once, each into its own account. A randomized battery mixed buys,
+  sells, fractions, dollar sizes, English and Chinese, chatter, pictures, options
+  and shorts, conditionals, re-posts, and bursts of up to 22 posts, and checked
+  every post: it settled, reached only its own account, was read as written, broke
+  no limit, and the accounts ended flat. One run force-killed the engine mid-burst.
+  Six faults it found were fixed (0.1.0-alpha.10); the final build's run of 169
+  posts, crash included, had none.
+
 In bounded runs with the market closed, one real interpretation produced one
 durable outcome, restarts sent no duplicate orders or notifications, Telegram
 accepted every notification, and a run that only read from the broker attempted
@@ -53,10 +64,10 @@ no orders.
 
 ## Not proven yet
 
-- Actual paper fills and a full entry-and-exit cycle during a market session,
-  over several sessions.
-- Real behavior with several broker accounts, parser accuracy across many gurus'
-  writing styles, and sustained load.
+- Paper copying across many sessions and days, and load beyond a few hundred
+  posts a day.
+- Parser accuracy across many real gurus' writing styles (the live battery's
+  posts were written for the test).
 - Signing with a Developer ID, notarization, and trusted signed updates.
 - Installation on a clean Mac, and trials with people who do not write code.
 - Real Touch ID and passcode prompts, sleep and wake, Keychain denial, and
