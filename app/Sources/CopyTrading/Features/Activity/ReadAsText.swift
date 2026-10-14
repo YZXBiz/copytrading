@@ -123,6 +123,7 @@ enum ReadAsText {
         switch share {
         case .all: L10n.string("all")
         case .fraction(let value, _): portion(value)
+        case .notGiven: L10n.string("some")
         }
     }
 

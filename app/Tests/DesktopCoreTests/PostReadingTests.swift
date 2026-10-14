@@ -9,7 +9,7 @@ private func readings() throws -> [PostReading] {
 @Test func everyReadingTheEngineWritesDecodesAndEncodesBack() throws {
     let decoded = try readings()
 
-    #expect(decoded.count == 11)
+    #expect(decoded.count == 12)
     let reencoded = try JSONDecoder().decode([PostReading].self, from: JSONEncoder().encode(decoded))
     #expect(reencoded == decoded)
 }
@@ -34,4 +34,12 @@ private func readings() throws -> [PostReading] {
     #expect(chatter == .chatter && chatter.calls.isEmpty && chatter.citedWords.isEmpty)
     let encoded = try JSONSerialization.jsonObject(with: JSONEncoder().encode(chatter)) as? [String: String]
     #expect(encoded == ["kind": "chatter"])
+}
+
+@Test func aVagueTrimStatesNoShareAndStillDecodes() throws {
+    let trim = try readings()[11]
+
+    guard case .sell(let sell) = try #require(trim.calls.first) else { Issue.record("expected a sell"); return }
+    #expect(sell.share == .notGiven && sell.share.words.isEmpty)
+    #expect(trim.citedWords == ["trim", "KO", "trim"])
 }

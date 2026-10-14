@@ -218,5 +218,32 @@
         "repeats": null
       }
     ]
+  },
+  {
+    "kind": "trade_made",
+    "summary": "Trims KO without saying how much",
+    "calls": [
+      {
+        "action": "sell",
+        "action_words": "trim",
+        "stock": {
+          "ticker": "KO",
+          "words": "KO"
+        },
+        "price": {
+          "kind": "at_market",
+          "words": "trim"
+        },
+        "share": {
+          "kind": "not_given"
+        },
+        "counts_from": null,
+        "counts_from_words": null,
+        "sell_from": {
+          "kind": "not_said"
+        },
+        "repeats": null
+      }
+    ]
   }
 ]
