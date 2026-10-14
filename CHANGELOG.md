@@ -4,7 +4,7 @@ User-visible changes for each release are recorded here. Every GitHub release's 
 
 ## 0.1.0-alpha.10 — developer preview
 
-One switch per account, Discord that survives an edited post, and a calmer account page.
+One switch per account, copying that holds up under bursts and crashes, and a calmer account page.
 
 - **One switch per account.** Each account's page has one **Start Copying** or **Stop Copying**. Start Copying starts copying if it isn't running and copies into that account; Stop Copying stops its buys, and sells of what it already copied still follow the guru. The sidebar says which accounts copy, and with two or more accounts the toolbar offers **Stop All** while copying runs. "Entries" are gone: there is no Enable, Pause, or Resume Entries any more, and a finished setup copies into every account it saved.
 - **Limits always save.** A limit changed while copying was starting used to wait as "Changed — not saved yet"; it now saves the moment the start settles, and the account page shows the new limits right away.
@@ -15,6 +15,14 @@ One switch per account, Discord that survives an edited post, and a calmer accou
 - **The day chart reads in your time.** Its hour marks and readouts use the same time zone and clock as the rest of the app (Settings → General), the opening bell and the close are marked, and no hour crowds them.
 - **Cash and buying power sit with the balance**, in the line under it, so the band under the chart holds only your limits.
 - **A start that fails says why in plain words**, such as "Copying didn't start: Discord could not be reached. Try again.", instead of an engine message.
+- **Copying comes back after a crash.** If the engine stops while copying runs, CopyTrading restarts it and starts copying again by itself, usually within half a minute; posts sent meanwhile are still copied. Before, both accounts stayed off until you pressed Start.
+- **Calls in a burst are all copied.** A buy that arrived right after another one filled could be skipped as "An open order at the broker needs your review"; several calls posted together now all trade.
+- **Up to 2,000 posts read a day.** The day's limit on reads was 200 across every guru, and a busy day sent later calls, sells included, to review. A post that isn't read now says why ("Not read: today's 2,000 model reads were used up", a picture, three failed reads) instead of asking you to review a reading that never happened.
+- **Plain exits are read for every guru.** "Out of NIO", "Closed UBER", and "Exited F" sell the whole position even for a guru with no playbook, and "Sold half SOFI" followed by "Closed SOFI" at the same price sells the rest instead of being dropped as a re-post.
+- **Sizes in words.** "Sold a third of NIO", "added a quarter position", and "two thirds" size the order; "third time" or "next quarter" don't.
+- **A sell after a new buy is a new sell.** The same "Sold all KO" posted again after the guru bought KO back sells that buy instead of being skipped as a repeat.
+- **The guru's page never blanks.** A post such as "trim some KO", which names no share, made the whole posts list fail to load; it now shows as "Sell some of KO".
+- **Copying starts at launch** even when you unlock after the engine is already up, and one reply the app can't read fails only that request, not every one after it.
 
 ## 0.1.0-alpha.9 — developer preview
 
