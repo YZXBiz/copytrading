@@ -60,7 +60,7 @@ CopyTrading is a native macOS app that reads the stock calls traders post on Dis
 
 - **Posts become exact orders.** A model you choose reads each post, and every ticker, price, and fraction must appear in the post itself, so it cannot invent a number.
 - **Your limits, per account.** Daily loss, per-order, per-symbol, and total exposure limits are checked before every copied buy. Each account has its own **Start Copying** and **Stop Copying**.
-- **Many traders, many accounts.** Each trader-to-account link has its own sizing, and paper and live accounts sit side by side.
+- **Many traders, many accounts.** Each account follows one guru and sizes its calls from that guru's full position, so several gurus copy side by side into their own accounts, paper and live together.
 - **Every position traces to its post.** Each copied buy is kept as a lot that names the post behind it, and you can sell any lot on its own. Shares you trade yourself in Alpaca are counted as yours on the next sync.
 - **Always live.** Balances, positions, and the equity curve are read from your broker even while copying is paused. Fills arrive as notifications, the menu bar shows today's change, and after time away a recap says what happened.
 - **Room to change your mind.** A sale or a confirmed copy waits a few seconds with Undo before it leaves, and a skipped call can be brought back.
@@ -74,7 +74,7 @@ Works with a dozen hosted model services, local models through Ollama, or any Op
 
 You need an Apple silicon Mac running macOS 26 or later.
 
-1. **[Download CopyTrading for macOS](https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.10/CopyTrading-0.1.0-alpha.10.dmg)** (55 MB).
+1. **[Download CopyTrading for macOS](https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-alpha.10/CopyTrading-0.1.0-alpha.10.dmg)** (57 MB).
 2. Open the DMG and drag **CopyTrading** into **Applications**.
 3. Open CopyTrading. Preview builds are not yet notarized by Apple, so the first time macOS blocks it: go to **System Settings → Privacy & Security** and choose **Open Anyway**. You only do this once.
 
@@ -116,7 +116,7 @@ A SwiftUI app supervises one local Python engine. The engine owns every decision
 
 ## Command line and agents
 
-The `copytrading` CLI and MCP server let you, a script, or a coding agent read the running app and pause it. Anything that could trade becomes a proposal you approve with Touch ID in the app.
+The `copytrading` CLI and MCP server let you, a script, or a coding agent read the running app and pause it. Anything that could trade becomes a proposal you approve with Touch ID in the app. Turn it on in **Settings → Agent Access**; the command ships inside the app at `CopyTrading.app/Contents/Helpers/copytrading`.
 
 ```console
 $ copytrading status
