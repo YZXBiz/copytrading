@@ -36,7 +36,7 @@ CopyTrading is a native macOS app that reads the stock calls traders post on Dis
 > **Developer preview.** CopyTrading has not been qualified for live trading. Start with an Alpaca paper account, and see [validation](docs/validation.md) for what has and has not been proven.
 
 <p align="center">
-  <a href="docs/assets/account.png"><img src="docs/assets/account.png" alt="An account: its balance and the day's change, the equity curve, cash and buying power, every limit under one Limits title with today's loss and what is in stocks against their caps, and each position with whose shares they are (sample data)" width="860"></a>
+  <a href="docs/assets/account.png"><img src="docs/assets/account.png" alt="A paper account that is copying, with Stop Copying: its balance, the day's change, cash and buying power on one line, the equity curve, its limits, a call waiting for you, and each position marked as from the guru or yours" width="860"></a>
 </p>
 
 <details>
@@ -44,9 +44,9 @@ CopyTrading is a native macOS app that reads the stock calls traders post on Dis
 <br>
 <table>
   <tr>
-    <td width="33%"><a href="docs/assets/guru.png"><img src="docs/assets/guru.png" alt="A guru: today's numbers and every post on one timeline, with what each account did (sample data)"></a></td>
-    <td width="33%"><a href="docs/assets/guru-sheet.png"><img src="docs/assets/guru-sheet.png" alt="A guru's settings: where they post, the account they copy into with what each call buys, and their playbook (sample data)"></a></td>
-    <td width="33%"><a href="docs/assets/connections.png"><img src="docs/assets/connections.png" alt="Connections: Discord, the model that reads posts, broker accounts, and gurus (sample data)"></a></td>
+    <td width="33%"><a href="docs/assets/guru.png"><img src="docs/assets/guru.png" alt="A guru who copies into one paper account: today's numbers and every post on one timeline, traded, waiting, or ignored"></a></td>
+    <td width="33%"><a href="docs/assets/guru-sheet.png"><img src="docs/assets/guru-sheet.png" alt="A guru's settings: where they post, the one account they copy into with what each call buys, their playbook, and an example"></a></td>
+    <td width="33%"><a href="docs/assets/connections.png"><img src="docs/assets/connections.png" alt="Connections: Discord, the model that reads posts, the optional chat filter, and two paper broker accounts, all connected"></a></td>
   </tr>
   <tr>
     <td align="center"><sub><b>A guru</b>: every post and what came of it</sub></td>
@@ -116,16 +116,22 @@ A SwiftUI app supervises one local Python engine. The engine owns every decision
 
 ## Command line and agents
 
-The `copytrading` CLI and MCP server let you, a script, or a coding agent read the running app and pause it. Anything that could trade becomes a proposal you approve with Touch ID in the app. Turn it on in **Settings → Agent Access**; the command ships inside the app at `CopyTrading.app/Contents/Helpers/copytrading`.
+The `copytrading` CLI and MCP server let you, a script, or a coding agent read the running app and pause it. Anything that could trade becomes a proposal you approve with Touch ID in the app. `copytrading accounts limits ACCOUNT --max-order-usd 300 …` changes an account's limits and `copytrading start` starts copying with Start Copying's own checks; both wait for your Touch ID in the app. Turn it on in **Settings → Agent Access**; the command ships inside the app at `CopyTrading.app/Contents/Helpers/copytrading`.
 
 ```console
 $ copytrading status
-Engine      Ready
-Processing  Running
-Accounts    paper-main  copying on, recovery manual
+Engine      running
+Processing  running
+Source      connected
+Model       ready
+Queued      0 messages, 0 signals
+Account     primary  running, copying on, recovery manual
 
-$ copytrading accounts resume paper-main
-Waiting for approval in CopyTrading: proposal p-4e1a9c, expires 16:42.
+$ copytrading accounts limits primary --max-order-usd 300
+Waiting for approval in CopyTrading: change primary: max order usd = 300. Proposal p-4e1a9c07d2b3, expires 2026-10-14 16:42:00.
+
+$ copytrading start
+Waiting for approval in CopyTrading: start copying. Proposal p-81f0c6a95e24, expires 2026-10-14 16:43:10.
 ```
 
 See [agent control](docs/agent-control.md) for the commands, permission tiers, and threat model.
