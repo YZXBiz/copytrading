@@ -22,6 +22,7 @@ from copytrading_engine.control.wire import (
     ProposalView,
     RecoverySubject,
     ResumeAccountSubject,
+    StartProcessingSubject,
 )
 from copytrading_engine.headless.config import ConfigError, load_secrets, load_setup
 from copytrading_engine.headless.engine import (
@@ -306,6 +307,8 @@ def _describe(subject: ProposalSubject) -> str:
             return f"turn entries back on in {account_id}"
         case RecoverySubject(account_id=account_id, preference=preference):
             return f"set recovery in {account_id} to {_plain(preference)}"
+        case StartProcessingSubject():
+            return "start copying"
         case LimitsSubject():
             return f"change {subject.account_id}: " + ", ".join(
                 f"{_plain(change.field)} = {change.value}" for change in subject.changes

@@ -1555,6 +1555,19 @@ final class AppModel {
         }
     }
 
+    /// Start Copying as an agent asked for and the owner approved: the button's own checks and start.
+    /// Returns nil once copying is starting or running, or a code that says why it did not.
+    func startCopyingForAgent() async -> String? {
+        guard isTradingUnlocked else { return "unavailable" }
+        guard savedTradingConfiguration != nil else { return "no_saved_setup" }
+        guard !isTradingCommandPending, !isValidatingTrading, !isActivatingTrading else { return "busy" }
+        await startTrading()
+        switch tradingStatus?.state {
+        case .running, .starting, .degraded: return nil
+        default: return tradingValidation?.report.activatable == false ? "failed_checks" : "failed"
+        }
+    }
+
     /// Limits an agent asked for and the owner approved go over the saved setup the way the account
     /// sheet's limit save does: no check, no pause. Returns nil once they took effect, or a code
     /// that says why nothing changed; unsaved edits and a start in flight are never overwritten.

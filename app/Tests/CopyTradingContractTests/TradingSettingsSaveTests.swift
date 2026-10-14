@@ -94,6 +94,7 @@ struct TradingSettingsSaveTests {
         try await checkLaunchStartRetriesAFailedCheck()
         try await checkLaunchStartRetriesATimedOutRequest()
         try await checkPauseEndsLaunchStartRetries()
+        try await checkAgentStartRunsStartCopyingsOwnChecks()
         try await checkAgentLimitChangesSaveOverTheSavedSetup()
         try await checkAgentLimitChangesNeverTouchUnsavedWork()
         try await checkEngineRestartStartsCopyingAgain()
@@ -447,6 +448,26 @@ struct TradingSettingsSaveTests {
         let validations = await starter.validationCallCount()
         try check(validations == 2, "Expected one timed out check and one retry, saw \(validations)")
         print("CopyTradingContractTests: launch start retried a timed out request")
+    }
+
+    /// An approved agent start is Start Copying: the same checks, and a failed check says so.
+    private static func checkAgentStartRunsStartCopyingsOwnChecks() async throws {
+        let (model, starter, directory) = try await launchStartFixture()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        model.setStartsCopying(false)
+        let failed = await model.startCopyingForAgent()
+        try check(failed == "failed_checks", "A failed connection check was not reported: \(failed ?? "nil")")
+        try check(model.tradingStatus?.state == .paused, "A failed check started copying")
+        await starter.setValidationActivatable(true)
+        let started = await model.startCopyingForAgent()
+        try check(started == nil, "A passing start was refused: \(started ?? "")")
+        try check(model.tradingStatus?.state == .running, "Copying did not start")
+        let locked = try await launchStartFixture()
+        defer { try? FileManager.default.removeItem(at: locked.2) }
+        locked.0.isTradingUnlocked = false
+        let refused = await locked.0.startCopyingForAgent()
+        try check(refused == "unavailable", "A locked app started: \(refused ?? "nil")")
+        print("CopyTradingContractTests: an agent's approved start ran Start Copying's checks")
     }
 
     /// An approved agent request changes the saved setup the way the account sheet's limit save

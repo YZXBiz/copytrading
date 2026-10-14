@@ -58,12 +58,23 @@ class SetAccountLimits:
     changes: tuple[tuple[str, str], ...]
 
 
-type Subject = ResumeAccount | SetRecovery | ConfirmManualOrder | SetAccountLimits
-type Kind = Literal["resume_account", "set_recovery", "confirm_manual_order", "set_account_limits"]
+@dataclass(frozen=True, slots=True)
+class StartProcessing:
+    """Start copying the saved setup; the app runs its own Start Copying checks and start."""
+
+
+type Subject = ResumeAccount | SetRecovery | ConfirmManualOrder | SetAccountLimits | StartProcessing
+type Kind = Literal[
+    "resume_account",
+    "set_recovery",
+    "confirm_manual_order",
+    "set_account_limits",
+    "start_processing",
+]
 
 # Kinds only the app can perform, because the setup file and its keys are the app's. Approving
 # one leaves it running until the app reports how it went.
-APP_PERFORMED: Final[frozenset[Kind]] = frozenset({"set_account_limits"})
+APP_PERFORMED: Final[frozenset[Kind]] = frozenset({"set_account_limits", "start_processing"})
 # How long the app has to report before the outcome is called unknown.
 APP_REPORT_WINDOW: Final = dt.timedelta(minutes=2)
 type Outcome = Literal["succeeded", "failed", "outcome_unknown"]
@@ -79,6 +90,8 @@ def kind_of(subject: Subject) -> Kind:
             return "confirm_manual_order"
         case SetAccountLimits():
             return "set_account_limits"
+        case StartProcessing():
+            return "start_processing"
 
 
 def digest(subject: Subject) -> str:

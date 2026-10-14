@@ -43,6 +43,7 @@ type Operation = Literal[
     "propose_recovery_preference",
     "propose_manual_order",
     "propose_set_account_limits",
+    "propose_start_processing",
 ]
 
 type ErrorCode = Literal[
@@ -189,6 +190,12 @@ class ProposeSetAccountLimits(RequestHeader):
     changes: Annotated[tuple[LimitChange, ...], Field(min_length=1, max_length=len(LIMIT_FIELDS))]
 
 
+class ProposeStartProcessing(RequestHeader):
+    """Start copying the saved setup, as the app's Start Copying does; the owner approves."""
+
+    operation: Literal["propose_start_processing"] = "propose_start_processing"
+
+
 class ProposeManualOrder(RequestHeader):
     operation: Literal["propose_manual_order"] = "propose_manual_order"
     account_id: AccountId
@@ -210,7 +217,8 @@ type Request = Annotated[
     | ProposeResumeAccount
     | ProposeRecoveryPreference
     | ProposeManualOrder
-    | ProposeSetAccountLimits,
+    | ProposeSetAccountLimits
+    | ProposeStartProcessing,
     Field(discriminator="operation"),
 ]
 REQUEST: Final = TypeAdapter[Request](Request)
@@ -470,8 +478,16 @@ class LimitsSubject(Wire):
     changes: tuple[LimitChange, ...]
 
 
+class StartProcessingSubject(Wire):
+    kind: Literal["start_processing"] = "start_processing"
+
+
 type ProposalSubject = Annotated[
-    ResumeAccountSubject | RecoverySubject | ManualOrderSubject | LimitsSubject,
+    ResumeAccountSubject
+    | RecoverySubject
+    | ManualOrderSubject
+    | LimitsSubject
+    | StartProcessingSubject,
     Field(discriminator="kind"),
 ]
 

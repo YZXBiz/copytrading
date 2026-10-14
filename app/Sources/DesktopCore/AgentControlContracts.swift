@@ -102,6 +102,8 @@ public struct AgentProposal: Decodable, Equatable, Identifiable, Sendable {
         case manualOrder(AgentManualOrder)
         /// New values for some of an account's settings; the app applies them over its saved setup.
         case setAccountLimits(accountID: String, changes: [AgentLimitChange])
+        /// Start copying the saved setup, with Start Copying's own checks.
+        case startProcessing
     }
 
     public struct Caller: Decodable, Equatable, Sendable {
@@ -164,6 +166,8 @@ public struct AgentProposal: Decodable, Equatable, Identifiable, Sendable {
                 accountID: try subject.decode(String.self, forKey: .accountID),
                 changes: try subject.decode([AgentLimitChange].self, forKey: .changes)
             )
+        case "start_processing":
+            self.subject = .startProcessing
         case "confirm_manual_order":
             self.subject = .manualOrder(try container.decode(AgentManualOrder.self, forKey: .subject))
         default:

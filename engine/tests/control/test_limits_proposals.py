@@ -150,3 +150,25 @@ async def test_an_unknown_account_is_not_found_and_a_server_without_the_app_cann
         "propose_set_account_limits", account_id="paper", changes=change(overnight="true")
     )
     assert await error(control, request, app_actions=False) == "unavailable"
+
+
+async def test_starting_waits_for_the_owner_then_the_app_reports():
+    control, engine, *_ = service()
+    await engine.pause()
+    proposal = await ok(control, line("propose_start_processing"))
+    assert isinstance(proposal, wire.ProposalView)
+    assert proposal.subject == wire.StartProcessingSubject()
+    running = await control.approve(proposal.proposal_id, proposal.digest)
+    assert running.state == "running"
+    assert engine.actions() == []
+    done = await control.complete(proposal.proposal_id, "failed", "failed_checks")
+    assert done.state == "failed"
+
+
+async def test_nothing_to_start_while_copying_runs_or_without_the_app():
+    control, engine, *_ = service()
+    assert await error(control, line("propose_start_processing")) == "conflict"
+    await engine.pause()
+    assert (
+        await error(control, line("propose_start_processing"), app_actions=False) == "unavailable"
+    )

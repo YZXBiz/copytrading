@@ -664,6 +664,35 @@
         ],
         "title": "ProposeSetAccountLimits",
         "type": "object"
+      },
+      "ProposeStartProcessing": {
+        "additionalProperties": false,
+        "description": "Start copying the saved setup, as the app's Start Copying does; the owner approves.",
+        "properties": {
+          "operation": {
+            "const": "propose_start_processing",
+            "default": "propose_start_processing",
+            "title": "Operation",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request_id"
+        ],
+        "title": "ProposeStartProcessing",
+        "type": "object"
       }
     },
     "discriminator": {
@@ -682,7 +711,8 @@
         "propose_manual_order": "#/$defs/ProposeManualOrder",
         "propose_recovery_preference": "#/$defs/ProposeRecoveryPreference",
         "propose_resume_account": "#/$defs/ProposeResumeAccount",
-        "propose_set_account_limits": "#/$defs/ProposeSetAccountLimits"
+        "propose_set_account_limits": "#/$defs/ProposeSetAccountLimits",
+        "propose_start_processing": "#/$defs/ProposeStartProcessing"
       },
       "propertyName": "operation"
     },
@@ -731,6 +761,9 @@
       },
       {
         "$ref": "#/$defs/ProposeSetAccountLimits"
+      },
+      {
+        "$ref": "#/$defs/ProposeStartProcessing"
       }
     ]
   },
@@ -2394,7 +2427,8 @@
             "confirm_manual_order": "#/$defs/ManualOrderSubject",
             "resume_account": "#/$defs/ResumeAccountSubject",
             "set_account_limits": "#/$defs/LimitsSubject",
-            "set_recovery": "#/$defs/RecoverySubject"
+            "set_recovery": "#/$defs/RecoverySubject",
+            "start_processing": "#/$defs/StartProcessingSubject"
           },
           "propertyName": "kind"
         },
@@ -2410,6 +2444,9 @@
           },
           {
             "$ref": "#/$defs/LimitsSubject"
+          },
+          {
+            "$ref": "#/$defs/StartProcessingSubject"
           }
         ]
       },
@@ -2638,6 +2675,19 @@
           "account_id"
         ],
         "title": "ResumeAccountSubject",
+        "type": "object"
+      },
+      "StartProcessingSubject": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "start_processing",
+            "default": "start_processing",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "title": "StartProcessingSubject",
         "type": "object"
       },
       "StatusView": {
