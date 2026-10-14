@@ -366,6 +366,13 @@ public actor EngineClient {
         return proposal
     }
 
+    /// Tell the engine how an approved change the app made itself went.
+    public func completeProposal(id: String, succeeded: Bool, code: String? = nil) async throws -> AgentProposal {
+        let result = try await request(.completeProposal(id: id, succeeded: succeeded, code: code))
+        guard case .agentProposal(let proposal) = result else { throw EngineContractError.missingResult }
+        return proposal
+    }
+
     public func rejectProposal(id: String) async throws -> AgentProposal {
         let result = try await request(.rejectProposal(id: id))
         guard case .agentProposal(let proposal) = result else { throw EngineContractError.missingResult }

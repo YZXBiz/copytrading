@@ -343,6 +343,7 @@ class ControlService:
                 wire.ProposeResumeAccount()
                 | wire.ProposeRecoveryPreference()
                 | wire.ProposeManualOrder()
+                | wire.ProposeSetAccountLimits()
             ):
                 raise ValueError("Approval-tier requests are proposed, never run directly")
 
@@ -413,6 +414,8 @@ class ControlService:
                     )
                 )
                 return _manual_outcome(outcome, account_id, proposal.command_id)
+            case SetAccountLimits():
+                raise ValueError("The app performs a limits change; the engine does not")
 
     def _require_account(self, account_id: str) -> None:
         if all(account.id != account_id for account in self._processing.status().accounts):

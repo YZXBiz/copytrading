@@ -75,11 +75,12 @@ owner / scripts / journeys ─► copytrading …  ┘   (one response        (s
 | `accounts pause ACCOUNT` | `pause_account` | Safer |
 | `accounts resume ACCOUNT` | `propose_resume_account` | Approval |
 | `accounts recovery ACCOUNT PREFERENCE` | `propose_recovery_preference` | Approval |
+| `accounts limits ACCOUNT --max-order-usd 300 --overnight true …` | `propose_set_account_limits` | Approval (the app applies it) |
 | `manual confirm ACCOUNT --preview ID` | `propose_manual_order` | Approval |
 | `schema` | — | Prints the response JSON Schema |
 
 The first version deliberately leaves out several operations:
-* **Starting processing**, because it needs Keychain secrets and the owner should read the validation report in the window.
+* **Starting processing from a stopped app**, because it needs Keychain secrets and the owner should read the validation report in the window. An account that is part of a running setup starts again with `accounts resume`.
 * **Selling a lot.** Positions list each lot and the post that bought it (below), but a lot is sold only by the owner, from Accounts, after reviewing the live quote; the app asks for Touch ID on live accounts.
 * **Corrections, ownership resolution, backup and restore, profile evaluation and self-test.** Each can join later by being given a tier.
 
@@ -111,7 +112,7 @@ Locking or quitting the app discards pending proposals.
 
 ## Proposals
 
-A proposal has a kind (`resume_account`, `set_recovery`, `confirm_manual_order`), a typed subject, a SHA-256 digest of that subject, a fixed `command_id`, and a state:
+A proposal has a kind (`resume_account`, `set_recovery`, `confirm_manual_order`, `set_account_limits`), a typed subject, a SHA-256 digest of that subject, a fixed `command_id`, and a state:
 
 ```text
 pending ──approve(digest)──► approved ──► succeeded | failed | outcome_unknown
@@ -120,6 +121,7 @@ pending ──► rejected | expired | discarded
 
 - **Expiry.** A proposal expires after 5 minutes, or earlier when its manual preview expires.
 - **Approve once.** Approval is accepted once, only while the proposal is pending, and only with a matching digest. The action runs once, under the fixed `command_id`, so a retry cannot double-submit.
+- **Changes the app performs.** `set_account_limits` changes the setup the app has saved, which the engine cannot write. Approving it leaves the proposal `running`; the app then applies the values over its saved setup exactly as the account sheet's limit save does (no check, no pause) and tells the engine how it went with `complete_proposal`. The app refuses with a code and changes nothing when you have unsaved edits (`unsaved_changes`), a start is in flight (`busy`), or the account is unknown (`not_found`). If the app never reports, the proposal ends as `outcome_unknown` (`app_did_not_report`) after two minutes. A headless server has no app, so it refuses the request as `unavailable`. The engine checks every value with the account settings model before the owner sees it, and the sheet shows each setting's value now and after. Any setting the account sheet's limits accept can be set; adding accounts, gurus, channels, and keys stays in the app, because keys must never pass through an agent.
 - **`outcome_unknown`.** Used when the action's result cannot be confirmed (for example, a broker timeout). The caller then checks with `manual show` or `events`; the fixed command ID makes that lookup exact.
 - **Limits.** One pending proposal per kind. Three rejections within 10 minutes stop new proposals for 10 minutes (`cooling_down`).
 - **Rate limit.** At most 30 control requests per 10 seconds (`busy`).

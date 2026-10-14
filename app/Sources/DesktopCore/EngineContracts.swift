@@ -614,6 +614,7 @@ enum EngineOperation: Sendable {
     case discardProposals
     case listProposals
     case approveProposal(id: String, digest: String)
+    case completeProposal(id: String, succeeded: Bool, code: String?)
     case rejectProposal(id: String)
     case agentAudit(limit: Int)
     case assistantAsk(
@@ -671,6 +672,8 @@ struct EngineRequest: Encodable, Sendable {
         case context
         case proposalID = "proposal_id"
         case digest
+        case outcome
+        case code
         case window
         case symbol
         case conversationID = "conversation_id"
@@ -836,6 +839,11 @@ struct EngineRequest: Encodable, Sendable {
             try container.encode("approve_proposal", forKey: .operation)
             try container.encode(id, forKey: .proposalID)
             try container.encode(digest, forKey: .digest)
+        case .completeProposal(let id, let succeeded, let code):
+            try container.encode("complete_proposal", forKey: .operation)
+            try container.encode(id, forKey: .proposalID)
+            try container.encode(succeeded ? "succeeded" : "failed", forKey: .outcome)
+            try container.encodeIfPresent(code, forKey: .code)
         case .rejectProposal(let id):
             try container.encode("reject_proposal", forKey: .operation)
             try container.encode(id, forKey: .proposalID)

@@ -4,6 +4,7 @@ import DesktopCore
 protocol AgentProposalOperations: Sendable {
     func agentProposals() async throws -> [AgentProposal]
     func approveProposal(id: String, digest: String) async throws -> AgentProposal
+    func completeProposal(id: String, succeeded: Bool, code: String?) async throws -> AgentProposal
     func rejectProposal(id: String) async throws -> AgentProposal
     func discardProposals() async throws -> Int
 }

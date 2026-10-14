@@ -14,12 +14,15 @@ public struct AgentRequestContext: Encodable, Equatable, Sendable {
     public let unlocked: Bool
     public let callerPID: Int32?
     public let callerPath: String?
+    /// Always true here: the app can change its own saved setup once the owner approves.
+    public let appActions: Bool
 
     public init(accessLevel: AgentAccessLevel, unlocked: Bool, callerPID: Int32?, callerPath: String?) {
         self.accessLevel = accessLevel
         self.unlocked = unlocked
         self.callerPID = callerPID
         self.callerPath = callerPath
+        self.appActions = true
     }
 
     enum CodingKeys: String, CodingKey {
@@ -27,6 +30,7 @@ public struct AgentRequestContext: Encodable, Equatable, Sendable {
         case unlocked
         case callerPID = "caller_pid"
         case callerPath = "caller_path"
+        case appActions = "app_actions"
     }
 }
 
@@ -68,6 +72,17 @@ public struct AgentManualOrder: Decodable, Equatable, Sendable {
     }
 }
 
+/// One account setting an agent asked to change, with the value as the text it sent.
+public struct AgentLimitChange: Decodable, Equatable, Sendable {
+    public let field: String
+    public let value: String
+
+    public init(field: String, value: String) {
+        self.field = field
+        self.value = value
+    }
+}
+
 /// What an agent asked for; the engine performs it only after the owner approves this digest.
 public struct AgentProposal: Decodable, Equatable, Identifiable, Sendable {
     public enum State: String, Decodable, Equatable, Sendable {
@@ -85,6 +100,8 @@ public struct AgentProposal: Decodable, Equatable, Identifiable, Sendable {
         case resumeAccount(accountID: String)
         case setRecovery(accountID: String, preference: String)
         case manualOrder(AgentManualOrder)
+        /// New values for some of an account's settings; the app applies them over its saved setup.
+        case setAccountLimits(accountID: String, changes: [AgentLimitChange])
     }
 
     public struct Caller: Decodable, Equatable, Sendable {
@@ -121,6 +138,7 @@ public struct AgentProposal: Decodable, Equatable, Identifiable, Sendable {
         case kind
         case accountID = "account_id"
         case preference
+        case changes
     }
 
     public init(from decoder: Decoder) throws {
@@ -140,6 +158,11 @@ public struct AgentProposal: Decodable, Equatable, Identifiable, Sendable {
             self.subject = .setRecovery(
                 accountID: try subject.decode(String.self, forKey: .accountID),
                 preference: try subject.decode(String.self, forKey: .preference)
+            )
+        case "set_account_limits":
+            self.subject = .setAccountLimits(
+                accountID: try subject.decode(String.self, forKey: .accountID),
+                changes: try subject.decode([AgentLimitChange].self, forKey: .changes)
             )
         case "confirm_manual_order":
             self.subject = .manualOrder(try container.decode(AgentManualOrder.self, forKey: .subject))
@@ -173,5 +196,52 @@ public struct AgentAuditEntry: Decodable, Equatable, Identifiable, Sendable {
         case tier
         case outcome
         case proposalID = "proposal_id"
+    }
+}
+
+extension TradingAccountPolicy {
+    public enum ChangeError: Error, Equatable {
+        case unknownSetting(String)
+        case badValue(String)
+    }
+
+    /// This policy with an agent's changes applied. The values are typed the way the engine's
+    /// settings model reads them, so a value it would refuse is refused here as well.
+    public func applying(_ changes: [AgentLimitChange]) throws -> TradingAccountPolicy {
+        let encoded = try JSONEncoder().encode(self)
+        guard var object = try JSONSerialization.jsonObject(with: encoded) as? [String: Any] else {
+            throw ChangeError.badValue("policy")
+        }
+        for change in changes {
+            let field = change.field
+            guard object[field] != nil else { throw ChangeError.unknownSetting(field) }
+            let text = change.value.trimmingCharacters(in: .whitespaces)
+            switch field {
+            case "extended_hours", "overnight", "copy_exits", "approve_orders":
+                guard text == "true" || text == "false" else { throw ChangeError.badValue(field) }
+                object[field] = text == "true"
+            case "max_entries_per_day", "max_signal_age_seconds", "order_timeout_seconds":
+                guard let whole = Int(text) else { throw ChangeError.badValue(field) }
+                object[field] = whole
+            case "poll_seconds":
+                guard let seconds = Double(text), seconds.isFinite else { throw ChangeError.badValue(field) }
+                object[field] = seconds
+            default:
+                guard Decimal(string: text) != nil else { throw ChangeError.badValue(field) }
+                object[field] = text
+            }
+        }
+        return try JSONDecoder().decode(
+            TradingAccountPolicy.self, from: JSONSerialization.data(withJSONObject: object))
+    }
+
+    /// One setting's value as text, in the spelling an agent's request uses.
+    public func text(of field: String) -> String? {
+        guard let encoded = try? JSONEncoder().encode(self),
+            let object = try? JSONSerialization.jsonObject(with: encoded) as? [String: Any],
+            let value = object[field]
+        else { return nil }
+        if let flag = value as? Bool { return flag ? "true" : "false" }
+        return "\(value)"
     }
 }

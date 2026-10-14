@@ -2,6 +2,26 @@ import DesktopCore
 import Foundation
 
 extension AppModel {
+    /// Whether a request touches a paper or a live account, so the sheet can say which.
+    func environment(of proposal: AgentProposal) -> TradingEnvironment? {
+        if let environment = proposal.environment { return environment }
+        guard case .setAccountLimits(let accountID, _) = proposal.subject else { return nil }
+        return savedTradingConfiguration?.accounts.first { $0.id == accountID }?.environment
+    }
+
+    /// What a limits request would change: each setting, its value now, and the value after.
+    func limitRows(of proposal: AgentProposal) -> [(title: String, now: String, after: String)] {
+        guard case .setAccountLimits(let accountID, let changes) = proposal.subject else { return [] }
+        let current = savedTradingConfiguration?.accounts.first { $0.id == accountID }?.policy
+        return changes.map { change in
+            (
+                AgentProposal.limitTitle(change.field),
+                current?.text(of: change.field).map { AgentProposal.limitValue(change.field, $0) } ?? "—",
+                AgentProposal.limitValue(change.field, change.value)
+            )
+        }
+    }
+
     /// The oldest proposal still waiting for the owner; it drives the approval sheet.
     var pendingAgentProposal: AgentProposal? {
         agentProposals.first { $0.state == .pending }
@@ -85,7 +105,15 @@ extension AppModel {
         do {
             try await confirmOwner(L10n.string("Approve: %@", proposal.summary))
             let result = try await operations.approveProposal(id: proposal.id, digest: proposal.digest)
-            agentAccessMessage = result.resultMessage
+            if result.state == .running, case .setAccountLimits(let accountID, let changes) = result.subject {
+                // Only the app can change its saved setup: do it, then tell the engine how it went.
+                let failure = await applyAgentLimitChanges(accountID: accountID, changes: changes)
+                let done = try await operations.completeProposal(
+                    id: result.id, succeeded: failure == nil, code: failure)
+                agentAccessMessage = done.resultMessage
+            } else {
+                agentAccessMessage = result.resultMessage
+            }
         } catch {
             agentAccessMessage = Self.userMessage(for: error)
         }

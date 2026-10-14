@@ -2296,3 +2296,6 @@
 "Trading activation status does not match the saved revision." = "Trading activation status does not match the saved revision.";
 "Trading credentials are unavailable in Keychain." = "Trading credentials are unavailable in Keychain.";
 "Saved trading credentials could not be read." = "Saved trading credentials could not be read.";
+"In %@: %@" = "In %@: %@";
+"Check for posts every (seconds)" = "Check for posts every (seconds)";
+"%@ → %@" = "%@ → %@";

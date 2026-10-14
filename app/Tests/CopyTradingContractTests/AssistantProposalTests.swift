@@ -97,6 +97,11 @@ private actor FakeQueue: AgentProposalOperations {
         return try proposal(id, state: "succeeded")
     }
 
+    func completeProposal(id: String, succeeded: Bool, code: String?) async throws -> AgentProposal {
+        states[id] = succeeded ? "succeeded" : "failed"
+        return try proposal(id, state: states[id] ?? "failed")
+    }
+
     func rejectProposal(id: String) async throws -> AgentProposal {
         states[id] = "rejected"
         return try proposal(id, state: "rejected")
