@@ -45,7 +45,10 @@ from copytrading_engine.host.self_test.service import SelfTestService
 from copytrading_engine.host.self_test.store import SQLiteSelfTestStore
 from copytrading_engine.host.status import EngineQueries
 from copytrading_engine.shared.sqlite import ensure_schema
-from copytrading_engine.trading.presentation.operator_models import SourceActivityPage
+from copytrading_engine.trading.presentation.operator_models import (
+    GuruDayStatsPage,
+    SourceActivityPage,
+)
 
 from ...contracts import CONTRACTS, contract
 from .builders import decode, request_line, services
@@ -85,6 +88,14 @@ class _OperatorControl:
         assert limit == 50
         fixture = contract("source-activity-response.json")
         return SourceActivityPage.model_validate_json(json.dumps(fixture["ok"]["activity"]))
+
+    async def guru_day_stats(
+        self, day_start: dt.datetime, day_end: dt.datetime
+    ) -> GuruDayStatsPage:
+        assert day_start == dt.datetime(2026, 10, 14, 7, tzinfo=UTC)
+        assert day_end == dt.datetime(2026, 10, 15, 7, tzinfo=UTC)
+        fixture = contract("guru-day-stats-response.json")
+        return GuruDayStatsPage.model_validate_json(json.dumps(fixture["ok"]["stats"]))
 
     async def account_feed(
         self, account_id: str, before_seq: int | None, limit: int
@@ -163,6 +174,8 @@ async def test_account_operator_contract_fixtures_and_exact_request_schema(store
     assert accounts == contract("account-overviews-response.json")
     activity = decode(await server.handle_line(request_line("get_source_activity", "req-activity")))
     assert activity == contract("source-activity-response.json")
+    day = decode(await server.handle_line((CONTRACTS / "guru-day-stats-request.json").read_bytes()))
+    assert day == contract("guru-day-stats-response.json")
     feed = decode(
         await server.handle_line(request_line("get_account_feed", "req-feed", account_id="paper"))
     )
@@ -204,6 +217,24 @@ async def test_account_operator_contract_fixtures_and_exact_request_schema(store
         request_line("get_accounts", "bad", before_account_id=""),
         request_line("get_accounts", "bad", before_account_id="a" * 65),
         request_line("get_source_activity", "bad", limit=True),
+        request_line(
+            "get_guru_day_stats",
+            "bad",
+            day_start="2026-10-15T07:00:00Z",
+            day_end="2026-10-14T07:00:00Z",
+        ),
+        request_line(
+            "get_guru_day_stats",
+            "bad",
+            day_start="2026-10-14T07:00:00",
+            day_end="2026-10-15T07:00:00",
+        ),
+        request_line(
+            "get_guru_day_stats",
+            "bad",
+            day_start="2026-10-01T07:00:00Z",
+            day_end="2026-10-15T07:00:00Z",
+        ),
         request_line("get_account_feed", "bad", account_id="paper", before_seq=0),
         request_line(
             "get_equity_history",

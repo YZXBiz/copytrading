@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "request_id": "req-guru-day",
+  "ok": {
+    "type": "guru_day_stats",
+    "stats": {
+      "day_start": "2026-10-14T07:00:00Z",
+      "day_end": "2026-10-15T07:00:00Z",
+      "gurus": [
+        {
+          "guru_id": "lee",
+          "posts": 104,
+          "traded": 12,
+          "read_seconds": 3.5,
+          "waiting_source_ids": ["discord:1:1427"]
+        },
+        {
+          "guru_id": "zhao",
+          "posts": 111,
+          "traded": 0,
+          "read_seconds": null,
+          "waiting_source_ids": []
+        }
+      ],
+      "unavailable_accounts": [{"account_id": "archive", "reason": "timeout"}]
+    }
+  }
+}

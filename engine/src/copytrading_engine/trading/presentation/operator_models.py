@@ -109,3 +109,34 @@ class SourceActivityPage(Value):
     rejected_items: tuple[RejectedSourceActivity, ...]
     next_before_seq: int | None = None
     unavailable_accounts: tuple[AccountUnavailable, ...] = ()
+
+
+class GuruPost(Value):
+    """One read post of a guru's: when it was posted and how long the reader took."""
+
+    source_id: str
+    guru_id: str
+    source_at: AwareDatetime
+    read_started_at: AwareDatetime | None = None
+    read_at: AwareDatetime | None = None
+
+
+class GuruDayStats(Value):
+    """One guru's numbers for a day, counted from every post the engine holds, not one page."""
+
+    guru_id: str
+    posts: int
+    #: The day's posts at least one account bought or sold on.
+    traded: int
+    #: How long the reader took per post that day, on average; None before any was read.
+    read_seconds: float | None = None
+    #: Posts of the current trading day a call of which still waits for the owner, any calendar
+    #: day; the app leaves out the ones the owner skipped, which only it knows.
+    waiting_source_ids: tuple[str, ...] = ()
+
+
+class GuruDayStatsPage(Value):
+    day_start: AwareDatetime
+    day_end: AwareDatetime
+    gurus: tuple[GuruDayStats, ...]
+    unavailable_accounts: tuple[AccountUnavailable, ...] = ()

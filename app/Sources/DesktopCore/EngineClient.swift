@@ -199,6 +199,12 @@ public actor EngineClient {
         return page
     }
 
+    public func guruDayStats(dayStart: Date, dayEnd: Date) async throws -> GuruDayStatsPage {
+        let result = try await request(.guruDayStats(dayStart: dayStart, dayEnd: dayEnd))
+        guard case .guruDayStats(let page) = result else { throw EngineContractError.missingResult }
+        return page
+    }
+
     public func evaluateHistoricalProfile(
         _ evaluation: HistoricalProfileEvaluationRequest
     ) async throws -> ProfileEvaluation {

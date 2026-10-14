@@ -1,5 +1,6 @@
 """The trading services the pipe server calls, as the protocols it depends on."""
 
+import datetime as dt
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -57,7 +58,10 @@ from copytrading_engine.trading.domain.profiles import (
 )
 from copytrading_engine.trading.domain.status import TradingStatus
 from copytrading_engine.trading.entrypoints.runtime import TradingRuntime
-from copytrading_engine.trading.presentation.operator_models import SourceActivityPage
+from copytrading_engine.trading.presentation.operator_models import (
+    GuruDayStatsPage,
+    SourceActivityPage,
+)
 
 
 class TradingLifecycle(Protocol):
@@ -88,6 +92,10 @@ class OperatorReads(Protocol):
     ) -> AccountOverviewPage: ...
 
     async def source_activity(self, before_seq: int | None, limit: int) -> SourceActivityPage: ...
+
+    async def guru_day_stats(
+        self, day_start: dt.datetime, day_end: dt.datetime
+    ) -> GuruDayStatsPage: ...
 
     async def account_feed(
         self, account_id: str, before_seq: int | None, limit: int

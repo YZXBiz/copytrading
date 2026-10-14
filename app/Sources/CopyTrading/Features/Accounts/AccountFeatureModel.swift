@@ -5,6 +5,7 @@ import Observation
 protocol AccountOperations: Sendable {
     func accounts(beforeAccountID: String?, limit: Int) async throws -> AccountOverviewPage
     func sourceActivity(beforeSeq: Int?, limit: Int) async throws -> SourceActivityPage
+    func guruDayStats(dayStart: Date, dayEnd: Date) async throws -> GuruDayStatsPage
     func accountFeed(accountID: String, beforeSeq: Int?, limit: Int) async throws -> AccountFeedPage
     func controlAccount(_ command: AccountControlCommand) async throws -> AccountControlResult
     func equityHistory(accountID: String, window: EquityHistoryWindow) async throws -> EquityHistory?
@@ -29,6 +30,9 @@ final class AccountFeatureModel {
     /// Told of each copied order that newly went out or filled, once; the app turns them into
     /// notifications.
     var onOrders: ((FillWatch.News) -> Void)?
+    /// Each guru's numbers for the owner's today, by guru, counted by the engine from every post
+    /// of the day; `activity` holds only the newest pages.
+    private(set) var guruDays: [String: GuruDayStats] = [:]
     private(set) var unavailableAccounts: [AccountUnavailable] = []
     private(set) var nextActivityCursor: Int?
     /// Each account's feed, newest first, and where its next older page starts.
@@ -73,6 +77,7 @@ final class AccountFeatureModel {
             activity = page.items
             nextActivityCursor = page.nextBeforeSeq
             recordUnavailable(page.unavailableAccounts)
+            try await readGuruDays(using: actions, generation: generation)
             errors.removeValue(forKey: "read")
             lastUpdatedAt = .now
         } catch {
@@ -89,12 +94,25 @@ final class AccountFeatureModel {
             let page = try await actions.sourceActivity(beforeSeq: nil, limit: 25)
             guard isCurrent(generation) else { return }
             activity = Self.merged(page.items, into: activity)
+            try await readGuruDays(using: actions, generation: generation)
             errors.removeValue(forKey: "read")
             lastUpdatedAt = .now
         } catch {
             guard isCurrent(generation) else { return }
             errors["read"] = Reason.refusal(error)
         }
+    }
+
+    /// Each guru's numbers from the start of the owner's today to its end, in the zone chosen in
+    /// Settings.
+    private func readGuruDays(using actions: any AccountOperations, generation: UUID, now: Date = .now) async throws {
+        let calendar = AppTime.calendar
+        let start = calendar.startOfDay(for: now)
+        let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start.addingTimeInterval(86_400)
+        let page = try await actions.guruDayStats(dayStart: start, dayEnd: end)
+        guard isCurrent(generation) else { return }
+        guruDays = Dictionary(page.gurus.map { ($0.guruID, $0) }, uniquingKeysWith: { first, _ in first })
+        recordUnavailable(page.unavailableAccounts)
     }
 
     /// The newest page in place of what it covers, followed by the older posts already loaded.
@@ -299,6 +317,7 @@ final class AccountFeatureModel {
         nextAccountCursor = nil
         loadedAccountPageCount = 0
         activity = []
+        guruDays = [:]
         nextActivityCursor = nil
         unavailableAccounts = []
         feeds = [:]

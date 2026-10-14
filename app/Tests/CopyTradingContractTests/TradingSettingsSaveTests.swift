@@ -2013,6 +2013,32 @@ struct TradingSettingsSaveTests {
         try check(page.items.first?.accountID == "paper", "EngineClient did not decode account page")
         try check(page.nextBeforeAccountID == "paper", "EngineClient did not decode account cursor")
         print("CopyTradingContractTests: account page request and cursor matched shared wire fixtures")
+
+        let dayRequest =
+            try JSONSerialization.jsonObject(
+                with: Data(contentsOf: contracts.appending(path: "guru-day-stats-request.json"))
+            ) as? [String: Any]
+        let dayTransport = AccountPageTransport(
+            responseFixture: try Data(contentsOf: contracts.appending(path: "guru-day-stats-response.json")))
+        let day = try await EngineClient(transport: dayTransport).guruDayStats(
+            dayStart: try Date("2026-10-14T07:00:00Z", strategy: .iso8601),
+            dayEnd: try Date("2026-10-15T07:00:00Z", strategy: .iso8601))
+        guard let dayLine = await dayTransport.sentRequest(),
+            var sentDay = try JSONSerialization.jsonObject(with: dayLine) as? [String: Any]
+        else {
+            throw ContractFailure("Guru day client sent no JSON request")
+        }
+        sentDay["request_id"] = "req-guru-day"
+        try check(
+            NSDictionary(dictionary: sentDay).isEqual(to: dayRequest ?? [:]),
+            "Swift guru day request differs from its shared fixture: \(sentDay)"
+        )
+        try check(
+            day.gurus.map(\.guruID) == ["lee", "zhao"] && day.gurus[0].posts == 104
+                && day.gurus[0].waitingSourceIDs == ["discord:1:1427"] && day.gurus[1].readSeconds == nil
+                && day.unavailableAccounts.map(\.accountID) == ["archive"],
+            "EngineClient did not decode the guru day"
+        )
     }
 
     /// A holdings question becomes one answer the owner confirms: copied shares the broker still
@@ -2710,6 +2736,14 @@ private actor RecordingAccountActions: AccountOperations {
         return value
     }
 
+    func guruDayStats(dayStart: Date, dayEnd: Date) throws -> GuruDayStatsPage {
+        let response = try JSONDecoder().decode(EngineResponse.self, from: fixture("guru-day-stats-response.json"))
+        guard case .guruDayStats(let value) = try response.successValue() else {
+            throw ContractFailure("Guru day fixture type changed")
+        }
+        return value
+    }
+
     func accountFeed(accountID: String, beforeSeq: Int?, limit: Int) throws -> AccountFeedPage {
         let response = try JSONDecoder().decode(
             EngineResponse.self, from: fixture("account-feed-response.json")
@@ -2808,6 +2842,16 @@ private actor SuspendedAccountActions: AccountOperations {
         return try decoded("source-activity-response.json", as: SourceActivityPage.self) {
             guard case .sourceActivity(let value) = try $0.successValue() else {
                 throw ContractFailure("Activity fixture type changed")
+            }
+            return value
+        }
+    }
+
+    func guruDayStats(dayStart: Date, dayEnd: Date) async throws -> GuruDayStatsPage {
+        try await suspendIfRequested("guruDays")
+        return try decoded("guru-day-stats-response.json", as: GuruDayStatsPage.self) {
+            guard case .guruDayStats(let value) = try $0.successValue() else {
+                throw ContractFailure("Guru day fixture type changed")
             }
             return value
         }

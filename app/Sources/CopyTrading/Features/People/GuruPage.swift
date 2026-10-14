@@ -34,8 +34,10 @@ struct GuruPage: View {
                         destinations: GuruDestinationsText.text(guru, in: model.savedTradingConfiguration),
                         edit: edit)
                     if let feed {
-                        GuruStatsStrip(stats: feed.stats)
-                            .padding(.top, 36)
+                        GuruStatsStrip(
+                            stats: GuruStats(day: feature.guruDays[guruID], skipped: model.skippedCalls.contains)
+                        )
+                        .padding(.top, 36)
                         GuruHoldingsLine(guruID: guruID, accounts: feature.accounts)
                             .padding(.top, 20)
                         GuruFeedList(days: feed.days, guruName: guru?.name ?? guruID, selection: $selectedID)

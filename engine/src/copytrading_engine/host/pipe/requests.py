@@ -1,9 +1,19 @@
 """The engine pipe's request contract: one model per operation the app may send."""
 
+import datetime as dt
 from collections.abc import Awaitable, Callable
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, StrictInt, TypeAdapter
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    SecretStr,
+    StrictInt,
+    TypeAdapter,
+    model_validator,
+)
 
 from copytrading_engine.assistant.service import AskContext
 from copytrading_engine.control.service import ControlContext
@@ -174,6 +184,21 @@ class GetSourceActivityRequest(PipeRequest):
     operation: Literal["get_source_activity"]
     before_seq: StrictInt | None = Field(default=None, ge=1)
     limit: StrictInt = Field(default=50, ge=1, le=100)
+
+
+class GetGuruDayStatsRequest(PipeRequest):
+    """Each guru's numbers for the owner's day, from its start up to its end in their zone."""
+
+    operation: Literal["get_guru_day_stats"]
+    day_start: AwareDatetime
+    day_end: AwareDatetime
+
+    @model_validator(mode="after")
+    def _one_day(self) -> GetGuruDayStatsRequest:
+        # A day is at most 25 hours, on the night the clocks go back.
+        if not dt.timedelta(0) < self.day_end - self.day_start <= dt.timedelta(hours=25):
+            raise ValueError("The day must end after it starts, within a day")
+        return self
 
 
 class EvaluateHistoricalProfileRequest(PipeRequest):
@@ -391,6 +416,7 @@ RequestType = Annotated[
     | ResolveOwnershipRequest
     | GetAccountsRequest
     | GetSourceActivityRequest
+    | GetGuruDayStatsRequest
     | EvaluateHistoricalProfileRequest
     | ReviewProfileExamplesRequest
     | LearnGuruPlaybookRequest

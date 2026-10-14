@@ -15,7 +15,7 @@ from copytrading_engine.execution.presentation.operator_views import (
 )
 from copytrading_engine.shared.raw_message import RawMessage
 from copytrading_engine.shared.signals import Instruction
-from copytrading_engine.trading.presentation.operator_models import SourceActivityPage
+from copytrading_engine.trading.presentation.operator_models import GuruPost, SourceActivityPage
 
 
 class ChannelHistory(Protocol):
@@ -37,6 +37,8 @@ class OperatorEvidence(Protocol):
         limit: int,
         destinations: dict[str, tuple[DestinationView, ...]],
     ) -> SourceActivityPage: ...
+
+    def guru_posts(self, database: Path, *, since: dt.datetime) -> tuple[GuruPost, ...]: ...
 
     def retained_account(
         self, path: Path, *, before_seq: int | None = None, limit: int = 50
