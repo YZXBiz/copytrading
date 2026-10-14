@@ -29,9 +29,8 @@ struct GuruHoldingsLine: View {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text(
                     L10n.string(
-                        "Holding %@ in %@ from these calls",
-                        cost.formatted(.currency(code: "USD").precision(.fractionLength(0))),
-                        Humanize.count(stocks, "stock"))
+                        stocks == 1 ? "Holding %@ in 1 stock from these calls" : "Holding %@ in %lld stocks from these calls",
+                        cost.formatted(.currency(code: "USD").precision(.fractionLength(0))), Int64(stocks))
                 )
                 .foregroundStyle(Palette.secondaryInk)
                 if cost > 0 {

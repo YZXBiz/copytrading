@@ -40,7 +40,7 @@ struct ExampleEditorSection: View {
             SheetRow(title: L10n.string("Expected action")) {
                 SheetChoices(
                     label: L10n.string("Expected action"),
-                    choices: TradingInstructionAction.allCases.map { ($0, Humanize.code($0.rawValue)) },
+                    choices: TradingInstructionAction.allCases.map { ($0, $0.title) },
                     selection: $example.expectedAction, identifier: "example.action")
             }
             Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 0) {

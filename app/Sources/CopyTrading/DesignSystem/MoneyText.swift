@@ -26,7 +26,7 @@ struct MoneyText: View {
     @ViewBuilder private var content: some View {
         switch style {
         case .amount:
-            Text(value, format: amountFormat)
+            Text(value.formatted(amountFormat))
                 .font(font)
                 .monospacedDigit()
                 .contentTransition(.numericText(value: value.doubleValue))
@@ -37,7 +37,7 @@ struct MoneyText: View {
                         .imageScale(.small)
                         .fontWeight(.semibold)
                 }
-                Text(value, format: .currency(code: "USD").sign(strategy: .always(showZero: false)))
+                Text(value.formatted(.currency(code: "USD").sign(strategy: .always(showZero: false))))
                     .contentTransition(.numericText(value: value.doubleValue))
             }
             .font(font)
