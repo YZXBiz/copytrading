@@ -34,7 +34,7 @@ from copytrading_engine.shared.reading import (
     TradeMade,
 )
 
-PROMPT_VERSION = "stock-reading-v6"
+PROMPT_VERSION = "stock-reading-v7"
 
 # Chinese characters and ASCII letters both count as Unicode word characters.
 # Match complete numeric tokens and bound English words by ASCII letters so

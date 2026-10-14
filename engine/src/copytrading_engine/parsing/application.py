@@ -136,13 +136,40 @@ def _without_repeats(
         earlier = by_ref.get(call.repeats) if call.repeats is not None else None
         # A sell is never a re-post of the buy it sells, whatever the reader says, and a call
         # after the guru traded the other side of that stock is a new call however it reads.
-        if earlier is None or not same_side(earlier, call) or _traded_since(earlier, call, recent):
+        if (
+            earlier is None
+            or not same_side(earlier, call)
+            or not _same_terms(earlier, call)
+            or _traded_since(earlier, call, recent)
+        ):
             kept.append(call)
         elif (at - earlier.at).total_seconds() > window * 60:
             return reading, "review"
     if not kept:
         return reading, "ignore"
     return reading.model_copy(update={"calls": tuple(kept)}), None
+
+
+def _same_terms(earlier: RecentCall, call: r.Buy | r.Sell) -> bool:
+    """A re-post states the earlier call's price and size again; "Closed SOFI" after "Sold half
+    SOFI" at the same price is the rest of the position, a new call whatever the reader says.
+    Terms the post leaves out, or the earlier call doesn't record, don't count against it."""
+    if isinstance(call.price, r.Exact) and earlier.price is not None:
+        if call.price.value != earlier.price:
+            return False
+    if isinstance(call, r.Sell):
+        match call.share:
+            case r.All():
+                return earlier.action == "close"
+            case r.Fraction(value=value):
+                return earlier.action == "reduce" and earlier.fraction == value
+            case _:
+                return True
+    if isinstance(call.size, r.Fraction):
+        return earlier.fraction == call.size.value
+    if isinstance(call.size, r.NotGiven):
+        return earlier.fraction is None
+    return True
 
 
 def _traded_since(
