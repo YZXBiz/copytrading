@@ -106,6 +106,9 @@ final class AppModel {
     var isAgentRelayListening = false
     var isChangingAgentAccess = false
     var agentProposals: [AgentProposal] = []
+    /// Requests already announced, so each one is said once. The real app sets `announceAgentRequest`.
+    @ObservationIgnored var announcedProposalIDs: Set<String> = []
+    @ObservationIgnored var announceAgentRequest: (AgentProposal) -> Void = { _ in }
     var agentAudit: [AgentAuditEntry] = []
     var agentAccessMessage: String?
     var isUnlockingTrading = false

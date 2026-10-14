@@ -97,6 +97,12 @@ extension AppModel {
     func refreshAssistantProposals() async {
         guard let operations = agentProposalOperations() else { return }
         agentProposals = (try? await operations.agentProposals()) ?? agentProposals
+        for proposal in agentProposals
+        where proposal.state == .pending && !AgentCallerName.isAssistant(proposal.requestedBy.path)
+            && announcedProposalIDs.insert(proposal.id).inserted
+        {
+            announceAgentRequest(proposal)
+        }
     }
 
     /// Perform what an agent asked for, after a fresh Touch ID or password check.

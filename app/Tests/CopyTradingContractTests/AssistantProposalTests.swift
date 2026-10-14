@@ -5,6 +5,7 @@ import Foundation
 func runAssistantProposalTests() async throws {
     try await decidingAnAssistantProposalClearsTheSheetWithAgentAccessOff()
     try await lockingDropsProposalsWithAgentAccessOff()
+    try await aWaitingAgentRequestIsAnnouncedOnce()
     try await lockingStopsTheAssistantBeforeDiscardingProposals()
     try await anEngineExitForgetsTheConversationAndProposals()
     try theApprovalSheetNamesTheAssistant()
@@ -137,6 +138,19 @@ private func decidingAnAssistantProposalClearsTheSheetWithAgentAccessOff() async
     guard let second = model.pendingAgentProposal else { throw ProposalFailure(description: "The second proposal vanished") }
     await model.rejectAgentProposal(second)
     try verifyProposal(model.pendingAgentProposal == nil, "Rejecting left the sheet up")
+}
+
+/// The sheet lives inside the window, so a waiting request is also said as a notification, once.
+@MainActor
+private func aWaitingAgentRequestIsAnnouncedOnce() async throws {
+    final class Announced { var ids: [String] = [] }
+    let announced = Announced()
+    let model = try await unlockedModel(FakeQueue(pending: ["p-1", "p-2"]))
+    model.announceAgentRequest = { announced.ids.append($0.id) }
+    await model.refreshAssistantProposals()
+    await model.refreshAssistantProposals()
+    try verifyProposal(
+        announced.ids.sorted() == ["p-1", "p-2"], "Each waiting request should be announced once: \(announced.ids)")
 }
 
 @MainActor
