@@ -36,7 +36,7 @@ CopyTrading 是一款原生 macOS 应用。它读取交易者在 Discord 上发�
 > **开发者预览版。** CopyTrading 尚未通过实盘交易的资格验证。请先使用 Alpaca 模拟盘账户；已验证和尚未验证的内容见 [validation](docs/validation.md)。
 
 <p align="center">
-  <a href="docs/assets/zh/account.png"><img src="docs/assets/zh/account.png" alt="账户：余额与当日变化、净值曲线、现金和购买力，“限额”标题下的今日亏损、股票持仓及各项上限，每笔持仓都注明归属（示例数据）" width="860"></a>
+  <a href="docs/assets/zh/account.png"><img src="docs/assets/zh/account.png" alt="正在跟单的模拟盘账户和“停止跟单”按钮：余额、当日变化，同一行的现金和购买力，净值曲线，各项限额，一条等你处理的喊单，以及注明来自信号源还是你自有的每笔持仓" width="860"></a>
 </p>
 
 <details>
@@ -44,9 +44,9 @@ CopyTrading 是一款原生 macOS 应用。它读取交易者在 Discord 上发�
 <br>
 <table>
   <tr>
-    <td width="33%"><a href="docs/assets/zh/guru.png"><img src="docs/assets/zh/guru.png" alt="信号源：今日数据和时间线上的每条帖子，以及每个账户的处理结果（示例数据）"></a></td>
-    <td width="33%"><a href="docs/assets/zh/guru-sheet.png"><img src="docs/assets/zh/guru-sheet.png" alt="信号源设置：在哪里发帖、跟单到哪个账户及每种信号买多少，以及操作指南（示例数据）"></a></td>
-    <td width="33%"><a href="docs/assets/zh/connections.png"><img src="docs/assets/zh/connections.png" alt="连接：Discord、读取帖子的 AI 模型、券商账户和信号源（示例数据）"></a></td>
+    <td width="33%"><a href="docs/assets/zh/guru.png"><img src="docs/assets/zh/guru.png" alt="跟单到一个模拟盘账户的信号源：今日数据，以及时间线上的每条帖子：已成交、等你决定或已忽略"></a></td>
+    <td width="33%"><a href="docs/assets/zh/guru-sheet.png"><img src="docs/assets/zh/guru-sheet.png" alt="信号源设置：发帖频道、跟单到的那一个账户及每种信号买多少、操作指南和示例"></a></td>
+    <td width="33%"><a href="docs/assets/zh/connections.png"><img src="docs/assets/zh/connections.png" alt="连接：Discord、读取帖子的 AI 模型、可选的闲聊过滤，以及两个已连接的模拟盘券商账户"></a></td>
   </tr>
   <tr>
     <td align="center"><sub><b>信号源</b>：每条帖子及其结果</sub></td>
@@ -116,16 +116,22 @@ make app
 
 ## 命令行与编程助手
 
-`copytrading` 命令行工具和 MCP 服务器让你、脚本或编程助手读取正在运行的应用，并可以暂停它。任何可能触发交易的操作都会变成一条提议，要在应用里用 Touch ID 批准。先在 **设置 → 智能体访问** 中打开它；命令随应用附带，位于 `CopyTrading.app/Contents/Helpers/copytrading`。
+`copytrading` 命令行工具和 MCP 服务器让你、脚本或编程助手读取正在运行的应用，并可以暂停它。任何可能触发交易的操作都会变成一条提议，要在应用里用 Touch ID 批准。`copytrading accounts limits ACCOUNT --max-order-usd 300 …` 修改账户限额，`copytrading start` 按“开始跟单”同样的检查开始跟单；两者都要等你在应用里用 Touch ID 批准。先在 **设置 → 智能体访问** 中打开它；命令随应用附带，位于 `CopyTrading.app/Contents/Helpers/copytrading`。
 
 ```console
 $ copytrading status
-Engine      Ready
-Processing  Running
-Accounts    paper-main  copying on, recovery manual
+Engine      running
+Processing  running
+Source      connected
+Model       ready
+Queued      0 messages, 0 signals
+Account     primary  running, copying on, recovery manual
 
-$ copytrading accounts resume paper-main
-Waiting for approval in CopyTrading: proposal p-4e1a9c, expires 16:42.
+$ copytrading accounts limits primary --max-order-usd 300
+Waiting for approval in CopyTrading: change primary: max order usd = 300. Proposal p-4e1a9c07d2b3, expires 2026-10-14 16:42:00.
+
+$ copytrading start
+Waiting for approval in CopyTrading: start copying. Proposal p-81f0c6a95e24, expires 2026-10-14 16:43:10.
 ```
 
 命令、权限等级和威胁模型见 [agent control](docs/agent-control.md)（英文）。
