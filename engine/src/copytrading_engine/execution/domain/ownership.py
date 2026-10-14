@@ -8,6 +8,7 @@ from typing import Literal, Self
 from pydantic import AwareDatetime, Field, model_validator
 
 from copytrading_engine.execution.domain.market import BrokerOrder, Position
+from copytrading_engine.execution.domain.order_lifecycle import OrderStatus
 from copytrading_engine.execution.domain.orders import OrderRecord
 from copytrading_engine.execution.domain.values import Identifier, Money, Quantity, Value
 
@@ -143,15 +144,46 @@ def account_activity_reason(
     known_by_id = {order.client_id: order for order in known_open_orders}
     if any(
         (saved := known_by_id.get(observed.client_order_id)) is None
-        or observed.symbol != saved.symbol
-        or observed.side != saved.side
-        or observed.qty != saved.qty
-        or (saved.broker_id is not None and observed.id != saved.broker_id)
-        or (
-            observed.position_intent is not None
-            and observed.position_intent != saved.position_intent
-        )
+        or not _same_order(observed, saved)
         for observed in open_orders
     ):
         return "unresolved_account_order"
     return None
+
+
+# What only the broker reports: an order the app aborted or never sent is not settled.
+_BROKER_SETTLED = frozenset(
+    {
+        OrderStatus.FILLED,
+        OrderStatus.CANCELED,
+        OrderStatus.EXPIRED,
+        OrderStatus.REPLACED,
+        OrderStatus.REJECTED,
+    }
+)
+
+
+def still_open(
+    open_orders: tuple[BrokerOrder, ...], orders: tuple[OrderRecord, ...]
+) -> tuple[BrokerOrder, ...]:
+    """The broker's open orders, less the app's own that the broker already reported settled.
+
+    The open-order list can trail a fill or cancel the broker has reported: in a burst, a buy
+    planned just after another fills still sees that one listed as open."""
+    settled = {order.client_id: order for order in orders if order.status in _BROKER_SETTLED}
+    return tuple(
+        observed
+        for observed in open_orders
+        if (saved := settled.get(observed.client_order_id)) is None
+        or not _same_order(observed, saved)
+    )
+
+
+def _same_order(observed: BrokerOrder, saved: OrderRecord) -> bool:
+    return (
+        observed.symbol == saved.symbol
+        and observed.side == saved.side
+        and observed.qty == saved.qty
+        and (saved.broker_id is None or observed.id == saved.broker_id)
+        and (observed.position_intent is None or observed.position_intent == saved.position_intent)
+    )

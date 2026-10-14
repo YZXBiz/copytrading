@@ -6,6 +6,7 @@ from decimal import Decimal
 import pytest
 from pydantic import ValidationError
 
+from copytrading_engine.execution.adapters.alpaca.models import decode_broker_order
 from copytrading_engine.execution.application.engine import CopyEngine
 from copytrading_engine.execution.domain.order_lifecycle import OrderStatus
 from copytrading_engine.execution.domain.progress import Skipped
@@ -630,3 +631,49 @@ def test_uncertain_market_exit_is_reconciled_without_duplicate_submission(system
     deliver(restarted, event("exit", "reduce", "27", "25"))
     assert broker.calls == 2
     assert restarted.ledger.owned("ABC") == 2
+
+
+def _broker_still_lists_open(broker, client_id, **changes):
+    """Alpaca's open-order list trailing a fill it already reported."""
+    stale = broker.orders[client_id] | {"status": "new", "filled_qty": "0"} | changes
+    listed = broker.open_orders
+    broker.open_orders = lambda: (*listed(), decode_broker_order(stale))
+
+
+def _buy(id, symbol, price, at):
+    message = event(id, price=price, timestamp=at)
+    message["instructions"][0]["symbol"] = symbol
+    message["evidence"] = [evidence(message["instructions"][0])]
+    return message
+
+
+@pytest.mark.parametrize("symbol", ["DEF", "ABC"])
+def test_a_buy_right_after_a_fill_is_sent_while_the_broker_still_lists_that_order(system, symbol):
+    """In a burst, the next call is planned while the order before it, already filled, can still
+    be on the broker's open list: that is the app's own settled order, not someone else's."""
+    engine, broker, _ = system
+    deliver(engine, event())
+    [client_id] = broker.orders
+    assert engine.ledger.order(client_id).status is OrderStatus.FILLED
+    _broker_still_lists_open(broker, client_id)
+
+    later = NOW + dt.timedelta(seconds=2)
+    deliver(engine, _buy("2", symbol, "26", later), later)
+
+    assert broker.calls == 2
+    assert broker.holdings[symbol] > 0
+
+
+def test_a_listed_order_that_is_not_the_filled_one_still_holds_buys(system):
+    engine, broker, _ = system
+    deliver(engine, event())
+    [client_id] = broker.orders
+    _broker_still_lists_open(broker, client_id, qty="5")
+
+    later = NOW + dt.timedelta(seconds=2)
+    deliver(engine, _buy("2", "DEF", "26", later), later)
+
+    assert broker.calls == 1
+    assert engine.ledger.message("discord:demo:2").parts == (
+        Skipped(reason="unresolved_account_order"),
+    )

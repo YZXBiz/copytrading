@@ -31,7 +31,7 @@ from copytrading_engine.execution.domain.ledger_state import MessageRecord
 from copytrading_engine.execution.domain.market import Account, CalendarDay
 from copytrading_engine.execution.domain.order_lifecycle import OrderStatus, is_cancelable
 from copytrading_engine.execution.domain.orders import OrderPlan, OrderRecord, OrderRequest
-from copytrading_engine.execution.domain.ownership import account_activity_reason
+from copytrading_engine.execution.domain.ownership import account_activity_reason, still_open
 from copytrading_engine.execution.domain.positions import PositionAudit, compare_positions
 from copytrading_engine.execution.domain.pricing import (
     SELL_FLOOR_QUOTE_MAX_AGE_SECONDS,
@@ -363,7 +363,7 @@ class CopyEngine:
         if account.id != self.ledger.account_id:
             raise RuntimeError("Broker account identity changed")
         positions = positions_read.result()
-        broker_open = open_orders_read.result()
+        broker_open = still_open(open_orders_read.result(), self.ledger.orders())
         activity_reason = account_activity_reason(
             broker_open,
             self.pending(),
@@ -497,7 +497,7 @@ class CopyEngine:
         actual = sum((p.qty for p in positions if p.symbol == s.symbol), ZERO)
         if actual != self.ledger.expected_position(s.symbol):
             return TradeDecision(None, "position_mismatch")
-        final_open = final_open_read.result()
+        final_open = still_open(final_open_read.result(), self.ledger.orders())
         activity_reason = account_activity_reason(
             final_open,
             self.pending(),
