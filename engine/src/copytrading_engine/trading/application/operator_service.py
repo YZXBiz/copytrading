@@ -3,17 +3,20 @@
 import asyncio
 import datetime as dt
 import logging
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from copytrading_engine.execution.application.manual_commands import (
     manual_command_page_from_snapshot,
 )
 from copytrading_engine.execution.application.ports import ACCOUNT_OPEN_REFUSALS
+from copytrading_engine.execution.domain.ledger_state import HELD_FOR_OWNER
 from copytrading_engine.execution.domain.manual_commands import (
     ManualCommandPage,
     ManualCommandPageRequest,
 )
 from copytrading_engine.execution.domain.market import EquityHistory, HistoryWindow, Quote
+from copytrading_engine.execution.domain.sessions import ET, trade_date
 from copytrading_engine.execution.presentation.account_feed import AccountFeedPage
 from copytrading_engine.execution.presentation.operator_views import (
     AccountEventPage,
@@ -36,9 +39,43 @@ from copytrading_engine.trading.application.paused_reader import (
     ReadKeys,
     ReadOnlyBroker,
 )
-from copytrading_engine.trading.presentation.operator_models import SourceActivityPage
+from copytrading_engine.trading.presentation.operator_models import (
+    GuruDayStats,
+    GuruDayStatsPage,
+    SourceActivityPage,
+)
 
 log = logging.getLogger(__name__)
+
+# Orders the owner placed by hand for a post; a call they entered themselves no longer waits.
+_OWNER_ENTRY = "manual-"
+
+
+@dataclass
+class _GuruTally:
+    posts: int = 0
+    traded: int = 0
+    reads: list[float] = field(default_factory=list)
+    waiting: list[str] = field(default_factory=list)
+
+
+def _traded(view: DestinationView) -> bool:
+    """The account bought or sold on the post: an order of it filled, in whole or in part."""
+    return any(order.status == "filled" or order.filled_quantity > 0 for order in view.orders)
+
+
+def _waits(views: list[DestinationView]) -> bool:
+    """A call of the post waits for the owner (ADR-0007): an account holds it for them, and they
+    have not entered the trade by hand."""
+    held = any(
+        view.status == "review_required"
+        or any(outcome in HELD_FOR_OWNER for outcome in view.instruction_outcomes)
+        for view in views
+    )
+    entered = any(
+        order.client_id.startswith(_OWNER_ENTRY) for view in views for order in view.orders
+    )
+    return held and not entered
 
 
 def _no_broker(keys: ReadKeys) -> ReadOnlyBroker:
@@ -245,51 +282,7 @@ class OperatorQueryService:
             ),
             timeout=2,
         )
-        ids = {item.source_id for item in page.items}
-        by_source: dict[str, list[DestinationView]] = {key: [] for key in ids}
-        paths = self._access.retained_paths()
-
-        async def read_destinations(
-            account_id: str, database: Path
-        ) -> dict[str, DestinationView] | AccountUnavailable:
-            supervisor = self._access.supervisors().get(account_id)
-            if (
-                supervisor is not None
-                and supervisor.owner is not None
-                and supervisor.state != "failed"
-            ):
-                live = await bounded_owner_read(supervisor.owner.destination_views(ids))
-                if not isinstance(live, OwnerUnavailable):
-                    return live
-            try:
-                _, snapshot, _ = await self._access.retained_account(database, timeout=2)
-            except TimeoutError:
-                return AccountUnavailable(account_id=account_id, reason="timeout")
-            except Exception as exc:  # noqa: BLE001 - one unreadable ledger must not hide others
-                log.warning("destination_read_failed id=%s type=%s", account_id, type(exc).__name__)
-                return AccountUnavailable(account_id=account_id, reason="read_failed")
-            try:
-                events = await asyncio.wait_for(
-                    asyncio.to_thread(self._access.evidence.retained_message_events, database, ids),
-                    timeout=2,
-                )
-            except Exception as exc:  # noqa: BLE001 - the timeline is extra; the outcome stands
-                log.warning("timeline_read_failed id=%s type=%s", account_id, type(exc).__name__)
-                events = ()
-            return destination_views(snapshot, ids, events)
-
-        results = await asyncio.gather(
-            *(
-                read_destinations(account_id, database)
-                for account_id, database in sorted(paths.items())
-            )
-        )
-        unavailable = tuple(result for result in results if isinstance(result, AccountUnavailable))
-        for views in results:
-            if isinstance(views, AccountUnavailable):
-                continue
-            for source_id, view in views.items():
-                by_source[source_id].append(view)
+        by_source, unavailable = await self._destinations({item.source_id for item in page.items})
         configuration = self._access.configuration()
         if configuration is not None:
             accounts = {account.id: account for account in configuration.accounts}
@@ -336,6 +329,108 @@ class OperatorQueryService:
                     for item in page.items
                 ),
             }
+        )
+
+    async def _destinations(
+        self, ids: set[str]
+    ) -> tuple[dict[str, list[DestinationView]], tuple[AccountUnavailable, ...]]:
+        """What each account did with each of these posts, from its owner or its ledger."""
+        by_source: dict[str, list[DestinationView]] = {key: [] for key in ids}
+        paths = self._access.retained_paths()
+
+        async def read_destinations(
+            account_id: str, database: Path
+        ) -> dict[str, DestinationView] | AccountUnavailable:
+            supervisor = self._access.supervisors().get(account_id)
+            if (
+                supervisor is not None
+                and supervisor.owner is not None
+                and supervisor.state != "failed"
+            ):
+                live = await bounded_owner_read(supervisor.owner.destination_views(ids))
+                if not isinstance(live, OwnerUnavailable):
+                    return live
+            try:
+                _, snapshot, _ = await self._access.retained_account(database, timeout=2)
+            except TimeoutError:
+                return AccountUnavailable(account_id=account_id, reason="timeout")
+            except Exception as exc:  # noqa: BLE001 - one unreadable ledger must not hide others
+                log.warning("destination_read_failed id=%s type=%s", account_id, type(exc).__name__)
+                return AccountUnavailable(account_id=account_id, reason="read_failed")
+            try:
+                events = await asyncio.wait_for(
+                    asyncio.to_thread(self._access.evidence.retained_message_events, database, ids),
+                    timeout=2,
+                )
+            except Exception as exc:  # noqa: BLE001 - the timeline is extra; the outcome stands
+                log.warning("timeline_read_failed id=%s type=%s", account_id, type(exc).__name__)
+                events = ()
+            return destination_views(snapshot, ids, events)
+
+        results = await asyncio.gather(
+            *(
+                read_destinations(account_id, database)
+                for account_id, database in sorted(paths.items())
+            )
+        )
+        unavailable = tuple(result for result in results if isinstance(result, AccountUnavailable))
+        for views in results:
+            if isinstance(views, AccountUnavailable):
+                continue
+            for source_id, view in views.items():
+                if source_id in by_source:
+                    by_source[source_id].append(view)
+        return by_source, unavailable
+
+    async def guru_day_stats(
+        self, day_start: dt.datetime, day_end: dt.datetime, now: dt.datetime | None = None
+    ) -> GuruDayStatsPage:
+        """Each guru's posts, trades and read time from `day_start` up to `day_end`, and the
+        posts of the current trading day still waiting for the owner, counted from every post
+        the engine holds."""
+        now = now or dt.datetime.now(dt.UTC)
+        trading_day = trade_date(now)
+        # The trading day began at 20:00 New York time the evening before.
+        trading_start = dt.datetime.combine(
+            trading_day - dt.timedelta(days=1), dt.time(20), tzinfo=ET
+        )
+        posts = await asyncio.wait_for(
+            asyncio.to_thread(
+                self._access.evidence.guru_posts,
+                self._access.application_database,
+                since=min(day_start, trading_start),
+            ),
+            timeout=2,
+        )
+        by_source, unavailable = await self._destinations({post.source_id for post in posts})
+        tallies: dict[str, _GuruTally] = {}
+        for post in posts:
+            tally = tallies.setdefault(post.guru_id, _GuruTally())
+            views = by_source.get(post.source_id, [])
+            if day_start <= post.source_at < day_end:
+                tally.posts += 1
+                if any(_traded(view) for view in views):
+                    tally.traded += 1
+                if post.read_started_at is not None and post.read_at is not None:
+                    tally.reads.append(
+                        max(0.0, (post.read_at - post.read_started_at).total_seconds())
+                    )
+            if trade_date(post.source_at) == trading_day and _waits(views):
+                tally.waiting.append(post.source_id)
+        return GuruDayStatsPage(
+            day_start=day_start,
+            day_end=day_end,
+            gurus=tuple(
+                GuruDayStats(
+                    guru_id=guru_id,
+                    posts=tally.posts,
+                    traded=tally.traded,
+                    read_seconds=sum(tally.reads) / len(tally.reads) if tally.reads else None,
+                    waiting_source_ids=tuple(tally.waiting),
+                )
+                for guru_id, tally in sorted(tallies.items())
+            ),
+            unavailable_accounts=unavailable,
         )
 
     async def list_manual_commands(self, request: ManualCommandPageRequest) -> ManualCommandPage:

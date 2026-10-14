@@ -2,7 +2,7 @@ import DesktopCore
 import Foundation
 
 /// One guru's posts for their page: newest first, grouped by day, each with how it was read and
-/// what each account did, and the numbers counted from them.
+/// what each account did.
 @MainActor
 struct GuruFeed: Equatable {
     struct Entry: Equatable, Identifiable {
@@ -22,7 +22,6 @@ struct GuruFeed: Equatable {
     }
 
     let days: [Day]
-    let stats: GuruStats
 
     init(
         guruID: String, activity: [SourceActivity], skipped: (String) -> Bool, now: Date = .now,
@@ -43,7 +42,6 @@ struct GuruFeed: Equatable {
             }
         }
         self.days = days
-        stats = GuruStats(entries: entries, calendar: calendar, now: now)
     }
 
     /// The guru's posts, newest first; ties keep the engine's newest sequence first.

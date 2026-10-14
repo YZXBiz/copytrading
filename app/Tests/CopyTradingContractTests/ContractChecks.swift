@@ -59,7 +59,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
         case .backupRestoreNotes: try await runBackupRestoreNoteTests()
         case .learnedExamples: try runLearnedExamplesTests()
         case .updateOffer: try runUpdateOfferTests()
-        case .guruFeed: try runGuruFeedTests()
+        case .guruFeed: try await runGuruFeedTests()
         case .manualInstructionGuess: try runManualInstructionGuessTests()
         case .fillWatch: try runFillWatchTests()
         case .positionStory: try runPositionStoryTests()

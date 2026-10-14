@@ -5,10 +5,10 @@ import Testing
 
 /// A guru's page: only their posts, newest first by day, and what each account did with each one.
 @MainActor
-func runGuruFeedTests() throws {
+func runGuruFeedTests() async throws {
     try aGurusPageShowsOnlyTheirPostsNewestFirstByDay()
     try eachAccountSaysWhatItDidInAFewWords()
-    try theStatsCountTodayAndWhatWaits()
+    try await theStripAndSidebarCountTheEnginesWholeDay()
 }
 
 private let losAngeles = TimeZone(identifier: "America/Los_Angeles")!
@@ -104,32 +104,37 @@ private func eachAccountSaysWhatItDidInAFewWords() throws {
     try #require(smallTalk.chatFilterVerdict == "gpt-6-luna · 98% chat · skipped", "a skipped post's verdict was wrong")
 }
 
+/// On a busy day the app has loaded only the newest page of posts across every guru; the strip
+/// and the sidebar say what the engine counted over the owner's whole day instead.
 @MainActor
-private func theStatsCountTodayAndWhatWaits() throws {
-    let filled: [String: Any] = [
-        "client_id": "c1", "symbol": "SOUN", "side": "buy", "status": "filled", "quantity": "1",
-        "filled_quantity": "1", "limit_price": "5.85", "average_fill_price": "5.85", "broker_id": "b1",
-        "created_at": "2026-10-05T14:30:01Z", "instruction_index": 0,
-    ]
-    let activity = [
-        try post(1, guru: "zhao", at: "2026-10-05T14:30:00Z")
-            .read(started: "2026-10-05T14:30:01Z", finished: "2026-10-05T14:30:03Z", delivered: "2026-10-05T14:30:03Z")
-            .destination("primary", status: "done", outcomes: ["order_linked"], orders: [filled]).build(),
-        try post(2, guru: "zhao", at: "2026-10-05T14:40:00Z")
-            .read(started: "2026-10-05T14:40:01Z", finished: "2026-10-05T14:40:05Z", delivered: "2026-10-05T14:40:05Z")
-            .destination("primary", status: "done", outcomes: ["approval_required"]).build(),
-        try post(3, guru: "zhao", at: "2026-10-02T16:00:00Z")
-            .destination("primary", status: "done", outcomes: ["order_linked"], orders: [filled]).build(),
-    ]
+private func theStripAndSidebarCountTheEnginesWholeDay() async throws {
+    let actions = GuruDayActions()
+    let feature = AccountFeatureModel()
+    feature.authorizePrivateEvidence()
 
-    let stats = GuruFeed(guruID: "zhao", activity: activity, skipped: { _ in false }, now: try date(morning), calendar: calendar)
-        .stats
+    await feature.refresh(using: actions)
 
-    try #require(stats.postsToday == 2 && stats.tradedToday == 1, "today counted \(stats)")
-    try #require(stats.waiting == 1, "waiting counted \(stats.waiting)")
-    try #require(stats.averageRead == 3, "reads averaged \(stats.averageRead ?? -1)")
+    let window = await actions.window
+    let start = AppTime.calendar.startOfDay(for: .now)
+    try #require(window?.start == start, "the day began at \(String(describing: window?.start))")
+    try #require(
+        window?.end == AppTime.calendar.date(byAdding: .day, value: 1, to: start),
+        "the day ended at \(String(describing: window?.end))")
+    try #require(feature.activity.count == 1, "the loaded page held \(feature.activity.count) posts")
 
-    let skipped = GuruFeed(
-        guruID: "zhao", activity: activity, skipped: { $0 == "discord:1:2" }, now: try date(morning), calendar: calendar)
-    try #require(skipped.stats.waiting == 0, "a skipped call still waited")
+    let lee = GuruStats(day: feature.guruDays["lee"], skipped: { _ in false })
+    try #require(lee.postsToday == 104 && lee.tradedToday == 12 && lee.averageRead == 3.5, "Lee's strip read \(lee)")
+    try #require(lee.waiting == 1 && lee.sidebarDetail == "1 need you", "Lee's sidebar read \(lee.sidebarDetail)")
+
+    let skipped = GuruStats(day: feature.guruDays["lee"], skipped: { $0 == "discord:1:1427" })
+    try #require(skipped.waiting == 0, "a skipped call still waited")
+    try #require(skipped.sidebarDetail == "104 posts today", "the sidebar read \(skipped.sidebarDetail)")
+
+    let zhao = GuruStats(day: feature.guruDays["zhao"], skipped: { _ in false })
+    try #require(zhao.postsToday == 111 && zhao.averageRead == nil, "Zhao's strip read \(zhao)")
+
+    let quiet = GuruStats(day: feature.guruDays["nobody"], skipped: { _ in false })
+    try #require(
+        quiet.postsToday == 0 && quiet.waiting == 0 && quiet.averageRead == nil && quiet.sidebarDetail == "Quiet today",
+        "a guru with no posts read \(quiet.sidebarDetail)")
 }

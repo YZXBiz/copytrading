@@ -294,6 +294,7 @@ public enum EngineResult: Equatable, Sendable {
     case ownershipResolution(OwnershipResolution)
     case accounts(AccountOverviewPage)
     case sourceActivity(SourceActivityPage)
+    case guruDayStats(GuruDayStatsPage)
     case profileEvaluation(ProfileEvaluation)
     case profileExampleReview(ProfileExampleReview)
     case learnedPlaybook(LearnedGuruPlaybook)
@@ -402,6 +403,7 @@ public struct EngineSuccess: Decodable, Equatable, Sendable {
         case resolution
         case accounts
         case activity
+        case stats
         case feed
         case correction
         case preview
@@ -466,6 +468,8 @@ public struct EngineSuccess: Decodable, Equatable, Sendable {
             result = .accounts(try container.decode(AccountOverviewPage.self, forKey: .accounts))
         case "source_activity":
             result = .sourceActivity(try container.decode(SourceActivityPage.self, forKey: .activity))
+        case "guru_day_stats":
+            result = .guruDayStats(try container.decode(GuruDayStatsPage.self, forKey: .stats))
         case "profile_evaluation":
             result = .profileEvaluation(try container.decode(ProfileEvaluation.self, forKey: .evaluation))
         case "profile_example_review":
@@ -592,6 +596,8 @@ enum EngineOperation: Sendable {
     case resolveOwnership(accountID: String, resolution: OwnershipResolutionRequest)
     case accounts(beforeAccountID: String?, limit: Int)
     case sourceActivity(beforeSeq: Int?, limit: Int)
+    /// Each guru's numbers for the owner's day, from its start up to its end.
+    case guruDayStats(dayStart: Date, dayEnd: Date)
     case evaluateHistoricalProfile(HistoricalProfileEvaluationRequest)
     case reviewProfileExamples(ProfileExampleReviewRequest)
     case learnGuruPlaybook(GuruPlaybookLearningRequest)
@@ -644,6 +650,8 @@ struct EngineRequest: Encodable, Sendable {
         case validationToken = "validation_token"
         case activationID = "activation_id"
         case beforeSeq = "before_seq"
+        case dayStart = "day_start"
+        case dayEnd = "day_end"
         case beforeAccountID = "before_account_id"
         case limit
         case accountID = "account_id"
@@ -755,6 +763,10 @@ struct EngineRequest: Encodable, Sendable {
             try container.encode("get_source_activity", forKey: .operation)
             try container.encodeIfPresent(beforeSeq, forKey: .beforeSeq)
             try container.encode(limit, forKey: .limit)
+        case .guruDayStats(let dayStart, let dayEnd):
+            try container.encode("get_guru_day_stats", forKey: .operation)
+            try container.encode(dayStart.formatted(.iso8601), forKey: .dayStart)
+            try container.encode(dayEnd.formatted(.iso8601), forKey: .dayEnd)
         case .evaluateHistoricalProfile(let evaluation):
             try container.encode("evaluate_historical_profile", forKey: .operation)
             try container.encode(evaluation.sourceID, forKey: .sourceID)

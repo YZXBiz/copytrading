@@ -28,6 +28,7 @@ from copytrading_engine.parsing.sqlite import record_owner_correction
 from copytrading_engine.shared.raw_message import RawMessage
 from copytrading_engine.shared.signals import Instruction, StockSignal
 from copytrading_engine.trading.presentation.operator_models import (
+    GuruPost,
     RejectedSourceActivity,
     SourceActivity,
     SourceActivityPage,
@@ -235,6 +236,43 @@ def source_page(
     )
 
 
+# Stored times keep their own offset, which shifts their text by at most this much from UTC.
+_OFFSET_SLACK = dt.timedelta(hours=14)
+
+
+def guru_posts(database: Path, *, since: dt.datetime) -> tuple[GuruPost, ...]:
+    """Every read post a guru made from `since` on, oldest first."""
+    if not database.exists():
+        return ()
+    with closing(sqlite3.connect(database.as_uri() + "?mode=ro", uri=True)) as db:
+        if not _has_table(db, "source_captures") or not _has_table(db, "parser_inbox"):
+            return ()
+        # The text comparison only narrows the scan; each time is compared exactly below.
+        rows = db.execute(
+            "SELECT capture.id,capture.source_at,parser.result,parser.enqueued_at,"
+            "parser.completed_at FROM source_captures capture "
+            "JOIN parser_inbox parser ON parser.id=capture.id "
+            "WHERE parser.result IS NOT NULL AND capture.source_at >= ? ORDER BY capture.seq",
+            ((since - _OFFSET_SLACK).astimezone(dt.UTC).replace(tzinfo=None).isoformat(),),
+        ).fetchall()
+    posts = []
+    for source_id, source_at, parsed, read_started_at, read_at in rows:
+        posted = _moment(source_at)
+        guru_id = StockSignal.model_validate_json(parsed).guru_id
+        if posted is None or posted < since or guru_id is None:
+            continue
+        posts.append(
+            GuruPost(
+                source_id=source_id,
+                guru_id=guru_id,
+                source_at=posted,
+                read_started_at=_moment(read_started_at),
+                read_at=_moment(read_at),
+            )
+        )
+    return tuple(posts)
+
+
 def _rejected_fallback_text(serialized: str) -> str:
     try:
         payload = json.loads(serialized)
@@ -437,6 +475,9 @@ class SQLiteOperatorEvidence:
         destinations: dict[str, tuple[DestinationView, ...]],
     ) -> SourceActivityPage:
         return source_page(database, before_seq=before_seq, limit=limit, destinations=destinations)
+
+    def guru_posts(self, database: Path, *, since: dt.datetime) -> tuple[GuruPost, ...]:
+        return guru_posts(database, since=since)
 
     def retained_account(
         self, path: Path, *, before_seq: int | None = None, limit: int = 50
