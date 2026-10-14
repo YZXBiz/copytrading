@@ -23,7 +23,12 @@ READ_TOOLS = {
     "get_proposal",
 }
 PAUSE_TOOLS = {"pause_processing", "pause_account"}
-PROPOSE_TOOLS = {"propose_resume_account", "propose_recovery_preference", "propose_manual_order"}
+PROPOSE_TOOLS = {
+    "propose_resume_account",
+    "propose_recovery_preference",
+    "propose_manual_order",
+    "propose_set_account_limits",
+}
 
 
 @asynccontextmanager

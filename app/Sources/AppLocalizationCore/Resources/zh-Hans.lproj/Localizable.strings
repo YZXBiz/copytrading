@@ -2296,3 +2296,6 @@
 "Trading activation status does not match the saved revision." = "交易启动状态与已保存的设置不一致。";
 "Trading credentials are unavailable in Keychain." = "钥匙串中没有可用的交易密钥。";
 "Saved trading credentials could not be read." = "无法读取已保存的交易密钥。";
+"In %@: %@" = "在 %@：%@";
+"Check for posts every (seconds)" = "检查新帖子的间隔（秒）";
+"%@ → %@" = "%@ → %@";

@@ -16,6 +16,7 @@ from pydantic import ValidationError
 
 from copytrading_engine.control.client import server_state_root
 from copytrading_engine.control.wire import (
+    LimitsSubject,
     ManualOrderSubject,
     ProposalSubject,
     ProposalView,
@@ -305,6 +306,10 @@ def _describe(subject: ProposalSubject) -> str:
             return f"turn entries back on in {account_id}"
         case RecoverySubject(account_id=account_id, preference=preference):
             return f"set recovery in {account_id} to {_plain(preference)}"
+        case LimitsSubject():
+            return f"change {subject.account_id}: " + ", ".join(
+                f"{_plain(change.field)} = {change.value}" for change in subject.changes
+            )
         case ManualOrderSubject():
             price = f" at ${subject.limit_price}" if subject.limit_price else " at market"
             return (

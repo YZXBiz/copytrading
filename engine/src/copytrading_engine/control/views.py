@@ -13,6 +13,7 @@ from copytrading_engine.control.proposals import (
     Proposal,
     ResumeAccount,
     Running,
+    SetAccountLimits,
     SetRecovery,
 )
 from copytrading_engine.execution.domain.lifecycle import AccountControlResult
@@ -275,12 +276,22 @@ def account_control(result: AccountControlResult) -> wire.AccountControlView:
 
 
 def proposal(item: Proposal) -> wire.ProposalView:
-    subject: wire.ResumeAccountSubject | wire.RecoverySubject | wire.ManualOrderSubject
+    subject: (
+        wire.ResumeAccountSubject
+        | wire.RecoverySubject
+        | wire.ManualOrderSubject
+        | wire.LimitsSubject
+    )
     match item.subject:
         case ResumeAccount(account_id=account_id):
             subject = wire.ResumeAccountSubject(account_id=account_id)
         case SetRecovery(account_id=account_id, preference=preference):
             subject = wire.RecoverySubject(account_id=account_id, preference=preference)
+        case SetAccountLimits(account_id=account_id, changes=changes):
+            subject = wire.LimitsSubject(
+                account_id=account_id,
+                changes=tuple(wire.LimitChange(field=f, value=v) for f, v in changes),  # ty: ignore[invalid-argument-type]
+            )
         case ConfirmManualOrder() as order:
             subject = wire.ManualOrderSubject(
                 account_id=order.account_id,

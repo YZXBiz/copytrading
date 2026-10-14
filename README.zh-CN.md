@@ -122,7 +122,7 @@ make app
 $ copytrading status
 Engine      Ready
 Processing  Running
-Accounts    paper-main  entries enabled, recovery manual
+Accounts    paper-main  copying on, recovery manual
 
 $ copytrading accounts resume paper-main
 Waiting for approval in CopyTrading: proposal p-4e1a9c, expires 16:42.

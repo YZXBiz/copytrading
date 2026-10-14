@@ -106,6 +106,9 @@ final class AppModel {
     var isAgentRelayListening = false
     var isChangingAgentAccess = false
     var agentProposals: [AgentProposal] = []
+    /// Requests already announced, so each one is said once. The real app sets `announceAgentRequest`.
+    @ObservationIgnored var announcedProposalIDs: Set<String> = []
+    @ObservationIgnored var announceAgentRequest: (AgentProposal) -> Void = { _ in }
     var agentAudit: [AgentAuditEntry] = []
     var agentAccessMessage: String?
     var isUnlockingTrading = false
@@ -1549,6 +1552,43 @@ final class AppModel {
             limitsSaveRefused = true
             message = Self.userMessage(for: error)
             return false
+        }
+    }
+
+    /// Limits an agent asked for and the owner approved go over the saved setup the way the account
+    /// sheet's limit save does: no check, no pause. Returns nil once they took effect, or a code
+    /// that says why nothing changed; unsaved edits and a start in flight are never overwritten.
+    func applyAgentLimitChanges(accountID: String, changes: [AgentLimitChange]) async -> String? {
+        syncSetupDraftWithSaved()
+        guard isTradingUnlocked, let saved = savedTradingConfiguration, let tradingConfigurationStore,
+            let control: (any TradingStarting) = tradingStarter ?? engineActions
+        else { return "unavailable" }
+        guard !hasUnsavedSetupChanges else { return "unsaved_changes" }
+        guard !isTradingCommandPending, !isValidatingTrading, !isActivatingTrading, pendingTradingActivation == nil,
+            (try? tradingConfigurationStore.pendingActivation()) == nil
+        else { return "busy" }
+        guard let index = saved.accounts.firstIndex(where: { $0.id == accountID }) else { return "not_found" }
+        var edited = saved
+        do {
+            edited.accounts[index].policy = try saved.accounts[index].policy.applying(changes)
+        } catch {
+            return "invalid_request"
+        }
+        guard edited != saved else { return nil }
+        isTradingCommandPending = true
+        defer { isTradingCommandPending = false }
+        do {
+            try Self.validateTradingConfiguration(edited)
+            let revision = try await control.updateAccountLimits(configuration: edited)
+            try tradingConfigurationStore.saveLimits(configuration: edited, revision: revision)
+            savedTradingConfiguration = edited
+            tradingValidation = nil
+            syncSetupDraftWithSaved()
+            limitsSavedAccountIDs.insert(accountID)
+            message = nil
+            return nil
+        } catch {
+            return "failed"
         }
     }
 

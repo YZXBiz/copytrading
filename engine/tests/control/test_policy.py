@@ -19,7 +19,12 @@ from copytrading_engine.control.policy import (
 )
 
 OPERATIONS = get_args(wire.Operation.__value__)
-APPROVAL = {"propose_resume_account", "propose_recovery_preference", "propose_manual_order"}
+APPROVAL = {
+    "propose_resume_account",
+    "propose_recovery_preference",
+    "propose_manual_order",
+    "propose_set_account_limits",
+}
 SAFER = {"pause_processing", "pause_account"}
 
 
@@ -41,6 +46,9 @@ def test_every_request_model_is_an_operation_with_a_tier():
         ("propose_resume_account", "read_pause", True, Refuse("forbidden")),
         ("propose_resume_account", "propose", False, Refuse("locked")),
         ("propose_manual_order", "propose", True, Propose()),
+        ("propose_set_account_limits", "read_pause", True, Refuse("forbidden")),
+        ("propose_set_account_limits", "propose", False, Refuse("locked")),
+        ("propose_set_account_limits", "propose", True, Propose()),
     ],
 )
 def test_decisions(operation, access, unlocked, expected):

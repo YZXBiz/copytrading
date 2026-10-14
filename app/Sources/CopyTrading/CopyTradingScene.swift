@@ -36,6 +36,7 @@ public struct CopyTradingScene: Scene {
                     }
                     // Asked once, up front, so the first order sent is never the one that asks.
                     FillNotifications.requestPermission()
+                    model.announceAgentRequest = { AgentRequestNotifications.post($0) }
                     model.startIfNeeded()
                 }
         }

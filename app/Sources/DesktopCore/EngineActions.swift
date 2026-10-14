@@ -252,6 +252,11 @@ public struct EngineActions: Sendable {
         return try await client.approveProposal(id: id, digest: digest)
     }
 
+    public func completeProposal(id: String, succeeded: Bool, code: String?) async throws -> AgentProposal {
+        let client = try await supervisor.engineClient()
+        return try await client.completeProposal(id: id, succeeded: succeeded, code: code)
+    }
+
     public func rejectProposal(id: String) async throws -> AgentProposal {
         let client = try await supervisor.engineClient()
         return try await client.rejectProposal(id: id)

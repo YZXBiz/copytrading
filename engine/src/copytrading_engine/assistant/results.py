@@ -202,6 +202,10 @@ def _asks_to(subject: wire.ProposalSubject) -> str:
                 f"{subject.side} {shares(subject.quantity)} {subject.symbol} "
                 f"in {subject.account_id}"
             )
+        case wire.LimitsSubject():
+            return f"change {subject.account_id}'s limits: " + ", ".join(
+                f"{change.field.replace('_', ' ')} to {change.value}" for change in subject.changes
+            )
 
 
 PROPOSAL_STATES = {

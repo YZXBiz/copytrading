@@ -209,9 +209,15 @@ def service(
     return control, engine, audit, clock
 
 
-def context(access: AccessLevel = "propose", *, unlocked: bool = True) -> ControlContext:
+def context(
+    access: AccessLevel = "propose", *, unlocked: bool = True, app_actions: bool = True
+) -> ControlContext:
     return ControlContext(
-        access_level=access, unlocked=unlocked, caller_pid=4242, caller_path="/usr/bin/agent"
+        access_level=access,
+        unlocked=unlocked,
+        caller_pid=4242,
+        caller_path="/usr/bin/agent",
+        app_actions=app_actions,
     )
 
 
@@ -244,6 +250,7 @@ async def app_socket(
                 unlocked=relay.unlocked,
                 caller_pid=os.getpid(),
                 caller_path="/usr/bin/agent",
+                app_actions=True,
             ),
         )
         writer.write(answer.encode() + b"\n")

@@ -49,8 +49,23 @@ class ConfirmManualOrder:
     limit_price: Decimal | None
 
 
-type Subject = ResumeAccount | SetRecovery | ConfirmManualOrder
-type Kind = Literal["resume_account", "set_recovery", "confirm_manual_order"]
+@dataclass(frozen=True, slots=True)
+class SetAccountLimits:
+    """New values for some of an account's settings, each as the text the agent sent. The app
+    applies them over the setup it has saved; nothing else about the setup can change."""
+
+    account_id: str
+    changes: tuple[tuple[str, str], ...]
+
+
+type Subject = ResumeAccount | SetRecovery | ConfirmManualOrder | SetAccountLimits
+type Kind = Literal["resume_account", "set_recovery", "confirm_manual_order", "set_account_limits"]
+
+# Kinds only the app can perform, because the setup file and its keys are the app's. Approving
+# one leaves it running until the app reports how it went.
+APP_PERFORMED: Final[frozenset[Kind]] = frozenset({"set_account_limits"})
+# How long the app has to report before the outcome is called unknown.
+APP_REPORT_WINDOW: Final = dt.timedelta(minutes=2)
 type Outcome = Literal["succeeded", "failed", "outcome_unknown"]
 
 
@@ -62,6 +77,8 @@ def kind_of(subject: Subject) -> Kind:
             return "set_recovery"
         case ConfirmManualOrder():
             return "confirm_manual_order"
+        case SetAccountLimits():
+            return "set_account_limits"
 
 
 def digest(subject: Subject) -> str:
@@ -244,6 +261,17 @@ class ProposalBook:
         for item in list(self._proposals.values()):
             if isinstance(item.state, Pending) and now >= item.expires_at:
                 self._store(replace(item, state=Closed("expired", now)))
+            elif (
+                isinstance(item.state, Running)
+                and item.kind in APP_PERFORMED
+                and now - item.state.approved_at >= APP_REPORT_WINDOW
+            ):
+                self._store(
+                    replace(
+                        item,
+                        state=Finished("outcome_unknown", "app_did_not_report", now),
+                    )
+                )
             elif isinstance(item.state, Finished | Closed) and now - item.created_at > RETENTION:
                 del self._proposals[item.proposal_id]
 

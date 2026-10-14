@@ -87,6 +87,64 @@ async def test_owner_approves_a_relayed_proposal_once(tmp_path):
     assert len(engine.actions()) == 1
 
 
+LIMITS_LINE = json.dumps(
+    {
+        "schema_version": 1,
+        "request_id": "agent-2",
+        "operation": "propose_set_account_limits",
+        "account_id": "paper",
+        "changes": [{"field": "max_entries_per_day", "value": "200"}],
+    }
+)
+
+
+async def test_the_app_performs_a_limit_change_and_reports_back_once(tmp_path):
+    installation, store, engine, build = _server(tmp_path / "application.db")
+    with installation, store:
+        server = build()
+        relayed = await _call(
+            server, "control", line=LIMITS_LINE, context=context().model_dump(mode="json")
+        )
+        proposal = json.loads(relayed["ok"]["line"])["ok"]
+        assert proposal["subject"]["kind"] == "set_account_limits"
+
+        early = await _call(
+            server, "complete_proposal", proposal_id=proposal["proposal_id"], outcome="succeeded"
+        )
+        assert early["error"]["code"] == "invalid_request"
+
+        approved = await _call(
+            server,
+            "approve_proposal",
+            proposal_id=proposal["proposal_id"],
+            digest=proposal["digest"],
+        )
+        assert approved["ok"]["proposal"]["state"] == "running"  # the engine changed nothing
+
+        done = await _call(
+            server, "complete_proposal", proposal_id=proposal["proposal_id"], outcome="succeeded"
+        )
+        assert done["ok"]["proposal"]["state"] == "succeeded"
+        failed_after = await _call(
+            server,
+            "complete_proposal",
+            proposal_id=proposal["proposal_id"],
+            outcome="failed",
+            code="conflict",
+        )
+        assert failed_after["error"]["code"] == "invalid_request"
+    assert engine.actions() == []
+
+
+async def test_a_server_without_the_app_cannot_be_asked_for_limit_changes(tmp_path):
+    installation, store, _, build = _server(tmp_path / "application.db")
+    with installation, store:
+        server = build()
+        ctx = context(app_actions=False).model_dump(mode="json")
+        relayed = await _call(server, "control", line=LIMITS_LINE, context=ctx)
+        assert json.loads(relayed["ok"]["line"])["error"]["code"] == "unavailable"
+
+
 async def test_reject_discard_and_unknown_proposals(tmp_path):
     installation, store, engine, build = _server(tmp_path / "application.db")
     with installation, store:

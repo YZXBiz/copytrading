@@ -72,7 +72,7 @@ async def test_pause_works_while_locked(app):
     relay.unlocked = False
     code, out, _ = await run(relay, "accounts", "pause", "paper")
     assert code == cli.EXIT_OK
-    assert "entries paused" in out
+    assert "copying off" in out
     assert await run(relay, "status") == (
         cli.EXIT_LOCKED,
         "",
@@ -181,4 +181,22 @@ def test_every_proposal_state_exits_as_documented():
 async def test_a_bad_argument_is_a_usage_error(app):
     relay, *_ = app
     code, _, _ = await run(relay, "accounts", "--limit", "not-a-number")
+    assert code == cli.EXIT_USAGE
+
+
+async def test_limits_are_proposed_in_plain_words_and_wait_for_the_owner(app):
+    relay, _, engine = app
+    code, out, _ = await run(
+        relay, "accounts", "limits", "paper", "--max-order-usd", "300", "--overnight", "true"
+    )
+    assert code == cli.EXIT_APPROVAL_PENDING
+    assert "change paper: max order usd = 300, overnight = true" in out
+    assert engine.actions() == []
+
+
+async def test_limits_need_a_setting_and_a_valid_value(app):
+    relay, *_ = app
+    code, _, err = await run(relay, "accounts", "limits", "paper")
+    assert (code, "Name at least one setting" in err) == (cli.EXIT_USAGE, True)
+    code, _, _ = await run(relay, "accounts", "limits", "paper", "--max-order-usd", "-5")
     assert code == cli.EXIT_USAGE

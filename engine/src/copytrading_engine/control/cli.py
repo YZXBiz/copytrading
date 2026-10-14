@@ -93,6 +93,20 @@ def _parser() -> argparse.ArgumentParser:
     recovery.add_argument("account_id")
     recovery.add_argument("preference", choices=("manual", "automatic"))
 
+    limits = account_actions.add_parser(
+        "limits",
+        parents=[output],
+        help="propose new limits and settings for an account (the owner approves in the app)",
+    )
+    limits.add_argument("account_id")
+    for field in wire.LIMIT_FIELDS:
+        limits.add_argument(
+            f"--{field.replace('_', '-')}",
+            dest=field,
+            metavar="VALUE",
+            help="true or false" if field in _SWITCHES else "a number",
+        )
+
     activity = commands.add_parser("activity", parents=[output, paged], help="source activity")
     activity.add_argument("--before", dest="before_seq", type=int)
     events = commands.add_parser("events", parents=[output, paged], help="account events")
@@ -149,6 +163,17 @@ def request_for(args: argparse.Namespace) -> wire.Request:
         case "accounts", "recovery":
             return wire.ProposeRecoveryPreference(
                 request_id=request_id, account_id=args.account_id, preference=args.preference
+            )
+        case "accounts", "limits":
+            changes = tuple(
+                wire.LimitChange(field=field, value=str(getattr(args, field)))
+                for field in wire.LIMIT_FIELDS
+                if getattr(args, field) is not None
+            )
+            if not changes:
+                raise ValueError("Name at least one setting, such as --max-order-usd 300")
+            return wire.ProposeSetAccountLimits(
+                request_id=request_id, account_id=args.account_id, changes=changes
             )
         case "activity", _:
             return wire.ListActivity(
@@ -279,8 +304,18 @@ async def _wait(client: ControlClient, response: wire.Response, timeout: float) 
 # Text output
 
 
+_SWITCHES: Final = ("extended_hours", "overnight", "copy_exits", "approve_orders")
+
+
 def _words(code: str | None) -> str:
     return "—" if code is None else code.replace("_", " ")
+
+
+def _copying(entry_permission: str) -> str:
+    """An account's buy switch in the app's words: Copying is on, or off."""
+    return {"enabled": "copying on", "paused": "copying off", "disabled": "copying disabled"}.get(
+        entry_permission, f"copying {_words(entry_permission)}"
+    )
 
 
 def _time(value: dt.datetime) -> str:
@@ -335,7 +370,7 @@ def render(result: wire.Result) -> str:
             return f"Processing is {_words(result.processing.state)}."
         case wire.AccountControlView():
             return (
-                f"{result.account_id}: entries {_words(result.entry_permission)}, "
+                f"{result.account_id}: {_copying(result.entry_permission)}, "
                 f"recovery {_words(result.recovery_preference)}."
             )
         case _:
@@ -359,7 +394,7 @@ def _render_status(status: wire.StatusView) -> str:
     for account in status.accounts:
         lines.append(
             f"Account     {account.account_id}  {_words(account.run_state)}, "
-            f"entries {_words(account.entry_permission)}, "
+            f"{_copying(account.entry_permission)}, "
             f"recovery {_words(account.recovery_preference)}"
         )
     return "\n".join(lines)
@@ -369,11 +404,14 @@ def _render_accounts(page: wire.AccountsPage) -> str:
     lines: list[str] = []
     for account in page.items:
         lines.append(
-            f"{account.account_id} ({account.environment})  entries "
-            f"{_words(account.entry_permission)}, recovery {_words(account.recovery_preference)}, "
+            f"{account.account_id} ({account.environment})  "
+            f"{_copying(account.entry_permission)}, "
+            f"recovery {_words(account.recovery_preference)}, "
             f"risk {_words(account.risk_status)}, exposure {_dollars(account.total_exposure_usd)}"
         )
         for position in account.positions:
+            if not (position.owned_qty or position.external_qty or position.lots):
+                continue  # a stock traded before and now at zero is history, not a position
             lines.append(
                 f"  {position.symbol}  app {_amount(position.owned_qty)}, "
                 f"external {_amount(position.external_qty)}"
@@ -466,6 +504,10 @@ def _render_proposal(proposal: wire.ProposalView) -> str:
             what = f"start copying into {subject.account_id}"
         case wire.RecoverySubject():
             what = f"set recovery for {subject.account_id} to {subject.preference}"
+        case wire.LimitsSubject():
+            what = f"change {subject.account_id}: " + ", ".join(
+                f"{_words(change.field)} = {change.value}" for change in subject.changes
+            )
         case wire.ManualOrderSubject():
             what = (
                 f"{subject.side} {_amount(subject.quantity)} {subject.symbol} "

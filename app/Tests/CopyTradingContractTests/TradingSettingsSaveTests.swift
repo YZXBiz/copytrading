@@ -94,6 +94,8 @@ struct TradingSettingsSaveTests {
         try await checkLaunchStartRetriesAFailedCheck()
         try await checkLaunchStartRetriesATimedOutRequest()
         try await checkPauseEndsLaunchStartRetries()
+        try await checkAgentLimitChangesSaveOverTheSavedSetup()
+        try await checkAgentLimitChangesNeverTouchUnsavedWork()
         try await checkEngineRestartStartsCopyingAgain()
         try await checkEngineRestartKeepsAPausedSetupPaused()
         try await checkAcceptedActivationWithLostResponseRemainsPending()
@@ -445,6 +447,64 @@ struct TradingSettingsSaveTests {
         let validations = await starter.validationCallCount()
         try check(validations == 2, "Expected one timed out check and one retry, saw \(validations)")
         print("CopyTradingContractTests: launch start retried a timed out request")
+    }
+
+    /// An approved agent request changes the saved setup the way the account sheet's limit save
+    /// does: copying takes the new values, and the saved file holds them.
+    private static func checkAgentLimitChangesSaveOverTheSavedSetup() async throws {
+        let (model, starter, directory) = try await launchStartFixture()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let failure = await model.applyAgentLimitChanges(
+            accountID: "paper",
+            changes: [
+                AgentLimitChange(field: "max_order_usd", value: "300.50"),
+                AgentLimitChange(field: "max_entries_per_day", value: "200"),
+                AgentLimitChange(field: "overnight", value: "true"),
+            ])
+        try check(failure == nil, "A valid limits request was refused: \(failure ?? "")")
+        let policy = model.savedTradingConfiguration?.accounts.first?.policy
+        try check(
+            policy?.maxOrderUSD == "300.50" && policy?.maxEntriesPerDay == 200 && policy?.overnight == true,
+            "The saved setup did not take the new limits")
+        let events = await starter.events()
+        try check(events == ["update_limits"], "Copying was not handed the limits once: \(events)")
+        try check(
+            model.setupDraft.accounts.first?.policy.maxOrderUSD == "300.50",
+            "The draft kept the old limits after the agent's change")
+        print("CopyTradingContractTests: an approved limits request changed the saved setup")
+    }
+
+    /// Nothing the owner has typed, started, or never saved is overwritten, and a value settings
+    /// would refuse changes nothing.
+    private static func checkAgentLimitChangesNeverTouchUnsavedWork() async throws {
+        let (model, starter, directory) = try await launchStartFixture()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let original = model.savedTradingConfiguration
+        let change = [AgentLimitChange(field: "max_order_usd", value: "300")]
+
+        let unknown = await model.applyAgentLimitChanges(accountID: "nope", changes: change)
+        try check(unknown == "not_found", "An unknown account was not refused: \(unknown ?? "nil")")
+        let bad = await model.applyAgentLimitChanges(
+            accountID: "paper", changes: [AgentLimitChange(field: "max_order_usd", value: "abc")])
+        try check(bad == "invalid_request", "A bad number was not refused: \(bad ?? "nil")")
+        let unknownSetting = await model.applyAgentLimitChanges(
+            accountID: "paper", changes: [AgentLimitChange(field: "api_key", value: "x")])
+        try check(unknownSetting == "invalid_request", "An unknown setting was applied: \(unknownSetting ?? "nil")")
+
+        model.syncSetupDraftWithSaved()
+        model.setupDraft.accounts[0].policy.maxSymbolUSD = "999"
+        let unsaved = await model.applyAgentLimitChanges(accountID: "paper", changes: change)
+        try check(unsaved == "unsaved_changes", "Unsaved edits were not protected: \(unsaved ?? "nil")")
+        try check(model.setupDraft.accounts[0].policy.maxSymbolUSD == "999", "The owner's edit was lost")
+
+        model.isTradingUnlocked = false
+        let locked = await model.applyAgentLimitChanges(accountID: "paper", changes: change)
+        try check(locked == "unavailable", "A locked app changed its setup: \(locked ?? "nil")")
+
+        try check(model.savedTradingConfiguration == original, "A refused request changed the saved setup")
+        let events = await starter.events()
+        try check(!events.contains("update_limits"), "Copying was handed limits for a refused request")
+        print("CopyTradingContractTests: refused limit requests changed nothing")
     }
 
     /// A crash is not the owner pausing: copying that was running starts again once the restarted
