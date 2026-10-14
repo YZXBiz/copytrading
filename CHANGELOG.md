@@ -2,6 +2,18 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
+## 0.1.0-alpha.11 — developer preview
+
+Limits and Start Copying from the command line, whole-day counts for each guru, and Chinese screens with no English left in them.
+
+- **Change limits from the command line.** `copytrading accounts limits ACCOUNT --max-order-usd 300 …` (and the MCP tool `propose_set_account_limits`) asks to change an account's limits. The app shows each setting as it is now and as it would be, and changes nothing until you approve with Touch ID.
+- **Start copying from the command line.** `copytrading start` (and `propose_start_processing`) asks the app to press **Start Copying**, with the same checks, after your Touch ID.
+- **An agent's request tells you it is waiting.** A macOS notification appears when a script or agent asks for something that needs your approval; the request expires after five minutes.
+- **Command-line output reads like the app.** `copytrading status` says "copying on" or "copying off", and stocks with no shares left are hidden.
+- **A guru's numbers count the whole day.** The guru's page and the sidebar counted only the newest 25 posts loaded, so a busy day read low; they now count every post of the day, and every call still waiting for you.
+- **Chinese screens are all Chinese.** Ignored posts, stock counts, buy, trim and close, and the copy deadline read in Chinese, and money shows as $ instead of US$.
+- **The README shows the app as it is now**, in English and Chinese.
+
 ## 0.1.0-alpha.10 — developer preview
 
 One switch per account, copying that holds up under bursts and crashes, and a calmer account page.
