@@ -15,8 +15,10 @@ from copytrading_engine.shared.reading import (
     Dollars,
     Exact,
     NotGiven,
+    NotSaid,
     PostReading,
     Range,
+    Sell,
     Stock,
     Suggestion,
     Unclear,
@@ -91,6 +93,16 @@ def examples() -> list:
                 size=Dollars(value=200, words="200$ of"),
             ),
             summary="Bought $200 of NFLX",
+        ),
+        trade(
+            Sell(
+                action_words="trim",
+                stock=Stock(ticker="KO", words="KO"),
+                price=AtMarket(words="trim"),
+                share=NotGiven(),
+                sell_from=NotSaid(),
+            ),
+            summary="Trims KO without saying how much",
         ),
     ]
 

@@ -114,6 +114,7 @@ private func readAsSaysEachCallInPlainWords() throws {
             "Just chat, nothing to trade",
             "The reader couldn't tell what this post means.",
             "Buy $200 of NFLX at $71.",
+            "Sell some of KO, at the market price.",
         ], "Read as lines changed: \(lines)")
     try #require(
         try ReadAsText.note(readings()[10].calls[0]) == nil, "a dollar size has no full-position note")

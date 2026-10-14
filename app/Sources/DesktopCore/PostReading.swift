@@ -309,10 +309,13 @@ public enum ReadSize: Codable, Equatable, Sendable {
 public enum ReadShare: Codable, Equatable, Sendable {
     case fraction(value: String, words: String)
     case all(words: String)
+    /// A vague trim ("trim some KO") states no share; it carries no words and waits for the owner.
+    case notGiven
 
     public var words: [String] {
         switch self {
         case .fraction(_, let words), .all(let words): [words]
+        case .notGiven: []
         }
     }
 
@@ -320,10 +323,15 @@ public enum ReadShare: Codable, Equatable, Sendable {
 
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: Key.self)
-        let words = try c.decode(String.self, forKey: .words)
-        self =
-            try c.decode(String.self, forKey: .kind) == "fraction"
-            ? .fraction(value: try c.decode(String.self, forKey: .value), words: words) : .all(words: words)
+        switch try c.decode(String.self, forKey: .kind) {
+        case "fraction":
+            self = .fraction(
+                value: try c.decode(String.self, forKey: .value), words: try c.decode(String.self, forKey: .words))
+        case "all":
+            self = .all(words: try c.decode(String.self, forKey: .words))
+        default:
+            self = .notGiven
+        }
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -332,6 +340,7 @@ public enum ReadShare: Codable, Equatable, Sendable {
         case .fraction(let value, let words):
             try c.encode("fraction", forKey: .kind); try c.encode(value, forKey: .value); try c.encode(words, forKey: .words)
         case .all(let words): try c.encode("all", forKey: .kind); try c.encode(words, forKey: .words)
+        case .notGiven: try c.encode("not_given", forKey: .kind)
         }
     }
 }
