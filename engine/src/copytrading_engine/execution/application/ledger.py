@@ -94,7 +94,11 @@ log = logging.getLogger(__name__)
 
 
 def _repeats(
-    instruction: Instruction, at: dt.datetime, earlier: MessageRecord, window_minutes: int | None
+    instruction: Instruction,
+    at: dt.datetime,
+    earlier: MessageRecord,
+    window_minutes: int | None,
+    previous: tuple[MessageRecord, ...] = (),
 ) -> bool:
     """A guru re-posting a call is not a new call, while the guru's repeat check is on. A buy
     read the same way (stock, price, size) within the guru's window is the same buy; later it can
@@ -105,6 +109,18 @@ def _repeats(
         return False
     since = (at - earlier.timestamp).total_seconds()
     if since < 0:
+        return False
+    # A buy or sell of this stock the other way since then makes this a new call: the same sell
+    # after a new buy sells that buy.
+    buying = instruction.action == "buy"
+    if any(
+        earlier.timestamp < other.timestamp <= at
+        and any(
+            i.symbol == instruction.symbol and (i.action == "buy") != buying
+            for i in other.instructions
+        )
+        for other in previous
+    ):
         return False
     if instruction.action == "buy":
         return since <= window_minutes * 60
@@ -851,7 +867,9 @@ class TradingLedger:
             Skipped(reason="duplicate")
             if status == "queued"
             and any(
-                _repeats(instruction, signal.timestamp, m, destination.repeat_window_minutes)
+                _repeats(
+                    instruction, signal.timestamp, m, destination.repeat_window_minutes, previous
+                )
                 for m in previous
             )
             else Pending()

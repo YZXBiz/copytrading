@@ -45,9 +45,28 @@ EXPLICIT_ALLOCATION = re.compile(
     r"|(?P<ratio>(?<![\d./])\d+\s*/\s*\d+(?![\d./]))"
     r"|(?P<percent>(?<![\d.])\d+(?:\.\d+)?%(?![\d]))"
     r"|(?P<half>一半|半仓|(?<![A-Za-z])half(?![A-Za-z]))"
-    r"|(?P<full>全仓|全部|(?<![A-Za-z])full(?![A-Za-z]))",
+    r"|(?P<full>全仓|全部|(?<![A-Za-z])full(?![A-Za-z]))"
+    # "a third", "two thirds", "a quarter", "three quarters", "quarter position". A bare "third"
+    # is an order ("third time") and a bare "quarter" a season ("next quarter"), so both need a
+    # count, or for a quarter the word position or size after it.
+    r"|(?P<english>(?<![A-Za-z])(?:(?:an?|one|two|three|four|[1-9])[\s-]+"
+    r"(?:third|quarter|fourth|fifth|sixth|seventh|eighth|ninth|tenth)s?"
+    r"|quarter(?=[\s-]+(?:position|pos|size)(?![A-Za-z])))(?![A-Za-z]))",
     re.I,
 )
+
+_ENGLISH_COUNTS = {"a": 1, "an": 1, "one": 1, "two": 2, "three": 3, "four": 4}
+_ENGLISH_PARTS = {
+    "third": 3,
+    "quarter": 4,
+    "fourth": 4,
+    "fifth": 5,
+    "sixth": 6,
+    "seventh": 7,
+    "eighth": 8,
+    "ninth": 9,
+    "tenth": 10,
+}
 
 
 class DecodeError(Exception):
@@ -231,6 +250,12 @@ def _allocation_value(match: re.Match[str]) -> Decimal | None:
         return Decimal("0.5")
     elif match.lastgroup == "full":
         return Decimal(1)
+    elif match.lastgroup == "english":
+        *count, part = re.split(r"[\s-]+", token)
+        written = count[0] if count else "one"
+        numerator = int(written) if written.isdigit() else _ENGLISH_COUNTS[written]
+        value = Decimal(numerator) / Decimal(_ENGLISH_PARTS[part.removesuffix("s")])
+        return value if value <= 1 else None
     return None
 
 

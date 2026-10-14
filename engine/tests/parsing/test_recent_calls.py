@@ -368,6 +368,31 @@ async def test_a_sell_is_never_dropped_as_a_repeat_of_a_buy():
     assert [(i.action, i.symbol) for i in result.instructions] == [("close", "SOUN")]
 
 
+async def test_a_sell_after_a_new_buy_is_a_new_call_even_if_it_reads_as_a_repost():
+    recent = recent_calls(
+        _past("p1", 20, _buy("SOUN", "5.85"))
+        + _past("p2", 8, _close("SOUN", "5.90"))
+        + _past("p3", 4, _buy("SOUN", "5.85"))
+    )
+    earlier_sell = next(call.ref for call in recent if call.action == "close")
+    reading = trade(
+        sell("SOUN", "5.90", bought_at=None, said="出掉").model_copy(
+            update={"repeats": earlier_sell}
+        )
+    )
+
+    result = await transform(
+        _post("5.90 soun 出掉"),
+        Route(repeat_window_minutes=10),
+        FakeDecoder(reading),
+        "test",
+        recent,
+    )
+
+    assert result.decision == "trade"
+    assert [(i.action, i.symbol) for i in result.instructions] == [("close", "SOUN")]
+
+
 async def test_a_post_with_a_repost_and_a_new_call_copies_only_the_new_one():
     reading = trade(
         buy("SOUN", "5.85", fraction=SIXTH, fraction_said="6分之一").model_copy(

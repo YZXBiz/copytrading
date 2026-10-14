@@ -134,14 +134,26 @@ def _without_repeats(
     kept = []
     for call in reading.calls:
         earlier = by_ref.get(call.repeats) if call.repeats is not None else None
-        # A sell is never a re-post of the buy it sells, whatever the reader says.
-        if earlier is None or not same_side(earlier, call):
+        # A sell is never a re-post of the buy it sells, whatever the reader says, and a call
+        # after the guru traded the other side of that stock is a new call however it reads.
+        if earlier is None or not same_side(earlier, call) or _traded_since(earlier, call, recent):
             kept.append(call)
         elif (at - earlier.at).total_seconds() > window * 60:
             return reading, "review"
     if not kept:
         return reading, "ignore"
     return reading.model_copy(update={"calls": tuple(kept)}), None
+
+
+def _traded_since(
+    earlier: RecentCall, call: r.Buy | r.Sell, recent: tuple[RecentCall, ...]
+) -> bool:
+    """The guru bought or sold this stock the other way after `earlier`: a sell after a new buy,
+    or a buy after a sell, is a new call even when it reads the same as the earlier one."""
+    return any(
+        other.symbol == earlier.symbol and other.at > earlier.at and not same_side(other, call)
+        for other in recent
+    )
 
 
 class _Wait(Exception):
