@@ -94,6 +94,8 @@ struct TradingSettingsSaveTests {
         try await checkLaunchStartRetriesAFailedCheck()
         try await checkLaunchStartRetriesATimedOutRequest()
         try await checkPauseEndsLaunchStartRetries()
+        try await checkEngineRestartStartsCopyingAgain()
+        try await checkEngineRestartKeepsAPausedSetupPaused()
         try await checkAcceptedActivationWithLostResponseRemainsPending()
         try await checkPendingActivationReconcilesAfterAppReopen(configuration: configuration, secrets: credentials)
         try await checkFailedSameRevisionActivationRetainsPreviousSecrets(configuration: configuration)
@@ -443,6 +445,38 @@ struct TradingSettingsSaveTests {
         let validations = await starter.validationCallCount()
         try check(validations == 2, "Expected one timed out check and one retry, saw \(validations)")
         print("CopyTradingContractTests: launch start retried a timed out request")
+    }
+
+    /// A crash is not the owner pausing: copying that was running starts again once the restarted
+    /// engine reports paused, even when the owner never asked for copying at launch.
+    private static func checkEngineRestartStartsCopyingAgain() async throws {
+        let (model, starter, directory) = try await launchStartFixture()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        model.setStartsCopying(false)
+        await starter.setValidationActivatable(true)
+        model.tradingStatus = try status(.running)
+        model.handle(.childExited(child: .engine, status: 9, restarting: true))
+        try check(
+            model.message == "The engine stopped and is restarting. Copying starts again when it's back.",
+            "The restart did not say copying comes back: \(model.message ?? "no message")")
+        model.tradingStatus = try status(.paused)
+        await model.startCopyingOnLaunchIfWanted()
+        try check(model.tradingStatus?.state == .running, "Copying stayed paused after the engine restarted")
+        print("CopyTradingContractTests: an engine restart started copying again")
+    }
+
+    private static func checkEngineRestartKeepsAPausedSetupPaused() async throws {
+        let (model, starter, directory) = try await launchStartFixture()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        model.setStartsCopying(false)
+        await starter.setValidationActivatable(true)
+        model.handle(.childExited(child: .engine, status: 9, restarting: true))
+        model.tradingStatus = try status(.paused)
+        await model.startCopyingOnLaunchIfWanted()
+        try check(model.tradingStatus?.state == .paused, "An engine restart started copying the owner had paused")
+        let validations = await starter.validationCallCount()
+        try check(validations == 0, "A paused setup ran checks after the restart")
+        print("CopyTradingContractTests: an engine restart kept a paused setup paused")
     }
 
     private static func checkPauseEndsLaunchStartRetries() async throws {
