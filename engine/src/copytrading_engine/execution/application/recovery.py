@@ -15,6 +15,7 @@ from copytrading_engine.execution.domain.ownership import (
     OwnershipResolution,
     OwnershipResolutionRequest,
     account_activity_reason,
+    still_open,
 )
 from copytrading_engine.execution.domain.recovery import (
     IncidentClearanceEvidence,
@@ -61,7 +62,7 @@ class RecoveryApplication:
             risk_reason = str(error)
             total_exposure = None
         activity_reason = account_activity_reason(
-            self._broker.open_orders(),
+            still_open(self._broker.open_orders(), tuple(snapshot.orders.values())),
             tuple(order for order in snapshot.orders.values() if order.pending),
             unresolved_order_incidents=snapshot.entry_halted,
         )
