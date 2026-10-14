@@ -28,7 +28,7 @@ class ParseWorker:
         routes: Mapping[str, Route],
         model: str,
         max_age: int = 120,
-        daily_limit: int = 200,
+        daily_limit: int = 2000,
         *,
         observe: Callable[[str], AbstractContextManager] = lambda _: nullcontext(),
         observe_workflow: Callable[[WorkflowAttempt], AbstractContextManager] = lambda _: (
