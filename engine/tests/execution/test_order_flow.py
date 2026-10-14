@@ -171,6 +171,23 @@ def test_a_sell_reposted_later_the_same_day_is_not_sold_twice(system):
     assert engine.ledger.message("discord:demo:3").parts == (Skipped(reason="duplicate"),)
 
 
+def test_the_same_sell_after_a_new_buy_sells_that_buy(system):
+    """Buy, sell, buy again at the same price, and the same sell again minutes later: each is a
+    new call, so the second buy is made and the second sell sells it."""
+    engine, broker, _ = system
+    deliver(engine, event())
+    sold = NOW + dt.timedelta(minutes=1)
+    deliver(engine, event("2", "close", "27", timestamp=sold), sold)
+    assert broker.holdings["ABC"] == 0
+    later = NOW + dt.timedelta(minutes=2)
+    deliver(engine, event("3", timestamp=later), later)
+    assert broker.holdings["ABC"] == 4
+    again = NOW + dt.timedelta(minutes=4)
+    deliver(engine, event("4", "close", "27", timestamp=again), again)
+
+    assert broker.holdings["ABC"] == 0
+
+
 def test_the_same_sell_on_a_later_trading_day_is_a_new_sell(system):
     engine, broker, _ = system
     deliver(engine, event())
