@@ -19,15 +19,15 @@ The command looks in `~/Library/Application Support/CopyTrading` unless `COPYTRA
 $ copytrading status
 Engine      Ready
 Processing  Running
-Accounts    paper-main  entries enabled, recovery manual
+Accounts    paper-main  copying on, recovery manual
 
 $ copytrading accounts
-paper-main (paper)  entries enabled, recovery manual, risk ready, exposure $2,184.00
+paper-main (paper)  copying on, recovery manual, risk ready, exposure $2,184.00
   NVDA  app 12, external 0
     lot copy-3f9a1c0e5b7d2a8f6e4c1b9d0a7f3e2c5b8d1a6e  12 of 12 at $182.40  from alex  (discord:calls:101)
 
 $ copytrading accounts pause paper-main
-Paused new entries for paper-main.
+paper-main: copying off, recovery manual.
 
 $ copytrading accounts resume paper-main
 Waiting for approval in CopyTrading: proposal p-4e1a9c, expires 16:42.

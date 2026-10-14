@@ -72,7 +72,7 @@ async def test_pause_works_while_locked(app):
     relay.unlocked = False
     code, out, _ = await run(relay, "accounts", "pause", "paper")
     assert code == cli.EXIT_OK
-    assert "entries paused" in out
+    assert "copying off" in out
     assert await run(relay, "status") == (
         cli.EXIT_LOCKED,
         "",

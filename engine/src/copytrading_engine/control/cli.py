@@ -283,6 +283,13 @@ def _words(code: str | None) -> str:
     return "—" if code is None else code.replace("_", " ")
 
 
+def _copying(entry_permission: str) -> str:
+    """An account's buy switch in the app's words: Copying is on, or off."""
+    return {"enabled": "copying on", "paused": "copying off", "disabled": "copying disabled"}.get(
+        entry_permission, f"copying {_words(entry_permission)}"
+    )
+
+
 def _time(value: dt.datetime) -> str:
     return value.astimezone().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -335,7 +342,7 @@ def render(result: wire.Result) -> str:
             return f"Processing is {_words(result.processing.state)}."
         case wire.AccountControlView():
             return (
-                f"{result.account_id}: entries {_words(result.entry_permission)}, "
+                f"{result.account_id}: {_copying(result.entry_permission)}, "
                 f"recovery {_words(result.recovery_preference)}."
             )
         case _:
@@ -359,7 +366,7 @@ def _render_status(status: wire.StatusView) -> str:
     for account in status.accounts:
         lines.append(
             f"Account     {account.account_id}  {_words(account.run_state)}, "
-            f"entries {_words(account.entry_permission)}, "
+            f"{_copying(account.entry_permission)}, "
             f"recovery {_words(account.recovery_preference)}"
         )
     return "\n".join(lines)
@@ -369,11 +376,14 @@ def _render_accounts(page: wire.AccountsPage) -> str:
     lines: list[str] = []
     for account in page.items:
         lines.append(
-            f"{account.account_id} ({account.environment})  entries "
-            f"{_words(account.entry_permission)}, recovery {_words(account.recovery_preference)}, "
+            f"{account.account_id} ({account.environment})  "
+            f"{_copying(account.entry_permission)}, "
+            f"recovery {_words(account.recovery_preference)}, "
             f"risk {_words(account.risk_status)}, exposure {_dollars(account.total_exposure_usd)}"
         )
         for position in account.positions:
+            if not (position.owned_qty or position.external_qty or position.lots):
+                continue  # a stock traded before and now at zero is history, not a position
             lines.append(
                 f"  {position.symbol}  app {_amount(position.owned_qty)}, "
                 f"external {_amount(position.external_qty)}"
