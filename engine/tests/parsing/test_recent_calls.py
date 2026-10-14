@@ -493,3 +493,98 @@ async def test_an_english_post_read_with_a_chinese_summary_is_asked_about_once(s
         await decoder.close()
     assert len(asked) == 1
     assert "English" in asked[0]
+
+
+def _reduce(symbol: str, price: str, fraction: str) -> Instruction:
+    return Instruction(
+        action="reduce", symbol=symbol, price=Decimal(price), fraction=Decimal(fraction)
+    )
+
+
+@pytest.mark.parametrize(
+    ("earlier", "call", "text"),
+    [
+        # The rest after a half, at the same price: "Sold half SOFI 14.11" then "Closed SOFI 14.11".
+        (
+            _reduce("SOFI", "14.11", "0.5"),
+            sell("SOFI", "14.11", ticker_said="SOFI", bought_at=None, said="Closed"),
+            "Closed $SOFI 14.11",
+        ),
+        # Another half at a new price.
+        (
+            _reduce("SOFI", "14.11", "0.5"),
+            sell(
+                "SOFI",
+                "14.30",
+                ticker_said="SOFI",
+                bought_at=None,
+                said="Sold",
+                fraction="0.5",
+                fraction_said="half",
+            ),
+            "Sold half $SOFI 14.30",
+        ),
+        # A second buy at another price, or of another size.
+        (
+            _buy("SOFI", "14.11"),
+            buy(
+                "SOFI",
+                "14.40",
+                ticker_said="SOFI",
+                said="Bought",
+                fraction=SIXTH,
+                fraction_said="1/6",
+            ),
+            "Bought 1/6 $SOFI 14.40",
+        ),
+        (
+            _buy("SOFI", "14.11"),
+            buy(
+                "SOFI",
+                "14.11",
+                ticker_said="SOFI",
+                said="Bought",
+                fraction="0.5",
+                fraction_said="half",
+            ),
+            "Bought half $SOFI 14.11",
+        ),
+    ],
+)
+async def test_a_call_with_other_terms_is_new_even_if_the_reader_calls_it_a_repost(
+    earlier, call, text
+):
+    recent = recent_calls(_past("p1", 1, earlier))
+    reading = trade(call.model_copy(update={"repeats": recent[0].ref}))
+
+    result = await transform(
+        _post(text), Route(repeat_window_minutes=10), FakeDecoder(reading), "test", recent
+    )
+
+    assert result.decision == "trade"
+    assert [i.symbol for i in result.instructions] == ["SOFI"]
+
+
+async def test_the_same_sell_again_is_still_a_repost():
+    recent = recent_calls(_past("p1", 1, _reduce("SOFI", "14.11", "0.5")))
+    reading = trade(
+        sell(
+            "SOFI",
+            "14.11",
+            ticker_said="SOFI",
+            bought_at=None,
+            said="Sold",
+            fraction="0.5",
+            fraction_said="half",
+        ).model_copy(update={"repeats": recent[0].ref})
+    )
+
+    result = await transform(
+        _post("Sold half $SOFI 14.11"),
+        Route(repeat_window_minutes=10),
+        FakeDecoder(reading),
+        "test",
+        recent,
+    )
+
+    assert result.decision == "ignore"
