@@ -921,6 +921,10 @@
 "today" = "今天";
 "Too large" = "过大";
 "Too old to copy" = "超出跟单时限";
+"The post's time was ahead of this Mac's clock" = "帖子的时间比这台 Mac 的时钟还晚";
+"The post has a picture, so it waits for you" = "帖子带图片，等你来看";
+"The model couldn't read it after three tries" = "模型试了三次也没读懂";
+"Not read: today's 2,000 model reads were used up" = "未读取：今天的 2,000 次模型读取已用完";
 "Total" = "总计";
 "Trace" = "追踪 ID";
 "Trade" = "交易";

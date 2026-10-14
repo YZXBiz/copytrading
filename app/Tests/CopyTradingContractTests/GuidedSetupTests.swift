@@ -90,6 +90,10 @@ private func helpArticlesAreCompleteAndLinked() throws {
     try verifyGuide(
         Reason.text("provider_model_not_found") == "The model service has no model by that name",
         "A missing model reached Activity as an engine code")
+    try verifyGuide(
+        Reason.parserMessage("daily_model_request_budget_exhausted", needsReview: true)
+            == "Not read: today's 2,000 model reads were used up",
+        "A post the day's model reads ran out for read as a reading to review")
 }
 
 @MainActor

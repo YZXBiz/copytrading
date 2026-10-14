@@ -921,6 +921,10 @@
 "today" = "today";
 "Too large" = "Too large";
 "Too old to copy" = "Too old to copy";
+"The post's time was ahead of this Mac's clock" = "The post's time was ahead of this Mac's clock";
+"The post has a picture, so it waits for you" = "The post has a picture, so it waits for you";
+"The model couldn't read it after three tries" = "The model couldn't read it after three tries";
+"Not read: today's 2,000 model reads were used up" = "Not read: today's 2,000 model reads were used up";
 "Total" = "Total";
 "Trace" = "Trace";
 "Trade" = "Trade";
