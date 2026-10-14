@@ -531,6 +531,51 @@ def test_a_word_containing_a_size_is_no_size(word):
 
 
 @pytest.mark.parametrize(
+    ("post", "words", "value"),
+    [
+        pytest.param("added a quarter position in abc at 25", "a quarter", "0.25", id="a-quarter"),
+        pytest.param("added quarter position abc at 25", "quarter", "0.25", id="quarter-position"),
+        pytest.param("added a third of abc at 25", "a third", "0.3333333333333333", id="a-third"),
+        pytest.param(
+            "added two thirds abc at 25", "two thirds", "0.6666666666666667", id="two-thirds"
+        ),
+        pytest.param("added one fifth abc at 25", "one fifth", "0.2", id="one-fifth"),
+    ],
+)
+async def test_an_english_size_keeps_its_value(post, words, value):
+    reading = trade(buy("ABC", "25", said="added", fraction=value, fraction_said=words))
+
+    assert (await read(post, reading)).instructions[0].fraction == Decimal(value)
+
+
+def test_an_english_size_must_be_the_value_it_says():
+    reading = trade(buy("ABC", "25", said="added", fraction="0.5", fraction_said="a third"))
+
+    assert failure("added a third of abc at 25", reading).issue.code == "fraction_not_grounded"
+
+
+@pytest.mark.parametrize(
+    "post", ["added a quarter position in abc at 25", "added a third of abc at 25"]
+)
+def test_the_reader_cannot_drop_an_english_size(post):
+    reading = trade(buy("ABC", "25", said="added"))
+
+    assert failure(post, reading).issue.code == "source_fraction_omitted"
+
+
+@pytest.mark.parametrize(
+    "post",
+    [
+        "added abc at 25, third time this week",
+        "added abc at 25 before next quarter earnings",
+        "added abc at 25, fifth day in a row",
+    ],
+)
+def test_an_order_or_a_season_is_no_size(post):
+    check(post, trade(buy("ABC", "25", said="added")))
+
+
+@pytest.mark.parametrize(
     "post",
     [
         "25加了6分之一常规仓abc",
