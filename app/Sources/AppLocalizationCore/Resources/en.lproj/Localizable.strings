@@ -1148,6 +1148,7 @@
 "Each broker account needs a different name." = "Each broker account needs a different name.";
 "Routes that share a channel each need an author ID." = "Routes that share a channel each need an author ID.";
 "The engine stopped and is restarting." = "The engine stopped and is restarting.";
+"The engine stopped and is restarting. Copying starts again when it's back." = "The engine stopped and is restarting. Copying starts again when it's back.";
 "The engine stopped unexpectedly." = "The engine stopped unexpectedly.";
 "A local service reached its restart limit." = "A local service reached its restart limit.";
 "A local service is degraded." = "A local service is degraded.";

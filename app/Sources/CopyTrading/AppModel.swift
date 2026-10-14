@@ -540,6 +540,8 @@ final class AppModel {
     @ObservationIgnored private let launchPreferencesStore: LaunchPreferencesStore?
     /// Whether this launch already tried starting copying on the owner's behalf.
     @ObservationIgnored private var didStartCopyingOnLaunch = false
+    /// The engine stopped under copying that was running; once it is back, copying starts again.
+    @ObservationIgnored var resumesAfterEngineRestart = false
     /// How long the launch start waits before each retry after a failed connection check.
     @ObservationIgnored var launchStartRetryDelays: [Duration] = [.seconds(10), .seconds(30), .seconds(60)]
     @ObservationIgnored private var launchStartRetry: Task<Void, Never>?
@@ -1735,6 +1737,7 @@ final class AppModel {
         else { return }
         didStartCopyingOnLaunch = true
         UserDefaults.standard.removeObject(forKey: Self.resumesAfterUpdateKey)
+        resumesAfterEngineRestart = false
         await startTrading()
         retryLaunchStartWhileHeldBack()
     }
@@ -2105,6 +2108,12 @@ final class AppModel {
                 }
             #endif
             if child == .engine {
+                // A crash is not the owner pausing: copying that was running starts again once
+                // the restarted engine reports, with the same checks as Start Copying.
+                if restarting, [.running, .degraded].contains(tradingStatus?.state) {
+                    resumesAfterEngineRestart = true
+                    didStartCopyingOnLaunch = false
+                }
                 engineGeneration.advance()
                 statusTask?.cancel()
                 statusTask = nil
@@ -2115,7 +2124,12 @@ final class AppModel {
                 Task { [weak self] in await self?.assistant.reset() }
             }
             runtimeState = .degraded
-            message = restarting ? L10n.string("The engine stopped and is restarting.") : L10n.string("The engine stopped unexpectedly.")
+            message =
+                !restarting
+                ? L10n.string("The engine stopped unexpectedly.")
+                : resumesAfterEngineRestart && canStartCopyingOnLaunch
+                    ? L10n.string("The engine stopped and is restarting. Copying starts again when it's back.")
+                    : L10n.string("The engine stopped and is restarting.")
         case .degraded(let code):
             runtimeState = .degraded
             switch code {

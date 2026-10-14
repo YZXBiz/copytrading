@@ -1148,6 +1148,7 @@
 "Each broker account needs a different name." = "每个券商账户都需要不同的名称。";
 "Routes that share a channel each need an author ID." = "共用同一个频道的信号源，各自都需要填写作者 ID。";
 "The engine stopped and is restarting." = "引擎已停止，正在重新启动。";
+"The engine stopped and is restarting. Copying starts again when it's back." = "引擎停止了，正在重启。重启后会自动继续跟单。";
 "The engine stopped unexpectedly." = "引擎意外停止。";
 "A local service reached its restart limit." = "有一个本地服务已达到重启次数上限。";
 "A local service is degraded." = "有一个本地服务运行状况不佳。";

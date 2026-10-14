@@ -3,10 +3,11 @@ import Foundation
 extension AppModel {
     static let resumesAfterUpdateKey = "update.resumesCopying"
 
-    /// Copying starts by itself at launch: the owner asked for it, or an update relaunched the
-    /// app while it was copying.
+    /// Copying starts by itself at launch: the owner asked for it, an update relaunched the app
+    /// while it was copying, or the engine restarted under copying that was running.
     var wantsCopyingOnLaunch: Bool {
         launchPreferences.startsCopying || UserDefaults.standard.bool(forKey: Self.resumesAfterUpdateKey)
+            || resumesAfterEngineRestart
     }
 
     /// Just before an update relaunches the app: copying that runs now starts again after it.
