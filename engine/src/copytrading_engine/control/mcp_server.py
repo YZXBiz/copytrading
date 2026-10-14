@@ -204,6 +204,24 @@ def build_server(client: ControlClient) -> MCPServer:
             wire.ProposalView,
         )
 
+    @server.tool(annotations=PROPOSE)
+    async def propose_set_account_limits(
+        account_id: str, changes: dict[wire.LimitField, str]
+    ) -> wire.ProposalView:
+        """Ask the owner to change an account's limits or switches, such as max_order_usd "300",
+        max_entries_per_day "200", or overnight "true". Values are text. Does nothing until the
+        owner approves it in the app, which saves them over the setup it has."""
+        return await call(
+            wire.ProposeSetAccountLimits(
+                request_id=new_request_id(),
+                account_id=account_id,
+                changes=tuple(
+                    wire.LimitChange(field=field, value=value) for field, value in changes.items()
+                ),
+            ),
+            wire.ProposalView,
+        )
+
     return server
 
 

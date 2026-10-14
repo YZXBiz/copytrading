@@ -321,6 +321,15 @@ class ApproveProposalRequest(PipeRequest):
     digest: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
+class CompleteProposalRequest(PipeRequest):
+    """The app reporting how an approved app-performed proposal went."""
+
+    operation: Literal["complete_proposal"]
+    proposal_id: str = Field(pattern=r"^p-[0-9a-f]{12}$")
+    outcome: Literal["succeeded", "failed"]
+    code: str | None = Field(default=None, pattern=r"^[a-z_]{1,48}$")
+
+
 class RejectProposalRequest(PipeRequest):
     operation: Literal["reject_proposal"]
     proposal_id: str = Field(pattern=r"^p-[0-9a-f]{12}$")
@@ -401,6 +410,7 @@ RequestType = Annotated[
     | ControlRequest
     | ListProposalsRequest
     | ApproveProposalRequest
+    | CompleteProposalRequest
     | RejectProposalRequest
     | DiscardProposalsRequest
     | AgentAuditRequest

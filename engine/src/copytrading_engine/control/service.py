@@ -4,7 +4,8 @@ import datetime as dt
 import json
 from collections import OrderedDict
 from collections.abc import Callable
-from typing import Final, Protocol
+from decimal import Decimal, InvalidOperation
+from typing import Final, Literal, Protocol
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -22,13 +23,16 @@ from copytrading_engine.control.policy import (
     tier,
 )
 from copytrading_engine.control.proposals import (
+    APP_PERFORMED,
     Caller,
     ConfirmManualOrder,
+    Finished,
     Outcome,
     Proposal,
     ProposalBook,
     ProposalRefused,
     ResumeAccount,
+    SetAccountLimits,
     SetRecovery,
     Subject,
 )
@@ -50,6 +54,7 @@ from copytrading_engine.execution.presentation.operator_views import (
     AccountEventPage,
     AccountOverviewPage,
 )
+from copytrading_engine.trading.domain.config import AccountPolicy
 from copytrading_engine.trading.domain.status import TradingStatus
 from copytrading_engine.trading.presentation.operator_models import SourceActivityPage
 
@@ -102,6 +107,50 @@ class ControlContext(BaseModel):
     unlocked: bool
     caller_pid: int | None = Field(default=None, ge=1)
     caller_path: str | None = Field(default=None, min_length=1, max_length=4096)
+    # The app can change the saved setup after the owner approves; a server without one cannot.
+    app_actions: bool = False
+
+
+def _validated_limits(changes: tuple[wire.LimitChange, ...]) -> tuple[tuple[str, str], ...]:
+    """The values as the account's own settings model reads them, in one fixed spelling, or a
+    ValueError: a number that settings would refuse never reaches the owner's sheet."""
+    values: dict[str, object] = {}
+    for change in changes:
+        if change.field in values:
+            raise ValueError("A setting is named twice")
+        values[change.field] = _typed_limit(change.field, change.value)
+    AccountPolicy.model_validate(values)
+    return tuple(sorted((field, _spelled(value)) for field, value in values.items()))
+
+
+_BOOLEAN_LIMITS: Final = {"extended_hours", "overnight", "copy_exits", "approve_orders"}
+_WHOLE_LIMITS: Final = {"max_entries_per_day", "max_signal_age_seconds", "order_timeout_seconds"}
+
+
+def _typed_limit(field: str, text: str) -> object:
+    value = text.strip().lower()
+    if field in _BOOLEAN_LIMITS:
+        if value not in {"true", "false"}:
+            raise ValueError("A switch is true or false")
+        return value == "true"
+    if field in _WHOLE_LIMITS:
+        if not value.isascii() or not value.isdigit():
+            raise ValueError("A whole number is digits only")
+        return int(value)
+    if field == "poll_seconds":
+        return float(value)
+    try:
+        return Decimal(value)
+    except InvalidOperation:
+        raise ValueError("A number is digits and one decimal point") from None
+
+
+def _spelled(value: object) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, Decimal):
+        return format(value.normalize(), "f")
+    return str(value)
 
 
 def _utc_now() -> dt.datetime:
@@ -157,7 +206,7 @@ class ControlService:
                     outcome = "ok"
                     proposal_id = None
                 case Propose():
-                    proposal = self._propose(request, caller)
+                    proposal = self._propose(request, caller, app_actions=context.app_actions)
                     result = views.proposal(proposal)
                     outcome = "proposed"
                     proposal_id = proposal.proposal_id
@@ -179,6 +228,9 @@ class ControlService:
         proposal = self._book.begin(proposal_id, approved_digest)
         owner = Caller(None, None)
         await self._record("owner", owner, "approve_proposal", "approval", "approved", proposal_id)
+        if proposal.kind in APP_PERFORMED:
+            # The app changes its own saved setup, then reports how it went (`complete`).
+            return views.proposal(proposal)
         result: Outcome
         code: str | None
         try:
@@ -193,6 +245,24 @@ class ControlService:
             result, code = "outcome_unknown", None
         finished = self._book.finish(proposal_id, result, code)
         await self._record("owner", owner, "perform_proposal", "approval", result, proposal_id)
+        return views.proposal(finished)
+
+    async def complete(
+        self, proposal_id: str, outcome: Literal["succeeded", "failed"], code: str | None
+    ) -> wire.ProposalView:
+        """Record how the app's own action went; only an approved app-performed proposal."""
+        proposal = self._book.get(proposal_id)
+        if proposal.kind not in APP_PERFORMED:
+            raise ProposalRefused("conflict")
+        state = proposal.state
+        if isinstance(state, Finished):
+            if state.result == outcome:
+                return views.proposal(proposal)  # the app said it twice
+            raise ProposalRefused("conflict")
+        finished = self._book.finish(proposal_id, outcome, code)
+        await self._record(
+            "owner", Caller(None, None), "perform_proposal", "approval", outcome, proposal_id
+        )
         return views.proposal(finished)
 
     async def reject(self, proposal_id: str) -> wire.ProposalView:
@@ -276,7 +346,7 @@ class ControlService:
             ):
                 raise ValueError("Approval-tier requests are proposed, never run directly")
 
-    def _propose(self, request: wire.Request, caller: Caller) -> Proposal:
+    def _propose(self, request: wire.Request, caller: Caller, *, app_actions: bool) -> Proposal:
         subject: Subject
         expires_by = None
         match request:
@@ -303,6 +373,11 @@ class ControlService:
                     limit_price=preview.plan.limit_price,
                 )
                 expires_by = preview.expires_at
+            case wire.ProposeSetAccountLimits(account_id=account_id, changes=changes):
+                if not app_actions:
+                    raise ProposalRefused("unavailable")
+                self._require_account(account_id)
+                subject = SetAccountLimits(account_id, _validated_limits(changes))
             case _:
                 raise ValueError("Only approval-tier requests become proposals")
         return self._book.propose(subject, caller, expires_by=expires_by)

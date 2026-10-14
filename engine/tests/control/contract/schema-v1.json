@@ -105,6 +105,46 @@
         "title": "GetStatus",
         "type": "object"
       },
+      "LimitChange": {
+        "additionalProperties": false,
+        "description": "One account setting and the value it is to take, as the text a person would type.",
+        "properties": {
+          "field": {
+            "$ref": "#/$defs/LimitField"
+          },
+          "value": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "value"
+        ],
+        "title": "LimitChange",
+        "type": "object"
+      },
+      "LimitField": {
+        "enum": [
+          "max_order_usd",
+          "max_symbol_usd",
+          "max_total_usd",
+          "daily_loss_cap_usd",
+          "max_entries_per_day",
+          "max_signal_age_seconds",
+          "order_timeout_seconds",
+          "poll_seconds",
+          "extended_hours",
+          "overnight",
+          "copy_exits",
+          "approve_orders",
+          "max_above_signal_pct",
+          "max_below_signal_pct"
+        ],
+        "type": "string"
+      },
       "ListAccountEvents": {
         "additionalProperties": false,
         "properties": {
@@ -579,6 +619,51 @@
         ],
         "title": "ProposeResumeAccount",
         "type": "object"
+      },
+      "ProposeSetAccountLimits": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Account Id",
+            "type": "string"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/$defs/LimitChange"
+            },
+            "maxItems": 14,
+            "minItems": 1,
+            "title": "Changes",
+            "type": "array"
+          },
+          "operation": {
+            "const": "propose_set_account_limits",
+            "default": "propose_set_account_limits",
+            "title": "Operation",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request_id",
+          "account_id",
+          "changes"
+        ],
+        "title": "ProposeSetAccountLimits",
+        "type": "object"
       }
     },
     "discriminator": {
@@ -596,7 +681,8 @@
         "preview_manual_order": "#/$defs/PreviewManualOrder",
         "propose_manual_order": "#/$defs/ProposeManualOrder",
         "propose_recovery_preference": "#/$defs/ProposeRecoveryPreference",
-        "propose_resume_account": "#/$defs/ProposeResumeAccount"
+        "propose_resume_account": "#/$defs/ProposeResumeAccount",
+        "propose_set_account_limits": "#/$defs/ProposeSetAccountLimits"
       },
       "propertyName": "operation"
     },
@@ -642,6 +728,9 @@
       },
       {
         "$ref": "#/$defs/ProposeManualOrder"
+      },
+      {
+        "$ref": "#/$defs/ProposeSetAccountLimits"
       }
     ]
   },
@@ -1507,6 +1596,74 @@
         "title": "InstructionView",
         "type": "object"
       },
+      "LimitChange": {
+        "additionalProperties": false,
+        "description": "One account setting and the value it is to take, as the text a person would type.",
+        "properties": {
+          "field": {
+            "$ref": "#/$defs/LimitField"
+          },
+          "value": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "value"
+        ],
+        "title": "LimitChange",
+        "type": "object"
+      },
+      "LimitField": {
+        "enum": [
+          "max_order_usd",
+          "max_symbol_usd",
+          "max_total_usd",
+          "daily_loss_cap_usd",
+          "max_entries_per_day",
+          "max_signal_age_seconds",
+          "order_timeout_seconds",
+          "poll_seconds",
+          "extended_hours",
+          "overnight",
+          "copy_exits",
+          "approve_orders",
+          "max_above_signal_pct",
+          "max_below_signal_pct"
+        ],
+        "type": "string"
+      },
+      "LimitsSubject": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/$defs/LimitChange"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "kind": {
+            "const": "set_account_limits",
+            "default": "set_account_limits",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "changes"
+        ],
+        "title": "LimitsSubject",
+        "type": "object"
+      },
       "LotView": {
         "additionalProperties": false,
         "description": "One block of shares the copier bought, and the post that bought it.",
@@ -2236,6 +2393,7 @@
           "mapping": {
             "confirm_manual_order": "#/$defs/ManualOrderSubject",
             "resume_account": "#/$defs/ResumeAccountSubject",
+            "set_account_limits": "#/$defs/LimitsSubject",
             "set_recovery": "#/$defs/RecoverySubject"
           },
           "propertyName": "kind"
@@ -2249,6 +2407,9 @@
           },
           {
             "$ref": "#/$defs/ManualOrderSubject"
+          },
+          {
+            "$ref": "#/$defs/LimitsSubject"
           }
         ]
       },

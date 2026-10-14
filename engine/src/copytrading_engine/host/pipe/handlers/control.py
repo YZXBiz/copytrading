@@ -5,6 +5,7 @@ from copytrading_engine.control.service import ControlService
 from copytrading_engine.host.pipe.requests import (
     AgentAuditRequest,
     ApproveProposalRequest,
+    CompleteProposalRequest,
     ControlRequest,
     DiscardProposalsRequest,
     ListProposalsRequest,
@@ -33,6 +34,7 @@ class ControlHandlers:
             ControlRequest: self._handle_control,
             ListProposalsRequest: self._handle_control,
             ApproveProposalRequest: self._handle_control,
+            CompleteProposalRequest: self._handle_control,
             RejectProposalRequest: self._handle_control,
             DiscardProposalsRequest: self._handle_control,
             AgentAuditRequest: self._handle_control,
@@ -43,6 +45,7 @@ class ControlHandlers:
         request: ControlRequest
         | ListProposalsRequest
         | ApproveProposalRequest
+        | CompleteProposalRequest
         | RejectProposalRequest
         | DiscardProposalsRequest
         | AgentAuditRequest,
@@ -102,6 +105,10 @@ class ControlHandlers:
         try:
             if isinstance(request, ApproveProposalRequest):
                 proposal = await control.approve(request.proposal_id, request.digest)
+            elif isinstance(request, CompleteProposalRequest):
+                proposal = await control.complete(
+                    request.proposal_id, request.outcome, request.code
+                )
             else:
                 proposal = await control.reject(request.proposal_id)
         except ProposalRefused as refused:

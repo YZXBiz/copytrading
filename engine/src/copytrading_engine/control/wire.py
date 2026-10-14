@@ -42,6 +42,7 @@ type Operation = Literal[
     "propose_resume_account",
     "propose_recovery_preference",
     "propose_manual_order",
+    "propose_set_account_limits",
 ]
 
 type ErrorCode = Literal[
@@ -141,6 +142,53 @@ class ProposeRecoveryPreference(RequestHeader):
     preference: RecoveryPreference
 
 
+LIMIT_FIELDS: Final = (
+    "max_order_usd",
+    "max_symbol_usd",
+    "max_total_usd",
+    "daily_loss_cap_usd",
+    "max_entries_per_day",
+    "max_signal_age_seconds",
+    "order_timeout_seconds",
+    "poll_seconds",
+    "extended_hours",
+    "overnight",
+    "copy_exits",
+    "approve_orders",
+    "max_above_signal_pct",
+    "max_below_signal_pct",
+)
+type LimitField = Literal[
+    "max_order_usd",
+    "max_symbol_usd",
+    "max_total_usd",
+    "daily_loss_cap_usd",
+    "max_entries_per_day",
+    "max_signal_age_seconds",
+    "order_timeout_seconds",
+    "poll_seconds",
+    "extended_hours",
+    "overnight",
+    "copy_exits",
+    "approve_orders",
+    "max_above_signal_pct",
+    "max_below_signal_pct",
+]
+
+
+class LimitChange(Wire):
+    """One account setting and the value it is to take, as the text a person would type."""
+
+    field: LimitField
+    value: Annotated[str, Field(min_length=1, max_length=32)]
+
+
+class ProposeSetAccountLimits(RequestHeader):
+    operation: Literal["propose_set_account_limits"] = "propose_set_account_limits"
+    account_id: AccountId
+    changes: Annotated[tuple[LimitChange, ...], Field(min_length=1, max_length=len(LIMIT_FIELDS))]
+
+
 class ProposeManualOrder(RequestHeader):
     operation: Literal["propose_manual_order"] = "propose_manual_order"
     account_id: AccountId
@@ -161,7 +209,8 @@ type Request = Annotated[
     | PauseAccount
     | ProposeResumeAccount
     | ProposeRecoveryPreference
-    | ProposeManualOrder,
+    | ProposeManualOrder
+    | ProposeSetAccountLimits,
     Field(discriminator="operation"),
 ]
 REQUEST: Final = TypeAdapter[Request](Request)
@@ -415,8 +464,14 @@ class ManualOrderSubject(Wire):
     limit_price: Decimal | None
 
 
+class LimitsSubject(Wire):
+    kind: Literal["set_account_limits"] = "set_account_limits"
+    account_id: str
+    changes: tuple[LimitChange, ...]
+
+
 type ProposalSubject = Annotated[
-    ResumeAccountSubject | RecoverySubject | ManualOrderSubject,
+    ResumeAccountSubject | RecoverySubject | ManualOrderSubject | LimitsSubject,
     Field(discriminator="kind"),
 ]
 

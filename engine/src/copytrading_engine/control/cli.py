@@ -93,6 +93,20 @@ def _parser() -> argparse.ArgumentParser:
     recovery.add_argument("account_id")
     recovery.add_argument("preference", choices=("manual", "automatic"))
 
+    limits = account_actions.add_parser(
+        "limits",
+        parents=[output],
+        help="propose new limits and settings for an account (the owner approves in the app)",
+    )
+    limits.add_argument("account_id")
+    for field in wire.LIMIT_FIELDS:
+        limits.add_argument(
+            f"--{field.replace('_', '-')}",
+            dest=field,
+            metavar="VALUE",
+            help="true or false" if field in _SWITCHES else "a number",
+        )
+
     activity = commands.add_parser("activity", parents=[output, paged], help="source activity")
     activity.add_argument("--before", dest="before_seq", type=int)
     events = commands.add_parser("events", parents=[output, paged], help="account events")
@@ -149,6 +163,17 @@ def request_for(args: argparse.Namespace) -> wire.Request:
         case "accounts", "recovery":
             return wire.ProposeRecoveryPreference(
                 request_id=request_id, account_id=args.account_id, preference=args.preference
+            )
+        case "accounts", "limits":
+            changes = tuple(
+                wire.LimitChange(field=field, value=str(getattr(args, field)))
+                for field in wire.LIMIT_FIELDS
+                if getattr(args, field) is not None
+            )
+            if not changes:
+                raise ValueError("Name at least one setting, such as --max-order-usd 300")
+            return wire.ProposeSetAccountLimits(
+                request_id=request_id, account_id=args.account_id, changes=changes
             )
         case "activity", _:
             return wire.ListActivity(
@@ -277,6 +302,9 @@ async def _wait(client: ControlClient, response: wire.Response, timeout: float) 
 
 
 # Text output
+
+
+_SWITCHES: Final = ("extended_hours", "overnight", "copy_exits", "approve_orders")
 
 
 def _words(code: str | None) -> str:
@@ -476,6 +504,10 @@ def _render_proposal(proposal: wire.ProposalView) -> str:
             what = f"start copying into {subject.account_id}"
         case wire.RecoverySubject():
             what = f"set recovery for {subject.account_id} to {subject.preference}"
+        case wire.LimitsSubject():
+            what = f"change {subject.account_id}: " + ", ".join(
+                f"{_words(change.field)} = {change.value}" for change in subject.changes
+            )
         case wire.ManualOrderSubject():
             what = (
                 f"{subject.side} {_amount(subject.quantity)} {subject.symbol} "

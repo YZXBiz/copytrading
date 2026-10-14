@@ -31,7 +31,12 @@ def tier(operation: Operation) -> Tier:
             return "read"
         case "pause_processing" | "pause_account":
             return "safer"
-        case "propose_resume_account" | "propose_recovery_preference" | "propose_manual_order":
+        case (
+            "propose_resume_account"
+            | "propose_recovery_preference"
+            | "propose_manual_order"
+            | "propose_set_account_limits"
+        ):
             return "approval"
         case _:
             assert_never(operation)
