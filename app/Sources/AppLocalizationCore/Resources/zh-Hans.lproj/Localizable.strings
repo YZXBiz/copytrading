@@ -1913,6 +1913,7 @@
 "Yesterday" = "昨天";
 "No account acted on it" = "没有账户处理";
 "No posts from %@ yet. They show here as soon as CopyTrading reads one." = "%@ 还没有帖子。CopyTrading 读到第一条后会显示在这里。";
+"%@'s posts show here once CopyTrading has read them." = "CopyTrading 读取后，%@ 的帖子会显示在这里。";
 "Edit %@" = "编辑 %@";
 "Saved · applies to the next order" = "已保存 · 下一笔订单生效";
 "These limits weren't saved." = "这些限额没有保存。";
