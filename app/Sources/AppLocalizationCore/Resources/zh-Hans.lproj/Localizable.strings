@@ -26,8 +26,6 @@
 "%@ → %@ · %@" = "%@ 至 %@ · %@";
 "%@, %@" = "%@，%@";
 "%@, and more" = "%@ 等";
-"%@, no calls yet." = "已发布 %@，但暂无喊单。";
-"%@, rest cancelled" = "%@，其余已取消";
 "%@: %@." = "%@：%@。";
 "%lld h ago" = "%lld小时前";
 "%lld min ago" = "%lld分钟前";
@@ -480,8 +478,6 @@
 "No message text was captured." = "未捕获到消息文本。";
 "No open positions. Copied buys appear here, next to anything you hold outside CopyTrading." = "当前没有未平仓持仓。跟随买入的股票会显示在此处，并与 CopyTrading 之外持有的股票并列。";
 "No posts loaded yet" = "尚未加载帖子";
-"No posts today. Start copying to follow %@." = "今天还没有帖子。开始跟单以关注 %@。";
-"No posts yet today. New calls from %@ appear here within seconds." = "今天还没有帖子。%@发布的新喊单会在几秒内显示在这里。";
 "No price quote was available" = "暂无可用报价";
 "No prior account delivery details are recorded." = "未记录此前向账户发送订单的详情。";
 "No problems recorded" = "尚未记录问题";
@@ -736,7 +732,6 @@
 "Show or hide the sidebar" = "显示或隐藏边栏";
 "Show Sidebar" = "显示边栏";
 "Show Tips Again" = "再次显示提示";
-"Shows %@'s calls and where they are copied" = "查看 %@ 发布的喊单及其跟单去向";
 "Shows the posts these shares came from" = "显示这些持仓来自哪些帖子";
 "Shows this post in Activity" = "在“活动”中显示此帖子";
 "Shows what a backup holds first. Nothing changes until you activate it." = "先预览备份包含的内容。启用恢复前不会更改任何数据。";
@@ -913,7 +908,6 @@
 "Working" = "进行中";
 "Yes" = "是";
 "You" = "你";
-"You're copying %@ into %@." = "正在将 %@ 的喊单跟单到 %@。";
 "You're set up. This page stays here as your guide." = "设置已完成。本页会一直保留，供你参考。";
 "Your account trades" = "账户执行交易";
 "your accounts" = "你的账户";
@@ -986,9 +980,6 @@
 "Read %@'s history" = "已读取 %@ 的账户历史记录";
 "Checked what is waiting for you" = "已查看等你处理的事项";
 "Paused copying" = "已暂停跟单";
-"Added up %@'s calls" = "已统计 %@ 的交易信号";
-"Paused new entries for %@" = "已暂停 %@ 的新开仓";
-"Asked you to approve resuming %@" = "已请你批准恢复 %@ 的开仓";
 "Added up %@'s calls" = "已统计 %@ 的喊单";
 "Looked at that post" = "已查看那条帖子";
 "Couldn't check whether copying is running" = "未能查看跟单是否在运行";
@@ -1306,11 +1297,6 @@
 "Copies into %@ · full position %@" = "跟单到 %@ · 满仓 %@";
 "Full position %@. A 1/6 call buys a sixth of it." = "满仓 %@。1/6 的喊单买它的六分之一。";
 "First set this account's max per stock. It's the guru's full position." = "先设置这个账户的单只股票上限，它就是信号源的满仓。";
-"You skipped this call." = "你跳过了这条信号。";
-"%@'s max per stock, **%@**, is this guru's full position." = "%@ 的单只股票上限 **%@** 就是这位信号源的满仓。";
-"A 1/6 call buys **%@** and a 1/2 call **%@**." = "1/6 的喊单买入 **%@**，1/2 的喊单买入 **%@**。";
-"Your max per order, **%@**, cuts bigger buys down. Activity shows when." = "单笔上限 **%@** 会把更大的买入减下来，“活动”里会注明。";
-"A post with no size buys **%@**." = "没说仓位的帖子买 **%@**。";
 "You skipped this call." = "你跳过了这条喊单。";
 "Too late to copy: its trading day is over." = "来不及跟单了：当天交易日已结束。";
 "Opens the call to check, then previews the order in each waiting account." = "打开这条喊单供你核对，然后在每个等待中的账户里预览订单。";
@@ -1327,9 +1313,6 @@
 "Not sold" = "没有卖出";
 "Not bought" = "没有买入";
 "Not copied yet" = "还没跟单";
-"The call was for %@. Your max per order cut it to %@." = "这条喊单要买 %@，单笔上限把它减到 %@。";
-"%@ already has %@ of %@. Buying %@ more would go over its %@ limit for one stock." = "%@ 已有 %@ 的 %@。再买 %@ 会超过单只股票上限 %@。";
-"%@ already holds %@ in total. Buying %@ more would go over its %@ total limit." = "%@ 总共已持有 %@。再买 %@ 会超过总额上限 %@。";
 "Read as" = "解读为";
 "A call is waiting for you" = "有一条喊单等你决定";
 "Some posts need you: a suggestion, an “if”, or a price that has moved. They wait here until you copy or skip them." = "有些帖子需要你决定：建议、带“如果”的，或价格已经变了的。它们会在这里等你跟单或跳过。";
@@ -1417,7 +1400,6 @@
 "You see what happened" = "你看到结果";
 "Each account decides on its own." = "每个账户各自决定。";
 "When the guru sells" = "信号源卖出时";
-"That part of what it bought on the guru's calls, at no less than their price less your allowance, 1% unless you change it." = "卖出按这个信号源的喊单买入的那部分，价格不低于信号源的价格减去你允许的幅度（默认 1%）。";
 "Never your own shares, and no stop-loss of its own." = "从不卖你自己的股票，也不会自己设止损。";
 "**Start on paper.** Paper accounts trade pretend money at real prices. A live account asks for Touch ID before it starts." = "**先用模拟盘**。模拟账户用虚拟资金按真实价格交易。实盘账户开始前会要求 Touch ID。";
 "**A sleeping Mac copies nothing.** Keep it plugged in and awake, with CopyTrading open, while the market is. A closed MacBook lid sleeps it unless a display is connected." = "**睡眠的 Mac 什么都不会跟单**。开盘期间让它接着电源、保持唤醒，并开着 CopyTrading。合上 MacBook 盖子会让它睡眠，除非连接了显示器。";
@@ -2180,8 +2162,6 @@
 "In %@: %@" = "在 %@：%@";
 "Check for posts every (seconds)" = "检查新帖子的间隔（秒）";
 "%@ → %@" = "%@ → %@";
-"Holding %@ in 1 stock from these calls" = "这些喊单目前持有 %@，共 1 只股票";
-"Holding %@ in %lld stocks from these calls" = "这些喊单目前持有 %@，共 %lld 只股票";
 "Reduce a position" = "减仓";
 "Close a position" = "清仓";
 "Deadline today: %@ %@" = "今天 %@（%@）";
