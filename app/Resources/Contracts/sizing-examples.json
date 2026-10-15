@@ -1,5 +1,5 @@
 {
-  "about": "What a call asks for: its share of the guru's full position (ADR-0007). The engine (requested_entry_budget) and the app (copiedBudgetUSD) must both give these.",
+  "about": "What a call asks for: its share of the guru's full position (ADR-0007), and, where an example names the account's max per order, what it spends after that cut. The engine (requested_entry_budget, entry_budget) and the app (copiedBudgetUSD, spentUSD) must both give these.",
   "examples": [
     {
       "case": "a sixth of 3000",
@@ -96,6 +96,36 @@
         "denominator": 6
       },
       "budget_usd": null
+    },
+    {
+      "case": "the full 1000 stops at a 250 max per order",
+      "full_position_usd": "1000",
+      "fraction": null,
+      "budget_usd": "1000.00",
+      "max_order_usd": "250",
+      "spent_usd": "250"
+    },
+    {
+      "case": "a quarter of 1000 is exactly a 250 max per order",
+      "full_position_usd": "1000",
+      "fraction": {
+        "numerator": 1,
+        "denominator": 4
+      },
+      "budget_usd": "250.00",
+      "max_order_usd": "250",
+      "spent_usd": "250.00"
+    },
+    {
+      "case": "a sixth of 1000 fits under a 250 max per order",
+      "full_position_usd": "1000",
+      "fraction": {
+        "numerator": 1,
+        "denominator": 6
+      },
+      "budget_usd": "166.66",
+      "max_order_usd": "250",
+      "spent_usd": "166.66"
     }
   ]
 }

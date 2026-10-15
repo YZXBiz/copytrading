@@ -32,6 +32,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
     case positionStory = "position story"
     case liveQuote = "live quote"
     case setupCheckProblems = "setup check problems"
+    case copySheet = "copy sheet amount and price"
 
     var testDescription: String { rawValue }
 
@@ -66,6 +67,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
         case .positionStory: try runPositionStoryTests()
         case .liveQuote: try runLiveQuoteTests()
         case .setupCheckProblems: try runSetupCheckProblemTests()
+        case .copySheet: try runCopySheetTests()
         }
     }
 }

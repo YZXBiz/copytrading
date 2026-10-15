@@ -39,8 +39,10 @@ struct ManualReviewSheet: View {
     @State private var approvalProblem: String?
     /// The broker's latest quote for each stock in the trades, by symbol.
     @State private var quotes: [String: LiveQuote] = [:]
-    /// Stocks whose quote is being asked for again.
+    /// Stocks whose quote is being asked for.
     @State private var refreshingQuotes: Set<String> = []
+    /// The quotes were asked for once already, as the sheet opened.
+    @State private var hasAskedForQuotes = false
 
     init(
         source: SourceActivity,
@@ -87,12 +89,8 @@ struct ManualReviewSheet: View {
             guessed = false
         }
         if drafts.isEmpty { drafts = [ManualInstructionDraft()] }
-        let prices = Self.marketPrices(in: accounts)
-        // A buy needs a price: with none in the post it follows the last price. A sell without one
-        // sells at the market.
-        for index in drafts.indices where !drafts[index].isSell && drafts[index].price.trimmed.isEmpty {
-            if let market = prices[drafts[index].symbol.trimmed.uppercased()] { drafts[index].price = "\(market)" }
-        }
+        // A post's price is copied as a limit at that price; a buy with none follows the live ask
+        // once the quote the sheet asks for on opening answers.
         _instructions = State(initialValue: drafts)
     }
 
@@ -115,7 +113,8 @@ struct ManualReviewSheet: View {
 
     private var estimate: ManualOrderEstimate {
         ManualOrderEstimate(
-            drafts: instructions, accounts: chosenAccounts, connections: connections, mode: mode, quotes: quotes)
+            drafts: instructions, accounts: chosenAccounts, connections: connections, maxOrderUSD: maxOrderUSD,
+            mode: mode, quotes: quotes)
     }
 
     /// The account whose read keys quote the stocks: the first chosen, else the first listed.
@@ -199,7 +198,7 @@ struct ManualReviewSheet: View {
                 .padding(.trailing, 14)
         }
         .background(Palette.page)
-        .frame(minWidth: 560, idealWidth: 620, minHeight: 600, idealHeight: 780)
+        .frame(minWidth: 560, idealWidth: 700, minHeight: 600, idealHeight: 780)
         .confirmationDialog(
             L10n.string("Confirm manual orders?"),
             isPresented: $showsConfirmation,
@@ -217,7 +216,7 @@ struct ManualReviewSheet: View {
             let accountIDs = Set(accounts.map(\.accountID) + source.destinations.map(\.accountID))
             await feature.recoverCommands(sourceID: source.sourceID, accountIDs: accountIDs, using: operations)
         }
-        .task(id: quoteRequest) { await fetchQuotes() }
+        .task(id: quoteRequest) { await followQuotes() }
         .onDisappear { feature.clearPrivateEvidence() }
     }
 
@@ -257,7 +256,6 @@ struct ManualReviewSheet: View {
     private var trades: some View {
         VStack(alignment: .leading, spacing: 22) {
             let holdings = ManualHolding.holdings(in: accounts, accountIDs: selectedAccountIDs)
-            let prices = Self.marketPrices(in: accounts)
             let single = chosenAccounts.count == 1 ? chosenAccounts.first.flatMap { connections[$0.accountID] } : nil
             let cap = chosenAccounts.count == 1 ? chosenAccounts.first.flatMap { maxOrderUSD[$0.accountID] } : nil
             ForEach($instructions) { $instruction in
@@ -265,7 +263,6 @@ struct ManualReviewSheet: View {
                 ManualInstructionEditor(
                     draft: $instruction,
                     holdings: holdings,
-                    marketPrices: prices,
                     quote: quotes[instruction.symbol.trimmed.uppercased()],
                     refreshQuote: refreshingQuotes.contains(instruction.symbol.trimmed.uppercased())
                         ? nil : { refreshQuote(instruction.symbol.trimmed.uppercased()) },
@@ -496,12 +493,20 @@ struct ManualReviewSheet: View {
         approvalProblem = nil
     }
 
+    /// Each order exactly as the engine planned it: a buy by the dollars it spends after the max
+    /// per order and its shares at the limit, a sell by its shares.
     @MainActor private var confirmationSummary: String {
-        confirmationToSubmit.map { request in
-            let preview = feature.previews[request.previewID]
-            return L10n.string(
-                "%@: %@ %@ %@ at %@", request.accountID, preview?.plan?.side ?? "order",
-                preview?.plan?.quantity ?? "", preview?.plan?.symbol ?? "", preview?.plan?.limitPrice ?? "—")
+        confirmationToSubmit.compactMap { request in
+            guard let plan = feature.previews[request.previewID]?.plan else { return nil }
+            let shares = Decimal(engine: plan.quantity).map { Humanize.shares($0) } ?? plan.quantity
+            let limit = Decimal(engine: plan.limitPrice).map(Humanize.usd) ?? "—"
+            if let budget = Decimal(engine: plan.budgetUSD) {
+                return L10n.string(
+                    "%@: Buy %@ of %@, %@ at %@ or less", request.accountID, Humanize.dollars("\(budget)"), plan.symbol,
+                    shares, limit)
+            }
+            let side = L10n.string(plan.side.lowercased() == "sell" ? "Sell" : "Buy")
+            return L10n.string("%@: %@ %@ of %@ at %@", request.accountID, side, shares, plan.symbol, limit)
         }.joined(separator: "\n")
     }
 
@@ -524,24 +529,34 @@ struct ManualReviewSheet: View {
         }
     }
 
-    /// Asks the engine for each typed stock's latest quote once typing pauses, read-only. A
-    /// failed ask leaves the stock on its last known price; a stock with no quote says so.
-    private func fetchQuotes() async {
+    /// How often an open sheet asks again, so Market always reads a live price.
+    private static let quoteRefresh = Duration.seconds(30)
+
+    /// Asks the engine for each stock's quote as the sheet opens, again every `quoteRefresh` while
+    /// it stays open, and after a typed ticker settles; read-only. A failed ask keeps the last
+    /// quote, which then says how old it is.
+    private func followQuotes() async {
         guard let operations, let accountID = quotingAccountID else { return }
-        do {
-            try await Task.sleep(for: .milliseconds(400))
-        } catch {
-            return
+        let symbols = Array(quoteRequest.dropFirst())
+        // The ask as the sheet opens goes out at once; a ticker being typed waits for a pause.
+        if hasAskedForQuotes {
+            do { try await Task.sleep(for: .milliseconds(400)) } catch { return }
         }
-        for symbol in quoteRequest.dropFirst() {
-            let quote: MarketQuote?
-            do {
-                quote = try await operations.quote(accountID: accountID, symbol: symbol)
-            } catch {
-                if Task.isCancelled { return }
-                continue
+        hasAskedForQuotes = true
+        while !Task.isCancelled {
+            for symbol in symbols {
+                refreshingQuotes.insert(symbol)
+                defer { refreshingQuotes.remove(symbol) }
+                let quote: MarketQuote?
+                do {
+                    quote = try await operations.quote(accountID: accountID, symbol: symbol)
+                } catch {
+                    if Task.isCancelled { return }
+                    continue
+                }
+                quotes[symbol] = LiveQuote(symbol: symbol, quote: quote)
             }
-            quotes[symbol] = LiveQuote(symbol: symbol, quote: quote)
+            do { try await Task.sleep(for: Self.quoteRefresh) } catch { return }
         }
     }
 
@@ -554,16 +569,5 @@ struct ManualReviewSheet: View {
             guard let quote = try? await operations.quote(accountID: accountID, symbol: symbol) else { return }
             quotes[symbol] = LiveQuote(symbol: symbol, quote: quote)
         }
-    }
-
-    /// The last price of every stock any account holds, inside CopyTrading or out, by symbol.
-    static func marketPrices(in accounts: [AccountOverview]) -> [String: Decimal] {
-        var prices: [String: Decimal] = [:]
-        for position in accounts.flatMap(\.positions) {
-            if let price = position.currentPrice.flatMap({ Decimal(string: $0) }), price > 0 {
-                prices[position.symbol.uppercased()] = price
-            }
-        }
-        return prices
     }
 }

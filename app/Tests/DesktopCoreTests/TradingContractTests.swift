@@ -179,12 +179,17 @@ private struct SizingExamples: Decodable {
         let fullPositionUSD: String
         let fraction: Fraction?
         let budgetUSD: String?
+        /// The account's max per order and what the call spends after it, where an example names one.
+        let maxOrderUSD: String?
+        let spentUSD: String?
 
         enum CodingKeys: String, CodingKey {
             case `case`
             case fullPositionUSD = "full_position_usd"
             case fraction
             case budgetUSD = "budget_usd"
+            case maxOrderUSD = "max_order_usd"
+            case spentUSD = "spent_usd"
         }
     }
 
@@ -205,5 +210,12 @@ private func sizingMatchesTheEngineOnEverySharedExample() throws {
         try #require(
             budget == example.budgetUSD.flatMap { Decimal(string: $0) },
             "sizing differs from the engine: \(example.case) gave \(String(describing: budget))")
+        // The copy sheet's footer and button: the same dollars the engine's plan spends.
+        if let cap = example.maxOrderUSD.flatMap({ Decimal(string: $0) }) {
+            let spent = connection.spentUSD(sourceFraction: source, maxOrderUSD: cap)
+            try #require(
+                spent == example.spentUSD.flatMap { Decimal(string: $0) },
+                "the max per order cut differs from the engine: \(example.case) gave \(String(describing: spent))")
+        }
     }
 }

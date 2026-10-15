@@ -221,6 +221,10 @@ public struct ManualOrderPlan: Codable, Equatable, Sendable {
     public let lotID: String?
     public let entryPrice: String
     public let session: String
+    /// What a buy's call asked for, and the dollars it spends after the max per order: the
+    /// amount the owner confirms (ADR-0007). Nil on a sell.
+    public let requestedUSD: String?
+    public let budgetUSD: String?
 
     enum CodingKeys: String, CodingKey {
         case side, type, symbol, session
@@ -231,6 +235,8 @@ public struct ManualOrderPlan: Codable, Equatable, Sendable {
         case entryTolerancePct = "entry_tolerance_pct"
         case lotID = "lot_id"
         case entryPrice = "entry_price"
+        case requestedUSD = "requested_usd"
+        case budgetUSD = "budget_usd"
     }
 }
 

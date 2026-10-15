@@ -8,8 +8,6 @@ struct ManualInstructionEditor: View {
     @Binding var draft: ManualInstructionDraft
     /// What CopyTrading holds in the chosen accounts.
     let holdings: [ManualHolding]
-    /// The last price of every stock any account holds, by symbol.
-    let marketPrices: [String: Decimal]
     /// The broker's latest quote for the chosen stock; nil until one is asked for and answered.
     let quote: LiveQuote?
     /// Asks the broker again for the chosen stock's quote; nil while it is being asked.
@@ -21,16 +19,10 @@ struct ManualInstructionEditor: View {
     /// "Trade 2 of 3" with Remove, when the sheet holds more than one.
     let position: (index: Int, count: Int)?
     let remove: () -> Void
-    @State private var typesPrice = false
     @FocusState private var focusedField: String?
 
     private var symbol: String { draft.symbol.trimmed.uppercased() }
     private var holding: ManualHolding? { holdings.first { $0.symbol == symbol } }
-    /// The live quote's ask for a buy or bid for a sell; a held stock's last price until it comes.
-    private var marketPrice: Decimal? {
-        if let quote { return quote.price(isSell: draft.isSell) }
-        return holding?.price ?? marketPrices[symbol]
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -50,21 +42,16 @@ struct ManualInstructionEditor: View {
             TradeSideSwitch(isSell: draft.isSell, choose: setSell)
                 .padding(.bottom, 8)
             FormRow(label: L10n.string("Stock"), note: holdingNote) { stock }
-            FormRow(label: L10n.string("How much")) { amount }
+            FormRow(label: L10n.string("How much"), note: capNote) { amount }
             if draft.isSell, !buyPrices.isEmpty {
                 FormRow(label: L10n.string("From")) { buys }
             }
             TimelineView(.periodic(from: .now, by: 10)) { context in
-                FormRow(label: L10n.string("Price"), note: noQuote) { price(now: context.date) }
+                FormRow(label: L10n.string("Price"), note: quoteNote(now: context.date)) { price(now: context.date) }
             }
         }
-        .onChange(of: quote) { refreshMarketPrice() }
-    }
-
-    /// The broker had no quote for the typed stock.
-    @MainActor private var noQuote: String? {
-        guard let quote, quote.price(isSell: draft.isSell) == nil else { return nil }
-        return quote.detail(isSell: draft.isSell)
+        .onChange(of: quote) { followMarket() }
+        .onChange(of: draft.symbol) { followMarket() }
     }
 
     /// What is held of the chosen stock, under the Stock row of a sell.
@@ -106,10 +93,9 @@ struct ManualInstructionEditor: View {
             .padding(.bottom, 5)
             .frame(width: 200)
             .focused($focusedField, equals: "symbol")
-            .overlay(alignment: .bottom) { fieldLine(focusedField == "symbol" || draft.symbol.trimmed.isEmpty) }
+            .overlay(alignment: .bottom) { WritingLine(isActive: focusedField == "symbol" || draft.symbol.trimmed.isEmpty) }
             .accessibilityLabel(L10n.string("Symbol"))
             .accessibilityIdentifier("review.symbol")
-            .onChange(of: draft.symbol) { refreshMarketPrice() }
         }
     }
 
@@ -121,58 +107,73 @@ struct ManualInstructionEditor: View {
 
     // MARK: Amount
 
+    /// The usual buy sizes, with those the max per order makes the same merged into one.
+    private var buySizes: [BuySize] { BuySize.choices(fullPosition: fullPosition, maxOrderUSD: maxOrderUSD) }
+
+    /// A dollar amount the post named, and what it spends after the max per order.
+    private var namedUSD: (asked: Decimal, spent: Decimal)? {
+        guard !draft.isSell, let usd = Decimal(string: draft.usdAmount.trimmed), usd > 0 else { return nil }
+        return (usd, fullPosition?.spentUSD(sourceFraction: nil, sourceUSD: usd, maxOrderUSD: maxOrderUSD) ?? usd)
+    }
+
     @ViewBuilder private var amount: some View {
-        let options = draft.isSell ? ManualInstructionDraft.sellShares : ManualInstructionDraft.buySizes
-        VStack(alignment: .leading, spacing: 8) {
-            FlowRow(spacing: 22, lineSpacing: 12) {
-                ForEach(options, id: \.self) { option in
-                    FormChoice(title: shareTitle(option), detail: buyDetail(option), isOn: isChosen(option)) {
-                        draft.fraction = option
-                        draft.usdAmount = ""
+        FlowRow(spacing: 22, lineSpacing: 12) {
+            if draft.isSell {
+                ForEach(ManualInstructionDraft.sellShares, id: \.self) { share in
+                    FormChoice(title: shareTitle(share), isOn: ManualInstructionDraft.sameShare(share, draft.fraction)) {
+                        draft.fraction = share
                     }
-                    .accessibilityIdentifier("review.amount.\(Humanize.fraction(option.isEmpty ? "1" : option))")
+                    .accessibilityIdentifier("review.amount.\(Humanize.fraction(share))")
                 }
-                // A dollar amount the post named.
-                if !draft.isSell, !draft.usdAmount.isEmpty {
-                    ChoiceWord(title: Humanize.dollars(draft.usdAmount), isOn: true) {}
+                if !ManualInstructionDraft.sellShares.contains(where: { ManualInstructionDraft.sameShare($0, draft.fraction) }) {
+                    FormChoice(title: shareTitle(draft.fraction), isOn: true) {}
                 }
-                // A size the post named that isn't one of the usual ones.
-                if !draft.fraction.isEmpty, !options.contains(where: { isChosen($0) }) {
-                    FormChoice(title: shareTitle(draft.fraction), detail: buyDetail(draft.fraction), isOn: true) {}
+            } else {
+                ForEach(buySizes, id: \.shares) { size in
+                    FormChoice(
+                        title: sizeTitle(size), detail: size.usd.map { Humanize.dollars("\($0)") },
+                        isOn: draft.usdAmount.isEmpty && size.contains(draft.fraction)
+                    ) {
+                        draft.usdAmount = ""
+                        // Already one of the sizes it stands for: keep the guru's own.
+                        if !size.contains(draft.fraction) { draft.fraction = size.shares[0] }
+                    }
+                    .accessibilityIdentifier("review.amount.\(Humanize.fraction(size.shares[0].isEmpty ? "1" : size.shares[0]))")
                 }
-            }
-            if let cap = maxOrderUSD, !draft.isSell, options.contains(where: { asked($0).map { $0 > cap } ?? false }) {
-                Text(L10n.string("Your max per order, %@, caps any one buy.", Humanize.dollars("\(cap)")))
-                    .font(DesignTokens.caption)
-                    .foregroundStyle(Palette.tertiaryInk)
+                if let namedUSD {
+                    FormChoice(
+                        title: Humanize.dollars("\(namedUSD.asked)"),
+                        detail: namedUSD.spent < namedUSD.asked ? Humanize.dollars("\(namedUSD.spent)") : nil, isOn: true
+                    ) {}
+                } else if !draft.fraction.isEmpty, !buySizes.contains(where: { $0.contains(draft.fraction) }) {
+                    // A size the post named that isn't one of the usual ones.
+                    let usd = BuySize.choices([draft.fraction], fullPosition: fullPosition, maxOrderUSD: maxOrderUSD).first?.usd
+                    FormChoice(title: shareTitle(draft.fraction), detail: usd.map { Humanize.dollars("\($0)") }, isOn: true) {}
+                }
             }
         }
     }
 
-    private func isChosen(_ option: String) -> Bool {
-        guard draft.isSell || draft.usdAmount.isEmpty else { return false }
-        return option.isEmpty ? draft.fraction.trimmed.isEmpty : ManualInstructionDraft.sameShare(option, draft.fraction)
+    /// One plain line once the max per order cuts any size: "Bigger sizes stop at your $250 max
+    /// per order."
+    @MainActor private var capNote: String? {
+        guard !draft.isSell, let maxOrderUSD else { return nil }
+        let cut = buySizes.contains { $0.shares.count > 1 } || namedUSD.map { $0.spent < $0.asked } == true
+        return cut ? L10n.string("Bigger sizes stop at your %@ max per order.", Humanize.dollars("\(maxOrderUSD)")) : nil
     }
 
-    @MainActor private func shareTitle(_ option: String) -> String {
-        if option.isEmpty { return L10n.string("Full") }
-        let fraction = Humanize.fraction(option)
+    /// "⅙", "Full", or "¼ or more" for the sizes the max per order made the same.
+    @MainActor private func sizeTitle(_ size: BuySize) -> String {
+        let first = shareTitle(size.shares[0])
+        return size.shares.count > 1 ? L10n.string("%@ or more", first) : first
+    }
+
+    @MainActor private func shareTitle(_ share: String) -> String {
+        if share.isEmpty { return L10n.string("Full") }
+        let fraction = Humanize.fraction(share)
         if fraction == "1" { return L10n.string(draft.isSell ? "All" : "Full") }
         let glyphs = ["1/6": "⅙", "1/4": "¼", "1/3": "⅓", "1/2": "½", "2/3": "⅔", "3/4": "¾", "1/5": "⅕", "1/8": "⅛"]
         return glyphs[fraction] ?? fraction
-    }
-
-    /// What a buy of this size asks for in the one chosen account, before the max per order.
-    private func asked(_ option: String) -> Decimal? {
-        guard !draft.isSell, let fullPosition else { return nil }
-        return fullPosition.copiedBudgetUSD(sourceFraction: option.isEmpty ? nil : Decimal(string: option))
-    }
-
-    /// What a buy of this size spends in the one chosen account: its share of the full position,
-    /// cut to the max per order, as the engine cuts it.
-    @MainActor private func buyDetail(_ option: String) -> String? {
-        guard let budget = asked(option) else { return nil }
-        return Humanize.dollars("\(maxOrderUSD.map { min(budget, $0) } ?? budget)")
     }
 
     // MARK: Buys
@@ -197,63 +198,61 @@ struct ManualInstructionEditor: View {
 
     // MARK: Price
 
+    /// The guru's price, the market with its quote and ↻, and Limit, on one line. Each choice and
+    /// what belongs to it wrap as one: ↻ never leaves Market, and the typed price never leaves
+    /// Limit.
     @ViewBuilder private func price(now: Date) -> some View {
-        let post = Decimal(string: draft.postPrice.trimmed)
-        let sent = Decimal(string: draft.price.trimmed)
-        // A sell at the market sends no price; a buy at the market sends the last price.
-        let atMarket = draft.isSell ? draft.price.trimmed.isEmpty : marketPrice != nil && sent == marketPrice && sent != post
-        let atPost = post != nil && sent == post
-        let other = typesPrice || (!atMarket && !atPost)
         FlowRow(spacing: 22, lineSpacing: 12) {
-            if let post {
-                FormChoice(title: Humanize.dollars("\(post)"), detail: L10n.string("the guru's price"), isOn: !typesPrice && atPost) {
-                    typesPrice = false
-                    draft.price = draft.postPrice
-                }
-            }
-            if draft.isSell || marketPrice != nil {
+            if let post = Decimal(string: draft.postPrice.trimmed) {
                 FormChoice(
-                    title: L10n.string("Market"),
-                    detail: marketDetail(now: now),
-                    isOn: !typesPrice && atMarket
-                ) {
-                    typesPrice = false
-                    draft.price = draft.isSell ? "" : marketPrice.map { "\($0)" } ?? ""
+                    title: Humanize.dollars("\(post)"), detail: L10n.string("the guru's price"),
+                    isOn: draft.priceChoice == .guru
+                ) { choose(.guru) }
+                .accessibilityIdentifier("review.price.guru")
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                FormChoice(title: L10n.string("Market"), detail: marketDetail(now: now), isOn: draft.priceChoice == .market) {
+                    choose(.market)
                 }
+                // A buy at the market needs a live price to pay; a sell at the market never sends one.
+                .disabled(!draft.isSell && livePrice(now: now) == nil)
                 .accessibilityIdentifier("review.price.market")
-                if quote != nil { refreshButton }
+                if LiveQuote.canQuote(symbol) { refreshButton }
             }
-            if post != nil || draft.isSell || marketPrice != nil {
-                FormChoice(title: L10n.string("Limit…"), isOn: other) {
-                    typesPrice = true
-                    if draft.isSell, draft.price.trimmed.isEmpty { draft.price = marketPrice.map { "\($0)" } ?? "" }
-                }
-            }
-            if other {
-                TextField(
-                    L10n.string("Price"), text: $draft.price,
-                    prompt: Text(L10n.string("Limit price")).foregroundStyle(Palette.tertiaryInk)
-                )
-                .textFieldStyle(.plain)
-                .font(DesignTokens.bodyEmphasis)
-                .monospacedDigit()
-                .padding(.bottom, 4)
-                .frame(width: 96)
-                .focused($focusedField, equals: "price")
-                .overlay(alignment: .bottom) { fieldLine(focusedField == "price" || draft.price.trimmed.isEmpty) }
-                .accessibilityLabel(L10n.string("Price in the post"))
-                .accessibilityIdentifier("review.price")
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                FormChoice(title: L10n.string("Limit"), isOn: draft.priceChoice == .limit) { choose(.limit) }
+                    .accessibilityIdentifier("review.price.limit")
+                if draft.priceChoice == .limit { limitField }
             }
         }
     }
 
-    /// Asks for the quote again, beside its age; a small spinner while the broker answers.
+    private var limitField: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 2) {
+            Text(verbatim: "$")
+                .font(DesignTokens.bodyText.weight(.semibold))
+                .foregroundStyle(Palette.ink)
+            TextField(L10n.string("Limit price"), text: $draft.price, prompt: Text(verbatim: ""))
+                .textFieldStyle(.plain)
+                .font(DesignTokens.bodyText.weight(.semibold))
+                .foregroundStyle(Palette.ink)
+                .monospacedDigit()
+                .padding(.bottom, 3)
+                .frame(width: 72)
+                .focused($focusedField, equals: "price")
+                .overlay(alignment: .bottom) { WritingLine(isActive: focusedField == "price" || draft.price.trimmed.isEmpty) }
+                .accessibilityLabel(L10n.string("Limit price"))
+                .accessibilityIdentifier("review.price")
+        }
+    }
+
+    /// Asks for the quote again, beside Market; a small spinner while the broker answers.
     @ViewBuilder private var refreshButton: some View {
         if let refreshQuote {
             Button(action: refreshQuote) {
                 Image(systemName: "arrow.clockwise")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Palette.secondaryInk)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Palette.tertiaryInk)
                     .contentShape(.rect)
             }
             .buttonStyle(.borderless)
@@ -267,20 +266,44 @@ struct ManualInstructionEditor: View {
         }
     }
 
-    /// A sell at the market goes just under the live bid; a buy at the ask. The live quote says
-    /// when it was quoted; a held stock's last price, until it comes, says only the price.
-    @MainActor private func marketDetail(now: Date) -> String? {
-        if let quote, marketPrice != nil { return quote.detail(isSell: draft.isSell, now: now) }
-        guard let marketPrice else { return draft.isSell ? L10n.string("At the bid") : nil }
-        return L10n.string("≈ %@", Humanize.usd(marketPrice))
+    /// The live ask for a buy or bid for a sell.
+    private func livePrice(now: Date) -> Decimal? {
+        quote?.livePrice(isSell: draft.isSell, now: now)
     }
 
-    /// A field's writing line: solid ink while it is being edited, dotted while it is still empty.
-    private func fieldLine(_ isShown: Bool) -> some View {
-        WritingLine(isActive: isShown)
+    /// "≈ $26.30 · 8:19 AM" while the quote is live; otherwise the note under the row says why
+    /// there is none. A sell at the market goes just under the live bid.
+    @MainActor private func marketDetail(now: Date) -> String? {
+        if let detail = quote?.detail(isSell: draft.isSell, now: now) { return detail }
+        return draft.isSell ? L10n.string("At the bid") : nil
+    }
+
+    /// Why Market has no price, under the row: "No live quote for CCL since 7:19 AM".
+    @MainActor private func quoteNote(now: Date) -> String? {
+        quote?.problem(isSell: draft.isSell, now: now)
     }
 
     // MARK: Changes
+
+    private func choose(_ choice: PriceChoice) {
+        draft.priceChoice = choice
+        switch choice {
+        case .guru:
+            draft.price = draft.postPrice
+        case .market:
+            followMarket()
+        case .limit:
+            // Starts from the price it replaces, ready to edit.
+            if draft.price.trimmed.isEmpty { draft.price = livePrice(now: .now).map { "\($0)" } ?? draft.postPrice }
+            focusedField = "price"
+        }
+    }
+
+    /// At the market, a buy pays the live ask and is not ready without one; a sell sends no price.
+    private func followMarket() {
+        guard draft.priceChoice == .market else { return }
+        draft.price = draft.isSell ? "" : livePrice(now: .now).map { "\($0)" } ?? ""
+    }
 
     private func setSell(_ sell: Bool) {
         guard draft.isSell != sell else { return }
@@ -295,19 +318,11 @@ struct ManualInstructionEditor: View {
         } else if draft.fraction == "1" {
             draft.fraction = ""
         }
-        refreshMarketPrice()
+        if draft.priceChoice != .limit { choose(ManualInstructionDraft.defaultChoice(postPrice: draft.postPrice)) }
     }
 
     private func pick(_ newSymbol: String) {
         draft.symbol = newSymbol
         draft.entryPrice = ""
-        refreshMarketPrice()
-    }
-
-    /// With no price in the post, a buy follows the last price of whichever stock is chosen; a
-    /// sell stays at the market.
-    private func refreshMarketPrice() {
-        guard draft.postPrice.trimmed.isEmpty, !typesPrice else { return }
-        draft.price = draft.isSell ? "" : marketPrice.map { "\($0)" } ?? ""
     }
 }
