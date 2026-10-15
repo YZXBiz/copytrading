@@ -65,7 +65,7 @@ private func theGuruPageReadsInChinese() throws {
     try #require(outcome == ["已忽略"], "an ignored post read \(outcome)")
 
     let holding = L10n.string("Holding %@ in %lld stocks from these calls", "$650", Int64(3))
-    try #require(holding == "这些信号目前持有 $650，共 3 只股票", "the holdings line read \(holding)")
+    try #require(holding == "这些喊单目前持有 $650，共 3 只股票", "the holdings line read \(holding)")
 
     let actions = TradingInstructionAction.allCases.map(\.title)
     try #require(actions == ["买入", "减仓", "清仓"], "an example's actions read \(actions)")

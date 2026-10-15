@@ -168,7 +168,7 @@ private func inSimplifiedChineseTheAssistantAsksAndShowsItsWorkInChinese() throw
         ("Looked at your accounts", "已查看你的账户"),
         ("Read paper-main's history", "已读取 paper-main 的账户历史记录"),
         ("Asked you to approve paper-main's after-restart setting", "已请你批准 paper-main 的重启后设置"),
-        ("Added up Zhao's calls", "已统计 Zhao 的交易信号"),
+        ("Added up Zhao's calls", "已统计 Zhao 的喊单"),
         ("Couldn't stop copying into paper-main", "未能停止跟单到 paper-main"),
         ("Couldn't ask you to approve copying into paper-main", "未能发起跟单到 paper-main 的批准请求"),
         ("Couldn't find that post", "没有找到那条帖子"),
