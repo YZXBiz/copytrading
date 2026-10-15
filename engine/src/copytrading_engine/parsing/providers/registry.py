@@ -43,19 +43,9 @@ class ProviderRegistry:
             factory = self._factories[name]
         except KeyError:
             raise ValueError(f"Unknown LLM provider: {name}") from None
-        reader = await (
+        return await (
             factory(config) if diagnostics is None else factory(config, diagnostics=diagnostics)
         )
-        if config.triage is None:
-            return reader
-        # The decision model sorts chat out in front of whichever reader this is (ADR-0012).
-        from .triage import sorted_decoder
-
-        try:
-            return sorted_decoder(reader, config.triage, diagnostics=diagnostics)
-        except BaseException:
-            await reader.close()
-            raise
 
 
 def builtin_registry() -> ProviderRegistry:

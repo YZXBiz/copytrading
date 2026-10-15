@@ -26,6 +26,14 @@ final class AccountFeatureModel {
             if !news.isEmpty { onOrders?(news) }
         }
     }
+    /// Every post the app knows of: the newest pages it loaded, and each call still waiting for
+    /// the owner that the engine counted over the whole trading day, loaded or not. Its version
+    /// of a post is the freshest, so it replaces a loaded one.
+    var knownActivity: [SourceActivity] {
+        let waiting = guruDays.values.flatMap(\.waiting)
+        let held = Set(waiting.map(\.id))
+        return (waiting + activity.filter { !held.contains($0.id) }).sorted { $0.id > $1.id }
+    }
     private var fillWatch = FillWatch()
     /// Told of each copied order that newly went out or filled, once; the app turns them into
     /// notifications.

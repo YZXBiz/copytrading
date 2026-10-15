@@ -2,6 +2,10 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
+## Unreleased
+
+- **The chat filter is gone.** It ran a second model (OpenAI's) in front of the interpreter on every post, added about 0.2 s to every real call, and saved only cents a day. The interpreter now reads every post, as it did before the filter. Connections loses its "Chat filter" step and its OpenAI key, Activity's Technical details lose the "Chat filter" line, and a setup saved with the filter on opens as it was, with the filter dropped. Its OpenAI key is no longer used; you can delete the key from your OpenAI account.
+
 ## 0.1.0-alpha.11 — developer preview
 
 Limits and Start Copying from the command line, whole-day counts for each guru, and Chinese screens with no English left in them.

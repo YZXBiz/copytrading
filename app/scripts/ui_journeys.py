@@ -2111,11 +2111,6 @@ def j28_connections_panel(app: AppDriver) -> None:
     local = app.see("connections-ollama")
     app.expect(local, "Connect to Ollama", "Base URL", "API key")
     app.click("connections.close")
-    # The chat filter is its own step, in front of whichever interpreter is picked.
-    app.click("connections.chatFilter")
-    time.sleep(0.8)
-    app.expect(app.see("connections-chat-filter"), "Connect to the chat filter", "OpenAI key")
-    app.click("connections.close")
     app.click("connections.alerts")
     time.sleep(0.8)
     app.expect(

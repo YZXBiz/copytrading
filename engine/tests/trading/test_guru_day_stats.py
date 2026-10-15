@@ -184,8 +184,15 @@ async def test_a_busy_day_counts_every_post_of_each_guru_within_the_owners_day(t
     assert by_guru["zhao"].traded == 1
     assert by_guru["lee"].read_seconds == 3.0
     assert by_guru["zhao"].read_seconds is not None
-    assert by_guru["lee"].waiting_source_ids == (lee[3], late_evening)
-    assert by_guru["zhao"].waiting_source_ids == (zhao[0],)
+    # Whole posts, newest first, though neither is among the newest page the app reads: the app
+    # lists them from here, so its count and its Waiting tab are one set.
+    assert [item.source_id for item in by_guru["lee"].waiting] == [late_evening, lee[3]]
+    assert [item.source_id for item in by_guru["zhao"].waiting] == [zhao[0]]
+    assert by_guru["lee"].waiting[1].text == "post lee-3"
+    assert by_guru["lee"].waiting[1].guru_id == "lee"
+    assert [view.instruction_outcomes for view in by_guru["lee"].waiting[1].destinations] == [
+        ("approval_required",)
+    ]
     assert page.unavailable_accounts == ()
 
 

@@ -83,10 +83,6 @@ class SourceActivity(Value):
     parser_reason: str | None
     parser_profile: str | None
     interpreted_by: str | None
-    # The chat filter's decision model and how likely it found the post chat (ADR-0012); it
-    # settled the post when it is also `interpreted_by`. None without the filter.
-    sorted_by: str | None = None
-    sorted_confidence: float | None = None
     # The calls the post trades, as the engine places them, before any account sizing.
     instructions: tuple[Instruction, ...]
     # For a post that waits for the owner: what Copy places (ADR-0007).
@@ -131,8 +127,9 @@ class GuruDayStats(Value):
     #: How long the reader took per post that day, on average; None before any was read.
     read_seconds: float | None = None
     #: Posts of the current trading day a call of which still waits for the owner, any calendar
-    #: day; the app leaves out the ones the owner skipped, which only it knows.
-    waiting_source_ids: tuple[str, ...] = ()
+    #: day, newest first and whole, so the app lists them without having loaded them; it leaves
+    #: out the ones the owner skipped, which only it knows.
+    waiting: tuple[SourceActivity, ...] = ()
 
 
 class GuruDayStatsPage(Value):

@@ -12,17 +12,83 @@
           "posts": 104,
           "traded": 12,
           "read_seconds": 3.5,
-          "waiting_source_ids": ["discord:1:1427"]
+          "waiting": [
+            {
+              "sequence": 1427,
+              "source_id": "discord:1:1427",
+              "author_id": "99",
+              "source_revision": 1,
+              "source_at": "2026-10-14T14:58:00Z",
+              "captured_at": "2026-10-14T14:58:03Z",
+              "text": "Sold half of PM, price?",
+              "capture_status": "delivered",
+              "parse_status": "complete",
+              "delivery_status": "delivered",
+              "decision": "review",
+              "parser_reason": "price_not_given",
+              "parser_profile": "profile-2",
+              "interpreted_by": "deepseek-flash",
+              "sorted_by": null,
+              "sorted_confidence": null,
+              "instructions": [
+                {
+                  "action": "reduce",
+                  "symbol": "PM",
+                  "price": null,
+                  "entry_price": null,
+                  "fraction": "0.5",
+                  "usd_amount": null,
+                  "exit_basis": null
+                }
+              ],
+              "suggested": [],
+              "reading": null,
+              "guru_id": "lee",
+              "profile_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "source_event": {
+                "event_type": "discord_message",
+                "message_id": "1427",
+                "channel_id": "1",
+                "author_id": "99",
+                "timestamp": "2026-09-26T14:58:00Z",
+                "content": "Sold half of PM, price?",
+                "embeds": [],
+                "attachments": [],
+                "attachments_omitted": 0,
+                "capture_status": "complete",
+                "payload_bytes": 180
+              },
+              "destinations": [
+                {
+                  "account_id": "paper",
+                  "environment": "paper",
+                  "status": "review_required",
+                  "instruction_outcomes": [],
+                  "limits_hit": [],
+                  "orders": [],
+                  "timeline": []
+                }
+              ],
+              "read_started_at": null,
+              "read_at": null,
+              "delivered_at": null
+            }
+          ]
         },
         {
           "guru_id": "zhao",
           "posts": 111,
           "traded": 0,
           "read_seconds": null,
-          "waiting_source_ids": []
+          "waiting": []
         }
       ],
-      "unavailable_accounts": [{"account_id": "archive", "reason": "timeout"}]
+      "unavailable_accounts": [
+        {
+          "account_id": "archive",
+          "reason": "timeout"
+        }
+      ]
     }
   }
 }

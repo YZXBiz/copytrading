@@ -32,7 +32,6 @@ struct ConnectionPanelContent: View {
             switch kind {
             case .discord: "Discord"
             case .interpreter: L10n.string(model.setupDraft.provider.title)
-            case .chatFilter: L10n.string("the chat filter")
             case .alerts: model.setupDraft.notificationService == .discord ? "Discord" : "Telegram"
             }
         return (openedSetUp ?? (!connecting && isSetUp(kind))) ? name : L10n.string("Connect to %@", name)
@@ -47,7 +46,6 @@ struct ConnectionPanelContent: View {
         switch kind {
         case .discord: "discord"
         case .interpreter: model.setupDraft.provider.brandIcon
-        case .chatFilter: (model.setupDraft.triage ?? .openAIDecisions).provider.brand
         case .alerts: model.setupDraft.notificationService.brandIcon
         }
     }

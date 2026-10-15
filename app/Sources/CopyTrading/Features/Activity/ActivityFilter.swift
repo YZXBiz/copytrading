@@ -23,7 +23,7 @@ enum ActivityFilter: String, CaseIterable, Identifiable {
         switch self {
         case .all: true
         case .waiting:
-            WaitingCall(item).map { !$0.hasExpired(at: now) && skipped?.contains(item.sourceID) != true } ?? false
+            WaitingCall.open(item, skipped: skipped?.contains(item.sourceID) == true, now: now) != nil
         case .trades: item.decision == "trade"
         }
     }

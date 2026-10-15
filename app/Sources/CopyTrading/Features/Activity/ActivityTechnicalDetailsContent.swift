@@ -24,10 +24,7 @@ struct ActivityTechnicalDetailsContent: View {
             }
             VStack(alignment: .leading, spacing: 0) {
                 TechnicalSectionTitle(text: L10n.string("Reading"))
-                if let verdict = item.chatFilterVerdict {
-                    TechnicalFactRow(label: "Chat filter") { Text(verdict) }
-                }
-                if let interpretedBy = item.interpretedBy, !item.isSortedAsChat {
+                if let interpretedBy = item.interpretedBy {
                     TechnicalFactRow(label: "Read by") { Text(interpretedBy) }
                 }
                 if item.profileRevision != nil {

@@ -19,7 +19,6 @@ from copytrading_engine.execution.domain.pricing import EntryPricingPolicy
 from copytrading_engine.execution.domain.signals import CopyConfig
 from copytrading_engine.execution.domain.sizing import DestinationTerms
 from copytrading_engine.parsing.providers.registry import ManagedDecoder
-from copytrading_engine.parsing.providers.triage import SortedDecoder
 from copytrading_engine.parsing.readiness import probe_model
 from copytrading_engine.parsing.relay import deliver_notifications
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore
@@ -216,9 +215,8 @@ class TradingRuntime:
         ]
         for broker in secrets.brokers:
             values.extend((broker.key.get_secret_value(), broker.secret.get_secret_value()))
-        for optional in (secrets.notification_token, secrets.triage_api_key):
-            if optional is not None:
-                values.append(optional.get_secret_value())
+        if secrets.notification_token is not None:
+            values.append(secrets.notification_token.get_secret_value())
         self._register_secrets(values)
 
     def activation_status(self, activation_id: str) -> TradingActivationStatus:
@@ -249,10 +247,6 @@ class TradingRuntime:
             secrets.notification_token is None or not secrets.notification_token.get_secret_value()
         ):
             raise ValueError("Configured notifications require a bot token")
-        if configuration.triage is not None and (
-            secrets.triage_api_key is None or not secrets.triage_api_key.get_secret_value()
-        ):
-            raise ValueError("Configured triage requires its model API key")
         activation_id = activation_id or str(uuid4())
         self._activation_journal.begin(activation_id, configuration.revision())
         self._activation_id = activation_id
@@ -473,15 +467,7 @@ class TradingRuntime:
             stage = "provider_unavailable"
             decoder = await self._factories.decoder(
                 configuration.provider.name,
-                configuration.provider.reader(
-                    secrets.provider_api_key,
-                    timeout=20,
-                    triage=(
-                        configuration.triage.config(secrets.triage_api_key, timeout=5)
-                        if configuration.triage is not None
-                        else None
-                    ),
-                ),
+                configuration.provider.reader(secrets.provider_api_key, timeout=20),
             )
             profile_by_revision = {
                 profile.profile_revision: profile for profile in configuration.profiles
@@ -611,12 +597,7 @@ class TradingRuntime:
                 self._mark_source_failure(exc)
             self._status = replace(self._status, state="degraded")
             stage = "provider_unavailable"
-            # The interpreter itself must answer: with the chat filter in front, the decision
-            # model alone could settle the test post and say nothing about the reader.
-            await probe_model(
-                decoder.reader if isinstance(decoder, SortedDecoder) else decoder,
-                worker.model_health,
-            )
+            await probe_model(decoder, worker.model_health)
             stage = "processing_unavailable"
             await self._work_loop(configuration, source, parser, worker, notifier)
         except RoutingChangePending:

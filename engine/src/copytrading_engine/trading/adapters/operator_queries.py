@@ -62,9 +62,18 @@ def source_page(
     before_seq: int | None,
     limit: int,
     destinations: dict[str, tuple[DestinationView, ...]],
+    source_ids: tuple[str, ...] | None = None,
 ) -> SourceActivityPage:
-    if not 1 <= limit <= 100 or (before_seq is not None and before_seq < 1):
-        raise ValueError("Invalid source activity page")
+    """A page of posts, newest first; or, given `source_ids`, exactly those posts however old,
+    with no page and no rejected posts."""
+    if source_ids is None:
+        if not 1 <= limit <= 100 or (before_seq is not None and before_seq < 1):
+            raise ValueError("Invalid source activity page")
+        where, bound = "(? IS NULL OR capture.seq < ?)", (before_seq, before_seq)
+    else:
+        limit = max(1, len(source_ids))
+        where = f"capture.id IN ({','.join('?' for _ in source_ids)})"
+        bound = source_ids
     if not database.exists():
         return SourceActivityPage(items=(), rejected_items=())
     with closing(sqlite3.connect(database.as_uri() + "?mode=ro", uri=True)) as db:
@@ -79,27 +88,31 @@ def source_page(
             "FROM source_captures capture LEFT JOIN parser_inbox parser ON parser.id=capture.id "
             "LEFT JOIN parser_signal_deliveries delivery ON delivery.message_id=capture.id "
             "LEFT JOIN source_event_evidence event ON event.source_id=capture.id "
-            "WHERE (? IS NULL OR capture.seq < ?) ORDER BY capture.seq DESC LIMIT ?",
-            (before_seq, before_seq, limit),
+            f"WHERE {where} ORDER BY capture.seq DESC LIMIT ?",
+            (*bound, limit),
         ).fetchall()
-        rejected_rows = db.execute(
-            "SELECT rejected.id,rejected.payload,rejected.reason,rejected.rejected_at,"
-            "event.event_payload,event.capture_status,event.payload_bytes "
-            "FROM source_rejected rejected LEFT JOIN source_event_evidence event "
-            "ON event.source_id=rejected.id ORDER BY rejected.rejected_at DESC,rejected.id DESC "
-            "LIMIT ?",
-            (limit,),
-        ).fetchall()
-        source_ids = tuple(row[1] for row in rows)
+        rejected_rows = (
+            []
+            if source_ids is not None
+            else db.execute(
+                "SELECT rejected.id,rejected.payload,rejected.reason,rejected.rejected_at,"
+                "event.event_payload,event.capture_status,event.payload_bytes "
+                "FROM source_rejected rejected LEFT JOIN source_event_evidence event "
+                "ON event.source_id=rejected.id ORDER BY rejected.rejected_at DESC,"
+                "rejected.id DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+        )
+        found_ids = tuple(row[1] for row in rows)
         attachment_rows = ()
-        if source_ids:
-            placeholders = ",".join("?" for _ in source_ids)
+        if found_ids:
+            placeholders = ",".join("?" for _ in found_ids)
             attachment_rows = db.execute(
                 "SELECT source_id,evidence_id,attachment_id,filename,content_type,declared_size,"
                 "capture_status,byte_size,sha256,omitted_count "
                 f"FROM source_attachment_evidence WHERE source_id IN ({placeholders}) "
                 "ORDER BY source_id,attachment_id",
-                source_ids,
+                found_ids,
             ).fetchall()
         rejected_ids = tuple(row[0] for row in rejected_rows)
         rejected_attachment_rows = ()
@@ -113,7 +126,7 @@ def source_page(
                 rejected_ids,
             ).fetchall()
     attachments_by_source: dict[str, list[SourceAttachmentEvidence]] = {
-        source_id: [] for source_id in source_ids
+        source_id: [] for source_id in found_ids
     }
     for row in attachment_rows:
         attachments_by_source[row[0]].append(
@@ -201,8 +214,6 @@ def source_page(
                 parser_reason=decision.reason if decision else None,
                 parser_profile=decision.parser_profile if decision else None,
                 interpreted_by=decision.model if decision else None,
-                sorted_by=decision.sorted_by if decision else None,
-                sorted_confidence=decision.sorted_confidence if decision else None,
                 instructions=decision.instructions if decision else (),
                 suggested=decision.suggested if decision else (),
                 reading=decision.reading if decision else None,
@@ -232,7 +243,7 @@ def source_page(
             )
             for row in rejected_rows
         ),
-        next_before_seq=items[-1].sequence if len(items) == limit else None,
+        next_before_seq=items[-1].sequence if source_ids is None and len(items) == limit else None,
     )
 
 
@@ -473,8 +484,15 @@ class SQLiteOperatorEvidence:
         before_seq: int | None,
         limit: int,
         destinations: dict[str, tuple[DestinationView, ...]],
+        source_ids: tuple[str, ...] | None = None,
     ) -> SourceActivityPage:
-        return source_page(database, before_seq=before_seq, limit=limit, destinations=destinations)
+        return source_page(
+            database,
+            before_seq=before_seq,
+            limit=limit,
+            destinations=destinations,
+            source_ids=source_ids,
+        )
 
     def guru_posts(self, database: Path, *, since: dt.datetime) -> tuple[GuruPost, ...]:
         return guru_posts(database, since=since)

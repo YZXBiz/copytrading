@@ -42,6 +42,7 @@ from copytrading_engine.trading.application.paused_reader import (
 from copytrading_engine.trading.presentation.operator_models import (
     GuruDayStats,
     GuruDayStatsPage,
+    SourceActivity,
     SourceActivityPage,
 )
 
@@ -56,7 +57,7 @@ class _GuruTally:
     posts: int = 0
     traded: int = 0
     reads: list[float] = field(default_factory=list)
-    waiting: list[str] = field(default_factory=list)
+    waiting: set[str] = field(default_factory=set)
 
 
 def _traded(view: DestinationView) -> bool:
@@ -285,6 +286,19 @@ class OperatorQueryService:
             timeout=2,
         )
         by_source, unavailable = await self._destinations({item.source_id for item in page.items})
+        return self._with_destinations(page, by_source, unavailable)
+
+    def _with_destinations(
+        self,
+        page: SourceActivityPage,
+        views_by_source: dict[str, list[DestinationView]],
+        unavailable: tuple[AccountUnavailable, ...],
+    ) -> SourceActivityPage:
+        """The page's posts, each with what every account did with it, and a pending delivery for
+        the accounts a route will still send it to."""
+        by_source = {
+            item.source_id: list(views_by_source.get(item.source_id, [])) for item in page.items
+        }
         configuration = self._access.configuration()
         if configuration is not None:
             accounts = {account.id: account for account in configuration.accounts}
@@ -390,8 +404,8 @@ class OperatorQueryService:
         self, day_start: dt.datetime, day_end: dt.datetime, now: dt.datetime | None = None
     ) -> GuruDayStatsPage:
         """Each guru's posts, trades and read time from `day_start` up to `day_end`, and the
-        posts of the current trading day still waiting for the owner, counted from every post
-        the engine holds."""
+        posts of the current trading day still waiting for the owner, whole, counted from every
+        post the engine holds: the app lists exactly these, so what it counts is what it shows."""
         now = now or dt.datetime.now(dt.UTC)
         trading_day = trade_date(now)
         # The trading day began at 20:00 New York time the evening before.
@@ -420,7 +434,25 @@ class OperatorQueryService:
                         max(0.0, (post.read_at - post.read_started_at).total_seconds())
                     )
             if trade_date(post.source_at) == trading_day and _waits(views):
-                tally.waiting.append(post.source_id)
+                tally.waiting.add(post.source_id)
+        waiting = {source_id for tally in tallies.values() for source_id in tally.waiting}
+        held: dict[str, SourceActivity] = {}
+        if waiting:
+            page = await asyncio.wait_for(
+                asyncio.to_thread(
+                    self._access.evidence.source_page,
+                    self._access.application_database,
+                    before_seq=None,
+                    limit=len(waiting),
+                    destinations={},
+                    source_ids=tuple(sorted(waiting)),
+                ),
+                timeout=2,
+            )
+            held = {
+                item.source_id: item
+                for item in self._with_destinations(page, by_source, unavailable).items
+            }
         return GuruDayStatsPage(
             day_start=day_start,
             day_end=day_end,
@@ -430,7 +462,13 @@ class OperatorQueryService:
                     posts=tally.posts,
                     traded=tally.traded,
                     read_seconds=sum(tally.reads) / len(tally.reads) if tally.reads else None,
-                    waiting_source_ids=tuple(tally.waiting),
+                    waiting=tuple(
+                        sorted(
+                            (held[source_id] for source_id in tally.waiting if source_id in held),
+                            key=lambda item: item.sequence,
+                            reverse=True,
+                        )
+                    ),
                 )
                 for guru_id, tally in sorted(tallies.items())
             ),
