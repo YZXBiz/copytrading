@@ -65,18 +65,13 @@ def test_chinese_calls_a_call_by_one_name():
 
 SOURCES = Path(__file__).resolve().parents[2] / "Sources" / "CopyTrading"
 LITERAL = r'"((?:[^"\\]|\\.)*)"'
-# The calls that look their text up in the catalogs, with the text written in place.
+# Other views that take a catalog key as an argument, with the text written in place.
 LOOKUPS = (
-    # A single-line text; a triple-quoted one is read by MULTILINE below.
-    re.compile(r"L10n\.string\(\s*\"(?!\"\")((?:[^\"\\]|\\.)*)\""),
     re.compile(r"SetupSectionHeader\(\s*title:\s*" + LITERAL),
     re.compile(r"SetupSectionHeader\([^)]*?detail:\s*" + LITERAL, re.S),
 )
-
-
-MULTILINE = re.compile(r'L10n\.string\(\s*"""\n(.*?)"""', re.S)
-# A text chosen by a condition: `L10n.string(isSell ? "Sell %@" : "Buy %@", symbol)`.
-TERNARY = re.compile(r"L10n\.string\([^\"()\n]*\?\s*" + LITERAL + r"\s*:\s*" + LITERAL)
+CALL = re.compile(r"\bL10n\.(string|sentence)\(")
+OPENERS, CLOSERS = "([{", ")]}"
 
 
 def multiline_text(raw: str) -> str:
@@ -85,23 +80,182 @@ def multiline_text(raw: str) -> str:
     return re.sub(r"\\\n", "", "\n".join(lines)).strip()
 
 
+def skip_string(source: str, index: int) -> tuple[int, str | None]:
+    """The end of the string literal starting at `index`, and its text (None if it interpolates)."""
+    if source.startswith('"""', index):
+        end = source.index('"""', index + 3)
+        raw = source[index + 3 : end]
+        return end + 3, None if "\\(" in raw else multiline_text(raw.lstrip("\n"))
+    position, depth, interpolates = index + 1, 0, False
+    while True:
+        char = source[position]
+        if depth == 0 and char == "\\":
+            if source[position + 1] == "(":
+                interpolates, depth, position = True, 1, position + 2
+                continue
+            position += 2
+            continue
+        if depth > 0:
+            if char == '"':
+                position, _ = skip_string(source, position)
+                continue
+            depth += {"(": 1, ")": -1}.get(char, 0)
+            position += 1
+            continue
+        if char == '"':
+            return position + 1, None if interpolates else source[index + 1 : position]
+        position += 1
+
+
+Literal = tuple[int, str | None, int, int]  # bracket depth, text, start, end
+
+
+def scan(source: str, start: int, stop: str) -> tuple[int, list[Literal]]:
+    """From `start`, the index where `stop` ends the expression at depth zero (a top-level comma
+    or the closing paren for an argument; a newline for a statement), and every string literal on
+    the way with its bracket depth. Strings and comments never end it."""
+    position, depth, literals = start, 0, []
+    while position < len(source):
+        char = source[position]
+        if source.startswith("//", position):
+            position = source.index("\n", position)
+            continue
+        if source.startswith("/*", position):
+            position = source.index("*/", position) + 2
+            continue
+        if char == '"':
+            end, text = skip_string(source, position)
+            literals.append((depth, text, position, end))
+            position = end
+            continue
+        if depth == 0 and (char in stop or (char == ")" and ")" in stop)):
+            return position, literals
+        if char in OPENERS:
+            depth += 1
+        elif char in CLOSERS:
+            depth -= 1
+        position += 1
+    return position, literals
+
+
+def initializer(source: str, name: str) -> tuple[int, list[Literal]]:
+    """The literals a local `let` or `var` of this name is set to, through any choice or switch."""
+    found: list[Literal] = []
+    for match in re.finditer(r"\b(?:let|var)\s+" + re.escape(name) + r"\b[^=\n{]*=(?!=)", source):
+        found += chosen(source, match.end(), scan(source, match.end(), "\n"))
+    return 0, found
+
+
+def chosen(source: str, start: int, scanned: tuple[int, list[Literal]]) -> list[Literal]:
+    """The literals an expression can evaluate to: its branches, never a condition it tests
+    (`text == "true" ? …`) or a piece it joins (`singular + "s"`)."""
+    end, literals = scanned
+    expression = source[start:end]
+    # The ternary's `?` at depth zero, not `??`; literals before it are the condition.
+    question = None
+    depth, position = 0, 0
+    while position < len(expression):
+        char = expression[position]
+        if char == '"':
+            position = skip_string(expression, position)[0]
+            continue
+        if char in OPENERS:
+            depth += 1
+        elif char in CLOSERS:
+            depth -= 1
+        elif (
+            char == "?"
+            and depth == 0
+            and expression[position + 1 : position + 2] != "?"
+            and (position == 0 or expression[position - 1] != "?")
+        ):
+            question = start + position
+            break
+        position += 1
+    kept = []
+    for literal in literals:
+        _, _, first, last = literal
+        before = source[start:first].rstrip()
+        after = source[last:end].lstrip()
+        if question is not None and first < question:
+            continue
+        if before.endswith(("==", "!=", "+")) or after.startswith(("==", "!=", "+")):
+            continue
+        kept.append(literal)
+    return kept
+
+
+def asked_texts(source: str) -> tuple[set[str], set[str]]:
+    """Every text that can reach a catalog lookup (`L10n.string`'s first argument, written in place,
+    chosen by a condition, or held in a local variable), and every literal handed to
+    `L10n.sentence`, which adds a full stop and looks nothing up."""
+    asked: set[str] = set()
+    sentences: set[str] = set()
+    for match in CALL.finditer(source):
+        scanned = scan(source, match.end(), ",)")
+        argument = source[match.end() : scanned[0]].strip()
+        if re.fullmatch(r"[A-Za-z_]\w*", argument):
+            literals = initializer(source, argument)[1]
+        else:
+            literals = chosen(source, match.end(), scanned)
+        # Literals inside a nested call belong to that call, not to this lookup.
+        texts = {text for depth, text, _, _ in literals if depth == 0 and text}
+        (asked if match.group(1) == "string" else sentences).update(texts)
+    for lookup in LOOKUPS:
+        asked |= {match.group(1) for match in lookup.finditer(source)}
+    return asked, sentences
+
+
 def test_every_text_the_app_asks_for_is_in_the_catalogs():
-    english = load("en")
-    found: set[tuple[str, str]] = set()
-    for path in SOURCES.rglob("*.swift"):
-        source = path.read_text()
-        for lookup in LOOKUPS:
-            found |= {(path.name, match.group(1)) for match in lookup.finditer(source)}
-        found |= {
-            (path.name, multiline_text(match.group(1))) for match in MULTILINE.finditer(source)
-        }
-        found |= {
-            (path.name, text) for match in TERNARY.finditer(source) for text in match.groups()
-        }
+    english, chinese = load("en"), load("zh-Hans")
     missing = sorted(
-        f"{name}: {text}" for name, text in found if "\\(" not in text and text not in english
+        f"{path.name}: {text}"
+        for path in SOURCES.rglob("*.swift")
+        for text in asked_texts(path.read_text())[0]
+        if text not in english or text not in chinese
     )
     assert missing == []
+
+
+def test_a_sentence_is_made_from_text_already_looked_up():
+    # `L10n.sentence` only adds "." or "。"; a literal handed to it is never translated.
+    raw = sorted(
+        f"{path.name}: {text}"
+        for path in SOURCES.rglob("*.swift")
+        for text in asked_texts(path.read_text())[1]
+    )
+    assert raw == []
+
+
+def test_the_extraction_reads_choices_variables_and_long_strings():
+    source = (
+        'L10n.string(isOne(count) ? "Holding %@ in 1 stock" : "Holding %@ in %lld stocks", x)\n'
+        'L10n.string(\n    target.asksForOwner ? "Sell %@ with Touch ID" : "Sell %@", a)\n'
+        'let title = flag ? "Chosen" : "Other"\n'
+        "L10n.string(title)\n"
+        'L10n.string(Humanize.code("not_a_key"))\n'
+        'L10n.string(text == "true" ? "on" : "off")\n'
+        'let noun = one ? singular : plural ?? singular + "s"\n'
+        "L10n.string(noun)\n"
+        'L10n.string(titles[field] ?? "Ledger entry")\n'
+        'L10n.string("Hello \\(name)")\n'
+        'L10n.string("""\n    A long\n    text\n    """)\n'
+        'L10n.sentence("Raw words")\n'
+    )
+    asked, sentences = asked_texts(source)
+    assert asked == {
+        "Holding %@ in 1 stock",
+        "Holding %@ in %lld stocks",
+        "Sell %@ with Touch ID",
+        "Sell %@",
+        "Chosen",
+        "Other",
+        "A long\ntext",
+        "on",
+        "off",
+        "Ledger entry",
+    }
+    assert sentences == {"Raw words"}
 
 
 # An error's own words: shown through `AppModel.userMessage(for:)`, which looks them up.
