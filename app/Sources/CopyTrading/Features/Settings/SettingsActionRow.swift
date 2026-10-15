@@ -14,7 +14,7 @@ struct SettingsActionRow: View {
 
     var body: some View {
         Button(action: action) {
-            SettingsRow(title: title, detail: detail, titleColor: role == .destructive ? .red : Palette.ink)
+            SettingsRow(title: title, detail: detail, titleColor: role == .destructive ? Palette.loss : Palette.ink)
                 .background(Palette.ink.opacity(isHovered && isEnabled ? 0.04 : 0))
         }
         .buttonStyle(QuietPressButtonStyle())

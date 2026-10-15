@@ -41,7 +41,7 @@ struct MenuBarView: View {
             if waiting > 0 {
                 Label(L10n.string("%@ waiting for approval", Humanize.count(waiting, "agent request")), systemImage: "hand.raised.fill")
                     .font(.system(size: 13))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Palette.live)
                     .padding(.top, 10)
             }
             Divider()

@@ -10,9 +10,9 @@ enum StatusTone: Equatable {
 
     var color: Color {
         switch self {
-        case .positive: .green
-        case .caution: .orange
-        case .critical: .red
+        case .positive: Palette.gain
+        case .caution: Palette.live
+        case .critical: Palette.loss
         case .neutral: Palette.secondaryInk
         case .inactive: .secondary
         }
