@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from copytrading_engine.execution.domain.pricing import EntryPricingPolicy
 from copytrading_engine.execution.domain.signals import CopyConfig
+from copytrading_engine.trading.domain.config import AccountPolicy
 
 
 @pytest.mark.parametrize(
@@ -74,3 +75,15 @@ def test_exit_allowance_defaults_to_one_percent_and_is_separate_from_the_entry_a
 def test_invalid_exit_allowance_is_rejected(value):
     with pytest.raises(ValidationError):
         EntryPricingPolicy(max_below_signal_pct=value)
+
+
+def test_a_sell_can_never_be_allowed_to_fill_at_nothing():
+    """At 100% below the guru's price the floor was $0, a limit no order can carry: the plan failed
+    validation inside the copy cycle and the account stopped until CopyTrading restarted."""
+    with pytest.raises(ValidationError):
+        EntryPricingPolicy(max_below_signal_pct="100")
+    with pytest.raises(ValidationError):
+        AccountPolicy(max_below_signal_pct="100")
+    widest = EntryPricingPolicy(max_below_signal_pct="99.99")
+    for price in ("0.0001", "0.5", "1", "25.10"):
+        assert widest.exit_limit_price(Decimal(price)) > 0
