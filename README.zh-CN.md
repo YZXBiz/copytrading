@@ -46,7 +46,7 @@ CopyTrading 是一款原生 macOS 应用。它读取交易者在 Discord 上发�
   <tr>
     <td width="33%"><a href="docs/assets/zh/guru.png"><img src="docs/assets/zh/guru.png" alt="跟单到一个模拟盘账户的信号源：今日数据，以及时间线上的每条帖子：已成交、等你决定或已忽略"></a></td>
     <td width="33%"><a href="docs/assets/zh/guru-sheet.png"><img src="docs/assets/zh/guru-sheet.png" alt="信号源设置：发帖频道、跟单到的那一个账户及每种信号买多少、操作指南和示例"></a></td>
-    <td width="33%"><a href="docs/assets/zh/connections.png"><img src="docs/assets/zh/connections.png" alt="连接：Discord、读取帖子的 AI 模型、可选的闲聊过滤，以及两个已连接的模拟盘券商账户"></a></td>
+    <td width="33%"><a href="docs/assets/zh/connections.png"><img src="docs/assets/zh/connections.png" alt="连接：Discord、读取帖子的 AI 模型，以及两个已连接的模拟盘券商账户"></a></td>
   </tr>
   <tr>
     <td align="center"><sub><b>信号源</b>：每条帖子及其结果</sub></td>

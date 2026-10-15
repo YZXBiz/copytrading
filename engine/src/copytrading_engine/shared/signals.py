@@ -70,7 +70,11 @@ class Evidence(Instruction):
 
 
 class StockSignal(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
+    # Posts stored by a release that had the chat filter carry its `sorted_by` and
+    # `sorted_confidence`; reading ignores them. A before-validator would drop them too, but it
+    # makes pydantic validate the nested models of a JSON document in Python mode, which their
+    # strict tuples refuse.
+    model_config = ConfigDict(extra="ignore", frozen=True, hide_input_in_errors=True)
     schema_version: Literal[2] = 2
     event_type: Literal["stock_signal"] = "stock_signal"
     source: str = Field(pattern=r"^[a-z][a-z0-9_-]*$")
@@ -80,14 +84,7 @@ class StockSignal(BaseModel):
     timestamp: AwareDatetime
     text: str = Field(max_length=50000)
     parser_profile: str
-    # The model that answered: the decision model when it settled the post (ADR-0012), else the
-    # reader.
     model: str
-    # The chat filter's decision model, when it sorted the post (ADR-0012): it settled the post
-    # when it is also `model`, and passed it to the reader otherwise. `sorted_confidence` is how
-    # likely it found the post chat; None when it didn't answer.
-    sorted_by: str | None = Field(default=None, max_length=128)
-    sorted_confidence: float | None = Field(default=None, ge=0, le=1)
     guru_id: str | None = Field(default=None, pattern=r"^[a-zA-Z0-9_-]{1,64}$")
     profile_revision: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     decision: Literal["trade", "ignore", "review"]

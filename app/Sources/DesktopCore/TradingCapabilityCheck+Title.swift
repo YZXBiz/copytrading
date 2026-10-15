@@ -5,7 +5,6 @@ extension TradingCapabilityCheck {
             switch name {
             case .source: "Discord source"
             case .model: "Model provider"
-            case .triage: "Triage model"
             case .broker: "Broker account"
             case .notification: "Notifications"
             case .configuration: "Configuration"

@@ -240,9 +240,4 @@ class HeadlessEngine:
                 if secrets.notification_token is None
                 else secrets.notification_token.get_secret_value()
             ),
-            "triage_api_key": (
-                None
-                if secrets.triage_api_key is None
-                else secrets.triage_api_key.get_secret_value()
-            ),
         }

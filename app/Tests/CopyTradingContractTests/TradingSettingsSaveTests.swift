@@ -117,7 +117,8 @@ struct TradingSettingsSaveTests {
         try await checkLimitOnlyChangesApplyWithoutAPause(configuration: configuration, secrets: credentials)
         try await checkConnectionClientRequest(provider: configuration.provider)
         try await checkOneConnectionUsesSavedKeysAndFollowsEdits(configuration: configuration, secrets: credentials)
-        try await checkChatFilterKeyIsCheckedAndKeptOnlyWhileOn(configuration: configuration, secrets: credentials)
+        try await checkSetupSavedWithTheRetiredChatFilterLoadsAndStartsOnTheEnginesRevision(
+            configuration: configuration, secrets: credentials)
         try await checkConfigurationWriteFailureDoesNotStart()
         try checkOperatorWireFixtures()
         try await checkAccountPageClientRequest()
@@ -1162,7 +1163,7 @@ struct TradingSettingsSaveTests {
         let revision = fakeEngineRevision(configuration)
         try store.save(configuration: configuration, revision: revision, secrets: secrets, when: .paused)
         let activationID = UUID().uuidString.lowercased()
-        try store.stageSavedResume(activationID: activationID, when: .paused)
+        try store.stageSavedResume(activationID: activationID, revision: revision, when: .paused)
         let starter = RecordingTradingStarter()
         try await starter.setActivationStatus(
             TradingActivationStatus(
@@ -1419,63 +1420,43 @@ struct TradingSettingsSaveTests {
         print("CopyTradingContractTests: Connect checks one service with typed or saved keys and follows edits")
     }
 
-    /// The chat filter's OpenAI key is checked as typed, then kept from the Keychain while the
-    /// filter stays on; with the filter off no key travels at all (ADR-0012).
-    private static func checkChatFilterKeyIsCheckedAndKeptOnlyWhileOn(
+    /// A setup saved while the chat filter existed loads with the filter dropped, its key in the
+    /// Keychain item is ignored, and Start stages the revision the engine reports for the setup
+    /// as it is now, not the one saved with the filter in it.
+    private static func checkSetupSavedWithTheRetiredChatFilterLoadsAndStartsOnTheEnginesRevision(
         configuration: TradingConfiguration, secrets: TradingSecrets
     ) async throws {
         let directory = FileManager.default.temporaryDirectory.appending(
-            path: "app-model-chat-filter-\(UUID().uuidString)", directoryHint: .isDirectory
-        )
+            path: "app-model-retired-chat-filter-\(UUID().uuidString)", directoryHint: .isDirectory)
         defer { try? FileManager.default.removeItem(at: directory) }
-        var filtered = configuration
-        filtered.provider = TradingProviderConfiguration(name: .deepseek, model: "deepseek-flash")
-        filtered.triage = .openAIDecisions
-        var filteredSecrets = secrets
-        filteredSecrets.triageAPIKey = "saved-openai-key"
-        let store = TradingConfigurationStore(
-            url: directory.appending(path: "configuration.json"), secrets: TestSecretRevisions()
-        )
-        try store.save(
-            configuration: filtered, revision: fakeEngineRevision(filtered), secrets: filteredSecrets, when: .paused)
-        let starter = RecordingTradingStarter()
-        let model = AppModel(tradingConfigurationStore: store, tradingStarter: starter)
-        model.isTradingUnlocked = true
-        // As unlocking does: the saved setup and the fact its keys are in the Keychain.
-        model.savedTradingConfiguration = filtered
-        model.hasTradingSecrets = true
-        model.setupDraft.load(filtered)
-        try check(model.setupDraft.triage == .openAIDecisions, "A saved chat filter did not load into the draft")
-        try check(model.hasSavedTriageKey, "The saved chat-filter key was not counted")
+        let file = directory.appending(path: "configuration.json")
+        let store = TradingConfigurationStore(url: file, secrets: TestSecretRevisions())
+        let staleRevision = String(repeating: "a", count: 64)
+        try store.save(configuration: configuration, revision: staleRevision, secrets: secrets, when: .paused)
+        guard var saved = try JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any],
+            var inner = saved["configuration"] as? [String: Any]
+        else { throw ContractFailure("The saved setup was not a JSON object") }
+        inner["triage"] = ["provider": "openai-decisions", "model": "gpt-6-luna", "route_threshold": 0.9]
+        saved["configuration"] = inner
+        try JSONSerialization.data(withJSONObject: saved).write(to: file)
 
-        _ = await model.checkConnection(.triage)
-        guard case .triage(let triage, let apiKey)? = await starter.checkedConnections().last else {
-            throw ContractFailure("Connect did not check the chat filter")
-        }
-        try check(triage == .openAIDecisions, "The chat filter was checked with another model")
-        try check(apiKey == "saved-openai-key", "A blank OpenAI key field did not fall back to the saved key")
-
-        model.setupDraft.triageAPIKey = "typed-openai-key"
-        try check(model.connectionCheckResult(.triage) == nil, "Typing a new key kept the old check")
-        await starter.setConnectionCheckFails(true)
-        let failed = await model.checkConnection(.triage)
-        guard case .triage(_, let typed)? = await starter.checkedConnections().last else {
-            throw ContractFailure("Connect did not check the typed chat-filter key")
-        }
-        try check(typed == "typed-openai-key", "A typed OpenAI key was not the one checked")
-        try check(failed?.state == .failed, "A failing chat-filter check was not returned")
-        await starter.setConnectionCheckFails(false)
-
-        let saved = try store.load()
+        let loaded = try store.load()
         try check(
-            AppModel.triageKey(entered: "", for: .openAIDecisions, saved: saved) == "saved-openai-key",
-            "Applying with a blank key dropped the saved OpenAI key")
-        try check(AppModel.triageKey(entered: "", for: nil, saved: saved) == nil, "A key travelled with the filter off")
+            loaded?.configuration == configuration, "A setup saved with the retired chat filter did not load without it")
+        let oldSecrets = Data(
+            #"{"discord_token":"d","provider_api_key":"p","brokers":[],"triage_api_key":"old-openai-key"}"#.utf8)
+        try check(
+            (try? JSONDecoder().decode(TradingSecrets.self, from: oldSecrets))?.providerAPIKey == "p",
+            "Saved keys with the retired chat-filter key did not load")
 
-        model.setupDraft.triage = nil
-        let (off, offSecrets) = try model.setupDraft.submission()
-        try check(off.triage == nil && offSecrets.triageAPIKey == nil, "Removing the chat filter still sent it")
-        print("CopyTradingContractTests: the chat filter's key is checked, kept while on, and dropped when off")
+        let engineRevision = fakeEngineRevision(configuration)
+        try store.stageSavedResume(
+            activationID: UUID().uuidString.lowercased(), revision: engineRevision, when: .paused)
+        let pending = try store.pendingActivation()
+        try check(
+            pending?.candidateRevision == engineRevision,
+            "Start staged the revision saved with the retired chat filter")
+        print("CopyTradingContractTests: a setup saved with the retired chat filter loads and starts on the engine's revision")
     }
 
     private static func checkSetupCheckKeepsKeysAndFollowsEdits(
@@ -3233,7 +3214,6 @@ private actor RecordingTradingStarter: TradingStarting {
             switch connection {
             case .source: .source
             case .model: .model
-            case .triage: .triage
             case .broker: .broker
             case .notification: .notification
             }

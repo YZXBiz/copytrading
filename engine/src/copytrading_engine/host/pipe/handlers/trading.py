@@ -154,11 +154,6 @@ class TradingLifecycleHandlers:
                 if secrets.notification_token is not None
                 else None
             ),
-            "triage_api_key": (
-                secrets.triage_api_key.get_secret_value()
-                if secrets.triage_api_key is not None
-                else None
-            ),
         }
         encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
         return hmac.new(self._activation_key, encoded, hashlib.sha256).hexdigest()

@@ -83,10 +83,6 @@ class SourceActivity(Value):
     parser_reason: str | None
     parser_profile: str | None
     interpreted_by: str | None
-    # The chat filter's decision model and how likely it found the post chat (ADR-0012); it
-    # settled the post when it is also `interpreted_by`. None without the filter.
-    sorted_by: str | None = None
-    sorted_confidence: float | None = None
     # The calls the post trades, as the engine places them, before any account sizing.
     instructions: tuple[Instruction, ...]
     # For a post that waits for the owner: what Copy places (ADR-0007).

@@ -6,10 +6,7 @@ enum ConnectionProblem {
     @MainActor
     static func text(for check: TradingCapabilityCheck, modelName: String = "") -> String {
         let provider = TradingProviderName(rawValue: check.adapter)
-        let service =
-            check.name == .triage
-            ? TradingTriageProvider(rawValue: check.adapter)?.title ?? check.adapter
-            : provider?.shortTitle ?? check.adapter
+        let service = provider?.shortTitle ?? check.adapter
         switch check.reasonCode {
         case "source_channel_access_denied", "source_history_permission_denied", "source_channel_not_readable":
             return L10n.string("Your Discord account can't read one of these channels. Check the channel IDs.")
@@ -17,12 +14,8 @@ enum ConnectionProblem {
             return L10n.string("Discord didn't answer in time. Check your connection and try again.")
         case "source_identity_unavailable", "source_auth_or_channel_access", "source_history_read_failed":
             return L10n.string("Discord didn't accept the token, or can't find a channel. Check both.")
-        case "model_key_rejected", "triage_key_rejected":
+        case "model_key_rejected":
             return L10n.string("%@ didn't accept the API key.", service)
-        case "triage_model_not_found":
-            return L10n.string("%@ has no model called “%@”.", service, TradingTriageConfiguration.openAIDecisions.model)
-        case "triage_unreachable":
-            return L10n.string("%@ didn't answer. Check your connection and try again.", service)
         case "model_not_found":
             return L10n.string("%@ has no model called “%@”.", service, modelName.trimmed)
         case "model_probe_rejected":

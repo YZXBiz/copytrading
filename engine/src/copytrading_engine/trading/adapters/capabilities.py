@@ -12,8 +12,6 @@ from pydantic import BaseModel, ConfigDict, SecretStr
 
 from copytrading_engine.execution.adapters.alpaca.broker import AlpacaBroker, AlpacaCredentials
 from copytrading_engine.parsing.providers.registry import ManagedDecoder, builtin_registry
-from copytrading_engine.parsing.providers.triage import decision_model
-from copytrading_engine.parsing.providers.triage import probe as probe_triage
 from copytrading_engine.parsing.readiness import ModelReadiness, probe_model
 from copytrading_engine.shared.cleanup import close_logged
 from copytrading_engine.sources.source import require_history_channel
@@ -31,16 +29,12 @@ from copytrading_engine.trading.domain.config import (
     SourceConfiguration,
     TradingConfiguration,
     TradingSecrets,
-    TriageCheck,
-    TriageConfiguration,
 )
 
 log = logging.getLogger(__name__)
 
 type CapabilityState = Literal["ready", "failed", "not_configured"]
-type CapabilityName = Literal[
-    "source", "model", "triage", "broker", "notification", "configuration"
-]
+type CapabilityName = Literal["source", "model", "broker", "notification", "configuration"]
 
 
 class CapabilityCheck(BaseModel):
@@ -72,8 +66,6 @@ class CapabilityProbes(Protocol):
     async def source(self, configuration: SourceConfiguration, token: str) -> CapabilityCheck: ...
 
     async def model(self, configuration: ProviderConfiguration, token: str) -> CapabilityCheck: ...
-
-    async def triage(self, configuration: TriageConfiguration, token: str) -> CapabilityCheck: ...
 
     async def broker(
         self, account: AccountConfiguration, credentials: BrokerCredentials
@@ -190,18 +182,6 @@ class TradingCapabilityService:
                 ),
             ),
         ]
-        if configuration.triage is not None:
-            operations.append(
-                _safely(
-                    "triage",
-                    self._probes.triage(
-                        configuration.triage,
-                        secrets.triage_api_key.get_secret_value()
-                        if secrets.triage_api_key is not None
-                        else "",
-                    ),
-                )
-            )
         for account in configuration.accounts:
             credentials = by_account.get(account.id)
             if credentials is None:
@@ -252,11 +232,6 @@ class TradingCapabilityService:
                     "model",
                     self._probes.model(connection.provider, connection.api_key.get_secret_value()),
                 )
-            case TriageCheck():
-                return await _safely(
-                    "triage",
-                    self._probes.triage(connection.triage, connection.api_key.get_secret_value()),
-                )
             case BrokerCheck():
                 account = connection.account
                 return await _safely(
@@ -283,14 +258,12 @@ class NativeCapabilityProbes:
         discord_client_factory: Callable[..., discord.Client] = discord.Client,
         http_client_factory: Callable[..., httpx.AsyncClient] = httpx.AsyncClient,
         source_timeout_seconds: float = 20,
-        triage_timeout_seconds: float = 10,
     ) -> None:
         if source_timeout_seconds <= 0:
             raise ValueError("Source probe timeout must be positive")
         self._discord_client_factory = discord_client_factory
         self._http_client_factory = http_client_factory
         self._source_timeout_seconds = source_timeout_seconds
-        self._triage_timeout_seconds = triage_timeout_seconds
 
     async def source(self, configuration: SourceConfiguration, token: str) -> CapabilityCheck:
         # discord.py-self does not expose discord.Intents. Its documented client
@@ -392,30 +365,6 @@ class NativeCapabilityProbes:
         finally:
             if decoder is not None:
                 await close_logged(decoder.close, resource="model_probe", log=log)
-
-    async def triage(self, configuration: TriageConfiguration, token: str) -> CapabilityCheck:
-        """One cheap decision, so a bad key or model name shows before copying starts."""
-        if not token:
-            return _failed("triage", "triage_key_missing", adapter=configuration.provider)
-        model, close = decision_model(
-            configuration.config(SecretStr(token), timeout=self._triage_timeout_seconds)
-        )
-        try:
-            async with asyncio.timeout(self._triage_timeout_seconds + 5):
-                problem = await probe_triage(model)
-        except TimeoutError:
-            problem = "triage_unreachable"
-        finally:
-            await close_logged(close, resource="triage_probe", log=log)
-        if problem is not None:
-            return _failed("triage", problem, adapter=configuration.provider)
-        return CapabilityCheck(
-            name="triage",
-            state="ready",
-            identity=f"{configuration.provider}:{configuration.model}",
-            adapter=configuration.provider,
-            reason_code=None,
-        )
 
     async def broker(
         self, account: AccountConfiguration, credentials: BrokerCredentials
