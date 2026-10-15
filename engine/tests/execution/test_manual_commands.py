@@ -552,6 +552,26 @@ def test_an_ask_above_the_limit_warns_with_the_limit_and_still_lets_the_owner_bu
     assert broker.calls == 1
 
 
+def test_a_manual_buy_is_cut_to_the_max_per_order_and_the_plan_says_by_how_much(tmp_path):
+    """The copy sheet's footer shows what the owner sends: a full-position buy of $600 in an
+    account whose max per order is $100 plans $100, records both, and sizes the shares at the
+    limit from the $100."""
+    _engine, broker, _, app, correction = setup_manual(
+        tmp_path, instruction=Instruction(action="buy", symbol="ABC", price=Decimal("25"))
+    )
+
+    preview = app.preview(preview_request(correction), NOW)
+
+    assert preview.reasons == ()
+    assert preview.plan is not None
+    assert (preview.plan.requested_usd, preview.plan.budget_usd) == (Decimal(600), Decimal(100))
+    assert preview.plan.qty * preview.plan.limit_price <= Decimal(100)
+    assert preview.plan.qty == Decimal(4)
+    app.confirm(confirmation_request(), NOW + dt.timedelta(seconds=1))
+    [order] = broker.orders.values()
+    assert Decimal(order["qty"]) == Decimal(4)
+
+
 def _assert_durable_intent(store, command_id):
     snapshot = store.load()
     command = snapshot.manual_commands[command_id]

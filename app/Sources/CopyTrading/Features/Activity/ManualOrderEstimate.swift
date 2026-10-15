@@ -2,14 +2,17 @@ import DesktopCore
 import Foundation
 
 /// What the drafted trades would place, worked out in the app before the engine checks them: the
-/// one-line preview under the choices and the words on the sheet's button. The engine's preview
-/// decides the real quantity and limit; this only says what the owner is asking for.
+/// one-line preview under the choices and the words on the sheet's button. A buy is the guru's
+/// share of the full position cut to the account's max per order, the dollars the engine's plan
+/// spends; the engine's preview then decides the shares at its limit.
 struct ManualOrderEstimate {
     let drafts: [ManualInstructionDraft]
     /// The chosen accounts, in the order the sheet lists them.
     let accounts: [AccountOverview]
     /// This guru's full position in each account, by account.
     let connections: [String: TradingRouteConnection]
+    /// Each account's max per order, by account: no one buy spends more.
+    let maxOrderUSD: [String: Decimal]
     let mode: ManualReviewMode
     /// The broker's latest quote for each stock, by symbol: a sell is valued at the bid, and a buy
     /// at the market is counted in shares at the ask.
@@ -87,10 +90,13 @@ struct ManualOrderEstimate {
         return rounded
     }
 
+    /// What a buy spends in the account, as the engine's `entry_budget` cuts it: its share of the
+    /// full position, then no more than the max per order.
     func budget(_ draft: ManualInstructionDraft, in account: AccountOverview) -> Decimal? {
-        connections[account.accountID]?.copiedBudgetUSD(
+        connections[account.accountID]?.spentUSD(
             sourceFraction: Decimal(string: draft.fraction.trimmed),
-            sourceUSD: draft.isSell ? nil : Decimal(string: draft.usdAmount.trimmed)
+            sourceUSD: draft.isSell ? nil : Decimal(string: draft.usdAmount.trimmed),
+            maxOrderUSD: maxOrderUSD[account.accountID]
         )
     }
 

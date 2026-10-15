@@ -168,6 +168,15 @@ public struct TradingRouteConnection: Codable, Equatable, Identifiable, Sendable
         return cents > 0 ? cents : nil
     }
 
+    /// What a call spends in an account: what it asks for, cut to the account's max per order,
+    /// as the engine's `entry_budget` cuts it before its exposure and cash checks. The copy sheet
+    /// shows this, so the owner confirms the dollars the engine's plan spends.
+    public func spentUSD(sourceFraction: Decimal?, sourceUSD: Decimal? = nil, maxOrderUSD: Decimal?) -> Decimal? {
+        guard let asked = copiedBudgetUSD(sourceFraction: sourceFraction, sourceUSD: sourceUSD) else { return nil }
+        guard let maxOrderUSD else { return asked }
+        return min(asked, maxOrderUSD)
+    }
+
     enum CodingKeys: String, CodingKey {
         case accountID = "account_id"
         case fullPositionUSD = "full_position_usd"

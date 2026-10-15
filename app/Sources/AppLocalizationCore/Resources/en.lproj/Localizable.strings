@@ -45,7 +45,6 @@
 "%@, and more" = "%@, and more";
 "%@, no calls yet." = "%@, no calls yet.";
 "%@, rest cancelled" = "%@, rest cancelled";
-"%@: %@ %@ %@ at %@" = "%@: %@ %@ %@ at %@";
 "%@: %@." = "%@: %@.";
 "%@’s post" = "%@’s post";
 "%lld h ago" = "%lld h ago";
@@ -127,7 +126,6 @@
 "Approve…" = "Approve…";
 "are" = "are";
 "Arrived out of order" = "Arrived out of order";
-"as of %@" = "as of %@";
 "Ask for Touch ID" = "Ask for Touch ID";
 "Asked the broker to cancel an order" = "Asked the broker to cancel an order";
 "attachment" = "attachment";
@@ -1709,7 +1707,6 @@
 "Automatic (%@)" = "Automatic (%@)";
 "New York (market time)" = "New York (market time)";
 "City or time zone" = "City or time zone";
-"Price in the post" = "Price in the post";
 "Save and Preview Order" = "Save and Preview Order";
 "Save and Preview Orders" = "Save and Preview Orders";
 "Try Again" = "Try Again";
@@ -2189,7 +2186,6 @@
 "Type a ticker" = "Type a ticker";
 "You hold %@" = "You hold %@";
 "How much" = "How much";
-"Limit…" = "Limit…";
 "the guru's price" = "the guru's price";
 "+ Another trade" = "+ Another trade";
 "%@ · checks your limits first" = "%@ · checks your limits first";
@@ -2216,8 +2212,6 @@
 "You entered the trade" = "You entered the trade";
 "You entered the trade yourself." = "You entered the trade yourself.";
 "No quote for %@" = "No quote for %@";
-"%lld min old" = "%lld min old";
-"%lld hr old" = "%lld hr old";
 "Just chat, nothing to trade" = "Just chat, nothing to trade";
 "just chat" = "just chat";
 "Posts are still being read or sent. Wait a moment, then check again." = "Posts are still being read or sent. Wait a moment, then check again.";
@@ -2378,3 +2372,11 @@
 "Couldn't read CopyTrading's saved records to check the setup. Try again in a moment." = "Couldn't read CopyTrading's saved records to check the setup. Try again in a moment.";
 "An account you removed still holds what CopyTrading bought" = "An account you removed still holds what CopyTrading bought";
 "Posts were still being read or sent" = "Posts were still being read or sent";
+"Bigger sizes stop at your %@ max per order." = "Bigger sizes stop at your %@ max per order.";
+"%@ or more" = "%@ or more";
+"No live quote for %@" = "No live quote for %@";
+"No live quote for %@ since %@" = "No live quote for %@ since %@";
+"Buy %@ of %@ in %@" = "Buy %@ of %@ in %@";
+"%@ at %@ or less" = "%@ at %@ or less";
+"%@: Buy %@ of %@, %@ at %@ or less" = "%@: Buy %@ of %@, %@ at %@ or less";
+"%@: %@ %@ of %@ at %@" = "%@: %@ %@ of %@ at %@";

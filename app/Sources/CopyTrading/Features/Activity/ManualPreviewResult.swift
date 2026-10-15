@@ -36,9 +36,14 @@ struct ManualPreviewResult: View {
         .padding(.vertical, 6)
     }
 
+    /// The order the engine planned, in the words the owner confirms: a buy by the dollars it
+    /// spends after the max per order, a sell by its shares.
     @MainActor private var headline: String {
         guard let plan = preview?.plan else {
             return L10n.string("%@ · trade %lld", request.accountID, Int64(request.instructionIndex + 1))
+        }
+        if let budget = Decimal(engine: plan.budgetUSD) {
+            return L10n.string("Buy %@ of %@ in %@", Humanize.dollars("\(budget)"), plan.symbol, request.accountID)
         }
         let quantity = Decimal(engine: plan.quantity).map { Humanize.shareCount($0) } ?? plan.quantity
         let limit = Decimal(engine: plan.limitPrice).map(Humanize.usd)
@@ -47,16 +52,24 @@ struct ManualPreviewResult: View {
             ?? L10n.string("%@ %@ %@ in %@", side, quantity, plan.symbol, request.accountID)
     }
 
-    /// The fresh price and the post's age, shown whether or not the order can go.
+    /// A buy's shares at its limit, then the fresh price and the post's age, shown whether or not
+    /// the order can go.
     @MainActor private var detail: String? {
         guard let preview else { return nil }
+        var parts: [String] = []
+        if let plan = preview.plan, plan.budgetUSD != nil, let quantity = Decimal(engine: plan.quantity),
+            let limit = Decimal(engine: plan.limitPrice)
+        {
+            parts.append(L10n.string("%@ at %@ or less", Humanize.shares(quantity), Humanize.usd(limit)))
+        }
         // A buy is checked against the ask and a sell against the bid.
         let side = preview.instruction.action == .buy ? "Ask %@" : "Bid %@"
-        let quote = Decimal(engine: preview.freshPrice).map { L10n.string(side, Humanize.usd($0)) }
+        if let fresh = Decimal(engine: preview.freshPrice) { parts.append(L10n.string(side, Humanize.usd(fresh))) }
         let age = Duration.seconds(preview.sourceAgeSeconds).formatted(
             .units(allowed: [.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 1)
                 .locale(AppTime.locale))
-        return [quote, L10n.string("posted %@ ago", age)].compactMap { $0 }.joined(separator: " · ")
+        parts.append(L10n.string("posted %@ ago", age))
+        return parts.joined(separator: " · ")
     }
 
     @MainActor private var status: (text: String, tone: StatusTone)? {
