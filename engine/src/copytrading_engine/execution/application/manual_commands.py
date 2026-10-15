@@ -372,14 +372,9 @@ class ManualTradingApplication:
                     for key, item in snapshot.late_order_incidents.items()
                 },
             },
+            # No quote: it ticks every second, and the plan recheck at confirmation already bounds
+            # what a moved price may change (ADR-0007), as a lot sale's facts leave it out too.
             "session": session.value if session is not None else None,
-            "quote": {
-                "feed": quote.feed,
-                "bid": str(quote.bid) if quote and quote.bid is not None else None,
-                "ask": str(quote.ask) if quote and quote.ask is not None else None,
-            }
-            if quote is not None
-            else None,
             "reasons": sorted(set(reasons)),
         }
         return ManualOrderPreview(

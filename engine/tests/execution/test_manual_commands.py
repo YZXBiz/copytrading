@@ -529,42 +529,17 @@ def _assert_durable_intent(store, command_id):
     assert snapshot.orders[command.client_id].submit_started_at is not None
 
 
-def test_confirmation_rejects_price_change_and_stable_id_conflict(tmp_path):
+@pytest.mark.parametrize("ask", [Decimal("24.99"), Decimal("25.01")])
+def test_a_quote_that_ticks_after_the_review_still_confirms(tmp_path, ask):
+    """The quote moves every second during the market; the reviewed plan still goes out."""
     _engine, broker, _, app, correction = setup_manual(tmp_path)
-    app.preview(preview_request(correction), NOW)
-    broker.ask = Decimal("25.01")
-
-    result = app.confirm(confirmation_request(), NOW + dt.timedelta(seconds=1))
-    assert result.status == "rejected"
-    assert result.reason == "account_facts_changed"
-    assert broker.calls == 0
-
-
-def test_changed_quote_requires_fresh_preview_and_new_confirmation_identity(tmp_path):
-    _engine, broker, _, app, correction = setup_manual(tmp_path)
-    old_preview = app.preview(preview_request(correction, "preview-old"), NOW)
-    broker.ask = Decimal("24.99")
+    reviewed = app.preview(preview_request(correction), NOW)
+    broker.ask = ask
     broker.quote_time = NOW + dt.timedelta(seconds=2)
 
-    stale = app.confirm(
-        confirmation_request("preview-old", "command-old"), NOW + dt.timedelta(seconds=3)
-    )
-    assert stale.status == "rejected"
-    assert stale.reason == "account_facts_changed"
-    assert broker.calls == 0
-
-    refreshed = app.preview(
-        preview_request(correction, "preview-new"), NOW + dt.timedelta(seconds=4)
-    )
-    assert refreshed.plan == old_preview.plan
-    assert refreshed.quote is not None
-    assert refreshed.quote.timestamp == broker.quote_time
-    assert refreshed.fresh_price == broker.ask
-    accepted = app.confirm(
-        confirmation_request("preview-new", "command-new"), NOW + dt.timedelta(seconds=5)
-    )
-    assert accepted.status == "filled"
-    assert accepted.command.request.command_id == "command-new"
+    result = app.confirm(confirmation_request(), NOW + dt.timedelta(seconds=3))
+    assert result.status == "filled"
+    assert reviewed.plan is not None
     assert broker.calls == 1
 
 
