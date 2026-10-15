@@ -50,6 +50,19 @@ def test_chinese_calls_a_guru_by_one_name():
     assert others == []
 
 
+def test_chinese_calls_a_call_by_one_name():
+    # A guru's call is 喊单; 信号 is kept for the guru (信号源) and the signal's price and age.
+    call = re.compile(r"\bcalls?\b", re.IGNORECASE)
+    signal = re.compile(r"信号(?!源|价|时|最长)")
+    chinese = load("zh-Hans")
+    others = [
+        key
+        for key, value in chinese.items()
+        if call.search(key) and "model call" not in key and signal.search(value)
+    ]
+    assert others == []
+
+
 SOURCES = Path(__file__).resolve().parents[2] / "Sources" / "CopyTrading"
 LITERAL = r'"((?:[^"\\]|\\.)*)"'
 # The calls that look their text up in the catalogs, with the text written in place.

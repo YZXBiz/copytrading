@@ -9,6 +9,7 @@ func runAssistantProposalTests() async throws {
     try await lockingStopsTheAssistantBeforeDiscardingProposals()
     try await anEngineExitForgetsTheConversationAndProposals()
     try theApprovalSheetNamesTheAssistant()
+    try aLimitsRequestNamesItsAccount()
     print("CopyTradingContractTests: assistant proposals clear after a decision, on lock, and when the engine exits")
 }
 
@@ -55,6 +56,26 @@ private func theApprovalSheetNamesTheAssistant() throws {
     try verifyProposal(
         assistant.approvalHeading == "助手请求批准" && assistant.requester == "CopyTrading 助手",
         "in 简体中文 the assistant's request read \(assistant.approvalHeading), from \(assistant.requester)")
+}
+
+/// A limits request is titled by its account, whose rows list each change; every request about an
+/// account names it, so the sheet's Account row never shows a mode alone.
+@MainActor
+private func aLimitsRequestNamesItsAccount() throws {
+    let limits = try JSONDecoder().decode(
+        AgentProposal.self,
+        from: Data(
+            """
+            {"proposal_id":"l","state":"pending","digest":"d-l","created_at":"2026-10-01T15:00:00Z",\
+            "expires_at":"2026-10-01T15:05:00Z","requested_by":{"pid":null,"path":null},"outcome":null,\
+            "subject":{"kind":"set_account_limits","account_id":"primary",\
+            "changes":[{"field":"max_order_usd","value":"750"},{"field":"daily_loss_cap_usd","value":"400"}]}}
+            """.utf8))
+    try verifyProposal(limits.sheetTitle == "Change primary's limits", "the limits request was titled \(limits.sheetTitle)")
+    try verifyProposal(limits.accountID == "primary", "the limits request named \(limits.accountID ?? "no account")")
+    let resume = try proposal("r", state: "pending")
+    try verifyProposal(resume.accountID == "primary", "a resume named \(resume.accountID ?? "no account")")
+    try verifyProposal(resume.sheetTitle == resume.summary, "a resume was titled \(resume.sheetTitle)")
 }
 
 /// The order in which the engine heard about a lock.
