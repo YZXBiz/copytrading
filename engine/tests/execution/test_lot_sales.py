@@ -241,3 +241,21 @@ def test_prices_moving_between_review_and_sell_do_not_block_the_sale(tmp_path):
 
     assert result.status != "rejected", result.reason
     assert broker.calls > calls
+
+
+def test_a_broker_refusal_of_a_sale_reads_as_the_same_fixed_code_as_a_copy(tmp_path):
+    """A refused sale carried Alpaca's own status word as its reason, while a refused copy
+    carried the fixed code the app words; both now read the same."""
+    from copytrading_engine.execution.application.ports import BrokerError
+
+    _, broker, app, lot_id, lot = owned_lot(tmp_path)
+
+    def refuse(_order):
+        raise BrokerError(422)
+
+    broker.submit = refuse
+    app.preview(preview_request(lot_id, lot.remaining_qty), NOW)
+
+    result = app.confirm(confirmation(), NOW + dt.timedelta(seconds=1))
+
+    assert (result.status, result.reason) == ("broker_rejected", "broker_rejected")
