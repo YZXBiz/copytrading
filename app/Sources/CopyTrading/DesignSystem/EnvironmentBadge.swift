@@ -9,7 +9,7 @@ struct EnvironmentBadge: View {
         switch environment {
         case .live:
             Label(L10n.string("Live"), systemImage: "dollarsign.circle.fill")
-                .badgeStyle(.orange)
+                .badgeStyle(Palette.live)
         case .paper:
             Label(L10n.string("Paper"), systemImage: "doc.text")
                 .badgeStyle(.secondary)

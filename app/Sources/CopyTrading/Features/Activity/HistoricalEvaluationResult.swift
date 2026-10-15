@@ -5,6 +5,8 @@ import SwiftUI
 /// done, in plain words; the model's own notes stay behind their reasons.
 struct HistoricalEvaluationResult: View {
     let evaluation: ProfileEvaluation
+    /// The post read, so a note that only repeats it is left out.
+    let post: String
 
     var body: some View {
         SheetSection(L10n.string("Simulated result · no orders")) {
@@ -12,8 +14,7 @@ struct HistoricalEvaluationResult: View {
                 Text(L10n.string(Humanize.code(evaluation.decision)))
                     .font(DesignTokens.rowTitle)
                     .foregroundStyle(Palette.ink)
-                // The model's note only when it is words; a parser code adds nothing the decision didn't say.
-                if let note = Reason.parserMessage(evaluation.reason, needsReview: evaluation.decision == "review") {
+                if let note = EvaluationNote.text(evaluation, post: post) {
                     Text(note)
                         .font(DesignTokens.caption)
                         .foregroundStyle(Palette.tertiaryInk)

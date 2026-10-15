@@ -22,7 +22,7 @@ struct SidebarAccountRow: View {
         SidebarEntityRow(
             title: account.id,
             detail: L10n.string("%@ · %@", L10n.string(isLive ? "Live" : "Paper"), copyWord),
-            detailTint: isLive ? .orange : Palette.tertiaryInk,
+            detailTint: isLive ? Palette.live : Palette.tertiaryInk,
             value: equity?.formatted(.currency(code: "USD")),
             identifier: screen.identifier,
             isSelected: model.selectedScreen == screen,

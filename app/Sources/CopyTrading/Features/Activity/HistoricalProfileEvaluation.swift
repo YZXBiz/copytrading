@@ -44,7 +44,14 @@ struct HistoricalProfileEvaluationSheet: View {
     @Environment(\.dismiss) private var dismiss
     let source: SourceActivity
     @Bindable var model: AppModel
-    @State private var feature = HistoricalProfileEvaluationModel()
+    @State private var feature: HistoricalProfileEvaluationModel
+
+    /// `feature` holds the evaluation; a preview passes one that already has a result.
+    init(source: SourceActivity, model: AppModel, feature: HistoricalProfileEvaluationModel = .init()) {
+        self.source = source
+        self.model = model
+        _feature = State(initialValue: feature)
+    }
     @State private var selectedRouteID: String?
 
     private var configuration: TradingConfiguration? { model.savedTradingConfiguration }
@@ -59,6 +66,21 @@ struct HistoricalProfileEvaluationSheet: View {
             title: "“\(source.text)”",
             lede: byline
         ) {
+            // The answer leads, right under the post it read, so it shows without scrolling.
+            if feature.isEvaluating {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text(L10n.string("Evaluating with the configured model"))
+                        .font(DesignTokens.bodyText)
+                        .foregroundStyle(Palette.secondaryInk)
+                }
+            }
+            if let error = feature.error {
+                Callout(error, tone: .critical)
+            }
+            if let evaluation = feature.evaluation {
+                HistoricalEvaluationResult(evaluation: evaluation, post: source.text)
+            }
             SheetSection(L10n.string("Guru and accounts")) {
                 if routes.isEmpty {
                     Text(L10n.string("Save a guru and start copying before evaluating older posts."))
@@ -89,20 +111,6 @@ struct HistoricalProfileEvaluationSheet: View {
                 Text(L10n.string("Simulated with the configured model. No order is placed."))
                     .font(DesignTokens.caption)
                     .foregroundStyle(Palette.tertiaryInk)
-            }
-            if feature.isEvaluating {
-                HStack(spacing: 8) {
-                    ProgressView().controlSize(.small)
-                    Text(L10n.string("Evaluating with the configured model"))
-                        .font(DesignTokens.bodyText)
-                        .foregroundStyle(Palette.secondaryInk)
-                }
-            }
-            if let error = feature.error {
-                Callout(error, tone: .critical)
-            }
-            if let evaluation = feature.evaluation {
-                HistoricalEvaluationResult(evaluation: evaluation)
             }
         } actions: {
             Button(L10n.string("Done")) {

@@ -303,7 +303,7 @@ struct ManualReviewSheet: View {
                     FormChoice(
                         title: account.accountID,
                         detail: account.environment == .live ? L10n.string("Live") : nil,
-                        detailTint: account.environment == .live ? .orange : nil,
+                        detailTint: account.environment == .live ? Palette.live : nil,
                         isOn: selectedAccountIDs.contains(account.accountID)
                     ) {
                         if selectedAccountIDs.contains(account.accountID) {

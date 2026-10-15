@@ -268,7 +268,7 @@ struct ActivityDetailView: View {
                 ActivityLabel(text: " · ")
                 ActivityLabel(
                     text: L10n.string(environment == .live ? "Live" : "Paper"),
-                    color: environment == .live ? .orange : Palette.tertiaryInk)
+                    color: environment == .live ? Palette.live : Palette.tertiaryInk)
             }
             if let story = stories[account.id] {
                 PositionStoryView(story: story, directory: directory, postText: postText)

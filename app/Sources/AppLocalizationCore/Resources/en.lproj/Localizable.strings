@@ -620,7 +620,6 @@
 "Received a post" = "Received a post";
 "Recent Requests" = "Recent Requests";
 "record" = "record";
-"Record type" = "Record type";
 "Recorded" = "Recorded";
 "Recorded a sale you made" = "Recorded a sale you made";
 "Recorded your correction" = "Recorded your correction";
@@ -2272,6 +2271,7 @@
 "%@ at %@ or less" = "%@ at %@ or less";
 "%@: Buy %@ of %@, %@ at %@ or less" = "%@: Buy %@ of %@, %@ at %@ or less";
 "%@: %@ %@ of %@ at %@" = "%@: %@ %@ of %@ at %@";
+"Change %@'s limits" = "Change %@'s limits";
 "Go to an account, a guru, or a page, in sidebar order" = "Go to an account, a guru, or a page, in sidebar order";
 "Find a post, a guru, or a page" = "Find a post, a guru, or a page";
 "Read accounts and posts again" = "Read accounts and posts again";

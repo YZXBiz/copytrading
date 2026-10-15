@@ -72,7 +72,7 @@ struct LotSaleSheet: View {
                 Eyebrow(" · ")
                 Eyebrow(
                     L10n.string(target.environment == .live ? "Live" : "Paper"),
-                    color: target.environment == .live ? .orange : Palette.tertiaryInk)
+                    color: target.environment == .live ? Palette.live : Palette.tertiaryInk)
             }
             Text(L10n.string("Sell %@", target.symbol))
                 .font(DisplayFont.font(size: 40, weight: .medium, relativeTo: .largeTitle))

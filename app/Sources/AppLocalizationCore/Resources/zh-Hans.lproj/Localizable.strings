@@ -620,7 +620,6 @@
 "Received a post" = "收到一条帖子";
 "Recent Requests" = "最近的请求";
 "record" = "条记录";
-"Record type" = "记录类型";
 "Recorded" = "已记录";
 "Recorded a sale you made" = "已记录你手动执行的卖出";
 "Recorded your correction" = "已记录你的更正";
@@ -1922,7 +1921,7 @@
 "Entered the trade the post asked for" = "按帖子的意思录入了交易";
 "Filled in from the post's words. Check it, then send." = "已按帖子的文字填好。核对后发送。";
 "At the bid" = "按买一价";
-"Agent request" = "代理请求";
+"Agent request" = "智能体请求";
 "The request" = "请求内容";
 "Before copying starts" = "开始复制之前";
 "Import" = "导入";
@@ -2272,6 +2271,7 @@
 "%@ at %@ or less" = "%@，限价 %@";
 "%@: Buy %@ of %@, %@ at %@ or less" = "账户 %@：买入 %@ 的 %@，%@，限价 %@";
 "%@: %@ %@ of %@ at %@" = "账户 %@：%@ %@ %@，价格 %@";
+"Change %@'s limits" = "修改 %@ 的限额";
 "Go to an account, a guru, or a page, in sidebar order" = "按侧边栏顺序前往账户、信号源或页面";
 "Find a post, a guru, or a page" = "查找帖子、信号源或页面";
 "Read accounts and posts again" = "重新读取账户和帖子";
