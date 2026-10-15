@@ -2365,6 +2365,11 @@
 "%@ at %@ or less" = "%@，限价 %@";
 "%@: Buy %@ of %@, %@ at %@ or less" = "账户 %@：买入 %@ 的 %@，%@，限价 %@";
 "%@: %@ %@ of %@ at %@" = "账户 %@：%@ %@ %@，价格 %@";
+"Change %@'s limits" = "修改 %@ 的限额";
+"Go to an account, a guru, or a page, in sidebar order" = "按侧边栏顺序前往账户、信号源或页面";
+"Find a post, a guru, or a page" = "查找帖子、信号源或页面";
+"Read accounts and posts again" = "重新读取账户和帖子";
+"Step through points on an account's chart" = "逐个查看账户图表上的数据点";
 "Self-test captured" = "自检：已捕获";
 "Self-test read" = "自检：已读取";
 "Self-test finished" = "自检：已完成";
@@ -2391,8 +2396,3 @@
 "Late order found" = "发现迟到订单";
 "Late order found again" = "再次发现迟到订单";
 "Ledger entry" = "账本记录";
-"Change %@'s limits" = "修改 %@ 的限额";
-"Go to an account, a guru, or a page, in sidebar order" = "按侧边栏顺序前往账户、信号源或页面";
-"Find a post, a guru, or a page" = "查找帖子、信号源或页面";
-"Read accounts and posts again" = "重新读取账户和帖子";
-"Step through points on an account's chart" = "逐个查看账户图表上的数据点";

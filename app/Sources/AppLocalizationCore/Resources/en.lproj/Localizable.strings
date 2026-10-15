@@ -2365,6 +2365,11 @@
 "%@ at %@ or less" = "%@ at %@ or less";
 "%@: Buy %@ of %@, %@ at %@ or less" = "%@: Buy %@ of %@, %@ at %@ or less";
 "%@: %@ %@ of %@ at %@" = "%@: %@ %@ of %@ at %@";
+"Change %@'s limits" = "Change %@'s limits";
+"Go to an account, a guru, or a page, in sidebar order" = "Go to an account, a guru, or a page, in sidebar order";
+"Find a post, a guru, or a page" = "Find a post, a guru, or a page";
+"Read accounts and posts again" = "Read accounts and posts again";
+"Step through points on an account's chart" = "Step through points on an account's chart";
 "Self-test captured" = "Self-test captured";
 "Self-test read" = "Self-test read";
 "Self-test finished" = "Self-test finished";
@@ -2391,8 +2396,3 @@
 "Late order found" = "Late order found";
 "Late order found again" = "Late order found again";
 "Ledger entry" = "Ledger entry";
-"Change %@'s limits" = "Change %@'s limits";
-"Go to an account, a guru, or a page, in sidebar order" = "Go to an account, a guru, or a page, in sidebar order";
-"Find a post, a guru, or a page" = "Find a post, a guru, or a page";
-"Read accounts and posts again" = "Read accounts and posts again";
-"Step through points on an account's chart" = "Step through points on an account's chart";
