@@ -1,12 +1,16 @@
 """Operator pages name accounts they could not read instead of showing them as empty."""
 
 import asyncio
+import json
+import sqlite3
+from contextlib import closing
 from decimal import Decimal
 from types import SimpleNamespace
 
 import pytest
 from pydantic import SecretStr
 
+from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
 from copytrading_engine.execution.domain.market import EquityHistory, HistoryWindow, Quote
 from copytrading_engine.execution.presentation.operator_views import AccountUnavailable
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore
@@ -20,6 +24,8 @@ from copytrading_engine.trading.application.account_access import (
 )
 from copytrading_engine.trading.application.operator_service import OperatorQueryService
 from copytrading_engine.trading.application.paused_reader import PausedAccountReader, ReadKeys
+
+from ..execution.builders import save_snapshot
 
 
 def _service(data_dir) -> OperatorQueryService:
@@ -48,6 +54,20 @@ async def test_unreadable_retained_account_is_reported_on_the_overview_page(tmp_
     assert page.items == ()
     assert page.unavailable_accounts == (
         AccountUnavailable(account_id="archive", reason="read_failed"),
+    )
+
+
+async def test_an_earlier_versions_retained_account_reads_as_kept_history(tmp_path):
+    account_dir = tmp_path / "accounts" / "archive"
+    save_snapshot(account_dir, LedgerSnapshot(account_id="archive"))
+    with closing(sqlite3.connect(account_dir / "execution.sqlite3")) as db, db:
+        data = json.loads(db.execute("SELECT data FROM snapshot").fetchone()[0])
+        db.execute("UPDATE snapshot SET data=?", (json.dumps(data | {"schema_version": 9}),))
+
+    page = await _service(tmp_path).account_overviews()
+
+    assert page.unavailable_accounts == (
+        AccountUnavailable(account_id="archive", reason="earlier_version"),
     )
 
 

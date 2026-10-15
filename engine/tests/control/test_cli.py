@@ -11,6 +11,7 @@ import pytest
 
 from copytrading_engine.control import cli, wire
 from copytrading_engine.control.client import ControlClient
+from copytrading_engine.execution.presentation.operator_views import AccountUnavailable
 
 from .fakes import running_app, service
 
@@ -57,6 +58,20 @@ async def test_accounts_list_each_lot_under_its_position(app):
     assert "  ABC  app 2, external 3" in out
     assert "    lot copy-0123456789abcdef0123456789abcdef01234567  2 of 2 at $25.10" in out
     assert "from alex  (discord:demo:1)" in out
+
+
+async def test_an_earlier_versions_account_reads_as_kept_history(app, monkeypatch):
+    relay, _, engine = app
+    page = await engine.account_overviews(None, 50)
+    kept = (AccountUnavailable(account_id="archive", reason="earlier_version"),)
+
+    async def overviews(before_account_id, limit):
+        return page.model_copy(update={"unavailable_accounts": kept})
+
+    monkeypatch.setattr(engine, "account_overviews", overviews)
+    code, out, _ = await run(relay, "accounts")
+    assert code == cli.EXIT_OK
+    assert "archive: history kept from an earlier version of CopyTrading" in out
 
 
 async def test_activity_marks_source_text_untrusted(app):

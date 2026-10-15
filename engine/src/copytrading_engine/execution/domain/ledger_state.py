@@ -49,6 +49,10 @@ MessageStatus = Literal[
 ]
 
 
+class EarlierLedgerVersion(ValueError):
+    """A ledger an earlier CopyTrading wrote; its format is never migrated."""
+
+
 class CashAnchor(Value):
     """First observed funds for a message, committed before any buy intent.
 

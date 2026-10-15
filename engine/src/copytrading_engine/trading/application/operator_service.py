@@ -10,7 +10,7 @@ from copytrading_engine.execution.application.manual_commands import (
     manual_command_page_from_snapshot,
 )
 from copytrading_engine.execution.application.ports import ACCOUNT_OPEN_REFUSALS
-from copytrading_engine.execution.domain.ledger_state import HELD_FOR_OWNER
+from copytrading_engine.execution.domain.ledger_state import HELD_FOR_OWNER, EarlierLedgerVersion
 from copytrading_engine.execution.domain.manual_commands import (
     ManualCommandPage,
     ManualCommandPageRequest,
@@ -155,6 +155,8 @@ class OperatorQueryService:
                     overview, _, _ = await self._access.retained_account(database, timeout=2)
                 except TimeoutError:
                     failure = "timeout"
+                except EarlierLedgerVersion:
+                    failure = "earlier_version"
                 except Exception as exc:  # noqa: BLE001 - one unreadable ledger must not hide others
                     log.warning(
                         "retained_account_read_failed id=%s type=%s error=%s",
@@ -354,6 +356,8 @@ class OperatorQueryService:
                 _, snapshot, _ = await self._access.retained_account(database, timeout=2)
             except TimeoutError:
                 return AccountUnavailable(account_id=account_id, reason="timeout")
+            except EarlierLedgerVersion:
+                return AccountUnavailable(account_id=account_id, reason="earlier_version")
             except Exception as exc:  # noqa: BLE001 - one unreadable ledger must not hide others
                 log.warning("destination_read_failed id=%s type=%s", account_id, type(exc).__name__)
                 return AccountUnavailable(account_id=account_id, reason="read_failed")

@@ -7,7 +7,11 @@ from pydantic import TypeAdapter, ValidationError
 
 from copytrading_engine.execution.adapters.sqlite_ledger import decode_ledger_snapshot
 from copytrading_engine.execution.application.engine import CopyEngine
-from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot, MessageRecord
+from copytrading_engine.execution.domain.ledger_state import (
+    EarlierLedgerVersion,
+    LedgerSnapshot,
+    MessageRecord,
+)
 from copytrading_engine.execution.domain.progress import (
     InstructionProgress,
     OrderLinked,
@@ -172,8 +176,11 @@ def test_snapshot_rejects_order_without_explicit_type():
 def test_snapshot_accepts_only_schema_version_ten_and_requires_control():
     assert LedgerSnapshot().schema_version == 10
     for old_version in (2, 6, 7, 8, 9):
-        with pytest.raises(ValueError, match="Unsupported execution snapshot schema"):
+        with pytest.raises(EarlierLedgerVersion, match="earlier version"):
             decode_ledger_snapshot(json.dumps({"schema_version": old_version}))
+    for unknown in (0, 11):
+        with pytest.raises(ValueError, match="Unsupported execution snapshot schema"):
+            decode_ledger_snapshot(json.dumps({"schema_version": unknown}))
     with pytest.raises(ValueError, match="account control evidence"):
         decode_ledger_snapshot(json.dumps({"schema_version": 10}))
 
