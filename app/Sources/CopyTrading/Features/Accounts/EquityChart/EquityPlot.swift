@@ -141,7 +141,7 @@ struct EquityPlot: View {
         Text(name.uppercased())
             .font(.system(size: 9, weight: .semibold))
             .tracking(0.6)
-            .foregroundStyle(Palette.tertiaryInk.opacity(0.8))
+            .foregroundStyle(Palette.tertiaryInk)
     }
 
     @ChartContentBuilder
@@ -149,7 +149,7 @@ struct EquityPlot: View {
         RuleMark(y: .value(curve.baseline == nil ? "Start" : "Previous close", reference))
             .foregroundStyle(contrast == .increased ? Palette.secondaryInk : Palette.tertiaryInk.opacity(0.75))
             .lineStyle(StrokeStyle(lineWidth: 1, dash: [2, 4]))
-            .accessibilityLabel(curve.baseline == nil ? "Start" : "Previous close")
+            .accessibilityLabel(L10n.string(curve.baseline == nil ? "Start" : "Previous close"))
             .accessibilityValue(reference.formatted(.currency(code: "USD")))
     }
 }
