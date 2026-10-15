@@ -8,6 +8,7 @@ func runGuidedSetupTests() throws {
     try helpArticlesAreCompleteAndLinked()
     try newAccountsAndGurusStartUsable()
     try unsavedChangesFollowTheSavedSetup()
+    try aSavedDraftIsNotAChange()
     try aKeyStaysWithItsService()
     try theTourAsksOnlyForWhatIsLeft()
     print("CopyTradingContractTests: the guide's checklist, help articles, and setup edits follow the draft")
@@ -175,6 +176,59 @@ private func unsavedChangesFollowTheSavedSetup() throws {
     try verifyGuide(
         !model.hasUnsavedSetupChanges && model.setupDraft.routes[0].displayName == "Alex",
         "Discard Changes did not return to the saved setup")
+}
+
+/// A saved setup refills the draft to exactly itself, whatever it holds, so a start that saved the
+/// draft never leaves the draft reading as a change; and a key typed beside an unchanged setup
+/// leaves the draft once it is saved.
+@MainActor
+private func aSavedDraftIsNotAChange() throws {
+    let profile = try TradingProfileBuilder().build(
+        TradingProfileDraft(
+            guruID: "alex", displayName: "Alex", playbook: "Reads calls as buys.",
+            examples: [
+                TradingProfileExample(message: "Bought AAPL at 200", expectedAction: .buy, expectedSymbol: "AAPL"),
+                TradingProfileExample(
+                    message: "Trimmed half of AAPL at 210", expectedAction: .reduce, expectedSymbol: "AAPL",
+                    expectedFraction: "0.5", expectedPrice: "210", expectedBuyPrice: "200"),
+            ]))
+    var policy = TradingAccountPolicy()
+    policy.maxSymbolUSD = "1200"
+    policy.maxOrderUSD = "400"
+    policy.pollSeconds = 1.5
+    let account = TradingAccountConfiguration(id: "main", environment: .paper, policy: policy)
+    let saved = TradingConfiguration(
+        source: TradingSourceConfiguration(channelIDs: ["123", "456"], authorIDs: ["9"]),
+        provider: TradingProviderConfiguration(name: .ollama, model: "llama", baseURL: "http://localhost:11434"),
+        accounts: [account],
+        profiles: [profile],
+        routes: [
+            TradingRouteConfiguration(
+                channelID: "123", authorID: "9", guruID: "alex", profileRevision: profile.profileRevision,
+                connections: [TradingRouteConnection(accountID: "main", fullPositionUSD: "1200")],
+                repeatWindowMinutes: nil)
+        ],
+        notification: TradingNotificationConfiguration(service: .telegram, chatID: "42")
+    )
+    var draft = ConnectionsDraft()
+    draft.load(saved)
+    let refilled = try draft.submission().0
+    try verifyGuide(refilled == saved, "A draft refilled from a full setup differs from it")
+
+    let model = AppModel()
+    model.savedTradingConfiguration = saved
+    model.hasTradingSecrets = true
+    model.syncSetupDraftWithSaved()
+    model.setupDraft.discordToken = "typed-token"
+    model.setupDraft.accounts[0].key = "typed-key"
+    try verifyGuide(model.hasUnsavedSetupChanges, "A typed key beside an unchanged setup did not count as a change")
+    // The start saved those keys without changing the configuration.
+    model.syncSetupDraftWithSaved()
+    try verifyGuide(model.hasUnsavedSetupChanges, "A sync refilled over keys that were not saved yet")
+    model.settleSetupDraftAfterStart()
+    try verifyGuide(
+        !model.setupDraft.hasTypedSecrets && !model.hasUnsavedSetupChanges && !model.hasSetupToStart,
+        "A saved key stayed in the draft as a change")
 }
 
 /// One service's key is never shown in, or sent to, another service's sheet.
