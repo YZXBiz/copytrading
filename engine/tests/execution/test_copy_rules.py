@@ -8,7 +8,10 @@ import pytest
 
 from copytrading_engine.execution.application.engine import CopyEngine
 from copytrading_engine.execution.application.ports import BrokerError
-from copytrading_engine.execution.domain.manual_commands import ManualCorrectionRecord
+from copytrading_engine.execution.domain.manual_commands import (
+    ManualCorrectionRecord,
+    ManualRefusal,
+)
 from copytrading_engine.execution.domain.market import Quote
 from copytrading_engine.execution.domain.progress import Pending, Skipped
 from copytrading_engine.execution.domain.signals import CopyConfig
@@ -253,8 +256,42 @@ def test_a_call_the_account_already_traded_cannot_be_copied_again():
     deliver(engine, event())
     assert engine.ledger.orders()
 
-    with pytest.raises(ValueError, match="reviewed source evidence"):
+    with pytest.raises(ManualRefusal, match="call_not_waiting"):
         engine.ledger.record_manual_correction(_correction(engine))
+
+
+def test_a_call_the_account_never_received_is_refused_by_name():
+    engine = _approving(FakeBroker())
+    deliver(engine, event())
+    correction = _correction(engine).model_copy(
+        update={
+            "source_id": "discord:demo:elsewhere",
+            "accepted_interpretation": _correction(engine).accepted_interpretation.model_copy(
+                update={"id": "elsewhere"}
+            ),
+        }
+    )
+
+    with pytest.raises(ManualRefusal, match="call_not_received"):
+        engine.ledger.record_manual_correction(correction)
+
+
+def test_a_call_whose_words_changed_is_refused_by_name():
+    engine = _approving(FakeBroker())
+    deliver(engine, event())
+    held = _correction(engine)
+    edited = held.source_text + " (edited)"
+    changed = held.model_copy(
+        update={
+            "source_text": edited,
+            "accepted_interpretation": held.accepted_interpretation.model_copy(
+                update={"text": edited}
+            ),
+        }
+    )
+
+    with pytest.raises(ManualRefusal, match="call_changed"):
+        engine.ledger.record_manual_correction(changed)
 
 
 def test_a_held_buy_alerts_that_it_waits_for_the_owner():

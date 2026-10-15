@@ -20,6 +20,7 @@ from copytrading_engine.execution.domain.manual_commands import (
     ManualCorrectionRecord,
     ManualOrderPreview,
     ManualPreviewRequest,
+    ManualRefusal,
 )
 from copytrading_engine.execution.domain.market import Quote
 from copytrading_engine.execution.domain.order_lifecycle import OrderStatus
@@ -65,7 +66,7 @@ class ManualTradingApplication:
         existing = self.engine.ledger.snapshot().manual_previews.get(request.preview_id)
         if existing is not None:
             if existing.request != request:
-                raise ValueError("Manual preview identity conflicts with another request")
+                raise ManualRefusal("identity_conflict")
             return existing
         preview = self._evaluate(request, now)
         return self.engine.ledger.save_manual_preview(preview)
@@ -75,16 +76,16 @@ class ManualTradingApplication:
         previous = snapshot.manual_commands.get(request.command_id)
         if previous is not None:
             if previous.request != request:
-                raise ValueError("Manual command identity conflicts with different content")
+                raise ManualRefusal("identity_conflict")
             self.engine.reconcile(now)
             return self.result(request.command_id)
 
         preview = snapshot.manual_previews.get(request.preview_id)
         if preview is None:
-            raise ValueError("Manual preview is unavailable")
+            raise ManualRefusal("preview_missing")
         correction = snapshot.manual_corrections.get(preview.request.correction_id)
         if correction is None:
-            raise ValueError("Manual correction is unavailable")
+            raise ManualRefusal("correction_incomplete")
 
         # Reconciliation is a read of prior broker outcomes before considering a
         # second action. It also converts a never acknowledged submit into durable
@@ -190,14 +191,14 @@ class ManualTradingApplication:
             raise ValueError("Manual preview account identity mismatch")
         correction = snapshot.manual_corrections.get(request.correction_id)
         if correction is None or self.local_account_id not in correction.selected_account_ids:
-            raise ValueError("Manual correction is unavailable for this account")
+            raise ManualRefusal("correction_incomplete")
         if request.instruction_index >= len(correction.instructions):
             raise ValueError("Corrected instruction index is invalid")
         if (
             snapshot.account_id != self.broker_account_id
             or snapshot.environment != self.environment
         ):
-            raise ValueError("Manual preview broker identity mismatch")
+            raise ManualRefusal("account_identity_changed")
 
         instruction = correction.instructions[request.instruction_index]
         message = self.engine.ledger.message(correction.source_id)
@@ -414,7 +415,9 @@ def manual_command_result_from_snapshot(
     snapshot: LedgerSnapshot, command_id: str
 ) -> ManualCommandResult:
     """Project one durable command and its latest order evidence into the read contract."""
-    command = snapshot.manual_commands[command_id]
+    command = snapshot.manual_commands.get(command_id)
+    if command is None:
+        raise ManualRefusal("command_not_found")
     if command.state == "rejected":
         return ManualCommandResult(command=command, status="rejected", reason=command.reason)
     assert command.client_id is not None
@@ -423,7 +426,8 @@ def manual_command_result_from_snapshot(
     return ManualCommandResult(
         command=command,
         status=status,
-        reason=order.raw_broker_status if status == "broker_rejected" else None,
+        # The broker's own word stays on the order; the owner reads the fixed code.
+        reason="broker_rejected" if status == "broker_rejected" else None,
         client_id=order.client_id,
         broker_order_id=order.broker_id,
         order_status=order.status,

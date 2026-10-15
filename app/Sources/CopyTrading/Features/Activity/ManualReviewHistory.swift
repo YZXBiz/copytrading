@@ -59,7 +59,7 @@ struct ManualReviewHistory: View {
                             .disabled(feature.pendingCommandPages.contains(accountID))
                         }
                         if let error = feature.errors["history:\(accountID)"] {
-                            Callout(error, tone: .critical)
+                            Callout(ManualRefusalText.line(error), tone: .critical)
                         }
                     }
                 }
@@ -78,8 +78,8 @@ struct ManualReviewHistory: View {
                 Spacer(minLength: 8)
                 StatusBadge(Humanize.code(result.status), tone: StatusTone(code: result.status))
             }
-            if let reason = result.reason {
-                Text(Reason.text(reason))
+            if let reason = ManualRefusalText.outcome(of: result) {
+                Text(reason)
                     .font(DesignTokens.caption)
                     .foregroundStyle(Palette.secondaryInk)
             }

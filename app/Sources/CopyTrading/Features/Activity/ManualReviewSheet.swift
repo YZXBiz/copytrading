@@ -131,8 +131,14 @@ struct ManualReviewSheet: View {
         feature.pendingCorrections.contains(correctionID) || !feature.pendingPreviews.isEmpty
     }
 
+    /// An order may have gone. A refusal, or an order the broker turned down, leaves the call open
+    /// to review again.
     private var hasSent: Bool {
-        confirmationRequests.values.contains { feature.commandOutcomes[$0.commandID] != nil }
+        confirmationRequests.values.contains { request in
+            guard let outcome = feature.commandOutcomes[request.commandID] else { return false }
+            if let result = outcome.result { return !["rejected", "broker_rejected"].contains(result.status) }
+            return outcome.error == "confirm_failed"
+        }
     }
 
     private var readyConfirmationRequests: [ManualConfirmationRequest] {
@@ -320,14 +326,15 @@ struct ManualReviewSheet: View {
         VStack(alignment: .leading, spacing: 14) {
             Eyebrow(L10n.string("Checked just now"))
             if let correctionRequest, let error = feature.errors[correctionRequest.correctionID] {
-                Callout(L10n.string(error), tone: .critical)
-                    .accessibilityLabel(L10n.string("Correction error: %@", L10n.string(error)))
+                Callout(ManualRefusalText.line(error), tone: .critical)
+                    .accessibilityLabel(L10n.string("Correction error: %@", ManualRefusalText.line(error)))
             }
             if let saved = correctionRequest.flatMap({ feature.corrections[$0.correctionID] }) {
                 ForEach(saved.accounts.filter { $0.status != "recorded" }) { result in
-                    StatusRow(
-                        result.accountID, value: Humanize.code(result.reason ?? result.status),
-                        tone: StatusTone(code: result.reason ?? result.status), localizesTitle: false)
+                    // The account, then why it did not save and what to do, in one line.
+                    Callout(
+                        L10n.string("%@: %@", result.accountID, ManualRefusalText.reason(result.reason ?? result.status)),
+                        tone: result.status == "unavailable" ? .caution : .critical)
                 }
             }
             ForEach(sortedPreviewRequests, id: \.previewID) { request in

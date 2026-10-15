@@ -44,14 +44,19 @@ def reply(
     ok: dict[str, object] | None = None,
     error: ErrorCode | None = None,
     message: str | None = None,
+    reason: str | None = None,
 ) -> bytes:
+    """`message` is a sentence written for the owner; `reason` is a code the app words."""
     if (ok is None) == (error is None):
         raise ValueError("a response must contain exactly one of ok or error")
     envelope: dict[str, object] = {"version": version, "request_id": request_id}
     if ok is not None:
         envelope["ok"] = ok
     else:
-        envelope["error"] = (
-            {"code": error} if message is None else {"code": error, "message": message}
-        )
+        detail: dict[str, object] = {"code": error}
+        if message is not None:
+            detail["message"] = message
+        if reason is not None:
+            detail["reason"] = reason
+        envelope["error"] = detail
     return (json.dumps(envelope, separators=(",", ":"), ensure_ascii=False) + "\n").encode()

@@ -2383,6 +2383,17 @@ struct TradingSettingsSaveTests {
                 "Manual IPC request differs from shared fixture: \(name); actual=\(actual); expected=\(expected)"
             )
         }
+        // A refusal's reason arrives as its code, for the view to word, not as the generic error.
+        await transport.refuseNext(operation: "preview_manual_order", reason: "correction_incomplete")
+        let refusedPreview = ManualPreviewRequest(
+            previewID: "preview-refused", accountID: "paper",
+            correctionID: correctionRequest.correctionID, instructionIndex: 0
+        )
+        await feature.preview(refusedPreview, using: client)
+        try check(
+            feature.errors[refusedPreview.previewID] == "correction_incomplete",
+            "A refused preview lost its reason: \(String(describing: feature.errors[refusedPreview.previewID]))"
+        )
         feature.clearPrivateEvidence()
         try check(
             feature.corrections.isEmpty && feature.previews.isEmpty
@@ -2949,6 +2960,7 @@ private actor ManualContractTransport: EngineTransport {
     private var suspendedResponse: Data?
     private var partialCorrectionResponses = 0
     private var operationToDrop: String?
+    private var refusals: [String: String] = [:]
 
     init(contracts: URL) {
         self.contracts = contracts
@@ -2962,6 +2974,19 @@ private actor ManualContractTransport: EngineTransport {
             throw EngineTransportError.malformedResponse
         }
         requests.append(line)
+        if let reason = refusals.removeValue(forKey: operation) {
+            let refused: [String: Any] = [
+                "version": 1, "request_id": requestID,
+                "error": ["code": "unavailable", "reason": reason],
+            ]
+            let encoded = try JSONSerialization.data(withJSONObject: refused)
+            if let continuation {
+                continuation.yield(encoded)
+            } else {
+                responsesWaitingForReader.append(encoded)
+            }
+            return
+        }
         let fixtureName: String
         switch operation {
         case "save_manual_correction": fixtureName = "manual-correction-response.json"
@@ -3069,6 +3094,9 @@ private actor ManualContractTransport: EngineTransport {
     func returnPartialCorrectionResponseOnce() { partialCorrectionResponses = 1 }
 
     func dropNextResponse(for operation: String) { operationToDrop = operation }
+
+    /// Answers the next `operation` with a refusal that names `reason`, as the engine does.
+    func refuseNext(operation: String, reason: String) { refusals[operation] = reason }
 
     func suspendNextResponse(for operation: String) {
         operationToSuspend = operation
@@ -3415,7 +3443,7 @@ private actor RecordingTradingStarter: TradingStarting {
         lastLearningRequest = learning
         operationEvents.append("learn")
         if let learningFailure {
-            throw EngineContractError.remote(code: .invalidRequest, message: learningFailure)
+            throw EngineContractError.remote(code: .invalidRequest, message: learningFailure, reason: nil)
         }
         return LearnedGuruPlaybook(
             postsRead: 3,

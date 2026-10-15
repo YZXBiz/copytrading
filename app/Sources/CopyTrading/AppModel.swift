@@ -1053,7 +1053,7 @@ final class AppModel {
                     provider: draft.providerConfiguration,
                     providerAPIKey: reading.providerAPIKey
                 ))
-        } catch EngineContractError.remote(code: _, message: let message?) {
+        } catch EngineContractError.remote(code: _, message: let message?, reason: _) {
             throw TradingSettingsError.invalidConfiguration(message)
         } catch is EngineContractError {
             throw TradingSettingsError.invalidConfiguration(L10n.string("The engine could not learn from this channel. Try again."))
@@ -1085,7 +1085,7 @@ final class AppModel {
                     destinations: route.connection.map { [$0.terms(fullPositionUSD: draft.fullPosition(for: $0))] }?
                         .filter { (Decimal(string: $0.fullPositionUSD) ?? 0) > 0 } ?? []
                 ))
-        } catch EngineContractError.remote(code: _, message: let message?) {
+        } catch EngineContractError.remote(code: _, message: let message?, reason: _) {
             throw TradingSettingsError.invalidConfiguration(message)
         } catch is EngineContractError {
             throw TradingSettingsError.invalidConfiguration(L10n.string("The engine could not replay this channel. Try again."))
@@ -2066,7 +2066,7 @@ final class AppModel {
                 try await commandJournal.record(workflow)
                 selfTestEntries = try await commandJournal.entries()
                 latestSelfTest = workflow
-            } catch EngineContractError.remote(code: .notFound, message: _) {
+            } catch EngineContractError.remote(code: .notFound, message: _, reason: _) {
                 message = L10n.string("Command %@ has no engine workflow yet. Retry the saved self-test from System.", entry.id)
             } catch {
                 message = L10n.string(
@@ -2087,7 +2087,7 @@ final class AppModel {
             let workflow: WorkflowView
             do {
                 workflow = try await engineActions.workflow(id: id)
-            } catch EngineContractError.remote(code: .notFound, message: _) {
+            } catch EngineContractError.remote(code: .notFound, message: _, reason: _) {
                 workflow = try await engineActions.submitSelfTest(command)
             }
             try await commandJournal.record(workflow)

@@ -9,6 +9,7 @@ from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
 from copytrading_engine.execution.domain.lifecycle import (
     AccountControlCommand,
     AccountControlResult,
+    AccountOwnerClosed,
 )
 from copytrading_engine.execution.domain.lot_sales import (
     LotSaleConfirmation,
@@ -27,12 +28,12 @@ from copytrading_engine.execution.domain.manual_commands import (
     ManualCorrectionRequest,
     ManualOrderPreview,
     ManualPreviewRequest,
+    ManualRefusal,
 )
 from copytrading_engine.execution.domain.ownership import (
     OwnershipResolution,
     OwnershipResolutionRequest,
 )
-from copytrading_engine.shared.owner_facing import OwnerFacingError
 from copytrading_engine.trading.application.account_access import (
     AccountAccess,
     OwnerUnavailable,
@@ -64,7 +65,7 @@ class ManualInterventionService:
                 timeout=3,
             )
             if evidence.source_id != request.source_id:
-                raise ValueError("Manual source evidence identity mismatch")
+                raise ManualRefusal("post_unavailable")
             # Every ledger on disk numbers the post's corrections; only the selected accounts must
             # read. An account from an earlier setup whose ledger no longer reads is skipped.
             snapshots = await self._manual_snapshots(required=request.selected_account_ids)
@@ -83,12 +84,12 @@ class ManualInterventionService:
                         correction.revision, correction.correction_id
                     )
                     if existing_id != correction.correction_id:
-                        raise RuntimeError("Manual correction revision evidence conflicts")
+                        raise ManualRefusal("correction_conflict")
 
             if by_id:
                 correction = by_id[0]
                 if any(item != correction for item in by_id):
-                    raise RuntimeError("Manual correction copies disagree")
+                    raise ManualRefusal("correction_conflict")
                 if (
                     not correction.matches_request(request)
                     or correction.source_revision != evidence.source_revision
@@ -96,7 +97,7 @@ class ManualInterventionService:
                     or correction.source_text != evidence.text
                     or correction.accepted_interpretation != evidence.accepted_interpretation
                 ):
-                    raise ValueError("Manual correction identity conflicts with different evidence")
+                    raise ManualRefusal("identity_conflict")
             else:
                 correction = ManualCorrectionRecord(
                     correction_id=request.correction_id,
@@ -117,58 +118,62 @@ class ManualInterventionService:
                 supervisor = self._access.supervisors().get(account_id)
                 if supervisor is None or supervisor.owner is None or supervisor.state == "failed":
                     return ManualCorrectionAccountResult(
-                        account_id=account_id, status="unavailable", reason="account_unavailable"
+                        account_id=account_id, status="unavailable", reason="account_not_running"
                     )
                 try:
                     saved = await supervisor.owner.record_manual_correction(correction)
                     if saved != correction:
                         raise RuntimeError("Account correction copy differs")
                     return ManualCorrectionAccountResult(account_id=account_id, status="recorded")
+                except AccountOwnerClosed:
+                    # Copying is pausing or stopped: the call was never offered to this account.
+                    return ManualCorrectionAccountResult(
+                        account_id=account_id, status="unavailable", reason="account_not_running"
+                    )
                 except Exception as exc:  # noqa: BLE001 - one account's failure is reported per account
+                    # A refusal names itself; anything else is one account that could not save.
+                    reason = exc.reason if isinstance(exc, ManualRefusal) else "record_failed"
                     log.warning(
-                        "manual_correction_record_failed account=%s error=%s",
+                        "manual_correction_record_failed account=%s error=%s reason=%s",
                         account_id,
                         type(exc).__name__,
+                        reason,
                     )
                     return ManualCorrectionAccountResult(
-                        account_id=account_id, status="failed", reason="record_failed"
+                        account_id=account_id, status="failed", reason=reason
                     )
 
             accounts = await asyncio.gather(
                 *(record_one(account_id) for account_id in request.selected_account_ids)
             )
-            if not any(account.status == "recorded" for account in accounts):
-                # An expected refusal, reported to the owner; it must not stop the engine.
-                if all(account.status == "unavailable" for account in accounts):
-                    raise OwnerFacingError(
-                        "Start copying first. A call is copied by hand only while its account runs."
-                    )
-                raise ValueError("Manual correction could not be recorded in any selected account")
-            # The guru's history reads the owner's call in place of the reader's (ADR-0010).
-            await asyncio.to_thread(
-                self._access.evidence.record_owner_correction,
-                source_database,
-                correction.source_id,
-                correction.instructions,
-                correction.recorded_at,
-            )
+            # An account that did not record says why; the owner reads those, not one error.
+            if any(account.status == "recorded" for account in accounts):
+                # The guru's history reads the owner's call in place of the reader's (ADR-0010).
+                await asyncio.to_thread(
+                    self._access.evidence.record_owner_correction,
+                    source_database,
+                    correction.source_id,
+                    correction.instructions,
+                    correction.recorded_at,
+                )
             return ManualCorrectionOutcome(correction=correction, accounts=tuple(accounts))
 
     async def preview_manual_order(self, request: ManualPreviewRequest) -> ManualOrderPreview:
         request = ManualPreviewRequest.model_validate(request.model_dump())
         _, owner = self._manual_owner(request.account_id)
         live = await bounded_owner_read(owner.observation())
-        record = (
-            None
-            if isinstance(live, OwnerUnavailable)
-            else live.ledger.manual_corrections.get(request.correction_id)
-        )
+        if isinstance(live, OwnerUnavailable):
+            raise ManualRefusal("account_unavailable")
+        record = live.ledger.manual_corrections.get(request.correction_id)
         if record is None:
-            raise ValueError("Manual correction replication is incomplete")
+            raise ManualRefusal("correction_incomplete")
         snapshots = await self._manual_snapshots(record.selected_account_ids)
         if not self._correction_copies_complete(record, snapshots):
-            raise ValueError("Manual correction replication is incomplete")
-        return await owner.preview_manual_order(request, dt.datetime.now(dt.UTC))
+            raise ManualRefusal("correction_incomplete")
+        try:
+            return await owner.preview_manual_order(request, dt.datetime.now(dt.UTC))
+        except AccountOwnerClosed as exc:
+            raise ManualRefusal("account_not_running") from exc
 
     async def preview_lot_sale(self, request: LotSalePreviewRequest) -> LotSalePreview:
         request = LotSalePreviewRequest.model_validate(request.model_dump())
@@ -206,10 +211,12 @@ class ManualInterventionService:
                         else None
                     )
                     if correction is None:
-                        raise ValueError("Manual correction is unavailable")
+                        raise ManualRefusal(
+                            "preview_missing" if preview is None else "correction_incomplete"
+                        )
                     snapshots = await self._manual_snapshots(correction.selected_account_ids)
                     if not self._correction_copies_complete(correction, snapshots):
-                        raise ValueError("Manual correction replication is incomplete")
+                        raise ManualRefusal("correction_incomplete")
                 result = await owner.confirm_manual_order(request, dt.datetime.now(dt.UTC))
                 await supervisor.refresh()
                 return ManualAccountCommandResult(
@@ -217,27 +224,26 @@ class ManualInterventionService:
                     command_id=request.command_id,
                     result=result,
                 )
-            except ValueError as exc:
-                reason = (
-                    "identity_conflict"
-                    if "identity conflicts" in str(exc)
-                    else "command_unavailable"
+            except AccountOwnerClosed:
+                # Closed before the call ran, so nothing was sent.
+                return ManualAccountCommandResult(
+                    account_id=request.account_id,
+                    command_id=request.command_id,
+                    error="account_not_running",
+                )
+            except Exception as exc:  # noqa: BLE001 - one account's failure is reported per account
+                # A refusal names itself; anything else cannot say whether the order went.
+                reason = exc.reason if isinstance(exc, ManualRefusal) else "confirm_failed"
+                log.warning(
+                    "manual_command_failed account=%s error=%s reason=%s",
+                    request.account_id,
+                    type(exc).__name__,
+                    reason,
                 )
                 return ManualAccountCommandResult(
                     account_id=request.account_id,
                     command_id=request.command_id,
                     error=reason,
-                )
-            except Exception as exc:  # noqa: BLE001 - one account's failure is reported per account
-                log.warning(
-                    "manual_command_failed account=%s error=%s",
-                    request.account_id,
-                    type(exc).__name__,
-                )
-                return ManualAccountCommandResult(
-                    account_id=request.account_id,
-                    command_id=request.command_id,
-                    error="account_unavailable",
                 )
 
         by_account: dict[str, list[ManualConfirmationRequest]] = {}
@@ -285,7 +291,7 @@ class ManualInterventionService:
     def _manual_owner(self, account_id: str) -> tuple[AccountSupervisor, AccountOwner]:
         supervisor = self._access.supervisors().get(account_id)
         if supervisor is None or supervisor.owner is None or supervisor.state == "failed":
-            raise ValueError("Account is not available for manual trading")
+            raise ManualRefusal("account_not_running")
         return supervisor, supervisor.owner
 
     async def _manual_snapshots(
@@ -314,7 +320,7 @@ class ManualInterventionService:
                 if not isinstance(live, OwnerUnavailable):
                     return account_id, live.ledger
             if database is None:
-                raise RuntimeError("Selected manual correction account evidence is unavailable")
+                raise ManualRefusal("records_unreadable")
             try:
                 _, snapshot, _ = await self._access.retained_account(database, timeout=3)
                 return account_id, snapshot
@@ -324,7 +330,7 @@ class ManualInterventionService:
                 )
                 if required is not None and account_id not in must_read:
                     return None
-                raise RuntimeError("Manual correction revision evidence is unavailable") from exc
+                raise ManualRefusal("records_unreadable") from exc
 
         read = await asyncio.gather(*(read_one(account_id) for account_id in selected_ids))
         return dict(item for item in read if item is not None)

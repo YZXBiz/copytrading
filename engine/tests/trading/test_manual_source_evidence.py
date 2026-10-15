@@ -4,6 +4,7 @@ import datetime as dt
 
 import pytest
 
+from copytrading_engine.execution.domain.manual_commands import ManualRefusal
 from copytrading_engine.parsing.application import outcome
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore
 from copytrading_engine.shared.raw_message import RawMessage
@@ -28,7 +29,7 @@ async def test_manual_source_evidence_is_read_only_and_requires_confirmed_live_r
     await parser.add(raw)
     await parser.finish(raw.identity, outcome(raw, "review", "ambiguous", model="fixture"))
 
-    with pytest.raises(ValueError, match="manual_source_unavailable"):
+    with pytest.raises(ManualRefusal, match="post_unavailable"):
         manual_source_evidence(database, raw.identity)
 
     assert (await source.claim_batch())[0].key == raw.identity

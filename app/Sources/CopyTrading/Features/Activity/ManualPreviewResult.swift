@@ -72,17 +72,23 @@ struct ManualPreviewResult: View {
     @MainActor private var problems: [String] {
         var problems: [String] = []
         if let preview {
-            problems += preview.reasons.map { Reason.text($0) }
+            problems += preview.reasons.map { ManualRefusalText.reason($0) }
             problems += preview.checks.filter { $0.status == "blocked" && $0.reason.map { !preview.reasons.contains($0) } ?? true }
-                .map { Reason.text($0.reason ?? $0.name) }
+                .map { ManualRefusalText.reason($0.reason ?? $0.name) }
         } else if let error = feature.errors[request.previewID] {
-            problems.append(L10n.string(error))
+            problems.append(ManualRefusalText.line(error))
         }
         if let confirmation {
-            if let error = feature.errors[confirmation.commandID] { problems.append(L10n.string(error)) }
-            if let error = feature.commandOutcomes[confirmation.commandID]?.error { problems.append(L10n.string(error)) }
+            if let error = feature.errors[confirmation.commandID] { problems.append(ManualRefusalText.line(error)) }
+            if let outcome = feature.commandOutcomes[confirmation.commandID] {
+                if let error = outcome.error { problems.append(ManualRefusalText.line(error)) }
+                // A refused or turned-down order says why, so "Rejected" is never the whole answer.
+                if let result = outcome.result, let line = ManualRefusalText.outcome(of: result) {
+                    problems.append(line)
+                }
+            }
         }
-        return problems
+        return problems.reduce(into: []) { if !$0.contains($1) { $0.append($1) } }
     }
 
     /// What the owner should know before sending, without stopping them: an ask above the buy's

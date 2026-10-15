@@ -10,6 +10,7 @@ from copytrading_engine.execution.domain.manual_commands import (
     ManualCorrectionOutcome,
     ManualCorrectionRecord,
     ManualCorrectionRequest,
+    ManualRefusal,
 )
 from copytrading_engine.host.pipe.server import PipeServer
 from copytrading_engine.host.self_test.parser import SelfTestParser
@@ -194,6 +195,102 @@ async def test_a_correction_that_fails_unexpectedly_is_answered_not_fatal(store)
             )
         )
     )
-    assert response["error"]["code"] == "unavailable"
+    assert response["error"] == {"code": "unavailable", "reason": "correction_failed"}
     after = decode(await server.handle_line(request_line("get_status", "request-after")))
     assert "ok" in after
+
+
+_PREVIEW = {
+    "preview_id": "preview-1",
+    "account_id": "paper",
+    "correction_id": "c-1",
+    "instruction_index": 0,
+}
+_CONFIRM = {
+    "command_id": "command-1",
+    "preview_id": "preview-1",
+    "account_id": "paper",
+    "actor": "me",
+}
+
+
+class _Refusing:
+    """A trading double whose by-hand steps fail the way the test says."""
+
+    def __init__(self, failure: Exception) -> None:
+        self.failure = failure
+
+    async def save_manual_correction(self, request):
+        raise self.failure
+
+    async def preview_manual_order(self, request):
+        raise self.failure
+
+    async def confirm_manual_orders(self, requests):
+        raise self.failure
+
+    async def manual_command_result(self, account_id, command_id):
+        raise self.failure
+
+    async def list_manual_commands(self, request):
+        raise self.failure
+
+
+async def _ask(store, trading, operation, **values):
+    server = PipeServer(
+        SelfTestService(store, SelfTestParser()),
+        EngineQueries(store, store.installation.instance_id),
+        trading,
+    )
+    return decode(await server.handle_line(request_line(operation, "req-refused", **values)))
+
+
+async def test_a_refusal_in_the_by_hand_flow_names_its_reason(store):
+    refused = await _ask(
+        store,
+        services(_Refusing(ManualRefusal("preview_missing"))),
+        "confirm_manual_orders",
+        commands=[_CONFIRM],
+    )
+    assert refused["error"] == {"code": "unavailable", "reason": "preview_missing"}
+
+    conflict = await _ask(
+        store,
+        services(_Refusing(ManualRefusal("identity_conflict"))),
+        "preview_manual_order",
+        preview=_PREVIEW,
+    )
+    assert conflict["error"] == {"code": "identity_conflict", "reason": "identity_conflict"}
+
+    missing = await _ask(
+        store,
+        services(_Refusing(ManualRefusal("command_not_found"))),
+        "get_manual_command",
+        account_id="paper",
+        command_id="command-1",
+    )
+    assert missing["error"] == {"code": "not_found", "reason": "command_not_found"}
+
+
+async def test_an_unexpected_failure_in_each_step_still_says_which_step(store):
+    steps = {
+        "preview_manual_order": ({"preview": _PREVIEW}, "preview_failed"),
+        "confirm_manual_orders": ({"commands": [_CONFIRM]}, "confirm_failed"),
+        "get_manual_command": (
+            {"account_id": "paper", "command_id": "command-1"},
+            "status_failed",
+        ),
+        "list_manual_commands": (
+            {"account_id": "paper", "source_id": "discord:demo:review-8"},
+            "history_failed",
+        ),
+    }
+    for operation, (values, reason) in steps.items():
+        for failure in (ValueError("a ledger invariant"), RuntimeError("anything"), KeyError("x")):
+            response = await _ask(store, services(_Refusing(failure)), operation, **values)
+            assert response["error"]["reason"] == reason, (operation, failure)
+
+
+async def test_a_by_hand_request_before_copying_starts_says_so(store):
+    response = await _ask(store, None, "preview_manual_order", preview=_PREVIEW)
+    assert response["error"] == {"code": "unavailable", "reason": "copying_not_started"}
