@@ -14,12 +14,17 @@ struct GuruAccountOutcomeList: View {
             }
             ForEach(outcomes) { outcome in
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    // A long account name shortens in the middle rather than breaking at its hyphens;
+                    // what happened keeps its words.
                     Text(outcome.accountID)
                         .fontWeight(.medium)
                         .foregroundStyle(Palette.secondaryInk)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
                     Text(outcome.summary)
                         .foregroundStyle(outcome.kind == .waiting ? Palette.amber : Palette.tertiaryInk)
                         .lineLimit(2)
+                        .layoutPriority(1)
                         .multilineTextAlignment(alignment == .trailing ? .trailing : .leading)
                 }
                 .accessibilityElement(children: .combine)

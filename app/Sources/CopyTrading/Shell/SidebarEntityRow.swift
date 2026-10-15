@@ -31,11 +31,13 @@ struct SidebarEntityRow<Leading: View>: View {
                 }
                 Spacer(minLength: 4)
                 if let value {
+                    // Money is never cut short; the name gives way instead.
                     Text(value)
                         .font(DesignTokens.sidebarDetail.weight(.medium))
                         .monospacedDigit()
                         .foregroundStyle(Palette.secondaryInk)
                         .lineLimit(1)
+                        .fixedSize()
                 }
             }
             .padding(.horizontal, 10)
