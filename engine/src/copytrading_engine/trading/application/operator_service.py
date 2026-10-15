@@ -89,6 +89,9 @@ class OperatorQueryService:
 
     def __init__(self, access: AccountAccess, reader: PausedAccountReader | None = None) -> None:
         self._access = access
+        # What each running account last said of itself: a worker busy placing orders may not
+        # answer within a read's time, and is still copying.
+        self._readiness: dict[str, str] = {}
         # With no reader given, paused accounts are read from their ledgers alone.
         self._reader = reader if reader is not None else PausedAccountReader(_no_broker)
 
@@ -150,6 +153,7 @@ class OperatorQueryService:
             ):
                 live = await bounded_owner_read(supervisor.owner.operator_overview())
                 if not isinstance(live, OwnerUnavailable):
+                    self._readiness[account_id] = live.readiness
                     return live, None
                 failure = live.reason
             if database is not None:
@@ -171,11 +175,14 @@ class OperatorQueryService:
                     overview = await self._live(account_id, overview)
                     if account_id not in configured:
                         return overview, None
-                    readiness = (
-                        "processing_stopped"
-                        if self._access.runtime_state() in {"paused", "pausing"}
-                        else self._unavailable_readiness(account_id)
-                    )
+                    if self._access.runtime_state() in {"paused", "pausing"}:
+                        readiness = "processing_stopped"
+                    elif failure == "timeout" and account_id in self._readiness:
+                        # Its worker is running but busy, so the saved ledger stands in for the
+                        # holdings and the account's own last word for whether it copies.
+                        readiness = self._readiness[account_id]
+                    else:
+                        readiness = self._unavailable_readiness(account_id)
                     return overview.model_copy(
                         update={"active_configuration": True, "readiness": readiness}
                     ), None
