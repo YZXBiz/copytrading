@@ -56,7 +56,10 @@ struct ManualReviewSheet: View {
         startEngine: @escaping () -> Void = {}
     ) {
         self.source = source
-        self.accounts = accounts
+        // An account can copy only a post it received: the guru's calls reach the one account it
+        // copies into, so another account has nothing to place them against.
+        let reached = Set(source.destinations.map(\.accountID))
+        self.accounts = reached.isEmpty ? accounts : accounts.filter { reached.contains($0.accountID) }
         self.operations = operations
         self.feature = feature
         self.guruName = guruName
@@ -66,7 +69,7 @@ struct ManualReviewSheet: View {
         self.engineStopped = engineStopped
         self.startEngine = startEngine
         mode = ManualReviewMode(copying: copying)
-        let available = Set(accounts.map(\.accountID))
+        let available = Set(self.accounts.map(\.accountID))
         let needsReview = Set(source.destinations.filter { $0.status == "review_required" }.map(\.accountID))
         let selected = available.intersection(copying.map { Set($0.accountIDs) } ?? needsReview)
         _selectedAccountIDs = State(initialValue: selected)
