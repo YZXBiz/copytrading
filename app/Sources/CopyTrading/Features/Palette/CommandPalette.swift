@@ -21,7 +21,7 @@ struct CommandPalette: View {
         var actions: [PaletteItem] = []
         if model.isCopying {
             actions.append(
-                PaletteItem(id: "action.pause", kind: .action, title: L10n.string("Pause Copying"), symbol: "pause.fill") {
+                PaletteItem(id: "action.pause", kind: .action, title: L10n.string("Stop All"), symbol: "stop.fill") {
                     Task { await model.pauseTrading() }
                 })
         }
