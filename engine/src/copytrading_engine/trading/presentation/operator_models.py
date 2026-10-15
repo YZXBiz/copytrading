@@ -131,8 +131,9 @@ class GuruDayStats(Value):
     #: How long the reader took per post that day, on average; None before any was read.
     read_seconds: float | None = None
     #: Posts of the current trading day a call of which still waits for the owner, any calendar
-    #: day; the app leaves out the ones the owner skipped, which only it knows.
-    waiting_source_ids: tuple[str, ...] = ()
+    #: day, newest first and whole, so the app lists them without having loaded them; it leaves
+    #: out the ones the owner skipped, which only it knows.
+    waiting: tuple[SourceActivity, ...] = ()
 
 
 class GuruDayStatsPage(Value):

@@ -53,7 +53,7 @@ struct ActivityCardOutcome {
     ) {
         let waiting = WaitingCall(source)
         // A post the owner traded by hand is settled: it no longer waits for them.
-        let open = waiting.map { !skipped && !$0.hasExpired(at: now) && !source.enteredByOwner } ?? false
+        let open = WaitingCall.open(source, skipped: skipped, now: now) != nil
         let deadline = waiting?.deadline.map { TradingDeadlineText.text($0, now: now, zone: zone, locale: locale) } ?? ""
         accounts = source.destinations.map { destination in
             let waits =

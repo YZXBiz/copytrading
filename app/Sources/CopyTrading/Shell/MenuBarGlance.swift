@@ -17,9 +17,9 @@ struct MenuBarGlance: View {
     private var waiting: Int {
         guard model.isTradingUnlocked else { return 0 }
         let now = Date.now
-        return accountFeature.activity.compactMap(WaitingCall.init).filter {
-            !$0.hasExpired(at: now) && !model.skippedCalls.contains($0.source.sourceID)
-        }.count
+        return accountFeature.knownActivity.count {
+            WaitingCall.open($0, skipped: model.skippedCalls.contains($0.sourceID), now: now) != nil
+        }
     }
 
     var body: some View {

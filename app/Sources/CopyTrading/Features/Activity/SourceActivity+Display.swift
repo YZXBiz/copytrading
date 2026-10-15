@@ -83,11 +83,6 @@ extension SourceActivity {
         return first.phrase + rest
     }
 
-    /// The owner placed a trade for this post by hand, so it no longer waits for them.
-    var enteredByOwner: Bool {
-        destinations.contains { $0.orders.contains(where: \.isOwnerEntry) }
-    }
-
     var sourceDate: Date? { Humanize.date(sourceAt) }
 
     /// A compact captured-source excerpt without mass mentions.

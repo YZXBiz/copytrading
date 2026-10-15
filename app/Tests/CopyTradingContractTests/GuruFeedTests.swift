@@ -9,6 +9,7 @@ func runGuruFeedTests() async throws {
     try aGurusPageShowsOnlyTheirPostsNewestFirstByDay()
     try eachAccountSaysWhatItDidInAFewWords()
     try await theStripAndSidebarCountTheEnginesWholeDay()
+    try theWaitingTabListsEveryCallTheCountSays()
 }
 
 private let losAngeles = TimeZone(identifier: "America/Los_Angeles")!
@@ -122,19 +123,71 @@ private func theStripAndSidebarCountTheEnginesWholeDay() async throws {
         "the day ended at \(String(describing: window?.end))")
     try #require(feature.activity.count == 1, "the loaded page held \(feature.activity.count) posts")
 
-    let lee = GuruStats(day: feature.guruDays["lee"], skipped: { _ in false })
+    // The fixture's waiting call was posted at 14:58 UTC on 14 October, 11:00 New York time.
+    let now = try date("2026-10-14T16:00:00Z")
+    let lee = GuruStats(day: feature.guruDays["lee"], skipped: { _ in false }, now: now)
     try #require(lee.postsToday == 104 && lee.tradedToday == 12 && lee.averageRead == 3.5, "Lee's strip read \(lee)")
     try #require(lee.waiting == 1 && lee.sidebarDetail == "1 need you", "Lee's sidebar read \(lee.sidebarDetail)")
 
-    let skipped = GuruStats(day: feature.guruDays["lee"], skipped: { $0 == "discord:1:1427" })
+    let skipped = GuruStats(day: feature.guruDays["lee"], skipped: { $0 == "discord:1:1427" }, now: now)
     try #require(skipped.waiting == 0, "a skipped call still waited")
     try #require(skipped.sidebarDetail == "104 posts today", "the sidebar read \(skipped.sidebarDetail)")
 
-    let zhao = GuruStats(day: feature.guruDays["zhao"], skipped: { _ in false })
+    let zhao = GuruStats(day: feature.guruDays["zhao"], skipped: { _ in false }, now: now)
     try #require(zhao.postsToday == 111 && zhao.averageRead == nil, "Zhao's strip read \(zhao)")
 
-    let quiet = GuruStats(day: feature.guruDays["nobody"], skipped: { _ in false })
+    let quiet = GuruStats(day: feature.guruDays["nobody"], skipped: { _ in false }, now: now)
     try #require(
         quiet.postsToday == 0 && quiet.waiting == 0 && quiet.averageRead == nil && quiet.sidebarDetail == "Quiet today",
         "a guru with no posts read \(quiet.sidebarDetail)")
+}
+
+/// The engine counted eight calls waiting from last evening's burst; the newest page the app
+/// loaded held none of them. The Waiting tab lists those eight, and the number above it is theirs.
+@MainActor
+private func theWaitingTabListsEveryCallTheCountSays() throws {
+    // 11:30 New York on 15 October: the trading day began at 20:00 the evening before.
+    let now = try date("2026-10-15T15:30:00Z")
+    func held(_ sequence: Int, at iso: String, orders: [[String: Any]] = []) throws -> SourceActivity {
+        try post(sequence, guru: "zhao", at: iso).decision("review").destination(
+            "primary", status: "review_required", outcomes: [], orders: orders
+        ).build()
+    }
+    let evening = try (1...8).map { try held($0, at: "2026-10-15T00:0\($0):00Z") }
+    let entered = try held(
+        9, at: "2026-10-15T00:09:00Z",
+        orders: [
+            [
+                "client_id": "manual-1", "symbol": "PM", "side": "buy", "status": "filled", "quantity": "1",
+                "filled_quantity": "1", "limit_price": "201", "average_fill_price": "201", "broker_id": "b9",
+                "created_at": "2026-10-15T14:00:00Z", "instruction_index": 0,
+            ]
+        ])
+    let yesterday = try held(10, at: "2026-10-14T15:00:00Z")
+    let skipped = try held(11, at: "2026-10-15T14:00:00Z")
+    let newest = try (20...23).map { try post($0, guru: "zhao", at: "2026-10-15T15:\($0 - 10):00Z").decision("ignore").build() }
+    // The engine counts a post by its own clock; the app drops what its day, the owner, or a
+    // later hand-entered trade has settled since.
+    let day = GuruDayStats(
+        guruID: "zhao", posts: 4, traded: 0, readSeconds: nil,
+        waiting: (evening + [entered, yesterday, skipped]).reversed())
+
+    let feed = GuruFeed(
+        guruID: "zhao", activity: newest, day: day, skipped: { $0 == skipped.sourceID }, now: now,
+        calendar: calendar)
+    let tab = feed.days.flatMap(\.entries).filter(GuruPostFilter.waiting.includes)
+    let all = feed.days.flatMap(\.entries)
+    let stats = GuruStats(day: day, skipped: { $0 == skipped.sourceID }, now: now)
+
+    try #require(
+        tab.map(\.item.sequence) == Array((1...8).reversed()), "the Waiting tab listed \(tab.map(\.item.sequence))")
+    try #require(stats.waiting == 8 && feed.waitingCount == 8, "the strip said \(stats.waiting), the feed \(feed.waitingCount)")
+    try #require(stats.waiting == tab.count, "the count and the tab differ")
+    // The calls settled since the engine counted them are not in the feed unless they were loaded.
+    try #require(all.count == 4 + 8, "the feed held \(all.map(\.item.sequence)), loaded and waiting")
+    let notTraded = all.filter(GuruPostFilter.notTraded.includes).map(\.item.sequence)
+    try #require(notTraded == [23, 22, 21, 20], "Not traded held \(notTraded)")
+    try #require(
+        GuruFeed(guruID: "zhao", activity: newest, skipped: { _ in false }, now: now).waitingCount == 0,
+        "posts the engine did not count read as waiting")
 }

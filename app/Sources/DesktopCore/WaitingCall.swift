@@ -49,6 +49,16 @@ public struct WaitingCall: Equatable, Sendable {
             : source.suggested
     }
 
+    /// The call a post holds for the owner right now, or nil: the one rule for whether a post
+    /// waits, whichever screen asks. It waits while an account holds it (`init`), its trading
+    /// day is not over, the owner has neither skipped it nor entered the trade by hand.
+    public static func open(_ source: SourceActivity, skipped: Bool, now: Date) -> WaitingCall? {
+        guard let call = WaitingCall(source), !skipped, !call.hasExpired(at: now), !source.enteredByOwner else {
+            return nil
+        }
+        return call
+    }
+
     /// Whether the post's trading day has ended, after which it can no longer be copied.
     public func hasExpired(at now: Date) -> Bool {
         guard let posted = EquityCurve.date(source.sourceAt) else { return true }
