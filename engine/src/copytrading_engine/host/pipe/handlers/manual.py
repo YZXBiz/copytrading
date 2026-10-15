@@ -16,6 +16,13 @@ from copytrading_engine.host.pipe.responses import reply
 from copytrading_engine.host.pipe.services import TradingServices
 
 
+def _copying_not_started(request: PipeRequest) -> bytes:
+    """The by-hand steps need accounts that run; before Start Copying there are none."""
+    return reply(
+        request.version, request.request_id, error="unavailable", reason="copying_not_started"
+    )
+
+
 class ManualOrderHandlers:
     """Save corrections and preview, confirm, and read back manual orders."""
 
@@ -35,7 +42,7 @@ class ManualOrderHandlers:
 
     async def _on_save_manual_correction(self, request: SaveManualCorrectionRequest) -> bytes:
         if self._trading is None:
-            return reply(request.version, request.request_id, error="unavailable")
+            return _copying_not_started(request)
         outcome = await self._trading.manual.save_manual_correction(request.correction)
         return reply(
             request.version,
@@ -45,7 +52,7 @@ class ManualOrderHandlers:
 
     async def _on_preview_manual_order(self, request: PreviewManualOrderRequest) -> bytes:
         if self._trading is None:
-            return reply(request.version, request.request_id, error="unavailable")
+            return _copying_not_started(request)
         preview = await self._trading.manual.preview_manual_order(request.preview)
         return reply(
             request.version,
@@ -55,7 +62,7 @@ class ManualOrderHandlers:
 
     async def _on_confirm_manual_orders(self, request: ConfirmManualOrdersRequest) -> bytes:
         if self._trading is None:
-            return reply(request.version, request.request_id, error="unavailable")
+            return _copying_not_started(request)
         outcome = await self._trading.manual.confirm_manual_orders(tuple(request.commands))
         return reply(
             request.version,
@@ -85,7 +92,7 @@ class ManualOrderHandlers:
 
     async def _on_get_manual_command(self, request: GetManualCommandRequest) -> bytes:
         if self._trading is None:
-            return reply(request.version, request.request_id, error="unavailable")
+            return _copying_not_started(request)
         result = await self._trading.manual.manual_command_result(
             request.account_id, request.command_id
         )
@@ -97,7 +104,7 @@ class ManualOrderHandlers:
 
     async def _on_list_manual_commands(self, request: ListManualCommandsRequest) -> bytes:
         if self._trading is None:
-            return reply(request.version, request.request_id, error="unavailable")
+            return _copying_not_started(request)
         page = await self._trading.operator.list_manual_commands(
             ManualCommandPageRequest(
                 account_id=request.account_id,

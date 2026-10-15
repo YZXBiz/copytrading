@@ -1,7 +1,7 @@
 """Immutable evidence and wire contracts for reviewed manual commands."""
 
 from decimal import Decimal
-from typing import Literal, Self
+from typing import Literal, Self, get_args
 
 from pydantic import AwareDatetime, Field, model_validator
 
@@ -11,6 +11,47 @@ from copytrading_engine.execution.domain.orders import OrderPlan
 from copytrading_engine.execution.domain.sessions import Session
 from copytrading_engine.execution.domain.values import Identifier, Positive, Quantity, Value
 from copytrading_engine.shared.signals import Instruction, StockSignal
+
+type ManualRefusalReason = Literal[
+    # Saving the call in an account.
+    "copying_not_started",
+    "account_not_running",
+    "account_unavailable",
+    "call_not_received",
+    "call_not_waiting",
+    "call_changed",
+    "correction_conflict",
+    "identity_conflict",
+    "record_failed",
+    "post_unavailable",
+    "post_ignored",
+    "records_unreadable",
+    # Checking and confirming the order.
+    "correction_incomplete",
+    "account_identity_changed",
+    "preview_missing",
+    "wait_pending_order",
+    "unresolved_order_incident",
+    # An operation that failed for a reason the engine did not expect.
+    "correction_failed",
+    "preview_failed",
+    "confirm_failed",
+    "status_failed",
+    "history_failed",
+    "command_not_found",
+]
+MANUAL_REFUSAL_REASONS: frozenset[str] = frozenset(get_args(ManualRefusalReason.__value__))
+
+
+class ManualRefusal(ValueError):
+    """An expected refusal in the by-hand flow, carrying the code the app words for the owner.
+
+    The text is only the code: it is logged and sent as the reply's `reason`, never input.
+    """
+
+    def __init__(self, reason: ManualRefusalReason) -> None:
+        super().__init__(reason)
+        self.reason: ManualRefusalReason = reason
 
 
 class ManualCorrectionRequest(Value):

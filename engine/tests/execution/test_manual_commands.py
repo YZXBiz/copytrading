@@ -21,6 +21,7 @@ from copytrading_engine.execution.domain.manual_commands import (
     ManualConfirmationRequest,
     ManualCorrectionRecord,
     ManualPreviewRequest,
+    ManualRefusal,
 )
 from copytrading_engine.execution.domain.market import Quote
 from copytrading_engine.execution.domain.progress import Skipped
@@ -504,6 +505,35 @@ def test_manual_preview_has_no_broker_mutation_and_confirm_is_durable_before_sub
     reopened.close()
 
 
+def test_a_broker_refusal_reads_as_a_fixed_code_not_the_brokers_words(tmp_path):
+    _engine, broker, _store, app, correction = setup_manual(tmp_path)
+
+    def refuse(_order):
+        raise BrokerError(422)
+
+    broker.before_submit = refuse
+    assert app.preview(preview_request(correction), NOW).plan is not None
+
+    result = app.confirm(confirmation_request(), NOW + dt.timedelta(seconds=1))
+
+    assert (result.status, result.reason) == ("broker_rejected", "broker_rejected")
+
+
+def test_a_result_asked_for_before_it_exists_is_refused_by_name(tmp_path):
+    _engine, _broker, _store, app, _correction = setup_manual(tmp_path)
+
+    with pytest.raises(ManualRefusal, match="command_not_found"):
+        app.result("never-confirmed")
+
+
+def test_an_account_that_changed_brokers_refuses_the_preview_by_name(tmp_path):
+    _engine, _broker, _store, app, correction = setup_manual(tmp_path)
+    app.broker_account_id = "another-account"
+
+    with pytest.raises(ManualRefusal, match="account_identity_changed"):
+        app.preview(preview_request(correction), NOW)
+
+
 def test_an_ask_above_the_limit_warns_with_the_limit_and_still_lets_the_owner_buy(tmp_path):
     """The limit alone bounds a buy (ADR-0007). A thin feed can quote an ask far above the market,
     so an ask over the limit is a warning that carries the limit, never a reason to refuse."""
@@ -563,7 +593,7 @@ def test_manual_entry_cannot_override_pause_or_safety_halt(tmp_path, gate, expec
     assert broker.calls == 0
     duplicate = app.confirm(confirmation_request(), NOW + dt.timedelta(seconds=2))
     assert duplicate == result
-    with pytest.raises(ValueError, match="identity conflicts"):
+    with pytest.raises(ManualRefusal, match="identity_conflict"):
         app.confirm(
             confirmation_request(command_id="command-1").model_copy(update={"actor": "other"}),
             NOW + dt.timedelta(seconds=3),

@@ -54,6 +54,7 @@ from copytrading_engine.execution.domain.manual_commands import (
     ManualCommandRecord,
     ManualCorrectionRecord,
     ManualOrderPreview,
+    ManualRefusal,
 )
 from copytrading_engine.execution.domain.market import BrokerOrder, Position
 from copytrading_engine.execution.domain.order_lifecycle import (
@@ -392,26 +393,27 @@ class TradingLedger:
         existing = self._snapshot.manual_corrections.get(correction.correction_id)
         if existing is not None:
             if existing != correction:
-                raise ValueError("Manual correction identity conflicts with different evidence")
+                raise ManualRefusal("identity_conflict")
             return existing
         message = self._snapshot.messages.get(correction.source_id)
+        if message is None:
+            raise ManualRefusal("call_not_received")
+        if not message.waits_for_owner:
+            raise ManualRefusal("call_not_waiting")
         if (
-            correction.correction_id in self._snapshot.manual_corrections
-            or message is None
-            or not message.waits_for_owner
-            or message.timestamp != correction.source_at
+            message.timestamp != correction.source_at
             or message.text != correction.source_text
             or StockSignal.model_validate(
                 {name: getattr(message, name) for name in StockSignal.model_fields}
             )
             != correction.accepted_interpretation
         ):
-            raise ValueError("Manual correction does not match reviewed source evidence")
+            raise ManualRefusal("call_changed")
         if any(
             value.source_id == correction.source_id and value.revision == correction.revision
             for value in self._snapshot.manual_corrections.values()
         ):
-            raise ValueError("Manual correction revision already exists")
+            raise ManualRefusal("correction_conflict")
         self._commit(
             self._replace(
                 manual_corrections=self._snapshot.manual_corrections
@@ -431,10 +433,10 @@ class TradingLedger:
         existing = self._snapshot.manual_previews.get(preview_id)
         if existing is not None:
             if existing.request != preview.request:
-                raise ValueError("Manual preview identity conflicts with another request")
+                raise ManualRefusal("identity_conflict")
             return existing
         if preview.broker_account_id != self.account_id:
-            raise ValueError("Manual preview belongs to another broker account")
+            raise ManualRefusal("account_identity_changed")
         self._commit(
             self._replace(manual_previews=self._snapshot.manual_previews | {preview_id: preview}),
             JournalEvent(at=preview.created_at, payload=ManualOrderPreviewed(preview=preview)),
@@ -447,7 +449,7 @@ class TradingLedger:
         previous = self._snapshot.manual_commands.get(command.request.command_id)
         if previous is not None:
             if previous != command:
-                raise ValueError("Manual command identity conflicts with different content")
+                raise ManualRefusal("identity_conflict")
             return previous
         if command.state != "rejected":
             raise ValueError("Rejected command must not carry an order intent")
@@ -470,7 +472,7 @@ class TradingLedger:
         previous = self._snapshot.manual_commands.get(command.request.command_id)
         if previous is not None:
             if previous != command:
-                raise ValueError("Manual command identity conflicts with different content")
+                raise ManualRefusal("identity_conflict")
             if previous.client_id is None:
                 raise ValueError("A rejected manual command cannot be prepared")
             return previous, self.order(previous.client_id)
@@ -485,9 +487,9 @@ class TradingLedger:
         if command.client_id in self._snapshot.orders:
             raise ValueError("Manual order intent identity already exists")
         if self.pending(plan.symbol):
-            raise ValueError("A pending order already owns this symbol")
+            raise ManualRefusal("wait_pending_order")
         if plan.side == "buy" and self._snapshot.entry_halted:
-            raise ValueError("Unresolved late-order incidents halt new buy orders")
+            raise ManualRefusal("unresolved_order_incident")
         order = OrderRecord(
             **plan.model_dump(),
             client_id=command.client_id,

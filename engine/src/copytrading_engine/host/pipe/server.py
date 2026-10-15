@@ -14,6 +14,7 @@ from copytrading_engine.backup.service import BackupRestoreService
 from copytrading_engine.control.service import ControlService
 from copytrading_engine.execution.application.restore_preflight import RestoreCandidatePreflight
 from copytrading_engine.execution.domain.lifecycle import AccountControlConflict
+from copytrading_engine.execution.domain.manual_commands import ManualRefusal, ManualRefusalReason
 from copytrading_engine.host.errors import (
     ForeignInstallation,
     IdentityConflict,
@@ -85,6 +86,15 @@ from copytrading_engine.shared.owner_facing import OwnerFacingError
 log = logging.getLogger(__name__)
 
 MAX_REQUEST_LINE_BYTES = 1024 * 1024
+
+# The by-hand steps: when one fails unexpectedly the reply still says which step it was.
+MANUAL_FAILURES: dict[type, ManualRefusalReason] = {
+    SaveManualCorrectionRequest: "correction_failed",
+    PreviewManualOrderRequest: "preview_failed",
+    ConfirmManualOrdersRequest: "confirm_failed",
+    GetManualCommandRequest: "status_failed",
+    ListManualCommandsRequest: "history_failed",
+}
 _READ_CHUNK_BYTES = 64 * 1024
 _PROCESS_LIMIT = 100
 # An assistant failure ends that one request as `unavailable`, never the pipe.
@@ -182,6 +192,7 @@ class PipeServer:
         ):
             return reply(request.version, request.request_id, error="unavailable")
 
+        reason: ManualRefusalReason | None = None
         try:
             return await self._handlers[type(request)](request)
         except IdentityConflict:
@@ -190,6 +201,7 @@ class PipeServer:
             code = "identity_conflict"
         except KeyError:
             code = "not_found"
+            reason = MANUAL_FAILURES.get(type(request))
         except WorkflowNotFound:
             code = "not_found"
         except InvalidCommand:
@@ -211,14 +223,29 @@ class PipeServer:
                     error="invalid_request",
                     message=str(exc),
                 )
+            if isinstance(exc, ManualRefusal):
+                # A refusal the by-hand flow expects names its own reason for the app to word.
+                refusal_code: ErrorCode = (
+                    "identity_conflict"
+                    if exc.reason == "identity_conflict"
+                    else "not_found"
+                    if exc.reason == "command_not_found"
+                    else "unavailable"
+                )
+                return reply(
+                    request.version, request.request_id, error=refusal_code, reason=exc.reason
+                )
+            if type(request) in MANUAL_FAILURES:
+                # A check the flow does not expect to fail still says which step it was.
+                return reply(
+                    request.version,
+                    request.request_id,
+                    error="unavailable",
+                    reason=MANUAL_FAILURES[type(request)],
+                )
             if isinstance(
                 request,
                 (
-                    SaveManualCorrectionRequest,
-                    PreviewManualOrderRequest,
-                    ConfirmManualOrdersRequest,
-                    GetManualCommandRequest,
-                    ListManualCommandsRequest,
                     EvaluateHistoricalProfileRequest,
                     LearnGuruPlaybookRequest,
                     ReplayGuruPostsRequest,
@@ -322,7 +349,8 @@ class PipeServer:
             ):
                 raise
             code = "unavailable"
-        return reply(request.version, request.request_id, error=code)
+            reason = MANUAL_FAILURES.get(type(request))
+        return reply(request.version, request.request_id, error=code, reason=reason)
 
     async def _on_submit(self, request: SubmitRequest) -> bytes:
         command = SubmitSelfTest(

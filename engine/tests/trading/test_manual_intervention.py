@@ -7,6 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from copytrading_engine.execution.domain.lifecycle import AccountOwnerClosed
 from copytrading_engine.execution.domain.manual_commands import (
     ManualCommandPage,
     ManualCommandPageRequest,
@@ -16,6 +17,7 @@ from copytrading_engine.execution.domain.manual_commands import (
     ManualCorrectionRecord,
     ManualCorrectionRequest,
     ManualPreviewRequest,
+    ManualRefusal,
     ManualSourceEvidence,
 )
 from copytrading_engine.shared.signals import Instruction, StockSignal
@@ -147,7 +149,7 @@ async def test_correction_replication_repairs_one_account_and_serializes_revisio
         assert owner_a.records[correction.correction_id] == correction
         assert owner_b.records[correction.correction_id] == correction
 
-    with pytest.raises(ValueError, match="identity conflicts"):
+    with pytest.raises(ManualRefusal, match="identity_conflict"):
         await runtime.manual.save_manual_correction(_request("correction-2", "28"))
 
 
@@ -204,7 +206,7 @@ async def test_manual_confirmation_returns_independent_account_results(tmp_path)
     by_account = {item.account_id: item for item in outcome.outcomes}
     assert by_account["account-a"].result is not None
     assert by_account["account-a"].result.status == "uncertain"
-    assert by_account["account-b"].error == "account_unavailable"
+    assert by_account["account-b"].error == "confirm_failed"
 
 
 async def test_compound_confirmation_replays_durable_result_after_response_loss(
@@ -308,7 +310,7 @@ async def test_compound_confirmation_replays_durable_result_after_response_loss(
     monkeypatch.setattr(runtime.manual, "_manual_snapshots", snapshots)
     first = await runtime.manual.confirm_manual_orders(requests)
     first_by_account = {item.account_id: item for item in first.outcomes}
-    assert first_by_account["account-a"].error == "account_unavailable"
+    assert first_by_account["account-a"].error == "confirm_failed"
     assert first_by_account["account-b"].result is not None
 
     replayed = await runtime.manual.confirm_manual_orders(requests)
@@ -597,5 +599,92 @@ async def test_a_chosen_accounts_unreadable_ledger_still_refuses(tmp_path, monke
 
     monkeypatch.setattr(runtime.manual._access, "retained_account", unreadable)
 
-    with pytest.raises(RuntimeError, match="evidence is unavailable"):
+    with pytest.raises(ManualRefusal, match="records_unreadable"):
         await runtime.manual.save_manual_correction(_request("correction-chosen", "25"))
+
+
+async def test_each_account_that_cannot_record_says_why_and_the_save_is_still_answered(
+    tmp_path, monkeypatch
+):
+    """Nothing recorded used to raise one blanket error that dropped every account's reason."""
+    runtime = TradingRuntime(tmp_path)
+
+    class Refusing:
+        def __init__(self, failure: Exception) -> None:
+            self.failure = failure
+
+        async def record_manual_correction(self, correction):
+            raise self.failure
+
+    runtime._accounts = {
+        "account-a": SimpleNamespace(
+            owner=Refusing(ManualRefusal("call_not_waiting")), state="ready"
+        ),
+        "account-b": SimpleNamespace(owner=Refusing(OSError("disk")), state="ready"),
+    }
+    history: list[str] = []
+    monkeypatch.setattr(
+        runtime.manual._access.evidence, "manual_source_evidence", lambda *_: _source_evidence()
+    )
+    monkeypatch.setattr(
+        runtime.manual._access.evidence,
+        "record_owner_correction",
+        lambda *args: history.append(args[1]),
+    )
+
+    async def snapshots(*_, **__):
+        return {}
+
+    monkeypatch.setattr(runtime.manual, "_manual_snapshots", snapshots)
+
+    outcome = await runtime.manual.save_manual_correction(_request("correction-1", "25"))
+
+    assert [(item.account_id, item.status, item.reason) for item in outcome.accounts] == [
+        ("account-a", "failed", "call_not_waiting"),
+        ("account-b", "failed", "record_failed"),
+    ]
+    assert history == []
+
+    runtime._accounts = {}
+    stopped = await runtime.manual.save_manual_correction(_request("correction-2", "26"))
+    assert [(item.status, item.reason) for item in stopped.accounts] == [
+        ("unavailable", "account_not_running"),
+        ("unavailable", "account_not_running"),
+    ]
+
+
+async def test_a_confirmation_the_account_refuses_names_its_reason(tmp_path):
+    runtime = TradingRuntime(tmp_path)
+    request = ManualConfirmationRequest(
+        command_id="command-1", preview_id="preview-1", account_id="account-a", actor="operator"
+    )
+
+    class Owner:
+        def __init__(self, failure: Exception) -> None:
+            self.failure = failure
+
+        async def observation(self):
+            record = SimpleNamespace(manual_commands={"command-1": object()})
+            return SimpleNamespace(ledger=record)
+
+        async def confirm_manual_order(self, request, now):
+            raise self.failure
+
+    async def refresh():
+        return None
+
+    for failure, expected in (
+        (ManualRefusal("wait_pending_order"), "wait_pending_order"),
+        (ManualRefusal("identity_conflict"), "identity_conflict"),
+        (AccountOwnerClosed("closed"), "account_not_running"),
+        (RuntimeError("unexpected"), "confirm_failed"),
+    ):
+        runtime._accounts = {
+            "account-a": SimpleNamespace(owner=Owner(failure), state="ready", refresh=refresh)
+        }
+        outcome = await runtime.manual.confirm_manual_orders((request,))
+        assert outcome.outcomes[0].error == expected
+
+    runtime._accounts = {}
+    gone = await runtime.manual.confirm_manual_orders((request,))
+    assert gone.outcomes[0].error == "account_not_running"

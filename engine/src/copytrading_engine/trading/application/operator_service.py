@@ -14,6 +14,7 @@ from copytrading_engine.execution.domain.ledger_state import HELD_FOR_OWNER, Ear
 from copytrading_engine.execution.domain.manual_commands import (
     ManualCommandPage,
     ManualCommandPageRequest,
+    ManualRefusal,
 )
 from copytrading_engine.execution.domain.market import EquityHistory, HistoryWindow, Quote
 from copytrading_engine.execution.domain.sessions import ET, trade_date
@@ -509,4 +510,4 @@ class OperatorQueryService:
                 request.account_id,
                 type(exc).__name__,
             )
-            raise ValueError("Manual account history is unavailable") from exc
+            raise ManualRefusal("history_failed") from exc

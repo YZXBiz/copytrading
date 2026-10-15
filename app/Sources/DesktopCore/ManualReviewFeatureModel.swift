@@ -106,7 +106,7 @@ public final class ManualReviewFeatureModel {
             errors.removeValue(forKey: request.correctionID)
         } catch {
             guard isCurrent(generation) else { return }
-            errors[request.correctionID] = error.localizedDescription
+            errors[request.correctionID] = Self.failure(error)
         }
     }
 
@@ -173,7 +173,7 @@ public final class ManualReviewFeatureModel {
             errors.removeValue(forKey: request.previewID)
         } catch {
             guard isCurrent(generation) else { return }
-            errors[request.previewID] = error.localizedDescription
+            errors[request.previewID] = Self.failure(error)
         }
     }
 
@@ -266,7 +266,7 @@ public final class ManualReviewFeatureModel {
                 }
             } catch {
                 guard isCurrent(generation) else { return }
-                for request in accountCommands { errors[request.commandID] = error.localizedDescription }
+                for request in accountCommands { errors[request.commandID] = Self.failure(error) }
             }
         }
     }
@@ -298,7 +298,7 @@ public final class ManualReviewFeatureModel {
             errors.removeValue(forKey: commandID)
         } catch {
             guard isCurrent(generation) else { return }
-            errors[commandID] = error.localizedDescription
+            errors[commandID] = Self.failure(error)
         }
     }
 
@@ -331,7 +331,7 @@ public final class ManualReviewFeatureModel {
                 errors.removeValue(forKey: "history:\(accountID)")
             } catch {
                 guard isCurrent(generation) else { return }
-                errors["history:\(accountID)"] = error.localizedDescription
+                errors["history:\(accountID)"] = Self.failure(error)
             }
         }
     }
@@ -371,8 +371,15 @@ public final class ManualReviewFeatureModel {
             errors.removeValue(forKey: "history:\(accountID)")
         } catch {
             guard isCurrent(generation) else { return }
-            errors["history:\(accountID)"] = error.localizedDescription
+            errors["history:\(accountID)"] = Self.failure(error)
         }
+    }
+
+    /// What to keep of a failed call: the code the engine gave for the owner's words when it gave
+    /// one (the view words it), else the error's own text.
+    private static func failure(_ error: any Error) -> String {
+        if case EngineContractError.remote(_, _, let reason?) = error { return reason }
+        return error.localizedDescription
     }
 
     private func absorb(_ results: [ManualCommandResult]) {

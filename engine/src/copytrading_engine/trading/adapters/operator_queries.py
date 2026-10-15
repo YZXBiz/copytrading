@@ -15,7 +15,10 @@ from copytrading_engine.execution.adapters.sqlite_ledger import (
 )
 from copytrading_engine.execution.domain.events import JournalEvent
 from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
-from copytrading_engine.execution.domain.manual_commands import ManualSourceEvidence
+from copytrading_engine.execution.domain.manual_commands import (
+    ManualRefusal,
+    ManualSourceEvidence,
+)
 from copytrading_engine.execution.presentation.account_feed import AccountFeedPage, account_feed
 from copytrading_engine.execution.presentation.operator_views import (
     AccountEventPage,
@@ -376,7 +379,7 @@ def _source_event_status(value: str) -> Literal["complete", "oversize", "missing
 def manual_source_evidence(database: Path, source_id: str) -> ManualSourceEvidence:
     """Read a complete live source and accepted review parse without mutating it."""
     if not database.exists():
-        raise ValueError("manual_source_unavailable")
+        raise ManualRefusal("post_unavailable")
     with closing(sqlite3.connect(database.as_uri() + "?mode=ro", uri=True)) as db:
         row = db.execute(
             "SELECT capture.seq,capture.payload,capture.source_at,capture.mode,"
@@ -386,14 +389,16 @@ def manual_source_evidence(database: Path, source_id: str) -> ManualSourceEviden
             (source_id,),
         ).fetchone()
     if row is None:
-        raise ValueError("manual_source_unavailable")
+        raise ManualRefusal("post_unavailable")
     source_revision, raw, source_at, mode, confirmed, parsed = row
     if mode != "live" or not confirmed or parsed is None:
-        raise ValueError("manual_source_unavailable")
+        raise ManualRefusal("post_unavailable")
     source = RawMessage.model_validate_json(raw)
     signal = StockSignal.model_validate_json(parsed)
     if source.identity != source_id or signal.text != source.text:
-        raise ValueError("manual_source_unavailable")
+        raise ManualRefusal("post_unavailable")
+    if signal.decision == "ignore":
+        raise ManualRefusal("post_ignored")
     return ManualSourceEvidence(
         source_id=source_id,
         source_revision=source_revision,

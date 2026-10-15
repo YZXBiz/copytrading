@@ -338,14 +338,17 @@ public enum EngineErrorCode: String, Codable, Equatable, Sendable {
 
 public struct EngineRemoteError: Codable, Equatable, Sendable {
     public let code: EngineErrorCode
+    /// A sentence the engine wrote for the owner, said as written.
     public let message: String?
+    /// A code the app words for the owner, such as `call_not_waiting`; never shown as it is.
+    public let reason: String?
 }
 
 public enum EngineContractError: Error, Equatable, LocalizedError, Sendable {
     case unsupportedVersion(Int)
     case missingResult
     case conflictingResults
-    case remote(code: EngineErrorCode, message: String?)
+    case remote(code: EngineErrorCode, message: String?, reason: String?)
 
     public var errorDescription: String? {
         switch self {
@@ -355,7 +358,7 @@ public enum EngineContractError: Error, Equatable, LocalizedError, Sendable {
             "The engine returned no result."
         case .conflictingResults:
             "The engine returned both a success and an error."
-        case .remote(_, let message):
+        case .remote(_, let message, _):
             message ?? "The engine could not complete that request."
         }
     }
@@ -380,7 +383,7 @@ public struct EngineResponse: Decodable, Sendable {
         }
         if let error {
             guard success == nil else { throw EngineContractError.conflictingResults }
-            throw EngineContractError.remote(code: error.code, message: error.message)
+            throw EngineContractError.remote(code: error.code, message: error.message, reason: error.reason)
         }
         guard let success else { throw EngineContractError.missingResult }
         return success.result
