@@ -379,7 +379,6 @@
 "Getting started 👋" = "Getting started 👋";
 "Go" = "Go";
 "Go back and forward" = "Go back and forward";
-"Go to Today, Activity, People, Accounts, Connections, or this guide" = "Go to Today, Activity, People, Accounts, Connections, or this guide";
 "GPT models" = "GPT models";
 "Grok models" = "Grok models";
 "guru" = "guru";
@@ -488,7 +487,6 @@
 "most recent post" = "most recent post";
 "most recent posts" = "most recent posts";
 "Motion and Transparency" = "Motion and Transparency";
-"Move through posts in Activity" = "Move through posts in Activity";
 "Name" = "Name";
 "Navigate to a page" = "Navigate to a page";
 "Needed when several people post there" = "Needed when several people post there";
@@ -643,7 +641,6 @@
 "Range" = "Range";
 "Range details" = "Range details";
 "Read" = "Read";
-"Read accounts and activity again" = "Read accounts and activity again";
 "Read and pause" = "Read and pause";
 "Read by" = "Read by";
 "Read by %@" = "Read by %@";
@@ -819,7 +816,6 @@
 "Status: %@" = "Status: %@";
 "Staying safe" = "Staying safe";
 "Step %lld: %@" = "Step %lld: %@";
-"Step through points on Today's chart" = "Step through points on Today's chart";
 "Stop Engine" = "Stop Engine";
 "Stop new entry orders. Exits still follow the account policy." = "Stop new entry orders. Exits still follow the account policy.";
 "Stop reading new posts and placing orders for every account." = "Stop reading new posts and placing orders for every account.";
@@ -2371,3 +2367,7 @@
 "%@ at %@ or less" = "%@ at %@ or less";
 "%@: Buy %@ of %@, %@ at %@ or less" = "%@: Buy %@ of %@, %@ at %@ or less";
 "%@: %@ %@ of %@ at %@" = "%@: %@ %@ of %@ at %@";
+"Go to an account, a guru, or a page, in sidebar order" = "Go to an account, a guru, or a page, in sidebar order";
+"Find a post, a guru, or a page" = "Find a post, a guru, or a page";
+"Read accounts and posts again" = "Read accounts and posts again";
+"Step through points on an account's chart" = "Step through points on an account's chart";

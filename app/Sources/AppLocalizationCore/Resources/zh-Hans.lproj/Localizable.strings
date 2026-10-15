@@ -379,7 +379,6 @@
 "Getting started 👋" = "快速开始 👋";
 "Go" = "前往";
 "Go back and forward" = "后退或前进";
-"Go to Today, Activity, People, Accounts, Connections, or this guide" = "前往“今日”“活动”“信号源”“账户”“连接”页面，或打开本指南";
 "GPT models" = "GPT 模型";
 "Grok models" = "Grok 模型";
 "guru" = "个信号源";
@@ -488,7 +487,6 @@
 "most recent post" = "条最近的帖子";
 "most recent posts" = "条最近的帖子";
 "Motion and Transparency" = "动态效果与透明度";
-"Move through posts in Activity" = "在“活动”中浏览帖子";
 "Name" = "名称";
 "Navigate to a page" = "跳转到页面";
 "Needed when several people post there" = "多人发帖时必填";
@@ -643,7 +641,6 @@
 "Range" = "时间范围";
 "Range details" = "范围详情";
 "Read" = "已读取";
-"Read accounts and activity again" = "重新读取账户和活动";
 "Read and pause" = "读取并暂停";
 "Read by" = "解读模型";
 "Read by %@" = "由 %@ 解读";
@@ -819,7 +816,6 @@
 "Status: %@" = "状态：%@";
 "Staying safe" = "安全保障";
 "Step %lld: %@" = "第%lld步：%@";
-"Step through points on Today's chart" = "逐个查看“今日”图表上的数据点";
 "Stop Engine" = "停止引擎";
 "Stop new entry orders. Exits still follow the account policy." = "停止新的开仓订单。平仓仍按账户策略执行。";
 "Stop reading new posts and placing orders for every account." = "停止读取新帖子，并停止为所有账户下单。";
@@ -900,7 +896,7 @@
 "times" = "次";
 "Timing" = "时机";
 "Tips point out things like measuring on the chart; each shows once" = "提示会指出图表测量等功能；每条提示只显示一次。";
-"to" = "打开";
+"to" = "至";
 "To do" = "未完成";
 "Today" = "今日";
 "today" = "今天";
@@ -2371,3 +2367,7 @@
 "%@ at %@ or less" = "%@，限价 %@";
 "%@: Buy %@ of %@, %@ at %@ or less" = "账户 %@：买入 %@ 的 %@，%@，限价 %@";
 "%@: %@ %@ of %@ at %@" = "账户 %@：%@ %@ %@，价格 %@";
+"Go to an account, a guru, or a page, in sidebar order" = "按侧边栏顺序前往账户、信号源或页面";
+"Find a post, a guru, or a page" = "查找帖子、信号源或页面";
+"Read accounts and posts again" = "重新读取账户和帖子";
+"Step through points on an account's chart" = "逐个查看账户图表上的数据点";
