@@ -67,7 +67,7 @@ struct GuruFeed: Equatable {
     /// Each call as the card's headline and its size, joined; a post with no calls says what it was.
     static func readAs(_ item: SourceActivity) -> String {
         guard let reading = item.reading, !reading.calls.isEmpty else {
-            return [item.headline, item.sortedNote].compactMap(\.self).joined(separator: " · ")
+            return item.headline
         }
         return reading.calls.map { call in
             let (title, detail) = ReadAsText.headline(call)

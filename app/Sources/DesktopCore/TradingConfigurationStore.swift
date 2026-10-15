@@ -135,9 +135,16 @@ public struct TradingConfigurationStore: Sendable {
         }
     }
 
-    /// Journal a fresh Start of the already saved revision without rotating its secret.
-    public func stageSavedResume(activationID: String, when state: TradingRunState) throws {
+    /// Journal a fresh Start of the saved setup without rotating its secret. `engineRevision` is
+    /// the revision the engine just reported for it: a saved revision can be stale, because a
+    /// setup read here may carry fields this release no longer has.
+    public func stageSavedResume(
+        activationID: String, revision engineRevision: String, when state: TradingRunState
+    ) throws {
         guard state == .paused else { throw TradingConfigurationStoreError.activeProcessing }
+        guard Self.isRevision(engineRevision) else {
+            throw TradingConfigurationStoreError.invalidConfiguration
+        }
         guard let saved = try loadEnvelope() else {
             throw TradingConfigurationStoreError.missingSecrets
         }
@@ -149,7 +156,7 @@ public struct TradingConfigurationStore: Sendable {
         }
         let pending = SavedTradingActivation(
             activationID: canonicalID,
-            candidateRevision: saved.revision,
+            candidateRevision: engineRevision,
             previous: SavedTradingConfigurationRevision(
                 configuration: saved.configuration, revision: saved.revision,
                 secretRevision: saved.secretRevision
@@ -160,7 +167,7 @@ public struct TradingConfigurationStore: Sendable {
                 SavedTradingConfiguration(
                     version: saved.version,
                     configuration: saved.configuration,
-                    revision: saved.revision,
+                    revision: engineRevision,
                     secretRevision: saved.secretRevision,
                     pendingActivation: pending
                 )), to: url)

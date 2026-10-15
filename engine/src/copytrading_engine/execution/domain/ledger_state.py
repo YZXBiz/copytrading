@@ -73,7 +73,7 @@ HELD_FOR_OWNER = frozenset({"approval_required", "named_buy_not_held"})
 
 
 class MessageRecord(StockSignal):
-    model_config = ConfigDict(frozen=True, extra="forbid", hide_input_in_errors=True)
+    model_config = ConfigDict(frozen=True, extra="ignore", hide_input_in_errors=True)
     source_key: Identifier
     destination: DestinationTerms
     parts: tuple[InstructionProgress, ...]

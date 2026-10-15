@@ -46,17 +46,7 @@ def test_every_field_comes_from_its_label(tmp_path: Path) -> None:
         "alpaca_key": "alpaca-key-value",
         "alpaca_secret": "alpaca-secret-value",
         "guru_name": "Zhao",
-        "triage_api_key": None,
     }
-
-
-def test_an_openai_key_turns_on_the_chat_filter(tmp_path: Path) -> None:
-    keys = tmp_path / "keys.txt"
-    keys.write_text(KEYS + "\nOpenAI key:\nopenai-key-value")
-
-    fields = dev_app.prefill(dev_app.read_labelled(keys), "deepseek", "Zhao")
-
-    assert fields["triage_api_key"] == "openai-key-value"
 
 
 def test_a_missing_value_is_named_never_shown(tmp_path: Path) -> None:

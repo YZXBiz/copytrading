@@ -1165,20 +1165,18 @@ final class AppModel {
             let notificationToken =
                 enteredSecrets.notificationToken?.isEmpty == false
                 ? enteredSecrets.notificationToken : sameAlertService ? previous?.notificationToken : nil
-            let triageAPIKey = Self.triageKey(entered: enteredSecrets.triageAPIKey, for: configuration.triage, saved: stored)
             let missing = [
                 discordToken.isEmpty ? "the Discord token" : nil,
                 providerAPIKey.isEmpty && configuration.provider.name.requiresAPIKey ? "the model API key" : nil,
                 configuration.notification != nil && notificationToken?.isEmpty != false
                     ? (configuration.notification?.service == .discord ? "the Discord webhook URL" : "the Telegram bot token") : nil,
-                configuration.triage != nil && triageAPIKey?.isEmpty != false ? "the OpenAI key" : nil,
             ].compactMap(\.self)
             guard missing.isEmpty else {
                 throw TradingSettingsError.missingCredentials(L10n.list(missing))
             }
             let secrets = TradingSecrets(
                 discordToken: discordToken, providerAPIKey: providerAPIKey,
-                brokers: brokers, notificationToken: notificationToken, triageAPIKey: triageAPIKey
+                brokers: brokers, notificationToken: notificationToken
             )
             let profilesByRevision = Dictionary(
                 configuration.profiles.map { ($0.profileRevision, $0) },
@@ -1477,7 +1475,8 @@ final class AppModel {
             }
             let activationID = UUID().uuidString.lowercased()
             try tradingConfigurationStore.stageSavedResume(
-                activationID: activationID, when: .paused
+                activationID: activationID, revision: validation.report.configurationRevision,
+                when: .paused
             )
             do {
                 tradingStatus = try await starter.startTrading(
@@ -1898,18 +1897,6 @@ final class AppModel {
         guard entered.isEmpty else { return entered }
         guard let saved, saved.configuration.provider.name == provider else { return "" }
         return saved.secrets.providerAPIKey
-    }
-
-    /// The chat filter's key to use: what was typed, or the saved one while the filter stays on with
-    /// the same service; nil while the filter is off.
-    static func triageKey(
-        entered: String?, for triage: TradingTriageConfiguration?,
-        saved: (configuration: TradingConfiguration, secrets: TradingSecrets)?
-    ) -> String? {
-        guard let triage else { return nil }
-        if let entered, !entered.isEmpty { return entered }
-        guard let saved, saved.configuration.triage?.provider == triage.provider else { return nil }
-        return saved.secrets.triageAPIKey
     }
 
     private static func validateTradingConfiguration(

@@ -80,29 +80,6 @@ private func eachAccountSaysWhatItDidInAFewWords() throws {
     try #require(GuruAccountOutcome.outcomes(of: chatter, skipped: false).isEmpty, "talk reached an account")
     let entry = GuruFeed(guruID: "zhao", activity: [chatter], skipped: { _ in false }).days.first?.entries.first
     try #require(entry?.readAs == "Not a trade", "talk read as \(entry?.readAs ?? "nil")")
-
-    // Small talk the chat filter settled says so, and who sorted it how surely.
-    let smallTalk = try post(3, guru: "zhao", at: "2026-10-05T14:32:00Z").decision("ignore", reason: "chatter")
-        .reading(.chatter).sorted(by: "gpt-6-luna", confidence: 0.976).build()
-    let sorted = GuruFeed(guruID: "zhao", activity: [smallTalk], skipped: { _ in false }).days.first?.entries.first
-    try #require(
-        sorted?.readAs == "Just chat, nothing to trade · sorted by OpenAI · 98% sure",
-        "chat read as \(sorted?.readAs ?? "nil")")
-    try #require(GuruAccountOutcome.outcomes(of: smallTalk, skipped: false).isEmpty, "chat reached an account")
-
-    // Chat the reader read itself carries no filter line.
-    let readChat = try post(4, guru: "zhao", at: "2026-10-05T14:33:00Z").decision("ignore", reason: "chatter")
-        .reading(.chatter).build()
-    try #require(readChat.sortedNote == nil && readChat.chatFilterVerdict == nil, "a read post said it was sorted")
-
-    // A post the filter passed on still says what the filter made of it, in Technical details.
-    let passed = try post(5, guru: "zhao", at: "2026-10-05T14:34:00Z").decision("trade")
-        .passed(by: "gpt-6-luna", chat: 0.12, to: "deepseek-flash").build()
-    try #require(passed.sortedNote == nil, "a post the reader read said it was sorted as chat")
-    try #require(
-        passed.chatFilterVerdict == "gpt-6-luna · 12% chat · sent to deepseek-flash",
-        "the filter's verdict read \(passed.chatFilterVerdict ?? "nil")")
-    try #require(smallTalk.chatFilterVerdict == "gpt-6-luna · 98% chat · skipped", "a skipped post's verdict was wrong")
 }
 
 /// On a busy day the app has loaded only the newest page of posts across every guru; the strip

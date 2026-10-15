@@ -213,7 +213,7 @@ class Commentary(_Part):
 
 class Chatter(_Part):
     """Small talk with nothing about stocks or the market: a greeting, a reaction, an emoji. It
-    has no words to cite, so a decision model can sort a post here on its own."""
+    has no words to cite."""
 
     kind: Literal["chatter"] = "chatter"
 
