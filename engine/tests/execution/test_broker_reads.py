@@ -53,3 +53,50 @@ def test_entry_reads_go_out_together_and_still_place_the_order():
 
     assert broker.most_in_flight >= 3
     assert broker.orders, "the overlapping reads must still end in the same order"
+
+
+class CountingBroker(FakeBroker):
+    def __init__(self):
+        super().__init__()
+        self.reads: list[str] = []
+
+    def account(self):
+        self.reads.append("account")
+        return super().account()
+
+    def positions(self):
+        self.reads.append("positions")
+        return super().positions()
+
+    def open_orders(self):
+        self.reads.append("open_orders")
+        return super().open_orders()
+
+
+async def test_an_idle_cycle_reads_each_broker_fact_once_per_check(tmp_path, monkeypatch):
+    """An idle cycle read the positions four times and the account twice, and every Alpaca
+    positions read fetched the account again: eleven requests every two seconds, past Alpaca's
+    200 a minute. Each reconcile now reads the positions once, and the audit and the holdings
+    inspection share that read and the cycle's one account read."""
+    import datetime as dt
+
+    from .test_account_lifecycle import _open
+
+    datetime_type = dt.datetime
+
+    class FixedDateTime(datetime_type):
+        @classmethod
+        def now(cls, tz=None):
+            fixed = cls(2026, 1, 5, 15, 0, tzinfo=dt.UTC)
+            return fixed if tz is None else fixed.astimezone(tz)
+
+    monkeypatch.setattr(dt, "datetime", FixedDateTime)
+    broker = CountingBroker()
+    owner = await _open(tmp_path, broker)
+    try:
+        await owner.cycle(NOW, halted=False)
+        broker.reads.clear()
+        await owner.cycle(NOW, halted=False)
+        assert sorted(broker.reads) == ["account", "open_orders", "positions", "positions"]
+    finally:
+        await owner.close()

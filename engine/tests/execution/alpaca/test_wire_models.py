@@ -108,11 +108,18 @@ def test_broker_positions_use_verified_account_currency_for_missing_wire_currenc
         assert contrary[0].currency == "EUR"
         with pytest.raises(ValueError, match="valuation"):
             account_exposure(contrary, (), (), account_currency="USD")
-        account.pop("currency")
-        with pytest.raises(BrokerResponseError):
-            broker.positions()
+        # An account's currency never changes: later reads of positions don't ask again.
+        assert calls == ["/v2/account", "/v2/positions", "/v2/positions"]
     finally:
         broker.close()
+
+    account.pop("currency")
+    unverified = make_broker("key", "secret", transport=httpx.MockTransport(handler))
+    try:
+        with pytest.raises(BrokerResponseError):
+            unverified.positions()
+    finally:
+        unverified.close()
 
 
 @pytest.mark.parametrize("value", ["NaN", "Infinity", "-Infinity", True, None])

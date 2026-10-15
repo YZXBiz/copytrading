@@ -40,12 +40,22 @@ class RecoveryApplication:
         self._broker = broker
         self._clock = clock or (lambda: dt.datetime.now(dt.UTC))
 
-    def inspect_ownership(self) -> OwnershipInspection:
+    def inspect_ownership(
+        self,
+        *,
+        account: Account | None = None,
+        positions: tuple[Position, ...] | None = None,
+    ) -> OwnershipInspection:
+        """Inspect against the broker now, or against an account and positions just read."""
         snapshot = self._ledger.snapshot()
         if snapshot.account_id is None or snapshot.environment is None:
             raise RuntimeError("Broker account inventory has not been initialized")
-        account = self._verify_account(snapshot.account_id, snapshot.account_id)
-        positions = self._broker.positions()
+        if account is None:
+            account = self._verify_account(snapshot.account_id, snapshot.account_id)
+        elif account.id != snapshot.account_id:
+            raise ValueError("Supplied, broker, and ledger account identities must match")
+        if positions is None:
+            positions = self._broker.positions()
         self._position_map(positions)
         try:
             exposure = account_exposure(

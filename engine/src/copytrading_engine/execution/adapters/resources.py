@@ -347,11 +347,13 @@ class ExecutionResources:
         # read, so a buy shows as copied and a sale as gone in the same cycle, never as shares at
         # the broker nobody copied or shares sold that still count. With nothing pending this
         # costs no broker call.
-        self.engine.reconcile(now)
-        self.position_audit = self.engine.audit_positions()
+        positions = self.engine.reconcile(now)
+        self.position_audit = self.engine.audit_positions(positions)
         self.account = self.broker.account()
         self.account_observed_at = now
-        self.last_inspection = self.inspect_ownership()
+        self.last_inspection = RecoveryApplication(
+            self.engine.ledger, self.broker
+        ).inspect_ownership(account=self.account, positions=positions)
         return self.observation()
 
     def receive(self, delivery: DestinationSignal, now: dt.datetime) -> None:
