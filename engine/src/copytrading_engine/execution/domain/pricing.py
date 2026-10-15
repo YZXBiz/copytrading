@@ -2,6 +2,7 @@
 
 import datetime as dt
 from decimal import ROUND_DOWN, ROUND_UP, Decimal
+from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -28,12 +29,19 @@ def quote_problem(
     return None
 
 
+# How far above the guru's price a buy may fill.
+AboveSignalPct = Annotated[Decimal, Field(ge=0, le=100)]
+# How far below the guru's sell price an exit may fill: a sell is always a limit order, and under
+# 100% so its floor is a price.
+BelowSignalPct = Annotated[Decimal, Field(ge=0, lt=100)]
+DEFAULT_ABOVE_SIGNAL_PCT = Decimal("0")
+DEFAULT_BELOW_SIGNAL_PCT = Decimal("1")
+
+
 class EntryPricingPolicy(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
-    max_above_signal_pct: Decimal = Field(default=Decimal("0"), ge=0, le=100)
-    # How far below the guru's sell price an exit may fill: a sell is always a limit order, and
-    # under 100% so its floor is a price.
-    max_below_signal_pct: Decimal = Field(default=Decimal("1"), ge=0, lt=100)
+    max_above_signal_pct: AboveSignalPct = DEFAULT_ABOVE_SIGNAL_PCT
+    max_below_signal_pct: BelowSignalPct = DEFAULT_BELOW_SIGNAL_PCT
 
     def limit_price(self, signal_price: Decimal) -> Decimal:
         """Return a valid stock tick that never exceeds the configured ceiling."""
