@@ -527,6 +527,7 @@ async def test_one_connection_is_checked_without_touching_the_start_grant(store:
             "adapter": "fake",
             "reason_code": None,
             "suggestion": None,
+            "symbols": [],
         },
     }
     assert "private-provider-key" not in json.dumps(checked)

@@ -12,9 +12,7 @@ struct SetupChangesStatus: Equatable {
 
     @MainActor
     init(_ model: AppModel) {
-        let hasProblem =
-            !model.profileExampleReviews.values.allSatisfy(\.automaticActivationAllowed)
-            || model.tradingValidation.map { !$0.report.activatable } == true
+        let problems = model.setupCheckProblemCount
         if model.isValidatingTrading {
             self.init("Checking every connection…", working: true)
         } else if model.isApplyingChanges && !model.isShowingSetupCheck {
@@ -26,10 +24,13 @@ struct SetupChangesStatus: Equatable {
             self.init("The engine is stopped", "Start it, then start copying.", "stop.circle.fill", .inactive)
         } else if model.tradingStatus == nil {
             self.init("Starting CopyTrading…", working: true)
-        } else if hasProblem {
+        } else if problems == 1 {
+            self.init("One check needs attention", "Review it, then start again.", "exclamationmark.triangle.fill", .caution)
+        } else if problems > 1 {
+            // Every row Setup Check marks Needs attention is counted, so the two always agree.
             self.init(
-                "Some checks need attention", "Review them, fix the setup, then start again.", "exclamationmark.triangle.fill",
-                .caution)
+                text: L10n.string("%lld checks need attention", problems), detail: L10n.string("Review them, then start again."),
+                symbol: "exclamationmark.triangle.fill", tone: .caution)
         } else if model.canStartCopyingFromCheck {
             self.init("Everything checks out", "Start copying when you're ready.", "checkmark.circle.fill", .positive)
         } else if model.awaitsExampleReview {
@@ -52,10 +53,15 @@ struct SetupChangesStatus: Equatable {
     @MainActor private init(
         _ text: String, _ detail: String? = nil, _ symbol: String = "", _ tone: StatusTone = .neutral, working: Bool = false
     ) {
-        self.text = L10n.string(text)
-        self.detail = detail.map { L10n.string($0) }
+        self.init(
+            text: L10n.string(text), detail: detail.map { L10n.string($0) }, symbol: symbol, tone: tone, isWorking: working)
+    }
+
+    private init(text: String, detail: String?, symbol: String, tone: StatusTone, isWorking: Bool = false) {
+        self.text = text
+        self.detail = detail
         self.symbol = symbol
         self.tone = tone
-        self.isWorking = working
+        self.isWorking = isWorking
     }
 }

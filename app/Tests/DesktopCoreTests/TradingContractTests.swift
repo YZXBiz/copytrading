@@ -150,12 +150,13 @@ private func capabilityChecksCarryAModelSuggestion() throws {
     let json = Data(
         """
         {"name":"model","state":"failed","subject":null,"environment":null,"identity":null,\
-        "adapter":"deepseek","reason_code":"model_not_found","suggestion":"deepseek-flash"}
+        "adapter":"deepseek","reason_code":"model_not_found","suggestion":"deepseek-flash","symbols":[]}
         """.utf8)
     let check = try JSONDecoder().decode(TradingCapabilityCheck.self, from: json)
     try #require(check.reasonCode == "model_not_found" && check.suggestion == "deepseek-flash")
-    let older = Data(#"{"name":"model","state":"ready","adapter":"deepseek","reason_code":null}"#.utf8)
-    try #require(try JSONDecoder().decode(TradingCapabilityCheck.self, from: older).suggestion == nil)
+    let ready = Data(
+        #"{"name":"model","state":"ready","adapter":"deepseek","reason_code":null,"suggestion":null,"symbols":[]}"#.utf8)
+    try #require(try JSONDecoder().decode(TradingCapabilityCheck.self, from: ready).suggestion == nil)
 }
 
 /// Discord alerts carry no chat ID; a saved setup from before Discord reads as Telegram.

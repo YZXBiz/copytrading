@@ -74,6 +74,14 @@ extension AppModel {
             && checkedSetupSignature == setupDraft.signature
     }
 
+    /// How many rows Setup Check marks Needs attention: each failed check, and each guru whose
+    /// examples were read differently from what the owner expected.
+    var setupCheckProblemCount: Int {
+        let failedChecks = tradingValidation?.report.checks.filter { $0.state == .failed }.count ?? 0
+        let misreadExamples = profileExampleReviews.values.filter { !$0.automaticActivationAllowed }.count
+        return failedChecks + misreadExamples
+    }
+
     /// Every connection passed and the examples read as expected; only looking them over is left.
     var awaitsExampleReview: Bool {
         tradingValidation?.report.activatable == true
@@ -150,6 +158,36 @@ extension AppModel {
 
     func removeAccount(named accountID: String) {
         setupDraft.accounts.removeAll { $0.name.trimmed == accountID }
+    }
+
+    /// Setup Check found a removed or renamed account still holding what CopyTrading bought, and
+    /// the owner keeps it: a rename is undone, a removed account comes back as it was saved, and
+    /// the check is dropped, since the setup it checked changed.
+    func keepAccount(_ accountID: String) {
+        let savedIDs = savedTradingConfiguration?.accounts.map(\.id) ?? []
+        guard let position = savedIDs.firstIndex(of: accountID), let saved = savedTradingConfiguration?.accounts[position]
+        else { return }
+        if let index = setupDraft.accounts.firstIndex(where: { $0.savedName == accountID }) {
+            let renamed = setupDraft.accounts[index].name.trimmed
+            setupDraft.accounts[index].name = accountID
+            renameAccountReferences(from: renamed, to: accountID)
+        } else if !setupDraft.accounts.contains(where: { $0.name.trimmed == accountID }) {
+            // Back where it was saved, so a setup with nothing else changed reads as unchanged.
+            let index =
+                setupDraft.accounts.firstIndex { (savedIDs.firstIndex(of: $0.name.trimmed) ?? .max) > position }
+                ?? setupDraft.accounts.endIndex
+            setupDraft.accounts.insert(
+                TradingAccountDraft(
+                    name: accountID, environment: saved.environment, policy: saved.policy, savedName: accountID),
+                at: index)
+        }
+        cancelTradingActivation(message: L10n.string("%@ is back in the setup.", accountID))
+    }
+
+    /// Setup Check names an account that still holds stocks; its page is where they are sold.
+    func openAccountFromSetupCheck(_ accountID: String) {
+        isShowingSetupCheck = false
+        selectedScreen = .account(accountID)
     }
 
     func removeGuru(_ guruID: String) {

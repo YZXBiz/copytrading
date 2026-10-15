@@ -5,7 +5,10 @@ import re
 import sqlite3
 from pathlib import Path
 
-from copytrading_engine.execution.adapters.ownership_probe import has_unresolved_ownership
+from copytrading_engine.execution.adapters.ownership_probe import (
+    UnsettledOwnership,
+    unsettled_ownership,
+)
 from copytrading_engine.shared.sqlite import SchemaComponent, SQLiteUnit, ensure_schema
 from copytrading_engine.trading.domain.config import TradingConfiguration
 
@@ -27,7 +30,14 @@ class RoutingChangePending(Exception):
 
 
 class AccountOwnershipPending(Exception):
-    """Removing this local account would abandon unsettled execution ownership."""
+    """Removing these local accounts would abandon what they still hold of CopyTrading's.
+
+    `accounts` names each removed account, A to Z, with what it holds; None when its records
+    could not be read, so whether it holds anything is unknown."""
+
+    def __init__(self, accounts: tuple[tuple[str, UnsettledOwnership | None], ...]) -> None:
+        super().__init__(", ".join(account_id for account_id, _ in accounts))
+        self.accounts = accounts
 
 
 class RoutingRevision:
@@ -79,14 +89,22 @@ class RoutingRevision:
             if self._account_root.is_symlink():
                 raise RuntimeError("Account state directory is invalid")
             prior_accounts.update(path.name for path in self._account_root.iterdir())
-        for account_id in prior_accounts - new_accounts:
+        unsettled: list[tuple[str, UnsettledOwnership | None]] = []
+        for account_id in sorted(prior_accounts - new_accounts):
             if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", account_id):
                 raise RuntimeError("Saved account identity is invalid")
             account_dir = self._account_root / account_id
             if account_dir.is_symlink():
                 raise RuntimeError("Account state directory is invalid")
-            if has_unresolved_ownership(account_dir):
-                raise AccountOwnershipPending
+            try:
+                held = unsettled_ownership(account_dir)
+            except RuntimeError:
+                unsettled.append((account_id, None))
+                continue
+            if held is not None:
+                unsettled.append((account_id, held))
+        if unsettled:
+            raise AccountOwnershipPending(tuple(unsettled))
         pending = any(
             db.execute(query).fetchone() is not None
             for query in (

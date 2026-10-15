@@ -51,6 +51,8 @@ class CapabilityCheck(BaseModel):
     reason_code: str | None = None
     # A close name the provider lists, when the model asked for does not exist.
     suggestion: str | None = None
+    # The stocks a configuration check is about, such as those a removed account still holds.
+    symbols: tuple[str, ...] = ()
 
 
 class TradingCapabilityReport(BaseModel):
@@ -158,8 +160,12 @@ class TradingCapabilityService:
         by_account = {credential.account_id: credential for credential in secrets.brokers}
         account_ids = {account.id for account in configuration.accounts}
         checks: list[CapabilityCheck] = []
-        if set(by_account) != account_ids:
-            checks.append(_failed("configuration", "broker_credential_mapping_invalid"))
+        # An account without keys fails its own broker check below; keys for an account the
+        # setup doesn't have are named here, once each.
+        checks.extend(
+            _failed("configuration", "broker_keys_without_account", subject=account_id)
+            for account_id in sorted(set(by_account) - account_ids)
+        )
 
         operations = [
             _safely(

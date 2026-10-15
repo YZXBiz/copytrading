@@ -190,7 +190,7 @@ struct TradingSettingsSaveTests {
             {"version":1,"request_id":"validation-request","ok":{"type":"trading_validation",
              "report":{"configuration_revision":"revision-1","activatable":true,
               "checks":[{"name":"source","state":"ready","subject":null,"environment":null,
-                "identity":"discord_user:123","adapter":"discord-py-self-user-token","reason_code":null}],
+                "identity":"discord_user:123","adapter":"discord-py-self-user-token","reason_code":null,"symbols":[]}],
               "cost_notice":"Model check may incur a charge."},"activation_token":"single-use-grant"}}
             """.utf8)
         let validationTransport = AccountPageTransport(responseFixture: validationWire)
@@ -423,7 +423,7 @@ struct TradingSettingsSaveTests {
         await model.startCopyingOnLaunchIfWanted()
         try check(model.tradingStatus?.state == .paused, "A failed check must leave processing paused")
         try check(
-            model.message == "Model provider failed its connection check. Processing remains paused.",
+            model.message == "Interpreter failed its connection check. Processing remains paused.",
             "The failed check was not named: \(model.message ?? "no message")")
         await starter.setValidationActivatable(true)
         for _ in 0..<100 where model.tradingStatus?.state != .running { try await Task.sleep(for: .milliseconds(20)) }
@@ -1326,7 +1326,7 @@ struct TradingSettingsSaveTests {
             """
             {"version":1,"request_id":"check-request","ok":{"type":"connection_check",
              "check":{"name":"model","state":"failed","subject":null,"environment":null,"identity":null,
-              "adapter":"deepseek","reason_code":"model_not_found","suggestion":"deepseek-flash"}}}
+              "adapter":"deepseek","reason_code":"model_not_found","suggestion":"deepseek-flash","symbols":[]}}}
             """.utf8)
         let transport = AccountPageTransport(responseFixture: wire)
         let result = try await EngineClient(transport: transport).checkConnection(
