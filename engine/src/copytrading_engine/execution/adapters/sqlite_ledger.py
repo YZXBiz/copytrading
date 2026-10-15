@@ -298,19 +298,18 @@ def message_events(db: sqlite3.Connection, message_ids: set[str]) -> tuple[Journ
 
 
 # What the account feed shows: each order's first final update, a sale the owner made at the
-# broker, entries paused or resumed, and a holdings review the owner settled.
-_FEED_EVENTS = """
+# broker, entries paused or resumed, and a holdings review the owner settled. Each order's first
+# final update is found in one grouped pass over the journal, not by searching every earlier
+# event again for each one.
+FEED_EVENTS = """
+WITH first_final AS (
+    SELECT min(id) AS id FROM journal
+    WHERE json_extract(event, '$.payload.kind') = 'order_update'
+        AND json_extract(event, '$.payload.status') IN ('filled','canceled','expired','rejected')
+    GROUP BY json_extract(event, '$.payload.client_id'))
 SELECT j.id, j.event FROM journal j
 WHERE (? IS NULL OR j.id < ?) AND (
-    (json_extract(j.event, '$.payload.kind') = 'order_update'
-        AND json_extract(j.event, '$.payload.status') IN ('filled','canceled','expired','rejected')
-        AND NOT EXISTS (
-            SELECT 1 FROM journal e WHERE e.id < j.id
-            AND json_extract(e.event, '$.payload.kind') = 'order_update'
-            AND json_extract(e.event, '$.payload.client_id')
-                = json_extract(j.event, '$.payload.client_id')
-            AND json_extract(e.event, '$.payload.status')
-                IN ('filled','canceled','expired','rejected')))
+    j.id IN (SELECT id FROM first_final)
     OR json_extract(j.event, '$.payload.kind')
         IN ('manual_sale_recorded', 'ownership_resolved', 'limits_changed')
     OR (json_extract(j.event, '$.payload.kind') = 'account_control_changed'
@@ -325,5 +324,5 @@ def feed_events(
     """The journal events the account feed turns into rows, newest first."""
     if not 1 <= limit <= 100 or (before_seq is not None and before_seq < 1):
         raise ValueError("Invalid account feed page")
-    rows = db.execute(_FEED_EVENTS, (before_seq, before_seq, limit)).fetchall()
+    rows = db.execute(FEED_EVENTS, (before_seq, before_seq, limit)).fetchall()
     return tuple((seq, JournalEvent.model_validate_json(raw)) for seq, raw in rows)

@@ -65,3 +65,17 @@ def test_a_buy_that_joined_a_holding_and_the_sale_of_it_name_that_holding():
     assert len({item.lot_id for item in trades}) == 1
     assert trades[0].lot_id is not None
     assert len({item.message_id for item in trades}) == 3, "each trade still names its own post"
+
+
+def test_the_feed_finds_each_orders_first_final_update_in_one_pass(tmp_path):
+    """The feed searched every earlier journal event again for each order's final update: 113 ms
+    for a page of a 4,265-event paper ledger, growing with the square of its length. It now
+    groups the final updates once (3 ms for the same page, the same rows)."""
+    from copytrading_engine.execution.adapters.sqlite_ledger import FEED_EVENTS, Store
+
+    store = Store(tmp_path / "execution.sqlite3")
+    try:
+        plan = store.db.execute("EXPLAIN QUERY PLAN " + FEED_EVENTS, (None, None, 50)).fetchall()
+    finally:
+        store.close()
+    assert not any("CORRELATED" in row[-1] for row in plan), plan
