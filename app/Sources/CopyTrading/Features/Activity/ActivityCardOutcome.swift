@@ -275,7 +275,8 @@ struct ActivityCardOutcome {
                 ? L10n.string("Waiting for your approval")
                 : short.map { L10n.string("Waiting for you: %@", $0) } ?? L10n.string("Waiting for you"),
             facts: [Fact(label: L10n.string(approving ? "Approve by" : "Copy by"), value: deadline)],
-            note: short == nil ? L10n.sentence(Reason.text(code)) : nil)
+            // With no reason given, the headline and deadline say it all; a note would be a lone dash.
+            note: short == nil ? code.map { L10n.sentence(Reason.text($0)) } : nil)
     }
 
     /// Why a call waits, in a few words after "Waiting for you:".

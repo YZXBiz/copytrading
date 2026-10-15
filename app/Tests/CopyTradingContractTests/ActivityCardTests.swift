@@ -15,6 +15,7 @@ func runActivityCardTests() throws {
     try aBuyNamesTheGurusPriceAndTheAllowanceItsLimitUsed()
     try aSkipNamesTheLimitWithItsNumbers()
     try aCallHeldForApprovalAsksToBeApproved()
+    try aCallWaitingWithNoReasonHasNoNote()
     try aBuyHeldForAResumeAsksToResumeByItsDeadline()
     try aDeadlineReadsOnTheOwnersClock()
     try theTimeZoneSettingMovesADeadline()
@@ -325,6 +326,23 @@ private func aCallHeldForApprovalAsksToBeApproved() throws {
     try #require(
         late.accounts.first?.results.first?.headline == "Not sent",
         "an expired approval read \(late.accounts.first?.results.first?.headline ?? "nil")")
+}
+
+/// A post held for review without a reason code reads "Waiting for you" and its deadline, and no
+/// note: there is nothing to explain, so no lone "—." sits under the deadline.
+@MainActor
+private func aCallWaitingWithNoReasonHasNoNote() throws {
+    let source = try SourceActivityBuilder().decision("review")
+        .suggested([SourceActivityBuilder.buy("SOUN", "5.85")])
+        .destination("zhao-paper", status: "review_required", outcomes: ["review_required"])
+        .build()
+    let sameDay = try Date("2026-10-05T15:00:00Z", strategy: .iso8601)
+
+    let outcome = ActivityCardOutcome(source, skipped: false, now: sameDay, zone: losAngeles, locale: english)
+
+    let waiting = try #require(outcome.accounts.first?.results.first)
+    try #require(waiting.headline == "Waiting for you", "headline was \(waiting.headline)")
+    try #require(waiting.note == nil, "note was \(waiting.note ?? "nil")")
 }
 
 @MainActor
