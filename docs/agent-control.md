@@ -139,7 +139,7 @@ Requests and responses are JSON lines of at most 64 KiB, one request per connect
 ```
 
 - **Positions and lots.** Each account's positions carry `owned_qty` (bought by CopyTrading), `external_qty` (held outside it), and `lots`: one entry per copied buy with `lot_id`, the `source_id` and `guru_id` of the post that bought it, `posted_at`, `untrusted_source_text` (an excerpt of that post), `bought_at`, `original_qty`, `remaining_qty`, and `average_price`.
-- **Dedicated response models.** These live in `control/wire.py`, not the engine's internal views, so engine refactors cannot silently break scripts. They never contain credentials, tokens or broker account identifiers. Discord text appears only in fields named `untrusted_source_text`; what the interpreter read from it is in `understood_as` (action, symbol, price, fraction).
+- **Dedicated response models.** These live in `control/wire.py`, not the engine's internal views, so engine refactors cannot silently break scripts. They never contain credentials, tokens or broker account identifiers. Discord text appears only in fields named `untrusted_source_text`; what the interpreter read from it is in `understood_as` (action, symbol, price, fraction, and `usd_amount` for a buy sized in dollars).
 - **Published schema.** `copytrading schema` prints the JSON Schema, and a committed copy (`engine/tests/control/contract/schema-v1.json`) fails the tests when the contract changes without a deliberate update.
 - **Error codes:** `access_off`, `locked`, `forbidden`, `invalid_request`, `not_found`, `unavailable`, `busy`, `cooling_down`, `proposal_limit`, `conflict`, `expired`, `rejected`.
 
