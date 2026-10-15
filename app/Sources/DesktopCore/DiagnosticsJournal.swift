@@ -61,6 +61,15 @@ public struct DiagnosticsJournal: Sendable {
             .filter { FileManager.default.fileExists(atPath: $0.path) }
     }
 
+    /// Each journal file's name, size, and modification time: unchanged means nothing new to read.
+    public func fingerprint() -> [String] {
+        files.map { url in
+            let values = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+            let modified = values?.contentModificationDate?.timeIntervalSinceReferenceDate ?? 0
+            return "\(url.lastPathComponent):\(values?.fileSize ?? 0):\(modified)"
+        }
+    }
+
     /// Bytes the journal holds on disk.
     public func usageBytes() -> Int64 {
         files.reduce(0) { total, url in

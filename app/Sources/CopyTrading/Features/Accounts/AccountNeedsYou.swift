@@ -22,8 +22,9 @@ struct AccountNeedsYou: View {
     }
 
     var body: some View {
-        // Ticks each second only while a skip can still be undone, so the line leaves on time.
-        TimelineView(.periodic(from: .now, by: 1)) { context in
+        // Ticks each second only while a skip can still be undone, so the line leaves on time;
+        // otherwise once a minute, enough for a deadline's day word.
+        TimelineView(.periodic(from: .now, by: skippedCalls.undoable() == nil ? 60 : 1)) { context in
             content(undo: skippedCalls.undoable(at: context.date))
         }
     }
