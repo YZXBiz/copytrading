@@ -53,10 +53,10 @@ struct ValidationResultsSection: View {
         switch check.name {
         case .source:
             return L10n.string("Signed in to Discord")
-        case .model, .triage:
+        case .model:
             let parts = identity.split(separator: ":", maxSplits: 1).map(String.init)
             guard parts.count == 2 else { return nil }
-            let provider = TradingProviderName(rawValue: parts[0])?.title ?? TradingTriageProvider(rawValue: parts[0])?.title ?? parts[0]
+            let provider = TradingProviderName(rawValue: parts[0])?.title ?? parts[0]
             return L10n.string("%@ answered as %@", provider, parts[1])
         case .broker:
             return L10n.string(check.environment == .live ? "Alpaca live account found" : "Alpaca paper account found")

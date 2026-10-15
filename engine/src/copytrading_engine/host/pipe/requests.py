@@ -36,7 +36,6 @@ from copytrading_engine.trading.domain.config import (
     SourceCheck,
     TradingConfiguration,
     TradingSecrets,
-    TriageCheck,
 )
 from copytrading_engine.trading.domain.profiles import ProfileRevision
 
@@ -102,8 +101,7 @@ class CheckConnectionRequest(PipeRequest):
 
     operation: Literal["check_connection"]
     connection: Annotated[
-        SourceCheck | ModelCheck | TriageCheck | BrokerCheck | NotificationCheck,
-        Field(discriminator="kind"),
+        SourceCheck | ModelCheck | BrokerCheck | NotificationCheck, Field(discriminator="kind")
     ]
 
 

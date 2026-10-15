@@ -103,6 +103,17 @@ def test_snapshot_round_trip_preserves_tagged_progress_json():
     ]
 
 
+def test_a_snapshot_saved_with_the_retired_chat_filter_fields_loads_without_them():
+    message = _message(part=Pending())
+    snapshot = LedgerSnapshot(messages={message.key: message})
+    saved = json.loads(snapshot.model_dump_json())
+    saved["messages"][message.key] |= {"sorted_by": "gpt-6-luna", "sorted_confidence": 0.97}
+
+    loaded = LedgerSnapshot.model_validate_json(json.dumps(saved))
+
+    assert loaded == snapshot
+
+
 def test_snapshot_rejects_order_link_to_wrong_instruction():
     repository = MemoryRepository()
     engine = CopyEngine(repository, FakeBroker(), CopyConfig(sources=["discord:demo"]))

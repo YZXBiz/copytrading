@@ -1,7 +1,14 @@
 # ADR-0012: A decision model first, the reader behind it
 
 ## Status
-Accepted, October 2026. Extends ADR-0007 (one reading contract) with a triage step.
+Superseded, October 2026. The owner removed the triage step: a decision model in front of the
+reader added about 0.2 s to every real call and saved only cents a day. Points 2, 4, and 5 below
+no longer describe the engine, the app, or the saved setup; the reader sees every post, and the
+`sorted_by` and `sorted_confidence` fields are gone from signals (stored ones are read and
+ignored). Point 1 stands: chat is the reader's own answer, `JustChat`, stored as `chatter`.
+What follows is the record of the decision as it was made.
+
+Was: Accepted, October 2026. Extends ADR-0007 (one reading contract) with a triage step.
 
 ## Context
 Every post went to the reader (DeepSeek), and a post it could not place waited for the owner, so

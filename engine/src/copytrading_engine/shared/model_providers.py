@@ -45,26 +45,6 @@ def endpoint_problem(url: str) -> str | None:
     return None
 
 
-# Decision models that sort a post before the reader reads it (ADR-0012): each answers a
-# pick-one with calibrated probabilities instead of writing text.
-type TriageProvider = Literal["openai-decisions", "typesafe"]
-
-TRIAGE_PROVIDERS: tuple[TriageProvider, ...] = get_args(TriageProvider.__value__)
-
-
-class TriageConfig(BaseModel):
-    """What the triage step needs to reach its decision model, and how sure a pick must be
-    before the post is settled without the reader."""
-
-    model_config = ConfigDict(frozen=True, hide_input_in_errors=True)
-
-    provider: TriageProvider
-    model: str = Field(min_length=1)
-    api_key: SecretStr
-    route_threshold: float = Field(ge=0, le=1, allow_inf_nan=False)
-    timeout: float = Field(gt=0, allow_inf_nan=False)
-
-
 class ProviderConfig(BaseModel):
     """What a reader needs to reach its model. The key is empty only for a model on this Mac or a
     custom service that takes none; `ProviderConfiguration.reader()` enforces that."""
@@ -75,5 +55,3 @@ class ProviderConfig(BaseModel):
     model: str = Field(min_length=1)
     timeout: float = Field(gt=0, allow_inf_nan=False)
     base_url: str | None = None
-    # A decision model in front of the reader, when the owner set one up (ADR-0012).
-    triage: TriageConfig | None = None

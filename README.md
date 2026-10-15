@@ -46,7 +46,7 @@ CopyTrading is a native macOS app that reads the stock calls traders post on Dis
   <tr>
     <td width="33%"><a href="docs/assets/guru.png"><img src="docs/assets/guru.png" alt="A guru who copies into one paper account: today's numbers and every post on one timeline, traded, waiting, or ignored"></a></td>
     <td width="33%"><a href="docs/assets/guru-sheet.png"><img src="docs/assets/guru-sheet.png" alt="A guru's settings: where they post, the one account they copy into with what each call buys, their playbook, and an example"></a></td>
-    <td width="33%"><a href="docs/assets/connections.png"><img src="docs/assets/connections.png" alt="Connections: Discord, the model that reads posts, the optional chat filter, and two paper broker accounts, all connected"></a></td>
+    <td width="33%"><a href="docs/assets/connections.png"><img src="docs/assets/connections.png" alt="Connections: Discord, the model that reads posts, and two paper broker accounts, all connected"></a></td>
   </tr>
   <tr>
     <td align="center"><sub><b>A guru</b>: every post and what came of it</sub></td>

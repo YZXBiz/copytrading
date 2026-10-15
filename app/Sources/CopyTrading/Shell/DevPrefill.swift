@@ -17,8 +17,6 @@
         var alpacaKey: String
         var alpacaSecret: String
         var guruName: String
-        /// The OpenAI key for the chat filter, when the key file has one.
-        var triageAPIKey: String?
 
         enum CodingKeys: String, CodingKey {
             case channelID = "channel_id"
@@ -29,7 +27,6 @@
             case alpacaKey = "alpaca_key"
             case alpacaSecret = "alpaca_secret"
             case guruName = "guru_name"
-            case triageAPIKey = "triage_api_key"
         }
 
         /// What this launch was given; the file is gone after the first read.
@@ -58,10 +55,6 @@
             draft.provider = provider
             draft.modelName = model
             draft.providerAPIKey = providerAPIKey
-            if let triageAPIKey, !triageAPIKey.isEmpty {
-                draft.triage = .openAIDecisions
-                draft.triageAPIKey = triageAPIKey
-            }
             var account = TradingAccountDraft()
             account.key = alpacaKey
             account.secret = alpacaSecret
