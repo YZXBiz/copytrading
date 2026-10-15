@@ -12,14 +12,11 @@ class SignalSourceNotAllowed(ValueError):
     """A valid signal belongs to a source outside this account's allowlist."""
 
 
-class CopyConfig(BaseModel):
-    """Validated startup policy; collections cannot change after validation."""
+class AccountLimits(BaseModel):
+    """The limits an account copies under, defined once: the saved setup (AccountPolicy) and the
+    engine (CopyConfig) both take them from here."""
 
     model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
-    sources: tuple[Annotated[str, Field(pattern=r"^[a-z][a-z0-9_-]*:[a-zA-Z0-9_-]+$")], ...] = (
-        Field(min_length=1)
-    )
-    entry_pricing: EntryPricingPolicy = Field(default_factory=EntryPricingPolicy)
     max_order_usd: Decimal = Field(default=Decimal("100"), gt=0, allow_inf_nan=False)
     max_symbol_usd: Decimal = Field(default=Decimal("600"), gt=0)
     max_total_usd: Decimal = Field(default=Decimal("2500"), gt=0)
@@ -40,3 +37,12 @@ class CopyConfig(BaseModel):
         if self.overnight and not self.extended_hours:
             raise ValueError("Overnight trading requires extended_hours")
         return self
+
+
+class CopyConfig(AccountLimits):
+    """Validated startup policy; collections cannot change after validation."""
+
+    sources: tuple[Annotated[str, Field(pattern=r"^[a-z][a-z0-9_-]*:[a-zA-Z0-9_-]+$")], ...] = (
+        Field(min_length=1)
+    )
+    entry_pricing: EntryPricingPolicy = Field(default_factory=EntryPricingPolicy)

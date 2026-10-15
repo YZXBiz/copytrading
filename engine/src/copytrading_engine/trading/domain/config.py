@@ -2,11 +2,17 @@
 
 import hashlib
 import json
-from decimal import Decimal
 from typing import Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, StrictBool, StrictInt, model_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 
+from copytrading_engine.execution.domain.pricing import (
+    DEFAULT_ABOVE_SIGNAL_PCT,
+    DEFAULT_BELOW_SIGNAL_PCT,
+    AboveSignalPct,
+    BelowSignalPct,
+)
+from copytrading_engine.execution.domain.signals import AccountLimits
 from copytrading_engine.execution.domain.sizing import (
     MAX_REPEAT_WINDOW_MINUTES,
     REPEAT_WINDOW_MINUTES,
@@ -75,31 +81,12 @@ class ProviderConfiguration(BaseModel):
         )
 
 
-class AccountPolicy(BaseModel):
-    """Existing execution policy values, kept explicit for a saved native profile."""
+class AccountPolicy(AccountLimits):
+    """Existing execution policy values, kept explicit for a saved native profile: the account's
+    limits, with entry pricing flat beside them."""
 
-    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
-
-    max_order_usd: Decimal = Field(default=Decimal("100"), gt=0)
-    max_symbol_usd: Decimal = Field(default=Decimal("600"), gt=0)
-    max_total_usd: Decimal = Field(default=Decimal("2500"), gt=0)
-    daily_loss_cap_usd: Decimal = Field(default=Decimal("250"), gt=0)
-    max_entries_per_day: StrictInt = Field(default=30, gt=0)
-    max_signal_age_seconds: StrictInt = Field(default=120, gt=0, le=600)
-    order_timeout_seconds: StrictInt = Field(default=60, gt=0, le=600)
-    poll_seconds: float = Field(default=2, ge=1, le=30)
-    extended_hours: StrictBool = True
-    overnight: StrictBool = False
-    copy_exits: StrictBool = True
-    approve_orders: StrictBool = False
-    max_above_signal_pct: Decimal = Field(default=Decimal("0"), ge=0, le=100)
-    max_below_signal_pct: Decimal = Field(default=Decimal("1"), ge=0, lt=100)
-
-    @model_validator(mode="after")
-    def validate_sessions(self) -> Self:
-        if self.overnight and not self.extended_hours:
-            raise ValueError("overnight trading requires extended hours")
-        return self
+    max_above_signal_pct: AboveSignalPct = DEFAULT_ABOVE_SIGNAL_PCT
+    max_below_signal_pct: BelowSignalPct = DEFAULT_BELOW_SIGNAL_PCT
 
 
 class AccountConfiguration(BaseModel):
