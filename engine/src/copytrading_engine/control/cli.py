@@ -318,6 +318,13 @@ def _words(code: str | None) -> str:
     return "—" if code is None else code.replace("_", " ")
 
 
+def _unavailable(reason: str) -> str:
+    """Why an account could not be shown; an earlier version's history is kept, not broken."""
+    if reason == "earlier_version":
+        return "history kept from an earlier version of CopyTrading"
+    return f"unavailable ({_words(reason)})"
+
+
 def _copying(entry_permission: str) -> str:
     """An account's buy switch in the app's words: Copying is on, or off."""
     return {"enabled": "copying on", "paused": "copying off", "disabled": "copying disabled"}.get(
@@ -432,9 +439,7 @@ def _render_accounts(page: wire.AccountsPage) -> str:
             ]
         if account.ownership_incidents:
             lines.append(f"  {account.ownership_incidents} ownership incident(s) need review")
-    lines += [
-        f"{item.account_id}: unavailable ({_words(item.reason)})" for item in page.unavailable
-    ]
+    lines += [f"{item.account_id}: {_unavailable(item.reason)}" for item in page.unavailable]
     return "\n".join(lines or ["No accounts."]) + "".join(
         "\n" + line for line in _next("--before", page.next_before_account_id)
     )

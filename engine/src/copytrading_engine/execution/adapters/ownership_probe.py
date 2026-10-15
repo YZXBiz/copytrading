@@ -10,7 +10,7 @@ from copytrading_engine.execution.adapters.sqlite_ledger import (
     EXECUTION_SCHEMA,
     decode_ledger_snapshot,
 )
-from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
+from copytrading_engine.execution.domain.ledger_state import is_earlier_version
 from copytrading_engine.execution.domain.order_lifecycle import is_terminal
 from copytrading_engine.shared.sqlite import verify_schema
 
@@ -68,11 +68,7 @@ def _older_snapshot(data: str) -> dict | None:
     snapshot = json.loads(data)
     if not isinstance(snapshot, dict):
         raise ValueError("Execution snapshot is not an object")
-    version = snapshot.get("schema_version")
-    current = LedgerSnapshot.model_fields["schema_version"].default
-    if isinstance(version, int) and 0 < version < current:
-        return snapshot
-    return None
+    return snapshot if is_earlier_version(snapshot.get("schema_version")) else None
 
 
 def _older_holds_work(snapshot: dict) -> bool:

@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 from pydantic import SecretStr
 
+from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
 from copytrading_engine.execution.domain.market import EquityHistory, HistoryWindow, Quote
 from copytrading_engine.execution.presentation.operator_views import AccountUnavailable
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore
@@ -20,6 +21,8 @@ from copytrading_engine.trading.application.account_access import (
 )
 from copytrading_engine.trading.application.operator_service import OperatorQueryService
 from copytrading_engine.trading.application.paused_reader import PausedAccountReader, ReadKeys
+
+from ..execution.builders import as_earlier_version, save_snapshot
 
 
 def _service(data_dir) -> OperatorQueryService:
@@ -51,17 +54,36 @@ async def test_unreadable_retained_account_is_reported_on_the_overview_page(tmp_
     )
 
 
-async def test_unreadable_account_is_reported_on_the_source_activity_page(tmp_path):
+async def test_an_earlier_versions_retained_account_reads_as_kept_history(tmp_path):
+    _earlier_ledger(tmp_path, "archive")
+
+    page = await _service(tmp_path).account_overviews()
+
+    assert page.unavailable_accounts == (
+        AccountUnavailable(account_id="archive", reason="earlier_version"),
+    )
+
+
+def _earlier_ledger(data_dir, account_id: str) -> None:
+    account_dir = data_dir / "accounts" / account_id
+    save_snapshot(account_dir, LedgerSnapshot(account_id=account_id))
+    as_earlier_version(account_dir)
+
+
+@pytest.mark.parametrize(
+    ("ledger", "reason"),
+    [(_corrupt_ledger, "read_failed"), (_earlier_ledger, "earlier_version")],
+    ids=["unreadable", "earlier-version"],
+)
+async def test_an_unshown_account_is_named_on_the_source_activity_page(tmp_path, ledger, reason):
     for opener in (SQLiteSourceStore.open, SQLiteExtractionStore.open):
         store = await opener(tmp_path / "application.db")
         await store.close()
-    _corrupt_ledger(tmp_path, "archive")
+    ledger(tmp_path, "archive")
 
     page = await _service(tmp_path).source_activity(None, 10)
 
-    assert page.unavailable_accounts == (
-        AccountUnavailable(account_id="archive", reason="read_failed"),
-    )
+    assert page.unavailable_accounts == (AccountUnavailable(account_id="archive", reason=reason),)
 
 
 async def test_stalled_owner_read_is_a_timeout_not_an_empty_result(monkeypatch):

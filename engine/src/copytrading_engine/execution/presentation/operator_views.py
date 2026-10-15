@@ -116,7 +116,7 @@ class AccountOverview(Value):
     balance: AccountBalanceView | None
 
 
-type UnavailableReason = Literal["timeout", "read_failed"]
+type UnavailableReason = Literal["timeout", "read_failed", "earlier_version"]
 
 
 class AccountUnavailable(Value):
