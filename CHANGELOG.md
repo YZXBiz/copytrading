@@ -4,6 +4,7 @@ User-visible changes for each release are recorded here. Every GitHub release's 
 
 ## Unreleased
 
+- **Setup Check says which account still holds stocks.** Removing or renaming an account that still holds stocks CopyTrading bought now reads "primary still holds GFS, NVDA, and WMT that CopyTrading bought. Sell them from primary's page, or keep primary in the setup.", with **Open primary** and **Keep primary** beside it. Every removed account is listed once, even when a connection failed too, and the changes bar counts the checks that need attention. An account without Alpaca keys is listed once, under its own name, and check names match Connections (Discord, Interpreter, Alerts, the account's name), in Chinese too.
 - **The chat filter is gone.** It ran a second model (OpenAI's) in front of the interpreter on every post, added about 0.2 s to every real call, and saved only cents a day. The interpreter now reads every post, as it did before the filter. Connections loses its "Chat filter" step and its OpenAI key, Activity's Technical details lose the "Chat filter" line, and a setup saved with the filter on opens as it was, with the filter dropped. Its OpenAI key is no longer used; you can delete the key from your OpenAI account.
 
 ## 0.1.0-alpha.11 — developer preview

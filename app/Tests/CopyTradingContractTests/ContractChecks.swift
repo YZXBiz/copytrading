@@ -31,6 +31,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
     case fillWatch = "fill notifications"
     case positionStory = "position story"
     case liveQuote = "live quote"
+    case setupCheckProblems = "setup check problems"
 
     var testDescription: String { rawValue }
 
@@ -64,6 +65,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
         case .fillWatch: try runFillWatchTests()
         case .positionStory: try runPositionStoryTests()
         case .liveQuote: try runLiveQuoteTests()
+        case .setupCheckProblems: try runSetupCheckProblemTests()
         }
     }
 }

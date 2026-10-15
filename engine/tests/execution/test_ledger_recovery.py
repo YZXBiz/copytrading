@@ -285,7 +285,7 @@ def test_late_sell_overflow_is_quarantined_atomically_cumulatively_and_reloaded(
 
 
 def test_released_fill_then_competing_close_fill_is_quarantined_and_reloaded(tmp_path):
-    from copytrading_engine.execution.adapters.ownership_probe import has_unresolved_ownership
+    from copytrading_engine.execution.adapters.ownership_probe import unsettled_ownership
     from copytrading_engine.execution.application.recovery import RecoveryApplication
     from copytrading_engine.execution.domain.ownership import OwnershipResolutionRequest
 
@@ -496,7 +496,7 @@ def test_released_fill_then_competing_close_fill_is_quarantined_and_reloaded(tmp
     )
     account_dir = tmp_path / "paper-demo"
     save_snapshot(account_dir, cleared_restart.ledger.snapshot())
-    assert not has_unresolved_ownership(account_dir)
+    assert unsettled_ownership(account_dir) is None
 
     after_clear = NOW + dt.timedelta(minutes=17)
     new_entry = event("after-clear", timestamp=after_clear)

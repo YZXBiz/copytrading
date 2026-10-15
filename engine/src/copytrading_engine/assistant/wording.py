@@ -108,6 +108,8 @@ REASONS = {
     "repeats_a_recent_call": "A re-post of a call already copied",
     "approved_by_owner": "You approved this call",
     "waiting_expired": "Too late to copy: its trading day is over",
+    "account_ownership_pending": "An account you removed still holds what CopyTrading bought",
+    "routing_change_pending": "Posts were still being read or sent",
 }
 
 # Outcomes the app shows with its own words rather than through Reason.

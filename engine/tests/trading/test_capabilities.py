@@ -181,6 +181,32 @@ def test_one_failed_capability_keeps_configuration_nonactivatable():
     assert any(item.name == "broker" and item.state == "failed" for item in report.checks)
 
 
+def test_each_key_problem_is_listed_once_and_names_its_account():
+    """An account without keys is its own broker row, not a second, nameless setup row too; keys
+    for an account the setup no longer has name that account."""
+    secrets = _secrets().model_dump()
+    secrets["brokers"] = [
+        {"account_id": "paper-account", "key": "paper-key", "secret": "paper-secret"},
+        {"account_id": "primary", "key": "old-key", "secret": "old-secret"},
+    ]
+    report = asyncio.run(
+        TradingCapabilityService(_fakes()).validate(
+            _configuration(), TradingSecrets.model_validate(secrets)
+        )
+    )
+
+    failed = [
+        (item.name, item.subject, item.reason_code)
+        for item in report.checks
+        if item.state == "failed"
+    ]
+    assert sorted(failed) == [
+        ("broker", "live-account", "broker_credentials_missing"),
+        ("configuration", "primary", "broker_keys_without_account"),
+    ]
+    assert report.activatable is False
+
+
 def test_validation_never_sends_a_notification_message():
     probes = _fakes(notification=True)
     report = asyncio.run(

@@ -18,7 +18,9 @@ struct SetupCheckSheet: View {
             if let report = model.tradingValidation?.report {
                 ValidationResultsSection(
                     report: report, modelName: model.setupDraft.modelName,
-                    useModel: { model.setupDraft.modelName = $0 })
+                    useModel: { model.setupDraft.modelName = $0 },
+                    accountPages: Set(model.savedTradingConfiguration?.accounts.map(\.id) ?? []),
+                    openAccount: model.openAccountFromSetupCheck, keepAccount: model.keepAccount)
             }
             if model.profileExampleReviews.isEmpty && model.tradingValidation == nil {
                 InkEmptyState(

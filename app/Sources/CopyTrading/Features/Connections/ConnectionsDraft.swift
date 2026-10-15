@@ -79,7 +79,7 @@ struct ConnectionsDraft {
         modelName = saved.provider.model
         providerBaseURL = saved.provider.baseURL ?? ""
         accounts = saved.accounts.map {
-            TradingAccountDraft(name: $0.id, environment: $0.environment, policy: $0.policy)
+            TradingAccountDraft(name: $0.id, environment: $0.environment, policy: $0.policy, savedName: $0.id)
         }
         let profileByRevision = Dictionary(
             uniqueKeysWithValues: saved.profiles.map { ($0.profileRevision, $0) }

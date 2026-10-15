@@ -7,9 +7,14 @@ from contextlib import asynccontextmanager
 
 import pytest
 
+from copytrading_engine.execution.adapters.ownership_probe import UnsettledOwnership
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore
 from copytrading_engine.shared.raw_message import RawMessage
 from copytrading_engine.sources.sqlite import SQLiteSourceStore
+from copytrading_engine.trading.adapters.capabilities import (
+    CapabilityCheck,
+    TradingCapabilityReport,
+)
 from copytrading_engine.trading.adapters.routing import (
     AccountOwnershipPending,
     RoutingChangePending,
@@ -265,21 +270,77 @@ async def test_account_removal_requires_settled_execution_ownership(tmp_path, mo
     try:
         await guard.accept(trading_configuration())
         replacement = trading_configuration("first")
+        held = UnsettledOwnership(symbols=("GFS", "NVDA", "WMT"))
         monkeypatch.setattr(
-            "copytrading_engine.trading.adapters.routing.has_unresolved_ownership",
-            lambda path: True,
+            "copytrading_engine.trading.adapters.routing.unsettled_ownership", lambda path: held
         )
-        with pytest.raises(AccountOwnershipPending):
+        with pytest.raises(AccountOwnershipPending) as pending:
             await guard.accept(replacement)
+        assert pending.value.accounts == (("second", held),)
         monkeypatch.setattr(
-            "copytrading_engine.trading.adapters.routing.has_unresolved_ownership",
-            lambda path: False,
+            "copytrading_engine.trading.adapters.routing.unsettled_ownership", lambda path: None
         )
         await guard.accept(replacement)
     finally:
         await guard.close()
         await parser.close()
         await source.close()
+
+
+async def test_setup_check_names_each_removed_account_and_what_it_holds(tmp_path, monkeypatch):
+    """Each removed account that still holds something is one Configuration row, naming the
+    account and the stocks, so the owner knows which account to settle and how."""
+    held = {
+        "first": UnsettledOwnership(symbols=("GFS", "NVDA", "WMT"), order_symbols=("AAPL",)),
+        "second": UnsettledOwnership(order_symbols=("AAPL",)),
+        "review": UnsettledOwnership(needs_review=True),
+    }
+
+    def probe(path):
+        if path.name == "broken":
+            raise RuntimeError("Execution ownership state is unreadable")
+        return held.get(path.name)
+
+    monkeypatch.setattr("copytrading_engine.trading.adapters.routing.unsettled_ownership", probe)
+    for account_id in ("first", "second", "review", "broken", "settled"):
+        (tmp_path / "accounts" / account_id).mkdir(parents=True)
+
+    class _DiscordFails:
+        """A failed connection doesn't hide the setup's own problems: all show in one check."""
+
+        async def validate(self, config, secrets):
+            return TradingCapabilityReport(
+                configuration_revision=config.revision(),
+                activatable=False,
+                checks=(
+                    CapabilityCheck(
+                        name="source",
+                        state="failed",
+                        adapter="discord",
+                        reason_code="source_identity_unavailable",
+                    ),
+                ),
+                cost_notice="synthetic test",
+            )
+
+    runtime = TradingRuntime(tmp_path, capability_service=_DiscordFails())
+    try:
+        report = await runtime.validate(
+            trading_configuration("third"), trading_secrets_for("third")
+        )
+    finally:
+        await runtime.shutdown()
+
+    assert not report.activatable
+    assert [
+        (check.name, check.subject, check.reason_code, check.symbols) for check in report.checks
+    ] == [
+        ("source", None, "source_identity_unavailable", ()),
+        ("configuration", "broken", "removed_account_unreadable", ()),
+        ("configuration", "first", "removed_account_holds_shares", ("GFS", "NVDA", "WMT")),
+        ("configuration", "review", "removed_account_needs_review", ()),
+        ("configuration", "second", "removed_account_has_open_orders", ("AAPL",)),
+    ]
 
 
 class _SlowClosingOwner(Owner):

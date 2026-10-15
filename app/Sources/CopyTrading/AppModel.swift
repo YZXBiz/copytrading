@@ -1815,7 +1815,7 @@ final class AppModel {
     }
 
     static func failedChecksMessage(_ report: TradingCapabilityReport) -> String {
-        let failed = report.checks.filter { $0.state == .failed }.map(\.title)
+        let failed = report.checks.filter { $0.state == .failed }.map(CapabilityCheckTitle.text(for:))
         guard !failed.isEmpty else { return L10n.string("A required connection check failed. Processing remains paused.") }
         let names = L10n.list(failed)
         return L10n.string(

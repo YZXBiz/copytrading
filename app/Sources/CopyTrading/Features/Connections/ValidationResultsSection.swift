@@ -7,19 +7,37 @@ struct ValidationResultsSection: View {
     var modelName = ""
     /// Puts a suggested model name into the setup.
     var useModel: (String) -> Void = { _ in }
+    /// Accounts with a page to open: the saved ones.
+    var accountPages: Set<String> = []
+    /// Opens an account's page, where what it holds can be sold.
+    var openAccount: (String) -> Void = { _ in }
+    /// Puts a removed account back in the setup, as it was saved.
+    var keepAccount: (String) -> Void = { _ in }
 
     var body: some View {
         SheetSection(L10n.string("Connection checks")) {
             ForEach(report.checks) { check in
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(L10n.string(check.title))
+                        Text(CapabilityCheckTitle.text(for: check))
                             .font(DesignTokens.rowTitle)
                             .foregroundStyle(Palette.ink)
                         if let detail = detail(for: check) {
                             Text(detail)
                                 .font(DesignTokens.caption)
                                 .foregroundStyle(check.state == .failed ? StatusTone.critical.color : Palette.tertiaryInk)
+                        }
+                        if let account = removedAccount(check) {
+                            HStack(spacing: 16) {
+                                if accountPages.contains(account), check.reasonCode != "removed_account_unreadable" {
+                                    Button(L10n.string("Open %@", account)) { openAccount(account) }
+                                        .accessibilityIdentifier("setupCheck.openAccount.\(account)")
+                                }
+                                Button(L10n.string("Keep %@", account)) { keepAccount(account) }
+                                    .accessibilityIdentifier("setupCheck.keepAccount.\(account)")
+                            }
+                            .buttonStyle(SheetQuietButtonStyle())
+                            .padding(.top, 4)
                         }
                         if let suggestion = check.suggestion {
                             HStack(spacing: 8) {
@@ -44,6 +62,15 @@ struct ValidationResultsSection: View {
         } footer: {
             Text(L10n.string(report.costNotice))
         }
+    }
+
+    /// The saved account a failed setup check says still holds something, so it can be opened
+    /// or kept.
+    private func removedAccount(_ check: TradingCapabilityCheck) -> String? {
+        guard check.name == .configuration, check.state == .failed,
+            check.reasonCode?.hasPrefix("removed_account_") == true
+        else { return nil }
+        return check.subject
     }
 
     /// What a check found, in words: never the engine's raw identity string.

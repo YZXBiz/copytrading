@@ -8,14 +8,17 @@ struct TradingAccountDraft: Identifiable {
     var policy: TradingAccountPolicy
     var key = ""
     var secret = ""
+    /// The name the account is saved under, so a rename can be undone; nil for a new account.
+    let savedName: String?
 
     init(
         name: String = "primary", environment: TradingEnvironment = .paper,
-        policy: TradingAccountPolicy = .init()
+        policy: TradingAccountPolicy = .init(), savedName: String? = nil
     ) {
         self.name = name
         self.environment = environment
         self.policy = policy
+        self.savedName = savedName
     }
 }
 

@@ -7,7 +7,10 @@ from decimal import Decimal
 
 import pytest
 
-from copytrading_engine.execution.adapters.ownership_probe import has_unresolved_ownership
+from copytrading_engine.execution.adapters.ownership_probe import (
+    UnsettledOwnership,
+    unsettled_ownership,
+)
 from copytrading_engine.execution.domain.ledger_state import (
     CashAnchor,
     LedgerSnapshot,
@@ -93,9 +96,9 @@ def _order(message: MessageRecord, status: OrderStatus) -> OrderRecord:
 
 def test_missing_ledger_and_settled_snapshot_are_safe(tmp_path):
     account_dir = tmp_path / "paper-demo"
-    assert not has_unresolved_ownership(account_dir)
+    assert unsettled_ownership(account_dir) is None
     save_snapshot(account_dir, LedgerSnapshot(account_id="paper-demo"))
-    assert not has_unresolved_ownership(account_dir)
+    assert unsettled_ownership(account_dir) is None
 
 
 def test_queued_message_blocks_account_removal(tmp_path):
@@ -134,7 +137,7 @@ def test_queued_message_blocks_account_removal(tmp_path):
     save_snapshot(
         account_dir, LedgerSnapshot(account_id="paper-demo", messages={message.key: message})
     )
-    assert has_unresolved_ownership(account_dir)
+    assert unsettled_ownership(account_dir) == UnsettledOwnership(needs_review=True)
 
 
 def test_nonterminal_order_blocks_account_removal(tmp_path):
@@ -149,7 +152,7 @@ def test_nonterminal_order_blocks_account_removal(tmp_path):
             orders={order.client_id: order},
         ),
     )
-    assert has_unresolved_ownership(account_dir)
+    assert unsettled_ownership(account_dir) == UnsettledOwnership(order_symbols=("ABC",))
 
 
 def test_remaining_app_owned_lot_blocks_account_removal(tmp_path):
@@ -175,7 +178,7 @@ def test_remaining_app_owned_lot_blocks_account_removal(tmp_path):
             lots={order.client_id: lot},
         ),
     )
-    assert has_unresolved_ownership(account_dir)
+    assert unsettled_ownership(account_dir) == UnsettledOwnership(symbols=("ABC",))
 
 
 @pytest.mark.parametrize("corruption", ["bad_json", "unknown_snapshot", "unknown_schema"])
@@ -193,7 +196,7 @@ def test_corrupt_or_unknown_state_fails_closed(tmp_path, corruption):
                 "WHERE component='execution'"
             )
     with pytest.raises(RuntimeError):
-        has_unresolved_ownership(account_dir)
+        unsettled_ownership(account_dir)
 
 
 def test_terminal_order_without_position_is_settled(tmp_path):
@@ -208,7 +211,7 @@ def test_terminal_order_without_position_is_settled(tmp_path):
             orders={order.client_id: order},
         ),
     )
-    assert not has_unresolved_ownership(account_dir)
+    assert unsettled_ownership(account_dir) is None
 
 
 def test_external_inventory_alone_does_not_claim_app_owned_shares(tmp_path):
@@ -220,7 +223,7 @@ def test_external_inventory_alone_does_not_claim_app_owned_shares(tmp_path):
             external_positions={"ABC": ExternalPosition(symbol="ABC", qty=Decimal(100))},
         ),
     )
-    assert not has_unresolved_ownership(account_dir)
+    assert unsettled_ownership(account_dir) is None
 
 
 def test_snapshot_environment_mismatch_fails_closed_on_removal(tmp_path):
@@ -229,7 +232,7 @@ def test_snapshot_environment_mismatch_fails_closed_on_removal(tmp_path):
     with closing(sqlite3.connect(account_dir / "execution.sqlite3")) as db, db:
         db.execute("UPDATE identity SET environment='live' WHERE singleton=1")
     with pytest.raises(RuntimeError, match="identity"):
-        has_unresolved_ownership(account_dir)
+        unsettled_ownership(account_dir)
 
 
 def test_open_ownership_incident_blocks_account_removal(tmp_path):
@@ -250,7 +253,7 @@ def test_open_ownership_incident_blocks_account_removal(tmp_path):
             },
         ),
     )
-    assert has_unresolved_ownership(account_dir)
+    assert unsettled_ownership(account_dir) == UnsettledOwnership(needs_review=True)
 
 
 def test_unreadable_existing_database_fails_closed(tmp_path):
@@ -258,7 +261,7 @@ def test_unreadable_existing_database_fails_closed(tmp_path):
     account_dir.mkdir()
     (account_dir / "execution.sqlite3").write_bytes(b"not a database")
     with pytest.raises(RuntimeError, match="unreadable"):
-        has_unresolved_ownership(account_dir)
+        unsettled_ownership(account_dir)
 
 
 def test_an_empty_account_from_an_older_version_does_not_block_setup(tmp_path):
@@ -266,22 +269,28 @@ def test_an_empty_account_from_an_older_version_does_not_block_setup(tmp_path):
     save_snapshot(account_dir, LedgerSnapshot(account_id="paper-demo"))
     as_earlier_version(account_dir)
 
-    assert not has_unresolved_ownership(account_dir)
+    assert unsettled_ownership(account_dir) is None
 
 
 @pytest.mark.parametrize(
-    "contents",
+    ("contents", "held"),
     [
-        {"lots": {"buy-1": {"symbol": "ABC", "remaining_qty": "1"}}},
-        {"orders": {"buy-1": {"status": "accepted"}}},
-        {"messages": {"m-1": {"status": "queued"}}},
-        {"lots": {"buy-1": {"symbol": "ABC"}}},
+        (
+            {"lots": {"buy-1": {"symbol": "ABC", "remaining_qty": "1"}}},
+            UnsettledOwnership(symbols=("ABC",)),
+        ),
+        (
+            {"orders": {"buy-1": {"symbol": "ABC", "status": "accepted"}}},
+            UnsettledOwnership(order_symbols=("ABC",)),
+        ),
+        ({"messages": {"m-1": {"status": "queued"}}}, UnsettledOwnership(needs_review=True)),
+        ({"lots": {"buy-1": {"symbol": "ABC"}}}, UnsettledOwnership(needs_review=True)),
     ],
     ids=["shares", "open-order", "post-being-copied", "unreadable"],
 )
-def test_an_older_versions_account_holding_anything_still_blocks(tmp_path, contents):
+def test_an_older_versions_account_holding_anything_still_blocks(tmp_path, contents, held):
     account_dir = tmp_path / "paper-demo"
     save_snapshot(account_dir, LedgerSnapshot(account_id="paper-demo"))
     as_earlier_version(account_dir, **contents)
 
-    assert has_unresolved_ownership(account_dir)
+    assert unsettled_ownership(account_dir) == held

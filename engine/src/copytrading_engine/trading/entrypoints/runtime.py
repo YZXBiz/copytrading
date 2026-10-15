@@ -330,7 +330,9 @@ class TradingRuntime:
                     reason_code="pause_before_configuration_change",
                 )
             )
-        elif report.activatable:
+        else:
+            # The setup's own checks read local records only, so they run even when a connection
+            # failed: every problem shows in the one check, not one after another.
             source = None
             parser = None
             routing = None
@@ -349,15 +351,8 @@ class TradingRuntime:
                         reason_code="routing_change_pending",
                     )
                 )
-            except AccountOwnershipPending:
-                failures.append(
-                    CapabilityCheck(
-                        name="configuration",
-                        state="failed",
-                        adapter="routing_revision",
-                        reason_code="account_ownership_pending",
-                    )
-                )
+            except AccountOwnershipPending as pending:
+                failures.extend(_ownership_checks(pending))
             except Exception:  # noqa: BLE001 - configuration errors become a failed capability check
                 failures.append(
                     CapabilityCheck(
@@ -912,6 +907,33 @@ class TradingRuntime:
             for account in self._accounts.values():
                 if account.owner is not None:
                     account.owner.request_stop()
+
+
+def _ownership_checks(pending: AccountOwnershipPending) -> tuple[CapabilityCheck, ...]:
+    """One check per removed account that still holds something of CopyTrading's, naming the
+    account and the stocks: shares first, since selling them settles it; then unfinished orders;
+    then anything else its page asks the owner to settle."""
+    checks = []
+    for account_id, held in pending.accounts:
+        if held is None:
+            reason, symbols = "removed_account_unreadable", ()
+        elif held.symbols:
+            reason, symbols = "removed_account_holds_shares", held.symbols
+        elif held.order_symbols:
+            reason, symbols = "removed_account_has_open_orders", held.order_symbols
+        else:
+            reason, symbols = "removed_account_needs_review", ()
+        checks.append(
+            CapabilityCheck(
+                name="configuration",
+                state="failed",
+                subject=account_id,
+                adapter="routing_revision",
+                reason_code=reason,
+                symbols=symbols,
+            )
+        )
+    return tuple(checks)
 
 
 def _copy_policy(configuration: TradingConfiguration, account_id: str) -> CopyConfig:
