@@ -1,13 +1,11 @@
 """Offline, broker-verified operator recovery for the execution ledger."""
 
 import datetime as dt
-from collections import defaultdict
 from collections.abc import Callable
 from decimal import Decimal
 
 from copytrading_engine.execution.application.ledger import TradingLedger
 from copytrading_engine.execution.application.ports import Broker
-from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
 from copytrading_engine.execution.domain.market import Account, Position
 from copytrading_engine.execution.domain.order_lifecycle import OrderStatus, is_terminal
 from copytrading_engine.execution.domain.ownership import (
@@ -72,7 +70,7 @@ class RecoveryApplication:
             external_positions=tuple(snapshot.external_positions.values()),
             incidents=tuple(snapshot.ownership_incidents.values()),
             broker_positions=positions,
-            expected_quantities=self._expected_positions(snapshot),
+            expected_quantities=snapshot.expected_holdings,
             account_risk_status=risk_status,
             account_risk_reason=risk_reason,
             total_exposure_usd=total_exposure,
@@ -112,7 +110,7 @@ class RecoveryApplication:
         ):
             raise ValueError("A matching broker order is still open")
         actual = self._position_map(self._broker.positions())
-        expected_qty = self._expected_positions(snapshot).get(order.symbol, Decimal(0))
+        expected_qty = snapshot.expected_holdings.get(order.symbol, Decimal(0))
         if actual.get(order.symbol, Decimal(0)) != expected_qty:
             raise ValueError("Broker position does not exactly match the saved ledger position")
 
@@ -142,7 +140,7 @@ class RecoveryApplication:
         if self._broker.open_orders():
             raise ValueError("Broker has open orders; verify the account before recording a sale")
 
-        expected = self._expected_positions(snapshot)
+        expected = snapshot.expected_holdings
         existing = snapshot.manual_sales.get(sale.order.id)
         if existing is None:
             expected[sale.order.symbol] = (
@@ -236,7 +234,7 @@ class RecoveryApplication:
             raise ValueError("Open orders prevent a reliable incident position audit")
 
         actual = self._position_map(self._broker.positions())
-        expected = self._expected_positions(refreshed)
+        expected = refreshed.expected_holdings
         if not self._positions_equal(expected, actual):
             raise ValueError("Fresh broker positions do not exactly match ledger-owned positions")
         checked_at = self._clock()
@@ -278,20 +276,6 @@ class RecoveryApplication:
                 raise ValueError("Broker returned duplicate position symbols")
             result[position.symbol] = position.qty
         return result
-
-    @staticmethod
-    def _owned_positions(snapshot: LedgerSnapshot) -> dict[str, Decimal]:
-        expected: dict[str, Decimal] = defaultdict(Decimal)
-        for lot in snapshot.lots.values():
-            expected[lot.symbol] += lot.remaining_qty
-        return dict(expected)
-
-    @classmethod
-    def _expected_positions(cls, snapshot: LedgerSnapshot) -> dict[str, Decimal]:
-        expected = cls._owned_positions(snapshot)
-        for position in snapshot.external_positions.values():
-            expected[position.symbol] = expected.get(position.symbol, Decimal(0)) + position.qty
-        return expected
 
     @staticmethod
     def _positions_equal(expected: dict[str, Decimal], actual: dict[str, Decimal]) -> bool:

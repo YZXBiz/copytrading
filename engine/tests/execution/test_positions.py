@@ -129,3 +129,30 @@ def test_position_read_failure_cannot_be_a_successful_idle_cycle(copier):
     broker.positions = unavailable
     with pytest.raises(BrokerError):
         cycle(engine, NOW, halted=False)
+
+
+def test_every_check_of_the_brokers_count_expects_the_same_shares():
+    """What the broker should hold, copied lots plus the owner's own shares, was worked out in
+    four places (the ledger, the holdings audit, operator recovery, restore); they now share one
+    rule, so they cannot drift apart."""
+    from copytrading_engine.execution.application.recovery import RecoveryApplication
+    from copytrading_engine.execution.domain.positions import expected_holdings
+
+    broker = FakeBroker()
+    broker.holdings = {"ABC": Decimal("2")}
+    engine = CopyEngine(MemoryRepository(), broker, CopyConfig(sources=["discord:demo"]))
+    engine.bind(NOW)
+    deliver(engine, event())
+    snapshot = engine.ledger.snapshot()
+
+    expected = {"ABC": Decimal("6")}
+    assert expected_holdings(snapshot.lots.values(), snapshot.external_positions.values()) == (
+        expected
+    )
+    assert snapshot.expected_holdings == expected
+    assert engine.ledger.expected_position("ABC") == Decimal("6")
+    assert engine.ledger.expected_position("XYZ") == 0
+    [comparison] = engine.audit_positions().positions
+    assert (comparison.symbol, comparison.expected, comparison.actual) == ("ABC", 6, 6)
+    inspection = RecoveryApplication(engine.ledger, broker).inspect_ownership()
+    assert inspection.expected_quantities == expected

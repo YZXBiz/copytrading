@@ -1,6 +1,7 @@
 """Compare broker holdings with filled lots, allowing only known in-flight fills."""
 
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
 from decimal import Decimal
 
@@ -48,20 +49,28 @@ class PositionAudit:
         }
 
 
+def expected_holdings(
+    lots: Iterable[OwnedLot], external: Iterable[ExternalPosition]
+) -> dict[str, Decimal]:
+    """The shares the broker should hold of each stock: what the copied lots have left plus the
+    owner's own. Stocks with none are left out. Every check of the broker's count uses this."""
+    expected: dict[str, Decimal] = defaultdict(Decimal)
+    for lot in lots:
+        expected[lot.symbol] += lot.remaining_qty
+    for holding in external:
+        expected[holding.symbol] += holding.qty
+    return {symbol: qty for symbol, qty in expected.items() if qty}
+
+
 def compare_positions(
     lots: tuple[OwnedLot, ...],
     pending: tuple[OrderRecord, ...],
     positions: tuple[Position, ...],
     external: tuple[ExternalPosition, ...] = (),
 ) -> PositionAudit:
-    expected: dict[str, Decimal] = defaultdict(Decimal)
+    expected: dict[str, Decimal] = defaultdict(Decimal, expected_holdings(lots, external))
     buys: dict[str, Decimal] = defaultdict(Decimal)
     sells: dict[str, Decimal] = defaultdict(Decimal)
-    for lot in lots:
-        if lot.remaining_qty:
-            expected[lot.symbol] += lot.remaining_qty
-    for holding in external:
-        expected[holding.symbol] += holding.qty
     for order in pending:
         # Prepared orders have not reached Alpaca and cannot explain a difference.
         if order.pending and order.submit_started_at is not None:
