@@ -53,7 +53,7 @@ struct PlaybookSection: View {
                 .accessibilityIdentifier("playbook.text")
             Text(L10n.string("%@ of %@ characters", route.playbook.count.formatted(), tradingPlaybookMaxLength.formatted()))
                 .font(DesignTokens.caption)
-                .foregroundStyle(route.playbook.count > tradingPlaybookMaxLength ? .red : Palette.tertiaryInk)
+                .foregroundStyle(route.playbook.count > tradingPlaybookMaxLength ? Palette.loss : Palette.tertiaryInk)
                 .monospacedDigit()
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .padding(.top, 6)

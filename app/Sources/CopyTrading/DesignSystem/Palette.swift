@@ -29,7 +29,7 @@ enum Palette {
     /// Row labels and body text (#47494B).
     static let secondaryInk = dynamic(light: rgb(0x47494B), dark: rgb(0xC5C5C8))
     /// Captions, column headers, and icons (#858687).
-    static let tertiaryInk = dynamic(light: rgb(0x5F6064), dark: rgb(0x8E8E93))
+    static let tertiaryInk = dynamic(light: rgb(0x5F6064), dark: rgb(0x96969B))
     /// Links, switches, and a screen's one primary action.
     static let accent = Color(red: 0.204, green: 0.471, blue: 0.965)
     /// What waits on the owner: a count beside a heading, a guru with calls to answer.
@@ -45,7 +45,16 @@ enum Palette {
     static let blush = dynamic(light: rgb(0xF3B4A2), dark: rgb(0xD98F7C))
     /// Sky: it is out with the broker, waiting on the market.
     static let sky = dynamic(light: rgb(0xB7D3EE), dark: rgb(0x86A9CC))
-    static let amber = dynamic(light: rgb(0xB8860B), dark: rgb(0xF5C04A))
+    /// Text and marks that carry a meaning keep WCAG AA (4.5:1) on every surface they sit on:
+    /// the system green, red, and orange measure 2.1, 3.6, and 2.2 to 1 on white.
+    /// A call waiting for the owner.
+    static let amber = dynamic(light: rgb(0x8B6508), dark: rgb(0xF5C04A))
+    /// Money up, and a status that went through.
+    static let gain = dynamic(light: rgb(0x187C27), dark: rgb(0x32D74B))
+    /// Money down, and a status that failed or stops something.
+    static let loss = dynamic(light: rgb(0xD80B00), dark: rgb(0xFF6057))
+    /// A live account's real money, and a status that wants a look.
+    static let live = dynamic(light: rgb(0x9D5C00), dark: rgb(0xFF9F0A))
 
     private static func rgb(_ hex: Int) -> NSColor {
         NSColor(
