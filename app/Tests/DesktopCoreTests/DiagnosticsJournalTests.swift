@@ -11,6 +11,27 @@ func runDiagnosticsJournalTests() throws {
     try settingsRoundTripAndRejectUnsupportedValues(root)
     try journalReadsNewestFirstAcrossRotations(root)
     try journalSkipsDamagedLinesAndReadsPayloads(root)
+    try theFingerprintChangesOnlyWhenTheJournalDoes(root)
+}
+
+/// The Diagnostics page polls every few seconds and reads the journal only when this changes.
+private func theFingerprintChangesOnlyWhenTheJournalDoes(_ root: URL) throws {
+    let directory = root.appending(path: "fingerprint", directoryHint: .isDirectory)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let journal = DiagnosticsJournal(directory: directory)
+    try #require(journal.fingerprint().isEmpty, "a journal with no files has a fingerprint")
+    let file = directory.appending(path: DiagnosticsJournal.fileName)
+    try Data((line("trading", at: "2026-10-15T20:00:00.000+00:00", #""operation":"workflow","outcome":"returned""#) + "\n").utf8)
+        .write(to: file)
+    let first = journal.fingerprint()
+    try #require(journal.fingerprint() == first, "an untouched journal changed its fingerprint")
+    let handle = try FileHandle(forWritingTo: file)
+    try handle.seekToEnd()
+    try handle.write(
+        contentsOf: Data(
+            (line("trading", at: "2026-10-15T20:00:01.000+00:00", #""operation":"workflow","outcome":"returned""#) + "\n").utf8))
+    try handle.close()
+    try #require(journal.fingerprint() != first, "a new record left the fingerprint as it was")
 }
 
 private func settingsRoundTripAndRejectUnsupportedValues(_ root: URL) throws {

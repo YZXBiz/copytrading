@@ -33,7 +33,7 @@ struct AccountPageWaiting: View {
                     .accessibilityAddTraits(.isHeader)
                 if let configuration {
                     Text(L10n.string(configuration.environment == .live ? "Live" : "Paper"))
-                        .foregroundStyle(configuration.environment == .live ? Color.orange : Palette.tertiaryInk)
+                        .foregroundStyle(configuration.environment == .live ? Palette.live : Palette.tertiaryInk)
                         .font(DesignTokens.lede)
                         .tracking(DesignTokens.ledeTracking)
                 }

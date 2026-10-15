@@ -20,8 +20,8 @@ enum ChangeDirection {
 
     var color: Color {
         switch self {
-        case .up: .green
-        case .down: .red
+        case .up: Palette.gain
+        case .down: Palette.loss
         case .flat: .secondary
         }
     }

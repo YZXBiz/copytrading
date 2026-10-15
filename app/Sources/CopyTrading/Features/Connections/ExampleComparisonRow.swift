@@ -53,7 +53,7 @@ struct ExampleComparisonRow: View {
             ForEach(example.reviewReasons, id: \.self) { reason in
                 Text(Reason.text(reason))
                     .font(.callout)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Palette.live)
             }
         }
         .padding(.vertical, 10)

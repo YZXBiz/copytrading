@@ -125,6 +125,8 @@ final class AppModel {
     var diagnosticsSettingsWarning: String?
     var diagnosticsEntries: [DiagnosticsJournalEntry] = []
     var diagnosticsJournalBytes: Int64 = 0
+    /// The journal files as last read; a reload with the same fingerprint parses nothing.
+    @ObservationIgnored private var diagnosticsFingerprint: [String]?
     var diagnosticsJournalMessage: String?
     var isLoadingDiagnostics = false
     var isRunningBackupRestore = false
@@ -666,6 +668,7 @@ final class AppModel {
             let identity = try paths.installationIdentity()
             diagnosticsSettingsStore = DiagnosticsSettingsStore(url: paths.logsDirectory.appending(path: "settings.json"))
             diagnosticsJournal = DiagnosticsJournal(directory: paths.logsDirectory)
+            diagnosticsFingerprint = nil
             loadDiagnosticsSettings()
             let selectedDiagnosticsSettings = diagnosticsSettings
             appliedDiagnosticsSettings = selectedDiagnosticsSettings
@@ -933,12 +936,19 @@ final class AppModel {
         isLoadingDiagnostics = true
         defer { isLoadingDiagnostics = false }
         let journal = diagnosticsJournal
+        let previous = diagnosticsFingerprint
         do {
-            let (entries, bytes) = try await Task.detached(priority: .userInitiated) {
-                (try journal.entries(), journal.usageBytes())
+            // The page polls every few seconds; an unchanged journal is not read or parsed again.
+            let read = try await Task.detached(priority: .userInitiated) {
+                () -> (fingerprint: [String], entries: [DiagnosticsJournalEntry], bytes: Int64)? in
+                let fingerprint = journal.fingerprint()
+                guard fingerprint != previous else { return nil }
+                return (fingerprint, try journal.entries(), journal.usageBytes())
             }.value
-            diagnosticsEntries = entries
-            diagnosticsJournalBytes = bytes
+            guard let read else { return }
+            diagnosticsFingerprint = read.fingerprint
+            diagnosticsEntries = read.entries
+            diagnosticsJournalBytes = read.bytes
             diagnosticsJournalMessage = nil
         } catch {
             diagnosticsJournalMessage = Self.userMessage(for: error)

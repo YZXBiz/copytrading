@@ -26,6 +26,9 @@ struct TrackedSwitcher<Choice: Hashable & Identifiable>: View {
                 // A switcher has at most a handful of choices, so each gets a digit.
                 .keyboardShortcut(KeyEquivalent(Character(String(index + 1))), modifiers: .control)
                 .help(L10n.string("%@ (Control-%lld)", L10n.string(title(choice)), Int64(index + 1)))
+                // Spoken as the choice's name, its count as the value, not the capitals drawn.
+                .accessibilityLabel(L10n.string(title(choice)))
+                .accessibilityValue(count(choice) > 0 ? count(choice).formatted() : "")
                 .accessibilityAddTraits(choice == selection ? [.isButton, .isSelected] : .isButton)
                 .accessibilityIdentifier("\(identifier).\(choice.id)")
             }
