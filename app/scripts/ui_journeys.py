@@ -334,7 +334,12 @@ class AppDriver:
                     time.sleep(1)
                     continue
                 # Navigation can race a capture in progress; Peekaboo asks for one fresh retry.
-                transient = ("inconsistent response", "AX tree incomplete")
+                transient = (
+                    "inconsistent response",
+                    "AX tree incomplete",
+                    "window changed while",
+                    "target changed during capture",
+                )
                 if not any(text in str(error) for text in transient) or attempt == 2:
                     raise
                 time.sleep(1)
@@ -1338,7 +1343,10 @@ def j31_agent_approval(app: AppDriver) -> None:
         raise JourneyFailure(f"the rejected request ended {rejected['state']}")
     after = _wait_for_account(app, "primary", timeout=5)
     if after["entry_permission"] != before["entry_permission"]:
-        raise JourneyFailure("a rejected resume still changed the account's entries")
+        raise JourneyFailure(
+            "a rejected resume still changed the account's entries: "
+            f"{before['entry_permission']} became {after['entry_permission']}"
+        )
     _check_every_cli_command(app, asked["proposal_id"])
     _agent_result(app, 0, "pause")
     _check_locked_app_still_pauses(app)
@@ -1642,6 +1650,25 @@ def _copying_with_entries(app: AppDriver) -> None:
         if done["state"] != "succeeded":
             raise JourneyFailure(f"setting automatic recovery ended {done['state']}")
 
+    # The paper account also holds the owner's own shares, and their value and today's loss count
+    # against the account's limits; room above them keeps a one-share test buy about the journey.
+    widen = _agent_result(
+        app,
+        10,
+        "accounts",
+        "limits",
+        "primary",
+        "--max-total-usd",
+        "100000",
+        "--daily-loss-cap-usd",
+        "100000",
+    )
+    app.wait_for("Maximum total exposure", timeout=30, name="limits-sheet")
+    app.click("Approve…", outcome_checked=True)
+    done = _agent_result(app, 0, "proposals", "wait", widen["proposal_id"], "--timeout", "60")
+    if done["state"] != "succeeded":
+        raise JourneyFailure(f"widening the test account's limits ended {done['state']}")
+
     # Entries start off after setup and after a restore; turning them on asks the owner.
     if _wait_for_account(app, "primary", timeout=10)["entry_permission"] != "enabled":
         resume = _agent_result(app, 10, "accounts", "resume", "primary")
@@ -1826,8 +1853,9 @@ def _sell_lot(app: AppDriver, symbol: str, lot: dict[str, Any]) -> None:
     app.open_screen("account.primary")
     # A lot bought moments ago appears once the account next syncs with the broker.
     app.wait_for(f"accounts.position.{symbol}", timeout=60, name="accounts-position")
-    app.click(f"accounts.position.{symbol}")
-    app.click(f"accounts.lot.sell.{lot['lot_id']}")
+    # The account can hold more positions than fit on screen, so press them through Accessibility.
+    app.press_action(f"accounts.position.{symbol}")
+    app.press_action(f"accounts.lot.sell.{lot['lot_id']}")
     for attempt in range(2):
         app.click("lotSale.review.button")
         app.wait_for("lotSale.sell", timeout=60, name="lot-sale-review")
