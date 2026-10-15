@@ -136,7 +136,7 @@ public struct DiagnosticsJournal: Sendable {
                     options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes, .fragmentsAllowed]
                 )
             else { return nil }
-            return String(decoding: data, as: UTF8.self)
+            return compactEmpty(String(decoding: data, as: UTF8.self))
         }
         let createdAt = (object["created_at_ns"] as? NSNumber)?.stringValue ?? atText
         return DiagnosticsJournalEntry(
@@ -151,6 +151,12 @@ public struct DiagnosticsJournal: Sendable {
             payloadJSON: payloadJSON,
             payloadUnreadable: payloadUnreadable
         )
+    }
+
+    /// Foundation prints an empty list or object over three lines with a blank one inside; the
+    /// page shows them as `[]` and `{}`.
+    static func compactEmpty(_ json: String) -> String {
+        json.replacing(/\[\n\s*\n\s*\]/, with: "[]").replacing(/\{\n\s*\n\s*\}/, with: "{}")
     }
 
     private static func text(_ value: Any) -> String {

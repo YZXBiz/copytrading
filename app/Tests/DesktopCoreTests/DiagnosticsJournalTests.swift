@@ -107,6 +107,16 @@ private func journalSkipsDamagedLinesAndReadsPayloads(_ root: URL) throws {
     try #require(entries[0].traceID == "abc", "the trace identity was lost")
     try #require(entries[0].payloadJSON?.contains("ignore [REDACTED]") == true, "the payload was not shown")
     try #require(entries[0].searchText.contains("ignore [redacted]"), "search must cover the payload")
+    // An empty list reads as [] on one line, not as brackets around a blank line.
+    let lists = line(
+        "payload", at: "2026-09-30T11:00:02.000+00:00",
+        #""capture_kind":"source_event","capture_status":"complete","payload":{"embeds":[],"meta":{}},"created_at_ns":6"#
+    )
+    try Data([lists, ""].joined(separator: "\n").utf8).write(to: directory.appending(path: "diagnostics.jsonl"))
+    let listed = try DiagnosticsJournal(directory: directory).entries()
+    try #require(
+        listed.first?.payloadJSON == "{\n  \"embeds\" : [],\n  \"meta\" : {}\n}",
+        "empty lists read \(listed.first?.payloadJSON ?? "nil")")
     // A compressed reply journaled as bytes reads as unreadable, never as replacement characters.
     let garbled = line(
         "payload", at: "2026-09-30T11:00:01.000+00:00",
