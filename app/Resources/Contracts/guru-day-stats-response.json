@@ -28,8 +28,6 @@
               "parser_reason": "price_not_given",
               "parser_profile": "profile-2",
               "interpreted_by": "deepseek-flash",
-              "sorted_by": null,
-              "sorted_confidence": null,
               "instructions": [
                 {
                   "action": "reduce",
