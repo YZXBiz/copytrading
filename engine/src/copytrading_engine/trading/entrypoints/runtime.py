@@ -5,7 +5,7 @@ import dataclasses
 import datetime as dt
 import logging
 import os
-from collections.abc import AsyncIterator, Callable, Collection, Mapping
+from collections.abc import AsyncIterator, Callable, Collection
 from contextlib import asynccontextmanager, nullcontext
 from dataclasses import replace
 from functools import partial
@@ -20,10 +20,8 @@ from copytrading_engine.execution.domain.signals import CopyConfig
 from copytrading_engine.execution.domain.sizing import DestinationTerms
 from copytrading_engine.parsing.providers.registry import ManagedDecoder
 from copytrading_engine.parsing.readiness import probe_model
-from copytrading_engine.parsing.relay import deliver_notifications
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore
 from copytrading_engine.parsing.worker import ParseWorker
-from copytrading_engine.shared.notification_models import NotificationPayload
 from copytrading_engine.shared.raw_message import RawMessage
 from copytrading_engine.shared.route_keys import route_key
 from copytrading_engine.sources.application import Delivery, ForwardBatch
@@ -52,6 +50,7 @@ from copytrading_engine.trading.application.accounts import (
     AccountSupervisor,
     SignalFanout,
 )
+from copytrading_engine.trading.application.alerts import AlertRelay
 from copytrading_engine.trading.application.manual_intervention import ManualInterventionService
 from copytrading_engine.trading.application.operator_service import OperatorQueryService
 from copytrading_engine.trading.application.paused_reader import PausedAccountReader, ReadKeys
@@ -63,7 +62,6 @@ from copytrading_engine.trading.domain.config import (
 )
 from copytrading_engine.trading.domain.status import AccountStatus, TradingStatus
 from copytrading_engine.trading.entrypoints.factories import (
-    NotificationSender,
     SourceSession,
     TradingFactories,
     create_decoder,
@@ -599,7 +597,27 @@ class TradingRuntime:
             stage = "provider_unavailable"
             await probe_model(decoder, worker.model_health)
             stage = "processing_unavailable"
-            await self._work_loop(configuration, source, parser, worker, notifier)
+            relay = (
+                AlertRelay(
+                    notifier,
+                    parser,
+                    lambda: tuple(
+                        account.owner
+                        for account in self._accounts.values()
+                        if account.state == "running" and account.owner is not None
+                    ),
+                )
+                if notifier is not None
+                else None
+            )
+            # Alerts go out on their own task: copying never waits for the alert service.
+            alerts = asyncio.create_task(relay.run(self._stop)) if relay is not None else None
+            try:
+                await self._work_loop(configuration, source, parser, worker, relay)
+            finally:
+                if alerts is not None:
+                    alerts.cancel()
+                    await asyncio.gather(alerts, return_exceptions=True)
         except RoutingChangePending:
             self._failure_code = "routing_change_pending"
         except AccountOwnershipPending:
@@ -679,7 +697,7 @@ class TradingRuntime:
         source: SQLiteSourceStore,
         parser: SQLiteExtractionStore,
         worker: ParseWorker,
-        notifier: NotificationSender | None,
+        relay: AlertRelay | None,
     ) -> None:
         forwarder = ForwardBatch(
             source,
@@ -718,7 +736,6 @@ class TradingRuntime:
             ),
         )
         processed = 0
-        notification_failed = False
 
         while not self._stop.is_set():
             # Cleared before the pass: a post captured during it wakes the next pass at once.
@@ -755,24 +772,7 @@ class TradingRuntime:
             processed += await fanout.deliver()
             if self._stop.is_set():
                 break
-            if notifier is not None:
-                try:
-                    await deliver_notifications(parser, lambda item: notifier.send(item.payload))
-                    for account in self._accounts.values():
-                        if account.state != "running" or account.owner is None:
-                            continue
-                        for (
-                            notification_id,
-                            _,
-                            _,
-                            value,
-                        ) in await account.owner.pending_notifications():
-                            await notifier.send(_execution_notification_payload(value))
-                            await account.owner.confirm_notification(notification_id)
-                    notification_failed = False
-                except Exception as exc:  # noqa: BLE001 - delivery failure is retried later
-                    notification_failed = True
-                    log.warning("notification_delivery_failed type=%s", type(exc).__name__)
+            notification_failed = relay is not None and relay.failing
             self._status = replace(
                 self._status,
                 state="running"
@@ -926,18 +926,3 @@ def _copy_policy(configuration: TradingConfiguration, account_id: str) -> CopyCo
 
 def _max_signal_age(configuration: TradingConfiguration) -> int:
     return max(account.policy.max_signal_age_seconds for account in configuration.accounts)
-
-
-def _execution_notification_payload(value: Mapping[str, object]) -> NotificationPayload:
-    labels = value.get("labels")
-    annotations = value.get("annotations")
-    starts_at = value.get("starts_at")
-    if not isinstance(labels, dict) or not isinstance(annotations, dict):
-        raise ValueError("Saved execution notification is invalid")
-    if not isinstance(starts_at, str):
-        raise ValueError("Saved execution notification timestamp is invalid")
-    if not all(isinstance(k, str) and isinstance(v, str) for k, v in labels.items()):
-        raise ValueError("Saved execution notification labels are invalid")
-    if not all(isinstance(k, str) and isinstance(v, str) for k, v in annotations.items()):
-        raise ValueError("Saved execution notification annotations are invalid")
-    return NotificationPayload(labels, annotations, dt.datetime.fromisoformat(starts_at))
