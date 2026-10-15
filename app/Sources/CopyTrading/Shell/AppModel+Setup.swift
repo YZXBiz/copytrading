@@ -93,6 +93,18 @@ extension AppModel {
     /// to the same setup. Keys typed for it are now in the Keychain, so they leave the draft.
     func syncSetupDraftWithSaved() {
         guard let saved = savedTradingConfiguration, saved != setupDraftSource else { return }
+        refillSetupDraft(from: saved)
+    }
+
+    /// A start just saved the draft. A new key alone leaves the configuration as it was, so the
+    /// draft is refilled whether or not the saved setup changed, and its typed keys, now in the
+    /// Keychain, leave it: otherwise they would read as a change still waiting to be applied.
+    func settleSetupDraftAfterStart() {
+        guard let saved = savedTradingConfiguration else { return }
+        refillSetupDraft(from: saved)
+    }
+
+    private func refillSetupDraft(from saved: TradingConfiguration) {
         setupEditor = nil
         limitsSaveRefused = false
         setupDraft.load(saved)
@@ -214,34 +226,26 @@ extension AppModel {
             message = Self.setupProblem(for: error)
             return
         }
-        let readingsShown =
+        // Readings taken of this very setup, with every example as the owner expected, are reused.
+        let readingsTaken =
             checkedSetupSignature == setupDraft.signature && !profileExampleReviews.isEmpty
             && profileExampleReviews.values.allSatisfy(\.automaticActivationAllowed)
-        if readingsShown && !isShowingSetupCheck {
-            isShowingSetupCheck = true
-            return
-        }
         checkedSetupSignature = setupDraft.signature
         applyChangesTask?.cancel()
         isApplyingChanges = true
         applyChangesTask = Task { [weak self] in
             guard let self else { return }
             defer { self.isApplyingChanges = false }
-            let reviews: [String: ProfileExampleReview]
-            if readingsShown {
-                // Pressed beside the readings: the owner's yes to them.
-                self.profileExamplesAcknowledged = true
-                reviews = self.profileExampleReviews
-            } else {
+            if !readingsTaken {
+                // Copying keeps running while the examples are read. A reading that differs from
+                // what the owner expected stops here and shows itself.
                 let read = await self.validateTradingSettings(
                     submission.0, enteredSecrets: submission.1, reviewOnly: true)
                 guard read, !Task.isCancelled else { return }
-                guard self.profileExampleReviews.isEmpty else {
-                    self.isShowingSetupCheck = true
-                    return
-                }
-                reviews = [:]
             }
+            // Every example read as expected, so pressing Apply Changes is the owner's yes to them.
+            let reviews = self.profileExampleReviews
+            self.profileExamplesAcknowledged = true
             self.isPausedToApplyChanges = true
             self.accountsCopyingBeforeApply = Set(
                 (self.accountFeature?.accounts ?? []).filter { AccountCopyState($0).isCopying }.map(\.accountID))

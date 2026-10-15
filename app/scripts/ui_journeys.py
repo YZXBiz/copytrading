@@ -1398,6 +1398,70 @@ def j40_live_limits(app: AppDriver) -> None:
     app.see("live-limits-done")
 
 
+def _flip_ask_before_orders_and_apply_once(app: AppDriver, on: bool) -> None:
+    """Change one setting beyond limits and press the start card's one button once. The check runs
+    inside that press, so Setup Check never opens, and once copying runs again the changes bar is
+    gone and the toolbar says the changes took effect."""
+    app.open_screen("connections")
+    app.click("connections.account.primary")
+    switch = app.see().find("Ask me before sending orders", role="checkbox")
+    if switch is None:
+        raise JourneyFailure("the account sheet has no 'Ask me before sending orders' switch")
+    if (switch.value == "1") == on:
+        raise JourneyFailure("the setting already reads the value the journey would apply")
+    app.click("Ask me before sending orders", role="checkbox")
+    app.click("Done")
+    bar = app.wait_for("You changed the setup", timeout=15, name="apply-once-bar")
+    if not bar.has("Apply Changes"):
+        raise JourneyFailure("an edited setting did not offer Apply Changes")
+    app.click("setup.startCopying")
+
+    deadline = time.monotonic() + 240
+    while True:
+        snapshot = app.see()
+        if snapshot.has("Setup Check") or snapshot.has("BEFORE COPYING STARTS"):
+            app.see("apply-once-setup-check")
+            raise JourneyFailure("one press of Apply Changes opened Setup Check for a clean check")
+        if not snapshot.has("You changed the setup"):
+            break
+        if time.monotonic() > deadline:
+            app.see("timeout-apply-once")
+            raise JourneyFailure("the changes bar stayed after Apply Changes was pressed once")
+        time.sleep(2)
+    _wait_for_account(app, "primary", timeout=180)
+    for _ in range(3):
+        time.sleep(2)
+        if app.see().has("You changed the setup"):
+            app.see("apply-once-bar-back")
+            raise JourneyFailure("the changes bar came back after the changes were applied")
+    app.see("apply-once-done")
+
+
+def j42_apply_once(app: AppDriver) -> None:
+    """One press of Apply Changes applies an edited setting while copying runs: the check runs
+    inside it without opening Setup Check, copying runs again with the change, and the "You
+    changed the setup" bar is gone, not left offering the same Apply Changes. The setting is
+    turned back the same way.
+
+    Needs the saved paper setup J31 leaves behind.
+    """
+    if app.state_root is None:
+        raise JourneySkipped("needs the run's state root")
+    _paper_setup()
+    _start_copying_primary(app)
+    _wait_for_account(app, "primary", timeout=180)
+    app.open_screen("connections")
+    app.click("connections.account.primary")
+    switch = app.see().find("Ask me before sending orders", role="checkbox")
+    if switch is None:
+        raise JourneyFailure("the account sheet has no 'Ask me before sending orders' switch")
+    was_on = switch.value == "1"
+    app.click("Done")
+    _flip_ask_before_orders_and_apply_once(app, not was_on)
+    # Back to what the owner had, applied the same way.
+    _flip_ask_before_orders_and_apply_once(app, was_on)
+
+
 def j39_setup_tour(app: AppDriver) -> None:
     """A first launch opens into the setup tour, which follows the owner from the Discord row to
     Start Copying: each stop points at the next thing to do and moves on once it is done.
@@ -2263,6 +2327,7 @@ JOURNEYS: list[tuple[str, Callable[[AppDriver], None]]] = [
     # Last: starting copying saves a setup that the journeys above expect to be empty.
     ("J31 agent approval", j31_agent_approval),
     ("J40 limits apply while copying", j40_live_limits),
+    ("J42 apply changes once", j42_apply_once),
     ("J33 backup and restore", j33_backup_and_restore),
     ("J38 account chart", j38_account_chart),
     ("J35 copy and sell", j35_copy_and_sell),

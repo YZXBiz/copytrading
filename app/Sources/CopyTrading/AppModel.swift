@@ -1387,7 +1387,7 @@ final class AppModel {
                 hasTradingSecrets = saved != nil
                 pendingTradingActivation = nil
                 tradingValidation = nil
-                syncSetupDraftWithSaved()
+                settleSetupDraftAfterStart()
                 didStartCopyingNewSetup()
                 await saveLimitsAwaitingStart()
                 return

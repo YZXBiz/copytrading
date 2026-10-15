@@ -1655,6 +1655,25 @@ struct TradingSettingsSaveTests {
         try check(!model.isPausedToApplyChanges, "A started change still counted as paused for it")
         try check(model.selectedScreen == .account("primary"), "Applying changes moved the owner off the screen they used")
         try check(model.message == "Your changes are saved, and copying uses them now.", "Applying changes did not say they took effect")
+        try check(
+            !model.hasUnsavedSetupChanges && !model.hasSetupToStart,
+            "The changes bar stayed after a successful apply: unsaved \(model.hasUnsavedSetupChanges) typed \(model.setupDraft.hasTypedSecrets) validation \(model.tradingValidation != nil) reviews \(model.profileExampleReviews.count)"
+        )
+
+        // A new key alone changes nothing in the saved setup, yet it is a change to apply; once
+        // applied it is in the Keychain and the draft holds no more of it.
+        model.setupDraft.providerAPIKey = "a-new-model-key"
+        try check(model.hasUnsavedSetupChanges && model.hasSetupToStart, "A typed key did not offer Apply Changes")
+        model.checkAndStartCopying()
+        for _ in 0..<4_000 where model.setupDraft.hasTypedSecrets || model.isApplyingChanges {
+            try await Task.sleep(for: .milliseconds(1))
+            if model.isShowingSetupCheck && model.awaitsExampleReview { model.checkAndStartCopying() }
+        }
+        try check(
+            !model.hasUnsavedSetupChanges && !model.hasSetupToStart,
+            "The changes bar stayed after a new key was applied: typed \(model.setupDraft.hasTypedSecrets) applying \(model.isApplyingChanges) message \(model.message ?? "nil")"
+        )
+        try check(model.tradingStatus?.state == .running, "Copying did not run again with the new key")
 
         // A change whose check fails: the saved setup copies again at once, and the results stay
         // readable in Setup Check.
@@ -1673,28 +1692,48 @@ struct TradingSettingsSaveTests {
         await starter.setFailingConfiguration(nil)
         model.isShowingSetupCheck = false
 
-        // With an example to look over, the readings wait for the owner while copying keeps
-        // running; Start Copying beside them pauses, checks, and starts without reading again.
+        // An example that reads as expected is no reason to stop: one press reads it, pauses,
+        // checks, and starts, and the owner is never sent to Setup Check.
         model.setupDraft.routes[0].examples = [
             TradingProfileExampleDraft(message: "Bought AAPL at 200", expectedAction: .buy, expectedSymbol: "AAPL")
         ]
         let beforeReview = await starter.events().count
+        var sawSetupCheck = false
         model.checkAndStartCopying()
-        for _ in 0..<4_000 where !model.isShowingSetupCheck || model.isValidatingTrading {
+        for _ in 0..<4_000 where model.isApplyingChanges || model.isPausedToApplyChanges || model.isActivatingTrading {
             try await Task.sleep(for: .milliseconds(1))
-        }
-        let reviewing = Array(await starter.events()[beforeReview...])
-        try check(reviewing == ["review_examples"], "Reading the examples did more than read them: \(reviewing)")
-        try check(model.tradingStatus?.state == .running, "Copying paused while the readings waited for the owner")
-        model.checkAndStartCopying()
-        for _ in 0..<4_000 where model.isShowingSetupCheck || model.isActivatingTrading || model.isPausedToApplyChanges {
-            try await Task.sleep(for: .milliseconds(1))
+            sawSetupCheck = sawSetupCheck || model.isShowingSetupCheck
         }
         let started = Array(await starter.events()[beforeReview...])
         try check(
             started == ["review_examples", "pause", "validate", "start"],
-            "Starting beside the readings did not pause, check, and start once: \(started)")
+            "One press did not read, pause, check, and start once: \(started)")
+        try check(!sawSetupCheck && !model.isShowingSetupCheck, "Examples that read as expected interrupted the apply")
         try check(model.tradingStatus?.state == .running, "Copying did not run again after the readings")
+        try check(
+            model.savedTradingConfiguration?.profiles.first?.examples.count == 1, "The applied example was not saved")
+        try check(
+            !model.hasUnsavedSetupChanges && !model.hasSetupToStart && model.profileExampleReviews.isEmpty,
+            "The changes bar stayed after applying with examples: unsaved \(model.hasUnsavedSetupChanges) typed \(model.setupDraft.hasTypedSecrets) validation \(model.tradingValidation != nil) reviews \(model.profileExampleReviews.count)"
+        )
+        try check(model.message == "Your changes are saved, and copying uses them now.", "Applying with examples did not say so")
+
+        // An example read differently from what the owner expected is the one thing that stops
+        // the apply: Setup Check opens, copying keeps running, and nothing is saved.
+        await starter.setExampleReviewMatches(false)
+        model.setupDraft.routes[0].examples[0].expectedSymbol = "MSFT"
+        let beforeMismatch = await starter.events().count
+        model.checkAndStartCopying()
+        for _ in 0..<4_000 where !model.isShowingSetupCheck || model.isApplyingChanges {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        let mismatched = Array(await starter.events()[beforeMismatch...])
+        try check(mismatched == ["review_examples"], "A mismatched reading went on to pause or start: \(mismatched)")
+        try check(model.isShowingSetupCheck, "A mismatched reading did not open Setup Check")
+        try check(model.tradingStatus?.state == .running, "Copying paused for a mismatched reading")
+        await starter.setExampleReviewMatches(true)
+        model.cancelTradingActivation()
+        model.setupDraft.routes[0].examples = []
 
         // Locking while the check runs: the apply stops and the saved setup copies again.
         let savedBeforeLock = model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD
