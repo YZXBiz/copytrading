@@ -298,7 +298,7 @@ async def test_compound_confirmation_replays_durable_result_after_response_loss(
         for request in requests
     }
 
-    async def snapshots(account_ids=None):
+    async def snapshots(account_ids=None, **_):
         return {
             request.account_id: SimpleNamespace(
                 manual_corrections={correction.correction_id: correction}
@@ -427,7 +427,7 @@ async def test_same_account_commands_are_sequenced_against_fresh_owner_state(tmp
     supervisor = Supervisor(owner)
     runtime._accounts = {"account-a": supervisor}
 
-    async def snapshots(account_ids=None):
+    async def snapshots(account_ids=None, **_):
         if account_ids is not None and "account-a" not in account_ids:
             return {}
         return {
@@ -688,3 +688,62 @@ async def test_a_confirmation_the_account_refuses_names_its_reason(tmp_path):
     runtime._accounts = {}
     gone = await runtime.manual.confirm_manual_orders((request,))
     assert gone.outcomes[0].error == "account_not_running"
+
+
+async def test_an_account_that_recorded_a_correction_previews_while_another_could_not(tmp_path):
+    """The app previews each account that recorded the correction. One chosen account that could
+    not record it (paused, or the call no longer waits there) must not refuse the others."""
+    runtime = TradingRuntime(tmp_path)
+    evidence = _source_evidence()
+    correction = ManualCorrectionRecord(
+        correction_id="correction-both",
+        source_id=evidence.source_id,
+        selected_account_ids=("recorded", "refused"),
+        revision=1,
+        actor="operator",
+        reason="Reviewed both accounts",
+        instructions=(Instruction(action="buy", symbol="ABC", price="25", fraction="0.25"),),
+        source_revision=evidence.source_revision,
+        source_at=evidence.source_at,
+        source_text=evidence.text,
+        accepted_interpretation=evidence.accepted_interpretation,
+        recorded_at=NOW,
+    )
+
+    class Owner:
+        def __init__(self, corrections):
+            self.corrections = corrections
+            self.previews = []
+
+        async def observation(self):
+            return SimpleNamespace(ledger=SimpleNamespace(manual_corrections=self.corrections))
+
+        async def preview_manual_order(self, request, now):
+            self.previews.append(request)
+            return SimpleNamespace(request=request)
+
+    recorded = Owner({correction.correction_id: correction})
+    refused = Owner({})
+    runtime._accounts = {
+        "recorded": SimpleNamespace(owner=recorded, state="ready"),
+        "refused": SimpleNamespace(owner=refused, state="ready"),
+    }
+    request = ManualPreviewRequest(
+        preview_id="preview-recorded",
+        account_id="recorded",
+        correction_id=correction.correction_id,
+        instruction_index=0,
+    )
+
+    preview = await runtime.manual.preview_manual_order(request)
+
+    assert preview.request == request
+    assert recorded.previews == [request]
+
+    # A different copy under the same name in another account still refuses.
+    conflicting = correction.model_copy(update={"reason": "Another review"})
+    refused.corrections = {correction.correction_id: conflicting}
+    with pytest.raises(ManualRefusal, match="correction_conflict"):
+        await runtime.manual.preview_manual_order(
+            request.model_copy(update={"preview_id": "preview-again"})
+        )

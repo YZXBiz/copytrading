@@ -167,9 +167,7 @@ class ManualInterventionService:
         record = live.ledger.manual_corrections.get(request.correction_id)
         if record is None:
             raise ManualRefusal("correction_incomplete")
-        snapshots = await self._manual_snapshots(record.selected_account_ids)
-        if not self._correction_copies_complete(record, snapshots):
-            raise ManualRefusal("correction_incomplete")
+        await self._require_agreeing_copies(record, request.account_id)
         try:
             return await owner.preview_manual_order(request, dt.datetime.now(dt.UTC))
         except AccountOwnerClosed as exc:
@@ -214,9 +212,7 @@ class ManualInterventionService:
                         raise ManualRefusal(
                             "preview_missing" if preview is None else "correction_incomplete"
                         )
-                    snapshots = await self._manual_snapshots(correction.selected_account_ids)
-                    if not self._correction_copies_complete(correction, snapshots):
-                        raise ManualRefusal("correction_incomplete")
+                    await self._require_agreeing_copies(correction, request.account_id)
                 result = await owner.confirm_manual_order(request, dt.datetime.now(dt.UTC))
                 await supervisor.refresh()
                 return ManualAccountCommandResult(
@@ -335,12 +331,20 @@ class ManualInterventionService:
         read = await asyncio.gather(*(read_one(account_id) for account_id in selected_ids))
         return dict(item for item in read if item is not None)
 
-    @staticmethod
-    def _correction_copies_complete(
-        correction: ManualCorrectionRecord, snapshots: dict[str, LedgerSnapshot]
-    ) -> bool:
-        return all(
-            account_id in snapshots
-            and snapshots[account_id].manual_corrections.get(correction.correction_id) == correction
-            for account_id in correction.selected_account_ids
+    async def _require_agreeing_copies(
+        self, correction: ManualCorrectionRecord, account_id: str
+    ) -> None:
+        """The account acting on a correction holds it, and no other chosen account holds a
+        different copy under its name. A chosen account that could not record it (paused, or
+        the call no longer waits there) holds none, which never stops the accounts that did."""
+        snapshots = await self._manual_snapshots(
+            correction.selected_account_ids, required=(account_id,)
         )
+        if snapshots[account_id].manual_corrections.get(correction.correction_id) != correction:
+            raise ManualRefusal("correction_incomplete")
+        if any(
+            copy != correction
+            for snapshot in snapshots.values()
+            if (copy := snapshot.manual_corrections.get(correction.correction_id)) is not None
+        ):
+            raise ManualRefusal("correction_conflict")
