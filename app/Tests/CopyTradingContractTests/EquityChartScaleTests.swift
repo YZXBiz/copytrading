@@ -7,6 +7,7 @@ func runEquityChartScaleTests() throws {
     try positionsTurnBackIntoTimes()
     try longerRangesAreLinear()
     try runsDimOnlyOutsideRegularHours()
+    try theValueAxisNeverReadsMinusZero()
     print("CopyTradingContractTests: the chart gives regular hours the room, maps positions back to times, and dims extended hours")
 }
 
@@ -74,6 +75,15 @@ private func runsDimOnlyOutsideRegularHours() throws {
     try verifyScale(runs.map(\.isExtended) == [true, false, true], "runs did not follow the sessions")
     try verifyScale(
         zip(runs, runs.dropFirst()).allSatisfy { $0.points.last == $1.points.first }, "adjacent runs do not share their joint")
+}
+
+/// A range that starts just below zero puts a tick at zero, and it reads "$0", never "-$0".
+@MainActor
+private func theValueAxisNeverReadsMinusZero() throws {
+    let axis = EquityValueAxis(lower: -50_000, upper: 1_300_000)
+    let labels = axis.ticks.map(axis.money)
+    try verifyScale(labels.contains("$0"), "no $0 tick in \(labels)")
+    try verifyScale(!labels.contains { $0.hasPrefix("-") }, "a tick read \(labels)")
 }
 
 private func verifyScale(_ condition: @autoclosure () -> Bool, _ message: String) throws {
