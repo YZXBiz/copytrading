@@ -16,9 +16,9 @@ struct AccountNeedsYou: View {
 
     private var waiting: [WaitingCall] {
         let now = Date.now
-        return activity.compactMap(WaitingCall.init).filter {
-            $0.accountIDs.contains(accountID) && !$0.hasExpired(at: now) && !skippedCalls.contains($0.source.sourceID)
-        }
+        return activity.compactMap {
+            WaitingCall.open($0, skipped: skippedCalls.contains($0.sourceID), now: now)
+        }.filter { $0.accountIDs.contains(accountID) }
     }
 
     var body: some View {

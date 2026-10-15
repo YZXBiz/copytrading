@@ -2035,7 +2035,7 @@ struct TradingSettingsSaveTests {
         )
         try check(
             day.gurus.map(\.guruID) == ["lee", "zhao"] && day.gurus[0].posts == 104
-                && day.gurus[0].waitingSourceIDs == ["discord:1:1427"] && day.gurus[1].readSeconds == nil
+                && day.gurus[0].waiting.map(\.sourceID) == ["discord:1:1427"] && day.gurus[1].readSeconds == nil
                 && day.unavailableAccounts.map(\.accountID) == ["archive"],
             "EngineClient did not decode the guru day"
         )

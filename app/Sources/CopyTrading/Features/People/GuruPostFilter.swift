@@ -23,8 +23,8 @@ enum GuruPostFilter: String, CaseIterable, Identifiable {
         switch self {
         case .all: return true
         case .traded: return kinds.contains(.traded)
-        case .waiting: return kinds.contains(.waiting)
-        case .notTraded: return !kinds.contains(.traded) && !kinds.contains(.waiting) && !kinds.contains(.working)
+        case .waiting: return entry.isWaiting
+        case .notTraded: return !kinds.contains(.traded) && !entry.isWaiting && !kinds.contains(.working)
         }
     }
 }

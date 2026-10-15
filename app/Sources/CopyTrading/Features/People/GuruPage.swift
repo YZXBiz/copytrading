@@ -35,7 +35,7 @@ struct GuruPage: View {
                         edit: edit)
                     if let feed {
                         GuruStatsStrip(
-                            stats: GuruStats(day: feature.guruDays[guruID], skipped: model.skippedCalls.contains)
+                            stats: GuruStats(day: feature.guruDays[guruID], waiting: feed.waitingCount)
                         )
                         .padding(.top, 36)
                         GuruHoldingsLine(guruID: guruID, accounts: feature.accounts)
@@ -68,11 +68,14 @@ struct GuruPage: View {
             reload()
         }
         .onChange(of: feature.activity) { reload() }
+        .onChange(of: feature.guruDays[guruID]) { reload() }
         .onChange(of: model.skippedCalls.skipped) { reload() }
     }
 
     private func reload() {
-        feed = GuruFeed(guruID: guruID, activity: feature.activity, skipped: model.skippedCalls.contains)
+        feed = GuruFeed(
+            guruID: guruID, activity: feature.activity, day: feature.guruDays[guruID],
+            skipped: model.skippedCalls.contains)
     }
 
     private func edit() {

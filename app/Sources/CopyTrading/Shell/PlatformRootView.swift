@@ -55,8 +55,9 @@ struct PlatformRootView: View {
             if !Self.suppressesRecap, let since = RecapMemory.lastSeen, Date.now.timeIntervalSince(since) >= RecapMemory.awayLongEnough {
                 let now = Date.now
                 let skipped = model.skippedCalls
-                let calls: [WaitingCall] = accountFeature.activity.compactMap { WaitingCall($0) }
-                let waiting = calls.filter { !$0.hasExpired(at: now) && !skipped.contains($0.source.sourceID) }.count
+                let waiting = accountFeature.knownActivity.count {
+                    WaitingCall.open($0, skipped: skipped.contains($0.sourceID), now: now) != nil
+                }
                 let found = Recap.since(
                     since, activity: accountFeature.activity, accounts: accountFeature.accounts,
                     equities: RecapMemory.equities, waiting: waiting)

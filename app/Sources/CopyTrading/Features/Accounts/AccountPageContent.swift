@@ -43,7 +43,7 @@ struct AccountPageContent: View {
         }
         AccountNeedsYou(
             accountID: account.accountID,
-            activity: feature.activity,
+            activity: feature.knownActivity,
             directory: directory,
             skippedCalls: model.skippedCalls,
             canCopy: !feature.accounts.isEmpty,
