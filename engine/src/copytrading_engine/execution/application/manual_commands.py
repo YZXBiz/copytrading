@@ -63,16 +63,16 @@ class ManualTradingApplication:
         return self.engine.ledger.record_manual_correction(correction)
 
     def preview(self, request: ManualPreviewRequest, now: dt.datetime) -> ManualOrderPreview:
-        existing = self.engine.ledger.snapshot().manual_previews.get(request.preview_id)
+        existing = self.engine.ledger.state.manual_previews.get(request.preview_id)
         if existing is not None:
             if existing.request != request:
                 raise ManualRefusal("identity_conflict")
-            return existing
+            return existing.model_copy(deep=True)
         preview = self._evaluate(request, now)
         return self.engine.ledger.save_manual_preview(preview)
 
     def confirm(self, request: ManualConfirmationRequest, now: dt.datetime) -> ManualCommandResult:
-        snapshot = self.engine.ledger.snapshot()
+        snapshot = self.engine.ledger.state
         previous = snapshot.manual_commands.get(request.command_id)
         if previous is not None:
             if previous.request != request:
@@ -186,7 +186,7 @@ class ManualTradingApplication:
         *,
         check_permission: bool = True,
     ) -> ManualOrderPreview:
-        snapshot = self.engine.ledger.snapshot()
+        snapshot = self.engine.ledger.state
         if request.account_id != self.local_account_id:
             raise ValueError("Manual preview account identity mismatch")
         correction = snapshot.manual_corrections.get(request.correction_id)
