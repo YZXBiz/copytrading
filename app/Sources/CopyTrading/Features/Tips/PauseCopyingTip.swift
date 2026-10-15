@@ -17,7 +17,7 @@ struct PauseCopyingTip: Tip {
         title = Text(L10n.string("Stop from anywhere"))
         message = Text(
             L10n.string(
-                "Stop Copying stops reading new posts and placing orders for every account. Each account's Start Copying picks up again."))
+                "Stop All stops reading new posts and placing orders for every account. Each account's Start Copying picks up again."))
     }
 
     var image: Image? { Image(systemName: "stop.circle") }

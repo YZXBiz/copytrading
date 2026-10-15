@@ -38,9 +38,9 @@ struct GuideBeforeYouGoSection: View {
             }
             GuideSafetyRow(
                 text:
-                    "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Pause Copying** stops everything at once."
+                    "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Stop All** stops everything at once."
             ) {
-                Label(L10n.string("Pause Copying"), systemImage: "pause.fill")
+                Label(L10n.string("Stop All"), systemImage: "stop.fill")
                     .font(DesignTokens.bodyText)
                     .foregroundStyle(Palette.ink)
                     .padding(.horizontal, 14)

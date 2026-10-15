@@ -608,7 +608,6 @@
 "Paste an exact source message" = "Paste an exact source message";
 "Paste it into **API key**, and enter a model name such as **%@** under **Model**." = "Paste it into **API key**, and enter a model name such as **%@** under **Model**.";
 "Paste it into **Channel IDs**. Separate several channels with commas." = "Paste it into **Channel IDs**. Separate several channels with commas.";
-"Pause Copying" = "Pause Copying";
 "Pause Copying stops reading new posts and placing orders for every account. Start Copying picks up again." = "Pause Copying stops reading new posts and placing orders for every account. Start Copying picks up again.";
 "Pause Entries" = "Pause Entries";
 "Pause from anywhere" = "Pause from anywhere";
@@ -1489,7 +1488,7 @@
 "**A sleeping Mac copies nothing.** Keep it plugged in and awake, with CopyTrading open, while the market is. A closed MacBook lid sleeps it unless a display is connected." = "**A sleeping Mac copies nothing.** Keep it plugged in and awake, with CopyTrading open, while the market is. A closed MacBook lid sleeps it unless a display is connected.";
 "**Discord's terms** don't allow automating a personal account. Use a separate account that only joins your gurus' servers." = "**Discord's terms** don't allow automating a personal account. Use a separate account that only joins your gurus' servers.";
 "**Your AI service bills you** for each post it reads, usually a fraction of a cent." = "**Your AI service bills you** for each post it reads, usually a fraction of a cent.";
-"**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Pause Copying** stops everything at once." = "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Pause Copying** stops everything at once.";
+"**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Stop All** stops everything at once." = "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Stop All** stops everything at once.";
 "Needs a name" = "Needs a name";
 "After a restart" = "After a restart";
 "After a restart: %@" = "After a restart: %@";
@@ -2160,7 +2159,7 @@
 "Stop All" = "Stop All";
 "Stop Copying" = "Stop Copying";
 "Stop Copying on an account stops its buys." = "Stop Copying on an account stops its buys.";
-"Stop Copying stops reading new posts and placing orders for every account. Each account's Start Copying picks up again." = "Stop Copying stops reading new posts and placing orders for every account. Each account's Start Copying picks up again.";
+"Stop All stops reading new posts and placing orders for every account. Each account's Start Copying picks up again." = "Stop All stops reading new posts and placing orders for every account. Each account's Start Copying picks up again.";
 "Stop from anywhere" = "Stop from anywhere";
 "Stopped copying into %@" = "Stopped copying into %@";
 "Stopping" = "Stopping";
