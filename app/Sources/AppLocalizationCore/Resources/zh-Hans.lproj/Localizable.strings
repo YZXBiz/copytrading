@@ -45,7 +45,6 @@
 "%@, and more" = "%@ 等";
 "%@, no calls yet." = "已发布 %@，但暂无交易信号。";
 "%@, rest cancelled" = "%@，其余已取消";
-"%@: %@ %@ %@ at %@" = "账户 %@：%@ %@ %@，价格 %@";
 "%@: %@." = "%@：%@。";
 "%@’s post" = "来自 %@ 的帖子";
 "%lld h ago" = "%lld小时前";
@@ -127,7 +126,6 @@
 "Approve…" = "批准…";
 "are" = "";
 "Arrived out of order" = "到达顺序异常";
-"as of %@" = "截至 %@";
 "Ask for Touch ID" = "要求使用 Touch ID";
 "Asked the broker to cancel an order" = "已请求券商取消订单";
 "attachment" = "个附件";
@@ -1709,7 +1707,6 @@
 "Automatic (%@)" = "自动（%@）";
 "New York (market time)" = "纽约（市场时间）";
 "City or time zone" = "城市或时区";
-"Price in the post" = "帖子里的价格";
 "Save and Preview Order" = "保存并预览订单";
 "Save and Preview Orders" = "保存并预览订单";
 "Try Again" = "重试";
@@ -2191,7 +2188,6 @@
 "Type a ticker" = "输入股票代码";
 "You hold %@" = "你持有 %@";
 "How much" = "数量";
-"Limit…" = "限价…";
 "the guru's price" = "老师的价格";
 "+ Another trade" = "+ 再加一笔";
 "%@ · checks your limits first" = "%@ · 先检查你的限额";
@@ -2218,8 +2214,6 @@
 "You entered the trade" = "你手动下了这笔单";
 "You entered the trade yourself." = "这笔交易是你手动下的。";
 "No quote for %@" = "%@ 暂无报价";
-"%lld min old" = "%lld 分钟前";
-"%lld hr old" = "%lld 小时前";
 "Just chat, nothing to trade" = "只是闲聊，没有交易";
 "just chat" = "闲聊";
 "An account you renamed or removed still holds stocks CopyTrading bought. Keep its old name, or sell those stocks first." = "你改名或删除的账户里还有 CopyTrading 买入的股票。请保留原名，或先卖出这些股票。";
@@ -2363,3 +2357,11 @@
 "Partially filled" = "部分成交";
 "Broker rejected" = "券商已拒绝";
 "Pending" = "处理中";
+"Bigger sizes stop at your %@ max per order." = "更大的仓位以单笔上限 %@ 为止。";
+"%@ or more" = "%@ 及以上";
+"No live quote for %@" = "%@ 暂无实时报价";
+"No live quote for %@ since %@" = "%@ 自 %@ 起暂无实时报价";
+"Buy %@ of %@ in %@" = "买入 %@ 的 %@，账户 %@";
+"%@ at %@ or less" = "%@，限价 %@";
+"%@: Buy %@ of %@, %@ at %@ or less" = "账户 %@：买入 %@ 的 %@，%@，限价 %@";
+"%@: %@ %@ of %@ at %@" = "账户 %@：%@ %@ %@，价格 %@";

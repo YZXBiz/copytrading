@@ -37,6 +37,7 @@ enum ManualInstructionGuess {
         draft.symbol = symbol ?? ""
         let price = price(in: text)
         draft.postPrice = price.map { "\($0)" } ?? ""
+        draft.priceChoice = ManualInstructionDraft.defaultChoice(postPrice: draft.postPrice)
         draft.price = draft.postPrice
         if let share = share(in: lowered) {
             draft.fraction = share

@@ -14,6 +14,9 @@ struct ManualInstructionDraft: Identifiable, Equatable {
     var symbol = ""
     /// The price the post named; empty when it named none.
     var postPrice = ""
+    /// Where the price comes from. A post that names a price is copied at that price, a limit;
+    /// only a post that names none follows the market.
+    var priceChoice = PriceChoice.market
     /// The price sent: the post's, the market's, or one the owner typed. Empty on a sell sells at
     /// the market, just under the live bid (ADR-0007).
     var price = ""
@@ -34,11 +37,18 @@ struct ManualInstructionDraft: Identifiable, Equatable {
         isSell = action != .buy
         symbol = call.symbol
         postPrice = call.price ?? ""
-        price = call.price ?? ""
+        priceChoice = Self.defaultChoice(postPrice: postPrice)
+        price = postPrice
         entryPrice = call.entryPrice ?? ""
         fraction = action == .close ? "1" : call.fraction ?? ""
         usdAmount = call.usdAmount ?? ""
         exitBasis = call.exitBasis
+    }
+
+    /// The guru's price whenever the post names one, so a copy never pays the market above it;
+    /// the market only when it names none.
+    static func defaultChoice(postPrice: String) -> PriceChoice {
+        postPrice.trimmed.isEmpty ? .market : .guru
     }
 
     var action: ManualInstructionAction {

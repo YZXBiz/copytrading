@@ -4,6 +4,10 @@ User-visible changes for each release are recorded here. Every GitHub release's 
 
 ## Unreleased
 
+- **The copy sheet shows the order it sends.** Copying a call into an account with a max per order now says the dollars the order really spends: a $1,000 full position in an account with a $250 max reads "Buy $250 of CCL", not "Buy $1,000". How much merges the sizes the max makes the same ("⅙ $166.66   ¼ or more $250") under one line, "Bigger sizes stop at your $250 max per order." The confirmation and the checked result show the engine's planned dollars, shares, and limit.
+- **A post's price is the price.** When a post names a price ("if CCL drops to 23.39 I'll buy"), the copy is a limit at that price; the sheet never starts on the market above it. Price reads on one line: the guru's price, Market with its quote time and ↻, and Limit, which opens a price field beside it.
+- **Market is always a live price.** The sheet asks for a quote as it opens and every 30 seconds while it stays open. A quote more than two minutes old is not offered as the market; the sheet says "No live quote for CCL since 7:19 AM" instead.
+
 - **The chat filter is gone.** It ran a second model (OpenAI's) in front of the interpreter on every post, added about 0.2 s to every real call, and saved only cents a day. The interpreter now reads every post, as it did before the filter. Connections loses its "Chat filter" step and its OpenAI key, Activity's Technical details lose the "Chat filter" line, and a setup saved with the filter on opens as it was, with the filter dropped. Its OpenAI key is no longer used; you can delete the key from your OpenAI account.
 
 ## 0.1.0-alpha.11 — developer preview
