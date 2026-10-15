@@ -195,7 +195,7 @@ class CopyEngine:
             self.ledger.lots(),
             self.pending(),
             self.broker.positions() if positions is None else positions,
-            tuple(self.ledger.snapshot().external_positions.values()),
+            tuple(self.ledger.state.external_positions.values()),
         )
 
     def reconcile(self, now: dt.datetime) -> tuple[Position, ...]:
@@ -222,7 +222,7 @@ class CopyEngine:
 
         # Operator-released IDs leave the ordinary pending set, but remain
         # under broker observation for their full audit history.
-        snapshot = self.ledger.snapshot()
+        snapshot = self.ledger.state
         for client_id in snapshot.release_evidence:
             if client_id in pending_ids:
                 continue
@@ -239,8 +239,7 @@ class CopyEngine:
         """Stocks with an open broker order the app didn't place. Read only while a holdings
         question is open, since only settling one needs it."""
         if not any(
-            not incident.resolved
-            for incident in self.ledger.snapshot().ownership_incidents.values()
+            not incident.resolved for incident in self.ledger.state.ownership_incidents.values()
         ):
             return frozenset()
         known = {order.client_id for order in self.pending()}
@@ -320,7 +319,7 @@ class CopyEngine:
         s, c = instruction, self.config
         if self.ledger.unresolved_ownership(s.symbol):
             return TradeDecision(None, "ownership_incident")
-        if s.action == "buy" and (halted or self.ledger.snapshot().buy_halted):
+        if s.action == "buy" and (halted or self.ledger.state.buy_halted):
             return TradeDecision(None, "halted")
         if s.action != "buy" and not c.copy_exits and chosen_lot is None:
             return TradeDecision(None, "exits_disabled")
@@ -374,7 +373,7 @@ class CopyEngine:
         activity_reason = account_activity_reason(
             broker_open,
             self.pending(),
-            unresolved_order_incidents=self.ledger.snapshot().entry_halted,
+            unresolved_order_incidents=self.ledger.state.entry_halted,
         )
         if activity_reason is not None:
             return TradeDecision(None, activity_reason)
@@ -452,7 +451,7 @@ class CopyEngine:
             entry_price = source_price
         else:
             if chosen_lot is not None:
-                lot = self.ledger.snapshot().lots.get(chosen_lot)
+                lot = self.ledger.state.lots.get(chosen_lot)
                 if lot is None or lot.symbol != s.symbol or lot.remaining_qty <= 0:
                     return TradeDecision(None, "lot_unavailable")
                 lot_id = chosen_lot
@@ -508,7 +507,7 @@ class CopyEngine:
         activity_reason = account_activity_reason(
             final_open,
             self.pending(),
-            unresolved_order_incidents=self.ledger.snapshot().entry_halted,
+            unresolved_order_incidents=self.ledger.state.entry_halted,
         )
         if activity_reason is not None:
             return TradeDecision(None, activity_reason)
@@ -565,7 +564,7 @@ class CopyEngine:
         controls = _ProcessControls(
             now=now_clock,
             monotonic=monotonic_clock,
-            halted=lambda: operator_halted() or self.ledger.snapshot().buy_halted,
+            halted=lambda: operator_halted() or self.ledger.state.buy_halted,
             entry_block_reason=entry_block_reason or (lambda: None),
             stopping=stopping or (lambda: False),
         )

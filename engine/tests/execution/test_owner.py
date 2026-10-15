@@ -172,7 +172,8 @@ async def test_owner_observation_detaches_nested_ledger_state(tmp_path):
             CopyEngine,
             SimpleNamespace(
                 ledger=SimpleNamespace(
-                    snapshot=lambda: ledger,
+                    # Like TradingLedger.snapshot, a detached copy.
+                    snapshot=lambda: ledger.model_copy(deep=True),
                     exposure=lambda: Decimal("42.50"),
                 )
             ),

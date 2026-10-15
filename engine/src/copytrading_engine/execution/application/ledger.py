@@ -178,8 +178,17 @@ class TradingLedger:
         return self._snapshot.account_id
 
     def snapshot(self) -> LedgerSnapshot:
-        # Containers must not expose a second mutable owner of the aggregate.
+        """A detached copy, for state that leaves the owner thread. Containers must not expose a
+        second mutable owner of the aggregate."""
         return self._snapshot.model_copy(deep=True)
+
+    @property
+    def state(self) -> LedgerSnapshot:
+        """The published state, read in place on the owner thread: every transition publishes a
+        new snapshot, so this one never changes underneath its reader. Never mutate it, and use
+        `snapshot()` for anything that leaves the owner thread. A copy of the whole ledger costs
+        tens of milliseconds, and a cycle reads it a dozen times."""
+        return self._snapshot
 
     def orders(self) -> tuple[OrderRecord, ...]:
         return tuple(self._snapshot.orders.values())

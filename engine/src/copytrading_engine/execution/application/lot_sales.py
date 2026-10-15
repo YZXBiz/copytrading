@@ -60,15 +60,15 @@ class LotSaleApplication:
         self.stopping = stopping
 
     def preview(self, request: LotSalePreviewRequest, now: dt.datetime) -> LotSalePreview:
-        existing = self.engine.ledger.snapshot().lot_sale_previews.get(request.preview_id)
+        existing = self.engine.ledger.state.lot_sale_previews.get(request.preview_id)
         if existing is not None:
             if existing.request != request:
                 raise ValueError("Lot sale preview identity conflicts with another request")
-            return existing
+            return existing.model_copy(deep=True)
         return self.engine.ledger.save_lot_sale_preview(self._evaluate(request, now))
 
     def confirm(self, request: LotSaleConfirmation, now: dt.datetime) -> LotSaleResult:
-        snapshot = self.engine.ledger.snapshot()
+        snapshot = self.engine.ledger.state
         previous = snapshot.lot_sales.get(request.command_id)
         if previous is not None:
             if previous.request != request:
@@ -138,7 +138,7 @@ class LotSaleApplication:
         return None
 
     def _evaluate(self, request: LotSalePreviewRequest, now: dt.datetime) -> LotSalePreview:
-        snapshot = self.engine.ledger.snapshot()
+        snapshot = self.engine.ledger.state
         if request.account_id != self.local_account_id:
             raise ValueError("Lot sale account identity mismatch")
         if (

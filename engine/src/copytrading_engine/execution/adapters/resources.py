@@ -147,11 +147,11 @@ class ExecutionResources:
     @property
     def runtime_entries_ready(self) -> bool:
         """Derive buy readiness from current-session recovery and durable permission."""
-        control = self.engine.ledger.snapshot().control
+        control = self.engine.ledger.state.control
         return self._recovery_ready and control.entry_permission == "enabled"
 
     def account_status(self) -> AccountRuntimeView:
-        control = self.engine.ledger.snapshot().control
+        control = self.engine.ledger.state.control
         inspection = self.last_inspection
         if control.entry_permission == "paused":
             readiness = "paused"
@@ -226,7 +226,7 @@ class ExecutionResources:
         )
 
     def entry_block_reason(self) -> str | None:
-        control = self.engine.ledger.snapshot().control
+        control = self.engine.ledger.state.control
         if control.entry_permission == "paused":
             return "account_paused"
         if control.entry_permission == "disabled":
@@ -246,7 +246,7 @@ class ExecutionResources:
         self.last_inspection = inspection
         self.account = self.broker.account()
         self.account_observed_at = now
-        control = self.engine.ledger.snapshot().control
+        control = self.engine.ledger.state.control
         self._recovery_ready = (
             control.entry_permission in {"enabled", "paused"}
             and control.recovery_preference == "automatic"
@@ -265,7 +265,7 @@ class ExecutionResources:
             and self.account.active
             and inspection.account_risk_status == "ready"
             and inspection.account_activity_status == "ready"
-            and not self.engine.ledger.snapshot().buy_halted
+            and not self.engine.ledger.state.buy_halted
         )
 
     def _resume_refusal(self, inspection: OwnershipInspection) -> str:
@@ -274,14 +274,14 @@ class ExecutionResources:
             return "resume_blocked_outside_order"
         if not self.account.active:
             return "resume_blocked_account_inactive"
-        if self.engine.ledger.snapshot().buy_halted:
+        if self.engine.ledger.state.buy_halted:
             return "resume_blocked_order_unclear"
         return "resume_blocked_unreadable"
 
     def control_account(
         self, command: AccountControlCommand, now: dt.datetime
     ) -> AccountControlResult:
-        previous = self.engine.ledger.snapshot().control.commands.get(command.command_id)
+        previous = self.engine.ledger.state.control.commands.get(command.command_id)
         if previous is not None:
             return self.engine.ledger.account_control(
                 command, now, local_account_id=self.data_dir.name
@@ -322,7 +322,7 @@ class ExecutionResources:
     def observation(self) -> ExecutionObservation:
         return ExecutionObservation(
             account=deepcopy(self.account),
-            ledger=deepcopy(self.engine.ledger.snapshot()),
+            ledger=self.engine.ledger.snapshot(),
             total_cost_exposure_usd=self.engine.ledger.exposure(),
             position_audit=deepcopy(self.position_audit),
         )
@@ -408,36 +408,32 @@ class ExecutionResources:
         return (
             self._recovery_ready
             and inspection_ready
-            and self.engine.ledger.snapshot().control.entry_permission in {"enabled", "paused"}
+            and self.engine.ledger.state.control.entry_permission in {"enabled", "paused"}
         )
 
     def _manual_application(self, stopping: Callable[[], bool]) -> ManualTradingApplication:
-        snapshot = self.engine.ledger.snapshot()
+        snapshot = self.engine.ledger.state
         manual_orders_ready = self._owner_orders_ready()
         return ManualTradingApplication(
             self.engine,
             local_account_id=self.data_dir.name,
             broker_account_id=snapshot.account_id or _UNBOUND_LEDGER,
             environment=snapshot.environment or "paper",
-            halted=lambda: (
-                (self.data_dir / "HALT").exists() or self.engine.ledger.snapshot().buy_halted
-            ),
+            halted=lambda: (self.data_dir / "HALT").exists() or self.engine.ledger.state.buy_halted,
             entry_block_reason=self.entry_block_reason,
             recovery_ready=lambda: manual_orders_ready,
             stopping=stopping,
         )
 
     def _lot_sale_application(self, stopping: Callable[[], bool]) -> LotSaleApplication:
-        snapshot = self.engine.ledger.snapshot()
+        snapshot = self.engine.ledger.state
         orders_ready = self._owner_orders_ready()
         return LotSaleApplication(
             self.engine,
             local_account_id=self.data_dir.name,
             broker_account_id=snapshot.account_id or _UNBOUND_LEDGER,
             environment=snapshot.environment or "paper",
-            halted=lambda: (
-                (self.data_dir / "HALT").exists() or self.engine.ledger.snapshot().buy_halted
-            ),
+            halted=lambda: (self.data_dir / "HALT").exists() or self.engine.ledger.state.buy_halted,
             entry_block_reason=self.entry_block_reason,
             recovery_ready=lambda: orders_ready,
             stopping=stopping,
@@ -491,7 +487,7 @@ class ExecutionResources:
 
     def inventory_account(self, now: dt.datetime) -> OwnershipInspection:
         self.account = self.engine.bind(
-            now, environment=self.engine.ledger.snapshot().environment or "paper"
+            now, environment=self.engine.ledger.state.environment or "paper"
         )
         self.account_observed_at = now
         return RecoveryApplication(self.engine.ledger, self.broker).inspect_ownership()

@@ -47,7 +47,7 @@ class RecoveryApplication:
         positions: tuple[Position, ...] | None = None,
     ) -> OwnershipInspection:
         """Inspect against the broker now, or against an account and positions just read."""
-        snapshot = self._ledger.snapshot()
+        snapshot = self._ledger.state
         if snapshot.account_id is None or snapshot.environment is None:
             raise RuntimeError("Broker account inventory has not been initialized")
         if account is None:
@@ -102,7 +102,7 @@ class RecoveryApplication:
     ) -> ReleaseEvidence:
         """Release a never-confirmed intent without replaying its source instruction."""
         self._require_attestation(actor, reason, order_history_ref, fill_history_ref)
-        snapshot = self._ledger.snapshot()
+        snapshot = self._ledger.state
         order = snapshot.orders.get(client_id)
         if order is None or order.status != OrderStatus.UNCERTAIN:
             raise ValueError("Only a saved uncertain order intent can be released")
@@ -141,7 +141,7 @@ class RecoveryApplication:
     def record_manual_sale(self, sale: ManualSale, *, account_id: str) -> None:
         """Import an externally completed sale after verifying broker fill and holdings."""
         self._require_attestation(sale.reason)
-        snapshot = self._ledger.snapshot()
+        snapshot = self._ledger.state
         self._verify_account(snapshot.account_id, account_id)
 
         observed = self._broker.lookup(sale.order.client_order_id)
@@ -172,7 +172,7 @@ class RecoveryApplication:
     def resolve_ownership(self, request: OwnershipResolutionRequest) -> OwnershipResolution:
         """Allocate a verified broker quantity without creating a broker order."""
         request = OwnershipResolutionRequest.model_validate(request.model_dump())
-        snapshot = self._ledger.snapshot()
+        snapshot = self._ledger.state
         prior = snapshot.ownership_resolutions.get(request.resolution_id)
         if prior is not None:
             if prior.request != request:
@@ -225,7 +225,7 @@ class RecoveryApplication:
     ) -> IncidentClearanceEvidence:
         """Refresh a late order, then clear only after an exact account position audit."""
         self._require_attestation(actor, reason, matched_audit_ref)
-        snapshot = self._ledger.snapshot()
+        snapshot = self._ledger.state
         if client_id not in snapshot.release_evidence:
             raise ValueError("No released uncertain order exists for this client ID")
         self._verify_account(snapshot.account_id, account_id)
@@ -235,7 +235,7 @@ class RecoveryApplication:
             raise ValueError("Broker lookup could not confirm the late order")
         observed_at = self._clock()
         self._ledger.apply_order(client_id, observed, observed_at)
-        refreshed = self._ledger.snapshot()
+        refreshed = self._ledger.state
         incident = refreshed.late_order_incidents.get(client_id)
         if incident is None:
             raise ValueError("Broker refresh did not create a late-order incident")
