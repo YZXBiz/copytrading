@@ -31,8 +31,9 @@ def quote_problem(
 class EntryPricingPolicy(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     max_above_signal_pct: Decimal = Field(default=Decimal("0"), ge=0, le=100)
-    # How far below the guru's sell price an exit may fill: a sell is always a limit order.
-    max_below_signal_pct: Decimal = Field(default=Decimal("1"), ge=0, le=100)
+    # How far below the guru's sell price an exit may fill: a sell is always a limit order, and
+    # under 100% so its floor is a price.
+    max_below_signal_pct: Decimal = Field(default=Decimal("1"), ge=0, lt=100)
 
     def limit_price(self, signal_price: Decimal) -> Decimal:
         """Return a valid stock tick that never exceeds the configured ceiling."""

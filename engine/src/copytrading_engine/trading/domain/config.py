@@ -93,7 +93,7 @@ class AccountPolicy(BaseModel):
     copy_exits: StrictBool = True
     approve_orders: StrictBool = False
     max_above_signal_pct: Decimal = Field(default=Decimal("0"), ge=0, le=100)
-    max_below_signal_pct: Decimal = Field(default=Decimal("1"), ge=0, le=100)
+    max_below_signal_pct: Decimal = Field(default=Decimal("1"), ge=0, lt=100)
 
     @model_validator(mode="after")
     def validate_sessions(self) -> Self:
