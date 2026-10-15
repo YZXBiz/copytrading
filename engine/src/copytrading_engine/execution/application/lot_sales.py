@@ -24,7 +24,10 @@ from copytrading_engine.execution.domain.lot_sales import (
 )
 from copytrading_engine.execution.domain.manual_commands import ManualCheck
 from copytrading_engine.execution.domain.market import Quote
-from copytrading_engine.execution.domain.pricing import quote_problem
+from copytrading_engine.execution.domain.pricing import (
+    SELL_FLOOR_QUOTE_MAX_AGE_SECONDS,
+    quote_problem,
+)
 from copytrading_engine.execution.domain.values import BrokerAccountNumber
 from copytrading_engine.shared.signals import Instruction
 
@@ -187,6 +190,7 @@ class LotSaleApplication:
         quote: Quote | None = None
         bid: Decimal | None = None
         quote_reason: str | None = None
+        old_bid: str | None = None
         broker = self.engine.broker
         if not isinstance(broker, QuoteBroker):
             quote_reason = "quote_unavailable"
@@ -194,7 +198,10 @@ class LotSaleApplication:
             try:
                 quote = broker.quote(lot.symbol)
                 bid = quote.bid
-                quote_reason = quote_problem(quote, bid, now)
+                # The bid only sets the sale's floor, so one up to six hours old will do, as for a
+                # copied sell at the market (ADR-0007); a sale off an old one is only warned about.
+                quote_reason = quote_problem(quote, bid, now, SELL_FLOOR_QUOTE_MAX_AGE_SECONDS)
+                old_bid = quote_problem(quote, bid, now)
             except BrokerError:
                 quote_reason = "quote_unavailable"
             except Exception as exc:  # noqa: BLE001 - unexpected preview failures become a reason
@@ -204,6 +211,8 @@ class LotSaleApplication:
             quote, bid = (quote, bid) if bid is not None and bid > 0 else (None, None)
             reasons.append(quote_reason)
             checks.append(ManualCheck(name="quote", status="blocked", reason=quote_reason))
+        elif old_bid is not None:
+            checks.append(ManualCheck(name="quote", status="warning", reason=old_bid))
         else:
             checks.append(ManualCheck(name="quote", status="passed"))
 

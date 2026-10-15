@@ -183,9 +183,22 @@ def test_pending_recovery_blocks_the_sale(tmp_path):
     assert "recovery_pending" in preview.reasons
 
 
-def test_a_stale_quote_blocks_the_sale(tmp_path):
+def test_an_evening_bid_minutes_old_still_sells_the_lot_with_a_warning(tmp_path):
+    # After 4 PM the free feed's newest bid is at least 15 minutes late; it only sets the floor.
     _, broker, app, lot_id, lot = owned_lot(tmp_path)
-    broker.quote_time = NOW - dt.timedelta(minutes=5)
+    broker.quote_time = NOW - dt.timedelta(minutes=16)
+
+    preview = app.preview(preview_request(lot_id, lot.remaining_qty), NOW)
+
+    assert preview.plan is not None
+    assert preview.reasons == ()
+    [quote] = [check for check in preview.checks if check.name == "quote"]
+    assert (quote.status, quote.reason) == ("warning", "quote_stale")
+
+
+def test_a_bid_older_than_six_hours_blocks_the_sale(tmp_path):
+    _, broker, app, lot_id, lot = owned_lot(tmp_path)
+    broker.quote_time = NOW - dt.timedelta(hours=6, minutes=1)
 
     preview = app.preview(preview_request(lot_id, lot.remaining_qty), NOW)
 
