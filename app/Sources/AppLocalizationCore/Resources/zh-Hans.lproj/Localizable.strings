@@ -2094,6 +2094,7 @@
 "An order's outcome is still unclear at Alpaca. Resume once it settles." = "Alpaca 中一笔订单的结果尚不明确。待其确定后再恢复。";
 "CopyTrading couldn't read this account's holdings just now. Try again in a moment." = "CopyTrading 暂时无法读取该账户的持仓。请稍后再试。";
 "Reading the account's curve from Alpaca…" = "正在从 Alpaca 读取账户曲线…";
+"Alpaca can't be asked for this account's curve right now." = "暂时无法向 Alpaca 读取这个账户的净值曲线。";
 "copied" = "复制";
 "yours + %@" = "你的 + %@";
 "yours" = "你的";

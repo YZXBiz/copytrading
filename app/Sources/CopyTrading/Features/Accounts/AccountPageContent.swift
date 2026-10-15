@@ -30,6 +30,7 @@ struct AccountPageContent: View {
             EquityChart(
                 account: account,
                 history: feature.histories[account.accountID],
+                isRead: feature.historiesRead.contains(account.accountID),
                 window: feature.historyWindow,
                 chooseWindow: chooseWindow,
                 plotHeight: isSharingWidth ? 120 : 200
