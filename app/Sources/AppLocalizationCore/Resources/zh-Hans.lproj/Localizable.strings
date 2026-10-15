@@ -2030,7 +2030,7 @@
 "Entered the trade the post asked for" = "按帖子的意思录入了交易";
 "Filled in from the post's words. Check it, then send." = "已按帖子的文字填好。核对后发送。";
 "At the bid" = "按买一价";
-"Agent request" = "代理请求";
+"Agent request" = "智能体请求";
 "The request" = "请求内容";
 "Before copying starts" = "开始复制之前";
 "Import" = "导入";
@@ -2380,3 +2380,4 @@
 "%@ at %@ or less" = "%@，限价 %@";
 "%@: Buy %@ of %@, %@ at %@ or less" = "账户 %@：买入 %@ 的 %@，%@，限价 %@";
 "%@: %@ %@ of %@ at %@" = "账户 %@：%@ %@ %@，价格 %@";
+"Change %@'s limits" = "修改 %@ 的限额";

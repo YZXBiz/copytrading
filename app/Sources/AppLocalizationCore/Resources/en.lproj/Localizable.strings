@@ -2380,3 +2380,4 @@
 "%@ at %@ or less" = "%@ at %@ or less";
 "%@: Buy %@ of %@, %@ at %@ or less" = "%@: Buy %@ of %@, %@ at %@ or less";
 "%@: %@ %@ of %@ at %@" = "%@: %@ %@ of %@ at %@";
+"Change %@'s limits" = "Change %@'s limits";
