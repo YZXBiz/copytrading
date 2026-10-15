@@ -23,6 +23,7 @@ from copytrading_engine.execution.domain.ownership import (
     OwnershipIncident,
     OwnershipResolution,
 )
+from copytrading_engine.execution.domain.positions import expected_holdings
 from copytrading_engine.execution.domain.progress import (
     InstructionProgress,
     OrderLinked,
@@ -137,6 +138,11 @@ class LedgerSnapshot(Value):
     @property
     def buy_halted(self) -> bool:
         return self.entry_halted
+
+    @property
+    def expected_holdings(self) -> dict[str, Decimal]:
+        """The shares the broker should hold of each stock (positions.expected_holdings)."""
+        return expected_holdings(self.lots.values(), self.external_positions.values())
 
     @property
     def has_outstanding_work(self) -> bool:

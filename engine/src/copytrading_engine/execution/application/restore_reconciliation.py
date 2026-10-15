@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from decimal import Decimal
-
 from copytrading_engine.execution.application.ports import BrokerRestoreEvidence
 from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
 from copytrading_engine.execution.domain.order_lifecycle import OrderStatus, map_broker_status
@@ -89,16 +87,7 @@ def reconcile_restore_snapshot(
                     "or price"
                 )
 
-    expected = _expected_positions(snapshot)
+    expected = snapshot.expected_holdings
     actual = {symbol: quantity for symbol, quantity in evidence.positions.items() if quantity}
     if expected != actual:
         raise RestoreReconciliationError("broker holdings do not match the restored ledger")
-
-
-def _expected_positions(snapshot: LedgerSnapshot) -> dict[str, Decimal]:
-    expected: dict[str, Decimal] = {}
-    for lot in snapshot.lots.values():
-        expected[lot.symbol] = expected.get(lot.symbol, Decimal(0)) + lot.remaining_qty
-    for position in snapshot.external_positions.values():
-        expected[position.symbol] = expected.get(position.symbol, Decimal(0)) + position.qty
-    return {symbol: quantity for symbol, quantity in expected.items() if quantity}

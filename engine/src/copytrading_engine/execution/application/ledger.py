@@ -205,8 +205,7 @@ class TradingLedger:
         return sum((lot.remaining_qty for lot in self.lots() if lot.symbol == symbol), ZERO)
 
     def expected_position(self, symbol: str) -> Decimal:
-        external = self._snapshot.external_positions.get(symbol)
-        return self.owned(symbol) + (external.qty if external is not None else ZERO)
+        return self._snapshot.expected_holdings.get(symbol, ZERO)
 
     def unresolved_ownership(self, symbol: str) -> tuple[OwnershipIncident, ...]:
         return tuple(
