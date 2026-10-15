@@ -18,20 +18,20 @@ Ranked by severity: what can lose money, stop copying, or mislead the owner firs
 
 | # | Severity | Finding | Status |
 |---|---|---|---|
-| 1 | High | Copying a held call into several accounts is refused in every account when one can't take it | Fixed: "An account that saved a copied call can place it when another chosen account couldn't" |
-| 2 | High | Alerts go out inside the copy loop: a slow alert service delays copying, failures retry every 0.5 s, and turning alerts on sends weeks of backlog | Fixed: "Alerts go out on their own task, news only, with a backoff" |
-| 3 | High | An idle account check makes 11 Alpaca requests; at the 2 s poll that is ~330 a minute, past Alpaca's 200 | Fixed: "An account check reads each broker fact once" |
+| 1 | High | Copying a held call into several accounts is refused in every account when one can't take it | Fixed in #106 |
+| 2 | High | Alerts go out inside the copy loop: a slow alert service delays copying, failures retry every 0.5 s, and turning alerts on sends weeks of backlog | Fixed in #110 |
+| 3 | High | An idle account check makes 11 Alpaca requests; at the 2 s poll that is ~330 a minute, past Alpaca's 200 | Fixed in #108 |
 | 4 | High | An order the broker never received stays "uncertain" forever: its stock is blocked and its reserve counts against the total limit, and the engine's recovery commands have no caller | Left: needs an owner decision and an app flow |
-| 5 | Medium | A 100% "maximum below signal price" prices sells at $0, and the first copied sell stops the account | Fixed: "A sell's allowance below the guru's price stays under 100%" |
-| 6 | Medium | Fills are journaled up to 10 s before the order that filled (314 of 563 live fills) | Fixed in this PR |
-| 7 | Medium | Every read of the ledger on the owner thread deep-copies the whole aggregate: 309 ms of CPU per idle cycle | Fixed: "The owner thread reads the ledger in place instead of copying it" |
-| 8 | Medium | The account feed query searches the journal again for every final order update: 113 ms a page, growing with the square of the journal | Fixed: "The account feed finds each order's first final update in one pass" |
+| 5 | Medium | A 100% "maximum below signal price" prices sells at $0, and the first copied sell stops the account | Fixed in #107 |
+| 6 | Medium | Fills are journaled up to 10 s before the order that filled (314 of 563 live fills) | Fixed in #105 |
+| 7 | Medium | Every read of the ledger on the owner thread deep-copies the whole aggregate: 309 ms of CPU per idle cycle | Fixed in #109 |
+| 8 | Medium | The account feed query searches the journal again for every final order update: 113 ms a page, growing with the square of the journal | Fixed in #113 |
 | 9 | Medium | Every ledger event rewrites, revalidates, and copies the whole 1.6 MB snapshot, and posts are never pruned | Left: a storage redesign |
 | 10 | Medium | Any unexpected error planning one instruction stops the whole account until restart | Left: deliberate fail-closed choice |
 | 11 | Low | A manual copy's preview fingerprint covers every order and lot in the account, unlike a lot sale's | Left: conservative, and a policy choice |
-| 12 | Low | A lot sale the broker refuses reports Alpaca's raw word; a refused copy reports the fixed code | Fixed: "A refused lot sale reads as the same fixed code as a refused copy" |
-| 13 | Low | "What the broker should hold" is computed in four places | Fixed: "What the broker should hold is worked out once" |
-| 14 | Low | Every account limit is declared twice, with its default and bounds | Fixed: "Account limits are declared once for the saved setup and the engine" |
+| 12 | Low | A lot sale the broker refuses reports Alpaca's raw word; a refused copy reports the fixed code | Fixed in #111 |
+| 13 | Low | "What the broker should hold" is computed in four places | Fixed in #112 |
+| 14 | Low | Every account limit is declared twice, with its default and bounds | Fixed in #114 |
 | 15 | Low | The daily entry cap counts buys the broker refused | Left: policy |
 | 16 | Low | The execution outbox's `attempts` and `retry_at` columns are never read or written | Left: schema revision |
 | 17 | Low | The app's `correction_incomplete` wording no longer matches when the engine refuses | Left: app copy, next to the copy sheet another worker owns |
