@@ -309,11 +309,28 @@ def _dollar_value(match: re.Match[str]) -> Decimal | None:
 
 
 def dollars_are_grounded(value: Decimal, evidence: str | None, text: str) -> bool:
-    """The cited words are in the post and hold exactly one dollar amount, of that value."""
+    """The cited words are in the post and hold exactly one dollar amount, of that value: the
+    post's size ("$200 of", "200 dollars"), or only its amount ("$200") when the post states that
+    amount as a size. A price with a dollar sign ("at $71") is never a size."""
     if not evidence or evidence not in text:
         return False
     found = list(DOLLAR_SIZE.finditer(evidence))
-    return len(found) == 1 and _dollar_value(found[0]) == value
+    if found:
+        return len(found) == 1 and _dollar_value(found[0]) == value
+    amount = _CITED_AMOUNT.fullmatch(evidence.strip())
+    return (
+        amount is not None
+        and Decimal(next(group for group in amount.groups() if group).replace(",", "")) == value
+        and any(
+            _dollar_value(size) == value and size.group(0).startswith(evidence.strip())
+            for size in DOLLAR_SIZE.finditer(text)
+        )
+    )
+
+
+# Only the amount of a dollar size, as a reader may cite it: "$200" of "$200 of", "200$" of
+# "200$ of".
+_CITED_AMOUNT = re.compile(r"\$\s*([\d,]+(?:\.\d+)?)|([\d,]+(?:\.\d+)?)\s*\$")
 
 
 # The batch number as written: 第二批, 第2批, batch 2.

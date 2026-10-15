@@ -40,6 +40,9 @@ def grounding_code(post: str, reading) -> str:
         pytest.param("buy $1,500 of nflx at 71", "$1,500 of", "1500", id="thousands"),
         pytest.param("nflx 71 买两百刀", "两百刀", "200", id="chinese-amount"),
         pytest.param("nflx 71 买一千五刀", "一千五刀", "1500", id="chinese-thousands"),
+        # DeepSeek cites only the amount of "$2 of" in a post of several calls (live, Oct 15).
+        pytest.param("buy $200 of nflx at 71", "$200", "200", id="the-amount-of-a-size"),
+        pytest.param("buy 200$ of nflx at 71", "200$", "200", id="the-amount-after-of-a-size"),
     ],
 )
 async def test_a_dollar_size_buys_that_amount(post, words, amount):
@@ -59,6 +62,8 @@ async def test_a_dollar_size_buys_that_amount(post, words, amount):
         pytest.param("buy 200$ of nflx at 71", "200$ of", "300", id="another-amount"),
         pytest.param("buy 200$ of nflx at 71", "nflx", "200", id="words-without-an-amount"),
         pytest.param("buy nflx at $71", "$71", "71", id="a-price-is-not-a-size"),
+        pytest.param("buy $200 of nflx at $71", "$71", "71", id="the-price-beside-a-size"),
+        pytest.param("buy $200 of nflx at 71", "$200", "300", id="another-amount-cited"),
     ],
 )
 def test_a_dollar_size_must_be_the_posts_amount(post, words, amount):
