@@ -36,7 +36,6 @@
 "%@ · %@ %@" = "%@ · %@ %@";
 "%@ · %@ on this Mac" = "%@ · %@ on this Mac";
 "%@ · as of %@" = "%@ · as of %@";
-"%@ · channel %@ · %@" = "%@ · channel %@ · %@";
 "%@ · instruction %lld" = "%@ · instruction %lld";
 "%@ → %@ · %@" = "%@ → %@ · %@";
 "%@, %@" = "%@, %@";
@@ -111,7 +110,6 @@
 "An agent is asking for approval" = "An agent is asking for approval";
 "An unknown program" = "An unknown program";
 "Another open order is in the way" = "Another open order is in the way";
-"any author" = "any author";
 "Any service or server that speaks the OpenAI API" = "Any service or server that speaks the OpenAI API";
 "anyone who posts" = "anyone who posts";
 "Anything that could trade only becomes a request you approve here with Touch ID." = "Anything that could trade only becomes a request you approve here with Touch ID.";
@@ -136,7 +134,6 @@
 "Authentication status: %@" = "Authentication status: %@";
 "author" = "author";
 "Author" = "Author";
-"author %@" = "author %@";
 "Author ID" = "Author ID";
 "authors" = "authors";
 "Automatic" = "Automatic";
@@ -330,17 +327,14 @@
 "Equity this week" = "Equity this week";
 "Equity" = "Equity";
 "Equity today" = "Equity today";
-"Estimated budget %@ · quantity %@" = "Estimated budget %@ · quantity %@";
 "Evaluate Message" = "Evaluate Message";
 "Evaluate with Saved Profile…" = "Evaluate with Saved Profile…";
 "Evaluating with the configured model" = "Evaluating with the configured model";
 "Everything checks out. Look over how the examples were read." = "Everything checks out. Look over how the examples were read.";
 "Everything checks out. Start copying when you're ready." = "Everything checks out. Start copying when you're ready.";
 "Everything CopyTrading records stays here, on this Mac." = "Everything CopyTrading records stays here, on this Mac.";
-"Evidence: %@ · %@ · %@" = "Evidence: %@ · %@ · %@";
 "Example %lld" = "Example %lld";
 "Exit fractions apply to" = "Exit fractions apply to";
-"Exit fractions apply to %@" = "Exit fractions apply to %@";
 "Expanded" = "Expanded";
 "Expected" = "Expected";
 "Expected action" = "Expected action";
@@ -399,7 +393,6 @@
 "Hide Sidebar" = "Hide Sidebar";
 "Historical" = "Historical";
 "Historical Evaluation" = "Historical Evaluation";
-"Historical message" = "Historical message";
 "Holdings differ from the broker" = "Holdings differ from the broker";
 "Holdings need your review" = "Holdings need your review";
 "Holdings review resolved" = "Holdings review resolved";
@@ -528,7 +521,6 @@
 "No price quote was available" = "No price quote was available";
 "No prior account delivery details are recorded." = "No prior account delivery details are recorded.";
 "No problems recorded" = "No problems recorded";
-"No saved gurus" = "No saved gurus";
 "No saved manual command results for this source." = "No saved manual command results for this source.";
 "No shares left to sell" = "No shares left to sell";
 "No trading steps yet" = "No trading steps yet";
@@ -798,7 +790,6 @@
 "Sign in at **%@** and open **%@**." = "Sign in at **%@** and open **%@**.";
 "Sign up or sign in at **alpaca.markets**. Paper trading is free." = "Sign up or sign in at **alpaca.markets**. Paper trading is free.";
 "Signal" = "Signal";
-"Simulated only. This preview cannot enqueue or submit an order." = "Simulated only. This preview cannot enqueue or submit an order.";
 "Simulated result · no orders" = "Simulated result · no orders";
 "Simulated with the configured model. No order is placed." = "Simulated with the configured model. No order is placed.";
 "since the start" = "since the start";
@@ -811,7 +802,6 @@
 "some" = "some";
 "Setup Tips" = "Setup Tips";
 "Source activity error: %@" = "Source activity error: %@";
-"Source fraction: %@ · evidence %@" = "Source fraction: %@ · evidence %@";
 "Source post" = "Source post";
 "Start" = "Start";
 "Start Copying" = "Start Copying";

@@ -23,6 +23,32 @@ func runActivityCardTests() throws {
     try aSellWithNoPriceReadsAsAtTheMarket()
     try yesterdaysPostsStopCountingAsTodayAtMidnight()
     try theGuruPageReadsInChinese()
+    try aSavedGuruIsChosenByNameNotByNumbers()
+}
+
+/// Evaluating an earlier post offers each saved guru by name and the accounts they copy into; the
+/// channel and author numbers that route their posts never show.
+@MainActor
+private func aSavedGuruIsChosenByNameNotByNumbers() throws {
+    let zhao = try TradingProfileBuilder().build(TradingProfileDraft(guruID: "zhao", displayName: "Zhao"))
+    let route = TradingRouteConfiguration(
+        channelID: "1287345091273645568", authorID: "804512398817402881", guruID: "zhao",
+        profileRevision: zhao.profileRevision,
+        connections: [
+            TradingRouteConnection(accountID: "primary", fullPositionUSD: "1200"),
+            TradingRouteConnection(accountID: "swing", fullPositionUSD: "900"),
+        ])
+    let configuration = TradingConfiguration(
+        source: TradingSourceConfiguration(channelIDs: ["1287345091273645568"]),
+        provider: TradingProviderConfiguration(name: .deepseek, model: "deepseek-flash"),
+        accounts: [
+            TradingAccountConfiguration(id: "primary", environment: .paper),
+            TradingAccountConfiguration(id: "swing", environment: .paper),
+        ],
+        profiles: [zhao], routes: [route])
+
+    let label = SavedGuruLabel.text(route, in: configuration)
+    try #require(label == "Zhao · primary, swing", "the saved guru read \(label)")
 }
 
 /// In 简体中文 the guru page and its examples keep no English: an ignored post, the holdings line,

@@ -38,6 +38,8 @@ final class HistoricalProfileEvaluationModel {
     }
 }
 
+/// An earlier post read again with a saved guru's rules, as a simulation: the post, which guru's
+/// rules to read it with, and what would have happened in each account. Nothing is ordered.
 struct HistoricalProfileEvaluationSheet: View {
     @Environment(\.dismiss) private var dismiss
     let source: SourceActivity
@@ -52,172 +54,85 @@ struct HistoricalProfileEvaluationSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section(L10n.string("Historical message")) {
-                    Text(source.text).textSelection(.enabled)
-                    LabeledContent(L10n.string("Received"), value: Humanize.timestamp(source.sourceAt))
-                    LabeledContent(L10n.string("Capture"), value: Humanize.code(source.captureStatus))
-                }
-
-                Section(L10n.string("Guru and accounts")) {
-                    if routes.isEmpty {
-                        ContentUnavailableView(
-                            L10n.string("No saved gurus"),
-                            systemImage: "point.topleft.down.curvedto.point.bottomright.up",
-                            description: Text(L10n.string("Save a guru and start copying before evaluating older posts."))
+        SheetScaffold(
+            kind: L10n.string("Historical Evaluation"),
+            title: "“\(source.text)”",
+            lede: byline
+        ) {
+            SheetSection(L10n.string("Guru and accounts")) {
+                if routes.isEmpty {
+                    Text(L10n.string("Save a guru and start copying before evaluating older posts."))
+                        .font(DesignTokens.bodyText)
+                        .foregroundStyle(Palette.tertiaryInk)
+                        .padding(.vertical, 8)
+                } else {
+                    SheetRow(title: L10n.string("Saved guru")) {
+                        SheetMenu(
+                            label: L10n.string("Saved guru"),
+                            choices: routes.map { (value: $0.id, title: SavedGuruLabel.text($0, in: configuration)) },
+                            selection: Binding(
+                                get: { selectedRouteID ?? routes.first?.id ?? "" }, set: { selectedRouteID = $0 })
                         )
-                    } else {
-                        Picker(L10n.string("Saved guru"), selection: $selectedRouteID) {
-                            ForEach(routes) { route in
-                                Text(routeLabel(route)).tag(Optional(route.id))
-                            }
-                        }
                         .accessibilityIdentifier("activity.historicalEvaluation.route")
-                        if let selectedRoute,
-                            let profile = configuration?.profiles.first(where: {
-                                $0.profileRevision == selectedRoute.profileRevision
-                            })
-                        {
-                            LabeledContent(L10n.string("Guru"), value: profile.displayName)
-                            LabeledContent(L10n.string("Guru version"), value: Humanize.revision(profile.profileRevision))
-                            ForEach(selectedRoute.connections) { connection in
-                                LabeledContent(
-                                    connection.accountID,
-                                    value: L10n.string(
-                                        "Full position %@. A 1/6 call buys a sixth of it.",
-                                        Humanize.usd(connection.fullPositionUSD))
-                                )
-                            }
+                    }
+                    ForEach(selectedRoute?.connections ?? []) { connection in
+                        SheetRow(
+                            title: connection.accountID,
+                            hint: L10n.string(
+                                "Full position %@. A 1/6 call buys a sixth of it.", Humanize.usd(connection.fullPositionUSD))
+                        ) {
+                            EmptyView()
                         }
                     }
                 }
-
-                Section {
-                    Button(L10n.string("Evaluate Message"), systemImage: "wand.and.stars") {
-                        guard let selectedRouteID else { return }
-                        Task {
-                            await feature.evaluate(
-                                sourceID: source.sourceID,
-                                routeID: selectedRouteID,
-                                using: model
-                            )
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(feature.isEvaluating || selectedRouteID == nil || !model.isTradingUnlocked)
-                    .accessibilityIdentifier("activity.historicalEvaluation.run")
-                    if feature.isEvaluating {
-                        ProgressView(L10n.string("Evaluating with the configured model"))
-                    }
-                    if let error = feature.error {
-                        Callout(error, tone: .critical)
-                    }
-                } footer: {
-                    Text(L10n.string("Simulated with the configured model. No order is placed."))
-                }
-
-                if let evaluation = feature.evaluation {
-                    evaluationSection(evaluation)
+            } footer: {
+                Text(L10n.string("Simulated with the configured model. No order is placed."))
+                    .font(DesignTokens.caption)
+                    .foregroundStyle(Palette.tertiaryInk)
+            }
+            if feature.isEvaluating {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text(L10n.string("Evaluating with the configured model"))
+                        .font(DesignTokens.bodyText)
+                        .foregroundStyle(Palette.secondaryInk)
                 }
             }
-            .formStyle(.grouped)
-            .navigationTitle(L10n.string("Historical Evaluation"))
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.string("Done")) {
-                        feature.clear()
-                        dismiss()
-                    }
-                }
+            if let error = feature.error {
+                Callout(error, tone: .critical)
             }
-            .task {
-                if selectedRouteID == nil { selectedRouteID = routes.first?.id }
+            if let evaluation = feature.evaluation {
+                HistoricalEvaluationResult(evaluation: evaluation)
             }
-            .onChange(of: model.isTradingUnlocked) { _, unlocked in
-                if !unlocked { feature.clear() }
+        } actions: {
+            Button(L10n.string("Done")) {
+                feature.clear()
+                dismiss()
             }
+            .buttonStyle(SheetButtonStyle())
+            .keyboardShortcut(.cancelAction)
+            Button(L10n.string("Evaluate Message")) {
+                guard let routeID = selectedRouteID else { return }
+                Task { await feature.evaluate(sourceID: source.sourceID, routeID: routeID, using: model) }
+            }
+            .buttonStyle(SheetButtonStyle(isPrimary: true))
+            .keyboardShortcut(.defaultAction)
+            .disabled(feature.isEvaluating || selectedRouteID == nil || !model.isTradingUnlocked)
+            .accessibilityIdentifier("activity.historicalEvaluation.run")
         }
-        .frame(minWidth: 580, idealWidth: 620, minHeight: 600, idealHeight: 720)
-    }
-
-    @ViewBuilder
-    private func evaluationSection(_ evaluation: ProfileEvaluation) -> some View {
-        Section(L10n.string("Simulated result · no orders")) {
-            LabeledContent(L10n.string("Decision")) {
-                StatusBadge(Humanize.code(evaluation.decision), tone: StatusTone(code: evaluation.decision))
-            }
-            LabeledContent(L10n.string("Provider"), value: "\(evaluation.provider) · \(evaluation.model)")
-            LabeledContent(L10n.string("Guru"), value: evaluation.guruID)
-            LabeledContent(L10n.string("Guru version"), value: Humanize.revision(evaluation.profileRevision))
-            LabeledContent(L10n.string("Reason"), value: Humanize.code(evaluation.reason))
-            Text(L10n.string(evaluation.costNotice)).foregroundStyle(.secondary)
-                .accessibilityIdentifier("activity.historicalEvaluation.costNotice")
-            ForEach(Array(evaluation.instructions.enumerated()), id: \.offset) { _, instruction in
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(
-                        L10n.string(
-                            "%@ %@ at %@", L10n.string(Humanize.code(instruction.action.rawValue)), instruction.symbol,
-                            instruction.price.map { Humanize.usd($0) } ?? L10n.string("the market price"))
-                    )
-                    .font(.headline)
-                    Text(
-                        L10n.string(
-                            "Evidence: %@ · %@ · %@", instruction.actionEvidence, instruction.symbolEvidence,
-                            instruction.priceEvidence ?? L10n.string("the market price"))
-                    )
-                    .foregroundStyle(.secondary)
-                    if let fraction = instruction.fraction {
-                        Text(L10n.string("Source fraction: %@ · evidence %@", fraction, instruction.fractionEvidence ?? "unavailable"))
-                    }
-                    if let basis = instruction.exitBasis {
-                        Text(L10n.string("Exit fractions apply to %@", exitBasisTitle(basis)))
-                    }
-                }
-                .accessibilityElement(children: .combine)
-            }
-            ForEach(Array(evaluation.destinations.enumerated()), id: \.offset) { _, destination in
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(
-                        L10n.string(
-                            "%@ · %@ %@", destination.accountID, L10n.string(Humanize.code(destination.action.rawValue)), destination.symbol
-                        )
-                    )
-                    .font(.headline)
-                    if let budget = destination.budgetUSD {
-                        Text(
-                            L10n.string(
-                                "Estimated budget %@ · quantity %@", Humanize.usd(budget), destination.estimatedQuantity ?? "unavailable"))
-                    }
-                    if let basis = destination.exitBasis {
-                        Text(L10n.string("Exit fractions apply to %@", exitBasisTitle(basis)))
-                    }
-                    Text(L10n.string(Humanize.code(destination.reason)))
-                        .foregroundStyle(.secondary)
-                }
-                .accessibilityElement(children: .combine)
-            }
-            ForEach(evaluation.reviewReasons, id: \.self) { reason in
-                Callout(L10n.string(Humanize.code(reason)), tone: .caution)
-            }
-            Callout(L10n.string("Simulated only. This preview cannot enqueue or submit an order."))
-                .accessibilityIdentifier("activity.historicalEvaluation.noOrder")
+        .frame(minWidth: 580, idealWidth: 620, minHeight: 520, idealHeight: 640)
+        .task {
+            if selectedRouteID == nil { selectedRouteID = routes.first?.id }
+        }
+        .onChange(of: model.isTradingUnlocked) { _, unlocked in
+            if !unlocked { feature.clear() }
         }
     }
 
-    @MainActor private func routeLabel(_ route: TradingRouteConfiguration) -> String {
-        let profileName =
-            configuration?.profiles.first(where: {
-                $0.profileRevision == route.profileRevision
-            })?.displayName ?? route.guruID
-        let author = route.authorID.map { L10n.string("author %@", $0) } ?? L10n.string("any author")
-        return L10n.string("%@ · channel %@ · %@", profileName, route.channelID, author)
-    }
-
-    @MainActor private func exitBasisTitle(_ basis: TradingExitBasis) -> String {
-        switch basis {
-        case .originalPosition: L10n.string("original position")
-        case .remainingPosition: L10n.string("remaining position")
-        }
+    /// Who posted it and when, as every post's byline reads.
+    private var byline: String {
+        let guru = GuruDirectory(configuration).gurus.first { $0.id == source.guruID }?.name
+        let time = Humanize.timestamp(source.sourceAt)
+        return guru.map { L10n.string("%@ · %@", $0, time) } ?? time
     }
 }
