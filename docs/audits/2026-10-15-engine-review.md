@@ -31,7 +31,7 @@ Ranked by severity: what can lose money, stop copying, or mislead the owner firs
 | 11 | Low | A manual copy's preview fingerprint covers every order and lot in the account, unlike a lot sale's | Left: conservative, and a policy choice |
 | 12 | Low | A lot sale the broker refuses reports Alpaca's raw word; a refused copy reports the fixed code | Fixed in #111 |
 | 13 | Low | "What the broker should hold" is computed in four places | Fixed in #112 |
-| 14 | Low | Every account limit is declared twice, with its default and bounds | Fixed in #114 |
+| 14 | Low | Every account limit is declared twice, with its default and bounds | Fixed in #115 |
 | 15 | Low | The daily entry cap counts buys the broker refused | Left: policy |
 | 16 | Low | The execution outbox's `attempts` and `retry_at` columns are never read or written | Left: schema revision |
 | 17 | Low | The app's `correction_incomplete` wording no longer matches when the engine refuses | Left: app copy, next to the copy sheet another worker owns |
