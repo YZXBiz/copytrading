@@ -28,7 +28,7 @@ from copytrading_engine.execution.domain.events import (
     SubmissionQuote,
 )
 from copytrading_engine.execution.domain.ledger_state import MessageRecord
-from copytrading_engine.execution.domain.market import Account, CalendarDay
+from copytrading_engine.execution.domain.market import Account, CalendarDay, Position
 from copytrading_engine.execution.domain.order_lifecycle import OrderStatus, is_cancelable
 from copytrading_engine.execution.domain.orders import OrderPlan, OrderRecord, OrderRequest
 from copytrading_engine.execution.domain.ownership import account_activity_reason, still_open
@@ -189,15 +189,18 @@ class CopyEngine:
     def pending(self, symbol: str | None = None) -> tuple[OrderRecord, ...]:
         return self.ledger.pending(symbol)
 
-    def audit_positions(self) -> PositionAudit:
+    def audit_positions(self, positions: tuple[Position, ...] | None = None) -> PositionAudit:
+        """The ledger's holdings against the broker's, read now unless `positions` were."""
         return compare_positions(
             self.ledger.lots(),
             self.pending(),
-            self.broker.positions(),
+            self.broker.positions() if positions is None else positions,
             tuple(self.ledger.snapshot().external_positions.values()),
         )
 
-    def reconcile(self, now: dt.datetime) -> None:
+    def reconcile(self, now: dt.datetime) -> tuple[Position, ...]:
+        """Book what the broker reports for every order still open, then audit holdings; return
+        the broker positions that audit read, after every fill it booked."""
         pending = self.pending()
         pending_ids = {order.client_id for order in pending}
         for order in pending:
@@ -226,7 +229,11 @@ class CopyEngine:
             update = self.broker.lookup(client_id)
             if update is not None:
                 self.ledger.apply_order(client_id, update, now)
-        self.ledger.open_ownership_incidents(self.audit_positions(), now, self._outside_orders())
+        positions = self.broker.positions()
+        self.ledger.open_ownership_incidents(
+            self.audit_positions(positions), now, self._outside_orders()
+        )
+        return positions
 
     def _outside_orders(self) -> frozenset[str]:
         """Stocks with an open broker order the app didn't place. Read only while a holdings

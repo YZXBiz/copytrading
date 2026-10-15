@@ -209,6 +209,8 @@ class AlpacaBroker:
         )
         self.environment = environment
         self.now = clock
+        # The account's valuation currency, from its first read: it never changes.
+        self._currency: str | None = None
 
     def close(self) -> None:
         self.http.close()
@@ -249,7 +251,9 @@ class AlpacaBroker:
             raise BrokerResponseError() from None
 
     def account(self) -> Account:
-        return self.decode_normalized(decode_account, self.request("GET", "/v2/account"))
+        account = self.decode_normalized(decode_account, self.request("GET", "/v2/account"))
+        self._currency = account.currency
+        return account
 
     def equity_history(self, window: HistoryWindow) -> EquityHistory:
         params: dict[str, str | int] = dict(_HISTORY_PARAMS[window.range])
@@ -274,9 +278,9 @@ class AlpacaBroker:
         )
 
     def positions(self) -> tuple[Position, ...]:
-        # Alpaca's position response may omit currency; the freshly decoded
-        # account provides the valuation unit, while an explicit position unit wins.
-        currency = self.account().currency
+        # Alpaca's position response may omit currency; the account's valuation unit stands in,
+        # while an explicit position unit wins. The account is read for it only once.
+        currency = self._currency or self.account().currency
         result = self.decode_normalized(
             lambda value: decode_positions(value, account_currency=currency),
             self.request("GET", "/v2/positions"),
