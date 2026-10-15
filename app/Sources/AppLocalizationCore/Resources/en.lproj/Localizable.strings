@@ -1913,6 +1913,7 @@
 "Yesterday" = "Yesterday";
 "No account acted on it" = "No account acted on it";
 "No posts from %@ yet. They show here as soon as CopyTrading reads one." = "No posts from %@ yet. They show here as soon as CopyTrading reads one.";
+"%@'s posts show here once CopyTrading has read them." = "%@'s posts show here once CopyTrading has read them.";
 "Edit %@" = "Edit %@";
 "Saved · applies to the next order" = "Saved · applies to the next order";
 "These limits weren't saved." = "These limits weren't saved.";

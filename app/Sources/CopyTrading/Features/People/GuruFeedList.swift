@@ -5,6 +5,8 @@ import SwiftUI
 struct GuruFeedList: View {
     let days: [GuruFeed.Day]
     let guruName: String
+    /// Whether the engine's posts have been read at all; until then no post is not the same as none.
+    let isRead: Bool
     @Binding var selection: SourceActivity.ID?
     @State private var filter = GuruPostFilter.all
 
@@ -22,7 +24,9 @@ struct GuruFeedList: View {
             }
             if days.isEmpty {
                 InkEmptyState(
-                    message: L10n.string("No posts from %@ yet. They show here as soon as CopyTrading reads one.", guruName)
+                    message: isRead
+                        ? L10n.string("No posts from %@ yet. They show here as soon as CopyTrading reads one.", guruName)
+                        : L10n.string("%@'s posts show here once CopyTrading has read them.", guruName)
                 )
                 .padding(.top, 20)
             }
