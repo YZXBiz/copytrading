@@ -191,7 +191,7 @@
 "Choose **Copy User ID** and paste it here." = "选择 **复制用户 ID**，然后粘贴到此处。";
 "Choose an interpreter" = "选择 AI 模型";
 "Claude models" = "Claude 模型";
-"Clear" = "清除";
+"Clear" = "无待处理";
 "Clear a measurement on the chart" = "清除图表上的测量结果";
 "Click any channel, then click a request named **messages** in the list." = "点击任一频道，再点击列表中名为 **messages** 的请求。";
 "Close" = "关闭";
@@ -215,7 +215,7 @@
 "Connection checks" = "连接检查";
 "Connections" = "连接";
 "Copied" = "已复制";
-"Copies %@ into %@. Your keys stay in this Mac's Keychain." = "将 %@ 跟单到 %@。你的密钥保存在这台 Mac 的钥匙串中。";
+"Copies %@ into %@. Your keys stay in this Mac's Keychain." = "将%@跟单到%@。你的密钥保存在这台 Mac 的钥匙串中。";
 "Copies into" = "跟单到";
 "Copies into %@ and %@." = "跟单到 %@ 和 %@。";
 "Copies into %@." = "跟单到 %@。";
