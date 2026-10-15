@@ -662,13 +662,18 @@ class TradingLedger:
         audit: PositionAudit,
         now: dt.datetime,
         outside_orders: frozenset[str] = frozenset(),
+        *,
+        settle_before: dt.datetime | None = None,
     ) -> None:
         """Open a question for each stock whose broker count left what the ledger expects, and
         settle every earlier one whose count has held still since (ADR-0011). `outside_orders` are
         the stocks with an open broker order the app didn't place; those wait, since that order
-        can still move the count."""
+        can still move the count. With `settle_before`, only questions opened before it settle.
+        """
         # The audit predates what was just settled, so those stocks wait for the next one.
-        settled = self._settle_incidents(audit, now, outside_orders)
+        settled = self._settle_incidents(
+            audit, now, outside_orders, now if settle_before is None else min(now, settle_before)
+        )
         for comparison in audit.positions:
             if (
                 not comparison.mismatched
@@ -702,7 +707,11 @@ class TradingLedger:
             )
 
     def _settle_incidents(
-        self, audit: PositionAudit, now: dt.datetime, outside_orders: frozenset[str]
+        self,
+        audit: PositionAudit,
+        now: dt.datetime,
+        outside_orders: frozenset[str],
+        opened_before: dt.datetime,
     ) -> set[str]:
         """Settle each open question from the broker's filled count, once that count has held
         still for a sync and no order in the stock is in flight (the app's own, an uncertain one,
@@ -715,7 +724,7 @@ class TradingLedger:
             return settled
         compared = {comparison.symbol: comparison for comparison in audit.positions}
         for incident in tuple(self._snapshot.ownership_incidents.values()):
-            if incident.resolved or now <= incident.observed_at:
+            if incident.resolved or opened_before <= incident.observed_at:
                 continue
             symbol = incident.symbol
             if (
