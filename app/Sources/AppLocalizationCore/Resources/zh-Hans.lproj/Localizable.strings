@@ -36,7 +36,6 @@
 "%@ · %@ %@" = "账户 %@ · %@ %@";
 "%@ · %@ on this Mac" = "%@ · %@（保存在此 Mac）";
 "%@ · as of %@" = "%@ · 截至 %@";
-"%@ · channel %@ · %@" = "信号源 %@ · 频道 %@ · %@";
 "%@ · instruction %lld" = "账户 %@ · 指令%lld";
 "%@ → %@ · %@" = "%@ 至 %@ · %@";
 "%@, %@" = "%@，%@";
@@ -111,7 +110,6 @@
 "An agent is asking for approval" = "智能体请求批准";
 "An unknown program" = "未知程序";
 "Another open order is in the way" = "存在另一笔未完成订单";
-"any author" = "任意作者";
 "Any service or server that speaks the OpenAI API" = "任何兼容 OpenAI API 的服务或服务器";
 "anyone who posts" = "不限作者";
 "Anything that could trade only becomes a request you approve here with Touch ID." = "任何可能进行交易的操作都会先变成审批请求，你可在此通过 Touch ID 批准。";
@@ -136,7 +134,6 @@
 "Authentication status: %@" = "身份验证状态：%@";
 "author" = "位作者";
 "Author" = "作者";
-"author %@" = "作者 %@";
 "Author ID" = "作者 ID";
 "authors" = "位作者";
 "Automatic" = "自动";
@@ -330,17 +327,14 @@
 "Equity this week" = "本周账户净值";
 "Equity" = "账户净值";
 "Equity today" = "今日账户净值";
-"Estimated budget %@ · quantity %@" = "预计预算 %@ · 数量 %@";
 "Evaluate Message" = "评估消息";
 "Evaluate with Saved Profile…" = "使用已保存的配置评估…";
 "Evaluating with the configured model" = "正在使用已配置的模型评估";
 "Everything checks out. Look over how the examples were read." = "所有检查均已通过。请查看示例的解析结果。";
 "Everything checks out. Start copying when you're ready." = "所有检查均已通过。准备好后即可开始跟单。";
 "Everything CopyTrading records stays here, on this Mac." = "CopyTrading 记录的所有内容都保存在这台 Mac 上。";
-"Evidence: %@ · %@ · %@" = "证据：%@ · %@ · %@";
 "Example %lld" = "示例%lld";
 "Exit fractions apply to" = "平仓比例适用于";
-"Exit fractions apply to %@" = "平仓比例适用于%@";
 "Expanded" = "已展开";
 "Expected" = "预期";
 "Expected action" = "预期操作";
@@ -385,7 +379,6 @@
 "Getting started 👋" = "快速开始 👋";
 "Go" = "前往";
 "Go back and forward" = "后退或前进";
-"Go to Today, Activity, People, Accounts, Connections, or this guide" = "前往“今日”“活动”“信号源”“账户”“连接”页面，或打开本指南";
 "GPT models" = "GPT 模型";
 "Grok models" = "Grok 模型";
 "guru" = "个信号源";
@@ -399,7 +392,6 @@
 "Hide Sidebar" = "隐藏边栏";
 "Historical" = "历史记录";
 "Historical Evaluation" = "历史评估";
-"Historical message" = "历史消息";
 "Holdings differ from the broker" = "持仓与经纪商记录不一致";
 "Holdings need your review" = "持仓需要你审核";
 "Holdings review resolved" = "持仓核对问题已解决";
@@ -495,7 +487,6 @@
 "most recent post" = "条最近的帖子";
 "most recent posts" = "条最近的帖子";
 "Motion and Transparency" = "动态效果与透明度";
-"Move through posts in Activity" = "在“活动”中浏览帖子";
 "Name" = "名称";
 "Navigate to a page" = "跳转到页面";
 "Needed when several people post there" = "多人发帖时必填";
@@ -528,7 +519,6 @@
 "No price quote was available" = "暂无可用报价";
 "No prior account delivery details are recorded." = "未记录此前向账户发送订单的详情。";
 "No problems recorded" = "尚未记录问题";
-"No saved gurus" = "尚无已保存的信号源";
 "No saved manual command results for this source." = "尚无此来源的已保存手动操作结果。";
 "No shares left to sell" = "没有可卖出的持仓";
 "No trading steps yet" = "尚无交易步骤";
@@ -608,7 +598,6 @@
 "Paste an exact source message" = "粘贴完整的原始消息";
 "Paste it into **API key**, and enter a model name such as **%@** under **Model**." = "粘贴到 **API 密钥** 字段，并在 **模型** 下输入模型名称，例如 **%@**。";
 "Paste it into **Channel IDs**. Separate several channels with commas." = "将其粘贴到 **频道 ID** 中。多个频道 ID 之间用逗号分隔。";
-"Pause Copying" = "暂停跟单";
 "Pause Copying stops reading new posts and placing orders for every account. Start Copying picks up again." = "暂停跟单会停止读取新帖子，并停止为所有账户下单。重新开始跟单后会继续。";
 "Pause Entries" = "暂停开仓";
 "Pause from anywhere" = "随时暂停";
@@ -652,7 +641,6 @@
 "Range" = "时间范围";
 "Range details" = "范围详情";
 "Read" = "已读取";
-"Read accounts and activity again" = "重新读取账户和活动";
 "Read and pause" = "读取并暂停";
 "Read by" = "解读模型";
 "Read by %@" = "由 %@ 解读";
@@ -798,7 +786,6 @@
 "Sign in at **%@** and open **%@**." = "登录 **%@**，然后打开 **%@**。";
 "Sign up or sign in at **alpaca.markets**. Paper trading is free." = "在 **alpaca.markets** 注册或登录。模拟交易免费。";
 "Signal" = "信号";
-"Simulated only. This preview cannot enqueue or submit an order." = "仅供模拟。此预览不会排队或提交订单。";
 "Simulated result · no orders" = "模拟结果 · 未下单";
 "Simulated with the configured model. No order is placed." = "使用已配置模型进行模拟，不会提交订单。";
 "since the start" = "自开始以来";
@@ -811,7 +798,6 @@
 "some" = "部分";
 "Setup Tips" = "设置小贴士";
 "Source activity error: %@" = "来源活动错误：%@";
-"Source fraction: %@ · evidence %@" = "来源比例：%@ · 证据 %@";
 "Source post" = "来源帖子";
 "Start" = "开始";
 "Start Copying" = "开始跟单";
@@ -830,7 +816,6 @@
 "Status: %@" = "状态：%@";
 "Staying safe" = "安全保障";
 "Step %lld: %@" = "第%lld步：%@";
-"Step through points on Today's chart" = "逐个查看“今日”图表上的数据点";
 "Stop Engine" = "停止引擎";
 "Stop new entry orders. Exits still follow the account policy." = "停止新的开仓订单。平仓仍按账户策略执行。";
 "Stop reading new posts and placing orders for every account." = "停止读取新帖子，并停止为所有账户下单。";
@@ -911,7 +896,7 @@
 "times" = "次";
 "Timing" = "时机";
 "Tips point out things like measuring on the chart; each shows once" = "提示会指出图表测量等功能；每条提示只显示一次。";
-"to" = "打开";
+"to" = "至";
 "To do" = "未完成";
 "Today" = "今日";
 "today" = "今天";
@@ -1489,7 +1474,7 @@
 "**A sleeping Mac copies nothing.** Keep it plugged in and awake, with CopyTrading open, while the market is. A closed MacBook lid sleeps it unless a display is connected." = "**睡眠的 Mac 什么都不会跟单**。开盘期间让它接着电源、保持唤醒，并开着 CopyTrading。合上 MacBook 盖子会让它睡眠，除非连接了显示器。";
 "**Discord's terms** don't allow automating a personal account. Use a separate account that only joins your gurus' servers." = "**Discord 的条款**不允许自动化个人账户。请用一个只加入信号源服务器的单独账户。";
 "**Your AI service bills you** for each post it reads, usually a fraction of a cent." = "**你的 AI 服务按读取的帖子收费**，通常每条不到一美分。";
-"**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Pause Copying** stops everything at once." = "**它只跟单，不做判断**。不提供建议，也不设止损。每日亏损上限只停止买入，不停止卖出。**暂停跟单**会一次停止所有操作。";
+"**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Stop All** stops everything at once." = "**它只跟单，不做判断**。不提供建议，也不设止损。每日亏损上限只停止买入，不停止卖出。**全部停止**会一次停止所有操作。";
 "Needs a name" = "缺少名称";
 "After a restart" = "重启后";
 "After a restart: %@" = "重启后：%@";
@@ -1913,6 +1898,7 @@
 "Yesterday" = "昨天";
 "No account acted on it" = "没有账户处理";
 "No posts from %@ yet. They show here as soon as CopyTrading reads one." = "%@ 还没有帖子。CopyTrading 读到第一条后会显示在这里。";
+"%@'s posts show here once CopyTrading has read them." = "CopyTrading 读取后，%@ 的帖子会显示在这里。";
 "Edit %@" = "编辑 %@";
 "Saved · applies to the next order" = "已保存 · 下一笔订单生效";
 "These limits weren't saved." = "这些限额没有保存。";
@@ -2104,6 +2090,7 @@
 "An order's outcome is still unclear at Alpaca. Resume once it settles." = "Alpaca 中一笔订单的结果尚不明确。待其确定后再恢复。";
 "CopyTrading couldn't read this account's holdings just now. Try again in a moment." = "CopyTrading 暂时无法读取该账户的持仓。请稍后再试。";
 "Reading the account's curve from Alpaca…" = "正在从 Alpaca 读取账户曲线…";
+"Alpaca can't be asked for this account's curve right now." = "暂时无法向 Alpaca 读取这个账户的净值曲线。";
 "copied" = "复制";
 "yours + %@" = "你的 + %@";
 "yours" = "你的";
@@ -2160,7 +2147,7 @@
 "Stop All" = "全部停止";
 "Stop Copying" = "停止跟单";
 "Stop Copying on an account stops its buys." = "在账户上停止跟单，就不会再买入。";
-"Stop Copying stops reading new posts and placing orders for every account. Each account's Start Copying picks up again." = "停止跟单会停止读取新帖子，并停止为所有账户下单。在各账户点“开始跟单”即可继续。";
+"Stop All stops reading new posts and placing orders for every account. Each account's Start Copying picks up again." = "“全部停止”会停止读取新帖子，并停止为所有账户下单。在各账户点“开始跟单”即可继续。";
 "Stop from anywhere" = "随时停止";
 "Stopped copying into %@" = "已停止跟单到 %@";
 "Stopping" = "正在停止";
@@ -2381,3 +2368,7 @@
 "%@: Buy %@ of %@, %@ at %@ or less" = "账户 %@：买入 %@ 的 %@，%@，限价 %@";
 "%@: %@ %@ of %@ at %@" = "账户 %@：%@ %@ %@，价格 %@";
 "Change %@'s limits" = "修改 %@ 的限额";
+"Go to an account, a guru, or a page, in sidebar order" = "按侧边栏顺序前往账户、信号源或页面";
+"Find a post, a guru, or a page" = "查找帖子、信号源或页面";
+"Read accounts and posts again" = "重新读取账户和帖子";
+"Step through points on an account's chart" = "逐个查看账户图表上的数据点";

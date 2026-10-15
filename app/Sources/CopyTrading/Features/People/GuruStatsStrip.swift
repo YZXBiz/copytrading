@@ -29,9 +29,12 @@ struct GuruStatsStrip: View {
 
     private var items: [GuruStatItem.Item] {
         [
-            .init(label: L10n.string("Posts today"), value: stats.postsToday.formatted()),
-            .init(label: L10n.string("Traded"), value: stats.tradedToday.formatted()),
-            .init(label: L10n.string("Waiting"), value: stats.waiting.formatted(), isCaution: stats.waiting > 0),
+            // Before the day is read every count is a dash, never a zero it has not counted.
+            .init(label: L10n.string("Posts today"), value: stats.postsToday?.formatted() ?? "—"),
+            .init(label: L10n.string("Traded"), value: stats.tradedToday?.formatted() ?? "—"),
+            .init(
+                label: L10n.string("Waiting"), value: stats.isRead ? stats.waiting.formatted() : "—",
+                isCaution: stats.waiting > 0),
             .init(
                 label: L10n.string("Read in"),
                 value: stats.averageRead.map(PostTimeline.duration) ?? "—",

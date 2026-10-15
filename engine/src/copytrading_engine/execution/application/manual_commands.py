@@ -30,6 +30,8 @@ from copytrading_engine.execution.domain.sessions import Session, trade_date
 from copytrading_engine.execution.domain.values import BrokerAccountNumber
 
 MANUAL_PREVIEW_TTL_SECONDS = 30
+# Quote problems an order by hand goes without: its limit, not the quote, bounds what it pays.
+OLD_QUOTE = frozenset({"quote_stale", "quote_unavailable"})
 log = logging.getLogger(__name__)
 
 
@@ -320,7 +322,14 @@ class ManualTradingApplication:
             except Exception as exc:  # noqa: BLE001 - unexpected preview failures become a reason
                 self._report_unexpected_preview_failure("quote", exc)
                 quote_reason = "preview_unavailable"
-        if quote_reason is not None:
+        if quote_reason in OLD_QUOTE:
+            # The order's own limit bounds it (ADR-0007), as it bounds a copied one that never
+            # reads a quote: a buy carries a price, and a sell at the market is floored by a bid
+            # the plan already checked. Outside regular hours the free feed is 15 minutes late at
+            # best, so an old or missing quote only warns, and is not shown as the market's price.
+            quote, fresh_price = None, None
+            checks.append(ManualCheck(name="quote", status="warning", reason=quote_reason))
+        elif quote_reason is not None:
             reasons.append(quote_reason)
             checks.append(ManualCheck(name="quote", status="blocked", reason=quote_reason))
         elif decision is not None and decision.plan is not None:

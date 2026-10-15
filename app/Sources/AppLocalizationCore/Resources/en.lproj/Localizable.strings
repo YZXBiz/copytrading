@@ -36,7 +36,6 @@
 "%@ · %@ %@" = "%@ · %@ %@";
 "%@ · %@ on this Mac" = "%@ · %@ on this Mac";
 "%@ · as of %@" = "%@ · as of %@";
-"%@ · channel %@ · %@" = "%@ · channel %@ · %@";
 "%@ · instruction %lld" = "%@ · instruction %lld";
 "%@ → %@ · %@" = "%@ → %@ · %@";
 "%@, %@" = "%@, %@";
@@ -111,7 +110,6 @@
 "An agent is asking for approval" = "An agent is asking for approval";
 "An unknown program" = "An unknown program";
 "Another open order is in the way" = "Another open order is in the way";
-"any author" = "any author";
 "Any service or server that speaks the OpenAI API" = "Any service or server that speaks the OpenAI API";
 "anyone who posts" = "anyone who posts";
 "Anything that could trade only becomes a request you approve here with Touch ID." = "Anything that could trade only becomes a request you approve here with Touch ID.";
@@ -136,7 +134,6 @@
 "Authentication status: %@" = "Authentication status: %@";
 "author" = "author";
 "Author" = "Author";
-"author %@" = "author %@";
 "Author ID" = "Author ID";
 "authors" = "authors";
 "Automatic" = "Automatic";
@@ -330,17 +327,14 @@
 "Equity this week" = "Equity this week";
 "Equity" = "Equity";
 "Equity today" = "Equity today";
-"Estimated budget %@ · quantity %@" = "Estimated budget %@ · quantity %@";
 "Evaluate Message" = "Evaluate Message";
 "Evaluate with Saved Profile…" = "Evaluate with Saved Profile…";
 "Evaluating with the configured model" = "Evaluating with the configured model";
 "Everything checks out. Look over how the examples were read." = "Everything checks out. Look over how the examples were read.";
 "Everything checks out. Start copying when you're ready." = "Everything checks out. Start copying when you're ready.";
 "Everything CopyTrading records stays here, on this Mac." = "Everything CopyTrading records stays here, on this Mac.";
-"Evidence: %@ · %@ · %@" = "Evidence: %@ · %@ · %@";
 "Example %lld" = "Example %lld";
 "Exit fractions apply to" = "Exit fractions apply to";
-"Exit fractions apply to %@" = "Exit fractions apply to %@";
 "Expanded" = "Expanded";
 "Expected" = "Expected";
 "Expected action" = "Expected action";
@@ -385,7 +379,6 @@
 "Getting started 👋" = "Getting started 👋";
 "Go" = "Go";
 "Go back and forward" = "Go back and forward";
-"Go to Today, Activity, People, Accounts, Connections, or this guide" = "Go to Today, Activity, People, Accounts, Connections, or this guide";
 "GPT models" = "GPT models";
 "Grok models" = "Grok models";
 "guru" = "guru";
@@ -399,7 +392,6 @@
 "Hide Sidebar" = "Hide Sidebar";
 "Historical" = "Historical";
 "Historical Evaluation" = "Historical Evaluation";
-"Historical message" = "Historical message";
 "Holdings differ from the broker" = "Holdings differ from the broker";
 "Holdings need your review" = "Holdings need your review";
 "Holdings review resolved" = "Holdings review resolved";
@@ -495,7 +487,6 @@
 "most recent post" = "most recent post";
 "most recent posts" = "most recent posts";
 "Motion and Transparency" = "Motion and Transparency";
-"Move through posts in Activity" = "Move through posts in Activity";
 "Name" = "Name";
 "Navigate to a page" = "Navigate to a page";
 "Needed when several people post there" = "Needed when several people post there";
@@ -528,7 +519,6 @@
 "No price quote was available" = "No price quote was available";
 "No prior account delivery details are recorded." = "No prior account delivery details are recorded.";
 "No problems recorded" = "No problems recorded";
-"No saved gurus" = "No saved gurus";
 "No saved manual command results for this source." = "No saved manual command results for this source.";
 "No shares left to sell" = "No shares left to sell";
 "No trading steps yet" = "No trading steps yet";
@@ -608,7 +598,6 @@
 "Paste an exact source message" = "Paste an exact source message";
 "Paste it into **API key**, and enter a model name such as **%@** under **Model**." = "Paste it into **API key**, and enter a model name such as **%@** under **Model**.";
 "Paste it into **Channel IDs**. Separate several channels with commas." = "Paste it into **Channel IDs**. Separate several channels with commas.";
-"Pause Copying" = "Pause Copying";
 "Pause Copying stops reading new posts and placing orders for every account. Start Copying picks up again." = "Pause Copying stops reading new posts and placing orders for every account. Start Copying picks up again.";
 "Pause Entries" = "Pause Entries";
 "Pause from anywhere" = "Pause from anywhere";
@@ -652,7 +641,6 @@
 "Range" = "Range";
 "Range details" = "Range details";
 "Read" = "Read";
-"Read accounts and activity again" = "Read accounts and activity again";
 "Read and pause" = "Read and pause";
 "Read by" = "Read by";
 "Read by %@" = "Read by %@";
@@ -798,7 +786,6 @@
 "Sign in at **%@** and open **%@**." = "Sign in at **%@** and open **%@**.";
 "Sign up or sign in at **alpaca.markets**. Paper trading is free." = "Sign up or sign in at **alpaca.markets**. Paper trading is free.";
 "Signal" = "Signal";
-"Simulated only. This preview cannot enqueue or submit an order." = "Simulated only. This preview cannot enqueue or submit an order.";
 "Simulated result · no orders" = "Simulated result · no orders";
 "Simulated with the configured model. No order is placed." = "Simulated with the configured model. No order is placed.";
 "since the start" = "since the start";
@@ -811,7 +798,6 @@
 "some" = "some";
 "Setup Tips" = "Setup Tips";
 "Source activity error: %@" = "Source activity error: %@";
-"Source fraction: %@ · evidence %@" = "Source fraction: %@ · evidence %@";
 "Source post" = "Source post";
 "Start" = "Start";
 "Start Copying" = "Start Copying";
@@ -830,7 +816,6 @@
 "Status: %@" = "Status: %@";
 "Staying safe" = "Staying safe";
 "Step %lld: %@" = "Step %lld: %@";
-"Step through points on Today's chart" = "Step through points on Today's chart";
 "Stop Engine" = "Stop Engine";
 "Stop new entry orders. Exits still follow the account policy." = "Stop new entry orders. Exits still follow the account policy.";
 "Stop reading new posts and placing orders for every account." = "Stop reading new posts and placing orders for every account.";
@@ -1489,7 +1474,7 @@
 "**A sleeping Mac copies nothing.** Keep it plugged in and awake, with CopyTrading open, while the market is. A closed MacBook lid sleeps it unless a display is connected." = "**A sleeping Mac copies nothing.** Keep it plugged in and awake, with CopyTrading open, while the market is. A closed MacBook lid sleeps it unless a display is connected.";
 "**Discord's terms** don't allow automating a personal account. Use a separate account that only joins your gurus' servers." = "**Discord's terms** don't allow automating a personal account. Use a separate account that only joins your gurus' servers.";
 "**Your AI service bills you** for each post it reads, usually a fraction of a cent." = "**Your AI service bills you** for each post it reads, usually a fraction of a cent.";
-"**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Pause Copying** stops everything at once." = "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Pause Copying** stops everything at once.";
+"**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Stop All** stops everything at once." = "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Stop All** stops everything at once.";
 "Needs a name" = "Needs a name";
 "After a restart" = "After a restart";
 "After a restart: %@" = "After a restart: %@";
@@ -1913,6 +1898,7 @@
 "Yesterday" = "Yesterday";
 "No account acted on it" = "No account acted on it";
 "No posts from %@ yet. They show here as soon as CopyTrading reads one." = "No posts from %@ yet. They show here as soon as CopyTrading reads one.";
+"%@'s posts show here once CopyTrading has read them." = "%@'s posts show here once CopyTrading has read them.";
 "Edit %@" = "Edit %@";
 "Saved · applies to the next order" = "Saved · applies to the next order";
 "These limits weren't saved." = "These limits weren't saved.";
@@ -2104,6 +2090,7 @@
 "An order's outcome is still unclear at Alpaca. Resume once it settles." = "An order's outcome is still unclear at Alpaca. Resume once it settles.";
 "CopyTrading couldn't read this account's holdings just now. Try again in a moment." = "CopyTrading couldn't read this account's holdings just now. Try again in a moment.";
 "Reading the account's curve from Alpaca…" = "Reading the account's curve from Alpaca…";
+"Alpaca can't be asked for this account's curve right now." = "Alpaca can't be asked for this account's curve right now.";
 "copied" = "copied";
 "yours + %@" = "yours + %@";
 "yours" = "yours";
@@ -2160,7 +2147,7 @@
 "Stop All" = "Stop All";
 "Stop Copying" = "Stop Copying";
 "Stop Copying on an account stops its buys." = "Stop Copying on an account stops its buys.";
-"Stop Copying stops reading new posts and placing orders for every account. Each account's Start Copying picks up again." = "Stop Copying stops reading new posts and placing orders for every account. Each account's Start Copying picks up again.";
+"Stop All stops reading new posts and placing orders for every account. Each account's Start Copying picks up again." = "Stop All stops reading new posts and placing orders for every account. Each account's Start Copying picks up again.";
 "Stop from anywhere" = "Stop from anywhere";
 "Stopped copying into %@" = "Stopped copying into %@";
 "Stopping" = "Stopping";
@@ -2381,3 +2368,7 @@
 "%@: Buy %@ of %@, %@ at %@ or less" = "%@: Buy %@ of %@, %@ at %@ or less";
 "%@: %@ %@ of %@ at %@" = "%@: %@ %@ of %@ at %@";
 "Change %@'s limits" = "Change %@'s limits";
+"Go to an account, a guru, or a page, in sidebar order" = "Go to an account, a guru, or a page, in sidebar order";
+"Find a post, a guru, or a page" = "Find a post, a guru, or a page";
+"Read accounts and posts again" = "Read accounts and posts again";
+"Step through points on an account's chart" = "Step through points on an account's chart";

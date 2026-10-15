@@ -18,11 +18,14 @@ struct EquityValueAxis {
         let normalized = raw / magnitude
         let unit: Double = normalized < 1.5 ? 1 : normalized < 3 ? 2 : normalized < 7 ? 5 : 10
         let step = unit * magnitude
-        var value = (lower / step).rounded(.up) * step
+        // Whole multiples of the step, so no tick drifts off its round number, and zero is +0: a
+        // range just below zero rounds up to -0, which reads "-$0".
+        var index = (lower / step).rounded(.up)
         var ticks: [Double] = []
-        while value <= upper + step * 1e-9 {
-            ticks.append(value)
-            value += step
+        while index * step <= upper + step * 1e-9 {
+            let value = index * step
+            ticks.append(value.isZero ? 0 : value)
+            index += 1
         }
         self.ticks = ticks
         self.step = step

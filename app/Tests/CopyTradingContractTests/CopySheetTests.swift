@@ -8,6 +8,7 @@ import Testing
 @MainActor
 func runCopySheetTests() throws {
     try theFooterSpendsWhatTheCappedPlanSpends()
+    try theFooterCountsSharesAtTheLimitTheEngineSends()
     try sizesTheMaxPerOrderMakesTheSameReadAsOne()
     try thePostsPriceIsTheDefault()
 }
@@ -36,6 +37,26 @@ private func theFooterSpendsWhatTheCappedPlanSpends() throws {
         drafts: [sixth], accounts: [account], connections: [account.accountID: full],
         maxOrderUSD: [account.accountID: 250], mode: .copy)
     try #require(small.action == "Buy $166.66 of CCL", "a sixth: \(small.action)")
+}
+
+/// From the live pass: "如果CCL跌到25.14我会买" into zhap-account-2 ($250 max per order, buys up to
+/// 1% above the price). The footer said "≈ 9.944 shares at $25.14"; the engine sent 9.846 shares
+/// with a $25.39 limit, as its checked row then said.
+@MainActor
+private func theFooterCountsSharesAtTheLimitTheEngineSends() throws {
+    let account = try fixtureAccount()
+    let full = TradingRouteConnection(accountID: account.accountID, fullPositionUSD: "1000")
+    let draft = ManualInstructionDraft(call: try call(#"{"action": "buy", "symbol": "CCL", "price": "25.14"}"#))
+    let estimate = ManualOrderEstimate(
+        drafts: [draft], accounts: [account], connections: [account.accountID: full],
+        maxOrderUSD: [account.accountID: 250], maxAbovePct: [account.accountID: 1], mode: .copy)
+
+    let order = estimate.summary?.order
+    try #require(order == "Buy $250 of CCL ≈ 9.846 shares at $25.39", "the footer: \(order ?? "nil")")
+    // The engine's `limit_price`: down to a cent, to a hundredth of a cent under $1.
+    try #require(ManualOrderEstimate.limit(Decimal(string: "25.14")!, abovePct: 1) == Decimal(string: "25.39")!)
+    try #require(ManualOrderEstimate.limit(Decimal(string: "0.5123")!, abovePct: 1) == Decimal(string: "0.5174")!)
+    try #require(ManualOrderEstimate.limit(Decimal(string: "23.39")!, abovePct: 0) == Decimal(string: "23.39")!)
 }
 
 private func sizesTheMaxPerOrderMakesTheSameReadAsOne() throws {
