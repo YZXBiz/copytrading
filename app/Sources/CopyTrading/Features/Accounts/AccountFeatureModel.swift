@@ -52,6 +52,9 @@ final class AccountFeatureModel {
     /// When accounts and activity were last read successfully; the toolbar shows its age.
     private(set) var lastUpdatedAt: Date?
     private(set) var histories: [String: EquityHistory] = [:]
+    /// The accounts whose curve for the current window was asked for, answered or not: a missing
+    /// curve means "still reading" only until then.
+    private(set) var historiesRead: Set<String> = []
     private(set) var historyWindow: EquityHistoryWindow = .today
     private var retryCommands: [String: AccountControlCommand] = [:]
     private var privateAccessGeneration: UUID?
@@ -138,16 +141,19 @@ final class AccountFeatureModel {
         if window != historyWindow {
             historyWindow = window
             histories = [:]
+            historiesRead = []
         }
         for account in accounts where account.readsBrokerCurve {
             do {
                 let history = try await actions.equityHistory(accountID: account.accountID, window: window)
                 guard isCurrent(generation), historyWindow == window else { return }
                 histories[account.accountID] = history
+                historiesRead.insert(account.accountID)
                 errors.removeValue(forKey: "history:\(account.accountID)")
             } catch {
                 guard isCurrent(generation) else { return }
                 histories[account.accountID] = nil
+                historiesRead.insert(account.accountID)
                 errors["history:\(account.accountID)"] = Reason.refusal(error)
             }
         }
@@ -337,6 +343,7 @@ final class AccountFeatureModel {
         retryCommands = [:]
         lastUpdatedAt = nil
         histories = [:]
+        historiesRead = []
         historyWindow = .today
     }
 

@@ -170,6 +170,7 @@ def activity(page: SourceActivityPage) -> wire.ActivityPage:
                         symbol=instruction.symbol,
                         price=instruction.price,
                         fraction=instruction.fraction,
+                        usd_amount=instruction.usd_amount,
                     )
                     for instruction in item.instructions
                 ),

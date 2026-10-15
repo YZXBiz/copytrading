@@ -379,7 +379,6 @@
 "Getting started 👋" = "快速开始 👋";
 "Go" = "前往";
 "Go back and forward" = "后退或前进";
-"Go to Today, Activity, People, Accounts, Connections, or this guide" = "前往“今日”“活动”“信号源”“账户”“连接”页面，或打开本指南";
 "GPT models" = "GPT 模型";
 "Grok models" = "Grok 模型";
 "guru" = "个信号源";
@@ -487,7 +486,6 @@
 "most recent post" = "条最近的帖子";
 "most recent posts" = "条最近的帖子";
 "Motion and Transparency" = "动态效果与透明度";
-"Move through posts in Activity" = "在“活动”中浏览帖子";
 "Name" = "名称";
 "Navigate to a page" = "跳转到页面";
 "Needed when several people post there" = "多人发帖时必填";
@@ -599,7 +597,6 @@
 "Paste an exact source message" = "粘贴完整的原始消息";
 "Paste it into **API key**, and enter a model name such as **%@** under **Model**." = "粘贴到 **API 密钥** 字段，并在 **模型** 下输入模型名称，例如 **%@**。";
 "Paste it into **Channel IDs**. Separate several channels with commas." = "将其粘贴到 **频道 ID** 中。多个频道 ID 之间用逗号分隔。";
-"Pause Copying" = "暂停跟单";
 "Pause Copying stops reading new posts and placing orders for every account. Start Copying picks up again." = "暂停跟单会停止读取新帖子，并停止为所有账户下单。重新开始跟单后会继续。";
 "Pause Entries" = "暂停开仓";
 "Pause from anywhere" = "随时暂停";
@@ -643,7 +640,6 @@
 "Range" = "时间范围";
 "Range details" = "范围详情";
 "Read" = "已读取";
-"Read accounts and activity again" = "重新读取账户和活动";
 "Read and pause" = "读取并暂停";
 "Read by" = "解读模型";
 "Read by %@" = "由 %@ 解读";
@@ -818,7 +814,6 @@
 "Status: %@" = "状态：%@";
 "Staying safe" = "安全保障";
 "Step %lld: %@" = "第%lld步：%@";
-"Step through points on Today's chart" = "逐个查看“今日”图表上的数据点";
 "Stop Engine" = "停止引擎";
 "Stop new entry orders. Exits still follow the account policy." = "停止新的开仓订单。平仓仍按账户策略执行。";
 "Stop reading new posts and placing orders for every account." = "停止读取新帖子，并停止为所有账户下单。";
@@ -899,7 +894,7 @@
 "times" = "次";
 "Timing" = "时机";
 "Tips point out things like measuring on the chart; each shows once" = "提示会指出图表测量等功能；每条提示只显示一次。";
-"to" = "打开";
+"to" = "至";
 "To do" = "未完成";
 "Today" = "今日";
 "today" = "今天";
@@ -1477,7 +1472,7 @@
 "**A sleeping Mac copies nothing.** Keep it plugged in and awake, with CopyTrading open, while the market is. A closed MacBook lid sleeps it unless a display is connected." = "**睡眠的 Mac 什么都不会跟单**。开盘期间让它接着电源、保持唤醒，并开着 CopyTrading。合上 MacBook 盖子会让它睡眠，除非连接了显示器。";
 "**Discord's terms** don't allow automating a personal account. Use a separate account that only joins your gurus' servers." = "**Discord 的条款**不允许自动化个人账户。请用一个只加入信号源服务器的单独账户。";
 "**Your AI service bills you** for each post it reads, usually a fraction of a cent." = "**你的 AI 服务按读取的帖子收费**，通常每条不到一美分。";
-"**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Pause Copying** stops everything at once." = "**它只跟单，不做判断**。不提供建议，也不设止损。每日亏损上限只停止买入，不停止卖出。**暂停跟单**会一次停止所有操作。";
+"**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Stop All** stops everything at once." = "**它只跟单，不做判断**。不提供建议，也不设止损。每日亏损上限只停止买入，不停止卖出。**全部停止**会一次停止所有操作。";
 "Needs a name" = "缺少名称";
 "After a restart" = "重启后";
 "After a restart: %@" = "重启后：%@";
@@ -2093,6 +2088,7 @@
 "An order's outcome is still unclear at Alpaca. Resume once it settles." = "Alpaca 中一笔订单的结果尚不明确。待其确定后再恢复。";
 "CopyTrading couldn't read this account's holdings just now. Try again in a moment." = "CopyTrading 暂时无法读取该账户的持仓。请稍后再试。";
 "Reading the account's curve from Alpaca…" = "正在从 Alpaca 读取账户曲线…";
+"Alpaca can't be asked for this account's curve right now." = "暂时无法向 Alpaca 读取这个账户的净值曲线。";
 "copied" = "复制";
 "yours + %@" = "你的 + %@";
 "yours" = "你的";
@@ -2149,7 +2145,7 @@
 "Stop All" = "全部停止";
 "Stop Copying" = "停止跟单";
 "Stop Copying on an account stops its buys." = "在账户上停止跟单，就不会再买入。";
-"Stop Copying stops reading new posts and placing orders for every account. Each account's Start Copying picks up again." = "停止跟单会停止读取新帖子，并停止为所有账户下单。在各账户点“开始跟单”即可继续。";
+"Stop All stops reading new posts and placing orders for every account. Each account's Start Copying picks up again." = "“全部停止”会停止读取新帖子，并停止为所有账户下单。在各账户点“开始跟单”即可继续。";
 "Stop from anywhere" = "随时停止";
 "Stopped copying into %@" = "已停止跟单到 %@";
 "Stopping" = "正在停止";
@@ -2395,3 +2391,7 @@
 "Late order found" = "发现迟到订单";
 "Late order found again" = "再次发现迟到订单";
 "Ledger entry" = "账本记录";
+"Go to an account, a guru, or a page, in sidebar order" = "按侧边栏顺序前往账户、信号源或页面";
+"Find a post, a guru, or a page" = "查找帖子、信号源或页面";
+"Read accounts and posts again" = "重新读取账户和帖子";
+"Step through points on an account's chart" = "逐个查看账户图表上的数据点";

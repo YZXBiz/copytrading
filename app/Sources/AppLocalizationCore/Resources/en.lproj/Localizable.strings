@@ -379,7 +379,6 @@
 "Getting started 👋" = "Getting started 👋";
 "Go" = "Go";
 "Go back and forward" = "Go back and forward";
-"Go to Today, Activity, People, Accounts, Connections, or this guide" = "Go to Today, Activity, People, Accounts, Connections, or this guide";
 "GPT models" = "GPT models";
 "Grok models" = "Grok models";
 "guru" = "guru";
@@ -487,7 +486,6 @@
 "most recent post" = "most recent post";
 "most recent posts" = "most recent posts";
 "Motion and Transparency" = "Motion and Transparency";
-"Move through posts in Activity" = "Move through posts in Activity";
 "Name" = "Name";
 "Navigate to a page" = "Navigate to a page";
 "Needed when several people post there" = "Needed when several people post there";
@@ -599,7 +597,6 @@
 "Paste an exact source message" = "Paste an exact source message";
 "Paste it into **API key**, and enter a model name such as **%@** under **Model**." = "Paste it into **API key**, and enter a model name such as **%@** under **Model**.";
 "Paste it into **Channel IDs**. Separate several channels with commas." = "Paste it into **Channel IDs**. Separate several channels with commas.";
-"Pause Copying" = "Pause Copying";
 "Pause Copying stops reading new posts and placing orders for every account. Start Copying picks up again." = "Pause Copying stops reading new posts and placing orders for every account. Start Copying picks up again.";
 "Pause Entries" = "Pause Entries";
 "Pause from anywhere" = "Pause from anywhere";
@@ -643,7 +640,6 @@
 "Range" = "Range";
 "Range details" = "Range details";
 "Read" = "Read";
-"Read accounts and activity again" = "Read accounts and activity again";
 "Read and pause" = "Read and pause";
 "Read by" = "Read by";
 "Read by %@" = "Read by %@";
@@ -818,7 +814,6 @@
 "Status: %@" = "Status: %@";
 "Staying safe" = "Staying safe";
 "Step %lld: %@" = "Step %lld: %@";
-"Step through points on Today's chart" = "Step through points on Today's chart";
 "Stop Engine" = "Stop Engine";
 "Stop new entry orders. Exits still follow the account policy." = "Stop new entry orders. Exits still follow the account policy.";
 "Stop reading new posts and placing orders for every account." = "Stop reading new posts and placing orders for every account.";
@@ -1477,7 +1472,7 @@
 "**A sleeping Mac copies nothing.** Keep it plugged in and awake, with CopyTrading open, while the market is. A closed MacBook lid sleeps it unless a display is connected." = "**A sleeping Mac copies nothing.** Keep it plugged in and awake, with CopyTrading open, while the market is. A closed MacBook lid sleeps it unless a display is connected.";
 "**Discord's terms** don't allow automating a personal account. Use a separate account that only joins your gurus' servers." = "**Discord's terms** don't allow automating a personal account. Use a separate account that only joins your gurus' servers.";
 "**Your AI service bills you** for each post it reads, usually a fraction of a cent." = "**Your AI service bills you** for each post it reads, usually a fraction of a cent.";
-"**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Pause Copying** stops everything at once." = "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Pause Copying** stops everything at once.";
+"**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Stop All** stops everything at once." = "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Stop All** stops everything at once.";
 "Needs a name" = "Needs a name";
 "After a restart" = "After a restart";
 "After a restart: %@" = "After a restart: %@";
@@ -2093,6 +2088,7 @@
 "An order's outcome is still unclear at Alpaca. Resume once it settles." = "An order's outcome is still unclear at Alpaca. Resume once it settles.";
 "CopyTrading couldn't read this account's holdings just now. Try again in a moment." = "CopyTrading couldn't read this account's holdings just now. Try again in a moment.";
 "Reading the account's curve from Alpaca…" = "Reading the account's curve from Alpaca…";
+"Alpaca can't be asked for this account's curve right now." = "Alpaca can't be asked for this account's curve right now.";
 "copied" = "copied";
 "yours + %@" = "yours + %@";
 "yours" = "yours";
@@ -2149,7 +2145,7 @@
 "Stop All" = "Stop All";
 "Stop Copying" = "Stop Copying";
 "Stop Copying on an account stops its buys." = "Stop Copying on an account stops its buys.";
-"Stop Copying stops reading new posts and placing orders for every account. Each account's Start Copying picks up again." = "Stop Copying stops reading new posts and placing orders for every account. Each account's Start Copying picks up again.";
+"Stop All stops reading new posts and placing orders for every account. Each account's Start Copying picks up again." = "Stop All stops reading new posts and placing orders for every account. Each account's Start Copying picks up again.";
 "Stop from anywhere" = "Stop from anywhere";
 "Stopped copying into %@" = "Stopped copying into %@";
 "Stopping" = "Stopping";
@@ -2395,3 +2391,7 @@
 "Late order found" = "Late order found";
 "Late order found again" = "Late order found again";
 "Ledger entry" = "Ledger entry";
+"Go to an account, a guru, or a page, in sidebar order" = "Go to an account, a guru, or a page, in sidebar order";
+"Find a post, a guru, or a page" = "Find a post, a guru, or a page";
+"Read accounts and posts again" = "Read accounts and posts again";
+"Step through points on an account's chart" = "Step through points on an account's chart";

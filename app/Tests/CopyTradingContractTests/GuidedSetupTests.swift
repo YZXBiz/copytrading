@@ -11,7 +11,19 @@ func runGuidedSetupTests() throws {
     try aSavedDraftIsNotAChange()
     try aKeyStaysWithItsService()
     try theTourAsksOnlyForWhatIsLeft()
+    try theGuidesShortcutsAreTheAppsOwn()
     print("CopyTradingContractTests: the guide's checklist, help articles, and setup edits follow the draft")
+}
+
+/// The guide lists only what the commands do: ⌘1–⌘9 go in sidebar order, and no shortcut names a
+/// page the sidebar no longer has.
+@MainActor
+private func theGuidesShortcutsAreTheAppsOwn() throws {
+    let removed = ["Today", "Activity", "People"]
+    let stale = GuideShortcut.all.filter { shortcut in removed.contains { shortcut.action.contains($0) } }
+    try verifyGuide(stale.isEmpty, "The guide named removed pages: \(stale.map(\.action))")
+    let numbered = GuideShortcut.all.first { $0.keys.first == "⌘" && $0.keys.contains("–") }
+    try verifyGuide(numbered?.keys == ["⌘", "1", "–", "9"], "The guide's numbered pages were \(numbered?.keys ?? [])")
 }
 
 @MainActor

@@ -337,6 +337,8 @@ class InstructionItem(Wire):
     # None for a sell at the market (ADR-0007).
     price: Decimal | None
     fraction: Decimal | None
+    # A buy the post sizes in dollars ("$200 of NFLX").
+    usd_amount: Decimal | None
 
 
 class ActivityItem(Wire):

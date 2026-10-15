@@ -15,6 +15,8 @@ struct ManualReviewSheet: View {
     let connections: [String: TradingRouteConnection]
     /// Each account's max per order, which caps any one buy.
     let maxOrderUSD: [String: Decimal]
+    /// How far above the price each account's buy limit sits, in percent.
+    let maxAbovePct: [String: Decimal]
     /// Asks for Touch ID when an order goes to a live account or one that asks to approve orders.
     let confirmOrders: (Set<String>) async throws -> Void
     /// The engine isn't running, so nothing can be saved or placed until it starts.
@@ -53,6 +55,7 @@ struct ManualReviewSheet: View {
         guruName: String? = nil,
         connections: [TradingRouteConnection] = [],
         maxOrderUSD: [String: Decimal] = [:],
+        maxAbovePct: [String: Decimal] = [:],
         confirmOrders: @escaping (Set<String>) async throws -> Void,
         engineStopped: Bool = false,
         startEngine: @escaping () -> Void = {}
@@ -67,6 +70,7 @@ struct ManualReviewSheet: View {
         self.guruName = guruName
         self.connections = Dictionary(connections.map { ($0.accountID, $0) }, uniquingKeysWith: { first, _ in first })
         self.maxOrderUSD = maxOrderUSD
+        self.maxAbovePct = maxAbovePct
         self.confirmOrders = confirmOrders
         self.engineStopped = engineStopped
         self.startEngine = startEngine
@@ -114,7 +118,7 @@ struct ManualReviewSheet: View {
     private var estimate: ManualOrderEstimate {
         ManualOrderEstimate(
             drafts: instructions, accounts: chosenAccounts, connections: connections, maxOrderUSD: maxOrderUSD,
-            mode: mode, quotes: quotes)
+            maxAbovePct: maxAbovePct, mode: mode, quotes: quotes)
     }
 
     /// The account whose read keys quote the stocks: the first chosen, else the first listed.

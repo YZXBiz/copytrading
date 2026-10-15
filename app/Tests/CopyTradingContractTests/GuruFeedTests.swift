@@ -10,6 +10,25 @@ func runGuruFeedTests() async throws {
     try eachAccountSaysWhatItDidInAFewWords()
     try await theStripAndSidebarCountTheEnginesWholeDay()
     try theWaitingTabListsEveryCallTheCountSays()
+    try await anAccountTheBrokerHasNoCurveForStopsReading()
+}
+
+/// The engine answers with no curve when it can't ask the broker for one. The account is marked
+/// read, so its chart stops saying it is still reading; a new window starts over.
+@MainActor
+private func anAccountTheBrokerHasNoCurveForStopsReading() async throws {
+    let actions = GuruDayActions()
+    let feature = AccountFeatureModel()
+    feature.authorizePrivateEvidence()
+    await feature.refresh(using: actions)
+    try #require(feature.historiesRead.isEmpty, "a curve was read before anyone asked")
+
+    await feature.refreshHistories(using: actions)
+    try #require(feature.histories["paper"] == nil, "the fake engine returned a curve")
+    try #require(feature.historiesRead == ["paper"], "the asked accounts were \(feature.historiesRead)")
+
+    await feature.refreshHistories(window: EquityHistoryWindow(range: .week, day: nil), using: actions)
+    try #require(feature.historiesRead == ["paper"], "the week was not asked for")
 }
 
 private let losAngeles = TimeZone(identifier: "America/Los_Angeles")!
