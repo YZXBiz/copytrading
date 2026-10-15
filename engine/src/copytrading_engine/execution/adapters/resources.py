@@ -334,7 +334,10 @@ class ExecutionResources:
         halted: bool,
         stopping: threading.Event,
     ) -> ExecutionObservation:
-        self.engine.reconcile(now)
+        # `now` is when the cycle was asked for, and work queued ahead of it (an approved order,
+        # say) may have run since: every step records the time it runs, never an earlier one.
+        started_at = _not_before(now)
+        self.engine.reconcile(started_at)
         self.engine.process(
             now,
             halted=halted,
@@ -346,11 +349,13 @@ class ExecutionResources:
         # Orders this cycle placed can fill before it ends: book those fills before the broker is
         # read, so a buy shows as copied and a sale as gone in the same cycle, never as shares at
         # the broker nobody copied or shares sold that still count. With nothing pending this
-        # costs no broker call.
-        positions = self.engine.reconcile(now)
+        # costs no broker call. A fill is booked at the time it is read, after the order it fills;
+        # a holdings question this cycle opened still waits for the next cycle's sync to settle.
+        settled_at = _not_before(started_at)
+        positions = self.engine.reconcile(settled_at, settle_before=started_at)
         self.position_audit = self.engine.audit_positions(positions)
         self.account = self.broker.account()
-        self.account_observed_at = now
+        self.account_observed_at = settled_at
         self.last_inspection = RecoveryApplication(
             self.engine.ledger, self.broker
         ).inspect_ownership(account=self.account, positions=positions)
@@ -578,6 +583,11 @@ def build_resources(
     except BaseException:
         stack.close()
         raise
+
+
+def _not_before(at: dt.datetime) -> dt.datetime:
+    """The time now, or `at` when a caller's clock runs ahead of it."""
+    return max(at, dt.datetime.now(dt.UTC))
 
 
 def _flat_limits(config: CopyConfig) -> dict[str, object]:

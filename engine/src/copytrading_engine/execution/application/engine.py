@@ -198,9 +198,13 @@ class CopyEngine:
             tuple(self.ledger.state.external_positions.values()),
         )
 
-    def reconcile(self, now: dt.datetime) -> tuple[Position, ...]:
-        """Book what the broker reports for every order still open, then audit holdings; return
-        the broker positions that audit read, after every fill it booked."""
+    def reconcile(
+        self, now: dt.datetime, *, settle_before: dt.datetime | None = None
+    ) -> tuple[Position, ...]:
+        """Book what the broker reports for every order still open, then audit holdings, and
+        return the broker positions that audit read, after every fill it booked. A holdings
+        question settles only once its count has held still for a later sync: with
+        `settle_before`, only questions opened before then are settled."""
         pending = self.pending()
         pending_ids = {order.client_id for order in pending}
         for order in pending:
@@ -231,7 +235,10 @@ class CopyEngine:
                 self.ledger.apply_order(client_id, update, now)
         positions = self.broker.positions()
         self.ledger.open_ownership_incidents(
-            self.audit_positions(positions), now, self._outside_orders()
+            self.audit_positions(positions),
+            now,
+            self._outside_orders(),
+            settle_before=settle_before,
         )
         return positions
 
