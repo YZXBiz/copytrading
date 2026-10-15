@@ -1,6 +1,9 @@
 """Signals, events, and engines the execution tests build on."""
 
 import datetime as dt
+import json
+import sqlite3
+from contextlib import closing
 from decimal import Decimal
 
 from copytrading_engine.execution.adapters.sqlite_ledger import Store
@@ -252,6 +255,14 @@ def save_snapshot(account_dir, snapshot: LedgerSnapshot) -> None:
         )
     finally:
         store.close()
+
+
+def as_earlier_version(account_dir, **contents) -> None:
+    """Rewrite the saved snapshot as an earlier CopyTrading's ledger, which is never migrated."""
+    with closing(sqlite3.connect(account_dir / "execution.sqlite3")) as db, db:
+        data = json.loads(db.execute("SELECT data FROM snapshot WHERE singleton=1").fetchone()[0])
+        data |= {"schema_version": 9} | contents
+        db.execute("UPDATE snapshot SET data=? WHERE singleton=1", (json.dumps(data),))
 
 
 def engine_with_wide_limits(store, broker):

@@ -8,7 +8,11 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from copytrading_engine.execution.domain.events import JournalEvent
-from copytrading_engine.execution.domain.ledger_state import EarlierLedgerVersion, LedgerSnapshot
+from copytrading_engine.execution.domain.ledger_state import (
+    EarlierLedgerVersion,
+    LedgerSnapshot,
+    is_earlier_version,
+)
 from copytrading_engine.execution.domain.values import BrokerAccountNumber
 from copytrading_engine.execution.presentation.notifications import execution_notification
 from copytrading_engine.shared.notification_models import NotificationIntent
@@ -55,13 +59,9 @@ def decode_ledger_snapshot(raw: str) -> LedgerSnapshot:
     payload = json.loads(raw)
     if not isinstance(payload, dict) or type(payload.get("schema_version")) is not int:
         raise RuntimeError("Execution snapshot schema version is missing")
-    version, current = (
-        payload["schema_version"],
-        LedgerSnapshot.model_fields["schema_version"].default,
-    )
-    if 0 < version < current:
+    if is_earlier_version(payload["schema_version"]):
         raise EarlierLedgerVersion("Execution snapshot was written by an earlier version")
-    if version != current:
+    if payload["schema_version"] != LedgerSnapshot.model_fields["schema_version"].default:
         raise ValueError("Unsupported execution snapshot schema version")
     if "control" not in payload:
         raise ValueError("Execution snapshot is missing account control evidence")

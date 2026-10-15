@@ -1,7 +1,6 @@
 """Configuration removal checks persisted ownership without starting broker resources."""
 
 import datetime as dt
-import json
 import sqlite3
 from contextlib import closing
 from decimal import Decimal
@@ -21,7 +20,7 @@ from copytrading_engine.execution.domain.progress import OrderLinked
 from copytrading_engine.execution.domain.sessions import Session
 from copytrading_engine.shared.signals import Evidence, Instruction, StockSignal
 
-from .builders import destination_signal, save_snapshot
+from .builders import as_earlier_version, destination_signal, save_snapshot
 
 NOW = dt.datetime(2026, 9, 25, 15, tzinfo=dt.UTC)
 
@@ -262,18 +261,10 @@ def test_unreadable_existing_database_fails_closed(tmp_path):
         has_unresolved_ownership(account_dir)
 
 
-def _as_older_version(account_dir, **contents) -> None:
-    """Rewrite the saved snapshot as an earlier CopyTrading's ledger, which is never migrated."""
-    with closing(sqlite3.connect(account_dir / "execution.sqlite3")) as db, db:
-        data = json.loads(db.execute("SELECT data FROM snapshot WHERE singleton=1").fetchone()[0])
-        data |= {"schema_version": 9} | contents
-        db.execute("UPDATE snapshot SET data=? WHERE singleton=1", (json.dumps(data),))
-
-
 def test_an_empty_account_from_an_older_version_does_not_block_setup(tmp_path):
     account_dir = tmp_path / "paper-demo"
     save_snapshot(account_dir, LedgerSnapshot(account_id="paper-demo"))
-    _as_older_version(account_dir)
+    as_earlier_version(account_dir)
 
     assert not has_unresolved_ownership(account_dir)
 
@@ -291,6 +282,6 @@ def test_an_empty_account_from_an_older_version_does_not_block_setup(tmp_path):
 def test_an_older_versions_account_holding_anything_still_blocks(tmp_path, contents):
     account_dir = tmp_path / "paper-demo"
     save_snapshot(account_dir, LedgerSnapshot(account_id="paper-demo"))
-    _as_older_version(account_dir, **contents)
+    as_earlier_version(account_dir, **contents)
 
     assert has_unresolved_ownership(account_dir)

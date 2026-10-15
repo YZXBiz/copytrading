@@ -1,9 +1,6 @@
 """Operator pages name accounts they could not read instead of showing them as empty."""
 
 import asyncio
-import json
-import sqlite3
-from contextlib import closing
 from decimal import Decimal
 from types import SimpleNamespace
 
@@ -25,7 +22,7 @@ from copytrading_engine.trading.application.account_access import (
 from copytrading_engine.trading.application.operator_service import OperatorQueryService
 from copytrading_engine.trading.application.paused_reader import PausedAccountReader, ReadKeys
 
-from ..execution.builders import save_snapshot
+from ..execution.builders import as_earlier_version, save_snapshot
 
 
 def _service(data_dir) -> OperatorQueryService:
@@ -58,11 +55,7 @@ async def test_unreadable_retained_account_is_reported_on_the_overview_page(tmp_
 
 
 async def test_an_earlier_versions_retained_account_reads_as_kept_history(tmp_path):
-    account_dir = tmp_path / "accounts" / "archive"
-    save_snapshot(account_dir, LedgerSnapshot(account_id="archive"))
-    with closing(sqlite3.connect(account_dir / "execution.sqlite3")) as db, db:
-        data = json.loads(db.execute("SELECT data FROM snapshot").fetchone()[0])
-        db.execute("UPDATE snapshot SET data=?", (json.dumps(data | {"schema_version": 9}),))
+    _earlier_ledger(tmp_path, "archive")
 
     page = await _service(tmp_path).account_overviews()
 
@@ -71,17 +64,26 @@ async def test_an_earlier_versions_retained_account_reads_as_kept_history(tmp_pa
     )
 
 
-async def test_unreadable_account_is_reported_on_the_source_activity_page(tmp_path):
+def _earlier_ledger(data_dir, account_id: str) -> None:
+    account_dir = data_dir / "accounts" / account_id
+    save_snapshot(account_dir, LedgerSnapshot(account_id=account_id))
+    as_earlier_version(account_dir)
+
+
+@pytest.mark.parametrize(
+    ("ledger", "reason"),
+    [(_corrupt_ledger, "read_failed"), (_earlier_ledger, "earlier_version")],
+    ids=["unreadable", "earlier-version"],
+)
+async def test_an_unshown_account_is_named_on_the_source_activity_page(tmp_path, ledger, reason):
     for opener in (SQLiteSourceStore.open, SQLiteExtractionStore.open):
         store = await opener(tmp_path / "application.db")
         await store.close()
-    _corrupt_ledger(tmp_path, "archive")
+    ledger(tmp_path, "archive")
 
     page = await _service(tmp_path).source_activity(None, 10)
 
-    assert page.unavailable_accounts == (
-        AccountUnavailable(account_id="archive", reason="read_failed"),
-    )
+    assert page.unavailable_accounts == (AccountUnavailable(account_id="archive", reason=reason),)
 
 
 async def test_stalled_owner_read_is_a_timeout_not_an_empty_result(monkeypatch):

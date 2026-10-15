@@ -585,3 +585,9 @@ class LedgerSnapshot(Value):
             if lot.remaining_qty != lot.original_qty - sold - manually_sold - ownership_reductions:
                 raise ValueError("Lot quantity does not match recorded sell fills")
         return self
+
+
+def is_earlier_version(version: object) -> bool:
+    """Whether a saved snapshot's version is one an earlier CopyTrading wrote."""
+    current = LedgerSnapshot.model_fields["schema_version"].default
+    return type(version) is int and 0 < version < current
