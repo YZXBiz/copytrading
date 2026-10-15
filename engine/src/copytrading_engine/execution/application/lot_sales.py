@@ -10,6 +10,7 @@ from typing import Literal
 from copytrading_engine.execution.application.engine import CopyEngine
 from copytrading_engine.execution.application.manual_commands import (
     facts_digest,
+    owner_order_reason,
     owner_order_status,
 )
 from copytrading_engine.execution.application.ports import BrokerError, QuoteBroker
@@ -300,7 +301,7 @@ def lot_sale_result_from_snapshot(snapshot: LedgerSnapshot, command_id: str) -> 
     return LotSaleResult(
         sale=sale,
         status=status,
-        reason=order.raw_broker_status if status == "broker_rejected" else None,
+        reason=owner_order_reason(status),
         client_id=order.client_id,
         broker_order_id=order.broker_id,
         order_status=order.status,

@@ -426,8 +426,7 @@ def manual_command_result_from_snapshot(
     return ManualCommandResult(
         command=command,
         status=status,
-        # The broker's own word stays on the order; the owner reads the fixed code.
-        reason="broker_rejected" if status == "broker_rejected" else None,
+        reason=owner_order_reason(status),
         client_id=order.client_id,
         broker_order_id=order.broker_id,
         order_status=order.status,
@@ -488,6 +487,12 @@ def facts_digest(value: object) -> str:
     """A stable fingerprint of the facts a preview was decided on."""
     encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), default=str).encode()
     return hashlib.sha256(encoded).hexdigest()
+
+
+def owner_order_reason(status: str) -> str | None:
+    """Why an owner's order (a copy or a lot sale) did not go through, as the code the app words.
+    The broker's own word stays on the order."""
+    return "broker_rejected" if status == "broker_rejected" else None
 
 
 def owner_order_status(
