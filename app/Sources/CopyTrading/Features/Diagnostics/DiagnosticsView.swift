@@ -91,21 +91,24 @@ struct DiagnosticsView: View {
     }
 
     private var controls: some View {
-        HStack(spacing: 10) {
-            SegmentedTrack(options: DiagnosticsFilter.allCases, selection: $filter) { option in
-                Text(L10n.string(option.rawValue))
-            }
+        // The same words-and-underline choices as every other page, and a field on a writing line.
+        HStack(alignment: .firstTextBaseline, spacing: 16) {
+            TrackedSwitcher(
+                choices: DiagnosticsFilter.allCases, selection: $filter, title: \.rawValue,
+                count: { choice in model.diagnosticsEntries.count { choice.includes($0) } },
+                identifier: "diagnostics.filter"
+            )
             .fixedSize()
-            .accessibilityLabel(L10n.string("Record type"))
-            Spacer(minLength: 12)
             TextField(L10n.string("Search"), text: $query)
-                .textFieldStyle(.roundedBorder)
+                .underlineField()
                 .frame(width: 180)
                 .accessibilityIdentifier("diagnostics.search")
             Button(L10n.string("Refresh"), systemImage: "arrow.clockwise") {
                 Task { await model.reloadDiagnostics() }
             }
             .labelStyle(.iconOnly)
+            .buttonStyle(QuietPressButtonStyle())
+            .foregroundStyle(Palette.secondaryInk)
             .disabled(model.isLoadingDiagnostics)
             .help(L10n.string("Read the log again"))
             .accessibilityIdentifier("diagnostics.refresh")

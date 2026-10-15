@@ -9,7 +9,7 @@ struct SidebarAccountGlyph: View {
     var body: some View {
         Image(systemName: "building.columns")
             .font(.system(size: 10, weight: .medium))
-            .foregroundStyle(environment == .live ? Color.orange : Palette.secondaryInk)
+            .foregroundStyle(environment == .live ? Palette.live : Palette.secondaryInk)
             .frame(width: 20, height: 20)
             .background(Palette.well, in: .rect(cornerRadius: 6))
             .accessibilityHidden(true)

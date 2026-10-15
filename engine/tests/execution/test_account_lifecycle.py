@@ -1,7 +1,9 @@
 """Real account SQLite and one controlled broker exercise durable entry permission."""
 
+import asyncio
 import datetime as dt
 from decimal import Decimal
+from types import SimpleNamespace
 
 import pytest
 from pydantic import SecretStr
@@ -19,6 +21,10 @@ from copytrading_engine.parsing.sqlite import SQLiteExtractionStore
 from copytrading_engine.shared.raw_message import RawMessage
 from copytrading_engine.shared.signals import StockSignal
 from copytrading_engine.sources.sqlite import SQLiteSourceStore
+from copytrading_engine.trading.adapters.operator_queries import SQLiteOperatorEvidence
+from copytrading_engine.trading.application import account_access
+from copytrading_engine.trading.application.account_access import AccountAccess
+from copytrading_engine.trading.application.operator_service import OperatorQueryService
 from copytrading_engine.trading.entrypoints.runtime import TradingRuntime
 
 from .builders import destination_signal, event
@@ -473,3 +479,76 @@ async def test_changed_limits_size_the_next_order_and_are_journaled(tmp_path, mo
         assert row.changes == changed.changes
     finally:
         await owner.close()
+
+
+async def test_a_copying_account_too_busy_to_answer_still_reads_as_copying(tmp_path, monkeypatch):
+    """A post with several calls keeps an account's worker on the broker for seconds. A read of
+    its overview that times out then falls back to the saved ledger, which must keep the
+    readiness the account last reported, not call it unavailable: the screen showed "Off" and
+    "Copying into 1 of 2" while the account was placing orders."""
+    monkeypatch.setattr(account_access, "_OWNER_READ_TIMEOUT_SECONDS", 0.05)
+    owner = await _open(tmp_path, FakeBroker())
+    try:
+        await owner.recover_account(NOW)
+        answered = (await owner.operator_overview()).model_copy(
+            update={"entry_permission": "enabled", "readiness": "enabled"}
+        )
+    finally:
+        await owner.close()
+    release = asyncio.Event()
+
+    class BusyOwner:
+        busy = False
+
+        async def operator_overview(self):
+            if self.busy:
+                await release.wait()
+            return answered
+
+    busy_owner = BusyOwner()
+    supervisor = SimpleNamespace(owner=busy_owner, state="running", error_code=None)
+    operator = OperatorQueryService(
+        AccountAccess(
+            tmp_path,
+            lambda: {"paper": supervisor},
+            configuration=lambda: SimpleNamespace(
+                accounts=(SimpleNamespace(id="paper", environment="paper"),)
+            ),
+            runtime_state=lambda: "running",
+            evidence=SQLiteOperatorEvidence(),
+        )
+    )
+
+    [live] = (await operator.account_overviews()).items
+    busy_owner.busy = True
+    page = await operator.account_overviews()
+    release.set()
+
+    assert live.readiness == "enabled"
+    [busy] = page.items
+    assert busy.readiness == "enabled"
+    assert page.unavailable_accounts == ()
+
+
+async def test_an_account_whose_worker_stopped_still_reads_as_unavailable(tmp_path):
+    owner = await _open(tmp_path, FakeBroker())
+    try:
+        await owner.recover_account(NOW)
+    finally:
+        await owner.close()
+    supervisor = SimpleNamespace(owner=None, state="failed", error_code=None)
+    operator = OperatorQueryService(
+        AccountAccess(
+            tmp_path,
+            lambda: {"paper": supervisor},
+            configuration=lambda: SimpleNamespace(
+                accounts=(SimpleNamespace(id="paper", environment="paper"),)
+            ),
+            runtime_state=lambda: "running",
+            evidence=SQLiteOperatorEvidence(),
+        )
+    )
+
+    [account] = (await operator.account_overviews()).items
+
+    assert account.readiness == "account_unavailable"

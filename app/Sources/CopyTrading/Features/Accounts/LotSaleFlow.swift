@@ -29,6 +29,15 @@ final class LotSaleFlow {
 
     var remaining: Decimal { Decimal(engine: target.lot.remainingQty) ?? 0 }
 
+    /// The chosen part in words: "0.44 of 0.885 shares", or "All 0.885 shares" rather than the
+    /// same number twice.
+    var sharesLine: String {
+        let quantity = { (value: Decimal) in value.formatted(.number.precision(.fractionLength(0...4))) }
+        return shares == remaining
+            ? L10n.string("All %@ shares", quantity(remaining))
+            : L10n.string("%@ of %@ shares", quantity(shares), quantity(remaining))
+    }
+
     /// A part of the lot for the sheet's chips (a quarter, a half, three quarters, or all of it).
     /// Parts round down to hundredths of a share, so a sale never asks for more than the lot holds.
     func amount(_ part: Decimal) -> Decimal {

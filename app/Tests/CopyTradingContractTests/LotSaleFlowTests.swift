@@ -8,6 +8,7 @@ func runLotSaleFlowTests() async throws {
     try await liveSalesAskForTouchIDAndSendNothingWithoutIt()
     try await aRetryAfterALostConnectionReusesTheSaleIdentity()
     try partsOfALotRoundDownToHundredthsAndAllIsExact()
+    try allOfALotSaysAllOnce()
     print("CopyTradingContractTests: lot sales review first, ask for Touch ID on live accounts, and never send twice")
 }
 
@@ -138,4 +139,13 @@ private func partsOfALotRoundDownToHundredthsAndAllIsExact() throws {
     try #require(flow.amount(Decimal(string: "0.25")!) == Decimal(string: "0.22")!, "A quarter of a lot did not round down")
     try #require(flow.amount(Decimal(string: "0.5")!) == Decimal(string: "0.44")!, "Half a lot did not round down")
     try #require(flow.amount(1) == Decimal(string: "0.885")!, "All of a lot was not the whole lot")
+}
+
+/// Choosing all of a lot reads "All 12 shares", not "12 of 12 shares".
+@MainActor
+private func allOfALotSaysAllOnce() throws {
+    let flow = LotSaleFlow(target: try target(.paper))
+    try #require(flow.sharesLine == "All 12 shares", "all of the lot read \(flow.sharesLine)")
+    flow.shares = flow.amount(Decimal(string: "0.25")!)
+    try #require(flow.sharesLine == "3 of 12 shares", "a quarter read \(flow.sharesLine)")
 }

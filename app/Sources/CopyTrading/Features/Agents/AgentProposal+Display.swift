@@ -31,6 +31,28 @@ extension AgentProposal {
         }
     }
 
+    /// The approval sheet's title. A limits request lists each change in the sheet's rows, so its
+    /// title only names the account; every other request reads as its summary.
+    @MainActor
+    var sheetTitle: String {
+        if case .setAccountLimits(let accountID, _) = subject {
+            return L10n.string("Change %@'s limits", accountID)
+        }
+        return summary
+    }
+
+    /// The account the request is about; nil when it starts copying the whole setup.
+    var accountID: String? {
+        switch subject {
+        case .resumeAccount(let accountID), .setRecovery(let accountID, _), .setAccountLimits(let accountID, _):
+            accountID
+        case .manualOrder(let order):
+            order.accountID
+        case .startProcessing:
+            nil
+        }
+    }
+
     /// The account sheet's own words for a setting, so a request reads like the page it changes.
     @MainActor
     static func limitTitle(_ field: String) -> String {

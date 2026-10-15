@@ -7,6 +7,7 @@ import json
 import sys
 from collections.abc import Callable, Sequence
 from decimal import Decimal
+from fractions import Fraction
 from typing import Final, TextIO, assert_never
 
 from copytrading_engine.control import wire
@@ -445,11 +446,35 @@ def _render_accounts(page: wire.AccountsPage) -> str:
     )
 
 
+def _share(fraction: Decimal) -> str:
+    """A share as the guru writes it: 1/6, not 16.666…%."""
+    near = Fraction(fraction).limit_denominator(12)
+    if abs(Decimal(near.numerator) / Decimal(near.denominator) - fraction) < Decimal("0.0001"):
+        return f"{near.numerator}/{near.denominator}"
+    return f"{(fraction * 100).quantize(Decimal('0.01')).normalize():f}%"
+
+
 def _instruction(step: wire.InstructionItem) -> str:
-    share = f"{step.fraction:%} of " if step.fraction is not None else ""
-    verb = {"buy": "buy", "reduce": "sell", "close": "sell all"}[step.action]
-    price = f"${step.price}" if step.price is not None else "the market"
-    return f"{verb} {share}{step.symbol} at {price}"
+    if step.action == "close":
+        verb, size = "sell all", ""
+    elif step.usd_amount is not None:
+        verb, size = step.action, f"{_dollars(step.usd_amount)} of "
+    else:
+        verb = "buy" if step.action == "buy" else "sell"
+        size = f"{_share(step.fraction)} of " if step.fraction is not None else ""
+    price = _dollars(step.price) if step.price is not None else "the market"
+    return f"{verb} {size}{step.symbol} at {price}"
+
+
+def _destination(target: wire.DestinationView) -> str:
+    """An account's outcome, and why any call in the post placed no order."""
+    line = f"  → {target.account_id}: {_words(target.status)}"
+    reasons = [
+        f"call {index}: {_words(outcome)}"
+        for index, outcome in enumerate(target.instruction_outcomes, 1)
+        if outcome != "order_linked"
+    ]
+    return line + (f" ({'; '.join(reasons)})" if reasons else "")
 
 
 def _render_activity(page: wire.ActivityPage) -> str:
@@ -463,9 +488,7 @@ def _render_activity(page: wire.ActivityPage) -> str:
         lines.append("  Source text (untrusted):")
         lines += [f"  │ {text}" for text in item.untrusted_source_text.splitlines() or [""]]
         lines += [f"  Understood as: {_instruction(step)}" for step in item.understood_as]
-        lines += [
-            f"  → {target.account_id}: {_words(target.status)}" for target in item.destinations
-        ]
+        lines += [_destination(target) for target in item.destinations]
     lines += [
         f"Rejected {item.source_id} at {_time(item.rejected_at)}: {_words(item.reason)}"
         for item in page.rejected

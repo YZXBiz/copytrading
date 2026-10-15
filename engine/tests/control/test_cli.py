@@ -1,10 +1,12 @@
 """The CLI end to end: socket, app relay, pipe server, and control service."""
 
 import asyncio
+import datetime as dt
 import io
 import json
 import os
 import typing
+from decimal import Decimal
 from types import SimpleNamespace
 
 import pytest
@@ -215,3 +217,76 @@ async def test_limits_need_a_setting_and_a_valid_value(app):
     assert (code, "Name at least one setting" in err) == (cli.EXIT_USAGE, True)
     code, _, _ = await run(relay, "accounts", "limits", "paper", "--max-order-usd", "-5")
     assert code == cli.EXIT_USAGE
+
+
+def test_activity_says_the_size_a_post_asked_for_and_why_a_call_placed_nothing():
+    """From the live pass: "Bought $100 of $SOFI" read as "buy SOFI", a sixth as 16.666…%, and a
+    refused call as "done"."""
+    at = dt.datetime(2026, 10, 15, 20, 38, tzinfo=dt.UTC)
+
+    def item(sequence, text, steps, outcomes):
+        return wire.ActivityItem(
+            sequence=sequence,
+            source_id=f"discord:demo:{sequence}",
+            source_at=at,
+            captured_at=at,
+            parse_status="complete",
+            delivery_status="delivered",
+            decision="trade",
+            parser_reason=None,
+            guru_id="guru-1",
+            untrusted_source_text=text,
+            understood_as=tuple(
+                wire.InstructionItem(action=a, symbol=s, price=p, fraction=f, usd_amount=u)
+                for a, s, p, f, u in steps
+            ),
+            destinations=(
+                wire.DestinationView(
+                    account_id="zhap",
+                    environment="paper",
+                    status="done",
+                    instruction_outcomes=outcomes,
+                    orders=(),
+                ),
+            ),
+        )
+
+    sixth, third = Decimal(1) / Decimal(6), Decimal(1) / Decimal(3)
+    page = wire.ActivityPage(
+        items=(
+            item(
+                1,
+                "Bought $100 of $SOFI at 15.04",
+                [("buy", "SOFI", Decimal("15.04"), None, Decimal("100"))],
+                ("duplicate",),
+            ),
+            item(
+                2,
+                "buy 1/6 t at 23.46",
+                [("buy", "T", Decimal("23.46"), sixth, None)],
+                ("order_linked",),
+            ),
+            item(
+                3,
+                "Trimmed 1/3 $BAC 51.74, Sold all $VZ at 44.48",
+                [
+                    ("reduce", "BAC", Decimal("51.74"), third, None),
+                    ("close", "VZ", Decimal("44.48"), Decimal(1), None),
+                ],
+                ("order_linked", "lot_unavailable"),
+            ),
+        ),
+        rejected=(),
+        next_before_seq=None,
+        unavailable=(),
+    )
+
+    out = cli._render_activity(page)
+
+    assert "  Understood as: buy $100.00 of SOFI at $15.04" in out
+    assert "  → zhap: done (call 1: duplicate)" in out
+    assert "  Understood as: buy 1/6 of T at $23.46" in out
+    assert "  → zhap: done\n" in out
+    assert "  Understood as: sell 1/3 of BAC at $51.74" in out
+    assert "  Understood as: sell all VZ at $44.48" in out
+    assert "(call 2: lot unavailable)" in out

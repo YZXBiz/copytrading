@@ -35,13 +35,18 @@ struct GuruPage: View {
                         edit: edit)
                     if let feed {
                         GuruStatsStrip(
-                            stats: GuruStats(day: feature.guruDays[guruID], waiting: feed.waitingCount)
+                            stats: GuruStats(
+                                day: feature.guruDays[guruID], waiting: feed.waitingCount,
+                                isRead: feature.lastUpdatedAt != nil)
                         )
                         .padding(.top, 36)
                         GuruHoldingsLine(guruID: guruID, accounts: feature.accounts)
                             .padding(.top, 20)
-                        GuruFeedList(days: feed.days, guruName: guru?.name ?? guruID, selection: $selectedID)
-                            .padding(.top, 56)
+                        GuruFeedList(
+                            days: feed.days, guruName: guru?.name ?? guruID, isRead: feature.lastUpdatedAt != nil,
+                            selection: $selectedID
+                        )
+                        .padding(.top, 56)
                     }
                 }
                 .frame(maxWidth: 880, alignment: .leading)

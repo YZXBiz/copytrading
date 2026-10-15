@@ -21,39 +21,42 @@ struct AccountPageWaiting: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
+            // The same name and grey mode line as a read account, so the page does not change shape
+            // when the numbers arrive.
+            VStack(alignment: .leading, spacing: 8) {
                 Text(accountID)
                     .font(DesignTokens.entityTitle)
                     .tracking(DesignTokens.entityTitleTracking)
                     .foregroundStyle(Palette.ink)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
                     .accessibilityAddTraits(.isHeader)
                 if let configuration {
-                    AccountModeBadge(environment: configuration.environment)
+                    Text(L10n.string(configuration.environment == .live ? "Live" : "Paper"))
+                        .foregroundStyle(configuration.environment == .live ? Palette.live : Palette.tertiaryInk)
+                        .font(DesignTokens.lede)
+                        .tracking(DesignTokens.ledeTracking)
                 }
             }
             if let error = feature.errors["read"] {
                 Callout(error, tone: .critical)
                     .accessibilityLabel(L10n.string("Account data error: %@", error))
             }
-            HStack(spacing: 12) {
-                if feature.isRefreshing {
-                    ProgressView().controlSize(.small)
-                } else {
-                    Image(systemName: "hourglass")
-                        .foregroundStyle(Palette.tertiaryInk)
-                        .accessibilityHidden(true)
+            // One sentence on the ground line, as every empty section reads; no dashed frame.
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    if feature.isRefreshing {
+                        ProgressView().controlSize(.mini)
+                    }
+                    Text(reason)
+                        .font(DesignTokens.bodyText)
+                        .tracking(0.3)
+                        .foregroundStyle(Palette.secondaryInk)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                Text(reason)
-                    .foregroundStyle(Palette.secondaryInk)
+                InkGround()
             }
-            .font(DesignTokens.bodyText)
-            .frame(maxWidth: .infinity, minHeight: 120, alignment: .leading)
-            .padding(.horizontal, 16)
-            .overlay {
-                RoundedRectangle(cornerRadius: DesignTokens.blockCornerRadius)
-                    .strokeBorder(Palette.hairline, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                    .accessibilityHidden(true)
-            }
+            .accessibilityElement(children: .combine)
         }
     }
 }

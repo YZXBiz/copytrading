@@ -4,7 +4,8 @@ import Foundation
 /// What the drafted trades would place, worked out in the app before the engine checks them: the
 /// one-line preview under the choices and the words on the sheet's button. A buy is the guru's
 /// share of the full position cut to the account's max per order, the dollars the engine's plan
-/// spends; the engine's preview then decides the shares at its limit.
+/// spends, in shares at the order's limit: the price plus the account's allowance above it, as
+/// the engine's `limit_price` sets it.
 struct ManualOrderEstimate {
     let drafts: [ManualInstructionDraft]
     /// The chosen accounts, in the order the sheet lists them.
@@ -13,6 +14,8 @@ struct ManualOrderEstimate {
     let connections: [String: TradingRouteConnection]
     /// Each account's max per order, by account: no one buy spends more.
     let maxOrderUSD: [String: Decimal]
+    /// How far above the price each account's buy limit sits, in percent, by account.
+    var maxAbovePct: [String: Decimal] = [:]
     let mode: ManualReviewMode
     /// The broker's latest quote for each stock, by symbol: a sell is valued at the bid, and a buy
     /// at the market is counted in shares at the ask.
@@ -65,10 +68,20 @@ struct ManualOrderEstimate {
         let at = ask.map(Humanize.usd) ?? "—"
         guard let budget = budget(draft, in: account) else { return L10n.string("Buy %@ at %@", symbol, at) }
         guard let ask else { return L10n.string("Buy %@ of %@ at %@", Humanize.dollars("\(budget)"), symbol, at) }
+        let limit = Self.limit(ask, abovePct: maxAbovePct[account.accountID] ?? 0)
         // The sentence says the count is an estimate; the count never adds a second "≈".
         return L10n.string(
             "Buy %@ of %@ ≈ %@ at %@", Humanize.dollars("\(budget)"), symbol,
-            Humanize.shares(budget / ask, marksRounding: false), at)
+            Humanize.shares(budget / limit, marksRounding: false), Humanize.usd(limit))
+    }
+
+    /// A buy's limit as the engine sets it: the price plus the allowance, down to a cent (a
+    /// hundredth of a cent under $1).
+    static func limit(_ price: Decimal, abovePct: Decimal) -> Decimal {
+        var ceiling = price * (1 + abovePct / 100)
+        var limit = Decimal()
+        NSDecimalRound(&limit, &ceiling, ceiling >= 1 ? 2 : 4, .down)
+        return limit
     }
 
     /// Shares to three places at most, as an order reads them: "0.442", "12".

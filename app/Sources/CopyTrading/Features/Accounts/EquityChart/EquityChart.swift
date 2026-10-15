@@ -7,6 +7,8 @@ import TipKit
 struct EquityChart: View {
     let account: AccountOverview
     let history: EquityHistory?
+    /// Whether the broker was asked for this window yet; until then no curve means "reading".
+    let isRead: Bool
     let window: EquityHistoryWindow
     let chooseWindow: (EquityHistoryWindow) -> Void
     /// Tall on its own, short while a detail pane shares the page.
@@ -74,6 +76,8 @@ struct EquityChart: View {
             if let stats {
                 plot(curve: curve, stats: stats)
                     .frame(height: plotHeight)
+                // In the page under the chart, not over it: a popover here covered the limits.
+                TipView(MeasureChartTip(generation: tipGeneration), arrowEdge: .top)
             } else {
                 emptyState
             }
@@ -101,7 +105,6 @@ struct EquityChart: View {
     private func plot(curve: EquityCurve, stats: EquityCurveStats) -> some View {
         EquityPlot(curve: curve, stats: stats, range: window.range, pointer: pointer)
             .drawsIn(token: drawing)
-            .popoverTip(MeasureChartTip(generation: tipGeneration), arrowEdge: .bottom)
             .task {
                 await MeasureChartTip.chartViewed.donate()
             }
@@ -144,14 +147,20 @@ struct EquityChart: View {
             }
     }
 
-    /// A short line while there is no curve, so an idle account doesn't open on a blank band.
+    /// A short line while there is no curve, on the plot's own floor, so the page keeps its shape
+    /// when the curve arrives.
     private var emptyState: some View {
-        InkEmptyState(
-            message: history == nil
-                ? L10n.string("Reading the account's curve from Alpaca…")
-                : L10n.string("The broker has no equity points for this %@.", L10n.string(window.range == .day ? "Day" : "Range"))
-        )
-        .frame(height: 72, alignment: .bottom)
+        InkEmptyState(message: emptyMessage)
+            .frame(height: plotHeight, alignment: .bottom)
+    }
+
+    private var emptyMessage: String {
+        if history != nil {
+            return L10n.string("The broker has no equity points for this %@.", L10n.string(window.range == .day ? "Day" : "Range"))
+        }
+        return isRead
+            ? L10n.string("Alpaca can't be asked for this account's curve right now.")
+            : L10n.string("Reading the account's curve from Alpaca…")
     }
 
     private func choose(_ chosen: EquityHistoryWindow) {

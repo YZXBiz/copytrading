@@ -61,7 +61,8 @@ same as his 1/6.
      tries again each cycle until the post is too old; a bid up to six hours old will do, since it
      only sets the floor: a limit sell fills at the market's better price, or rests until its
      timeout and the shares stay (Oct 2026, after live runs found the free feed's last bid is the
-     4 PM one all evening). A buy with no price, or at the market, waits
+     4 PM one all evening). An order placed by hand, a copied call or a lot sale, is bounded the
+     same way: a quote too old or missing to show only warns, never stops it. A buy with no price, or at the market, waits
      for the owner: only the guru's price bounds what a copied buy pays. So does a batch until its
      guru's N is set, and a sell that names no buy for a guru whose sells refer to the buy price.
 5. **Limits only protect.** Maximum per order trims a buy and the trim is shown. A buy that would
