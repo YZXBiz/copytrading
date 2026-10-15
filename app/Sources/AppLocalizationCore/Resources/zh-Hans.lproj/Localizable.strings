@@ -1,18 +1,12 @@
 " and %lld more" = "，另有%lld项";
 " at %@" = "：%@";
 " It has handled %@ since it started%@." = "启动以来已处理 %@%@。";
-" on %@" = "，发布于 %@";
-"%@  %@" = "%@（%@）";
 "%@ %@" = "%@%@";
-"%@ %@ %@" = "%@ %@股 %@";
-"%@ %@ %@ · limit %@" = "%@ %@ %@ · 限价 %@";
 "%@ %@ %@, %@, in %@" = "%@ %@ %@，%@，账户 %@";
 "%@ %@ at %@" = "%@ %@，价格 %@";
 "%@ %@ of %@" = "%@ %@ %@";
-"%@ %@ of %@ %@" = "%@ %@股（共%@股）%@";
 "%@ %@ · fraction %@" = "%@ %@ · 仓位 %@";
 "%@ (%@)" = "账户 %@（%@）";
-"%@ and %@" = "%@ 和 %@";
 "%@ and %lld more" = "%@，另有%lld项";
 "%@ at %@" = "%@，成交价 %@";
 "%@ at up to %@" = "%@，限价 %@";
@@ -24,34 +18,18 @@
 "%@ of %@ copying" = "正在跟单%@/%@个账户";
 "%@ of %@ shares" = "%@ / %@股";
 "%@ omitted" = "已省略 %@";
-"%@ post" = "%@条帖子";
-"%@ posts" = "%@条帖子";
-"%@ shares left from %@%@, bought%@ in %@." = "剩余%@股，来源 %@%@，买入价%@，账户 %@。";
-"%@ skipped" = "已跳过%@条";
-"%@ to review" = "待审核%@条";
 "%@ today" = "今天有%@";
 "%@ waiting" = "%@项待处理";
 "%@ waiting for approval" = "有%@需要审批";
 "%@ · %@" = "%@ · %@";
-"%@ · %@ %@" = "账户 %@ · %@ %@";
 "%@ · %@ on this Mac" = "%@ · %@（保存在此 Mac）";
-"%@ · as of %@" = "%@ · 截至 %@";
-"%@ · instruction %lld" = "账户 %@ · 指令%lld";
 "%@ → %@ · %@" = "%@ 至 %@ · %@";
 "%@, %@" = "%@，%@";
-"%@, %@, %@" = "%@、%@、%@";
-"%@, and %@" = "%@ 和 %@";
 "%@, and more" = "%@ 等";
-"%@, no calls yet." = "已发布 %@，但暂无喊单。";
-"%@, rest cancelled" = "%@，其余已取消";
 "%@: %@." = "%@：%@。";
-"%@’s post" = "来自 %@ 的帖子";
 "%lld h ago" = "%lld小时前";
 "%lld min ago" = "%lld分钟前";
-"%lld more today in Activity" = "今天“活动”中还有%lld条";
-"%lld of %lld" = "已完成%lld / %lld项";
 "%lld of %lld steps done" = "已完成%lld/%lld个步骤";
-"%lld people" = "%lld人";
 "%lld percent used" = "已使用%lld%%";
 "%llds ago" = "%lld秒前";
 ", and %@ %@ waiting" = "，另有 %@%@项待处理";
@@ -72,11 +50,9 @@
 "account" = "个账户";
 "Account" = "账户";
 "Account %@ %@, so its data is not shown." = "账户 %@ %@，因此不显示其数据。";
-"Account %@ %@, so its outcomes are not shown." = "账户 %@ %@，因此不显示其处理结果。";
 "Account command error: %@" = "账户操作错误：%@";
 "Account data error: %@" = "账户数据错误：%@";
 "Account delivery" = "账户投递";
-"Account events error: %@" = "账户事件错误：%@";
 "Account history" = "账户历史记录";
 "Account name" = "账户名称";
 "Account settings changed" = "账户设置已更改";
@@ -97,7 +73,6 @@
 "agent requests" = "个智能体请求";
 "Alerts on Your Phone" = "在手机上接收提醒";
 "All" = "全部";
-"All %@" = "全部%@股";
 "All Activity" = "全部活动";
 "Allow Agents To" = "允许智能体执行";
 "Allow new entry orders for this account." = "允许此账户下达新的开仓订单。";
@@ -150,7 +125,6 @@
 "Bought" = "已买入";
 "bought at" = "买入价";
 "Broker account %@" = "券商账户：%@";
-"Broker activity: %@" = "券商活动：%@";
 "Buy" = "买入";
 "buy" = "买入";
 "Buy %@ at %@" = "买入 %@，价格 %@";
@@ -200,7 +174,6 @@
 "Comma-separated Discord channel IDs" = "以逗号分隔的 Discord 频道 ID";
 "Command" = "命令";
 "Command %@" = "操作 ID：%@";
-"Command: %@" = "操作状态：%@";
 "Completed" = "已完成";
 "Confirm %lld order(s)" = "确认%lld笔订单";
 "Confirm manual orders?" = "确认手动订单？";
@@ -214,8 +187,6 @@
 "Copied" = "已复制";
 "Copies %@ into %@. Your keys stay in this Mac's Keychain." = "将%@跟单到%@。你的密钥保存在这台 Mac 的钥匙串中。";
 "Copies into" = "跟单到";
-"Copies into %@ and %@." = "跟单到 %@ 和 %@。";
-"Copies into %@." = "跟单到 %@。";
 "Copy" = "复制";
 "Copy %@ ID" = "复制%@ ID";
 "Copy Channel ID" = "复制频道 ID";
@@ -260,7 +231,6 @@
 "Could not complete: %@ (%@)." = "无法完成：%@（%@）。";
 "Could not read the log." = "无法读取日志。";
 "Could not save the log." = "无法保存日志。";
-"Counted from the %@ CopyTrading has loaded." = "统计范围为 CopyTrading 已加载的%@。";
 "Create a key, name it CopyTrading, and copy it. Most services show a key only once." = "创建密钥并将其命名为 CopyTrading，然后复制。多数服务只显示一次密钥。";
 "Create Backup…" = "创建备份…";
 "Create Key" = "创建密钥";
@@ -362,10 +332,8 @@
 "Forward" = "前进";
 "Fraction" = "比例";
 "Fraction to reduce" = "减仓比例";
-"Fresh quote %@ at %@ · preview expires %@" = "最新报价：%@ · 时间：%@ · 预览到期：%@";
 "From %@" = "来自 %@";
 "from %@" = "来自 %@";
-"from %@ to %@" = "从 %@ 到 %@";
 "From %@ to %@, %@. High %@, low %@." = "从 %@ 到 %@，变动 %@。最高 %@，最低 %@。";
 "Gemini models" = "Gemini 模型";
 "General" = "通用";
@@ -405,7 +373,6 @@
 "In Terminal, run **ollama pull llama3.2**, or pull any model you prefer." = "在终端中运行 **ollama pull llama3.2**，也可以下载你喜欢的其他模型。";
 "Install **Ollama** and open it." = "安装并打开 **Ollama**。";
 "Installation %@\nStaging %@" = "安装标识 %@\n暂存标识 %@";
-"Instruction %lld" = "指令%lld";
 "Instruction details" = "信号详情";
 "Interpretation" = "解读";
 "Interpretations, risk checks, order submissions, and ledger events appear here." = "解读、风险检查、订单提交和账本事件会显示在这里。";
@@ -424,7 +391,6 @@
 "Keys removed" = "密钥已移除";
 "Kimi models" = "Kimi 模型";
 "Language" = "语言";
-"Last post %@" = "上次发帖：%@";
 "Last problem: %@" = "最近的问题：%@";
 "Last result, %@. %@" = "最近结果：%@。%@";
 "Last verified backup" = "上次验证的备份";
@@ -452,7 +418,6 @@
 "Load More Accounts" = "加载更多账户";
 "Load Older History" = "加载更早的历史记录";
 "Load Older Posts" = "加载更早的帖子";
-"Loading %@ command history" = "正在加载 %@ 的操作记录";
 "Local engine, %@" = "本地引擎，%@";
 "Local log, %@" = "本地日志，%@";
 "Lock" = "锁定";
@@ -512,10 +477,7 @@
 "No history loaded." = "尚未加载历史记录。";
 "No message text was captured." = "未捕获到消息文本。";
 "No open positions. Copied buys appear here, next to anything you hold outside CopyTrading." = "当前没有未平仓持仓。跟随买入的股票会显示在此处，并与 CopyTrading 之外持有的股票并列。";
-"No posts from %@ have been loaded yet." = "尚未加载 %@ 的帖子。";
 "No posts loaded yet" = "尚未加载帖子";
-"No posts today. Start copying to follow %@." = "今天还没有帖子。开始跟单以关注 %@。";
-"No posts yet today. New calls from %@ appear here within seconds." = "今天还没有帖子。%@发布的新喊单会在几秒内显示在这里。";
 "No price quote was available" = "暂无可用报价";
 "No prior account delivery details are recorded." = "未记录此前向账户发送订单的详情。";
 "No problems recorded" = "尚未记录问题";
@@ -578,20 +540,16 @@
 "Opens the reviewed correction, preview, and confirmation workflow." = "打开已审核更正、预览和确认流程。";
 "Optional for local models" = "本地模型可不填";
 "Optional, comma-separated user IDs" = "可选，以逗号分隔的用户 ID";
-"Order %@" = "订单状态：%@";
 "Order %@ · filled %@" = "订单 %@ · 已成交 %@";
-"Order for %@ %@ was cancelled" = "已取消%@股 %@ 的订单";
 "Order previews" = "订单预览";
 "Order submission" = "订单提交";
 "Order timeout (seconds)" = "订单超时时间（秒）";
 "Orders follow the reading above, not the raw text of the post." = "订单会根据上方的解读生成，而不是直接依据帖子的原文。";
 "original position" = "原始仓位";
 "Original post: %@" = "原始帖子：%@";
-"Posted %@ · %@ before this preview" = "发布于 %@ · 比本次预览早 %@";
 "Other (OpenAI-compatible)" = "其他（兼容 OpenAI）";
 "Overnight trading is not supported" = "不支持盘前盘后交易";
 "Overnight trading was halted" = "盘前盘后交易已暂停";
-"Owned lot: %@" = "持仓批次：%@";
 "Paper" = "模拟盘";
 "Partly filled" = "部分成交";
 "Passed validation" = "验证通过";
@@ -608,7 +566,6 @@
 "Payload" = "载荷";
 "Payload size" = "载荷大小";
 "People" = "信号源";
-"Permitted quantity: %@ · original source age: %@ seconds" = "允许数量：%@ · 原始信号时长：%@秒";
 "Pick the channel they post in, then choose **Learn from Channel**. CopyTrading reads their recent posts and drafts how they write buys, sells, and tickers." = "选择其发布内容的频道，然后选择 **从频道学习**。CopyTrading 会读取近期帖子，并拟定其买入、卖出和股票代码的写法。";
 "Pick who to copy" = "选择跟单对象";
 "Platform status: %@" = "平台状态：%@";
@@ -620,7 +577,6 @@
 "Post forwarded" = "帖子已转发";
 "Post pipeline" = "帖子处理流程";
 "posts" = "条帖子";
-"Posts in Discord channel %@" = "Discord 频道 %@ 中的帖子";
 "Posts, model calls, and trading steps appear here as the engine handles them, with keys removed. The log stays on this Mac." = "引擎处理帖子时，帖子、模型调用和交易步骤会显示在这里；写入日志前会移除密钥。日志保存在这台 Mac 上。";
 "Posts, model calls, and trading steps appear here as the engine handles them." = "引擎处理帖子时，帖子、模型调用和交易步骤会显示在这里。";
 "Prepared an order" = "已准备订单";
@@ -677,7 +633,6 @@
 "Refresh Previews" = "刷新预览";
 "Refresh Status" = "刷新状态";
 "Reject" = "拒绝";
-"Rejected a post: %@" = "帖子已拒绝：%@";
 "Rejected by the broker" = "已被券商拒绝";
 "remaining position" = "剩余仓位";
 "Remove" = "移除";
@@ -696,7 +651,6 @@
 "Restore in Progress" = "正在恢复";
 "Restore Preview" = "恢复预览";
 "Resume Entries" = "恢复开仓";
-"Resume new entries in %@" = "恢复账户 %@ 的新开仓";
 "Resume Restore" = "继续恢复";
 "Resume with a read-only broker check, or roll back to the previous generation." = "可先通过只读券商检查后继续恢复，或回滚到上一版本。";
 "Retry Pending Self-Test" = "重试待处理的自检";
@@ -778,7 +732,6 @@
 "Show or hide the sidebar" = "显示或隐藏边栏";
 "Show Sidebar" = "显示边栏";
 "Show Tips Again" = "再次显示提示";
-"Shows %@'s calls and where they are copied" = "查看 %@ 发布的喊单及其跟单去向";
 "Shows the posts these shares came from" = "显示这些持仓来自哪些帖子";
 "Shows this post in Activity" = "在“活动”中显示此帖子";
 "Shows what a backup holds first. Nothing changes until you activate it." = "先预览备份包含的内容。启用恢复前不会更改任何数据。";
@@ -790,13 +743,11 @@
 "since the start" = "自开始以来";
 "skipped" = "已跳过";
 "Skipped" = "已跳过";
-"Skipped: %@" = "已跳过：%@";
 "Sold" = "已卖出";
 "Sold %@ %@%@" = "已卖出%@股 %@%@";
 "Sold %@ so far" = "目前已卖出%@股";
 "some" = "部分";
 "Setup Tips" = "设置小贴士";
-"Source activity error: %@" = "来源活动错误：%@";
 "Source post" = "来源帖子";
 "Start" = "开始";
 "Start Copying" = "开始跟单";
@@ -918,7 +869,6 @@
 "Turn on Developer Mode, then right-click the channel your guru posts in and copy its ID." = "打开开发者模式，然后右键点击信号源发帖的频道并复制其 ID。";
 "Unchanged" = "无变化";
 "Under **Request Headers**, copy the value next to **authorization** and paste it into **Discord token**." = "在 **请求标头**中，复制 **authorization** 旁边的值并粘贴到 **Discord 令牌**。";
-"Understood as · %@" = "解读为 · %@";
 "Unknown guru" = "未知信号源";
 "Unlock" = "解锁";
 "Unlock with Touch ID or your Mac's password each time CopyTrading opens." = "每次打开 CopyTrading 时，使用 Touch ID 或 Mac 密码解锁。";
@@ -958,7 +908,6 @@
 "Working" = "进行中";
 "Yes" = "是";
 "You" = "你";
-"You're copying %@ into %@." = "正在将 %@ 的喊单跟单到 %@。";
 "You're set up. This page stays here as your guide." = "设置已完成。本页会一直保留，供你参考。";
 "Your account trades" = "账户执行交易";
 "your accounts" = "你的账户";
@@ -1031,8 +980,6 @@
 "Read %@'s history" = "已读取 %@ 的账户历史记录";
 "Checked what is waiting for you" = "已查看等你处理的事项";
 "Paused copying" = "已暂停跟单";
-"Paused new entries for %@" = "已暂停 %@ 的新开仓";
-"Asked you to approve resuming %@" = "已请你批准恢复 %@ 的开仓";
 "Added up %@'s calls" = "已统计 %@ 的喊单";
 "Looked at that post" = "已查看那条帖子";
 "Couldn't check whether copying is running" = "未能查看跟单是否在运行";
@@ -1041,8 +988,6 @@
 "Couldn't read %@'s history" = "未能读取 %@ 的账户历史记录";
 "Couldn't check what is waiting for you" = "未能查看等你处理的事项";
 "Couldn't pause copying" = "未能暂停跟单";
-"Couldn't pause new entries for %@" = "未能暂停 %@ 的新开仓";
-"Couldn't ask you to approve resuming %@" = "未能发起恢复 %@ 开仓的批准请求";
 "Couldn't find that post" = "没有找到那条帖子";
 "Outcome unknown" = "结果未知";
 "Discarded" = "已作废";
@@ -1196,7 +1141,6 @@
 "Open Alpaca" = "打开 Alpaca";
 "start copying into live accounts" = "开始跟单到实盘账户";
 "Copying didn't start. Confirm with Touch ID or your Mac password to copy into live accounts." = "跟单未开始。请用 Touch ID 或 Mac 密码确认，才能跟单到实盘账户。";
-"allow new entries in %@" = "允许 %@ 开新仓";
 "Alpaca account" = "Alpaca 账户";
 "New" = "新建";
 "For example" = "举个例子";
@@ -1257,8 +1201,6 @@
 "Broker accounts" = "券商账户";
 "Gurus" = "信号源";
 "Copies into %@" = "跟单到 %@";
-"Copies into %@ · %@" = "跟单到 %@ · %@";
-"%@ a call" = "每次 %@";
 "Edit in Connections" = "在“连接”中编辑";
 "Edit this account's keys and limits in Connections" = "在“连接”中编辑此账户的密钥和限额";
 "Set Up in Connections" = "前往“连接”设置";
@@ -1355,10 +1297,6 @@
 "Copies into %@ · full position %@" = "跟单到 %@ · 满仓 %@";
 "Full position %@. A 1/6 call buys a sixth of it." = "满仓 %@。1/6 的喊单买它的六分之一。";
 "First set this account's max per stock. It's the guru's full position." = "先设置这个账户的单只股票上限，它就是信号源的满仓。";
-"%@'s max per stock, **%@**, is this guru's full position." = "%@ 的单只股票上限 **%@** 就是这位信号源的满仓。";
-"A 1/6 call buys **%@** and a 1/2 call **%@**." = "1/6 的喊单买入 **%@**，1/2 的喊单买入 **%@**。";
-"Your max per order, **%@**, cuts bigger buys down. Activity shows when." = "单笔上限 **%@** 会把更大的买入减下来，“活动”里会注明。";
-"A post with no size buys **%@**." = "没说仓位的帖子买 **%@**。";
 "You skipped this call." = "你跳过了这条喊单。";
 "Too late to copy: its trading day is over." = "来不及跟单了：当天交易日已结束。";
 "Opens the call to check, then previews the order in each waiting account." = "打开这条喊单供你核对，然后在每个等待中的账户里预览订单。";
@@ -1375,9 +1313,6 @@
 "Not sold" = "没有卖出";
 "Not bought" = "没有买入";
 "Not copied yet" = "还没跟单";
-"The call was for %@. Your max per order cut it to %@." = "这条喊单要买 %@，单笔上限把它减到 %@。";
-"%@ already has %@ of %@. Buying %@ more would go over its %@ limit for one stock." = "%@ 已有 %@ 的 %@。再买 %@ 会超过单只股票上限 %@。";
-"%@ already holds %@ in total. Buying %@ more would go over its %@ total limit." = "%@ 总共已持有 %@。再买 %@ 会超过总额上限 %@。";
 "Read as" = "解读为";
 "A call is waiting for you" = "有一条喊单等你决定";
 "Some posts need you: a suggestion, an “if”, or a price that has moved. They wait here until you copy or skip them." = "有些帖子需要你决定：建议、带“如果”的，或价格已经变了的。它们会在这里等你跟单或跳过。";
@@ -1392,7 +1327,6 @@
 "Sell %@ of the %@ bought at %@, %@." = "卖出%@：%@ 在 %@ 买入的那笔，%@。";
 "Sell %@ of %@, %@." = "卖出%@：%@，%@。";
 "Sell" = "卖出";
-"from the %@ buy" = "来自 %@ 那笔";
 "no buy named" = "没说哪笔买入";
 "at %@" = "价格 %@";
 "between %@ and %@" = "价格在 %@ 到 %@ 之间";
@@ -1408,7 +1342,6 @@
 "a sixth" = "六分之一";
 "market price" = "市价";
 "no price" = "没给价格";
-"batch %lld" = "第 %lld 批";
 "no size" = "没说仓位";
 "Nothing is waiting for you" = "没有等你决定的喊单";
 "Unlock CopyTrading before replaying posts." = "请先解锁 CopyTrading，再重放帖子。";
@@ -1467,7 +1400,6 @@
 "You see what happened" = "你看到结果";
 "Each account decides on its own." = "每个账户各自决定。";
 "When the guru sells" = "信号源卖出时";
-"That part of what it bought on the guru's calls, at no less than their price less your allowance, 1% unless you change it." = "卖出按这个信号源的喊单买入的那部分，价格不低于信号源的价格减去你允许的幅度（默认 1%）。";
 "Never your own shares, and no stop-loss of its own." = "从不卖你自己的股票，也不会自己设止损。";
 "**Start on paper.** Paper accounts trade pretend money at real prices. A live account asks for Touch ID before it starts." = "**先用模拟盘**。模拟账户用虚拟资金按真实价格交易。实盘账户开始前会要求 Touch ID。";
 "**A sleeping Mac copies nothing.** Keep it plugged in and awake, with CopyTrading open, while the market is. A closed MacBook lid sleeps it unless a display is connected." = "**睡眠的 Mac 什么都不会跟单**。开盘期间让它接着电源、保持唤醒，并开着 CopyTrading。合上 MacBook 盖子会让它睡眠，除非连接了显示器。";
@@ -1476,7 +1408,6 @@
 "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Stop All** stops everything at once." = "**它只跟单，不做判断**。不提供建议，也不设止损。每日亏损上限只停止买入，不停止卖出。**全部停止**会一次停止所有操作。";
 "Needs a name" = "缺少名称";
 "After a restart" = "重启后";
-"After a restart: %@" = "重启后：%@";
 "Wait for me" = "等我确认";
 "Carry on by itself" = "自动继续";
 "After CopyTrading restarts, from a crash, a Mac restart, waking from sleep, or a restore, this account either waits for you before buying again or carries on by itself once Alpaca matches its records." = "CopyTrading 重启后（崩溃、Mac 重启、从睡眠唤醒或恢复备份），此账户要么等你确认后再买入，要么在核对 Alpaca 记录一致后自动继续。";
@@ -1654,11 +1585,6 @@
 "Added %lld example posts below yours." = "在你的示例下方添加了 %lld 条示例帖子。";
 "The holdings couldn't be settled: %@. Check the broker for open orders in %@, then try again." = "持仓无法确认：%@。请检查券商里 %@ 的未成交订单，然后再试。";
 "Clear the Old Count" = "清除旧的计数";
-"Count %@ Shares as Yours" = "把 %@ 股算作你自己的";
-"CopyTrading counted %@ %@ shares, and the broker holds %@. Every copied share is still there, so the broker's other shares count as yours, and %@ is copied again." = "CopyTrading 记录了 %@ 股 %@，券商持有 %@。跟单买入的股票都还在，所以券商的其余股票算作你自己的，%@ 会恢复跟单。";
-"Treat %@ Copied Shares as Sold" = "把 %@ 股跟单股票视为已卖出";
-"CopyTrading bought %@ %@ shares, and the broker holds %@. The missing shares were sold outside CopyTrading; the oldest buys are counted as sold first, and %@ is copied again." = "CopyTrading 买入了 %@ 股 %@，券商持有 %@。缺少的股票是在 CopyTrading 之外卖出的；最早的买入先算作卖出，%@ 会恢复跟单。";
-"%@ holdings need your review: CopyTrading counted %@, the broker holds %@. Calls for %@ wait until you settle it." = "%@ 的持仓需要你确认：CopyTrading 记录了 %@，券商持有 %@。确认之前，%@ 的喊单会先等待。";
 "Review in Accounts" = "在账户中确认";
 "Selected" = "已选择";
 "Not selected" = "未选择";
@@ -1669,12 +1595,7 @@
 "Waited for you to resume entries after the restart, and got too old" = "重启后在等你恢复开仓，期间帖子已过期";
 "Still checking the account after a restart" = "重启后仍在检查账户";
 "Entries wait for you to resume them after the restart" = "重启后，开仓要等你恢复";
-"Waiting for you to resume entries in %@" = "等待你恢复 %@ 的开仓";
-"Resume by %@ to copy it." = "在 %@ 前恢复即可跟单。";
-"Resume now: after %@ it is too old to copy." = "请立即恢复：%@ 之后就太旧，无法跟单。";
 "Allows new entries in this account, so the held buy can be copied." = "允许这个账户开新仓，暂缓的买入就能跟单。";
-"Approve it by %@, when trading ends." = "请在交易结束前（%@）批准。";
-"Copy it from here by %@, when trading ends." = "请在交易结束前（%@）在这里复制。";
 "Also copy calls before and after regular hours, %@, with limit orders." = "在常规交易时段前后也复制（%@），使用限价单。";
 "Also copy calls overnight, %@. Needs extended hours on." = "夜间也复制（%@）。需要开启盘前盘后交易。";
 "CopyTrading %@ is ready to install." = "CopyTrading %@ 已可安装。";
@@ -1704,9 +1625,6 @@
 "held outside" = "外部持有";
 "%@, %@ shares" = "%@，%@ 股";
 "price %@" = "现价 %@";
-"%@ %@ %@, good for the day" = "%@ %@ %@，当日有效";
-"%@ (guru's price %@, up to %@%% above)" = "%@（信号源价格 %@，最多高出 %@%%）";
-"%@ filled of %@" = "已成交 %@ / %@";
 "%@ s" = "%@ 秒";
 "%@ was offered at %@ when it went out." = "下单时 %@ 的卖价为 %@。";
 "%lld min" = "%lld 分钟";
@@ -1742,7 +1660,6 @@
 "Timeline" = "时间线";
 "Why it ended" = "结束原因";
 "Your buys pay at most %@%% above the guru's price." = "你的买单最多比信号源价格高出 %@%%。";
-"bid %@ · ask %@" = "买价 %@ · 卖价 %@";
 "limit order" = "限价单";
 "market order" = "市价单";
 "All posts" = "全部帖子";
@@ -1755,8 +1672,6 @@
 "from every buy of it" = "从它的每笔买入中卖出";
 "read by %@" = "由 %@ 解读";
 "Refresh now" = "立即刷新";
-"%lld accounts" = "%lld 个账户";
-"%@ · %@ · %@" = "%@ · %@ · %@";
 "Partly traded" = "部分成交";
 "Your buys pay at most the guru's price, not a cent above, so it waited for the price to come down. Raise Maximum above signal price in the account's limits to let buys fill nearby." = "你的买入最多按信号源的价格成交，一分钱都不多付，所以它一直在等价格回落。在账户限额里调高“高于信号价的上限”，买单就能在附近价位成交。";
 "Buy %@ %@" = "买入 %@，%@";
@@ -1770,8 +1685,6 @@
 "Reading with %@… %@" = "%@ 正在解读… %@";
 "Reading… %@" = "正在解读… %@";
 "Handing to your accounts… %@" = "正在交给你的账户… %@";
-"Held · waiting for you to resume entries · %@, copies until %@" = "暂缓 · 等你恢复建仓 · %@，%@ 前仍可跟单";
-"Held · waiting for you to resume entries · %@" = "暂缓 · 等你恢复建仓 · %@";
 "Waiting for the next account cycle… %@" = "等待账户下一轮处理… %@";
 "Sent to Alpaca · waiting for a fill · %@ of %@" = "已发送至 Alpaca · 等待成交 · %@ / %@";
 "Sent to Alpaca · waiting for a fill · %@" = "已发送至 Alpaca · 等待成交 · %@";
@@ -1785,7 +1698,6 @@
 "Captured in %@" = "%@ 内捕获";
 "Waited %@ before reading" = "等待 %@ 后开始解读";
 "Sent" = "已发送";
-"%@ %@, limit %@" = "%@ %@，限价 %@";
 "accepted by Alpaca in %@" = "Alpaca 在 %@ 内接受";
 "Held %@ waiting for you to resume" = "暂缓 %@，等你恢复";
 "Waited %@ for a fill" = "等待成交 %@";
@@ -1849,7 +1761,6 @@
 "Bought %@, rest cancelled" = "买入了 %@，其余已取消";
 "Sold %@, rest cancelled" = "卖出了 %@，其余已取消";
 "%@ · day" = "%@ · 当日有效";
-"%@ · cut from %@" = "%@ · 从 %@ 削减";
 "%@ · %@%% above the guru" = "%@ · 最多高于信号源 %@%%";
 "Bid %@ · Ask %@" = "买价 %@ · 卖价 %@";
 "Type" = "类型";
@@ -1892,7 +1803,6 @@
 "Open the post that bought these shares." = "打开买入这些股票的帖子。";
 "Posts today" = "今日帖子";
 "Read in" = "解读用时";
-"%@ avg" = "平均 %@";
 "Newest first" = "最新在前";
 "Yesterday" = "昨天";
 "No account acted on it" = "没有账户处理";
@@ -1934,9 +1844,6 @@
 "Reading it · %@" = "正在阅读 · %@";
 "Working out each account's share · %@" = "正在计算每个账户的份额 · %@";
 "%@ picks it up on its next cycle · %@" = "%@ 将在下一轮处理 · %@";
-"%@ holds new buys until you resume entries · %@" = "%@ 暂停新买入，等你恢复开仓 · %@";
-"%@ is waiting for a fill · %@ of %@" = "%@ 等待成交 · %@ / %@";
-"%@ is waiting for a fill · %@" = "%@ 等待成交 · %@";
 
 "Getting started" = "快速开始";
 "About 10 minutes, five steps." = "大约 10 分钟，共五步。";
@@ -1971,7 +1878,6 @@
 "%@ is waiting for a fill" = "%@ 正在等待成交";
 "Cost → price" = "成本 → 现价";
 "Average cost %@, price %@" = "平均成本 %@，现价 %@";
-"bought %@" = "买入价 %@";
 "now %@" = "现价 %@";
 "Open post" = "打开帖子";
 "From %@’s post" = "来自 %@ 的帖子";
@@ -2098,7 +2004,6 @@
 "Go to a page, run an action, or find a post" = "前往页面、执行操作或查找消息";
 "Nothing matches." = "没有匹配项。";
 "Command palette" = "命令面板";
-"Copying didn't start: %@." = "没有开始跟单：%@。";
 "The new setup didn't start, so your previous setup is still in place: %@." = "新设置没有启动，仍在使用之前的设置：%@。";
 "The engine stopped while starting" = "引擎在启动时停止了";
 "Another CopyTrading on this Mac is copying into this account" = "这台 Mac 上另一个 CopyTrading 正在为这个账户跟单";

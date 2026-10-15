@@ -2,7 +2,6 @@ import AppKit
 import SwiftUI
 
 /// A neutral workspace, restrained reading/card surfaces, hairlines, and graphite ink in three strengths.
-/// The accent is kept for links, switches, and the one primary action on a screen.
 enum Palette {
     /// The soft off-white workspace mat around reading surfaces and the inset sidebar panel.
     static let canvas = dynamic(light: rgb(0xF3F3F3), dark: rgb(0x1C1C1E))
@@ -30,8 +29,6 @@ enum Palette {
     static let secondaryInk = dynamic(light: rgb(0x47494B), dark: rgb(0xC5C5C8))
     /// Captions, column headers, and icons (#858687).
     static let tertiaryInk = dynamic(light: rgb(0x5F6064), dark: rgb(0x96969B))
-    /// Links, switches, and a screen's one primary action.
-    static let accent = Color(red: 0.204, green: 0.471, blue: 0.965)
     /// What waits on the owner: a count beside a heading, a guru with calls to answer.
     /// The one warm fill, as a studio drawing uses it: inside an ink outline, on the thing the eye
     /// should land on (the gap that decided an order, how much of a limit is used, a step done).

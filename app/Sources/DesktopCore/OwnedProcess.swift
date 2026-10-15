@@ -7,7 +7,6 @@ enum OwnedProcessEvent: Sendable {
 
 actor OwnedProcess: EngineTransport {
     nonisolated let events: AsyncStream<OwnedProcessEvent>
-    nonisolated let generation = UUID()
 
     private let specification: ProcessLaunchSpecification
     private let outputBufferLimit: Int
