@@ -74,6 +74,8 @@ struct EquityChart: View {
             if let stats {
                 plot(curve: curve, stats: stats)
                     .frame(height: plotHeight)
+                // In the page under the chart, not over it: a popover here covered the limits.
+                TipView(MeasureChartTip(generation: tipGeneration), arrowEdge: .top)
             } else {
                 emptyState
             }
@@ -101,7 +103,6 @@ struct EquityChart: View {
     private func plot(curve: EquityCurve, stats: EquityCurveStats) -> some View {
         EquityPlot(curve: curve, stats: stats, range: window.range, pointer: pointer)
             .drawsIn(token: drawing)
-            .popoverTip(MeasureChartTip(generation: tipGeneration), arrowEdge: .bottom)
             .task {
                 await MeasureChartTip.chartViewed.donate()
             }
