@@ -42,6 +42,14 @@ def test_chinese_text_has_no_doubled_words():
     assert doubled == []
 
 
+def test_chinese_calls_a_guru_by_one_name():
+    # A guru is 信号源 everywhere; 老师, 导师 and 达人 were tried and rejected by the owner.
+    rejected = ("老师", "导师", "达人")
+    chinese = load("zh-Hans")
+    others = [key for key, value in chinese.items() if any(word in value for word in rejected)]
+    assert others == []
+
+
 SOURCES = Path(__file__).resolve().parents[2] / "Sources" / "CopyTrading"
 LITERAL = r'"((?:[^"\\]|\\.)*)"'
 # The calls that look their text up in the catalogs, with the text written in place.
