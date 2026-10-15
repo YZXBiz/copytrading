@@ -84,10 +84,11 @@ struct GeneralSettingsPage: View {
         }
     }
 
+    /// Why the switch is off limits, when it is: nothing saved yet, or a live account.
     private var startDetail: String {
-        model.canStartCopyingOnLaunch
-            ? "Runs the same connection checks as Start Copying. Lock still locks."
-            : "Only when every account is paper. Lock still locks."
+        if model.canStartCopyingOnLaunch { return "Runs the same connection checks as Start Copying. Lock still locks." }
+        if model.savedTradingConfiguration == nil { return "Once a setup is saved and every account is paper. Lock still locks." }
+        return "Only when every account is paper. Lock still locks."
     }
 
     private func load() {

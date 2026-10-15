@@ -3,12 +3,15 @@ import DesktopCore
 extension ConnectionsDraft {
     /// Picks a model service. A key belongs to the service it was typed for, so picking another
     /// one empties the key field: one service's key is never shown in, or sent to, another's.
+    /// Picking the service already chosen still fills an empty Model field, as the draft starts on
+    /// Anthropic with no model.
     @MainActor
     mutating func pick(_ service: TradingProviderName) {
         let previous = provider
-        guard service != previous else { return }
-        provider = service
-        providerAPIKey = ""
+        if service != previous {
+            provider = service
+            providerAPIKey = ""
+        }
         suggestModel(after: previous)
     }
 

@@ -14,7 +14,8 @@ struct GuideDocument: View {
             }
             .id(GuideAnchor.top)
             GuideSection("How a post becomes a trade") {
-                GuideJourneySection(open: { model.selectedScreen = $0 ?? model.homeScreen })
+                GuideJourneySection(
+                    firstAccount: model.savedTradingConfiguration?.accounts.first?.id, open: { model.selectedScreen = $0 })
             }
             GuideSection("Before you go") {
                 GuideBeforeYouGoSection()

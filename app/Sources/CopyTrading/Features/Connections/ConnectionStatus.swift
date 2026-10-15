@@ -35,6 +35,7 @@ struct ConnectionStatus: Equatable {
     @MainActor
     static func account(_ account: TradingAccountDraft, in model: AppModel) -> ConnectionStatus {
         let name = account.name.trimmed
+        if account.nameProblem != nil { return .init(text: "Needs a valid name", tone: .caution) }
         if let checked = checked(.account(name), in: model) { return checked }
         let typed = !account.key.isEmpty && !account.secret.isEmpty
         let hasSavedKeys = model.savedKeyAccountIDs.contains(name)

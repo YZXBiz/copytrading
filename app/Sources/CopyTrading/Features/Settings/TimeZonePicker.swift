@@ -37,6 +37,7 @@ struct TimeZonePicker: View {
                     L10n.string("Search"), text: $query, prompt: Text(L10n.string("City or time zone")).foregroundStyle(Palette.tertiaryInk)
                 )
                 .labelsHidden()
+                .accessibilityLabel(L10n.string("Search time zones"))
                 .underlineField()
                 .padding(.bottom, 12)
                 LazyVStack(alignment: .leading, spacing: 0) {

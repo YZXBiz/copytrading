@@ -32,7 +32,8 @@ struct ConnectionPanelContent: View {
             switch kind {
             case .discord: "Discord"
             case .interpreter: L10n.string(model.setupDraft.provider.title)
-            case .alerts: model.setupDraft.notificationService == .discord ? "Discord" : "Telegram"
+            // Named for what they do, so the alerts webhook never reads as the Discord the posts come from.
+            case .alerts: L10n.string(model.setupDraft.notificationService == .discord ? "Discord alerts" : "Telegram alerts")
             }
         return (openedSetUp ?? (!connecting && isSetUp(kind))) ? name : L10n.string("Connect to %@", name)
     }

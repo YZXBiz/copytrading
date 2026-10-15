@@ -347,6 +347,7 @@
 "Getting started 👋" = "快速开始 👋";
 "Go" = "前往";
 "Go back and forward" = "后退或前进";
+"Go to an account, a guru, or a page, in sidebar order" = "按侧边栏顺序前往账户、信号源或页面";
 "GPT models" = "GPT 模型";
 "Grok models" = "Grok 模型";
 "guru" = "个信号源";
@@ -452,6 +453,7 @@
 "most recent post" = "条最近的帖子";
 "most recent posts" = "条最近的帖子";
 "Motion and Transparency" = "动态效果与透明度";
+"Move through Find's results and the Diagnostics log" = "在查找结果和诊断日志中上下移动";
 "Name" = "名称";
 "Navigate to a page" = "跳转到页面";
 "Needed when several people post there" = "多人发帖时必填";
@@ -766,6 +768,7 @@
 "Status: %@" = "状态：%@";
 "Staying safe" = "安全保障";
 "Step %lld: %@" = "第%lld步：%@";
+"Step through points on an account's chart" = "逐个查看账户图表上的数据点";
 "Stop Engine" = "停止引擎";
 "Stop new entry orders. Exits still follow the account policy." = "停止新的开仓订单。平仓仍按账户策略执行。";
 "Stop reading new posts and placing orders for every account." = "停止读取新帖子，并停止为所有账户下单。";
@@ -1406,6 +1409,7 @@
 "**Discord's terms** don't allow automating a personal account. Use a separate account that only joins your gurus' servers." = "**Discord 的条款**不允许自动化个人账户。请用一个只加入信号源服务器的单独账户。";
 "**Your AI service bills you** for each post it reads, usually a fraction of a cent." = "**你的 AI 服务按读取的帖子收费**，通常每条不到一美分。";
 "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Stop All** stops everything at once." = "**它只跟单，不做判断**。不提供建议，也不设止损。每日亏损上限只停止买入，不停止卖出。**全部停止**会一次停止所有操作。";
+"**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Stop Copying** in the menu bar stops every account at once." = "**它只跟单，不做判断**。不提供建议，也不设止损。每日亏损上限只停止买入，不停止卖出。菜单栏里的**停止跟单**会一次停止所有账户。";
 "Needs a name" = "缺少名称";
 "After a restart" = "重启后";
 "Wait for me" = "等我确认";
@@ -1480,7 +1484,7 @@
 "Show Me Around" = "带我走一遍";
 "Pick Up Where I Left Off" = "从上次停下的地方继续";
 "Shows you where on Connections" = "在连接页面指给你看";
-"Tour stop %lld of %lld" = "第 %lld / %lld 步";
+"Tour stop %lld of %lld" = "导览 %lld/%lld";
 "and connect it" = "然后连接";
 "Open the Discord row. You'll paste the guru's channel ID and your Discord token there." = "打开 Discord 这一行，在里面粘贴信号源的频道 ID 和你的 Discord 令牌。";
 "Then click the blue button under it, and CopyTrading checks the token with Discord. **Help** shows where Discord keeps it." = "然后点击下方的蓝色按钮，CopyTrading 会向 Discord 核对令牌。**帮助** 告诉你在哪里找到它。";
@@ -2277,3 +2281,20 @@
 "Read accounts and posts again" = "重新读取账户和帖子";
 "Step through points on an account's chart" = "逐个查看账户图表上的数据点";
 "All %@ shares" = "全部%@股";
+"Find a page, an action, or a post" = "查找页面、操作或帖子";
+"Switch tabs on an account or guru page" = "切换账户页或信号源页上的标签";
+"Tips will show again once copying is set up, each beside what it points at." = "设置好跟单后，提示会再次出现在相应位置旁。";
+"Tips will show again, each beside what it points at." = "提示会再次出现在相应位置旁。";
+"Once a setup is saved and every account is paper. Lock still locks." = "保存设置且所有账户都是模拟账户后可用。锁定功能仍然有效。";
+"CopyTrading couldn't run this check because its engine isn't answering. Start it in Settings → Engine, then try again." = "引擎没有响应，CopyTrading 无法完成这项检查。请在“设置 → 引擎”中启动引擎，然后重试。";
+"Enter a channel ID and your Discord token to connect." = "请输入频道 ID 和你的 Discord 令牌后再连接。";
+"Enter the model's name to connect." = "请输入模型名称后再连接。";
+"Discord alerts" = "Discord 提醒";
+"Telegram alerts" = "Telegram 提醒";
+"Give the account a name." = "请给账户起个名字。";
+"Keep the name to 64 characters." = "名称不能超过 64 个字符。";
+"Use only letters, digits, “-” and “_” in the name: no spaces." = "名称只能包含字母、数字、“-”和“_”，不能有空格。";
+"Needs a valid name" = "名称无效";
+"Each guru needs a name of up to 100 characters, a playbook under %@ characters, and at most 32 examples." = "每个信号源都需要一个不超过 100 个字符的名称、少于 %@ 个字符的操作指南，以及最多 32 个示例。";
+"Search time zones" = "搜索时区";
+"Nothing was sent: the engine isn't running. Start it in Settings → Engine, then try again." = "没有发送任何指令：引擎没有运行。请在“设置 → 引擎”中启动它，然后重试。";

@@ -977,7 +977,7 @@ def j5_self_test(app: AppDriver) -> None:
 def j6_setup_editing(app: AppDriver) -> None:
     """Accounts and gurus are added in Connections; People and Accounts wait for a saved setup."""
     connections = app.open_screen("connections")
-    app.expect(connections, "Broker accounts", "Gurus", "0 of 4 steps done", "setup.startCopying")
+    app.expect(connections, "Broker accounts", "Gurus", "0 of 5 steps done", "setup.startCopying")
     app.click("connections.accounts.paper")
     sheet = app.see("account-sheet")
     app.expect(
@@ -1028,7 +1028,7 @@ def j6_setup_editing(app: AppDriver) -> None:
     app.click("Remove Guru")
     app.click("connections.account.primary")
     app.click("Remove Account")
-    app.expect(app.see("setup-cleaned"), "connections.accounts.paper", "0 of 4 steps done")
+    app.expect(app.see("setup-cleaned"), "connections.accounts.paper", "0 of 5 steps done")
 
 
 def _relock(app: AppDriver) -> None:
@@ -1054,7 +1054,7 @@ def j7_validation_gate(app: AppDriver) -> None:
         raise JourneyFailure("Connections did not offer Start Copying")
     if start.enabled:
         raise JourneyFailure("Start Copying was enabled before every step was done")
-    app.expect(snapshot, "0 of 4 steps done", "Next: Connect Discord.")
+    app.expect(snapshot, "0 of 5 steps done", "Next: Connect Discord.")
     _relock(app)
 
 
@@ -1101,7 +1101,7 @@ def j8_credential_gate(app: AppDriver) -> None:
     app.click("connections.gurus.add")
     app.type("Journey Guru", into="Name")
     guru = app.see("guru-adopted-channel")
-    app.expect(guru, "First channel in Connections (123456789012345678)")
+    app.expect(guru, "123456789012345678")
     app.click("Done")
     gated = app.see("credential-gate")
     # The typed keys count; the Discord token and the model key are still missing.
@@ -2114,7 +2114,7 @@ def j28_connections_panel(app: AppDriver) -> None:
     app.click("connections.alerts")
     time.sleep(0.8)
     app.expect(
-        app.see("connections-alerts"), "Connect to Telegram", "Chat ID", "Bot token", "Step by step"
+        app.see("connections-alerts"), "Connect to Telegram alerts", "Chat ID", "Bot token", "Step by step"
     )
     app.click("connections.close")
     closed = app.see("connections-alerts-closed")

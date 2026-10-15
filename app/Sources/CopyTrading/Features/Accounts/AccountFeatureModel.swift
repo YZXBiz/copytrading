@@ -205,9 +205,11 @@ final class AccountFeatureModel {
         accountID: String, action: AccountControlAction,
         preference: RecoveryPreference? = nil, using actions: (any AccountOperations)?
     ) async {
-        guard let actions, let generation = privateAccessGeneration,
-            !pendingAccounts.contains(accountID)
-        else { return }
+        guard let generation = privateAccessGeneration, !pendingAccounts.contains(accountID) else { return }
+        guard let actions else {
+            errors[accountID] = Self.noEngine
+            return
+        }
         let command: AccountControlCommand
         if let previous = retryCommands[accountID],
             previous.action == action, previous.recoveryPreference == preference
@@ -258,11 +260,20 @@ final class AccountFeatureModel {
         }
     }
 
+    /// What an account's button says when there is no engine to send its command to.
+    static var noEngine: String {
+        L10n.string("Nothing was sent: the engine isn't running. Start it in Settings → Engine, then try again.")
+    }
+
     /// Settles a holdings question the owner answered, then rereads the accounts so the warning
     /// and the held-back entries clear together.
     func resolveOwnership(_ fix: OwnershipFix, using actions: (any AccountOperations)?) async {
         let accountID = fix.request.accountID
-        guard let actions, privateAccessGeneration != nil, !pendingAccounts.contains(accountID) else { return }
+        guard privateAccessGeneration != nil, !pendingAccounts.contains(accountID) else { return }
+        guard let actions else {
+            errors[accountID] = Self.noEngine
+            return
+        }
         pendingAccounts.insert(accountID)
         defer { pendingAccounts.remove(accountID) }
         do {

@@ -104,6 +104,38 @@ extension AppModel {
         return Screen(identifier: stored)
     }
 
+    /// Opens one post where it is read in full: the page of the first account it reached, with
+    /// the post selected, or its guru's page when it reached none.
+    func show(_ post: SourceActivity, focusPost: (SourceActivity.ID) -> Void) {
+        focusPost(post.id)
+        if let accountID = post.destinations.first?.accountID {
+            selectedScreen = .account(accountID)
+        } else if let guruID = post.guruID {
+            selectedScreen = .guru(guruID)
+        }
+    }
+
+    /// Back (⌘[): the last screen the owner left that still exists.
+    func goBack() {
+        retrace { screenHistory.goBack(from: selectedScreen, keeping: exists) }
+    }
+
+    /// Forward (⌘]): the screen Back last left.
+    func goForward() {
+        retrace { screenHistory.goForward(from: selectedScreen, keeping: exists) }
+    }
+
+    private func retrace(_ step: () -> Screen?) {
+        guard let screen = step() else { return }
+        isRetracingScreens = true
+        selectedScreen = screen
+        isRetracingScreens = false
+    }
+
+    private func exists(_ screen: Screen) -> Bool {
+        navigableScreens.contains(screen)
+    }
+
     /// The selectable screens in sidebar order, for ⌘1… and the page menu.
     var navigableScreens: [Screen] {
         let accounts = savedTradingConfiguration?.accounts.map { Screen.account($0.id) } ?? []

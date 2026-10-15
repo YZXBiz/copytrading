@@ -60,8 +60,15 @@ final class AppModel {
             if selectedScreen != .settings {
                 UserDefaults.standard.set(selectedScreen.identifier, forKey: Self.lastScreenKey)
             }
+            if selectedScreen != oldValue, !isRetracingScreens {
+                screenHistory.leave(oldValue)
+            }
         }
     }
+    /// What Back and Forward step through.
+    var screenHistory = ScreenHistory()
+    /// Set while Back or Forward moves, so the move isn't recorded as a new visit.
+    @ObservationIgnored var isRetracingScreens = false
     /// The Settings page on show and the pages visited before it, newest last.
     var settingsPage: SettingsPage = .general
     var settingsTrail: [SettingsPage] = []
@@ -700,6 +707,8 @@ final class AppModel {
                 } else {
                     selectedScreen = homeScreen
                 }
+                // The screen a launch opens on is where the owner starts; Back has nothing before it.
+                screenHistory = ScreenHistory()
             }
             let newJournal = CommandJournal(url: paths.applicationSupportDirectory.appending(path: "commands.json"))
             selfTestEntries = try await newJournal.entries()

@@ -23,6 +23,8 @@ struct AccountEditorSheet: View {
     @State private var isChecking = false
     /// nil until limits are saved or refused; then whether they were saved.
     @State private var limitsSaved: Bool?
+    /// Alpaca refused the keys on this sheet's last Done and they haven't changed since.
+    @State private var keysRefused = false
     @FocusState private var focusedField: AccountEditorFocus?
 
     private var hasSavedCredentials: Bool { savedAccountIDs.contains(account.name.trimmed) }
@@ -57,6 +59,8 @@ struct AccountEditorSheet: View {
             // Return in a limit field saves it, as Done does.
             .onSubmit(commitLimits)
             .onChange(of: account.policy) { limitsSaved = nil }
+            .onChange(of: [account.key, account.secret, account.name]) { keysRefused = false }
+            .onChange(of: account.environment) { keysRefused = false }
             .task {
                 guard let focus else { return }
                 // After the sheet settles, so the scroll lands and the field takes focus.
@@ -76,6 +80,10 @@ struct AccountEditorSheet: View {
                     prompt: Text(L10n.string("e.g. %@", "primary")).foregroundStyle(Palette.tertiaryInk)
                 )
                 .accessibilityLabel(L10n.string("Account name"))
+            }
+            if let problem = account.nameProblem {
+                Callout(L10n.string(problem), tone: .caution)
+                    .accessibilityIdentifier("account.nameProblem")
             }
             SheetChoices(
                 label: L10n.string("Environment"),
@@ -239,23 +247,23 @@ struct AccountEditorSheet: View {
             if let focus {
                 TextField(L10n.string(title), text: text)
                     .focused($focusedField, equals: focus)
-                    .limitField()
+                    .limitField(L10n.string(title))
                     .id(focus)
             } else {
-                TextField(L10n.string(title), text: text).limitField()
+                TextField(L10n.string(title), text: text).limitField(L10n.string(title))
             }
         }
     }
 
     private func numberLimit(_ title: String, hint: String, value: Binding<Int>, example: String) -> some View {
         SheetRow(title: L10n.string(title), hint: L10n.string(hint), example: example) {
-            TextField(L10n.string(title), value: value, format: .number).limitField()
+            TextField(L10n.string(title), value: value, format: .number).limitField(L10n.string(title))
         }
     }
 
     private func numberLimit(_ title: String, hint: String, value: Binding<Double>, example: String) -> some View {
         SheetRow(title: L10n.string(title), hint: L10n.string(hint), example: example) {
-            TextField(L10n.string(title), value: value, format: .number).limitField()
+            TextField(L10n.string(title), value: value, format: .number).limitField(L10n.string(title))
         }
     }
 
@@ -272,8 +280,9 @@ struct AccountEditorSheet: View {
     /// Changed limits, when they are all that changed, are saved then and copied with at once;
     /// the sheet stays open when they can't be.
     private func finish() {
-        // Limits refused once close on a second Done and wait for the full check.
-        if limitsSaved == false {
+        // Limits refused once, or keys Alpaca refused and still unchanged, close on a second Done:
+        // the account stays in the setup, and its row says it couldn't connect.
+        if limitsSaved == false || keysRefused {
             dismiss()
             return
         }
@@ -282,6 +291,7 @@ struct AccountEditorSheet: View {
             let result = await check()
             guard result?.state != .failed else {
                 isChecking = false
+                keysRefused = true
                 return
             }
             limitsSaved = await saveLimits()
@@ -305,8 +315,10 @@ struct AccountEditorSheet: View {
 
 extension View {
     /// A limit's value: a short underlined field, its number at the trailing edge.
-    fileprivate func limitField() -> some View {
+    /// A hidden-label field still needs its name for VoiceOver, which `labelsHidden` drops.
+    fileprivate func limitField(_ label: String) -> some View {
         labelsHidden()
+            .accessibilityLabel(label)
             .multilineTextAlignment(.trailing)
             .monospacedDigit()
             .underlineField()

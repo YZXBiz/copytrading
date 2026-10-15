@@ -347,6 +347,7 @@
 "Getting started 👋" = "Getting started 👋";
 "Go" = "Go";
 "Go back and forward" = "Go back and forward";
+"Go to an account, a guru, or a page, in sidebar order" = "Go to an account, a guru, or a page, in sidebar order";
 "GPT models" = "GPT models";
 "Grok models" = "Grok models";
 "guru" = "guru";
@@ -452,6 +453,7 @@
 "most recent post" = "most recent post";
 "most recent posts" = "most recent posts";
 "Motion and Transparency" = "Motion and Transparency";
+"Move through Find's results and the Diagnostics log" = "Move through Find's results and the Diagnostics log";
 "Name" = "Name";
 "Navigate to a page" = "Navigate to a page";
 "Needed when several people post there" = "Needed when several people post there";
@@ -766,6 +768,7 @@
 "Status: %@" = "Status: %@";
 "Staying safe" = "Staying safe";
 "Step %lld: %@" = "Step %lld: %@";
+"Step through points on an account's chart" = "Step through points on an account's chart";
 "Stop Engine" = "Stop Engine";
 "Stop new entry orders. Exits still follow the account policy." = "Stop new entry orders. Exits still follow the account policy.";
 "Stop reading new posts and placing orders for every account." = "Stop reading new posts and placing orders for every account.";
@@ -1406,6 +1409,7 @@
 "**Discord's terms** don't allow automating a personal account. Use a separate account that only joins your gurus' servers." = "**Discord's terms** don't allow automating a personal account. Use a separate account that only joins your gurus' servers.";
 "**Your AI service bills you** for each post it reads, usually a fraction of a cent." = "**Your AI service bills you** for each post it reads, usually a fraction of a cent.";
 "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Stop All** stops everything at once." = "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Stop All** stops everything at once.";
+"**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Stop Copying** in the menu bar stops every account at once." = "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Stop Copying** in the menu bar stops every account at once.";
 "Needs a name" = "Needs a name";
 "After a restart" = "After a restart";
 "Wait for me" = "Wait for me";
@@ -1480,7 +1484,7 @@
 "Show Me Around" = "Show Me Around";
 "Pick Up Where I Left Off" = "Pick Up Where I Left Off";
 "Shows you where on Connections" = "Shows you where on Connections";
-"Tour stop %lld of %lld" = "%lld of %lld";
+"Tour stop %lld of %lld" = "Stop %lld of %lld";
 "and connect it" = "and connect it";
 "Open the Discord row. You'll paste the guru's channel ID and your Discord token there." = "Open the Discord row. You'll paste the guru's channel ID and your Discord token there.";
 "Then click the blue button under it, and CopyTrading checks the token with Discord. **Help** shows where Discord keeps it." = "Then click the blue button under it, and CopyTrading checks the token with Discord. **Help** shows where Discord keeps it.";
@@ -2164,8 +2168,8 @@
 "%@ → %@" = "%@ → %@";
 "Holding %@ in 1 stock from these calls" = "Holding %@ in 1 stock from these calls";
 "Holding %@ in %lld stocks from these calls" = "Holding %@ in %lld stocks from these calls";
-"Reduce a position" = "Reduce";
-"Close a position" = "Close";
+"Reduce a position" = "Sell part";
+"Close a position" = "Sell all";
 "Deadline today: %@ %@" = "%@ %@ today";
 "Deadline tomorrow: %@ %@" = "%@ %@ tomorrow";
 "Deadline on a weekday: %@ %@ %@" = "%@ %@ %@";
@@ -2277,3 +2281,20 @@
 "Read accounts and posts again" = "Read accounts and posts again";
 "Step through points on an account's chart" = "Step through points on an account's chart";
 "All %@ shares" = "All %@ shares";
+"Find a page, an action, or a post" = "Find a page, an action, or a post";
+"Switch tabs on an account or guru page" = "Switch tabs on an account or guru page";
+"Tips will show again once copying is set up, each beside what it points at." = "Tips will show again once copying is set up, each beside what it points at.";
+"Tips will show again, each beside what it points at." = "Tips will show again, each beside what it points at.";
+"Once a setup is saved and every account is paper. Lock still locks." = "Once a setup is saved and every account is paper. Lock still locks.";
+"CopyTrading couldn't run this check because its engine isn't answering. Start it in Settings → Engine, then try again." = "CopyTrading couldn't run this check because its engine isn't answering. Start it in Settings → Engine, then try again.";
+"Enter a channel ID and your Discord token to connect." = "Enter a channel ID and your Discord token to connect.";
+"Enter the model's name to connect." = "Enter the model's name to connect.";
+"Discord alerts" = "Discord alerts";
+"Telegram alerts" = "Telegram alerts";
+"Give the account a name." = "Give the account a name.";
+"Keep the name to 64 characters." = "Keep the name to 64 characters.";
+"Use only letters, digits, “-” and “_” in the name: no spaces." = "Use only letters, digits, “-” and “_” in the name: no spaces.";
+"Needs a valid name" = "Needs a valid name";
+"Each guru needs a name of up to 100 characters, a playbook under %@ characters, and at most 32 examples." = "Each guru needs a name of up to 100 characters, a playbook under %@ characters, and at most 32 examples.";
+"Search time zones" = "Search time zones";
+"Nothing was sent: the engine isn't running. Start it in Settings → Engine, then try again." = "Nothing was sent: the engine isn't running. Start it in Settings → Engine, then try again.";
