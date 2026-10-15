@@ -702,6 +702,7 @@
 "Hidden" = "已收起";
 "Sell %@" = "卖出 %@";
 "Sell %@ %@" = "卖出%@股 %@";
+"Sell %@ %@ with Touch ID" = "使用 Touch ID 卖出%@股 %@";
 "Sell %@ from %@" = "卖出 %@（来自 %@）";
 "Sell %@ of %@ at %@" = "以 %@ 的比例卖出 %@，价格 %@";
 "Sell all %@ at %@" = "按全部仓位卖出 %@，价格 %@";
@@ -2162,6 +2163,8 @@
 "In %@: %@" = "在 %@：%@";
 "Check for posts every (seconds)" = "检查新帖子的间隔（秒）";
 "%@ → %@" = "%@ → %@";
+"Holding %@ in 1 stock from these calls" = "这些喊单目前持有 %@，共 1 只股票";
+"Holding %@ in %lld stocks from these calls" = "这些喊单目前持有 %@，共 %lld 只股票";
 "Reduce a position" = "减仓";
 "Close a position" = "清仓";
 "Deadline today: %@ %@" = "今天 %@（%@）";
