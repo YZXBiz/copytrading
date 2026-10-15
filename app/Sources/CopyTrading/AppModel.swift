@@ -504,8 +504,6 @@ final class AppModel {
     /// Each connection's latest check, kept only while what it checked stays as typed.
     var connectionChecks: [ConnectionCheckSubject: ConnectionCheckResult] = [:]
     var isShowingSetupCheck = false
-    /// When copying last started from a new setup. Today says so until the first post after it.
-    var copyingStartedAt: Date?
     /// A Getting Started section asked for from the Help menu; the guide clears it.
     var guideAnchor: GuideAnchor?
     /// The setup tour is walking the owner through Connections. Where it points is read from the

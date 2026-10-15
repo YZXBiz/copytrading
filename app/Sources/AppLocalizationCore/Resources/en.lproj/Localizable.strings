@@ -1,18 +1,12 @@
 " and %lld more" = " and %lld more";
 " at %@" = " at %@";
 " It has handled %@ since it started%@." = " It has handled %@ since it started%@.";
-" on %@" = " on %@";
-"%@  %@" = "%@  %@";
 "%@ %@" = "%@ %@";
-"%@ %@ %@" = "%@ %@ %@";
-"%@ %@ %@ · limit %@" = "%@ %@ %@ · limit %@";
 "%@ %@ %@, %@, in %@" = "%@ %@ %@, %@, in %@";
 "%@ %@ at %@" = "%@ %@ at %@";
 "%@ %@ of %@" = "%@ %@ of %@";
-"%@ %@ of %@ %@" = "%@ %@ of %@ %@";
 "%@ %@ · fraction %@" = "%@ %@ · fraction %@";
 "%@ (%@)" = "%@ (%@)";
-"%@ and %@" = "%@ and %@";
 "%@ and %lld more" = "%@ and %lld more";
 "%@ at %@" = "%@ at %@";
 "%@ at up to %@" = "%@ at up to %@";
@@ -24,34 +18,18 @@
 "%@ of %@ copying" = "%@ of %@ copying";
 "%@ of %@ shares" = "%@ of %@ shares";
 "%@ omitted" = "%@ omitted";
-"%@ post" = "%@ post";
-"%@ posts" = "%@ posts";
-"%@ shares left from %@%@, bought%@ in %@." = "%@ shares left from %@%@, bought%@ in %@.";
-"%@ skipped" = "%@ skipped";
-"%@ to review" = "%@ to review";
 "%@ today" = "%@ today";
 "%@ waiting" = "%@ waiting";
 "%@ waiting for approval" = "%@ waiting for approval";
 "%@ · %@" = "%@ · %@";
-"%@ · %@ %@" = "%@ · %@ %@";
 "%@ · %@ on this Mac" = "%@ · %@ on this Mac";
-"%@ · as of %@" = "%@ · as of %@";
-"%@ · instruction %lld" = "%@ · instruction %lld";
 "%@ → %@ · %@" = "%@ → %@ · %@";
 "%@, %@" = "%@, %@";
-"%@, %@, %@" = "%@, %@, %@";
-"%@, and %@" = "%@, and %@";
 "%@, and more" = "%@, and more";
-"%@, no calls yet." = "%@, no calls yet.";
-"%@, rest cancelled" = "%@, rest cancelled";
 "%@: %@." = "%@: %@.";
-"%@’s post" = "%@’s post";
 "%lld h ago" = "%lld h ago";
 "%lld min ago" = "%lld min ago";
-"%lld more today in Activity" = "%lld more today in Activity";
-"%lld of %lld" = "%lld of %lld";
 "%lld of %lld steps done" = "%lld of %lld steps done";
-"%lld people" = "%lld people";
 "%lld percent used" = "%lld percent used";
 "%llds ago" = "%llds ago";
 ", and %@ %@ waiting" = ", and %@ %@ waiting";
@@ -72,11 +50,9 @@
 "account" = "account";
 "Account" = "Account";
 "Account %@ %@, so its data is not shown." = "Account %@ %@, so its data is not shown.";
-"Account %@ %@, so its outcomes are not shown." = "Account %@ %@, so its outcomes are not shown.";
 "Account command error: %@" = "Account command error: %@";
 "Account data error: %@" = "Account data error: %@";
 "Account delivery" = "Account delivery";
-"Account events error: %@" = "Account events error: %@";
 "Account history" = "Account history";
 "Account name" = "Account name";
 "Account settings changed" = "Account settings changed";
@@ -97,7 +73,6 @@
 "agent requests" = "agent requests";
 "Alerts on Your Phone" = "Alerts on Your Phone";
 "All" = "All";
-"All %@" = "All %@";
 "All Activity" = "All Activity";
 "Allow Agents To" = "Allow Agents To";
 "Allow new entry orders for this account." = "Allow new entry orders for this account.";
@@ -150,7 +125,6 @@
 "Bought" = "Bought";
 "bought at" = "bought at";
 "Broker account %@" = "Broker account %@";
-"Broker activity: %@" = "Broker activity: %@";
 "Buy" = "Buy";
 "buy" = "buy";
 "Buy %@ at %@" = "Buy %@ at %@";
@@ -200,7 +174,6 @@
 "Comma-separated Discord channel IDs" = "Comma-separated Discord channel IDs";
 "Command" = "Command";
 "Command %@" = "Command %@";
-"Command: %@" = "Command: %@";
 "Completed" = "Completed";
 "Confirm %lld order(s)" = "Confirm %lld order(s)";
 "Confirm manual orders?" = "Confirm manual orders?";
@@ -214,8 +187,6 @@
 "Copied" = "Copied";
 "Copies %@ into %@. Your keys stay in this Mac's Keychain." = "Copies %@ into %@. Your keys stay in this Mac's Keychain.";
 "Copies into" = "Copies into";
-"Copies into %@ and %@." = "Copies into %@ and %@.";
-"Copies into %@." = "Copies into %@.";
 "Copy" = "Copy";
 "Copy %@ ID" = "Copy %@ ID";
 "Copy Channel ID" = "Copy Channel ID";
@@ -260,7 +231,6 @@
 "Could not complete: %@ (%@)." = "Could not complete: %@ (%@).";
 "Could not read the log." = "Could not read the log.";
 "Could not save the log." = "Could not save the log.";
-"Counted from the %@ CopyTrading has loaded." = "Counted from the %@ CopyTrading has loaded.";
 "Create a key, name it CopyTrading, and copy it. Most services show a key only once." = "Create a key, name it CopyTrading, and copy it. Most services show a key only once.";
 "Create Backup…" = "Create Backup…";
 "Create Key" = "Create Key";
@@ -362,10 +332,8 @@
 "Forward" = "Forward";
 "Fraction" = "Fraction";
 "Fraction to reduce" = "Fraction to reduce";
-"Fresh quote %@ at %@ · preview expires %@" = "Fresh quote %@ at %@ · preview expires %@";
 "From %@" = "From %@";
 "from %@" = "from %@";
-"from %@ to %@" = "from %@ to %@";
 "From %@ to %@, %@. High %@, low %@." = "From %@ to %@, %@. High %@, low %@.";
 "Gemini models" = "Gemini models";
 "General" = "General";
@@ -405,7 +373,6 @@
 "In Terminal, run **ollama pull llama3.2**, or pull any model you prefer." = "In Terminal, run **ollama pull llama3.2**, or pull any model you prefer.";
 "Install **Ollama** and open it." = "Install **Ollama** and open it.";
 "Installation %@\nStaging %@" = "Installation %@\nStaging %@";
-"Instruction %lld" = "Instruction %lld";
 "Instruction details" = "Instruction details";
 "Interpretation" = "Interpretation";
 "Interpretations, risk checks, order submissions, and ledger events appear here." = "Interpretations, risk checks, order submissions, and ledger events appear here.";
@@ -424,7 +391,6 @@
 "Keys removed" = "Keys removed";
 "Kimi models" = "Kimi models";
 "Language" = "Language";
-"Last post %@" = "Last post %@";
 "Last problem: %@" = "Last problem: %@";
 "Last result, %@. %@" = "Last result, %@. %@";
 "Last verified backup" = "Last verified backup";
@@ -452,7 +418,6 @@
 "Load More Accounts" = "Load More Accounts";
 "Load Older History" = "Load Older History";
 "Load Older Posts" = "Load Older Posts";
-"Loading %@ command history" = "Loading %@ command history";
 "Local engine, %@" = "Local engine, %@";
 "Local log, %@" = "Local log, %@";
 "Lock" = "Lock";
@@ -512,10 +477,7 @@
 "No history loaded." = "No history loaded.";
 "No message text was captured." = "No message text was captured.";
 "No open positions. Copied buys appear here, next to anything you hold outside CopyTrading." = "No open positions. Copied buys appear here, next to anything you hold outside CopyTrading.";
-"No posts from %@ have been loaded yet." = "No posts from %@ have been loaded yet.";
 "No posts loaded yet" = "No posts loaded yet";
-"No posts today. Start copying to follow %@." = "No posts today. Start copying to follow %@.";
-"No posts yet today. New calls from %@ appear here within seconds." = "No posts yet today. New calls from %@ appear here within seconds.";
 "No price quote was available" = "No price quote was available";
 "No prior account delivery details are recorded." = "No prior account delivery details are recorded.";
 "No problems recorded" = "No problems recorded";
@@ -578,20 +540,16 @@
 "Opens the reviewed correction, preview, and confirmation workflow." = "Opens the reviewed correction, preview, and confirmation workflow.";
 "Optional for local models" = "Optional for local models";
 "Optional, comma-separated user IDs" = "Optional, comma-separated user IDs";
-"Order %@" = "Order %@";
 "Order %@ · filled %@" = "Order %@ · filled %@";
-"Order for %@ %@ was cancelled" = "Order for %@ %@ was cancelled";
 "Order previews" = "Order previews";
 "Order submission" = "Order submission";
 "Order timeout (seconds)" = "Order timeout (seconds)";
 "Orders follow the reading above, not the raw text of the post." = "Orders follow the reading above, not the raw text of the post.";
 "original position" = "original position";
 "Original post: %@" = "Original post: %@";
-"Posted %@ · %@ before this preview" = "Posted %@ · %@ before this preview";
 "Other (OpenAI-compatible)" = "Other (OpenAI-compatible)";
 "Overnight trading is not supported" = "Overnight trading is not supported";
 "Overnight trading was halted" = "Overnight trading was halted";
-"Owned lot: %@" = "Owned lot: %@";
 "Paper" = "Paper";
 "Partly filled" = "Partly filled";
 "Passed validation" = "Passed validation";
@@ -608,7 +566,6 @@
 "Payload" = "Payload";
 "Payload size" = "Payload size";
 "People" = "People";
-"Permitted quantity: %@ · original source age: %@ seconds" = "Permitted quantity: %@ · original source age: %@ seconds";
 "Pick the channel they post in, then choose **Learn from Channel**. CopyTrading reads their recent posts and drafts how they write buys, sells, and tickers." = "Pick the channel they post in, then choose **Learn from Channel**. CopyTrading reads their recent posts and drafts how they write buys, sells, and tickers.";
 "Pick who to copy" = "Pick who to copy";
 "Platform status: %@" = "Platform status: %@";
@@ -620,7 +577,6 @@
 "Post forwarded" = "Post forwarded";
 "Post pipeline" = "Post pipeline";
 "posts" = "posts";
-"Posts in Discord channel %@" = "Posts in Discord channel %@";
 "Posts, model calls, and trading steps appear here as the engine handles them, with keys removed. The log stays on this Mac." = "Posts, model calls, and trading steps appear here as the engine handles them, with keys removed. The log stays on this Mac.";
 "Posts, model calls, and trading steps appear here as the engine handles them." = "Posts, model calls, and trading steps appear here as the engine handles them.";
 "Prepared an order" = "Prepared an order";
@@ -678,7 +634,6 @@
 "Refresh Previews" = "Refresh Previews";
 "Refresh Status" = "Refresh Status";
 "Reject" = "Reject";
-"Rejected a post: %@" = "Rejected a post: %@";
 "Rejected by the broker" = "Rejected by the broker";
 "remaining position" = "remaining position";
 "Remove" = "Remove";
@@ -697,7 +652,6 @@
 "Restore in Progress" = "Restore in Progress";
 "Restore Preview" = "Restore Preview";
 "Resume Entries" = "Resume Entries";
-"Resume new entries in %@" = "Resume new entries in %@";
 "Resume Restore" = "Resume Restore";
 "Resume with a read-only broker check, or roll back to the previous generation." = "Resume with a read-only broker check, or roll back to the previous generation.";
 "Retry Pending Self-Test" = "Retry Pending Self-Test";
@@ -748,7 +702,6 @@
 "Hidden" = "Hidden";
 "Sell %@" = "Sell %@";
 "Sell %@ %@" = "Sell %@ %@";
-"Sell %@ %@ with Touch ID" = "Sell %@ %@ with Touch ID";
 "Sell %@ from %@" = "Sell %@ from %@";
 "Sell %@ of %@ at %@" = "Sell %@ of %@ at %@";
 "Sell all %@ at %@" = "Sell all %@ at %@";
@@ -779,7 +732,6 @@
 "Show or hide the sidebar" = "Show or hide the sidebar";
 "Show Sidebar" = "Show Sidebar";
 "Show Tips Again" = "Show Tips Again";
-"Shows %@'s calls and where they are copied" = "Shows %@'s calls and where they are copied";
 "Shows the posts these shares came from" = "Shows the posts these shares came from";
 "Shows this post in Activity" = "Shows this post in Activity";
 "Shows what a backup holds first. Nothing changes until you activate it." = "Shows what a backup holds first. Nothing changes until you activate it.";
@@ -791,13 +743,11 @@
 "since the start" = "since the start";
 "skipped" = "skipped";
 "Skipped" = "Skipped";
-"Skipped: %@" = "Skipped: %@";
 "Sold" = "Sold";
 "Sold %@ %@%@" = "Sold %@ %@%@";
 "Sold %@ so far" = "Sold %@ so far";
 "some" = "some";
 "Setup Tips" = "Setup Tips";
-"Source activity error: %@" = "Source activity error: %@";
 "Source post" = "Source post";
 "Start" = "Start";
 "Start Copying" = "Start Copying";
@@ -919,7 +869,6 @@
 "Turn on Developer Mode, then right-click the channel your guru posts in and copy its ID." = "Turn on Developer Mode, then right-click the channel your guru posts in and copy its ID.";
 "Unchanged" = "Unchanged";
 "Under **Request Headers**, copy the value next to **authorization** and paste it into **Discord token**." = "Under **Request Headers**, copy the value next to **authorization** and paste it into **Discord token**.";
-"Understood as · %@" = "Understood as · %@";
 "Unknown guru" = "Unknown guru";
 "Unlock" = "Unlock";
 "Unlock with Touch ID or your Mac's password each time CopyTrading opens." = "Unlock with Touch ID or your Mac's password each time CopyTrading opens.";
@@ -959,7 +908,6 @@
 "Working" = "Working";
 "Yes" = "Yes";
 "You" = "You";
-"You're copying %@ into %@." = "You're copying %@ into %@.";
 "You're set up. This page stays here as your guide." = "You're set up. This page stays here as your guide.";
 "Your account trades" = "Your account trades";
 "your accounts" = "your accounts";
@@ -1032,8 +980,6 @@
 "Read %@'s history" = "Read %@'s history";
 "Checked what is waiting for you" = "Checked what is waiting for you";
 "Paused copying" = "Paused copying";
-"Paused new entries for %@" = "Paused new entries for %@";
-"Asked you to approve resuming %@" = "Asked you to approve resuming %@";
 "Added up %@'s calls" = "Added up %@'s calls";
 "Looked at that post" = "Looked at that post";
 "Couldn't check whether copying is running" = "Couldn't check whether copying is running";
@@ -1042,8 +988,6 @@
 "Couldn't read %@'s history" = "Couldn't read %@'s history";
 "Couldn't check what is waiting for you" = "Couldn't check what is waiting for you";
 "Couldn't pause copying" = "Couldn't pause copying";
-"Couldn't pause new entries for %@" = "Couldn't pause new entries for %@";
-"Couldn't ask you to approve resuming %@" = "Couldn't ask you to approve resuming %@";
 "Couldn't find that post" = "Couldn't find that post";
 "Outcome unknown" = "Outcome unknown";
 "Discarded" = "Discarded";
@@ -1197,7 +1141,6 @@
 "Open Alpaca" = "Open Alpaca";
 "start copying into live accounts" = "start copying into live accounts";
 "Copying didn't start. Confirm with Touch ID or your Mac password to copy into live accounts." = "Copying didn't start. Confirm with Touch ID or your Mac password to copy into live accounts.";
-"allow new entries in %@" = "allow new entries in %@";
 "Alpaca account" = "Alpaca account";
 "New" = "New";
 "For example" = "For example";
@@ -1258,8 +1201,6 @@
 "Broker accounts" = "Broker accounts";
 "Gurus" = "Gurus";
 "Copies into %@" = "Copies into %@";
-"Copies into %@ · %@" = "Copies into %@ · %@";
-"%@ a call" = "%@ a call";
 "Edit in Connections" = "Edit in Connections";
 "Edit this account's keys and limits in Connections" = "Edit this account's keys and limits in Connections";
 "Set Up in Connections" = "Set Up in Connections";
@@ -1356,10 +1297,6 @@
 "Copies into %@ · full position %@" = "Copies into %@ · full position %@";
 "Full position %@. A 1/6 call buys a sixth of it." = "Full position %@. A 1/6 call buys a sixth of it.";
 "First set this account's max per stock. It's the guru's full position." = "First set this account's max per stock. It's the guru's full position.";
-"%@'s max per stock, **%@**, is this guru's full position." = "%@'s max per stock, **%@**, is this guru's full position.";
-"A 1/6 call buys **%@** and a 1/2 call **%@**." = "A 1/6 call buys **%@** and a 1/2 call **%@**.";
-"Your max per order, **%@**, cuts bigger buys down. Activity shows when." = "Your max per order, **%@**, cuts bigger buys down. Activity shows when.";
-"A post with no size buys **%@**." = "A post with no size buys **%@**.";
 "You skipped this call." = "You skipped this call.";
 "Too late to copy: its trading day is over." = "Too late to copy: its trading day is over.";
 "Opens the call to check, then previews the order in each waiting account." = "Opens the call to check, then previews the order in each waiting account.";
@@ -1376,9 +1313,6 @@
 "Not sold" = "Not sold";
 "Not bought" = "Not bought";
 "Not copied yet" = "Not copied yet";
-"The call was for %@. Your max per order cut it to %@." = "The call was for %@. Your max per order cut it to %@.";
-"%@ already has %@ of %@. Buying %@ more would go over its %@ limit for one stock." = "%@ already has %@ of %@. Buying %@ more would go over its %@ limit for one stock.";
-"%@ already holds %@ in total. Buying %@ more would go over its %@ total limit." = "%@ already holds %@ in total. Buying %@ more would go over its %@ total limit.";
 "Read as" = "Read as";
 "A call is waiting for you" = "A call is waiting for you";
 "Some posts need you: a suggestion, an “if”, or a price that has moved. They wait here until you copy or skip them." = "Some posts need you: a suggestion, an “if”, or a price that has moved. They wait here until you copy or skip them.";
@@ -1393,7 +1327,6 @@
 "Sell %@ of the %@ bought at %@, %@." = "Sell %@ of the %@ bought at %@, %@.";
 "Sell %@ of %@, %@." = "Sell %@ of %@, %@.";
 "Sell" = "Sell";
-"from the %@ buy" = "from the %@ buy";
 "no buy named" = "no buy named";
 "at %@" = "at %@";
 "between %@ and %@" = "between %@ and %@";
@@ -1409,7 +1342,6 @@
 "a sixth" = "a sixth";
 "market price" = "market price";
 "no price" = "no price";
-"batch %lld" = "batch %lld";
 "no size" = "no size";
 "Nothing is waiting for you" = "Nothing is waiting for you";
 "Unlock CopyTrading before replaying posts." = "Unlock CopyTrading before replaying posts.";
@@ -1468,7 +1400,6 @@
 "You see what happened" = "You see what happened";
 "Each account decides on its own." = "Each account decides on its own.";
 "When the guru sells" = "When the guru sells";
-"That part of what it bought on the guru's calls, at no less than their price less your allowance, 1% unless you change it." = "That part of what it bought on the guru's calls, at no less than their price less your allowance, 1% unless you change it.";
 "Never your own shares, and no stop-loss of its own." = "Never your own shares, and no stop-loss of its own.";
 "**Start on paper.** Paper accounts trade pretend money at real prices. A live account asks for Touch ID before it starts." = "**Start on paper.** Paper accounts trade pretend money at real prices. A live account asks for Touch ID before it starts.";
 "**A sleeping Mac copies nothing.** Keep it plugged in and awake, with CopyTrading open, while the market is. A closed MacBook lid sleeps it unless a display is connected." = "**A sleeping Mac copies nothing.** Keep it plugged in and awake, with CopyTrading open, while the market is. A closed MacBook lid sleeps it unless a display is connected.";
@@ -1477,7 +1408,6 @@
 "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Stop All** stops everything at once." = "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Stop All** stops everything at once.";
 "Needs a name" = "Needs a name";
 "After a restart" = "After a restart";
-"After a restart: %@" = "After a restart: %@";
 "Wait for me" = "Wait for me";
 "Carry on by itself" = "Carry on by itself";
 "After CopyTrading restarts, from a crash, a Mac restart, waking from sleep, or a restore, this account either waits for you before buying again or carries on by itself once Alpaca matches its records." = "After CopyTrading restarts, from a crash, a Mac restart, waking from sleep, or a restore, this account either waits for you before buying again or carries on by itself once Alpaca matches its records.";
@@ -1655,11 +1585,6 @@
 "Added %lld example posts below yours." = "Added %lld example posts below yours.";
 "The holdings couldn't be settled: %@. Check the broker for open orders in %@, then try again." = "The holdings couldn't be settled: %@. Check the broker for open orders in %@, then try again.";
 "Clear the Old Count" = "Clear the Old Count";
-"Count %@ Shares as Yours" = "Count %@ Shares as Yours";
-"CopyTrading counted %@ %@ shares, and the broker holds %@. Every copied share is still there, so the broker's other shares count as yours, and %@ is copied again." = "CopyTrading counted %@ %@ shares, and the broker holds %@. Every copied share is still there, so the broker's other shares count as yours, and %@ is copied again.";
-"Treat %@ Copied Shares as Sold" = "Treat %@ Copied Shares as Sold";
-"CopyTrading bought %@ %@ shares, and the broker holds %@. The missing shares were sold outside CopyTrading; the oldest buys are counted as sold first, and %@ is copied again." = "CopyTrading bought %@ %@ shares, and the broker holds %@. The missing shares were sold outside CopyTrading; the oldest buys are counted as sold first, and %@ is copied again.";
-"%@ holdings need your review: CopyTrading counted %@, the broker holds %@. Calls for %@ wait until you settle it." = "%@ holdings need your review: CopyTrading counted %@, the broker holds %@. Calls for %@ wait until you settle it.";
 "Review in Accounts" = "Review in Accounts";
 "Selected" = "Selected";
 "Not selected" = "Not selected";
@@ -1670,12 +1595,7 @@
 "Waited for you to resume entries after the restart, and got too old" = "Waited for you to resume entries after the restart, and got too old";
 "Still checking the account after a restart" = "Still checking the account after a restart";
 "Entries wait for you to resume them after the restart" = "Entries wait for you to resume them after the restart";
-"Waiting for you to resume entries in %@" = "Waiting for you to resume entries in %@";
-"Resume by %@ to copy it." = "Resume by %@ to copy it.";
-"Resume now: after %@ it is too old to copy." = "Resume now: after %@ it is too old to copy.";
 "Allows new entries in this account, so the held buy can be copied." = "Allows new entries in this account, so the held buy can be copied.";
-"Approve it by %@, when trading ends." = "Approve it by %@, when trading ends.";
-"Copy it from here by %@, when trading ends." = "Copy it from here by %@, when trading ends.";
 "Also copy calls before and after regular hours, %@, with limit orders." = "Also copy calls before and after regular hours, %@, with limit orders.";
 "Also copy calls overnight, %@. Needs extended hours on." = "Also copy calls overnight, %@. Needs extended hours on.";
 "CopyTrading %@ is ready to install." = "CopyTrading %@ is ready to install.";
@@ -1705,9 +1625,6 @@
 "held outside" = "held outside";
 "%@, %@ shares" = "%@, %@ shares";
 "price %@" = "price %@";
-"%@ %@ %@, good for the day" = "%@ %@ %@, good for the day";
-"%@ (guru's price %@, up to %@%% above)" = "%@ (guru's price %@, up to %@%% above)";
-"%@ filled of %@" = "%@ filled of %@";
 "%@ s" = "%@ s";
 "%@ was offered at %@ when it went out." = "%@ was offered at %@ when it went out.";
 "%lld min" = "%lld min";
@@ -1743,7 +1660,6 @@
 "Timeline" = "Timeline";
 "Why it ended" = "Why it ended";
 "Your buys pay at most %@%% above the guru's price." = "Your buys pay at most %@%% above the guru's price.";
-"bid %@ · ask %@" = "bid %@ · ask %@";
 "limit order" = "limit order";
 "market order" = "market order";
 "All posts" = "All posts";
@@ -1756,8 +1672,6 @@
 "from every buy of it" = "from every buy of it";
 "read by %@" = "read by %@";
 "Refresh now" = "Refresh now";
-"%lld accounts" = "%lld accounts";
-"%@ · %@ · %@" = "%@ · %@ · %@";
 "Partly traded" = "Partly traded";
 "Your buys pay at most the guru's price, not a cent above, so it waited for the price to come down. Raise Maximum above signal price in the account's limits to let buys fill nearby." = "Your buys pay at most the guru's price, not a cent above, so it waited for the price to come down. Raise Maximum above signal price in the account's limits to let buys fill nearby.";
 "Buy %@ %@" = "Buy %@ %@";
@@ -1771,8 +1685,6 @@
 "Reading with %@… %@" = "Reading with %@… %@";
 "Reading… %@" = "Reading… %@";
 "Handing to your accounts… %@" = "Handing to your accounts… %@";
-"Held · waiting for you to resume entries · %@, copies until %@" = "Held · waiting for you to resume entries · %@, copies until %@";
-"Held · waiting for you to resume entries · %@" = "Held · waiting for you to resume entries · %@";
 "Waiting for the next account cycle… %@" = "Waiting for the next account cycle… %@";
 "Sent to Alpaca · waiting for a fill · %@ of %@" = "Sent to Alpaca · waiting for a fill · %@ of %@";
 "Sent to Alpaca · waiting for a fill · %@" = "Sent to Alpaca · waiting for a fill · %@";
@@ -1786,7 +1698,6 @@
 "Captured in %@" = "Captured in %@";
 "Waited %@ before reading" = "Waited %@ before reading";
 "Sent" = "Sent";
-"%@ %@, limit %@" = "%@ %@, limit %@";
 "accepted by Alpaca in %@" = "accepted by Alpaca in %@";
 "Held %@ waiting for you to resume" = "Held %@ waiting for you to resume";
 "Waited %@ for a fill" = "Waited %@ for a fill";
@@ -1850,7 +1761,6 @@
 "Bought %@, rest cancelled" = "Bought %@, rest cancelled";
 "Sold %@, rest cancelled" = "Sold %@, rest cancelled";
 "%@ · day" = "%@ · day";
-"%@ · cut from %@" = "%@ · cut from %@";
 "%@ · %@%% above the guru" = "%@ · %@%% above the guru";
 "Bid %@ · Ask %@" = "Bid %@ · Ask %@";
 "Type" = "Type";
@@ -1893,7 +1803,6 @@
 "Open the post that bought these shares." = "Open the post that bought these shares.";
 "Posts today" = "Posts today";
 "Read in" = "Read in";
-"%@ avg" = "%@ avg";
 "Newest first" = "Newest first";
 "Yesterday" = "Yesterday";
 "No account acted on it" = "No account acted on it";
@@ -1935,9 +1844,6 @@
 "Reading it · %@" = "Reading it · %@";
 "Working out each account's share · %@" = "Working out each account's share · %@";
 "%@ picks it up on its next cycle · %@" = "%@ picks it up on its next cycle · %@";
-"%@ holds new buys until you resume entries · %@" = "%@ holds new buys until you resume entries · %@";
-"%@ is waiting for a fill · %@ of %@" = "%@ is waiting for a fill · %@ of %@";
-"%@ is waiting for a fill · %@" = "%@ is waiting for a fill · %@";
 
 "Getting started" = "Getting started";
 "About 10 minutes, five steps." = "About 10 minutes, five steps.";
@@ -1972,7 +1878,6 @@
 "%@ is waiting for a fill" = "%@ is waiting for a fill";
 "Cost → price" = "Cost → price";
 "Average cost %@, price %@" = "Average cost %@, price %@";
-"bought %@" = "bought %@";
 "now %@" = "now %@";
 "Open post" = "Open post";
 "From %@’s post" = "From %@’s post";
@@ -2099,7 +2004,6 @@
 "Go to a page, run an action, or find a post" = "Go to a page, run an action, or find a post";
 "Nothing matches." = "Nothing matches.";
 "Command palette" = "Command palette";
-"Copying didn't start: %@." = "Copying didn't start: %@.";
 "The new setup didn't start, so your previous setup is still in place: %@." = "The new setup didn't start, so your previous setup is still in place: %@.";
 "The engine stopped while starting" = "The engine stopped while starting";
 "Another CopyTrading on this Mac is copying into this account" = "Another CopyTrading on this Mac is copying into this account";
@@ -2258,8 +2162,6 @@
 "In %@: %@" = "In %@: %@";
 "Check for posts every (seconds)" = "Check for posts every (seconds)";
 "%@ → %@" = "%@ → %@";
-"Holding %@ in 1 stock from these calls" = "Holding %@ in 1 stock from these calls";
-"Holding %@ in %lld stocks from these calls" = "Holding %@ in %lld stocks from these calls";
 "Reduce a position" = "Reduce";
 "Close a position" = "Close";
 "Deadline today: %@ %@" = "%@ %@ today";
