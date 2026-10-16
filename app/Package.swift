@@ -42,7 +42,7 @@ let package = Package(
         ),
         .executableTarget(
             name: "CopyTrading",
-            dependencies: ["CopyTradingUI", .product(name: "Sparkle", package: "Sparkle")],
+            dependencies: ["CopyTradingUI", "DesktopCore", .product(name: "Sparkle", package: "Sparkle")],
             path: "Sources/CopyTradingApp",
             linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])]
         ),

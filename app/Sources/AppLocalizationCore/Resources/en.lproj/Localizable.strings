@@ -2331,3 +2331,11 @@
 "The chart can't change while the engine is stopped. Start it in Settings → Engine." = "The chart can't change while the engine is stopped. Start it in Settings → Engine.";
 "Self-test completed" = "Self-test completed";
 "Find" = "Find";
+"Desktop" = "Desktop";
+"Documents" = "Documents";
+"Downloads" = "Downloads";
+"iCloud Drive" = "iCloud Drive";
+"cloud storage" = "cloud storage";
+"CopyTrading is in your %@ folder, where macOS won't let the updater replace it: the update would quit CopyTrading without installing. Move CopyTrading to Applications, open it from there, and check again." = "CopyTrading is in your %@ folder, where macOS won't let the updater replace it: the update would quit CopyTrading without installing. Move CopyTrading to Applications, open it from there, and check again.";
+"CopyTrading %@ is out, but can't install in %@." = "CopyTrading %@ is out, but can't install in %@.";
+"Move CopyTrading to Applications, then open it from there to install." = "Move CopyTrading to Applications, then open it from there to install.";

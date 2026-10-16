@@ -1,12 +1,15 @@
 import Combine
 import CopyTradingUI
+import DesktopCore
 import Foundation
 import Sparkle
 
 /// Updates through Sparkle: it reads the signed release feed (SUFeedURL), checks each download's
 /// EdDSA signature against SUPublicEDKey, replaces the app, and relaunches it. A scheduled check
 /// that finds an update shows the app's own banner (Sparkle's gentle reminders) instead of a
-/// window; Install opens Sparkle's update window with the release notes.
+/// window; Install opens Sparkle's update window with the release notes. An app in a folder macOS
+/// guards is never quit for an install that can't land there, and an install that fails after
+/// the app quit still ends with the app open again (RelaunchGuard).
 @MainActor
 @Observable
 final class SparkleUpdater: AppUpdating {
@@ -54,6 +57,9 @@ final class SparkleUpdater: AppUpdating {
 private final class UpdaterDelegate: NSObject, SPUUpdaterDelegate, @preconcurrency SPUStandardUserDriverDelegate {
     let offer: UpdateOffer
     var willRelaunch: (@MainActor () -> Void)?
+    /// A version a scheduled check found while the app sits in a guarded folder, offered with
+    /// that folder once Sparkle ends the check.
+    private var blocked: (version: String, folder: ProtectedFolder)?
 
     init(offer: UpdateOffer) {
         self.offer = offer
@@ -67,7 +73,33 @@ private final class UpdaterDelegate: NSObject, SPUUpdaterDelegate, @preconcurren
         }
     #endif
 
+    /// Sparkle's installer can't replace the app in a folder macOS guards: macOS stops it to ask
+    /// after the app has quit, and nothing reopens the app. So the update stops here, while the
+    /// app still runs, and says to move the app.
+    func updater(
+        _ updater: SPUUpdater, shouldProceedWithUpdate updateItem: SUAppcastItem, updateCheck: SPUUpdateCheck
+    ) throws {
+        guard let folder = ProtectedFolder.containing(Bundle.main.bundleURL) else { return }
+        if updateCheck == .updatesInBackground {
+            blocked = (updateItem.displayVersionString, folder)
+        }
+        throw NSError(
+            domain: "dev.copytrading.update", code: 1,
+            userInfo: [NSLocalizedDescriptionKey: folder.updateRefusal])
+    }
+
+    func updater(_ updater: SPUUpdater, didFinishUpdateCycleFor updateCheck: SPUUpdateCheck, error: (any Error)?) {
+        guard let blocked else { return }
+        self.blocked = nil
+        offer.found(blocked.version, blockedIn: blocked.folder.name)
+    }
+
+    /// Sparkle quits the app next. If its installer then fails, it never reopens the app, so the
+    /// guard does.
     func updaterWillRelaunchApplication(_ updater: SPUUpdater) {
+        if let executable = Bundle.main.executableURL {
+            _ = try? RelaunchGuard.start(appPID: getpid(), executable: executable, bundle: Bundle.main.bundleURL)
+        }
         willRelaunch?()
     }
 
