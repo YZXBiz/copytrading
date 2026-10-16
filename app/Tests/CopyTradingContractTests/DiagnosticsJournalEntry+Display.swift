@@ -1,0 +1,1 @@
+../../Sources/CopyTrading/Features/Diagnostics/DiagnosticsJournalEntry+Display.swift

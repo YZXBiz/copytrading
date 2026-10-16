@@ -6,7 +6,50 @@ import Testing
 func runConnectionsAndSettingsPagesTests() throws {
     try connectionTilesFollowTheDraft()
     try settingsRetracesPagesAndClosesBack()
+    try diagnosticsRecordsReadInWords()
     print("CopyTradingContractTests: Connections tiles follow the draft; Settings goes back through its pages and closes")
+}
+
+/// Every ledger event the engine journals (`safe_ledger_event`) and every self-test stage has its
+/// own title in both languages; none falls back to its code, and a Discord post names no provider.
+@MainActor
+private func diagnosticsRecordsReadInWords() throws {
+    let ledgerEvents = [
+        "account_bound", "signal_rejected", "message", "skipped", "message_done", "order_prepared", "submit_started",
+        "submission_aborted", "submission_uncertain", "broker_acknowledged", "cancel_requested", "quote_unavailable",
+        "submit_error", "submission_quote", "manual_sale_recorded", "order_intent_released",
+        "late_order_incident_cleared", "order_update", "late_order_incident_opened", "late_order_incident_reopened",
+    ]
+    try #require(
+        Set(ledgerEvents) == Set(DiagnosticsJournalEntry.ledgerTitles.keys),
+        "ledger titles cover \(DiagnosticsJournalEntry.ledgerTitles.keys.sorted())")
+    try #require(
+        Set(["captured", "parsed", "completed", "failed"]) == Set(DiagnosticsJournalEntry.stageTitles.keys),
+        "self-test titles cover \(DiagnosticsJournalEntry.stageTitles.keys.sorted())")
+    let longest = DiagnosticsJournalEntry.ledgerTitles.values.map(\.count).max() ?? 0
+    try #require(longest <= 22, "a ledger title is \(longest) characters, too long for the list")
+
+    func entry(_ line: String) throws -> DiagnosticsJournalEntry {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "journal-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try Data((line + "\n").utf8).write(to: directory.appending(path: DiagnosticsJournal.fileName))
+        return try #require(try DiagnosticsJournal(directory: directory).entries().first)
+    }
+    let post = try entry(
+        #"{"kind":"payload","at":"2026-10-15T20:00:00.000+00:00","capture_kind":"source_event","capture_status":"complete","provider":"other","created_at_ns":1}"#
+    )
+    try #require(!post.displayFields.contains { $0.label == "Provider" }, "a Discord post named provider \(post.displayFields)")
+    let stage = try entry(
+        #"{"kind":"stage","at":"2026-10-15T20:00:01.000+00:00","stage":"parsed","outcome":"parsed","created_at_ns":2}"#
+    )
+    let preference = AppLanguagePreference.shared
+    let original = preference.language
+    defer { preference.select(original) }
+    preference.select(.simplifiedChinese)
+    try #require(
+        stage.title == "自检：已读取" && stage.outcomeTitle == "已读取",
+        "a self-test stage read \(stage.title) · \(stage.outcomeTitle) in 简体中文")
 }
 
 @MainActor
