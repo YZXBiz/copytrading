@@ -189,7 +189,7 @@ above stays. Renders: `resp/narrow-en`, `resp/narrow-zh`, `resp/narrow-many-en`,
   - **Menus** are one button each.
   - **Capitals** are spoken as written. `test_drawn_capitals.py` now fails a display `uppercased()`
     or a `textCase` without a spoken label.
-  - **Fields** carry their names. Switches read their title once, with the detail as the hint.
+  - **Fields** carry their names. Switches read their title once, on the switch; the detail stays readable text.
   - **Choices** report their selection (`AXSelected`).
   - **Charts.** The day chart speaks its summary instead of fractions. The menu bar sparkline is
     one element.
