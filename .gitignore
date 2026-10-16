@@ -42,3 +42,4 @@ engine/dist/
 app/Resources/Runtime/
 # Private runtime files retained for existing installations; no tracked deployment code.
 /deploy/
+docs/audits/

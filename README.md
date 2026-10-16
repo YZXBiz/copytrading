@@ -151,7 +151,7 @@ The engine also runs without the app, on a Mac or a Linux server, so copying con
 
 ## Contributing
 
-Run `make doctor` to check your Mac, then `make check` for the engine's 1,500+ tests, Ruff, and Ty. [CONTRIBUTING.md](CONTRIBUTING.md) covers the native app checks and conventions. Ask questions in [Discussions](https://github.com/YZXBiz/copytrading/discussions), report bugs with the [issue forms](https://github.com/YZXBiz/copytrading/issues/new/choose), and report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+Run `make doctor` to check your Mac, then `make check` for the engine's 1,700+ tests, Ruff, and Ty. [CONTRIBUTING.md](CONTRIBUTING.md) covers the native app checks and conventions. Ask questions in [Discussions](https://github.com/YZXBiz/copytrading/discussions), report bugs with the [issue forms](https://github.com/YZXBiz/copytrading/issues/new/choose), and report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 
 ## License
 

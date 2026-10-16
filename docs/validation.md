@@ -56,6 +56,24 @@ one.
   no limit, and the accounts ended flat. One run force-killed the engine mid-burst.
   Six faults it found were fixed (0.1.0-alpha.10); the final build's run of 169
   posts, crash included, had none.
+- **Full test pass, October 15–16, 2026:** three parallel passes over the
+  installed app, every step recorded as passed or failed with evidence.
+  - **Trading:** a 30-post battery through the real Discord channel into Alpaca
+    paper, run in the extended, overnight and regular sessions, read, sized,
+    priced and filled all 90 posts as written. Every limit refused at exactly its
+    edge, including the daily loss and shares the owner bought outside the app.
+    Copying a call by hand sent exactly the order its footer showed; selling one
+    named buy, one lot, or everything sold exactly that. A burst survived the
+    engine being killed mid-way with each post filled once, and copying continued
+    with the lid closed. Median post to fill was 5 to 6 seconds.
+  - **Controls:** every button, switch, link, menu item, tab, sheet and shortcut,
+    in English and 简体中文.
+  - **Visuals:** every screen in both languages and both appearances, against
+    the design rules.
+  - **Fixes:** each failure was fixed at its cause before release. Among them,
+    a sell of everything right after a sell of one named buy was dropped as a
+    re-post. An update the app couldn't install from an iCloud-synced folder
+    used to quit it and leave copying off.
 
 In bounded runs with the market closed, one real interpretation produced one
 durable outcome, restarts sent no duplicate orders or notifications, Telegram
@@ -70,8 +88,9 @@ no orders.
   posts were written for the test).
 - Signing with a Developer ID, notarization, and trusted signed updates.
 - Installation on a clean Mac, and trials with people who do not write code.
-- Real Touch ID and passcode prompts, sleep and wake, Keychain denial, and
-  closing and reopening the window, outside controlled tests.
+- Real Touch ID and passcode prompts, sleep and wake (a scheduled wake needs
+  administrator rights the test pass didn't use), Keychain denial, and closing
+  and reopening the window, outside controlled tests.
 - Live trading, which needs its own separately authorized qualification.
 
 ## Known limitations
