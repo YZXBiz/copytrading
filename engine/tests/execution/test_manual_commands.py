@@ -234,7 +234,8 @@ def test_unexpected_quote_failure_is_diagnostic_and_never_submits(tmp_path, capl
     assert snapshot.manual_commands == {}
 
 
-def test_known_quote_broker_failure_remains_a_quote_unavailable_outcome(tmp_path):
+def test_a_priced_buy_goes_without_a_quote_the_broker_cannot_give(tmp_path):
+    """The limit alone bounds a priced buy (ADR-0007), so a quote outage only warns."""
     _engine, broker, store, app, correction = setup_manual(tmp_path)
 
     def fail_quote(_symbol):
@@ -243,11 +244,32 @@ def test_known_quote_broker_failure_remains_a_quote_unavailable_outcome(tmp_path
     broker.quote = fail_quote
     preview = app.preview(preview_request(correction), NOW)
 
-    assert preview.plan is None
-    assert "quote_unavailable" in preview.reasons
-    assert "preview_unavailable" not in preview.reasons
+    assert preview.reasons == ()
+    assert preview.plan is not None
+    [quote] = [check for check in preview.checks if check.name == "quote"]
+    assert (quote.status, quote.reason) == ("warning", "quote_unavailable")
     assert broker.calls == 0
     assert store.load().orders == {}
+
+
+def test_an_evening_quote_minutes_old_warns_and_the_owner_can_still_copy(tmp_path):
+    """From 4 PM to 8 PM the free feed's newest quote is the consolidated tape, 15 minutes late:
+    a copy by hand at the guru's price goes out at its limit, as a copied one does, and the old ask
+    is not shown as the market's."""
+    _engine, broker, _, app, correction = setup_manual(tmp_path)
+    broker.ask = Decimal("26.49")
+    broker.quote_time = NOW - dt.timedelta(minutes=16)
+
+    preview = app.preview(preview_request(correction), NOW)
+
+    assert preview.reasons == ()
+    assert preview.plan is not None
+    assert (preview.quote, preview.fresh_price) == (None, None)
+    [quote] = [check for check in preview.checks if check.name == "quote"]
+    assert (quote.status, quote.reason) == ("warning", "quote_stale")
+    result = app.confirm(confirmation_request(), NOW + dt.timedelta(seconds=5))
+    assert result.status != "rejected"
+    assert broker.calls == 1
 
 
 async def test_manual_preference_requires_current_resume_and_keeps_exit_ready_after_pause(

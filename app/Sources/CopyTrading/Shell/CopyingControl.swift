@@ -27,7 +27,8 @@ struct CopyingControl: View {
                     .labelStyle(.titleAndIcon)
                     .disabled(model.isTradingCommandPending || model.tradingStatus?.state == .pausing)
                     .help(L10n.string("Stop reading new posts and placing orders for every account."))
-                    .popoverTip(PauseCopyingTip(generation: tipGeneration), arrowEdge: .top)
+                    // On macOS the arrow edge is the side the tip opens on: below, inside the window.
+                    .popoverTip(PauseCopyingTip(generation: tipGeneration), arrowEdge: .bottom)
                     .accessibilityIdentifier("toolbar.copying")
             }
             .task { await PauseCopyingTip.copyingStarted.donate() }

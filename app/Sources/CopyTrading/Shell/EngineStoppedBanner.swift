@@ -23,7 +23,7 @@ struct EngineStoppedBanner: View {
         if isStopped {
             HStack(spacing: 10) {
                 Image(systemName: model.runtimeState == .failed ? "xmark.octagon.fill" : "pause.circle.fill")
-                    .foregroundStyle(model.runtimeState == .failed ? .red : .secondary)
+                    .foregroundStyle(model.runtimeState == .failed ? Palette.loss : .secondary)
                     .accessibilityHidden(true)
                 Text(message)
                 Spacer(minLength: 8)

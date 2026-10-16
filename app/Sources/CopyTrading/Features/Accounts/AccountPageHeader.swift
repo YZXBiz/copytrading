@@ -82,7 +82,7 @@ struct AccountPageHeader: View {
                 .help(L10n.string("Broker account %@", account.brokerIdentity))
             HStack(spacing: 6) {
                 Text(L10n.string(account.environment == .live ? "Live" : "Paper"))
-                    .foregroundStyle(account.environment == .live ? Color.orange : Palette.tertiaryInk)
+                    .foregroundStyle(account.environment == .live ? Palette.live : Palette.tertiaryInk)
                 Text(verbatim: "·")
                     .foregroundStyle(Palette.tertiaryInk)
                     .accessibilityHidden(true)

@@ -39,9 +39,9 @@ struct FreshnessLabel: View {
         let ago = Self.ago(age)
         if !isCopying { return (L10n.string("Synced %@", ago), L10n.string("Synced %@", ago), .secondary) }
         if age > Self.staleAfter {
-            return (L10n.string("Updates delayed · last %@", ago), L10n.string("Delayed · %@", ago), .orange)
+            return (L10n.string("Updates delayed · last %@", ago), L10n.string("Delayed · %@", ago), Palette.live)
         }
-        return (L10n.string("Synced %@", ago), L10n.string("Synced %@", ago), .green)
+        return (L10n.string("Synced %@", ago), L10n.string("Synced %@", ago), Palette.gain)
     }
 
     static func ago(_ seconds: TimeInterval) -> String {

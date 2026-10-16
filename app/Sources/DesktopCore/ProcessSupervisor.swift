@@ -121,18 +121,6 @@ public enum ProcessSupervisorError: Error, Equatable, LocalizedError, Sendable {
     }
 }
 
-#if DEBUG
-    public struct OwnedChildIdentity: Equatable, Sendable {
-        public let processIdentifier: Int32
-        public let generation: UUID
-
-        public init(processIdentifier: Int32, generation: UUID) {
-            self.processIdentifier = processIdentifier
-            self.generation = generation
-        }
-    }
-#endif
-
 public actor ProcessSupervisor {
     public nonisolated let events: AsyncStream<RuntimeEvent>
 
@@ -268,27 +256,6 @@ public actor ProcessSupervisor {
     public func processIdentifier(for child: RuntimeChild) async -> Int32? {
         await children[child]?.processIdentifier()
     }
-
-    #if DEBUG
-        public func ownedChildIdentity(for child: RuntimeChild) async -> OwnedChildIdentity? {
-            guard let process = children[child],
-                let processID = await process.processIdentifier(),
-                children[child] === process
-            else { return nil }
-            return OwnedChildIdentity(processIdentifier: processID, generation: process.generation)
-        }
-
-        public func terminateOwnedChildForTesting(
-            _ child: RuntimeChild, expected identity: OwnedChildIdentity
-        ) async throws {
-            guard let process = children[child], process.generation == identity.generation,
-                let processID = await process.processIdentifier(),
-                processID == identity.processIdentifier,
-                children[child] === process
-            else { throw ProcessSupervisorError.startupFailed }
-            await process.stop()
-        }
-    #endif
 
     public func engineClient() throws -> EngineClient {
         guard let engineClientValue else { throw ProcessSupervisorError.missingEngineClient }

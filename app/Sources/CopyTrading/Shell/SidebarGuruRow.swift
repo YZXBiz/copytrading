@@ -11,7 +11,9 @@ struct SidebarGuruRow: View {
     private var screen: AppModel.Screen { .guru(guru.id) }
 
     var body: some View {
-        let stats = GuruStats(day: accountFeature.guruDays[guru.id], skipped: model.skippedCalls.contains)
+        let stats = GuruStats(
+            day: accountFeature.guruDays[guru.id], skipped: model.skippedCalls.contains,
+            isRead: accountFeature.lastUpdatedAt != nil)
         SidebarEntityRow(
             title: guru.name,
             detail: stats.sidebarDetail,

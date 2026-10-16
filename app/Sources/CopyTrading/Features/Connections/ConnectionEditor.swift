@@ -87,7 +87,7 @@ struct ConnectionEditor: View {
                 if kind == .alerts, model.setupDraft.notificationsEnabled {
                     Button(L10n.string("Turn Off Alerts"), role: .destructive, action: turnOffAlerts)
                         .buttonStyle(.borderless)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Palette.loss)
                 }
             }
         }

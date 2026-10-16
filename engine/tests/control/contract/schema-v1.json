@@ -1546,13 +1546,29 @@
           "symbol": {
             "title": "Symbol",
             "type": "string"
+          },
+          "usd_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usd Amount"
           }
         },
         "required": [
           "action",
           "symbol",
           "price",
-          "fraction"
+          "fraction",
+          "usd_amount"
         ],
         "title": "InstructionItem",
         "type": "object"

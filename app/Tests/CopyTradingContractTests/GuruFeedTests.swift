@@ -10,6 +10,25 @@ func runGuruFeedTests() async throws {
     try eachAccountSaysWhatItDidInAFewWords()
     try await theStripAndSidebarCountTheEnginesWholeDay()
     try theWaitingTabListsEveryCallTheCountSays()
+    try await anAccountTheBrokerHasNoCurveForStopsReading()
+}
+
+/// The engine answers with no curve when it can't ask the broker for one. The account is marked
+/// read, so its chart stops saying it is still reading; a new window starts over.
+@MainActor
+private func anAccountTheBrokerHasNoCurveForStopsReading() async throws {
+    let actions = GuruDayActions()
+    let feature = AccountFeatureModel()
+    feature.authorizePrivateEvidence()
+    await feature.refresh(using: actions)
+    try #require(feature.historiesRead.isEmpty, "a curve was read before anyone asked")
+
+    await feature.refreshHistories(using: actions)
+    try #require(feature.histories["paper"] == nil, "the fake engine returned a curve")
+    try #require(feature.historiesRead == ["paper"], "the asked accounts were \(feature.historiesRead)")
+
+    await feature.refreshHistories(window: EquityHistoryWindow(range: .week, day: nil), using: actions)
+    try #require(feature.historiesRead == ["paper"], "the week was not asked for")
 }
 
 private let losAngeles = TimeZone(identifier: "America/Los_Angeles")!
@@ -102,21 +121,27 @@ private func theStripAndSidebarCountTheEnginesWholeDay() async throws {
 
     // The fixture's waiting call was posted at 14:58 UTC on 14 October, 11:00 New York time.
     let now = try date("2026-10-14T16:00:00Z")
-    let lee = GuruStats(day: feature.guruDays["lee"], skipped: { _ in false }, now: now)
+    let lee = GuruStats(day: feature.guruDays["lee"], skipped: { _ in false }, isRead: true, now: now)
     try #require(lee.postsToday == 104 && lee.tradedToday == 12 && lee.averageRead == 3.5, "Lee's strip read \(lee)")
     try #require(lee.waiting == 1 && lee.sidebarDetail == "1 need you", "Lee's sidebar read \(lee.sidebarDetail)")
 
-    let skipped = GuruStats(day: feature.guruDays["lee"], skipped: { $0 == "discord:1:1427" }, now: now)
+    let skipped = GuruStats(day: feature.guruDays["lee"], skipped: { $0 == "discord:1:1427" }, isRead: true, now: now)
     try #require(skipped.waiting == 0, "a skipped call still waited")
     try #require(skipped.sidebarDetail == "104 posts today", "the sidebar read \(skipped.sidebarDetail)")
 
-    let zhao = GuruStats(day: feature.guruDays["zhao"], skipped: { _ in false }, now: now)
+    let zhao = GuruStats(day: feature.guruDays["zhao"], skipped: { _ in false }, isRead: true, now: now)
     try #require(zhao.postsToday == 111 && zhao.averageRead == nil, "Zhao's strip read \(zhao)")
 
-    let quiet = GuruStats(day: feature.guruDays["nobody"], skipped: { _ in false }, now: now)
+    let quiet = GuruStats(day: feature.guruDays["nobody"], skipped: { _ in false }, isRead: true, now: now)
     try #require(
         quiet.postsToday == 0 && quiet.waiting == 0 && quiet.averageRead == nil && quiet.sidebarDetail == "Quiet today",
         "a guru with no posts read \(quiet.sidebarDetail)")
+
+    // Before the engine's day has been read, nothing is counted: no zeros, and no "Quiet today".
+    let unread = GuruStats(day: nil, skipped: { _ in false }, isRead: false, now: now)
+    try #require(
+        unread.postsToday == nil && unread.tradedToday == nil && unread.sidebarDetail == "Not read yet",
+        "a guru not read yet read \(unread.sidebarDetail)")
 }
 
 /// The engine counted eight calls waiting from last evening's burst; the newest page the app
@@ -154,7 +179,7 @@ private func theWaitingTabListsEveryCallTheCountSays() throws {
         calendar: calendar)
     let tab = feed.days.flatMap(\.entries).filter(GuruPostFilter.waiting.includes)
     let all = feed.days.flatMap(\.entries)
-    let stats = GuruStats(day: day, skipped: { $0 == skipped.sourceID }, now: now)
+    let stats = GuruStats(day: day, skipped: { $0 == skipped.sourceID }, isRead: true, now: now)
 
     try #require(
         tab.map(\.item.sequence) == Array((1...8).reversed()), "the Waiting tab listed \(tab.map(\.item.sequence))")
