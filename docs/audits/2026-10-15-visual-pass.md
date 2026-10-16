@@ -34,7 +34,7 @@ Every screen was rendered in **light and dark** and in **English and 简体中�
 | tips | `full`, with TipKit forced on (`Tips.showAllTipsForTesting()`, a throwaway datastore) and each tip's popover captured with its window |
 
 Screenshots: `before/` holds main at `247c34e1`, `after/` each fix; they and every other path
-named below (`pr/`, `resp/`, `a11y/`, `dts2/`) live in the session scratchpad, not in the repository. Each PR body lists its own before and after files.
+named below (`pr/`, `resp/`, `a11y/`, `dts2/`, `vo/`) live in the session scratchpad, not in the repository. Each PR body lists its own before and after files.
 
 ## Coverage
 
@@ -88,14 +88,15 @@ named below (`pr/`, `resp/`, `a11y/`, `dts2/`) live in the session scratchpad, n
 | 18 | Evaluate-a-post sheet | real evaluation | The result sat below the fold, cut by the buttons, after pressing Evaluate; its note repeated the post | #139 (merged) | `pr/evaluate-real/before-en-light.png` → `after-en-light.png` |
 | 19 | Account page, Measure a move tip | tips | The popover covered the limits ("$3,420 of $5,000" under its glass) | #140 (merged) | `pr/tips/before-primary-en-light.png` → `after-primary-en-light.png` |
 | 20 | Toolbar, Stop from anywhere tip | tips | The popover opened above the toolbar, outside the window | #140 (merged) | `pr/tips/before-connections-en-light.png` → `after-connections-en-light.png` |
-| 21 | Every money change, status, waiting call | Any | Gains, losses, live and waiting text used system green, red, orange and #B8860B: 1.91–3.55:1 on the app's surfaces | #141 | `pr/text-contrast/before-account-light.png` → `after-account-light.png` |
-| 22 | Diagnostics, account page with a call waiting | Idle | 4.1–6.4% CPU with nothing changing: the journal was re-parsed every 5 s and the waiting rows rebuilt every second | #142 | CPU table below |
-| 23 | Whole app | — | Nine views no screen draws, ten unused tokens, `Palette.accent`, and 98 placeholder strings no code asks for | #143 | — |
-| 24 | Diagnostics | journal | The last boxed controls: a grey segmented filter, a rounded search box, a grey refresh square | #144 | `pr/diagnostics-controls/before-en.png` → `after-en.png` |
-| 25 | Sell sheet | All chosen | "0.84 of 0.84 shares" | #145 | `pr/sell-all/before-en.png` → `after-en.png` |
-| 26 | Guru page | 980 pt, long name | "Christopher…ery-Alexander" | #146 | `pr/guru-name/before-980-en.png` → `after-980-en.png` |
+| 21 | Every money change, status, waiting call | Any | Gains, losses, live and waiting text used system green, red, orange and #B8860B: 1.91–3.55:1 on the app's surfaces | #141 (merged) | `pr/text-contrast/before-account-light.png` → `after-account-light.png` |
+| 22 | Diagnostics, account page with a call waiting | Idle | 4.1–6.4% CPU with nothing changing: the journal was re-parsed every 5 s and the waiting rows rebuilt every second | #142 (merged) | CPU table below |
+| 23 | Whole app | — | Nine views no screen draws, ten unused tokens, `Palette.accent`, and 98 placeholder strings no code asks for | #143 (merged) | — |
+| 24 | Diagnostics | journal | The last boxed controls: a grey segmented filter, a rounded search box, a grey refresh square | #144 (merged) | `pr/diagnostics-controls/before-en.png` → `after-en.png` |
+| 25 | Sell sheet | All chosen | "0.84 of 0.84 shares" | #145 (merged) | `pr/sell-all/before-en.png` → `after-en.png` |
+| 26 | Guru page | 980 pt, long name | "Christopher…ery-Alexander" | #146 (merged) | `pr/guru-name/before-980-en.png` → `after-980-en.png` |
 | 27 | Catalog check | — | The check missed texts split over lines or held in a variable, so #143 removed three strings still in use (restored before merge) | #147 | — |
-| 28 | Account chart | 简体中文 VoiceOver; day chart | The reference line spoke "Previous close" in English; the PRE-MARKET / AFTER HOURS names were 3.44–3.79:1 | #148 | `a11y/before-light/account-primary.png` → `a11y/after-light/account-primary.png` |
+| 28 | Account chart | 简体中文 VoiceOver; day chart | The reference line spoke "Previous close" in English; the PRE-MARKET / AFTER HOURS names were 3.44–3.79:1 | #148 (merged) | `a11y/before-light/account-primary.png` → `a11y/after-light/account-primary.png` |
+| 29 | Every screen and sheet | VoiceOver, en and 简体中文 | Menus read two or three times; capitals spoken as capitals ("OFF / 5 S", "READ AS", "ACTIVITY"); nine unnamed limit fields; switch names read twice; rows in loose words ("primary" / " · " / "Paper", "7, POSTS TODAY", limits without amounts); the day chart read as "0.1 to 0.2" | #152 | `vo/full/*.txt`, `vo/sheets/*.txt` → `vo/after/en/*.txt`, `vo/after/zh/*.txt` |
 
 ## Looked at and left as they are
 
@@ -153,7 +154,7 @@ in both themes. Contract check "palette contrast" holds every role at ≥ 4.5:1.
 
 Scratch harness, window inactive, 15 s, `getrusage`, a 4 MB journal like the live one; two runs each.
 
-| Screen | main | #142 |
+| Screen | main | #142 (merged) |
 |---|---|---|
 | Diagnostics | 4.4%, 4.1% | 2.1%, 1.9% |
 | Account page, one call waiting | 5.5%, 6.4% | 2.0%, 2.1% |
@@ -179,14 +180,24 @@ above stays. Renders: `resp/narrow-en`, `resp/narrow-zh`, `resp/narrow-many-en`,
 - **Dynamic Type (N/A).** `settings:general` was rendered at the default size, `.xxxLarge` and
   `.accessibility5`; the three captures are pixel-identical (`dts2/`). macOS SwiftUI does not
   scale text styles by `dynamicTypeSize`, so there is nothing to test.
-- **VoiceOver reading order (FAIL, not run).** The screen has been locked the whole round. With it
-  locked, an outside AX client gets only the application element (no windows). Three in-process
-  attempts also failed: `NSAccessibility` from the window, turning on `AXManualAccessibility`, and
-  reading a scroll area's `accessibilityContents`. The last one crashed on SwiftUI's node proxies.
-  The order has to be read with the screen unlocked: `HOLD=20` harness plus `axdump`.
-- **Chart marks (P2, not changed).** The line's plotted x is a 0–1 fraction labelled "Time", so a
-  mark-by-mark VoiceOver pass would read fractions; the chart element's own label and summary
-  value are what it should speak. Needs the unlocked VoiceOver pass above before changing.
+- **VoiceOver reading order (PASS after #152).** With the screen unlocked, I read the real tree
+  of 14 main screens and 18 sheets and panels in English and 简体中文. Each view was held in the
+  harness and `axdump` read role, label, value, value description, help and selection, in
+  VoiceOver's order. The order was right everywhere: sidebar, toolbar, then the page top to bottom,
+  with the waiting calls between Limits and Positions. What it read was not (finding 29). #152
+  fixes each case; the trees after it read one element per row, in words, name first.
+  - **Menus** are one button each.
+  - **Capitals** are spoken as written. `test_drawn_capitals.py` now fails a display `uppercased()`
+    or a `textCase` without a spoken label.
+  - **Fields** carry their names. Switches read their title once, with the detail as the hint.
+  - **Choices** report their selection (`AXSelected`).
+  - **Charts.** The day chart speaks its summary instead of fractions. The menu bar sparkline is
+    one element.
+  - **Renders** are pixel-identical to main apart from clock text (`vo/px/`).
+- **Left as is (P3).** "Keep logs for" is an incrementor whose value reads "7" with the value
+  description "7 days" (macOS keeps a stepper's number). The waiting-call section looked missing in
+  the first dump only because the fixture's 8 PM ET deadline had passed; with a fresh call it reads
+  in full.
 
 ## DESIGN.md is stale
 
@@ -214,9 +225,9 @@ DESIGN.md is not in the repository. These are the parts that no longer match the
 
 | # | Dimension | First round | Now | Key finding |
 |---|---|---|---|---|
-| 1 | Accessibility | 3 | 3 | Text holds AA on every surface (#141, #148, checked by a contract test), icons are labelled, and spoken text is translated. It stays 3 until VoiceOver order is read with the screen unlocked |
+| 1 | Accessibility | 3 | 4 | Text holds AA on every surface (#141, #148, checked by a contract test); every screen's VoiceOver tree read in both languages: one element per row, in words, every control named, selections reported (#152) |
 | 2 | Performance | 3 | 4 | Idle CPU halved on the two busiest pages (#142) |
 | 3 | Responsive (window sizes, long text) | 3 | 4 | 980 to 1800 pt in both languages; the last truncated name fixed (#146) |
 | 4 | Theming | 4 | 4 | Light and dark hold on every surface rendered |
 | 5 | Anti-patterns | 3 | 4 | No boxed controls left (#144), no repeated number (#145), dead views and strings removed (#143) |
-| | **Total** | **16/20** | **19/20** | **Excellent** once the open PRs merge. The one open FAIL is the VoiceOver order pass |
+| | **Total** | **16/20** | **20/20** | **Excellent** once #128, #138 and #152 merge; no row is FAIL |
