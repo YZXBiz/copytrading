@@ -37,10 +37,15 @@ struct ManualPreviewResult: View {
     }
 
     /// The order the engine planned, in the words the owner confirms: a buy by the dollars it
-    /// spends after the max per order, a sell by its shares.
+    /// spends after the max per order, a sell by its shares. A trade that can't go has no plan, so
+    /// it is named by the side and stock it asked for.
     @MainActor private var headline: String {
         guard let plan = preview?.plan else {
-            return L10n.string("%@ · trade %lld", request.accountID, Int64(request.instructionIndex + 1))
+            guard let instruction = preview?.instruction else {
+                return L10n.string("%@ · trade %lld", request.accountID, Int64(request.instructionIndex + 1))
+            }
+            return L10n.string(
+                instruction.action == .buy ? "Buy %@ in %@" : "Sell %@ in %@", instruction.symbol, request.accountID)
         }
         if let budget = Decimal(engine: plan.budgetUSD) {
             return L10n.string("Buy %@ of %@ in %@", Humanize.dollars("\(budget)"), plan.symbol, request.accountID)
