@@ -17,7 +17,7 @@ struct GuideBeforeYouGoSection: View {
             }
             GuideSafetyRow(
                 text:
-                    "**A sleeping Mac copies nothing.** Keep it plugged in and awake, with CopyTrading open, while the market is. A closed MacBook lid sleeps it unless a display is connected."
+                    "**A sleeping Mac copies nothing.** Keep it plugged in, with CopyTrading open, while the market is. Plugged in, it keeps copying with the lid closed; on battery, a closed lid sleeps it."
             ) {
                 Label(L10n.string("Keep this Mac awake"), systemImage: "moon.zzz")
                     .font(DesignTokens.bodyText)
