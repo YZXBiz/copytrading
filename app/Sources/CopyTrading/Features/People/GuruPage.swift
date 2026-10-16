@@ -32,7 +32,9 @@ struct GuruPage: View {
                     GuruPageHeader(
                         name: guru?.name ?? guruID,
                         destinations: GuruDestinationsText.text(guru, in: model.savedTradingConfiguration),
-                        edit: edit)
+                        pendingNote: model.guruPendingNote(guruID),
+                        edit: edit,
+                        review: review)
                     if let feed {
                         GuruStatsStrip(
                             stats: GuruStats(
@@ -84,6 +86,11 @@ struct GuruPage: View {
     }
 
     private func edit() {
+        model.editGuru(guruID)
+    }
+
+    private func review() {
+        model.selectedScreen = .connections
         model.editGuru(guruID)
     }
 

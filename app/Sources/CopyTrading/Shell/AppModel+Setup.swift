@@ -195,6 +195,27 @@ extension AppModel {
         selectedScreen = .account(accountID)
     }
 
+    /// This guru reads and copies as saved: their route and profile match the saved ones, so an
+    /// edit elsewhere in the setup leaves them alone.
+    func isGuruSaved(_ guruID: String) -> Bool {
+        guard let saved = savedTradingConfiguration, saved.profiles.contains(where: { $0.guruID == guruID }),
+            let draft = try? setupDraft.submission().0
+        else { return false }
+        return draft.routes.filter { $0.guruID == guruID } == saved.routes.filter { $0.guruID == guruID }
+            && draft.profiles.filter { $0.guruID == guruID } == saved.profiles.filter { $0.guruID == guruID }
+    }
+
+    /// A saved guru the unsaved setup removes or changes says so on their page, as an account
+    /// does: the page shows the saved setup, and Done on the guru sheet saves nothing by itself.
+    func guruPendingNote(_ guruID: String) -> String? {
+        guard hasUnsavedSetupChanges, savedTradingConfiguration?.profiles.contains(where: { $0.guruID == guruID }) == true
+        else { return nil }
+        guard setupDraft.routes.contains(where: { $0.guruID.trimmed == guruID }) else {
+            return L10n.string("Removed — not saved yet")
+        }
+        return isGuruSaved(guruID) ? nil : L10n.string("Changed — not saved yet")
+    }
+
     func removeGuru(_ guruID: String) {
         setupDraft.routes.removeAll { $0.guruID.trimmed == guruID }
     }
