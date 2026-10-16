@@ -2318,8 +2318,12 @@ def j26_help_menu(app: AppDriver) -> None:
     peekaboo("menu", "click", "--app", APP_NAME, "--path", "Help > Keyboard Shortcuts")
     time.sleep(1)
     shortcuts = app.see("help-shortcuts")
+    # One shortcut per action: ⌘K is Find's only shortcut.
     app.expect(
-        shortcuts, "Show or hide the sidebar", "Move through Find's results and the Diagnostics log"
+        shortcuts,
+        "Show or hide the sidebar",
+        "Find a post, a guru, or a page",
+        "Move through Find's results and the Diagnostics log",
     )
     app.open_screen("connections")
     peekaboo("menu", "click", "--app", APP_NAME, "--path", "Help > Getting Started")

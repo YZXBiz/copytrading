@@ -1,7 +1,7 @@
 import DesktopCore
 import SwiftUI
 
-/// ⌘K (or ⌘F): one field that finds a page, a safe action, or a guru's post by its words, chosen
+/// ⌘K: one field that finds a page, a safe action, or a guru's post by its words, chosen
 /// with the arrow keys and Return, or a click. A post opens where it is read in full. Starting copying is left to its own button, which checks live
 /// accounts first; nothing here can place an order.
 struct CommandPalette: View {
