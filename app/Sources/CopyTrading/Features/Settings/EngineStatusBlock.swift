@@ -30,12 +30,13 @@ struct EngineStatusBlock: View {
     }
 
     private var state: (word: String, tone: StatusTone) {
+        let word = EngineStateWord.word(model.runtimeState, needsLook: problem != nil)
         switch model.runtimeState {
-        case .ready: problem == nil ? (L10n.string("Running"), .positive) : (L10n.string("Needs a look"), .caution)
-        case .starting: (L10n.string("Starting"), .inactive)
-        case .degraded: (L10n.string("Needs a look"), .caution)
-        case .stopped: (L10n.string("Stopped"), .inactive)
-        case .failed: (L10n.string("Stopped unexpectedly"), .critical)
+        case .ready: return (word, problem == nil ? .positive : .caution)
+        case .starting: return (word, .inactive)
+        case .degraded: return (word, .caution)
+        case .stopped: return (word, .inactive)
+        case .failed: return (word, .critical)
         }
     }
 
@@ -88,7 +89,7 @@ struct EngineStatusBlock: View {
                 }
                 .accessibilityElement(children: .ignore)
                 .accessibilityAddTraits(.isHeader)
-                .accessibilityLabel(L10n.string("Local engine, %@", L10n.string(Humanize.code(model.runtimeState.rawValue))))
+                .accessibilityLabel(EngineStateWord.spoken(model.runtimeState, needsLook: problem != nil))
                 Spacer(minLength: 12)
                 control
             }

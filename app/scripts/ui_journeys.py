@@ -823,7 +823,7 @@ def j1_launch_and_unlock(app: AppDriver) -> None:
 
 def j2_engine_starts(app: AppDriver) -> None:
     app.open_settings("engine")
-    app.wait_for("Local engine, Ready", timeout=90, name="engine-ready")
+    app.wait_for("Local engine, Running", timeout=90, name="engine-ready")
 
 
 def _saved_appearance() -> str | None:
@@ -882,7 +882,7 @@ def j37_everyday_buttons(app: AppDriver) -> None:
     app.click("settings.stopEngine")
     app.wait_for("settings.startEngine", timeout=60, name="engine-stopped-in-settings")
     app.click("settings.startEngine")
-    app.wait_for("Local engine, Ready", timeout=90, name="engine-started-in-settings")
+    app.wait_for("Local engine, Running", timeout=90, name="engine-started-in-settings")
 
     if app.state_root is not None and any(app.state_root.rglob("trading-configuration.json")):
         return  # a kept setup (--reuse-state): there is nothing left to show around
@@ -1149,7 +1149,7 @@ def j19_engine_stop_start(app: AppDriver) -> None:
     app.expect(stopped, "The local engine is stopped. Nothing is being copied.")
     app.click("engine.start")
     app.open_settings("engine")
-    app.wait_for("Local engine, Ready", timeout=90, name="engine-restarted")
+    app.wait_for("Local engine, Running", timeout=90, name="engine-restarted")
 
 
 def _agent_command(app: AppDriver, *arguments: str) -> subprocess.CompletedProcess[str]:
@@ -2285,7 +2285,7 @@ def j17_crash_recovery(app: AppDriver) -> None:
     launch(app.state_root, quit_first=False)
     app.wait_for(UNLOCKED, timeout=60)
     app.open_settings("engine")
-    app.wait_for("Local engine, Ready", timeout=90, name="relaunched-after-crash")
+    app.wait_for("Local engine, Running", timeout=90, name="relaunched-after-crash")
     survivors = orphans_before & set(_bundle_processes())
     if survivors:
         raise JourneyFailure(
