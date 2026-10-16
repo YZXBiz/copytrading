@@ -4,6 +4,12 @@ User-visible changes for each release are recorded here. Every GitHub release's 
 
 ## Unreleased
 
+## 0.1.0-beta.1 — developer preview
+
+The first beta. CopyTrading went through a full test pass in English and 简体中文: every trading flow on real Discord and Alpaca paper, every control, and every screen ([validation](docs/validation.md)). These are the fixes it led to. Start with a paper account; live trading is not yet qualified.
+
+> **Updating from an alpha:** move CopyTrading to **Applications** before you install this update. An alpha kept in Desktop, Documents or Downloads quits to install and macOS stops the installer, so it doesn't reopen. From this beta on, CopyTrading refuses an update it can't install and says where to move it.
+
 - **Removing an account no longer makes you sell first.** Setup Check refused to remove an account that still held shares CopyTrading had bought ("primary still holds GFS, NVDA, and WMT … Sell them from primary's page"), and also an account with entries halted or holdings to review. The shares now stay in your broker account and CopyTrading stops tracking them. Only an order still working or a post still being copied holds a removal back.
 - **A guru's page says when an edit is not saved yet.** Done on a guru's sheet only changes the setup draft, so after moving Zhao to another account, Zhao's page still read "Copies into zhap-account-2" with nothing saying the change waited for **Apply Changes** in Connections. The page now says "Changed — not saved yet" (or "Removed — not saved yet") under the name, with **Review in Connections**, as an account's page already did.
 - **An update never leaves CopyTrading quit.** Install and Relaunch on a copy in Desktop, Documents, Downloads, or iCloud Drive quit the app, then macOS stopped Sparkle's installer to ask for that folder, so nothing installed or reopened and copying stayed off (all night on October 14). In those folders the update now stops before quitting, and the banner says to move CopyTrading to Applications, with **Show in Finder**. Elsewhere, if an install fails after the app quits, CopyTrading opens again within two minutes and copying that was on starts again.
