@@ -4,10 +4,13 @@ import SwiftUI
 /// headline, one line on what happens, where to change it, and the one caution.
 struct GuideJourneyCard: View {
     let index: Int
-    let open: (AppModel.Screen?) -> Void
+    /// The first saved account, which the account stops open.
+    let firstAccount: String?
+    let open: (AppModel.Screen) -> Void
     let select: (Int) -> Void
 
     private var stop: GuideJourneyStop { GuideJourneyStop.all[index] }
+    private var place: (screen: AppModel.Screen, title: String) { stop.place(firstAccount: firstAccount) }
     private var count: Int { GuideJourneyStop.all.count }
 
     var body: some View {
@@ -81,12 +84,12 @@ struct GuideJourneyCard: View {
     /// Where this stop is changed, as one quiet button that goes there.
     private var setting: some View {
         Button {
-            open(stop.screen)
+            open(place.screen)
         } label: {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(L10n.string(stop.setting))
                     .foregroundStyle(Palette.secondaryInk)
-                Text(L10n.string(stop.placeTitle))
+                Text(L10n.string(place.title))
                     .fontWeight(.semibold)
                     .foregroundStyle(Palette.ink)
                     .underline(color: Palette.hairline)
@@ -99,8 +102,8 @@ struct GuideJourneyCard: View {
             .contentShape(.rect)
         }
         .buttonStyle(QuietPressButtonStyle())
-        .help(L10n.string(stop.placeTitle))
-        .accessibilityLabel("\(L10n.string(stop.setting)), \(L10n.string(stop.placeTitle))")
+        .help(L10n.string(place.title))
+        .accessibilityLabel("\(L10n.string(stop.setting)), \(L10n.string(place.title))")
         .accessibilityIdentifier("guide.journey.open")
     }
 }

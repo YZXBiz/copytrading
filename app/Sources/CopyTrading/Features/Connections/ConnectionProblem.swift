@@ -2,6 +2,9 @@ import DesktopCore
 
 /// What a failed connection check means, in one plain sentence that says what to do next.
 enum ConnectionProblem {
+    /// The app's own reason for a check the engine couldn't run.
+    static let engineUnavailable = "check_engine_unavailable"
+
     /// - Parameter modelName: the model that was checked, for "has no model called …".
     @MainActor
     static func text(for check: TradingCapabilityCheck, modelName: String = "") -> String {
@@ -73,6 +76,9 @@ enum ConnectionProblem {
             return L10n.string("Posts are still being read or sent. Wait a moment, then check again.")
         case "pause_before_configuration_change":
             return L10n.string("Pause copying before changing the setup.")
+        case engineUnavailable:
+            return L10n.string(
+                "CopyTrading couldn't run this check because its engine isn't answering. Start it in Settings → Engine, then try again.")
         case "configuration_preflight_unavailable":
             return L10n.string("Couldn't read CopyTrading's saved records to check the setup. Try again in a moment.")
         default:

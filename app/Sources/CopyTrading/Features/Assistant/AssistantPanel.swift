@@ -113,7 +113,9 @@ struct AssistantPanel: View {
     private var suggestions: [String] {
         let directory = GuruDirectory(model.savedTradingConfiguration)
         let guru = directory.name(for: model.selectedScreen.guruID) ?? directory.gurus.first?.name
-        return AssistantSuggestions.suggestions(for: model.selectedScreen, guru: guru, hasSelectedPost: selectedPost != nil)
+        return AssistantSuggestions.suggestions(
+            for: model.selectedScreen, guru: guru, hasSelectedPost: selectedPost != nil,
+            isSetUp: model.savedTradingConfiguration != nil)
     }
 
     private var selectedPost: SourceActivity? {

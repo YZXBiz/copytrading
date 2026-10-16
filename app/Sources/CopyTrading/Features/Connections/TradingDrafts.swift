@@ -20,6 +20,16 @@ struct TradingAccountDraft: Identifiable {
         self.policy = policy
         self.savedName = savedName
     }
+
+    /// Why the engine would refuse the name, in the owner's words; nil when it is fine.
+    var nameProblem: String? {
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if name.isEmpty { return "Give the account a name." }
+        guard name.range(of: "^[A-Za-z0-9_-]{1,64}$", options: .regularExpression) == nil else { return nil }
+        return name.count > 64
+            ? "Keep the name to 64 characters."
+            : "Use only letters, digits, “-” and “_” in the name: no spaces."
+    }
 }
 
 struct TradingProfileExampleDraft: Identifiable {
