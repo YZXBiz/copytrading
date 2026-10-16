@@ -147,7 +147,8 @@ def _without_repeats(
 def _same_terms(earlier: RecentCall, call: r.Buy | r.Sell) -> bool:
     """A re-post states the earlier call's price and size again; "Closed SOFI" after "Sold half
     SOFI" at the same price is the rest of the position, a new call whatever the reader says, and
-    so is "Sold all F 12.30" after "出掉12.41的f 12.30", which sold only the buy at 12.41.
+    so is "Sold all F 12.30" after "出掉12.41的f 12.30", which sold only the buy at 12.41, and
+    "Bought $200 of F" after "Bought $100 of F" at the same price.
     Terms the post leaves out, or the earlier call doesn't record, don't count against it."""
     if isinstance(call.price, r.Exact) and earlier.price is not None:
         if call.price.value != earlier.price:
@@ -165,8 +166,10 @@ def _same_terms(earlier: RecentCall, call: r.Buy | r.Sell) -> bool:
                 return True
     if isinstance(call.size, r.Fraction):
         return earlier.fraction == call.size.value
+    if isinstance(call.size, r.Dollars):
+        return earlier.usd_amount == call.size.value
     if isinstance(call.size, r.NotGiven):
-        return earlier.fraction is None
+        return earlier.fraction is None and earlier.usd_amount is None
     return True
 
 

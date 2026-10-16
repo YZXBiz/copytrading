@@ -17,7 +17,7 @@ from copytrading_engine.parsing.providers.anthropic import build_decoder as buil
 from copytrading_engine.parsing.routes import Route
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore, record_owner_correction
 from copytrading_engine.shared.model_providers import ProviderConfig
-from copytrading_engine.shared.reading import Fraction, NotGiven, NotSaid, Sell, Stock
+from copytrading_engine.shared.reading import Dollars, Fraction, NotGiven, NotSaid, Sell, Stock
 from copytrading_engine.shared.signals import Instruction
 
 from ..readings import buy, commentary, sell, trade
@@ -501,6 +501,16 @@ def _reduce(symbol: str, price: str, fraction: str) -> Instruction:
     )
 
 
+def _dollars(symbol: str, price: str, usd: str) -> Instruction:
+    return Instruction(action="buy", symbol=symbol, price=Decimal(price), usd_amount=Decimal(usd))
+
+
+def _bought_dollars(symbol: str, price: str, usd: str):
+    return buy(symbol, price, ticker_said=f"${symbol}", said="Bought").model_copy(
+        update={"size": Dollars(value=Decimal(usd), words=f"${usd} of")}
+    )
+
+
 @pytest.mark.parametrize(
     ("earlier", "call", "text"),
     [
@@ -549,6 +559,12 @@ def _reduce(symbol: str, price: str, fraction: str) -> Instruction:
             ),
             "Bought half $SOFI 14.11",
         ),
+        # Another dollar size at the same price.
+        (
+            _dollars("SOFI", "14.11", "100"),
+            _bought_dollars("SOFI", "14.11", "200"),
+            "Bought $200 of $SOFI at 14.11",
+        ),
         # Oct 16 2026, live: the rest after a sell of one buy, at the same price.
         (
             _close("F", "12.30", entry="12.41"),
@@ -575,6 +591,23 @@ async def test_a_call_with_other_terms_is_new_even_if_the_reader_calls_it_a_repo
 
     assert result.decision == "trade"
     assert [i.symbol for i in result.instructions] == [earlier.symbol]
+
+
+async def test_the_same_dollar_buy_again_is_still_a_repost():
+    recent = recent_calls(_past("p1", 1, _dollars("SOFI", "14.11", "100")))
+    reading = trade(
+        _bought_dollars("SOFI", "14.11", "100").model_copy(update={"repeats": recent[0].ref})
+    )
+
+    result = await transform(
+        _post("Bought $100 of $SOFI at 14.11"),
+        Route(repeat_window_minutes=10),
+        FakeDecoder(reading),
+        "test",
+        recent,
+    )
+
+    assert result.decision == "ignore"
 
 
 async def test_the_same_sell_of_one_buy_again_is_still_a_repost():
