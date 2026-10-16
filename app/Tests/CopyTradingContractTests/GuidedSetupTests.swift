@@ -9,6 +9,7 @@ func runGuidedSetupTests() throws {
     try newAccountsAndGurusStartUsable()
     try unsavedChangesFollowTheSavedSetup()
     try aSavedDraftIsNotAChange()
+    try aGuruEditSaysItIsNotSavedYet()
     try aKeyStaysWithItsService()
     try theTourAsksOnlyForWhatIsLeft()
     try theGuidesShortcutsAreTheAppsOwn()
@@ -241,6 +242,49 @@ private func aSavedDraftIsNotAChange() throws {
     try verifyGuide(
         !model.setupDraft.hasTypedSecrets && !model.hasUnsavedSetupChanges && !model.hasSetupToStart,
         "A saved key stayed in the draft as a change")
+}
+
+/// Done on a guru's sheet only changes the draft, so their page says so until Apply Changes, as an
+/// account's page does; a limit, which saves when its sheet closes, leaves the guru alone.
+@MainActor
+private func aGuruEditSaysItIsNotSavedYet() throws {
+    let profile = try TradingProfileBuilder().build(
+        TradingProfileDraft(
+            guruID: "alex", displayName: "Alex", playbook: "Reads calls as buys.",
+            examples: [TradingProfileExample(message: "Bought AAPL at 200", expectedAction: .buy, expectedSymbol: "AAPL")]))
+    let saved = TradingConfiguration(
+        source: TradingSourceConfiguration(channelIDs: ["123"], authorIDs: []),
+        provider: TradingProviderConfiguration(name: .ollama, model: "llama", baseURL: "http://localhost:11434"),
+        accounts: [
+            TradingAccountConfiguration(id: "main", environment: .paper, policy: TradingAccountPolicy()),
+            TradingAccountConfiguration(id: "spare", environment: .paper, policy: TradingAccountPolicy()),
+        ],
+        profiles: [profile],
+        routes: [
+            TradingRouteConfiguration(
+                channelID: "123", guruID: "alex", profileRevision: profile.profileRevision,
+                connections: [TradingRouteConnection(accountID: "main", fullPositionUSD: "600")])
+        ]
+    )
+    let model = AppModel()
+    model.savedTradingConfiguration = saved
+    model.hasTradingSecrets = true
+    model.syncSetupDraftWithSaved()
+    try verifyGuide(model.guruPendingNote("alex") == nil, "A saved guru read as not saved")
+
+    model.setupDraft.accounts[0].policy.maxOrderUSD = "50"
+    try verifyGuide(model.guruPendingNote("alex") == nil, "A limit change marked the guru as not saved")
+    model.setupDraft.accounts[0].policy = saved.accounts[0].policy
+
+    model.setupDraft.routes[0].connection = TradingConnectionDraft(accountID: "spare")
+    try verifyGuide(
+        model.guruPendingNote("alex") == L10n.string("Changed — not saved yet"),
+        "A guru moved to another account read \(model.guruPendingNote("alex") ?? "nothing")")
+
+    model.removeGuru("alex")
+    try verifyGuide(
+        model.guruPendingNote("alex") == L10n.string("Removed — not saved yet"),
+        "A removed guru read \(model.guruPendingNote("alex") ?? "nothing")")
 }
 
 /// One service's key is never shown in, or sent to, another service's sheet.

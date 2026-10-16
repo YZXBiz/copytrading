@@ -61,20 +61,8 @@ struct ConnectionStatus: Equatable {
         if route.connection.map({ accounts.contains($0.accountID.trimmed) }) != true {
             return .init(text: "Needs an account to copy into", tone: .caution)
         }
-        guard isSaved(route, in: model) else { return .init(text: "Not saved yet", tone: .inactive) }
+        guard model.isGuruSaved(route.guruID.trimmed) else { return .init(text: "Not saved yet", tone: .inactive) }
         return running(model) { _ in .init(text: "Copying", tone: .positive) } ?? .init(text: "Saved", tone: .inactive)
-    }
-
-    /// This guru reads and copies as saved: their route and profile match the saved ones, so an
-    /// edit elsewhere in the setup leaves them alone.
-    @MainActor
-    private static func isSaved(_ route: TradingRouteDraft, in model: AppModel) -> Bool {
-        let guruID = route.guruID.trimmed
-        guard let saved = model.savedTradingConfiguration, saved.profiles.contains(where: { $0.guruID == guruID }),
-            let draft = try? model.setupDraft.submission().0
-        else { return false }
-        return draft.routes.filter { $0.guruID == guruID } == saved.routes.filter { $0.guruID == guruID }
-            && draft.profiles.filter { $0.guruID == guruID } == saved.profiles.filter { $0.guruID == guruID }
     }
 
     /// The draft of this service differs from what copying runs: a new token or key, or other
