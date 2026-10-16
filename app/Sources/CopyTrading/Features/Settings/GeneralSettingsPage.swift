@@ -33,7 +33,7 @@ struct GeneralSettingsPage: View {
                 SettingsToggleRow(
                     title: "Keep this Mac awake",
                     detail:
-                        "So no post is missed. The screen can still turn off and lock. Closing a MacBook's lid still puts it to sleep unless it's plugged in with a display connected.",
+                        "So no post is missed. The screen can still turn off and lock. Plugged in, it stays awake with the lid closed too; on battery, closing the lid puts it to sleep.",
                     isOn: $keepsMacAwake,
                     identifier: "settings.keepsMacAwake"
                 )

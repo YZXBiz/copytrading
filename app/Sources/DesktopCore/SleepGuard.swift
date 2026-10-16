@@ -1,9 +1,8 @@
 import Foundation
 
-/// Keeps the Mac from idle-sleeping while CopyTrading copies, like Codex's "Prevent sleep while
-/// running": the display may still sleep and the screen lock, but the system stays awake, so posts
-/// are read and orders placed as they come. A closed MacBook lid still sleeps the Mac unless it is
-/// plugged in with a display connected; nothing an app may do overrides that.
+/// Keeps the Mac awake while CopyTrading copies: the display may still sleep and the screen lock,
+/// but the system stays awake, so posts are read and orders placed as they come. Plugged in, a
+/// closed MacBook lid stays awake too; on battery, closing the lid still sleeps it.
 @MainActor
 public final class SleepGuard {
     public typealias Begin = @MainActor (String) -> any NSObjectProtocol
@@ -17,8 +16,8 @@ public final class SleepGuard {
     public static let reason = "CopyTrading is copying trades"
 
     public init(
-        begin: @escaping Begin = { ProcessInfo.processInfo.beginActivity(options: .idleSystemSleepDisabled, reason: $0) },
-        end: @escaping End = { ProcessInfo.processInfo.endActivity($0) }
+        begin: @escaping Begin = { AwakeClaim(reason: $0) },
+        end: @escaping End = { ($0 as? AwakeClaim)?.release() }
     ) {
         self.begin = begin
         self.end = end

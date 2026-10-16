@@ -1374,7 +1374,7 @@
 "Set to **60**. The guru buys NVDA at **$200.00**. With **Maximum above signal price** at **%@%%**, your buy fills at **%@ or less**. The price jumps to **%@** and stays there, so nothing fills. After **60 seconds** the order is cancelled, so it can't fill hours later." = "设为 **60**。信号源以 **$200.00** 买入 NVDA。**高于信号价格的最高幅度**为 **%@%%** 时，你的买单最高只以 **%@ 或更低** 成交。价格涨到 **%@** 并停在那里，所以不会成交。**60 秒**后订单会被取消，不会过几个小时才成交。";
 "While Copying" = "跟单时";
 "Keep this Mac awake" = "让这台 Mac 保持唤醒";
-"So no post is missed. The screen can still turn off and lock. Closing a MacBook's lid still puts it to sleep unless it's plugged in with a display connected." = "这样不会漏掉任何帖子。屏幕仍会关闭和锁定。合上 MacBook 的盖子仍会让它睡眠，除非接着电源并连接了显示器。";
+"So no post is missed. The screen can still turn off and lock. Plugged in, it stays awake with the lid closed too; on battery, closing the lid puts it to sleep." = "这样不会漏掉任何帖子。屏幕仍会关闭和锁定。接着电源时，合上盖子也保持唤醒；用电池时，合上盖子会让它睡眠。";
 "%lld waiting" = "%lld项待处理";
 "How a post becomes a trade" = "帖子是怎样变成交易的";
 "Before you go" = "开始前要知道";
@@ -1389,7 +1389,7 @@
 "When the guru sells" = "信号源卖出时";
 "Never your own shares, and no stop-loss of its own." = "从不卖你自己的股票，也不会自己设止损。";
 "**Start on paper.** Paper accounts trade pretend money at real prices. A live account asks for Touch ID before it starts." = "**先用模拟盘**。模拟账户用虚拟资金按真实价格交易。实盘账户开始前会要求 Touch ID。";
-"**A sleeping Mac copies nothing.** Keep it plugged in and awake, with CopyTrading open, while the market is. A closed MacBook lid sleeps it unless a display is connected." = "**睡眠的 Mac 什么都不会跟单**。开盘期间让它接着电源、保持唤醒，并开着 CopyTrading。合上 MacBook 盖子会让它睡眠，除非连接了显示器。";
+"**A sleeping Mac copies nothing.** Keep it plugged in, with CopyTrading open, while the market is. Plugged in, it keeps copying with the lid closed; on battery, a closed lid sleeps it." = "**睡眠的 Mac 什么都不会跟单**。开盘期间让它接着电源，并开着 CopyTrading。接着电源时合上盖子也会继续跟单；用电池时合上盖子会让它睡眠。";
 "**Discord's terms** don't allow automating a personal account. Use a separate account that only joins your gurus' servers." = "**Discord 的条款**不允许自动化个人账户。请用一个只加入信号源服务器的单独账户。";
 "**Your AI service bills you** for each post it reads, usually a fraction of a cent." = "**你的 AI 服务按读取的帖子收费**，通常每条不到一美分。";
 "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Stop All** stops everything at once." = "**它只跟单，不做判断**。不提供建议，也不设止损。每日亏损上限只停止买入，不停止卖出。**全部停止**会一次停止所有操作。";
