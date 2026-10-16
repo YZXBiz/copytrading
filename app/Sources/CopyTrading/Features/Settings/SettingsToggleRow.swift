@@ -12,7 +12,6 @@ struct SettingsToggleRow: View {
             Toggle(L10n.string(title), isOn: $isOn)
                 .labelsHidden()
                 .compactSwitch()
-                .accessibilityHint(detail.map { L10n.string($0) } ?? "")
                 .accessibilityIdentifier(identifier ?? title)
         }
     }

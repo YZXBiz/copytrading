@@ -59,9 +59,6 @@ struct GeneralSettingsPage: View {
                     }
                     .accessibilityElement(children: .contain)
                     .accessibilityLabel(L10n.string("Hold my orders before sending"))
-                    .accessibilityHint(
-                        L10n.string(
-                            "After you press Sell or confirm a copy, the order waits this long with Undo before it leaves for Alpaca."))
                 }
             }
             SettingsSection(title: "Help") {

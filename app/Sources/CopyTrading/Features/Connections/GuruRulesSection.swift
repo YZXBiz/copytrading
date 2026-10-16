@@ -15,10 +15,9 @@ struct GuruRulesSection: View {
                 Toggle(L10n.string("Skip re-posted calls"), isOn: skipsReposts)
                     .labelsHidden()
                     .compactSwitch()
-                    .accessibilityHint(L10n.string(Self.repostHint(route.repeatWindowMinutes)))
             }
             if route.repeatWindowMinutes != nil {
-                SheetRow(title: L10n.string("Counts as a re-post within"), labelsControl: true) {
+                SheetRow(title: L10n.string("Counts as a re-post within")) {
                     HStack(spacing: 6) {
                         // The control's own title is what VoiceOver reads, once.
                         TextField(L10n.string("Re-post window in minutes"), value: repeatMinutes, format: .number)

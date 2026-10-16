@@ -8,8 +8,8 @@ struct SettingsRow<Trailing: View>: View {
     var detail: String?
     var tone: StatusTone?
     var titleColor = Palette.ink
-    /// The trailing control is named by these words and hinted with the detail, so VoiceOver
-    /// reads them once, on the control, instead of once as text and again on the control.
+    /// The trailing control carries the row's name, so VoiceOver reads it once, on the control,
+    /// instead of once as text and again on the control. The detail stays readable text.
     var labelsControl = false
     @ViewBuilder var trailing: Trailing
 
@@ -40,7 +40,6 @@ struct SettingsRow<Trailing: View>: View {
                         .font(.body)
                         .foregroundStyle(Palette.secondaryInk)
                         .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityHidden(labelsControl)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

@@ -7,8 +7,8 @@ struct SheetRow<Trailing: View>: View {
     var hint: String?
     /// One worked example behind an "i" beside the name.
     var example: String?
-    /// The trailing control is named by the title and hinted with the hint, so VoiceOver reads
-    /// them once, on the control.
+    /// The trailing control carries the title, so VoiceOver reads it once, on the control. The
+    /// hint stays readable text.
     var labelsControl = false
     /// The trailing side only shows a value, so VoiceOver hears the row as one reading:
     /// "Requested by, claude".
@@ -40,7 +40,6 @@ struct SheetRow<Trailing: View>: View {
                         .font(DesignTokens.caption)
                         .foregroundStyle(Palette.tertiaryInk)
                         .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityHidden(labelsControl)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

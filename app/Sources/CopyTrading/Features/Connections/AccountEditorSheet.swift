@@ -239,23 +239,23 @@ struct AccountEditorSheet: View {
             if let focus {
                 TextField(L10n.string(title), text: text)
                     .focused($focusedField, equals: focus)
-                    .limitField(title, hint: hint)
+                    .limitField(title)
                     .id(focus)
             } else {
-                TextField(L10n.string(title), text: text).limitField(title, hint: hint)
+                TextField(L10n.string(title), text: text).limitField(title)
             }
         }
     }
 
     private func numberLimit(_ title: String, hint: String, value: Binding<Int>, example: String) -> some View {
         SheetRow(title: L10n.string(title), hint: L10n.string(hint), example: example, labelsControl: true) {
-            TextField(L10n.string(title), value: value, format: .number).limitField(title, hint: hint)
+            TextField(L10n.string(title), value: value, format: .number).limitField(title)
         }
     }
 
     private func numberLimit(_ title: String, hint: String, value: Binding<Double>, example: String) -> some View {
         SheetRow(title: L10n.string(title), hint: L10n.string(hint), example: example, labelsControl: true) {
-            TextField(L10n.string(title), value: value, format: .number).limitField(title, hint: hint)
+            TextField(L10n.string(title), value: value, format: .number).limitField(title)
         }
     }
 
@@ -305,12 +305,11 @@ struct AccountEditorSheet: View {
 
 extension View {
     /// A limit's value: a short underlined field, its number at the trailing edge.
-    /// A limit's number field. Its title is only a placeholder on macOS, and the row's words are
-    /// kept from VoiceOver, so the field carries its name and what it does.
-    fileprivate func limitField(_ title: String, hint: String) -> some View {
+    /// A limit's number field. Its title is only a placeholder on macOS, and the row's name is
+    /// kept from VoiceOver, so the field carries it.
+    fileprivate func limitField(_ title: String) -> some View {
         labelsHidden()
             .accessibilityLabel(L10n.string(title))
-            .accessibilityHint(L10n.string(hint))
             .multilineTextAlignment(.trailing)
             .monospacedDigit()
             .underlineField()
