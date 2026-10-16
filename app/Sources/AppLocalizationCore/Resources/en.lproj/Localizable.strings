@@ -2276,10 +2276,8 @@
 "%@: Buy %@ of %@, %@ at %@ or less" = "%@: Buy %@ of %@, %@ at %@ or less";
 "%@: %@ %@ of %@ at %@" = "%@: %@ %@ of %@ at %@";
 "Change %@'s limits" = "Change %@'s limits";
-"Go to an account, a guru, or a page, in sidebar order" = "Go to an account, a guru, or a page, in sidebar order";
 "Find a post, a guru, or a page" = "Find a post, a guru, or a page";
 "Read accounts and posts again" = "Read accounts and posts again";
-"Step through points on an account's chart" = "Step through points on an account's chart";
 "All %@ shares" = "All %@ shares";
 "Find a page, an action, or a post" = "Find a page, an action, or a post";
 "Switch tabs on an account or guru page" = "Switch tabs on an account or guru page";

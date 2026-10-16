@@ -40,12 +40,12 @@ Three findings are left open with reasons, and four groups of controls could not
 | 14 | Guru editor | Channel picker | Listed the same channel twice | Once |
 | 15 | Getting Started | "Your account" stops before setup | Dead (opened the guide itself) | Open Connections until an account exists |
 | 16 | Getting Started | Show Tips Again | Nothing visible | "Tips will show again once copying is set up, each beside what it points at." |
-| 17 | Getting Started | Shortcuts | Named Today, Activity, People screens that are gone; ⌘K, ⌘J missing | Rewritten from the bound shortcuts |
+| 17 | Getting Started | Shortcuts | Named Today, Activity, People screens that are gone; ⌘K, ⌘J missing | Rewritten on main in #133; this branch adds ⌃1–4 (tabs) and ↑↓ (Find, Diagnostics) |
 | 18 | Settings sidebar | Steps count | "1 of 5" while Connections said "1 of 4" | "n of 5 steps done" everywhere |
 | 19 | Settings › General | Start copying automatically (off) | Gave the wrong reason | "Once a setup is saved and every account is paper. Lock still locks." |
 | 20 | Account page | Stop/Start Copying, After a restart, holdings fix | Did nothing and said nothing with no engine | "Nothing was sent: the engine isn't running. Start it in Settings → Engine, then try again." |
 | 21 | ⌘K Find | Choosing a post | Opened the guru, not the post | Opens the post; rows are real buttons |
-| 22 | ⌘K Find, guide | "Pause Copying" | The control is called Stop Copying | Stop Copying |
+| 22 | ⌘K Find, guide | "Pause Copying" | Not the name of the control it runs | Stop All, as main named it everywhere in #134 |
 | 23 | Setup error | Invalid guru | Asked for a "message prefix", which no longer exists | Names what is invalid |
 | 24 | Settings › Updates | Check for updates automatically | Turned the setting off but kept showing on | The switch follows Sparkle's setting |
 | 25 | Settings › Engine | Run Self-Test while stopped | Pressable; said "Start it in Settings → Engine" on that page | Disabled with "Start the engine to run the self-test." |
@@ -60,7 +60,7 @@ Three findings are left open with reasons, and four groups of controls could not
 | 34 | Toolbar | Stop All with no engine | Did nothing and said nothing | Says the engine isn't running |
 | 35 | ⌘K Find | Search field | No accessibility label | "Find" / 查找 |
 | 36 | Connections | Fireworks AI key page link | Redirected to a 404 | `app.fireworks.ai/settings/users/api-keys` |
-| 37 | 简体中文 › Engine | Risk checks "Clear" | 清除 ("erase") | "Nothing waiting" / 无待处理 |
+| 37 | 简体中文 › Engine | Risk checks "Clear" | 清除 ("erase") | Fixed on main in #135 (无待处理); English now says "Nothing waiting" too |
 | 38 | 简体中文 › Diagnostics | Self-test records | Raw engine codes: "自检：completed", "parsed", status "Parsed" | 自检：已完成 / 已读取 / 已捕获 |
 | 39 | 简体中文 › Agent Access | Command name | "CopyTrading 命令" for the `copytrading` command | `copytrading` 命令 |
 | 40 | 简体中文 › Tour | Name | 导览, 结束引导, 设置引导 for one tour | 导览 throughout |

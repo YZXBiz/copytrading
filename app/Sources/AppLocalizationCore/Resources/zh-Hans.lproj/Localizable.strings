@@ -163,7 +163,6 @@
 "Choose **Copy User ID** and paste it here." = "选择 **复制用户 ID**，然后粘贴到此处。";
 "Choose an interpreter" = "选择 AI 模型";
 "Claude models" = "Claude 模型";
-"Clear" = "无待处理";
 "Nothing waiting" = "无待处理";
 "Clear a measurement on the chart" = "清除图表上的测量结果";
 "Click any channel, then click a request named **messages** in the list." = "点击任一频道，再点击列表中名为 **messages** 的请求。";
@@ -2277,10 +2276,8 @@
 "%@: Buy %@ of %@, %@ at %@ or less" = "账户 %@：买入 %@ 的 %@，%@，限价 %@";
 "%@: %@ %@ of %@ at %@" = "账户 %@：%@ %@ %@，价格 %@";
 "Change %@'s limits" = "修改 %@ 的限额";
-"Go to an account, a guru, or a page, in sidebar order" = "按侧边栏顺序前往账户、信号源或页面";
 "Find a post, a guru, or a page" = "查找帖子、信号源或页面";
 "Read accounts and posts again" = "重新读取账户和帖子";
-"Step through points on an account's chart" = "逐个查看账户图表上的数据点";
 "All %@ shares" = "全部%@股";
 "Find a page, an action, or a post" = "查找页面、操作或帖子";
 "Switch tabs on an account or guru page" = "切换账户页或信号源页上的标签";
