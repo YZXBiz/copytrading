@@ -1,6 +1,6 @@
 # Controls pass — October 15, 2026
 
-**Baseline:** `be54732f` (main). **Fixes:** this branch, `YZXBiz/test-pass-controls` (PR #PR).
+**Baseline:** `be54732f` (main). **Fixes:** this branch, `YZXBiz/test-pass-controls` (#151).
 
 Every button, switch, link, menu item, tab, sheet, toolbar item, context menu, keyboard shortcut,
 and ⌘K action was pressed, in English and in 简体中文. Each was checked against three questions:
