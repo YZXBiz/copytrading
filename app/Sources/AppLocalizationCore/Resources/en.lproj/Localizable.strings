@@ -1374,7 +1374,7 @@
 "Set to **60**. The guru buys NVDA at **$200.00**. With **Maximum above signal price** at **%@%%**, your buy fills at **%@ or less**. The price jumps to **%@** and stays there, so nothing fills. After **60 seconds** the order is cancelled, so it can't fill hours later." = "Set to **60**. The guru buys NVDA at **$200.00**. With **Maximum above signal price** at **%@%%**, your buy fills at **%@ or less**. The price jumps to **%@** and stays there, so nothing fills. After **60 seconds** the order is cancelled, so it can't fill hours later.";
 "While Copying" = "While Copying";
 "Keep this Mac awake" = "Keep this Mac awake";
-"So no post is missed. The screen can still turn off and lock. Closing a MacBook's lid still puts it to sleep unless it's plugged in with a display connected." = "So no post is missed. The screen can still turn off and lock. Closing a MacBook's lid still puts it to sleep unless it's plugged in with a display connected.";
+"So no post is missed. The screen can still turn off and lock. Plugged in, it stays awake with the lid closed too; on battery, closing the lid puts it to sleep." = "So no post is missed. The screen can still turn off and lock. Plugged in, it stays awake with the lid closed too; on battery, closing the lid puts it to sleep.";
 "%lld waiting" = "%lld waiting";
 "How a post becomes a trade" = "How a post becomes a trade";
 "Before you go" = "Before you go";
@@ -1389,7 +1389,7 @@
 "When the guru sells" = "When the guru sells";
 "Never your own shares, and no stop-loss of its own." = "Never your own shares, and no stop-loss of its own.";
 "**Start on paper.** Paper accounts trade pretend money at real prices. A live account asks for Touch ID before it starts." = "**Start on paper.** Paper accounts trade pretend money at real prices. A live account asks for Touch ID before it starts.";
-"**A sleeping Mac copies nothing.** Keep it plugged in and awake, with CopyTrading open, while the market is. A closed MacBook lid sleeps it unless a display is connected." = "**A sleeping Mac copies nothing.** Keep it plugged in and awake, with CopyTrading open, while the market is. A closed MacBook lid sleeps it unless a display is connected.";
+"**A sleeping Mac copies nothing.** Keep it plugged in, with CopyTrading open, while the market is. Plugged in, it keeps copying with the lid closed; on battery, a closed lid sleeps it." = "**A sleeping Mac copies nothing.** Keep it plugged in, with CopyTrading open, while the market is. Plugged in, it keeps copying with the lid closed; on battery, a closed lid sleeps it.";
 "**Discord's terms** don't allow automating a personal account. Use a separate account that only joins your gurus' servers." = "**Discord's terms** don't allow automating a personal account. Use a separate account that only joins your gurus' servers.";
 "**Your AI service bills you** for each post it reads, usually a fraction of a cent." = "**Your AI service bills you** for each post it reads, usually a fraction of a cent.";
 "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Stop All** stops everything at once." = "**It copies; it doesn't judge.** No advice and no stop-losses. The daily loss cap stops buying, not selling. **Stop All** stops everything at once.";
