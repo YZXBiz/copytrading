@@ -175,7 +175,8 @@
 "Command" = "命令";
 "Command %@" = "操作 ID：%@";
 "Completed" = "已完成";
-"Confirm %lld order(s)" = "确认%lld笔订单";
+"Confirm 1 order" = "确认1笔订单";
+"Confirm %lld orders" = "确认%lld笔订单";
 "Confirm manual orders?" = "确认手动订单？";
 "Connect Discord" = "连接 Discord";
 "Connected" = "已连接";
@@ -1985,7 +1986,8 @@
 "Nothing else is waiting" = "没有其他待处理的喊单";
 "Sending in %lld s" = "%lld 秒后发送";
 "%@, sending soon" = "%@，即将发送";
-"Placing %lld order(s)" = "正在下 %lld 笔订单";
+"Placing 1 order" = "正在下 1 笔订单";
+"Placing %lld orders" = "正在下 %lld 笔订单";
 "Hold my orders before sending" = "发送前保留订单";
 "After you press Sell or confirm a copy, the order waits this long with Undo before it leaves for Alpaca." = "按下卖出或确认复制后，订单会等待这段时间并可撤销，然后才发往 Alpaca。";
 "5 seconds" = "5 秒";
@@ -2277,3 +2279,5 @@
 "Read accounts and posts again" = "重新读取账户和帖子";
 "Step through points on an account's chart" = "逐个查看账户图表上的数据点";
 "All %@ shares" = "全部%@股";
+"Buy %@ in %@" = "买入 %@，账户 %@";
+"Sell %@ in %@" = "卖出 %@，账户 %@";
