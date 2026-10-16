@@ -51,6 +51,7 @@
 "Account" = "Account";
 "Account %@ %@, so its data is not shown." = "Account %@ %@, so its data is not shown.";
 "Account command error: %@" = "Account command error: %@";
+"Account %@ %@, so its outcomes are not shown." = "Account %@ %@, so its outcomes are not shown.";
 "Account data error: %@" = "Account data error: %@";
 "Account delivery" = "Account delivery";
 "Account history" = "Account history";
@@ -162,7 +163,7 @@
 "Choose **Copy User ID** and paste it here." = "Choose **Copy User ID** and paste it here.";
 "Choose an interpreter" = "Choose an interpreter";
 "Claude models" = "Claude models";
-"Clear" = "Clear";
+"Nothing waiting" = "Nothing waiting";
 "Clear a measurement on the chart" = "Clear a measurement on the chart";
 "Click any channel, then click a request named **messages** in the list." = "Click any channel, then click a request named **messages** in the list.";
 "Close" = "Close";
@@ -696,7 +697,7 @@
 "Select a post" = "Select a post";
 "Select a record" = "Select a record";
 "Self-Test" = "Self-Test";
-"Self-test %@" = "Self-test %@";
+"Self-test captured" = "Self-test captured";
 "sell" = "sell";
 "Buy %@" = "Buy %@";
 "Shown" = "Shown";
@@ -1379,7 +1380,7 @@
 "The lowest a sell can go below the guru's price. A sell that can't fill by then is cancelled." = "The lowest a sell can go below the guru's price. A sell that can't fill by then is cancelled.";
 "Set to **1**. The guru sells AAPL at **$200**. You sell at **$198** or better. At **0**, you sell at **$200** or better." = "Set to **1**. The guru sells AAPL at **$200**. You sell at **$198** or better. At **0**, you sell at **$200** or better.";
 "Ask me before sending orders" = "Ask me before sending orders";
-"Nothing is sent by itself. Each order waits in Activity until you approve it with Touch ID." = "Nothing is sent by itself. Each order waits in Activity until you approve it with Touch ID.";
+"Nothing is sent by itself. Each order waits on the account's page until you approve it with Touch ID." = "Nothing is sent by itself. Each order waits on the account's page until you approve it with Touch ID.";
 "You asked to approve every order for this account" = "You asked to approve every order for this account";
 "You approved this call" = "You approved this call";
 "Nothing was sent: Touch ID was not confirmed." = "Nothing was sent: Touch ID was not confirmed.";
@@ -2302,3 +2303,9 @@
 "Which AI model should I choose?" = "Which AI model should I choose?";
 "What is a paper account?" = "What is a paper account?";
 "Orders the broker already accepted may stay open until they fill or expire." = "Orders the broker already accepted may stay open until they fill or expire.";
+"The chart can't change while the engine is stopped. Start it in Settings → Engine." = "The chart can't change while the engine is stopped. Start it in Settings → Engine.";
+"Self-test read" = "Self-test read";
+"Self-test completed" = "Self-test completed";
+"Self-test failed" = "Self-test failed";
+"Self-test step" = "Self-test step";
+"Find" = "Find";

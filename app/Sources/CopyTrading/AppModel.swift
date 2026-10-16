@@ -1518,7 +1518,10 @@ final class AppModel {
 
     func pauseTrading() async {
         launchStartRetry?.cancel()
-        guard let control: (any TradingStarting) = tradingStarter ?? engineActions else { return }
+        guard let control: (any TradingStarting) = tradingStarter ?? engineActions else {
+            message = AccountFeatureModel.noEngine
+            return
+        }
         guard !isTradingCommandPending else { return }
         isTradingCommandPending = true
         defer { isTradingCommandPending = false }

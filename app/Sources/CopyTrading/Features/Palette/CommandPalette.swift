@@ -84,6 +84,7 @@ struct CommandPalette: View {
                     close()
                     return .handled
                 }
+                .accessibilityLabel(L10n.string("Find"))
                 .accessibilityIdentifier("palette.field")
             }
             .padding(.horizontal, 20)

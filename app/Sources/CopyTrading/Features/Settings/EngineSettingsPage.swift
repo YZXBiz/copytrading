@@ -102,7 +102,7 @@ struct EngineSettingsPage: View {
             .init(
                 title: "Risk checks",
                 state: status.pendingSignals > 0
-                    ? L10n.string("%@ waiting", status.pendingSignals.formatted()) : L10n.string("Clear"),
+                    ? L10n.string("%@ waiting", status.pendingSignals.formatted()) : L10n.string("Nothing waiting"),
                 tone: status.pendingSignals > 0 ? .neutral : .positive),
             .init(
                 title: "Accounts",

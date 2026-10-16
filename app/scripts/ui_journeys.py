@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import datetime as dt
+import functools
 import json
 import os
 import select
@@ -23,7 +24,7 @@ import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from decimal import Decimal
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from types import TracebackType
 from typing import Any
@@ -82,6 +83,62 @@ class ScriptedModelServer(ThreadingHTTPServer):
         with self._lock:
             self.requests.append(body)
             return len(self.requests) - 1
+
+
+class _QuietFiles(SimpleHTTPRequestHandler):
+    def log_message(self, format: str, *args: object) -> None:
+        pass
+
+
+class LocalAppcast:
+    """A one-item update feed on a local port offering version 99.0, newer than any build.
+
+    A debug build reads it through COPYTRADING_UPDATE_FEED. The journey never installs: its
+    enclosure points nowhere and carries no valid signature.
+    """
+
+    def __init__(self) -> None:
+        self._directory = Path(tempfile.mkdtemp(prefix="copytrading-appcast."))
+        (self._directory / "appcast.xml").write_text(
+            """<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>CopyTrading journey feed</title>
+    <item>
+      <title>99.0</title>
+      <sparkle:version>99000</sparkle:version>
+      <sparkle:shortVersionString>99.0</sparkle:shortVersionString>
+      <description><![CDATA[<p>A journey release. Never installed.</p>]]></description>
+      <enclosure url="http://127.0.0.1:9/CopyTrading-99.0.zip" length="1"
+        type="application/octet-stream" sparkle:edSignature="AAAA"/>
+    </item>
+  </channel>
+</rss>
+""",
+            encoding="utf-8",
+        )
+        self._server = ThreadingHTTPServer(
+            ("127.0.0.1", 0), functools.partial(_QuietFiles, directory=str(self._directory))
+        )
+        self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
+
+    @property
+    def url(self) -> str:
+        return f"http://127.0.0.1:{self._server.server_address[1]}/appcast.xml"
+
+    def __enter__(self) -> LocalAppcast:
+        self._thread.start()
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        self._server.shutdown()
+        self._server.server_close()
+        shutil.rmtree(self._directory, ignore_errors=True)
 
 
 def _completion(index: int, *, model: str) -> dict[str, Any]:
@@ -702,7 +759,7 @@ def build_debug_bundle() -> None:
     )
 
 
-def launch(state_root: Path, *, quit_first: bool = True) -> None:
+def launch(state_root: Path, *, quit_first: bool = True, env: dict[str, str] | None = None) -> None:
     if quit_first:
         quit_app()
     # The tour's end, the last page, and the last tab are remembered per app; a run starts as a
@@ -717,6 +774,7 @@ def launch(state_root: Path, *, quit_first: bool = True) -> None:
             "COPYTRADING_UI_TEST_UNLOCK=1",
             "--env",
             f"COPYTRADING_STATE_ROOT={state_root}",
+            *(arg for name, value in (env or {}).items() for arg in ("--env", f"{name}={value}")),
             # A debug build reports the errors behind a failed start or restore here.
             "--stderr",
             str(APP_LOG),
@@ -2114,7 +2172,11 @@ def j28_connections_panel(app: AppDriver) -> None:
     app.click("connections.alerts")
     time.sleep(0.8)
     app.expect(
-        app.see("connections-alerts"), "Connect to Telegram alerts", "Chat ID", "Bot token", "Step by step"
+        app.see("connections-alerts"),
+        "Connect to Telegram alerts",
+        "Chat ID",
+        "Bot token",
+        "Step by step",
     )
     app.click("connections.close")
     closed = app.see("connections-alerts-closed")
@@ -2256,11 +2318,98 @@ def j26_help_menu(app: AppDriver) -> None:
     peekaboo("menu", "click", "--app", APP_NAME, "--path", "Help > Keyboard Shortcuts")
     time.sleep(1)
     shortcuts = app.see("help-shortcuts")
-    app.expect(shortcuts, "Show or hide the sidebar", "Move through posts in Activity")
+    app.expect(
+        shortcuts, "Show or hide the sidebar", "Move through Find's results and the Diagnostics log"
+    )
     app.open_screen("connections")
     peekaboo("menu", "click", "--app", APP_NAME, "--path", "Help > Getting Started")
     time.sleep(1)
     app.expect(app.see("help-guide"), "About 10 minutes")
+
+
+def j43_updates(app: AppDriver) -> None:
+    """A daily check that finds a newer version offers it in a banner; Later puts the banner
+    away, the automatic-check switch shows what it saved, and Check for Updates… opens the
+    release notes. The feed is local and nothing is installed.
+    """
+    if app.state_root is None:
+        raise JourneySkipped("needs the run's state root")
+    with LocalAppcast() as feed:
+        subprocess.run(
+            ["defaults", "write", BUNDLE_ID, "SUEnableAutomaticChecks", "-bool", "true"], check=True
+        )
+        # The last check long ago, so the scheduled one runs at launch.
+        subprocess.run(
+            [
+                "defaults",
+                "write",
+                BUNDLE_ID,
+                "SULastCheckTime",
+                "-date",
+                "2000-01-01 00:00:00 +0000",
+            ],
+            check=True,
+        )
+        launch(app.state_root, env={"COPYTRADING_UPDATE_FEED": feed.url})
+        app.wait_for(UNLOCKED, timeout=60)
+        banner = app.wait_for("update.banner", timeout=60, name="update-banner")
+        app.expect(
+            banner, "CopyTrading 99.0 is ready to install.", "update.later", "update.install"
+        )
+        app.click("update.later")
+        time.sleep(0.8)
+        app.expect_absent(app.see("update-later"), "update.banner")
+
+        updates = app.open_settings("updates")
+        before = updates.find("settings.updates.automatic")
+        if before is None:
+            raise JourneyFailure("Updates has no automatic-check switch")
+        app.click("settings.updates.automatic")
+        time.sleep(0.8)
+        after = app.see("updates-automatic-off").find("settings.updates.automatic")
+        saved = subprocess.run(
+            ["defaults", "read", BUNDLE_ID, "SUEnableAutomaticChecks"],
+            capture_output=True,
+            text=True,
+            check=False,
+        ).stdout.strip()
+        if saved != "0":
+            raise JourneyFailure(f"turning automatic checks off saved {saved!r}")
+        if after is None or after.value == before.value:
+            raise JourneyFailure(
+                "the switch still showed automatic checks on after turning them off"
+            )
+        app.click("settings.updates.automatic")
+
+        app.click("settings.updates.check")
+        deadline = time.monotonic() + 30
+        while "Software Update" not in {
+            w.get("window_title")
+            for w in peekaboo("window", "list", "--app", APP_NAME).get("windows", [])
+        }:
+            if time.monotonic() > deadline:
+                raise JourneyFailure("Check for Updates… opened no update window")
+            time.sleep(1)
+    # Back to a launch with no feed, so later journeys see no banner.
+    launch(app.state_root)
+    app.wait_for(UNLOCKED, timeout=60)
+
+
+def j44_find_and_go_back(app: AppDriver) -> None:
+    """⌘K finds a page by name and opens it; Back and Forward retrace the owner's moves."""
+    app.open_screen("connections")
+    app.open_screen("gettingStarted")
+    app.press("cmd+k")
+    palette = app.wait_for("palette.field", timeout=15, name="find")
+    app.expect(palette, "Connections", "Getting Started", "Settings", "Diagnostics")
+    app.type_focused("diag", into="Find")
+    app.press("Return")
+    app.wait_for("on this Mac", timeout=15, name="found-diagnostics")
+    app.click("toolbar.back")
+    back = app.wait_for("About 10 minutes", timeout=15, name="went-back")
+    app.expect_absent(back, "palette.field")
+    app.click("toolbar.forward")
+    app.wait_for("on this Mac", timeout=15, name="went-forward")
 
 
 def j15_lock(app: AppDriver) -> None:
@@ -2317,6 +2466,8 @@ JOURNEYS: list[tuple[str, Callable[[AppDriver], None]]] = [
     ("J25 getting started", j25_getting_started),
     ("J30 assistant", j30_assistant),
     ("J26 help menu", j26_help_menu),
+    ("J44 find and go back", j44_find_and_go_back),
+    ("J43 updates", j43_updates),
     ("J15 lock", j15_lock),
     ("J17 crash recovery", j17_crash_recovery),
     # Last: starting copying saves a setup that the journeys above expect to be empty.

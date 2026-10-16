@@ -18,6 +18,8 @@ func runControlsPassTests() async throws {
     try examplesSayBuyOrSell()
     try await accountButtonsWithNoEngineSaySo()
     try selfTestWaitsForARunningEngine()
+    try await chartRangesWithNoEngineSaySo()
+    try selfTestStagesReadInChinese()
     try assistantSuggestionsBeforeSetupAreAboutSettingUp()
     print("CopyTradingContractTests: every control the controls pass fixed does what it says")
 }
@@ -170,6 +172,9 @@ private func accountButtonsWithNoEngineSaySo() async throws {
     await feature.control(accountID: "primary", action: .pause, using: nil)
     try #require(
         feature.errors["primary"] == AccountFeatureModel.noEngine, "Stop Copying with no engine did nothing and said nothing")
+    let model = AppModel()
+    await model.pauseTrading()
+    try #require(model.message == AccountFeatureModel.noEngine, "Stop All with no engine did nothing and said nothing")
 }
 
 @MainActor
@@ -195,6 +200,29 @@ private func assistantSuggestionsBeforeSetupAreAboutSettingUp() throws {
                 !suggestions.contains { $0.contains(nothingYet) }, "Before setup the assistant offered \(suggestions)")
         }
     }
+}
+
+@MainActor
+private func chartRangesWithNoEngineSaySo() async throws {
+    let feature = AccountFeatureModel()
+    feature.authorizePrivateEvidence()
+    await feature.chooseHistoryWindow(EquityHistoryWindow(range: .week), for: "primary", using: nil)
+    try #require(feature.errors["primary"]?.contains("engine is stopped") == true, "1W with no engine did nothing and said nothing")
+}
+
+@MainActor
+private func selfTestStagesReadInChinese() throws {
+    let preference = AppLanguagePreference.shared
+    let original = preference.language
+    defer { preference.select(original) }
+    preference.select(.simplifiedChinese)
+    for stage in ["captured", "parsed", "completed", "failed"] {
+        let word = DiagnosticsJournalEntry.stageWord(stage)
+        try #require(
+            word.unicodeScalars.allSatisfy { !CharacterSet.letters.contains($0) || $0.value > 0x2E80 }, "\(stage) read \(word) in Chinese")
+    }
+    preference.select(.english)
+    try #require(DiagnosticsJournalEntry.stageWord("parsed") == "Read", "The parsed stage was not called Read")
 }
 
 private func controlsConfiguration(guru: String?) throws -> TradingConfiguration {

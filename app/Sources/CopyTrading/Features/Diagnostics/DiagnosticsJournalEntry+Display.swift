@@ -7,7 +7,13 @@ extension DiagnosticsJournalEntry {
     var title: String {
         switch kind {
         case .stage:
-            L10n.string("Self-test %@", L10n.string(Humanize.code(name).lowercased()))
+            switch name {
+            case "captured": L10n.string("Self-test captured")
+            case "parsed": L10n.string("Self-test read")
+            case "completed": L10n.string("Self-test completed")
+            case "failed": L10n.string("Self-test failed")
+            default: L10n.string("Self-test step")
+            }
         case .payload:
             switch name {
             case "source_event": L10n.string("Source post")
@@ -41,7 +47,20 @@ extension DiagnosticsJournalEntry {
         case "oversize": L10n.string("Too large")
         case "missing": L10n.string("Missing")
         case "incomplete": L10n.string("Not captured")
+        case "parsed": L10n.string("Read")
         default: kind == .trading && name == "execution.ledger_event" ? L10n.string("Recorded") : L10n.string(Humanize.code(outcome))
+        }
+    }
+
+    /// A self-test stage the way the Engine page names it.
+    @MainActor
+    static func stageWord(_ stage: String) -> String {
+        switch stage {
+        case "captured": L10n.string("Captured")
+        case "parsed": L10n.string("Read")
+        case "completed": L10n.string("Completed")
+        case "failed": L10n.string("Failed")
+        default: Humanize.code(stage)
         }
     }
 
@@ -93,7 +112,7 @@ extension DiagnosticsJournalEntry {
             case "filled_qty": return (L10n.string("Filled"), Decimal(engine: value).map { Humanize.shareCount($0) } ?? value)
             case "filled_avg_price": return (L10n.string("Average fill"), Decimal(engine: value).map(Humanize.usd) ?? value)
             case "reason": return (L10n.string("Reason"), Reason.text(value))
-            case "previous_stage": return (L10n.string("After"), Humanize.code(value))
+            case "previous_stage": return (L10n.string("After"), Self.stageWord(value))
             case "provider": return (L10n.string("Provider"), TradingProviderName(rawValue: value)?.title ?? Humanize.code(value))
             case "command_id": return (L10n.string("Command"), value)
             case "workflow_id": return (L10n.string("Workflow"), value)

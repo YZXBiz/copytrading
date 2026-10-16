@@ -260,6 +260,18 @@ final class AccountFeatureModel {
         }
     }
 
+    /// The chart's range and day buttons. With no engine to read the curve from, the account says
+    /// so instead of the buttons doing nothing.
+    func chooseHistoryWindow(
+        _ window: EquityHistoryWindow, for accountID: String, using actions: (any AccountOperations)?
+    ) async {
+        guard let actions else {
+            errors[accountID] = L10n.string("The chart can't change while the engine is stopped. Start it in Settings → Engine.")
+            return
+        }
+        await refreshHistories(window: window, using: actions)
+    }
+
     /// What an account's button says when there is no engine to send its command to.
     static var noEngine: String {
         L10n.string("Nothing was sent: the engine isn't running. Start it in Settings → Engine, then try again.")

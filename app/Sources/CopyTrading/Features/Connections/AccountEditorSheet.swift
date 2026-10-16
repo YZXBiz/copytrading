@@ -212,7 +212,7 @@ struct AccountEditorSheet: View {
                 isOn: $account.policy.copyExits)
             behavior(
                 "Ask me before sending orders",
-                hint: "Nothing is sent by itself. Each order waits in Activity until you approve it with Touch ID.",
+                hint: "Nothing is sent by itself. Each order waits on the account's page until you approve it with Touch ID.",
                 isOn: $account.policy.approveOrders)
         } footer: {
             Text(

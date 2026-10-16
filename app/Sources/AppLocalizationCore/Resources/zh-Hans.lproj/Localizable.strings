@@ -51,6 +51,7 @@
 "Account" = "账户";
 "Account %@ %@, so its data is not shown." = "账户 %@ %@，因此不显示其数据。";
 "Account command error: %@" = "账户操作错误：%@";
+"Account %@ %@, so its outcomes are not shown." = "账户 %@ %@，因此不显示其处理结果。";
 "Account data error: %@" = "账户数据错误：%@";
 "Account delivery" = "账户投递";
 "Account history" = "账户历史记录";
@@ -163,12 +164,13 @@
 "Choose an interpreter" = "选择 AI 模型";
 "Claude models" = "Claude 模型";
 "Clear" = "无待处理";
+"Nothing waiting" = "无待处理";
 "Clear a measurement on the chart" = "清除图表上的测量结果";
 "Click any channel, then click a request named **messages** in the list." = "点击任一频道，再点击列表中名为 **messages** 的请求。";
 "Close" = "关闭";
 "Close owned position" = "平掉自有持仓";
 "Close Settings" = "关闭设置";
-"Coding agents such as Claude Code reach CopyTrading through its copytrading command or MCP server, and only while the app runs. Posts from sources reach them as untrusted text." = "Claude Code 等编程智能体只能在应用运行时通过 CopyTrading 命令或 MCP 服务器访问 CopyTrading。来源帖子会作为不可信文本提供给智能体。";
+"Coding agents such as Claude Code reach CopyTrading through its copytrading command or MCP server, and only while the app runs. Posts from sources reach them as untrusted text." = "Claude Code 等编程智能体只能在应用运行时通过 copytrading 命令或 MCP 服务器访问 CopyTrading。来源帖子会作为不可信文本提供给智能体。";
 "Collapsed" = "已折叠";
 "Combined equity" = "总账户净值";
 "Comma-separated Discord channel IDs" = "以逗号分隔的 Discord 频道 ID";
@@ -696,7 +698,7 @@
 "Select a post" = "选择帖子";
 "Select a record" = "选择一条记录";
 "Self-Test" = "自检";
-"Self-test %@" = "自检：%@";
+"Self-test captured" = "自检：已捕获";
 "sell" = "卖出";
 "Buy %@" = "买入 %@";
 "Shown" = "已展开";
@@ -1379,7 +1381,7 @@
 "The lowest a sell can go below the guru's price. A sell that can't fill by then is cancelled." = "卖出价最多可以比信号源的价格低这么多。到时还没成交的卖单会被取消。";
 "Set to **1**. The guru sells AAPL at **$200**. You sell at **$198** or better. At **0**, you sell at **$200** or better." = "设为 **1**。信号源以 **$200** 卖出 AAPL，你以 **$198** 或更高价卖出。设为 **0**，则以 **$200** 或更高价卖出。";
 "Ask me before sending orders" = "发送订单前先问我";
-"Nothing is sent by itself. Each order waits in Activity until you approve it with Touch ID." = "不会自动发送任何订单。每笔订单都会在“活动”里等你用Touch ID 批准。";
+"Nothing is sent by itself. Each order waits on the account's page until you approve it with Touch ID." = "不会自动发送任何订单。每笔订单都会在账户页面等待，直到你用 Touch ID 批准。";
 "You asked to approve every order for this account" = "你设置了这个账户的每笔订单都要先经你批准";
 "You approved this call" = "你已批准这条喊单";
 "Nothing was sent: Touch ID was not confirmed." = "没有发送任何订单：Touch ID 未通过。";
@@ -1477,8 +1479,8 @@
 "Waiting for the account's keys" = "等待账户密钥";
 "Waiting for a guru" = "等待添加信号源";
 "Waiting for Start Copying" = "等待点击开始跟单";
-"End Tour" = "结束引导";
-"Setup tour" = "设置引导";
+"End Tour" = "结束导览";
+"Setup tour" = "设置导览";
 "Show Me" = "带我去";
 "Show Me Around" = "带我走一遍";
 "Pick Up Where I Left Off" = "从上次停下的地方继续";
@@ -2302,3 +2304,9 @@
 "Which AI model should I choose?" = "该选哪个 AI 模型？";
 "What is a paper account?" = "什么是模拟盘账户？";
 "Orders the broker already accepted may stay open until they fill or expire." = "券商已接受的订单仍可能保持有效，直到成交或过期。";
+"The chart can't change while the engine is stopped. Start it in Settings → Engine." = "引擎已停止，图表暂时无法切换。请在“设置 → 引擎”中启动它。";
+"Self-test read" = "自检：已读取";
+"Self-test completed" = "自检：已完成";
+"Self-test failed" = "自检：失败";
+"Self-test step" = "自检步骤";
+"Find" = "查找";
