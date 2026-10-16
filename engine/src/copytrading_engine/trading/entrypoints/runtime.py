@@ -910,15 +910,13 @@ class TradingRuntime:
 
 
 def _ownership_checks(pending: AccountOwnershipPending) -> tuple[CapabilityCheck, ...]:
-    """One check per removed account that still holds something of CopyTrading's, naming the
-    account and the stocks: shares first, since selling them settles it; then unfinished orders;
-    then anything else its page asks the owner to settle."""
+    """One check per removed account that still has work in flight, naming the account and the
+    stocks: unfinished orders first, then a post still being copied. Shares it holds never block:
+    they stay at the broker."""
     checks = []
     for account_id, held in pending.accounts:
         if held is None:
             reason, symbols = "removed_account_unreadable", ()
-        elif held.symbols:
-            reason, symbols = "removed_account_holds_shares", held.symbols
         elif held.order_symbols:
             reason, symbols = "removed_account_has_open_orders", held.order_symbols
         else:

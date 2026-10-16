@@ -26,11 +26,11 @@ private func aRemovedAccountsCheckDecodesItsStocks() throws {
     let json = Data(
         """
         {"name":"configuration","state":"failed","subject":"primary","environment":null,"identity":null,\
-        "adapter":"routing_revision","reason_code":"removed_account_holds_shares","suggestion":null,\
+        "adapter":"routing_revision","reason_code":"removed_account_has_open_orders","suggestion":null,\
         "symbols":["GFS","NVDA","WMT"]}
         """.utf8)
     let check = try JSONDecoder().decode(TradingCapabilityCheck.self, from: json)
-    try #require(check == removedAccountCheck("removed_account_holds_shares", symbols: ["GFS", "NVDA", "WMT"]))
+    try #require(check == removedAccountCheck("removed_account_has_open_orders", symbols: ["GFS", "NVDA", "WMT"]))
 }
 
 @MainActor
@@ -40,13 +40,11 @@ private func aRemovedAccountIsNamedWithWhatItHolds() throws {
     defer { language.select(original) }
     language.select(.english)
 
-    let shares = ConnectionProblem.text(for: removedAccountCheck("removed_account_holds_shares", symbols: ["GFS", "NVDA", "WMT"]))
+    let orders = ConnectionProblem.text(for: removedAccountCheck("removed_account_has_open_orders", symbols: ["GFS", "NVDA", "WMT"]))
     try #require(
-        shares
-            == "primary still holds GFS, NVDA, and WMT that CopyTrading bought. Sell them from primary's page, or keep primary in the setup.",
-        "a removed account's shares were not named: \(shares)")
-    let one = ConnectionProblem.text(for: removedAccountCheck("removed_account_holds_shares", symbols: ["GFS"]))
-    try #require(one.contains("holds GFS that") && one.contains("Sell it from"), "one stock read as many: \(one)")
+        orders
+            == "primary still has orders for GFS, NVDA, and WMT that CopyTrading placed. Let them fill or cancel them in Alpaca, or keep primary in the setup.",
+        "a removed account's orders were not named: \(orders)")
     let many = ConnectionProblem.stocks(["A", "B", "C", "D", "E", "F"])
     try #require(many == "A, B, C, and 3 more", "a long list was not shortened: \(many)")
     for reason in ["removed_account_has_open_orders", "removed_account_needs_review", "removed_account_unreadable"] {
@@ -57,12 +55,12 @@ private func aRemovedAccountIsNamedWithWhatItHolds() throws {
     try #require(
         ConnectionProblem.text(for: removedAccountCheck("removed_account_has_open_orders", symbols: ["AAPL"])).contains("orders for AAPL"),
         "unfinished orders did not name their stock")
-    try #require(CapabilityCheckTitle.text(for: removedAccountCheck("removed_account_holds_shares")) == "primary")
+    try #require(CapabilityCheckTitle.text(for: removedAccountCheck("removed_account_has_open_orders")) == "primary")
 
     // Every Configuration failure says what it is about, never the catch-all for a connection.
     let fallback = ConnectionProblem.text(for: removedAccountCheck("not_a_known_code"))
     for reason in [
-        "removed_account_holds_shares", "removed_account_has_open_orders", "removed_account_needs_review",
+        "removed_account_has_open_orders", "removed_account_needs_review",
         "removed_account_unreadable", "broker_keys_without_account", "routing_change_pending",
         "pause_before_configuration_change", "configuration_preflight_unavailable",
     ] {
@@ -70,9 +68,9 @@ private func aRemovedAccountIsNamedWithWhatItHolds() throws {
     }
 
     language.select(.simplifiedChinese)
-    let chinese = ConnectionProblem.text(for: removedAccountCheck("removed_account_holds_shares", symbols: ["GFS", "NVDA", "WMT"]))
+    let chinese = ConnectionProblem.text(for: removedAccountCheck("removed_account_needs_review"))
     try #require(
-        chinese.hasPrefix("primary 里还有 CopyTrading 买入的 GFS") && chinese.contains("请在 primary 的页面卖出"),
+        chinese == "primary 还有正在跟单的帖子。请稍等后再检查，或把 primary 留在设置中。",
         "the Chinese text did not name the account and stocks: \(chinese)")
     try #require(CapabilityCheckTitle.text(for: TradingCapabilityCheck(name: .model, state: .ready, adapter: "deepseek")) == "AI 模型")
 }
@@ -113,7 +111,7 @@ private func keepingARemovedAccountPutsItBackAsSaved() throws {
     let model = try modelShowingCheck([])
     model.removeAccount(named: "primary")
     try #require(model.hasUnsavedSetupChanges, "removing an account was not a change")
-    model.tradingValidation = try modelShowingCheck([removedAccountCheck("removed_account_holds_shares", symbols: ["GFS"])])
+    model.tradingValidation = try modelShowingCheck([removedAccountCheck("removed_account_has_open_orders", symbols: ["GFS"])])
         .tradingValidation
     model.isShowingSetupCheck = true
 
@@ -141,7 +139,7 @@ private func keepingARenamedAccountUndoesTheRename() throws {
 
 @MainActor
 private func openingTheAccountLeavesSetupCheck() throws {
-    let model = try modelShowingCheck([removedAccountCheck("removed_account_holds_shares", symbols: ["GFS"])])
+    let model = try modelShowingCheck([removedAccountCheck("removed_account_has_open_orders", symbols: ["GFS"])])
     model.openAccountFromSetupCheck("primary")
     try #require(model.selectedScreen == .account("primary") && !model.isShowingSetupCheck, "primary's page did not open")
 }
@@ -150,7 +148,7 @@ private func openingTheAccountLeavesSetupCheck() throws {
 private func theChangesBarCountsTheRowsThatNeedAttention() throws {
     let model = try modelShowingCheck([
         TradingCapabilityCheck(name: .source, state: .ready, adapter: "discord"),
-        removedAccountCheck("removed_account_holds_shares", symbols: ["GFS"]),
+        removedAccountCheck("removed_account_has_open_orders", symbols: ["GFS"]),
     ])
     try #require(model.setupCheckProblemCount == 1, "one failed row counted as \(model.setupCheckProblemCount)")
     model.tradingValidation?.report.checks.append(removedAccountCheck("removed_account_needs_review", account: "second"))

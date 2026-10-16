@@ -30,10 +30,10 @@ class RoutingChangePending(Exception):
 
 
 class AccountOwnershipPending(Exception):
-    """Removing these local accounts would abandon what they still hold of CopyTrading's.
+    """Removing these local accounts would abandon work they still have in flight.
 
-    `accounts` names each removed account, A to Z, with what it holds; None when its records
-    could not be read, so whether it holds anything is unknown."""
+    `accounts` names each removed account, A to Z, with that work; None when its records could
+    not be read, so whether it has any is unknown."""
 
     def __init__(self, accounts: tuple[tuple[str, UnsettledOwnership | None], ...]) -> None:
         super().__init__(", ".join(account_id for account_id, _ in accounts))

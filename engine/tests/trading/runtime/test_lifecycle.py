@@ -262,7 +262,7 @@ async def test_pending_source_rejects_changed_destination(tmp_path):
         await source.close()
 
 
-async def test_account_removal_requires_settled_execution_ownership(tmp_path, monkeypatch):
+async def test_account_removal_waits_for_work_in_flight(tmp_path, monkeypatch):
     database = tmp_path / "application.db"
     source = await SQLiteSourceStore.open(database)
     parser = await SQLiteExtractionStore.open(database)
@@ -270,7 +270,7 @@ async def test_account_removal_requires_settled_execution_ownership(tmp_path, mo
     try:
         await guard.accept(trading_configuration())
         replacement = trading_configuration("first")
-        held = UnsettledOwnership(symbols=("GFS", "NVDA", "WMT"))
+        held = UnsettledOwnership(order_symbols=("GFS",))
         monkeypatch.setattr(
             "copytrading_engine.trading.adapters.routing.unsettled_ownership", lambda path: held
         )
@@ -288,10 +288,10 @@ async def test_account_removal_requires_settled_execution_ownership(tmp_path, mo
 
 
 async def test_setup_check_names_each_removed_account_and_what_it_holds(tmp_path, monkeypatch):
-    """Each removed account that still holds something is one Configuration row, naming the
+    """Each removed account that still has work in flight is one Configuration row, naming the
     account and the stocks, so the owner knows which account to settle and how."""
     held = {
-        "first": UnsettledOwnership(symbols=("GFS", "NVDA", "WMT"), order_symbols=("AAPL",)),
+        "first": UnsettledOwnership(order_symbols=("GFS", "NVDA"), needs_review=True),
         "second": UnsettledOwnership(order_symbols=("AAPL",)),
         "review": UnsettledOwnership(needs_review=True),
     }
@@ -337,7 +337,7 @@ async def test_setup_check_names_each_removed_account_and_what_it_holds(tmp_path
     ] == [
         ("source", None, "source_identity_unavailable", ()),
         ("configuration", "broken", "removed_account_unreadable", ()),
-        ("configuration", "first", "removed_account_holds_shares", ("GFS", "NVDA", "WMT")),
+        ("configuration", "first", "removed_account_has_open_orders", ("GFS", "NVDA")),
         ("configuration", "review", "removed_account_needs_review", ()),
         ("configuration", "second", "removed_account_has_open_orders", ("AAPL",)),
     ]

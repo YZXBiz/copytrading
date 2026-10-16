@@ -2239,10 +2239,8 @@
 "%lld checks need attention" = "有 %lld 项检查需要处理";
 "Review them, then start again." = "逐项查看后再重新开始。";
 "This account has no Alpaca keys yet. Open it and add them." = "这个账户还没有 Alpaca 密钥。请打开它并填写。";
-"%1$@ still holds %2$@ that CopyTrading bought. Sell it from %1$@'s page, or keep %1$@ in the setup." = "%1$@ 里还有 CopyTrading 买入的 %2$@。请在 %1$@ 的页面卖出，或把 %1$@ 留在设置中。";
-"%1$@ still holds %2$@ that CopyTrading bought. Sell them from %1$@'s page, or keep %1$@ in the setup." = "%1$@ 里还有 CopyTrading 买入的 %2$@。请在 %1$@ 的页面卖出，或把 %1$@ 留在设置中。";
 "%1$@ still has orders for %2$@ that CopyTrading placed. Let them fill or cancel them in Alpaca, or keep %1$@ in the setup." = "%1$@ 里还有 CopyTrading 下的 %2$@ 订单未完成。请等它们成交或在 Alpaca 取消，或把 %1$@ 留在设置中。";
-"%1$@ still has a post being copied or holdings to review. Open %1$@'s page to settle them, or keep %1$@ in the setup." = "%1$@ 还有正在跟单的帖子或待核对的持仓。请打开 %1$@ 的页面处理，或把 %1$@ 留在设置中。";
+"%1$@ still has a post being copied. Wait a moment, then check again, or keep %1$@ in the setup." = "%1$@ 还有正在跟单的帖子。请稍等后再检查，或把 %1$@ 留在设置中。";
 "CopyTrading couldn't read %1$@'s records to see what it still holds. Keep %1$@ in the setup for now." = "CopyTrading 读不到 %1$@ 的记录，无法确认它还持有什么。请暂时把 %1$@ 留在设置中。";
 "Alpaca keys were sent for %@, which isn't in the setup. Check the setup again." = "收到了 %@ 的 Alpaca 密钥，但设置中没有这个账户。请重新检查设置。";
 "Couldn't read CopyTrading's saved records to check the setup. Try again in a moment." = "读不到 CopyTrading 保存的记录，无法检查设置。请稍后再试。";
