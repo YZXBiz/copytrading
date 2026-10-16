@@ -79,9 +79,8 @@ struct ConnectionEditor: View {
                     }
                     .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.capsule)
-                .controlSize(.large)
+                // The panel's one answer, an ink capsule like every sheet's.
+                .buttonStyle(SheetButtonStyle(isPrimary: true))
                 .keyboardShortcut(.defaultAction)
                 .disabled(isChecking)
                 .accessibilityIdentifier("connections.done")
@@ -181,9 +180,9 @@ struct ConnectionEditor: View {
         .setupTourTarget(stop.target)
     }
 
-    /// One field's row: a click anywhere on it focuses the field, and VoiceOver hears its label.
+    /// One field's row: VoiceOver hears its label.
     private func row(_ label: String, @ViewBuilder field: () -> some View) -> some View {
-        ConnectionField(label: label, focus: { focused = label }) {
+        ConnectionField(label: label) {
             field()
                 .focused($focused, equals: label)
                 .accessibilityLabel(L10n.string(label))
