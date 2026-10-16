@@ -22,7 +22,7 @@ struct LockedView: View {
                 }
                 if let accessMessage = model.accessMessage {
                     Text(accessMessage)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Palette.live)
                         .accessibilityLabel(L10n.string("Authentication status: %@", accessMessage))
                 }
             }

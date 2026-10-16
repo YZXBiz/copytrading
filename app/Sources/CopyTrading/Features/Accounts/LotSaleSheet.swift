@@ -72,8 +72,11 @@ struct LotSaleSheet: View {
                 Eyebrow(" · ")
                 Eyebrow(
                     L10n.string(target.environment == .live ? "Live" : "Paper"),
-                    color: target.environment == .live ? .orange : Palette.tertiaryInk)
+                    color: target.environment == .live ? Palette.live : Palette.tertiaryInk)
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(
+                L10n.string("%@, %@", target.accountID, L10n.string(target.environment == .live ? "Live" : "Paper")))
             Text(L10n.string("Sell %@", target.symbol))
                 .font(DisplayFont.font(size: 40, weight: .medium, relativeTo: .largeTitle))
                 .tracking(DesignTokens.entityTitleTracking)
@@ -137,7 +140,7 @@ struct LotSaleSheet: View {
     @ViewBuilder
     private var preview: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(L10n.string("%@ of %@ shares", PositionRow.quantity(flow.shares), PositionRow.quantity(flow.remaining)))
+            Text(flow.sharesLine)
                 .font(DisplayFont.font(size: 22, weight: .medium, relativeTo: .title3))
                 .monospacedDigit()
                 .foregroundStyle(Palette.ink)

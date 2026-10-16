@@ -9,19 +9,31 @@ struct AgentProposalSheet: View {
 
     var body: some View {
         SheetScaffold(
-            kind: L10n.string("Agent request"), title: proposal.summary, lede: proposal.approvalHeading, scrolls: false
+            kind: L10n.string("Agent request"), title: proposal.sheetTitle, lede: proposal.approvalHeading, scrolls: false
         ) {
             SheetSection(L10n.string("The request")) {
-                if let environment = model.environment(of: proposal) {
-                    SheetRow(title: L10n.string("Account")) { EnvironmentBadge(environment: environment) }
+                if let accountID = proposal.accountID {
+                    // The account by name and its mode in words; only Live carries colour.
+                    SheetRow(title: L10n.string("Account"), isReading: true) {
+                        let environment = model.environment(of: proposal)
+                        HStack(spacing: 6) {
+                            value(accountID)
+                            if let environment {
+                                Text(verbatim: "·").foregroundStyle(Palette.tertiaryInk).accessibilityHidden(true)
+                                Text(L10n.string(environment == .live ? "Live" : "Paper"))
+                                    .font(DesignTokens.bodyText)
+                                    .foregroundStyle(environment == .live ? Color.orange : Palette.secondaryInk)
+                            }
+                        }
+                    }
                 }
                 ForEach(Array(model.limitRows(of: proposal).enumerated()), id: \.offset) { _, row in
-                    SheetRow(title: row.title) {
+                    SheetRow(title: row.title, isReading: true) {
                         value(L10n.string("%@ → %@", row.now, row.after))
                     }
                 }
-                SheetRow(title: L10n.string("Requested by")) { value(proposal.requester) }
-                SheetRow(title: L10n.string("Expires")) { value(Humanize.timestamp(proposal.expiresAt)) }
+                SheetRow(title: L10n.string("Requested by"), isReading: true) { value(proposal.requester) }
+                SheetRow(title: L10n.string("Expires"), isReading: true) { value(Humanize.timestamp(proposal.expiresAt)) }
             }
             Callout(
                 L10n.string(

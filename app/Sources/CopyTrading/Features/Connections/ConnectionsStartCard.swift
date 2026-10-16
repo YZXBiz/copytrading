@@ -20,11 +20,6 @@ struct ConnectionsStartCard: View {
             && !model.isValidatingTrading && !model.isActivatingTrading
     }
 
-    /// The four steps a check needs, done or not.
-    private var stepsDone: Int {
-        [SetupStep.discord, .interpreter, .account, .guru].filter(progress.isDone).count
-    }
-
     var body: some View {
         HStack(spacing: 14) {
             icon
@@ -91,7 +86,9 @@ struct ConnectionsStartCard: View {
     }
 
     private var headline: String {
-        progress.isReadyToCheck ? status.text : L10n.string("%@ of 4 steps done", stepsDone.formatted())
+        // The same count as the guide and Settings: the fifth step is this card's Start Copying.
+        progress.isReadyToCheck
+            ? status.text : L10n.string("%lld of %lld steps done", Int64(progress.completed), Int64(progress.total))
     }
 
     private var detail: String? {

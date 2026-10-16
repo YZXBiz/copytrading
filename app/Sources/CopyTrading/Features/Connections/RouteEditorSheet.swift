@@ -40,12 +40,12 @@ struct RouteEditorSheet: View {
                         .foregroundStyle(Palette.tertiaryInk)
                         .padding(.vertical, 12)
                 } else {
-                    SheetRow(title: L10n.string("Discord channel")) {
+                    SheetRow(title: L10n.string("Discord channel"), labelsControl: true) {
+                        // Each channel once: a guru with no channel of its own reads as the first.
                         SheetMenu(
                             label: L10n.string("Discord channel"),
-                            choices: [("", L10n.string("First channel in Connections (%@)", channelIDs[0]))]
-                                + channelChoices.map { ($0, $0) },
-                            selection: $route.channelID)
+                            choices: channelChoices.map { ($0, $0) },
+                            selection: channelSelection)
                     }
                 }
                 SheetField(title: L10n.string("Author ID")) {
@@ -100,6 +100,12 @@ struct RouteEditorSheet: View {
                 .keyboardShortcut(.defaultAction)
         }
         .frame(minWidth: 620, idealWidth: 660, minHeight: 680, idealHeight: 780)
+    }
+
+    private var channelSelection: Binding<String> {
+        Binding(
+            get: { route.channelID.isEmpty ? channelIDs.first ?? "" : route.channelID },
+            set: { route.channelID = $0 })
     }
 
     private var channelChoices: [String] {

@@ -61,6 +61,15 @@ public struct DiagnosticsJournal: Sendable {
             .filter { FileManager.default.fileExists(atPath: $0.path) }
     }
 
+    /// Each journal file's name, size, and modification time: unchanged means nothing new to read.
+    public func fingerprint() -> [String] {
+        files.map { url in
+            let values = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+            let modified = values?.contentModificationDate?.timeIntervalSinceReferenceDate ?? 0
+            return "\(url.lastPathComponent):\(values?.fileSize ?? 0):\(modified)"
+        }
+    }
+
     /// Bytes the journal holds on disk.
     public func usageBytes() -> Int64 {
         files.reduce(0) { total, url in
@@ -136,7 +145,7 @@ public struct DiagnosticsJournal: Sendable {
                     options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes, .fragmentsAllowed]
                 )
             else { return nil }
-            return String(decoding: data, as: UTF8.self)
+            return compactEmpty(String(decoding: data, as: UTF8.self))
         }
         let createdAt = (object["created_at_ns"] as? NSNumber)?.stringValue ?? atText
         return DiagnosticsJournalEntry(
@@ -151,6 +160,12 @@ public struct DiagnosticsJournal: Sendable {
             payloadJSON: payloadJSON,
             payloadUnreadable: payloadUnreadable
         )
+    }
+
+    /// Foundation prints an empty list or object over three lines with a blank one inside; the
+    /// page shows them as `[]` and `{}`.
+    static func compactEmpty(_ json: String) -> String {
+        json.replacing(/\[\n\s*\n\s*\]/, with: "[]").replacing(/\{\n\s*\n\s*\}/, with: "{}")
     }
 
     private static func text(_ value: Any) -> String {

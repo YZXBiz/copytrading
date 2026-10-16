@@ -14,8 +14,9 @@ struct LogsSettingsPage: View {
         ageDays != model.diagnosticsSettings.ageDays || storageLimitBytes != model.diagnosticsSettings.storageLimitBytes
     }
 
+    /// A saved change the engine takes on its next start; an edit since then is not saved yet.
     private var waitsForRestart: Bool {
-        guard let applied = model.appliedDiagnosticsSettings, model.engineStatus != nil else { return false }
+        guard !hasChanges, let applied = model.appliedDiagnosticsSettings, model.engineStatus != nil else { return false }
         return applied != model.diagnosticsSettings
     }
 
@@ -47,7 +48,7 @@ struct LogsSettingsPage: View {
                 title: "Log Retention",
                 subtitle: "Older days go first, then the oldest part once the limit is reached. Trading data and backups are never touched."
             ) {
-                SettingsRow(label: "Keep logs for", title: Humanize.count(ageDays, "day")) {
+                SettingsRow(label: "Keep logs for", title: Humanize.count(ageDays, "day"), labelsControl: true) {
                     Stepper(
                         L10n.string("Keep logs for"), value: $ageDays,
                         in: DiagnosticsSettings.minimumAgeDays...DiagnosticsSettings.maximumAgeDays

@@ -9,6 +9,8 @@ struct ConnectionPanel<Content: View>: View {
     let close: () -> Void
     /// Esc closes the sheet, except while something above it, such as the assistant, takes Esc.
     var escapeCloses = true
+    /// Narrower beside the assistant; see ConnectionPanelPlacement.
+    var width = ConnectionPanelPlacement.fullWidth
     @ViewBuilder let content: Content
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.colorSchemeContrast) private var contrast
@@ -21,7 +23,8 @@ struct ConnectionPanel<Content: View>: View {
                     .font(DesignTokens.settingsHeading)
                     .tracking(DesignTokens.listHeadingTracking)
                     .foregroundStyle(Palette.ink)
-                    .lineLimit(1)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 8)
                 Button(L10n.string("Close"), systemImage: "xmark", action: close)
@@ -42,7 +45,7 @@ struct ConnectionPanel<Content: View>: View {
             content
                 .padding(20)
         }
-        .frame(width: 420)
+        .frame(width: width)
         .background(Palette.page, in: .rect(cornerRadius: 22, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 22, style: .continuous)

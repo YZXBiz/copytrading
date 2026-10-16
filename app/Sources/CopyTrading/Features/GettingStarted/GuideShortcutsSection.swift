@@ -19,11 +19,13 @@ struct GuideShortcutsSection: View {
                         }
                     }
                     .gridColumnAlignment(.trailing)
+                    .accessibilityHidden(true)
+                    // One line for VoiceOver, what it does then the keys; a grid row can't be one element.
                     Text(L10n.string(shortcut.action))
                         .font(DesignTokens.documentBody)
                         .foregroundStyle(Palette.ink)
+                        .accessibilityLabel(L10n.string("%@, %@", L10n.string(shortcut.action), shortcut.spokenKeys))
                 }
-                .accessibilityElement(children: .combine)
             }
         }
     }

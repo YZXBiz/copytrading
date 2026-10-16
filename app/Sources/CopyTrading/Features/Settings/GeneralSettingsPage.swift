@@ -46,7 +46,8 @@ struct GeneralSettingsPage: View {
                 )
                 SettingsRow(
                     title: "Hold my orders before sending",
-                    detail: "After you press Sell or confirm a copy, the order waits this long with Undo before it leaves for Alpaca."
+                    detail: "After you press Sell or confirm a copy, the order waits this long with Undo before it leaves for Alpaca.",
+                    labelsControl: true
                 ) {
                     HStack(spacing: 18) {
                         ForEach([0.0, 5.0, 10.0], id: \.self) { seconds in
@@ -84,10 +85,11 @@ struct GeneralSettingsPage: View {
         }
     }
 
+    /// Why the switch is off limits, when it is: nothing saved yet, or a live account.
     private var startDetail: String {
-        model.canStartCopyingOnLaunch
-            ? "Runs the same connection checks as Start Copying. Lock still locks."
-            : "Only when every account is paper. Lock still locks."
+        if model.canStartCopyingOnLaunch { return "Runs the same connection checks as Start Copying. Lock still locks." }
+        if model.savedTradingConfiguration == nil { return "Once a setup is saved and every account is paper. Lock still locks." }
+        return "Only when every account is paper. Lock still locks."
     }
 
     private func load() {

@@ -30,6 +30,7 @@ struct AccountPageContent: View {
             EquityChart(
                 account: account,
                 history: feature.histories[account.accountID],
+                isRead: feature.historiesRead.contains(account.accountID),
                 window: feature.historyWindow,
                 chooseWindow: chooseWindow,
                 plotHeight: isSharingWidth ? 120 : 200
@@ -74,7 +75,7 @@ struct AccountPageContent: View {
     }
 
     private func chooseWindow(_ window: EquityHistoryWindow) {
-        Task { await feature.refreshHistories(window: window, using: model.accountActions()) }
+        Task { await feature.chooseHistoryWindow(window, for: account.accountID, using: model.accountActions()) }
     }
 
     /// The account's sheet opens over this page on its limits; the changes apply as soon as they

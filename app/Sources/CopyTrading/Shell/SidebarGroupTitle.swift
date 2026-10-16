@@ -5,7 +5,9 @@ struct SidebarGroupTitle: View {
     let title: String
 
     var body: some View {
-        Text(L10n.string(title).uppercased())
+        Text(L10n.string(title))
+            .accessibilityLabel(L10n.string(title))
+            .textCase(.uppercase)
             .font(DesignTokens.eyebrow)
             .tracking(DesignTokens.eyebrowTracking)
             .foregroundStyle(Palette.tertiaryInk)

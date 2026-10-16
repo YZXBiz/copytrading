@@ -26,6 +26,8 @@ struct SettingsPickerRow<Value: Hashable>: View {
                     .foregroundStyle(Palette.tertiaryInk)
                     .accessibilityHidden(true)
             }
+            // One menu button for VoiceOver, named by the label and value below, not one per line.
+            .accessibilityElement(children: .ignore)
         }
         .menuStyle(.button)
         .buttonStyle(.plain)

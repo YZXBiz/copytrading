@@ -37,7 +37,7 @@ struct AccountPageHeader: View {
             }
             if let error = feature.errors[account.accountID] {
                 Callout(error, tone: .critical)
-                    .accessibilityLabel(L10n.string("Account command error: %@", error))
+                    .accessibilityLabel(L10n.string("%@: %@", account.accountID, error))
             }
             if let pendingNote {
                 // An edit is only in the setup until it is applied; say so where it shows.
@@ -82,7 +82,7 @@ struct AccountPageHeader: View {
                 .help(L10n.string("Broker account %@", account.brokerIdentity))
             HStack(spacing: 6) {
                 Text(L10n.string(account.environment == .live ? "Live" : "Paper"))
-                    .foregroundStyle(account.environment == .live ? Color.orange : Palette.tertiaryInk)
+                    .foregroundStyle(account.environment == .live ? Palette.live : Palette.tertiaryInk)
                 Text(verbatim: "·")
                     .foregroundStyle(Palette.tertiaryInk)
                     .accessibilityHidden(true)
@@ -91,6 +91,7 @@ struct AccountPageHeader: View {
             }
             .font(DesignTokens.lede)
             .tracking(DesignTokens.ledeTracking)
+            .accessibilityElement(children: .combine)
         }
         .fixedSize(horizontal: true, vertical: false)
     }

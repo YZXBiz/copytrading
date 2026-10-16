@@ -23,6 +23,9 @@ struct ActivitySheetContent: View {
                 maxOrderUSD: (model.savedTradingConfiguration?.accounts ?? []).reduce(into: [:]) { caps, account in
                     caps[account.id] = Decimal(string: account.policy.maxOrderUSD.trimmed)
                 },
+                maxAbovePct: (model.savedTradingConfiguration?.accounts ?? []).reduce(into: [:]) { above, account in
+                    above[account.id] = Decimal(string: account.policy.maxAboveSignalPct.trimmed)
+                },
                 confirmOrders: { try await model.confirmOrders(for: $0, reason: L10n.string("send these orders")) },
                 engineStopped: model.runtimeState == .stopped || model.runtimeState == .failed,
                 startEngine: model.requestStart

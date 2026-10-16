@@ -30,7 +30,7 @@ struct MenuBarSparkline: View {
         if values.count >= 2, let first = values.first?.1, let last = values.last?.1,
             (values.map(\.1).max() ?? 0) - (values.map(\.1).min() ?? 0) >= 0.01
         {
-            let tint: Color = last > first ? .green : last < first ? .red : Palette.secondaryInk
+            let tint: Color = last > first ? Palette.gain : last < first ? Palette.loss : Palette.secondaryInk
             let low = values.map(\.1).min() ?? 0
             let high = values.map(\.1).max() ?? 0
             Chart(values, id: \.0) { point in
@@ -44,7 +44,17 @@ struct MenuBarSparkline: View {
             .chartYAxis(.hidden)
             .chartYScale(domain: low...max(high, low + 1))
             .frame(height: 54)
+            // One element: its half-hour marks read as dates would say nothing the summary doesn't.
+            .accessibilityElement(children: .ignore)
             .accessibilityLabel(L10n.string("Equity today"))
+            .accessibilityValue(
+                L10n.string(
+                    "From %@ to %@, %@. High %@, low %@.", usd(first), usd(last),
+                    (last - first).formatted(.currency(code: "USD").sign(strategy: .always())), usd(high), usd(low)))
         }
+    }
+
+    private func usd(_ value: Double) -> String {
+        value.formatted(.currency(code: "USD"))
     }
 }

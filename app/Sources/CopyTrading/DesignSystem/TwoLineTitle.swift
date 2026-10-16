@@ -21,7 +21,7 @@ struct TwoLineTitle: View {
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(L10n.string("%@ %@", lead, emphasis))
+        .accessibilityLabel(L10n.string("%@, %@", lead, emphasis))
         .accessibilityAddTraits(.isHeader)
     }
 }

@@ -15,6 +15,8 @@ struct ManualReviewSheet: View {
     let connections: [String: TradingRouteConnection]
     /// Each account's max per order, which caps any one buy.
     let maxOrderUSD: [String: Decimal]
+    /// How far above the price each account's buy limit sits, in percent.
+    let maxAbovePct: [String: Decimal]
     /// Asks for Touch ID when an order goes to a live account or one that asks to approve orders.
     let confirmOrders: (Set<String>) async throws -> Void
     /// The engine isn't running, so nothing can be saved or placed until it starts.
@@ -53,6 +55,7 @@ struct ManualReviewSheet: View {
         guruName: String? = nil,
         connections: [TradingRouteConnection] = [],
         maxOrderUSD: [String: Decimal] = [:],
+        maxAbovePct: [String: Decimal] = [:],
         confirmOrders: @escaping (Set<String>) async throws -> Void,
         engineStopped: Bool = false,
         startEngine: @escaping () -> Void = {}
@@ -67,6 +70,7 @@ struct ManualReviewSheet: View {
         self.guruName = guruName
         self.connections = Dictionary(connections.map { ($0.accountID, $0) }, uniquingKeysWith: { first, _ in first })
         self.maxOrderUSD = maxOrderUSD
+        self.maxAbovePct = maxAbovePct
         self.confirmOrders = confirmOrders
         self.engineStopped = engineStopped
         self.startEngine = startEngine
@@ -114,7 +118,7 @@ struct ManualReviewSheet: View {
     private var estimate: ManualOrderEstimate {
         ManualOrderEstimate(
             drafts: instructions, accounts: chosenAccounts, connections: connections, maxOrderUSD: maxOrderUSD,
-            mode: mode, quotes: quotes)
+            maxAbovePct: maxAbovePct, mode: mode, quotes: quotes)
     }
 
     /// The account whose read keys quote the stocks: the first chosen, else the first listed.
@@ -204,7 +208,7 @@ struct ManualReviewSheet: View {
             isPresented: $showsConfirmation,
             titleVisibility: .visible
         ) {
-            Button(L10n.string("Confirm %lld order(s)", Int64(confirmationToSubmit.count)), role: .destructive) {
+            Button(orderCount("Confirm 1 order", "Confirm %lld orders"), role: .destructive) {
                 Task { await send() }
             }
             Button(L10n.string("Cancel"), role: .cancel) { confirmationToSubmit = [] }
@@ -299,7 +303,7 @@ struct ManualReviewSheet: View {
                     FormChoice(
                         title: account.accountID,
                         detail: account.environment == .live ? L10n.string("Live") : nil,
-                        detailTint: account.environment == .live ? .orange : nil,
+                        detailTint: account.environment == .live ? Palette.live : nil,
                         isOn: selectedAccountIDs.contains(account.accountID)
                     ) {
                         if selectedAccountIDs.contains(account.accountID) {
@@ -360,7 +364,7 @@ struct ManualReviewSheet: View {
             }
             if isHolding {
                 OrderHold(
-                    title: L10n.string("Placing %lld order(s)", Int64(confirmationToSubmit.count)),
+                    title: orderCount("Placing 1 order", "Placing %lld orders"),
                     seconds: OrderHold.chosenSeconds,
                     send: {
                         isHolding = false
@@ -491,6 +495,12 @@ struct ManualReviewSheet: View {
         previewRequests = [:]
         confirmationRequests = [:]
         approvalProblem = nil
+    }
+
+    /// "Confirm 1 order" or "Confirm 3 orders", by how many are about to go.
+    @MainActor private func orderCount(_ one: String, _ many: String) -> String {
+        let count = confirmationToSubmit.count
+        return count == 1 ? L10n.string(one) : L10n.string(many, Int64(count))
     }
 
     /// Each order exactly as the engine planned it: a buy by the dollars it spends after the max

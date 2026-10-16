@@ -48,6 +48,11 @@ extension AppModel {
             failed: Set(connectionChecks.keys.filter { connectionCheckResult($0)?.check?.state == .failed }))
     }
 
+    /// The optional alerts step is done: alerts are on and their latest check didn't fail.
+    var alertsReady: Bool {
+        setupDraft.notificationsEnabled && connectionCheckResult(.alerts)?.check?.state != .failed
+    }
+
     /// The saved model key belongs to the provider the draft names, so a blank key field keeps it.
     var hasSavedProviderKey: Bool {
         hasTradingSecrets && savedTradingConfiguration?.provider.name == setupDraft.provider
@@ -375,7 +380,6 @@ extension AppModel {
             return
         }
         message = nil
-        copyingStartedAt = .now
         selectedScreen = homeScreen
         if let accountFeature {
             Task { await turnOnEveryAccount(feature: accountFeature) }
@@ -442,7 +446,9 @@ extension AppModel {
         case TradingProfileBuilderError.invalidIdentity:
             L10n.string("Each guru needs a name.")
         case TradingProfileBuilderError.invalidProfile:
-            L10n.string("Each guru needs a message prefix, and a playbook under %@ characters.", tradingPlaybookMaxLength.formatted())
+            L10n.string(
+                "Each guru needs a name of up to 100 characters, a playbook under %@ characters, and at most 32 examples.",
+                tradingPlaybookMaxLength.formatted())
         case TradingProfileBuilderError.invalidExample:
             L10n.string("Check each guru's examples: each needs a message, a ticker, and a fraction between 0 and 1 if given.")
         case let error as TradingSettingsError:

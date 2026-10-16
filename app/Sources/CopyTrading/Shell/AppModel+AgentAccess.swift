@@ -5,7 +5,7 @@ extension AppModel {
     /// Whether a request touches a paper or a live account, so the sheet can say which.
     func environment(of proposal: AgentProposal) -> TradingEnvironment? {
         if let environment = proposal.environment { return environment }
-        guard case .setAccountLimits(let accountID, _) = proposal.subject else { return nil }
+        guard let accountID = proposal.accountID else { return nil }
         return savedTradingConfiguration?.accounts.first { $0.id == accountID }?.environment
     }
 

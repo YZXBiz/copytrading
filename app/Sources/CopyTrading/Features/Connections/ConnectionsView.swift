@@ -45,7 +45,7 @@ struct ConnectionsView: View {
                     .padding(.bottom, 36)
                     .id(SetupTourTarget.gurus)
                     SetupStepSection(
-                        number: 5, isDone: model.setupDraft.notificationsEnabled, isOptional: true,
+                        number: 5, isDone: model.alertsReady, isOptional: true,
                         title: ConnectionKind.alerts.title, subtitle: ConnectionKind.alerts.explanation
                     ) { section(.alerts) }
                     .padding(.bottom, 36)
@@ -72,19 +72,26 @@ struct ConnectionsView: View {
             .background(Palette.page)
             .overlayPreferenceValue(ConnectionOriginKey.self) { origins in
                 GeometryReader { layer in
+                    // Beside the assistant, not under it: the owner may be asking about this panel.
+                    let placement = ConnectionPanelPlacement(
+                        pageWidth: layer.size.width, coveredTrailing: model.assistant.isOpen ? AssistantPanel.width + 8 : 0)
                     ZStack {
                         if let panel {
                             veil
                                 .transition(.opacity)
                             ConnectionPanelContent(
-                                page: panel.page, model: model, close: close, cancel: cancel, connecting: isEditingFromProviderRow
+                                page: panel.page, model: model, close: close, cancel: cancel, connecting: isEditingFromProviderRow,
+                                width: placement.width
                             )
+                            .position(x: placement.centerX, y: layer.size.height / 2)
                             .transition(
                                 ConnectionPanelTransition(
-                                    origin: origins[panel.origin].map { layer[$0] }, layer: layer.size, reduceMotion: reduceMotion))
+                                    origin: origins[panel.origin].map { layer[$0] }, layer: layer.size, centerX: placement.centerX,
+                                    reduceMotion: reduceMotion))
                         }
                     }
                     .frame(width: layer.size.width, height: layer.size.height)
+                    .animation(motion, value: placement)
                 }
             }
             .clipped()
@@ -158,7 +165,10 @@ struct ConnectionsView: View {
                 .accessibilityIdentifier("connections.importSetup")
         }
         Menu {
-            Button(L10n.string("Import Setup…"), systemImage: "square.and.arrow.down") { model.isShowingSetupImporter = true }
+            // Before a setup is saved, Import Setup… is the button beside this menu.
+            if model.savedTradingConfiguration != nil {
+                Button(L10n.string("Import Setup…"), systemImage: "square.and.arrow.down") { model.isShowingSetupImporter = true }
+            }
             Button(L10n.string(ideasHidden ? "Show Ideas" : "Hide Ideas"), systemImage: "lightbulb", action: toggleIdeas)
             Button(L10n.string("Open Getting Started"), systemImage: "hand.wave") { model.selectedScreen = .gettingStarted }
         } label: {

@@ -58,6 +58,9 @@ struct EquityPlot: View {
             .foregroundStyle(by: .value("Session", \.session))
             .interpolationMethod(.monotone)
             .lineStyle(StrokeStyle(lineWidth: contrast == .increased ? 2.25 : 1.75, lineCap: .round, lineJoin: .round))
+            // Its x is a share of the day, which VoiceOver would read as "0.1 to 0.2". The chart's
+            // summary and the arrow keys' readout say the line in money and times instead.
+            .accessibilityHidden(true)
             PointMark(x: .value("Time", scale.x(stats.last.at)), y: .value("Equity", stats.last.value))
                 .symbolSize(30)
                 .foregroundStyle(Palette.ink)
@@ -138,10 +141,12 @@ struct EquityPlot: View {
     }
 
     private func sessionName(_ name: String) -> some View {
-        Text(name.uppercased())
+        Text(name)
+            .accessibilityLabel(name)
+            .textCase(.uppercase)
             .font(.system(size: 9, weight: .semibold))
             .tracking(0.6)
-            .foregroundStyle(Palette.tertiaryInk.opacity(0.8))
+            .foregroundStyle(Palette.tertiaryInk)
     }
 
     @ChartContentBuilder
@@ -149,7 +154,7 @@ struct EquityPlot: View {
         RuleMark(y: .value(curve.baseline == nil ? "Start" : "Previous close", reference))
             .foregroundStyle(contrast == .increased ? Palette.secondaryInk : Palette.tertiaryInk.opacity(0.75))
             .lineStyle(StrokeStyle(lineWidth: 1, dash: [2, 4]))
-            .accessibilityLabel(curve.baseline == nil ? "Start" : "Previous close")
+            .accessibilityLabel(L10n.string(curve.baseline == nil ? "Start" : "Previous close"))
             .accessibilityValue(reference.formatted(.currency(code: "USD")))
     }
 }

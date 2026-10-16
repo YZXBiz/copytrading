@@ -17,9 +17,4 @@ enum EquitySelection: Equatable {
         if case .span(let first, let second, _) = self { return (min(first, second), max(first, second)) }
         return nil
     }
-
-    var isSettledSpan: Bool {
-        if case .span(_, _, settled: true) = self { return true }
-        return false
-    }
 }

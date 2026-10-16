@@ -28,28 +28,29 @@ private func suggestionsLeadWithTheScreen() throws {
     let screens: [AppModel.Screen] = [.account("primary"), .guru("zhao")] + AppModel.Screen.pages
     for screen in screens {
         for selected in [false, true] {
-            let suggestions = AssistantSuggestions.suggestions(for: screen, guru: "Zhao", hasSelectedPost: selected)
+            let suggestions = AssistantSuggestions.suggestions(for: screen, guru: "Zhao", hasSelectedPost: selected, isSetUp: true)
             try verifyPanel(suggestions.count == 4, "\(screen) did not offer four suggestions")
             try verifyPanel(Set(suggestions).count == 4, "\(screen) repeated a suggestion")
         }
     }
     try verifyPanel(
-        AssistantSuggestions.suggestions(for: .account("primary"), guru: nil, hasSelectedPost: true).first == "Why was this post skipped?",
+        AssistantSuggestions.suggestions(for: .account("primary"), guru: nil, hasSelectedPost: true, isSetUp: true).first
+            == "Why was this post skipped?",
         "A selected post did not lead")
     try verifyPanel(
-        AssistantSuggestions.suggestions(for: .guru("zhao"), guru: "Zhao").first == "How did Zhao do this week?",
+        AssistantSuggestions.suggestions(for: .guru("zhao"), guru: "Zhao", isSetUp: true).first == "How did Zhao do this week?",
         "A guru's page did not lead with the guru")
     try verifyPanel(
-        AssistantSuggestions.suggestions(for: .guru("zhao"), guru: nil).first == "How did my gurus do this week?",
+        AssistantSuggestions.suggestions(for: .guru("zhao"), guru: nil, isSetUp: true).first == "How did my gurus do this week?",
         "A guru's page without a name named one")
     try verifyPanel(
-        AssistantSuggestions.suggestions(for: .account("primary"), guru: nil).first == "What's in my paper account?",
+        AssistantSuggestions.suggestions(for: .account("primary"), guru: nil, isSetUp: true).first == "What's in my paper account?",
         "An account's page did not lead with the account")
     try verifyPanel(
-        AssistantSuggestions.suggestions(for: .connections, guru: nil).first == "How do I add Telegram alerts?",
+        AssistantSuggestions.suggestions(for: .connections, guru: nil, isSetUp: true).first == "How do I add Telegram alerts?",
         "Connections did not lead with setting up alerts")
     try verifyPanel(
-        !AssistantSuggestions.suggestions(for: .connections, guru: nil).contains("Why was this post skipped?"),
+        !AssistantSuggestions.suggestions(for: .connections, guru: nil, isSetUp: true).contains("Why was this post skipped?"),
         "A screen without a selected post asked about this post")
 }
 
@@ -159,16 +160,16 @@ private func inSimplifiedChineseTheAssistantAsksAndShowsItsWorkInChinese() throw
     preference.select(.simplifiedChinese)
     try verifyPanel(
         model.assistantContext(selectedPost: nil).language == "zh-Hans", "简体中文 did not send zh-Hans")
-    let suggestions = AssistantSuggestions.suggestions(for: .guru("zhao"), guru: "Zhao")
+    let suggestions = AssistantSuggestions.suggestions(for: .guru("zhao"), guru: "Zhao", isSetUp: true)
     try verifyPanel(suggestions.first == "Zhao 这周表现怎么样？", "People's first suggestion was \(suggestions)")
     try verifyPanel(
-        AssistantSuggestions.suggestions(for: .guru("zhao"), guru: nil).first == "我的信号源这周表现怎么样？",
+        AssistantSuggestions.suggestions(for: .guru("zhao"), guru: nil, isSetUp: true).first == "我的信号源这周表现怎么样？",
         "Gurus were not called 信号源")
     for (engine, shown) in [
         ("Looked at your accounts", "已查看你的账户"),
         ("Read paper-main's history", "已读取 paper-main 的账户历史记录"),
         ("Asked you to approve paper-main's after-restart setting", "已请你批准 paper-main 的重启后设置"),
-        ("Added up Zhao's calls", "已统计 Zhao 的交易信号"),
+        ("Added up Zhao's calls", "已统计 Zhao 的喊单"),
         ("Couldn't stop copying into paper-main", "未能停止跟单到 paper-main"),
         ("Couldn't ask you to approve copying into paper-main", "未能发起跟单到 paper-main 的批准请求"),
         ("Couldn't find that post", "没有找到那条帖子"),

@@ -23,7 +23,9 @@ struct ChoiceWord: View {
                         Text(title)
                             .font(DisplayFont.font(size: 30, weight: .medium, relativeTo: .title))
                     } else {
-                        Text(title.uppercased())
+                        Text(title)
+                            .accessibilityLabel(title)
+                            .textCase(.uppercase)
                             .font(DesignTokens.bodyEmphasis.weight(.semibold))
                             .tracking(DesignTokens.eyebrowTracking)
                     }

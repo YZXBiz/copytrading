@@ -18,21 +18,27 @@ struct GuideJourneyDiagram: View {
             let curve = GuideJourneyCurve(width: geometry.size.width, count: stops.count)
             ZStack(alignment: .topLeading) {
                 path(curve)
-                Text(L10n.string("later").uppercased())
+                Text(L10n.string("later"))
+                    .accessibilityLabel(L10n.string("later"))
+                    .textCase(.uppercase)
                     .font(DesignTokens.eyebrow)
                     .tracking(DesignTokens.eyebrowTracking)
                     .foregroundStyle(Palette.tertiaryInk)
                     .position(curve.point(onLeg: stops.count - 2, at: 0.45).applying(.init(translationX: 4, y: -18)))
+                    .accessibilityHidden(true)
                 chevrons(curve)
                 if let trip {
                     traveler(trip, on: curve)
                 }
                 ForEach(Array(stops.enumerated()), id: \.offset) { index, stop in
                     let isSelected = index == selection
+                    // Each stop's button says its number, words and example; what is drawn stays quiet.
                     node(stop, isSelected: isSelected).position(curve.point(index))
+                        .accessibilityHidden(true)
                     label(stop, number: index + 1, isSelected: isSelected)
                         .frame(width: geometry.size.width / CGFloat(stops.count))
                         .position(x: curve.point(index).x, y: labelRow)
+                        .accessibilityHidden(true)
                     Button {
                         selection = index
                     } label: {

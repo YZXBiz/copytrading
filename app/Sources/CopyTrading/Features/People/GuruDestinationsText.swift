@@ -20,7 +20,7 @@ enum GuruDestinationsText {
             let name = L10n.string("%@ (%@)", accountID, mode(.live))
             guard let range = text.range(of: name) else { continue }
             let live = text[range].range(of: mode(.live), options: .backwards) ?? range
-            text[live].foregroundColor = .orange
+            text[live].foregroundColor = Palette.live
         }
         return text
     }

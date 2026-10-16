@@ -8,7 +8,10 @@ struct GuruRulesSection: View {
 
     var body: some View {
         SheetSection(L10n.string("Re-posted calls"), detail: L10n.string("When the guru posts the same call again.")) {
-            SheetRow(title: L10n.string("Skip re-posted calls"), hint: L10n.string(Self.repostHint(route.repeatWindowMinutes))) {
+            SheetRow(
+                title: L10n.string("Skip re-posted calls"), hint: L10n.string(Self.repostHint(route.repeatWindowMinutes)),
+                labelsControl: true
+            ) {
                 Toggle(L10n.string("Skip re-posted calls"), isOn: skipsReposts)
                     .labelsHidden()
                     .compactSwitch()
@@ -16,9 +19,10 @@ struct GuruRulesSection: View {
             if route.repeatWindowMinutes != nil {
                 SheetRow(title: L10n.string("Counts as a re-post within")) {
                     HStack(spacing: 6) {
-                        // The control's own title is what VoiceOver reads, once.
+                        // A hidden label leaves VoiceOver nothing to read, so the field names itself.
                         TextField(L10n.string("Re-post window in minutes"), value: repeatMinutes, format: .number)
                             .labelsHidden()
+                            .accessibilityLabel(L10n.string("Re-post window in minutes"))
                             .multilineTextAlignment(.trailing)
                             .monospacedDigit()
                             .underlineField()

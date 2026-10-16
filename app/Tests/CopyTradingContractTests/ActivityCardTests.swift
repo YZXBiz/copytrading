@@ -23,6 +23,52 @@ func runActivityCardTests() throws {
     try aSellWithNoPriceReadsAsAtTheMarket()
     try yesterdaysPostsStopCountingAsTodayAtMidnight()
     try theGuruPageReadsInChinese()
+    try aSavedGuruIsChosenByNameNotByNumbers()
+    try anEvaluationNoteNeverRepeatsThePost()
+}
+
+/// The model's summary of an evaluated post shows only when it says something the post doesn't: a
+/// live DeepSeek reading of "sofi another 1/6 at 27.10" summarized it as the same words.
+@MainActor
+private func anEvaluationNoteNeverRepeatsThePost() throws {
+    func evaluation(_ decision: String, reason: String) -> ProfileEvaluation {
+        ProfileEvaluation(
+            messageIdentity: "m", guruID: "zhao", profileRevision: "r", provider: "deepseek", model: "deepseek-flash",
+            decision: decision, reason: reason, simulated: true, noOrder: true, costNotice: "",
+            instructions: [], destinations: [], reviewReasons: [])
+    }
+    let post = "sofi another 1/6 at 27.10"
+    let echoed = EvaluationNote.text(evaluation("trade", reason: "SOFI another 1/6  at 27.10"), post: post)
+    try #require(echoed == nil, "an echoed summary showed \(echoed ?? "")")
+    let summary = EvaluationNote.text(evaluation("trade", reason: "Bought another sixth of SOFI"), post: post)
+    try #require(summary == "Bought another sixth of SOFI", "a real summary read \(summary ?? "nil")")
+    let code = EvaluationNote.text(evaluation("trade", reason: "trade_made"), post: post)
+    try #require(code == nil, "a parser code showed \(code ?? "")")
+}
+
+/// Evaluating an earlier post offers each saved guru by name and the accounts they copy into; the
+/// channel and author numbers that route their posts never show.
+@MainActor
+private func aSavedGuruIsChosenByNameNotByNumbers() throws {
+    let zhao = try TradingProfileBuilder().build(TradingProfileDraft(guruID: "zhao", displayName: "Zhao"))
+    let route = TradingRouteConfiguration(
+        channelID: "1287345091273645568", authorID: "804512398817402881", guruID: "zhao",
+        profileRevision: zhao.profileRevision,
+        connections: [
+            TradingRouteConnection(accountID: "primary", fullPositionUSD: "1200"),
+            TradingRouteConnection(accountID: "swing", fullPositionUSD: "900"),
+        ])
+    let configuration = TradingConfiguration(
+        source: TradingSourceConfiguration(channelIDs: ["1287345091273645568"]),
+        provider: TradingProviderConfiguration(name: .deepseek, model: "deepseek-flash"),
+        accounts: [
+            TradingAccountConfiguration(id: "primary", environment: .paper),
+            TradingAccountConfiguration(id: "swing", environment: .paper),
+        ],
+        profiles: [zhao], routes: [route])
+
+    let label = SavedGuruLabel.text(route, in: configuration)
+    try #require(label == "Zhao · primary, swing", "the saved guru read \(label)")
 }
 
 /// In 简体中文 the guru page and its examples keep no English: an ignored post, the holdings line,
@@ -39,7 +85,7 @@ private func theGuruPageReadsInChinese() throws {
     try #require(outcome == ["已忽略"], "an ignored post read \(outcome)")
 
     let holding = L10n.string("Holding %@ in %lld stocks from these calls", "$650", Int64(3))
-    try #require(holding == "这些信号目前持有 $650，共 3 只股票", "the holdings line read \(holding)")
+    try #require(holding == "这些喊单目前持有 $650，共 3 只股票", "the holdings line read \(holding)")
 
     let actions = TradingInstructionAction.allCases.map(\.title)
     try #require(actions == ["买入", "减仓", "清仓"], "an example's actions read \(actions)")

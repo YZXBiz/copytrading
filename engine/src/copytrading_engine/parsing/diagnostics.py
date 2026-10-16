@@ -37,11 +37,16 @@ def _from_reading(loc: tuple[int | str, ...]) -> tuple[int | str, ...]:
 
 
 def validation_issues(error: Exception) -> tuple[ValidationIssue, ...]:
-    """PydanticAI wraps validation failures; inspect causes without serializing exceptions."""
+    """PydanticAI wraps validation failures; inspect causes without serializing exceptions. A
+    reading check's failure (a GroundingError) carries its rule and path, so a post the reader
+    could not read twice says which check it failed."""
     seen: set[int] = set()
     current: BaseException | None = error
     while current is not None and id(current) not in seen:
         seen.add(id(current))
+        issue = getattr(current, "issue", None)
+        if isinstance(issue, ValidationIssue):
+            return (issue,)
         if isinstance(current, ValidationError):
             return tuple(
                 ValidationIssue(

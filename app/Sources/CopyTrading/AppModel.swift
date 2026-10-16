@@ -60,8 +60,15 @@ final class AppModel {
             if selectedScreen != .settings {
                 UserDefaults.standard.set(selectedScreen.identifier, forKey: Self.lastScreenKey)
             }
+            if selectedScreen != oldValue, !isRetracingScreens {
+                screenHistory.leave(oldValue)
+            }
         }
     }
+    /// What Back and Forward step through.
+    var screenHistory = ScreenHistory()
+    /// Set while Back or Forward moves, so the move isn't recorded as a new visit.
+    @ObservationIgnored var isRetracingScreens = false
     /// The Settings page on show and the pages visited before it, newest last.
     var settingsPage: SettingsPage = .general
     var settingsTrail: [SettingsPage] = []
@@ -125,6 +132,8 @@ final class AppModel {
     var diagnosticsSettingsWarning: String?
     var diagnosticsEntries: [DiagnosticsJournalEntry] = []
     var diagnosticsJournalBytes: Int64 = 0
+    /// The journal files as last read; a reload with the same fingerprint parses nothing.
+    @ObservationIgnored private var diagnosticsFingerprint: [String]?
     var diagnosticsJournalMessage: String?
     var isLoadingDiagnostics = false
     var isRunningBackupRestore = false
@@ -504,8 +513,6 @@ final class AppModel {
     /// Each connection's latest check, kept only while what it checked stays as typed.
     var connectionChecks: [ConnectionCheckSubject: ConnectionCheckResult] = [:]
     var isShowingSetupCheck = false
-    /// When copying last started from a new setup. Today says so until the first post after it.
-    var copyingStartedAt: Date?
     /// A Getting Started section asked for from the Help menu; the guide clears it.
     var guideAnchor: GuideAnchor?
     /// The setup tour is walking the owner through Connections. Where it points is read from the
@@ -666,6 +673,7 @@ final class AppModel {
             let identity = try paths.installationIdentity()
             diagnosticsSettingsStore = DiagnosticsSettingsStore(url: paths.logsDirectory.appending(path: "settings.json"))
             diagnosticsJournal = DiagnosticsJournal(directory: paths.logsDirectory)
+            diagnosticsFingerprint = nil
             loadDiagnosticsSettings()
             let selectedDiagnosticsSettings = diagnosticsSettings
             appliedDiagnosticsSettings = selectedDiagnosticsSettings
@@ -699,6 +707,8 @@ final class AppModel {
                 } else {
                     selectedScreen = homeScreen
                 }
+                // The screen a launch opens on is where the owner starts; Back has nothing before it.
+                screenHistory = ScreenHistory()
             }
             let newJournal = CommandJournal(url: paths.applicationSupportDirectory.appending(path: "commands.json"))
             selfTestEntries = try await newJournal.entries()
@@ -887,23 +897,23 @@ final class AppModel {
         message = nil
     }
 
+    /// How the engine stopped, in the owner's words: whether it finished what it was doing, and
+    /// that orders the broker already took can still fill.
     static func stopMessage(for report: ProcessSupervisorStopReport) -> String {
-        let acknowledgement: String
+        let how: String
         switch report.engineDrainAcknowledgement {
         case .acknowledged:
-            acknowledgement = L10n.string("The engine acknowledged its graceful drain.")
+            how = L10n.string("The engine finished what it was doing and stopped.")
         case .unconfirmed:
-            acknowledgement = L10n.string("The engine did not confirm its graceful drain; owned local processes were stopped.")
+            how = L10n.string("The engine didn't answer, so CopyTrading stopped it.")
         case .noLiveEngine:
-            acknowledgement = L10n.string("No live engine session was available to confirm a drain.")
+            how = L10n.string("The engine wasn't running.")
         }
-        let forcedChildren = report.forciblyStoppedChildren.map(\.rawValue)
-        var sentences = [acknowledgement]
-        if !forcedChildren.isEmpty {
-            sentences.append(L10n.string("Forced termination was required for: %@.", Humanize.joined(forcedChildren)))
-        }
-        sentences.append(L10n.string("Broker-accepted orders may remain open."))
-        return sentences.dropFirst().reduce(acknowledgement) { L10n.string("%@ %@", $0, $1) }
+        let forced = report.forciblyStoppedChildren.isEmpty ? nil : L10n.string("It had to be forced to stop.")
+        // Sentences join through the catalog: a space in English, none in Chinese.
+        return [forced, L10n.string("Orders the broker already accepted may stay open until they fill or expire.")]
+            .compactMap { $0 }
+            .reduce(how) { L10n.string("%@ %@", $0, $1) }
     }
 
     private func loadDiagnosticsSettings() {
@@ -933,12 +943,19 @@ final class AppModel {
         isLoadingDiagnostics = true
         defer { isLoadingDiagnostics = false }
         let journal = diagnosticsJournal
+        let previous = diagnosticsFingerprint
         do {
-            let (entries, bytes) = try await Task.detached(priority: .userInitiated) {
-                (try journal.entries(), journal.usageBytes())
+            // The page polls every few seconds; an unchanged journal is not read or parsed again.
+            let read = try await Task.detached(priority: .userInitiated) {
+                () -> (fingerprint: [String], entries: [DiagnosticsJournalEntry], bytes: Int64)? in
+                let fingerprint = journal.fingerprint()
+                guard fingerprint != previous else { return nil }
+                return (fingerprint, try journal.entries(), journal.usageBytes())
             }.value
-            diagnosticsEntries = entries
-            diagnosticsJournalBytes = bytes
+            guard let read else { return }
+            diagnosticsFingerprint = read.fingerprint
+            diagnosticsEntries = read.entries
+            diagnosticsJournalBytes = read.bytes
             diagnosticsJournalMessage = nil
         } catch {
             diagnosticsJournalMessage = Self.userMessage(for: error)
@@ -949,6 +966,9 @@ final class AppModel {
     func diagnosticsExportText() throws -> String {
         try diagnosticsJournal.exportText()
     }
+
+    /// Whether the local engine takes commands; the self-test waits for it.
+    var isEngineRunning: Bool { runtimeState == .ready || runtimeState == .degraded }
 
     func runSelfTest() async {
         guard engineActions != nil else {
@@ -1498,7 +1518,10 @@ final class AppModel {
 
     func pauseTrading() async {
         launchStartRetry?.cancel()
-        guard let control: (any TradingStarting) = tradingStarter ?? engineActions else { return }
+        guard let control: (any TradingStarting) = tradingStarter ?? engineActions else {
+            message = AccountFeatureModel.noEngine
+            return
+        }
         guard !isTradingCommandPending else { return }
         isTradingCommandPending = true
         defer { isTradingCommandPending = false }

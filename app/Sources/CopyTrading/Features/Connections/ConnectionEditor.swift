@@ -13,8 +13,8 @@ struct ConnectionEditor: View {
     /// The field the cursor is in, by its label.
     @FocusState private var focused: String?
     @State private var isChecking = false
-    /// What an alerts sheet still needs before Connect can check it.
-    @State private var missingAlerts: String?
+    /// What the panel still needs before Connect can do anything.
+    @State private var missing: String?
 
     private var subject: ConnectionCheckSubject { ConnectionCheckSubject(kind) }
 
@@ -60,8 +60,8 @@ struct ConnectionEditor: View {
             VStack(alignment: .leading, spacing: 14) {
                 fields
             }
-            if let missingAlerts {
-                Callout(missingAlerts, tone: .caution)
+            if let missing {
+                Callout(missing, tone: .caution)
             }
             if let failedCheck {
                 ConnectionCheckCallout(
@@ -79,16 +79,15 @@ struct ConnectionEditor: View {
                     }
                     .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.capsule)
-                .controlSize(.large)
+                // The panel's one answer, an ink capsule like every sheet's.
+                .buttonStyle(SheetButtonStyle(isPrimary: true))
                 .keyboardShortcut(.defaultAction)
                 .disabled(isChecking)
                 .accessibilityIdentifier("connections.done")
                 if kind == .alerts, model.setupDraft.notificationsEnabled {
                     Button(L10n.string("Turn Off Alerts"), role: .destructive, action: turnOffAlerts)
                         .buttonStyle(.borderless)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Palette.loss)
                 }
             }
         }
@@ -181,9 +180,9 @@ struct ConnectionEditor: View {
         .setupTourTarget(stop.target)
     }
 
-    /// One field's row: a click anywhere on it focuses the field, and VoiceOver hears its label.
+    /// One field's row: VoiceOver hears its label.
     private func row(_ label: String, @ViewBuilder field: () -> some View) -> some View {
-        ConnectionField(label: label, focus: { focused = label }) {
+        ConnectionField(label: label) {
             field()
                 .focused($focused, equals: label)
                 .accessibilityLabel(L10n.string(label))
@@ -202,10 +201,10 @@ struct ConnectionEditor: View {
     /// Checks the service as typed. The panel closes when it answers, or when there is nothing the
     /// engine can check yet; a failed check stays on screen until something is changed.
     private func connect() {
+        let draft = model.setupDraft
+        missing = draft.missingToConnect(kind, savedSecret: kind == .alerts ? alertSecretSaved : model.hasTradingSecrets)
+        guard missing == nil else { return }
         if kind == .alerts {
-            let draft = model.setupDraft
-            missingAlerts = draft.missingForAlerts(savedSecret: alertSecretSaved)
-            guard missingAlerts == nil else { return }
             model.setupDraft.notificationsEnabled = !draft.notificationChatID.trimmed.isEmpty || !draft.notificationToken.isEmpty
         }
         Task {
