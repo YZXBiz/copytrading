@@ -153,7 +153,7 @@ Waiting for approval in CopyTrading: start copying. Proposal p-81f0c6a95e24, exp
 
 ## 参与贡献
 
-先运行 `make doctor` 检查你的 Mac，再用 `make check` 运行引擎的 1,500 多个测试、Ruff 和 Ty。原生应用的检查和约定见 [CONTRIBUTING.md](CONTRIBUTING.md)。使用问题请到 [Discussions](https://github.com/YZXBiz/copytrading/discussions) 提问，缺陷请用 [issue 表单](https://github.com/YZXBiz/copytrading/issues/new/choose) 报告，安全漏洞请按 [SECURITY.md](SECURITY.md) 私下报告。
+先运行 `make doctor` 检查你的 Mac，再用 `make check` 运行引擎的 1,700 多个测试、Ruff 和 Ty。原生应用的检查和约定见 [CONTRIBUTING.md](CONTRIBUTING.md)。使用问题请到 [Discussions](https://github.com/YZXBiz/copytrading/discussions) 提问，缺陷请用 [issue 表单](https://github.com/YZXBiz/copytrading/issues/new/choose) 报告，安全漏洞请按 [SECURITY.md](SECURITY.md) 私下报告。
 
 ## 许可证
 

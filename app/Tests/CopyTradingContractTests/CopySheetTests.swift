@@ -39,9 +39,9 @@ private func theFooterSpendsWhatTheCappedPlanSpends() throws {
     try #require(small.action == "Buy $166.66 of CCL", "a sixth: \(small.action)")
 }
 
-/// From the live pass: "如果CCL跌到25.14我会买" into zhap-account-2 ($250 max per order, buys up to
-/// 1% above the price). The footer said "≈ 9.944 shares at $25.14"; the engine sent 9.846 shares
-/// with a $25.39 limit, as its checked row then said.
+/// A conditional buy of CCL at $25.14 into an account with a $250 max per order that buys up to
+/// 1% above the price. The footer once said "≈ 9.944 shares at $25.14" while the engine sent 9.846
+/// shares with a $25.39 limit, as its checked row then said.
 @MainActor
 private func theFooterCountsSharesAtTheLimitTheEngineSends() throws {
     let account = try fixtureAccount()
