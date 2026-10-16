@@ -208,7 +208,7 @@ struct ManualReviewSheet: View {
             isPresented: $showsConfirmation,
             titleVisibility: .visible
         ) {
-            Button(L10n.string("Confirm %lld order(s)", Int64(confirmationToSubmit.count)), role: .destructive) {
+            Button(orderCount("Confirm 1 order", "Confirm %lld orders"), role: .destructive) {
                 Task { await send() }
             }
             Button(L10n.string("Cancel"), role: .cancel) { confirmationToSubmit = [] }
@@ -364,7 +364,7 @@ struct ManualReviewSheet: View {
             }
             if isHolding {
                 OrderHold(
-                    title: L10n.string("Placing %lld order(s)", Int64(confirmationToSubmit.count)),
+                    title: orderCount("Placing 1 order", "Placing %lld orders"),
                     seconds: OrderHold.chosenSeconds,
                     send: {
                         isHolding = false
@@ -495,6 +495,12 @@ struct ManualReviewSheet: View {
         previewRequests = [:]
         confirmationRequests = [:]
         approvalProblem = nil
+    }
+
+    /// "Confirm 1 order" or "Confirm 3 orders", by how many are about to go.
+    @MainActor private func orderCount(_ one: String, _ many: String) -> String {
+        let count = confirmationToSubmit.count
+        return count == 1 ? L10n.string(one) : L10n.string(many, Int64(count))
     }
 
     /// Each order exactly as the engine planned it: a buy by the dollars it spends after the max

@@ -174,7 +174,6 @@
 "Command" = "Command";
 "Command %@" = "Command %@";
 "Completed" = "Completed";
-"Confirm %lld order(s)" = "Confirm %lld order(s)";
 "Confirm manual orders?" = "Confirm manual orders?";
 "Connect Discord" = "Connect Discord";
 "Connected" = "Connected";
@@ -1973,7 +1972,6 @@
 "Nothing else is waiting" = "Nothing else is waiting";
 "Sending in %lld s" = "Sending in %lld s";
 "%@, sending soon" = "%@, sending soon";
-"Placing %lld order(s)" = "Placing %lld order(s)";
 "Hold my orders before sending" = "Hold my orders before sending";
 "After you press Sell or confirm a copy, the order waits this long with Undo before it leaves for Alpaca." = "After you press Sell or confirm a copy, the order waits this long with Undo before it leaves for Alpaca.";
 "5 seconds" = "5 seconds";
@@ -2328,3 +2326,9 @@
 "The chart can't change while the engine is stopped. Start it in Settings → Engine." = "The chart can't change while the engine is stopped. Start it in Settings → Engine.";
 "Self-test completed" = "Self-test completed";
 "Find" = "Find";
+"Confirm 1 order" = "Confirm 1 order";
+"Confirm %lld orders" = "Confirm %lld orders";
+"Placing 1 order" = "Placing 1 order";
+"Placing %lld orders" = "Placing %lld orders";
+"Buy %@ in %@" = "Buy %@ in %@";
+"Sell %@ in %@" = "Sell %@ in %@";
