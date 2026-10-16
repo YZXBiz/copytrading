@@ -12,8 +12,10 @@ import Sparkle
 final class SparkleUpdater: AppUpdating {
     private let controller: SPUStandardUpdaterController
     private let delegate: UpdaterDelegate
-    private var watching: AnyCancellable?
+    private var watching: Set<AnyCancellable> = []
     private(set) var canCheckForUpdates = false
+    /// Sparkle's setting mirrored here, so the switch redraws when it changes.
+    private var automaticChecks = false
     let offer = UpdateOffer()
     var willRelaunch: (@MainActor () -> Void)? {
         get { delegate.willRelaunch }
@@ -25,12 +27,16 @@ final class SparkleUpdater: AppUpdating {
         controller = SPUStandardUpdaterController(
             startingUpdater: starting, updaterDelegate: delegate, userDriverDelegate: delegate)
         // As Sparkle's SwiftUI example does; the updater reports on the main thread.
-        watching = controller.updater.publisher(for: \.canCheckForUpdates)
+        controller.updater.publisher(for: \.canCheckForUpdates)
             .sink { [weak self] canCheck in self?.canCheckForUpdates = canCheck }
+            .store(in: &watching)
+        controller.updater.publisher(for: \.automaticallyChecksForUpdates)
+            .sink { [weak self] checks in self?.automaticChecks = checks }
+            .store(in: &watching)
     }
 
     var checksAutomatically: Bool {
-        get { controller.updater.automaticallyChecksForUpdates }
+        get { automaticChecks }
         set { controller.updater.automaticallyChecksForUpdates = newValue }
     }
 

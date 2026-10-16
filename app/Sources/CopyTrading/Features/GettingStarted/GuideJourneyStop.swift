@@ -11,7 +11,13 @@ struct GuideJourneyStop: Hashable {
     let screen: AppModel.Screen?
     let caution: String
 
-    var placeTitle: String { screen?.title ?? "Your account" }
+    /// Where the stop's button goes and what it is called: its own page, or the first saved
+    /// account's page; before any account is saved, Connections, where accounts are added.
+    func place(firstAccount: String?) -> (screen: AppModel.Screen, title: String) {
+        if let screen { return (screen, screen.title) }
+        if let firstAccount { return (.account(firstAccount), "Your account") }
+        return (.connections, AppModel.Screen.connections.title)
+    }
 
     /// One SOUN call followed from the guru's post to the sale, with numbers that add up under the
     /// default limits: 1/6 of a $600 full position is $100, the most one order spends, which buys

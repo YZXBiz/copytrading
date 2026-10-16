@@ -14,8 +14,9 @@ struct LogsSettingsPage: View {
         ageDays != model.diagnosticsSettings.ageDays || storageLimitBytes != model.diagnosticsSettings.storageLimitBytes
     }
 
+    /// A saved change the engine takes on its next start; an edit since then is not saved yet.
     private var waitsForRestart: Bool {
-        guard let applied = model.appliedDiagnosticsSettings, model.engineStatus != nil else { return false }
+        guard !hasChanges, let applied = model.appliedDiagnosticsSettings, model.engineStatus != nil else { return false }
         return applied != model.diagnosticsSettings
     }
 

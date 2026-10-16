@@ -11,6 +11,7 @@ struct ConnectionPanelContent: View {
     /// Opened from a service's own Connect or Switch row: always a new connection, even when
     /// picking the service filled in a suggested model.
     var connecting = false
+    var width = ConnectionPanelPlacement.fullWidth
     /// Whether the service was set up when the sheet opened, so its title holds while you type.
     @State private var openedSetUp: Bool?
 
@@ -18,7 +19,8 @@ struct ConnectionPanelContent: View {
         switch page {
         case .editor(let kind):
             ConnectionPanel(
-                title: title(for: kind), brand: brand(for: kind), close: cancel ?? close, escapeCloses: !model.assistant.isOpen
+                title: title(for: kind), brand: brand(for: kind), close: cancel ?? close, escapeCloses: !model.assistant.isOpen,
+                width: width
             ) {
                 ConnectionEditor(kind: kind, model: model, isNew: !(openedSetUp ?? (!connecting && isSetUp(kind))), done: close)
             }
@@ -32,7 +34,8 @@ struct ConnectionPanelContent: View {
             switch kind {
             case .discord: "Discord"
             case .interpreter: L10n.string(model.setupDraft.provider.title)
-            case .alerts: model.setupDraft.notificationService == .discord ? "Discord" : "Telegram"
+            // Named for what they do, so the alerts webhook never reads as the Discord the posts come from.
+            case .alerts: L10n.string(model.setupDraft.notificationService == .discord ? "Discord alerts" : "Telegram alerts")
             }
         return (openedSetUp ?? (!connecting && isSetUp(kind))) ? name : L10n.string("Connect to %@", name)
     }

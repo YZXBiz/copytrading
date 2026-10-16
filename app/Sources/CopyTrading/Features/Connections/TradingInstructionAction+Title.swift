@@ -1,7 +1,7 @@
 import DesktopCore
 
 extension TradingInstructionAction {
-    /// What an example expects the reader to do, in the app's language: Buy, Reduce, or Close.
+    /// What an example expects the reader to do, in the app's language: Buy, Sell part, or Sell all.
     @MainActor var title: String {
         switch self {
         case .buy: L10n.string("Buy")

@@ -19,7 +19,7 @@ struct GuruRulesSection: View {
             if route.repeatWindowMinutes != nil {
                 SheetRow(title: L10n.string("Counts as a re-post within")) {
                     HStack(spacing: 6) {
-                        // The control's own title is what VoiceOver reads, once.
+                        // A hidden label leaves VoiceOver nothing to read, so the field names itself.
                         TextField(L10n.string("Re-post window in minutes"), value: repeatMinutes, format: .number)
                             .labelsHidden()
                             .accessibilityLabel(L10n.string("Re-post window in minutes"))

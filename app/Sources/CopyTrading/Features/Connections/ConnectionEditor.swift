@@ -13,8 +13,8 @@ struct ConnectionEditor: View {
     /// The field the cursor is in, by its label.
     @FocusState private var focused: String?
     @State private var isChecking = false
-    /// What an alerts sheet still needs before Connect can check it.
-    @State private var missingAlerts: String?
+    /// What the panel still needs before Connect can do anything.
+    @State private var missing: String?
 
     private var subject: ConnectionCheckSubject { ConnectionCheckSubject(kind) }
 
@@ -60,8 +60,8 @@ struct ConnectionEditor: View {
             VStack(alignment: .leading, spacing: 14) {
                 fields
             }
-            if let missingAlerts {
-                Callout(missingAlerts, tone: .caution)
+            if let missing {
+                Callout(missing, tone: .caution)
             }
             if let failedCheck {
                 ConnectionCheckCallout(
@@ -201,10 +201,10 @@ struct ConnectionEditor: View {
     /// Checks the service as typed. The panel closes when it answers, or when there is nothing the
     /// engine can check yet; a failed check stays on screen until something is changed.
     private func connect() {
+        let draft = model.setupDraft
+        missing = draft.missingToConnect(kind, savedSecret: kind == .alerts ? alertSecretSaved : model.hasTradingSecrets)
+        guard missing == nil else { return }
         if kind == .alerts {
-            let draft = model.setupDraft
-            missingAlerts = draft.missingForAlerts(savedSecret: alertSecretSaved)
-            guard missingAlerts == nil else { return }
             model.setupDraft.notificationsEnabled = !draft.notificationChatID.trimmed.isEmpty || !draft.notificationToken.isEmpty
         }
         Task {

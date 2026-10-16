@@ -19,11 +19,11 @@ struct BackupsSettingsPage: View {
                     "A backup holds your records, saved setup, captured posts, and attachments. Keys and disposable logs are left out."
             ) {
                 SettingsActionRow(
-                    title: "Create Backup…", detail: "Pauses and drains trading writers while it runs.", action: chooseBackupDestination
+                    title: "Create Backup…", detail: "Copying waits a moment while it runs.", action: chooseBackupDestination
                 )
                 .disabled(model.isRunningBackupRestore)
                 SettingsActionRow(
-                    title: "Restore from Backup…", detail: "Shows what a backup holds first. Nothing changes until you activate it.",
+                    title: "Restore from Backup…", detail: "Shows what a backup holds first. Nothing changes until you restore it.",
                     action: chooseRestoreArchive
                 )
                 .disabled(model.isRunningBackupRestore || model.pendingRestoreCandidate != nil)

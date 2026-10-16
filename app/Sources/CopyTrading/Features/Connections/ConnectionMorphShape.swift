@@ -7,6 +7,8 @@ struct ConnectionMorphShape: Shape {
     /// The card's bounds in the layer's coordinates.
     let origin: CGRect
     let layer: CGSize
+    /// Where the panel's center sits across the layer: the middle, or beside the assistant.
+    let centerX: CGFloat
     var progress: Double
 
     var animatableData: Double {
@@ -15,7 +17,7 @@ struct ConnectionMorphShape: Shape {
     }
 
     func path(in rect: CGRect) -> Path {
-        let start = origin.offsetBy(dx: -(layer.width - rect.width) / 2, dy: -(layer.height - rect.height) / 2)
+        let start = origin.offsetBy(dx: -(centerX - rect.width / 2), dy: -(layer.height - rect.height) / 2)
         let t = max(0, min(1, progress))
         let frame = CGRect(
             x: start.minX + (rect.minX - start.minX) * t,

@@ -112,7 +112,7 @@ extension SetupHelp {
         case .xai: ("console.x.ai", "API Keys", URL(literal: "https://console.x.ai"))
         case .mistral: ("console.mistral.ai", "API Keys", URL(literal: "https://console.mistral.ai/api-keys"))
         case .together: ("api.together.ai", "API Keys", URL(literal: "https://api.together.ai/settings/api-keys"))
-        case .fireworks: ("fireworks.ai", "API Keys", URL(literal: "https://fireworks.ai/account/api-keys"))
+        case .fireworks: ("fireworks.ai", "API Keys", URL(literal: "https://app.fireworks.ai/settings/users/api-keys"))
         case .cerebras: ("cloud.cerebras.ai", "API Keys", URL(literal: "https://cloud.cerebras.ai"))
         case .moonshotai: ("platform.moonshot.ai", "API Keys", URL(literal: "https://platform.moonshot.ai/console/api-keys"))
         case .ollama, .openAICompatible: ("", "", URL(literal: "https://ollama.com"))

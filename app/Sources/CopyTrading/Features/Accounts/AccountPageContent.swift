@@ -75,7 +75,7 @@ struct AccountPageContent: View {
     }
 
     private func chooseWindow(_ window: EquityHistoryWindow) {
-        Task { await feature.refreshHistories(window: window, using: model.accountActions()) }
+        Task { await feature.chooseHistoryWindow(window, for: account.accountID, using: model.accountActions()) }
     }
 
     /// The account's sheet opens over this page on its limits; the changes apply as soon as they

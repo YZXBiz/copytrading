@@ -26,7 +26,7 @@ struct SetupProgress: Equatable {
         let accountsWithKeys = Set(
             draft.accounts.filter { account in
                 let name = account.name.trimmed
-                return !name.isEmpty && !failed.contains(.account(name))
+                return account.nameProblem == nil && !failed.contains(.account(name))
                     && ((!account.key.isEmpty && !account.secret.isEmpty) || savedKeyAccountIDs.contains(name))
             }.map { $0.name.trimmed })
         if !accountsWithKeys.isEmpty {

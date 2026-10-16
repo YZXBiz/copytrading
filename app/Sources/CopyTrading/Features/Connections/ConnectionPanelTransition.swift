@@ -6,6 +6,8 @@ import SwiftUI
 struct ConnectionPanelTransition: Transition {
     let origin: CGRect?
     let layer: CGSize
+    /// Where the panel's center sits across the layer.
+    var centerX: CGFloat?
     let reduceMotion: Bool
 
     func body(content: Content, phase: TransitionPhase) -> some View {
@@ -14,7 +16,9 @@ struct ConnectionPanelTransition: Transition {
                 content
                     .opacity(phase.isIdentity ? 1 : 0)
                     .scaleEffect(phase.isIdentity ? 1 : 0.97)
-                    .clipShape(ConnectionMorphShape(origin: origin, layer: layer, progress: phase.isIdentity ? 1 : 0))
+                    .clipShape(
+                        ConnectionMorphShape(
+                            origin: origin, layer: layer, centerX: centerX ?? layer.width / 2, progress: phase.isIdentity ? 1 : 0))
             } else {
                 content.opacity(phase.isIdentity ? 1 : 0)
             }
