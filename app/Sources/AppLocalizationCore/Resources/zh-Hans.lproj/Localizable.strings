@@ -2289,6 +2289,12 @@
 "Late order found" = "发现迟到订单";
 "Late order found again" = "再次发现迟到订单";
 "Ledger entry" = "账本记录";
+"Confirm 1 order" = "确认1笔订单";
+"Confirm %lld orders" = "确认%lld笔订单";
+"Placing 1 order" = "正在下 1 笔订单";
+"Placing %lld orders" = "正在下 %lld 笔订单";
+"Buy %@ in %@" = "买入 %@，账户 %@";
+"Sell %@ in %@" = "卖出 %@，账户 %@";
 "Account %@ %@, so its outcomes are not shown." = "账户 %@ %@，因此不显示其处理结果。";
 "Nothing waiting" = "无待处理";
 "Move through Find's results and the Diagnostics log" = "在查找结果和诊断日志中上下移动";
@@ -2326,9 +2332,3 @@
 "The chart can't change while the engine is stopped. Start it in Settings → Engine." = "引擎已停止，图表暂时无法切换。请在“设置 → 引擎”中启动它。";
 "Self-test completed" = "自检：已完成";
 "Find" = "查找";
-"Confirm 1 order" = "确认1笔订单";
-"Confirm %lld orders" = "确认%lld笔订单";
-"Placing 1 order" = "正在下 1 笔订单";
-"Placing %lld orders" = "正在下 %lld 笔订单";
-"Buy %@ in %@" = "买入 %@，账户 %@";
-"Sell %@ in %@" = "卖出 %@，账户 %@";

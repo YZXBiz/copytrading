@@ -2289,6 +2289,12 @@
 "Late order found" = "Late order found";
 "Late order found again" = "Late order found again";
 "Ledger entry" = "Ledger entry";
+"Confirm 1 order" = "Confirm 1 order";
+"Confirm %lld orders" = "Confirm %lld orders";
+"Placing 1 order" = "Placing 1 order";
+"Placing %lld orders" = "Placing %lld orders";
+"Buy %@ in %@" = "Buy %@ in %@";
+"Sell %@ in %@" = "Sell %@ in %@";
 "Account %@ %@, so its outcomes are not shown." = "Account %@ %@, so its outcomes are not shown.";
 "Nothing waiting" = "Nothing waiting";
 "Move through Find's results and the Diagnostics log" = "Move through Find's results and the Diagnostics log";
@@ -2326,9 +2332,3 @@
 "The chart can't change while the engine is stopped. Start it in Settings → Engine." = "The chart can't change while the engine is stopped. Start it in Settings → Engine.";
 "Self-test completed" = "Self-test completed";
 "Find" = "Find";
-"Confirm 1 order" = "Confirm 1 order";
-"Confirm %lld orders" = "Confirm %lld orders";
-"Placing 1 order" = "Placing 1 order";
-"Placing %lld orders" = "Placing %lld orders";
-"Buy %@ in %@" = "Buy %@ in %@";
-"Sell %@ in %@" = "Sell %@ in %@";
