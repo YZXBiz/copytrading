@@ -41,6 +41,7 @@ class RecentCall:
     # None for a sell at the market (ADR-0007).
     price: Decimal | None
     fraction: Decimal | None
+    usd_amount: Decimal | None
     entry_price: Decimal | None
     open: bool
 
@@ -80,6 +81,7 @@ def recent_calls(past: Iterable[PastCall]) -> tuple[RecentCall, ...]:
             symbol=call.instruction.symbol,
             price=call.instruction.price,
             fraction=call.instruction.fraction,
+            usd_amount=call.instruction.usd_amount,
             entry_price=call.instruction.entry_price,
             open=(call.source_key, call.index) in still_open,
         )

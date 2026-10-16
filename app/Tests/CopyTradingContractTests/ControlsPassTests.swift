@@ -217,12 +217,14 @@ private func selfTestStagesReadInChinese() throws {
     defer { preference.select(original) }
     preference.select(.simplifiedChinese)
     for stage in ["captured", "parsed", "completed", "failed"] {
-        let word = DiagnosticsJournalEntry.stageWord(stage)
+        let word = L10n.string(DiagnosticsJournalEntry.stageTitles[stage] ?? stage)
         try #require(
             word.unicodeScalars.allSatisfy { !CharacterSet.letters.contains($0) || $0.value > 0x2E80 }, "\(stage) read \(word) in Chinese")
     }
     preference.select(.english)
-    try #require(DiagnosticsJournalEntry.stageWord("parsed") == "Read", "The parsed stage was not called Read")
+    try #require(
+        L10n.string(DiagnosticsJournalEntry.stageTitles["parsed"] ?? "") == "Self-test read",
+        "The parsed stage was not called Self-test read")
 }
 
 private func controlsConfiguration(guru: String?) throws -> TradingConfiguration {

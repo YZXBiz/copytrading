@@ -7,13 +7,7 @@ extension DiagnosticsJournalEntry {
     var title: String {
         switch kind {
         case .stage:
-            switch name {
-            case "captured": L10n.string("Self-test captured")
-            case "parsed": L10n.string("Self-test read")
-            case "completed": L10n.string("Self-test completed")
-            case "failed": L10n.string("Self-test failed")
-            default: L10n.string("Self-test step")
-            }
+            L10n.string(Self.stageTitles[name] ?? "Self-test step")
         case .payload:
             switch name {
             case "source_event": L10n.string("Source post")
@@ -30,11 +24,43 @@ extension DiagnosticsJournalEntry {
             case "execution.risk_checks": L10n.string("Risk checks")
             case "execution.order_submission": L10n.string("Order submission")
             case "execution.quote_snapshot": L10n.string("Quote snapshot")
-            case "execution.ledger_event": L10n.string("Ledger: %@", L10n.string(Humanize.code(outcome).lowercased()))
+            case "execution.ledger_event": L10n.string(Self.ledgerTitles[outcome] ?? "Ledger entry")
             default: L10n.string("Trading step")
             }
         }
     }
+
+    /// A self-test's stages, as the Engine page's self-test line names them.
+    static let stageTitles: [String: String] = [
+        "captured": "Self-test captured",
+        "parsed": "Self-test read",
+        "completed": "Self-test finished",
+        "failed": "Self-test failed",
+    ]
+
+    /// Every ledger event the engine journals (`safe_ledger_event`), short enough for the list.
+    static let ledgerTitles: [String: String] = [
+        "account_bound": "Account connected",
+        "signal_rejected": "Post refused",
+        "message": "Post received",
+        "skipped": "Order skipped",
+        "message_done": "Post finished",
+        "order_prepared": "Order prepared",
+        "submit_started": "Order sending",
+        "submission_aborted": "Order not sent",
+        "submission_uncertain": "Order unconfirmed",
+        "broker_acknowledged": "Broker accepted",
+        "cancel_requested": "Cancel asked",
+        "quote_unavailable": "No quote",
+        "submit_error": "Order refused",
+        "submission_quote": "Quote at sending",
+        "manual_sale_recorded": "Sale recorded",
+        "order_intent_released": "Order released",
+        "late_order_incident_cleared": "Late order cleared",
+        "order_update": "Order update",
+        "late_order_incident_opened": "Late order found",
+        "late_order_incident_reopened": "Late order found again",
+    ]
 
     /// How it ended, in words; ledger events carry their name in the title instead.
     @MainActor
@@ -47,20 +73,11 @@ extension DiagnosticsJournalEntry {
         case "oversize": L10n.string("Too large")
         case "missing": L10n.string("Missing")
         case "incomplete": L10n.string("Not captured")
-        case "parsed": L10n.string("Read")
-        default: kind == .trading && name == "execution.ledger_event" ? L10n.string("Recorded") : L10n.string(Humanize.code(outcome))
-        }
-    }
-
-    /// A self-test stage the way the Engine page names it.
-    @MainActor
-    static func stageWord(_ stage: String) -> String {
-        switch stage {
-        case "captured": L10n.string("Captured")
+        case "accepted": L10n.string("Accepted")
         case "parsed": L10n.string("Read")
         case "completed": L10n.string("Completed")
-        case "failed": L10n.string("Failed")
-        default: Humanize.code(stage)
+        case "failed", "error": L10n.string("Failed")
+        default: kind == .trading && name == "execution.ledger_event" ? L10n.string("Recorded") : L10n.string(Humanize.code(outcome))
         }
     }
 
@@ -108,12 +125,15 @@ extension DiagnosticsJournalEntry {
             case "qty": return (L10n.string("Shares"), Decimal(engine: value).map { Humanize.shareCount($0) } ?? value)
             case "limit_price": return (L10n.string("Limit price"), Decimal(engine: value).map(Humanize.usd) ?? value)
             case "source_price": return (L10n.string("Guru's price"), Decimal(engine: value).map(Humanize.usd) ?? value)
-            case "status": return (L10n.string("Status"), Humanize.code(value))
+            case "status": return (L10n.string("Status"), L10n.string(Humanize.code(value)))
             case "filled_qty": return (L10n.string("Filled"), Decimal(engine: value).map { Humanize.shareCount($0) } ?? value)
             case "filled_avg_price": return (L10n.string("Average fill"), Decimal(engine: value).map(Humanize.usd) ?? value)
             case "reason": return (L10n.string("Reason"), Reason.text(value))
-            case "previous_stage": return (L10n.string("After"), Self.stageWord(value))
-            case "provider": return (L10n.string("Provider"), TradingProviderName(rawValue: value)?.title ?? Humanize.code(value))
+            case "previous_stage": return (L10n.string("After"), L10n.string(Self.stageTitles[value] ?? Humanize.code(value)))
+            // A post from Discord has no model provider; the engine journals "other".
+            case "provider":
+                guard let provider = TradingProviderName(rawValue: value) else { return nil }
+                return (L10n.string("Provider"), provider.title)
             case "command_id": return (L10n.string("Command"), value)
             case "workflow_id": return (L10n.string("Workflow"), value)
             case "trace_id": return (L10n.string("Trace"), value)
