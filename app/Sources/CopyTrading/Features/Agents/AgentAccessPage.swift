@@ -6,9 +6,12 @@ import SwiftUI
 /// asked for.
 struct AgentAccessPage: View {
     let model: AppModel
+    @State private var copiedAt: Date?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var command: String {
-        Bundle.main.bundleURL.appending(path: "Contents/Helpers/copytrading").path
+    /// What Copy Setup Command puts on the clipboard, shown whole so the row reads what it copies.
+    private var setupCommand: String {
+        "claude mcp add copytrading -- \"\(Bundle.main.bundleURL.appending(path: "Contents/Helpers/copytrading").path)\" mcp"
     }
 
     var body: some View {
@@ -28,12 +31,22 @@ struct AgentAccessPage: View {
             SettingsSection(title: "Connection") {
                 SettingsValueRow(label: "Status", value: connectionLabel, tone: model.isAgentRelayListening ? .positive : .inactive)
                 if model.isAgentRelayListening {
-                    SettingsRow(label: "Command", title: command, detail: "Add it to Claude Code as an MCP server.") {
-                        Button(L10n.string("Copy Setup Command"), systemImage: "doc.on.doc", action: copySetup)
-                            .labelStyle(.iconOnly)
-                            .buttonStyle(.borderless)
-                            .foregroundStyle(Palette.tertiaryInk)
-                            .help(L10n.string("Copy the claude mcp add command"))
+                    SettingsRow(label: "Command", title: setupCommand, detail: "Add it to Claude Code as an MCP server.") {
+                        Button(
+                            L10n.string(copiedAt == nil ? "Copy Setup Command" : "Copied"),
+                            systemImage: copiedAt == nil ? "doc.on.doc" : "checkmark", action: copySetup
+                        )
+                        .labelStyle(.iconOnly)
+                        .buttonStyle(.borderless)
+                        .foregroundStyle(copiedAt == nil ? Palette.tertiaryInk : Palette.ink)
+                        .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
+                        .help(L10n.string("Copy the claude mcp add command"))
+                        .accessibilityIdentifier("agents.copySetup")
+                    }
+                    .task(id: copiedAt) {
+                        guard copiedAt != nil else { return }
+                        try? await Task.sleep(for: .seconds(1.5))
+                        copiedAt = nil
                     }
                 }
                 if let message = model.agentAccessMessage {
@@ -67,6 +80,7 @@ struct AgentAccessPage: View {
 
     private func copySetup() {
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString("claude mcp add copytrading -- \"\(command)\" mcp", forType: .string)
+        NSPasteboard.general.setString(setupCommand, forType: .string)
+        copiedAt = .now
     }
 }

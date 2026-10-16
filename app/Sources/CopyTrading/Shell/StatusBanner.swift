@@ -19,7 +19,7 @@ struct StatusBanner: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel(L10n.string("Platform status: %@", message))
+                    .accessibilityLabel(L10n.string("Message: %@", message))
                     Spacer(minLength: 8)
                     Button(L10n.string("Dismiss"), systemImage: "xmark", action: dismiss)
                         .labelStyle(.iconOnly)

@@ -84,9 +84,11 @@ private func verifyStopReportMessageExplainsUnconfirmedDrain() throws {
         forciblyStoppedChildren: [.engine]
     )
     let message = AppModel.stopMessage(for: report)
-    try #require(message.contains("did not confirm its graceful drain"), "Stop must identify an unconfirmed engine drain")
-    try #require(message.contains("Forced termination was required for: engine"), "Stop must disclose a forced owned-process stop")
-    try #require(message.contains("Broker-accepted orders may remain open"), "Stop must explain broker orders can remain outstanding")
+    try #require(message.contains("The engine didn't answer"), "Stop must identify an unconfirmed engine drain")
+    try #require(message.contains("It had to be forced to stop."), "Stop must disclose a forced owned-process stop")
+    try #require(
+        message.contains("Orders the broker already accepted may stay open"), "Stop must explain broker orders can remain outstanding")
+    try #require(!message.contains("drain") && !message.contains("engine."), "Stop spoke the engine's own words")
 }
 
 private actor WindowOwnerAuthenticator: AppOwnerAuthenticator {

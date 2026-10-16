@@ -1,12 +1,19 @@
 /// Four questions to start a conversation with, the first one about the screen the owner is on,
-/// in the app's language, so the answer comes back in it too.
+/// in the app's language, so the answer comes back in it too. Before a setup is saved there are no
+/// gurus, accounts, or posts to ask about, so the questions are about setting up.
 enum AssistantSuggestions {
     @MainActor
-    static func suggestions(for screen: AppModel.Screen, guru: String?, hasSelectedPost: Bool = false) -> [String] {
+    static func suggestions(for screen: AppModel.Screen, guru: String?, hasSelectedPost: Bool = false, isSetUp: Bool) -> [String] {
+        let alerts = L10n.string("How do I add Telegram alerts?")
+        guard isSetUp else {
+            return [
+                L10n.string("Where do I find a channel ID?"), L10n.string("Which AI model should I choose?"),
+                L10n.string("What is a paper account?"), alerts,
+            ]
+        }
         let skipped = L10n.string(hasSelectedPost ? "Why was this post skipped?" : "Why was the last post skipped?")
         let record = guru.map { L10n.string("How did %@ do this week?", $0) } ?? L10n.string("How did my gurus do this week?")
         let account = L10n.string("What's in my paper account?")
-        let alerts = L10n.string("How do I add Telegram alerts?")
         if hasSelectedPost { return [skipped, record, account, alerts] }
         switch screen {
         case .guru: return [record, skipped, account, alerts]

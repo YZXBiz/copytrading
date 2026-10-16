@@ -562,7 +562,7 @@
 "Pause Entries" = "Pause Entries";
 "Pause from anywhere" = "Pause from anywhere";
 "Paused" = "Paused";
-"Pauses and drains trading writers while it runs." = "Pauses and drains trading writers while it runs.";
+"Copying waits a moment while it runs." = "Copying waits a moment while it runs.";
 "Pausing" = "Pausing";
 "Pausing…" = "Pausing…";
 "Payload" = "Payload";
@@ -570,7 +570,7 @@
 "People" = "People";
 "Pick the channel they post in, then choose **Learn from Channel**. CopyTrading reads their recent posts and drafts how they write buys, sells, and tickers." = "Pick the channel they post in, then choose **Learn from Channel**. CopyTrading reads their recent posts and drafts how they write buys, sells, and tickers.";
 "Pick who to copy" = "Pick who to copy";
-"Platform status: %@" = "Platform status: %@";
+"Message: %@" = "Message: %@";
 "Playbook" = "Playbook";
 "Popular" = "Popular";
 "Position limits (USD)" = "Position limits (USD)";
@@ -736,7 +736,7 @@
 "Show Tips Again" = "Show Tips Again";
 "Shows the posts these shares came from" = "Shows the posts these shares came from";
 "Shows this post in Activity" = "Shows this post in Activity";
-"Shows what a backup holds first. Nothing changes until you activate it." = "Shows what a backup holds first. Nothing changes until you activate it.";
+"Shows what a backup holds first. Nothing changes until you restore it." = "Shows what a backup holds first. Nothing changes until you restore it.";
 "Sign in at **%@** and open **%@**." = "Sign in at **%@** and open **%@**.";
 "Sign up or sign in at **alpaca.markets**. Paper trading is free." = "Sign up or sign in at **alpaca.markets**. Paper trading is free.";
 "Signal" = "Signal";
@@ -1040,9 +1040,9 @@
 "Largest drop" = "Largest drop";
 "Turn off agent access" = "Turn off agent access";
 "Allow agents to use CopyTrading" = "Allow agents to use CopyTrading";
-"The engine acknowledged its graceful drain." = "The engine acknowledged its graceful drain.";
-"The engine did not confirm its graceful drain; owned local processes were stopped." = "The engine did not confirm its graceful drain; owned local processes were stopped.";
-"No live engine session was available to confirm a drain." = "No live engine session was available to confirm a drain.";
+"The engine finished what it was doing and stopped." = "The engine finished what it was doing and stopped.";
+"The engine didn't answer, so CopyTrading stopped it." = "The engine didn't answer, so CopyTrading stopped it.";
+"The engine wasn't running." = "The engine wasn't running.";
 "Saved log settings could not be read, so the defaults apply." = "Saved log settings could not be read, so the defaults apply.";
 "Look up the pending command before starting another self-test." = "Look up the pending command before starting another self-test.";
 "Unlock CopyTrading before learning a playbook." = "Unlock CopyTrading before learning a playbook.";
@@ -1134,8 +1134,7 @@
 "CopyTrading can't confirm the new setup yet. Copying continues for %@; pause copying before changing the setup again." = "CopyTrading can't confirm the new setup yet. Copying continues for %@; pause copying before changing the setup again.";
 "Each guru needs a message prefix, and a playbook under %@ characters." = "Each guru needs a message prefix, and a playbook under %@ characters.";
 ", " = ", ";
-"Forced termination was required for: %@." = "Forced termination was required for: %@.";
-"Broker-accepted orders may remain open." = "Broker-accepted orders may remain open.";
+"It had to be forced to stop." = "It had to be forced to stop.";
 "Get Alpaca live keys" = "Get Alpaca live keys";
 "Live keys place real orders with real money. Alpaca gives them only to an approved brokerage account." = "Live keys place real orders with real money. Alpaca gives them only to an approved brokerage account.";
 "Sign in at **alpaca.markets**. Live trading needs an approved brokerage account with money in it." = "Sign in at **alpaca.markets**. Live trading needs an approved brokerage account with money in it.";
@@ -2298,3 +2297,8 @@
 "Each guru needs a name of up to 100 characters, a playbook under %@ characters, and at most 32 examples." = "Each guru needs a name of up to 100 characters, a playbook under %@ characters, and at most 32 examples.";
 "Search time zones" = "Search time zones";
 "Nothing was sent: the engine isn't running. Start it in Settings → Engine, then try again." = "Nothing was sent: the engine isn't running. Start it in Settings → Engine, then try again.";
+"Start the engine to run the self-test." = "Start the engine to run the self-test.";
+"Where do I find a channel ID?" = "Where do I find a channel ID?";
+"Which AI model should I choose?" = "Which AI model should I choose?";
+"What is a paper account?" = "What is a paper account?";
+"Orders the broker already accepted may stay open until they fill or expire." = "Orders the broker already accepted may stay open until they fill or expire.";

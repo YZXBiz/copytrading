@@ -6,10 +6,6 @@ import SwiftUI
 struct EngineSettingsPage: View {
     let model: AppModel
 
-    private var engineRunning: Bool {
-        model.runtimeState == .ready || model.runtimeState == .degraded
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 44) {
             VStack(alignment: .leading, spacing: 22) {
@@ -29,7 +25,7 @@ struct EngineSettingsPage: View {
                     }
                     Button(L10n.string(model.isRunningSelfTest ? "Running…" : "Run Self-Test"), action: run)
                         .buttonStyle(PageButtonStyle())
-                        .disabled(model.isRunningSelfTest || model.pendingCommandID != nil)
+                        .disabled(!model.isEngineRunning || model.isRunningSelfTest || model.pendingCommandID != nil)
                         .accessibilityIdentifier("system.runSelfTest")
                 }
                 Text(selfTestSentence)
@@ -78,7 +74,7 @@ struct EngineSettingsPage: View {
 
     private var postStops: [RouteStop] {
         let waiting = model.savedTradingConfiguration == nil ? "Not set up" : "Waiting"
-        guard engineRunning else {
+        guard model.isEngineRunning else {
             return [
                 .init(title: "Discord", state: waiting, tone: .inactive),
                 .init(title: "Interpreter", state: waiting, tone: .inactive),
@@ -121,6 +117,7 @@ struct EngineSettingsPage: View {
 
     private var selfTestSentence: String {
         if model.isRunningSelfTest { return L10n.string("Sending the test message through now…") }
+        guard model.isEngineRunning else { return L10n.string("Start the engine to run the self-test.") }
         guard let result = model.latestSelfTest else {
             return L10n.string(
                 "Sends a practice post through every step. It uses no keys and never places an order."
@@ -140,7 +137,7 @@ struct EngineSettingsPage: View {
     }
 
     private var selfTestAccessibility: String {
-        guard let result = model.latestSelfTest else { return selfTestSentence }
+        guard model.isEngineRunning, let result = model.latestSelfTest else { return selfTestSentence }
         return L10n.string(
             "Last result, %@. %@",
             L10n.string(Humanize.code(result.stage.rawValue)),

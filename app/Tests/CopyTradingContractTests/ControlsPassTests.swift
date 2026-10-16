@@ -17,6 +17,8 @@ func runControlsPassTests() async throws {
     try showTipsAgainSaysWhenTheyReturn()
     try examplesSayBuyOrSell()
     try await accountButtonsWithNoEngineSaySo()
+    try selfTestWaitsForARunningEngine()
+    try assistantSuggestionsBeforeSetupAreAboutSettingUp()
     print("CopyTradingContractTests: every control the controls pass fixed does what it says")
 }
 
@@ -168,6 +170,31 @@ private func accountButtonsWithNoEngineSaySo() async throws {
     await feature.control(accountID: "primary", action: .pause, using: nil)
     try #require(
         feature.errors["primary"] == AccountFeatureModel.noEngine, "Stop Copying with no engine did nothing and said nothing")
+}
+
+@MainActor
+private func selfTestWaitsForARunningEngine() throws {
+    let model = AppModel()
+    for (state, runs) in [(AppModel.RuntimeState.stopped, false), (.starting, false), (.failed, false), (.ready, true), (.degraded, true)] {
+        model.runtimeState = state
+        try #require(model.isEngineRunning == runs, "Run Self-Test was \(runs ? "off" : "on") with the engine \(state)")
+    }
+}
+
+@MainActor
+private func assistantSuggestionsBeforeSetupAreAboutSettingUp() throws {
+    let preference = AppLanguagePreference.shared
+    let original = preference.language
+    defer { preference.select(original) }
+    preference.select(.english)
+    for screen in AppModel.Screen.pages {
+        let suggestions = AssistantSuggestions.suggestions(for: screen, guru: nil, isSetUp: false)
+        try #require(suggestions.count == 4 && Set(suggestions).count == 4, "\(screen) did not offer four setup questions")
+        for nothingYet in ["guru", "post", "What's in my"] {
+            try #require(
+                !suggestions.contains { $0.contains(nothingYet) }, "Before setup the assistant offered \(suggestions)")
+        }
+    }
 }
 
 private func controlsConfiguration(guru: String?) throws -> TradingConfiguration {

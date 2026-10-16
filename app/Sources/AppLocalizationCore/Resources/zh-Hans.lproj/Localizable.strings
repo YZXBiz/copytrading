@@ -562,7 +562,7 @@
 "Pause Entries" = "暂停开仓";
 "Pause from anywhere" = "随时暂停";
 "Paused" = "已暂停";
-"Pauses and drains trading writers while it runs." = "备份期间会暂停交易数据写入，并等待正在进行的写入完成。";
+"Copying waits a moment while it runs." = "备份期间，跟单会稍等片刻。";
 "Pausing" = "正在暂停";
 "Pausing…" = "正在暂停…";
 "Payload" = "载荷";
@@ -570,7 +570,7 @@
 "People" = "信号源";
 "Pick the channel they post in, then choose **Learn from Channel**. CopyTrading reads their recent posts and drafts how they write buys, sells, and tickers." = "选择其发布内容的频道，然后选择 **从频道学习**。CopyTrading 会读取近期帖子，并拟定其买入、卖出和股票代码的写法。";
 "Pick who to copy" = "选择跟单对象";
-"Platform status: %@" = "平台状态：%@";
+"Message: %@" = "消息：%@";
 "Playbook" = "操作指南";
 "Popular" = "热门";
 "Position limits (USD)" = "仓位限额（美元）";
@@ -736,7 +736,7 @@
 "Show Tips Again" = "再次显示提示";
 "Shows the posts these shares came from" = "显示这些持仓来自哪些帖子";
 "Shows this post in Activity" = "在“活动”中显示此帖子";
-"Shows what a backup holds first. Nothing changes until you activate it." = "先预览备份包含的内容。启用恢复前不会更改任何数据。";
+"Shows what a backup holds first. Nothing changes until you restore it." = "先显示备份包含的内容。确认恢复之前，不会更改任何数据。";
 "Sign in at **%@** and open **%@**." = "登录 **%@**，然后打开 **%@**。";
 "Sign up or sign in at **alpaca.markets**. Paper trading is free." = "在 **alpaca.markets** 注册或登录。模拟交易免费。";
 "Signal" = "信号";
@@ -1040,9 +1040,9 @@
 "Largest drop" = "最大跌幅";
 "Turn off agent access" = "关闭智能体访问";
 "Allow agents to use CopyTrading" = "允许智能体使用 CopyTrading";
-"The engine acknowledged its graceful drain." = "引擎已确认正常收尾。";
-"The engine did not confirm its graceful drain; owned local processes were stopped." = "引擎没有确认正常收尾；已停止本机相关进程。";
-"No live engine session was available to confirm a drain." = "没有运行中的引擎来确认收尾。";
+"The engine finished what it was doing and stopped." = "引擎已完成手头的工作并停止。";
+"The engine didn't answer, so CopyTrading stopped it." = "引擎没有响应，CopyTrading 已将其停止。";
+"The engine wasn't running." = "引擎没有在运行。";
 "Saved log settings could not be read, so the defaults apply." = "无法读取已保存的日志设置，将使用默认设置。";
 "Look up the pending command before starting another self-test." = "请先查询待处理的命令，再开始新的自检。";
 "Unlock CopyTrading before learning a playbook." = "请先解锁 CopyTrading，再学习操作指南。";
@@ -1134,8 +1134,7 @@
 "CopyTrading can't confirm the new setup yet. Copying continues for %@; pause copying before changing the setup again." = "CopyTrading 暂时无法确认新设置。%@ 仍在继续跟单；再次更改设置前请先暂停跟单。";
 "Each guru needs a message prefix, and a playbook under %@ characters." = "每个信号源都需要消息前缀，并且操作指南不超过%@个字符。";
 ", " = "，";
-"Forced termination was required for: %@." = "强制终止了这些进程：%@。";
-"Broker-accepted orders may remain open." = "券商已接受的订单可能仍然有效。";
+"It had to be forced to stop." = "它是被强制停止的。";
 "Get Alpaca live keys" = "获取 Alpaca 实盘账户密钥";
 "Live keys place real orders with real money. Alpaca gives them only to an approved brokerage account." = "实盘密钥会用真实资金下真实订单。Alpaca 只向已获批准的证券账户提供实盘密钥。";
 "Sign in at **alpaca.markets**. Live trading needs an approved brokerage account with money in it." = "登录 **alpaca.markets**。实盘交易需要一个已获批准且有资金的证券账户。";
@@ -2298,3 +2297,8 @@
 "Each guru needs a name of up to 100 characters, a playbook under %@ characters, and at most 32 examples." = "每个信号源都需要一个不超过 100 个字符的名称、少于 %@ 个字符的操作指南，以及最多 32 个示例。";
 "Search time zones" = "搜索时区";
 "Nothing was sent: the engine isn't running. Start it in Settings → Engine, then try again." = "没有发送任何指令：引擎没有运行。请在“设置 → 引擎”中启动它，然后重试。";
+"Start the engine to run the self-test." = "启动引擎后才能运行自检。";
+"Where do I find a channel ID?" = "频道 ID 在哪里找？";
+"Which AI model should I choose?" = "该选哪个 AI 模型？";
+"What is a paper account?" = "什么是模拟盘账户？";
+"Orders the broker already accepted may stay open until they fill or expire." = "券商已接受的订单仍可能保持有效，直到成交或过期。";
