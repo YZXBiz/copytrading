@@ -74,6 +74,9 @@ struct LotSaleSheet: View {
                     L10n.string(target.environment == .live ? "Live" : "Paper"),
                     color: target.environment == .live ? Palette.live : Palette.tertiaryInk)
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(
+                L10n.string("%@, %@", target.accountID, L10n.string(target.environment == .live ? "Live" : "Paper")))
             Text(L10n.string("Sell %@", target.symbol))
                 .font(DisplayFont.font(size: 40, weight: .medium, relativeTo: .largeTitle))
                 .tracking(DesignTokens.entityTitleTracking)

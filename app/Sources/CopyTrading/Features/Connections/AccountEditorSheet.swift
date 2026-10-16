@@ -243,7 +243,7 @@ struct AccountEditorSheet: View {
     private func textLimit(
         _ title: String, hint: String, text: Binding<String>, example: String, focus: AccountEditorFocus? = nil
     ) -> some View {
-        SheetRow(title: L10n.string(title), hint: L10n.string(hint), example: example) {
+        SheetRow(title: L10n.string(title), hint: L10n.string(hint), example: example, labelsControl: true) {
             if let focus {
                 TextField(L10n.string(title), text: text)
                     .focused($focusedField, equals: focus)
@@ -256,19 +256,19 @@ struct AccountEditorSheet: View {
     }
 
     private func numberLimit(_ title: String, hint: String, value: Binding<Int>, example: String) -> some View {
-        SheetRow(title: L10n.string(title), hint: L10n.string(hint), example: example) {
+        SheetRow(title: L10n.string(title), hint: L10n.string(hint), example: example, labelsControl: true) {
             TextField(L10n.string(title), value: value, format: .number).limitField(L10n.string(title))
         }
     }
 
     private func numberLimit(_ title: String, hint: String, value: Binding<Double>, example: String) -> some View {
-        SheetRow(title: L10n.string(title), hint: L10n.string(hint), example: example) {
+        SheetRow(title: L10n.string(title), hint: L10n.string(hint), example: example, labelsControl: true) {
             TextField(L10n.string(title), value: value, format: .number).limitField(L10n.string(title))
         }
     }
 
     private func behavior(_ title: String, hint: String, isOn: Binding<Bool>) -> some View {
-        SheetRow(title: L10n.string(title), hint: L10n.string(hint)) {
+        SheetRow(title: L10n.string(title), hint: L10n.string(hint), labelsControl: true) {
             Toggle(L10n.string(title), isOn: isOn)
                 .labelsHidden()
                 .compactSwitch()
@@ -315,7 +315,8 @@ struct AccountEditorSheet: View {
 
 extension View {
     /// A limit's value: a short underlined field, its number at the trailing edge.
-    /// A hidden-label field still needs its name for VoiceOver, which `labelsHidden` drops.
+    /// A hidden-label field still needs its name for VoiceOver, which `labelsHidden` drops, and the
+    /// row's name is kept from VoiceOver, so the field carries it.
     fileprivate func limitField(_ label: String) -> some View {
         labelsHidden()
             .accessibilityLabel(label)

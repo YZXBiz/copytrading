@@ -23,6 +23,8 @@ struct AccountBalanceSummary: View {
                                 .font(DesignTokens.bodyText)
                                 .monospacedDigit()
                                 .foregroundStyle(Palette.tertiaryInk)
+                                .accessibilityLabel(
+                                    L10n.string("%@ cash  ·  %@ buying power", money(balance.cash), money(balance.buyingPower)))
                             freshness(balance)
                         }
                         .fixedSize()
@@ -42,20 +44,23 @@ struct AccountBalanceSummary: View {
         }
     }
 
-    @ViewBuilder
+    /// Today's change, its percent, and "today": one phrase for VoiceOver.
     private func change(_ balance: AccountBalance) -> some View {
-        MoneyText(
-            value: Decimal(engine: balance.dayChangeUSD) ?? 0, style: .change,
-            font: DesignTokens.bodyText.weight(.semibold))
-        if let percent = dayChangeFraction(balance) {
-            Text(percent.formatted(.percent.precision(.fractionLength(2)).sign(strategy: .always(includingZero: false))))
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            MoneyText(
+                value: Decimal(engine: balance.dayChangeUSD) ?? 0, style: .change,
+                font: DesignTokens.bodyText.weight(.semibold))
+            if let percent = dayChangeFraction(balance) {
+                Text(percent.formatted(.percent.precision(.fractionLength(2)).sign(strategy: .always(includingZero: false))))
+                    .font(DesignTokens.bodyText)
+                    .monospacedDigit()
+                    .foregroundStyle(ChangeDirection(Decimal(engine: balance.dayChangeUSD) ?? 0).color)
+            }
+            Text(L10n.string("today"))
                 .font(DesignTokens.bodyText)
-                .monospacedDigit()
-                .foregroundStyle(ChangeDirection(Decimal(engine: balance.dayChangeUSD) ?? 0).color)
+                .foregroundStyle(Palette.tertiaryInk)
         }
-        Text(L10n.string("today"))
-            .font(DesignTokens.bodyText)
-            .foregroundStyle(Palette.tertiaryInk)
+        .accessibilityElement(children: .combine)
     }
 
     private func freshness(_ balance: AccountBalance) -> some View {

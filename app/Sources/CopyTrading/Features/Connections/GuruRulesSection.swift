@@ -8,7 +8,10 @@ struct GuruRulesSection: View {
 
     var body: some View {
         SheetSection(L10n.string("Re-posted calls"), detail: L10n.string("When the guru posts the same call again.")) {
-            SheetRow(title: L10n.string("Skip re-posted calls"), hint: L10n.string(Self.repostHint(route.repeatWindowMinutes))) {
+            SheetRow(
+                title: L10n.string("Skip re-posted calls"), hint: L10n.string(Self.repostHint(route.repeatWindowMinutes)),
+                labelsControl: true
+            ) {
                 Toggle(L10n.string("Skip re-posted calls"), isOn: skipsReposts)
                     .labelsHidden()
                     .compactSwitch()

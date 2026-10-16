@@ -40,7 +40,7 @@ struct RouteEditorSheet: View {
                         .foregroundStyle(Palette.tertiaryInk)
                         .padding(.vertical, 12)
                 } else {
-                    SheetRow(title: L10n.string("Discord channel")) {
+                    SheetRow(title: L10n.string("Discord channel"), labelsControl: true) {
                         // Each channel once: a guru with no channel of its own reads as the first.
                         SheetMenu(
                             label: L10n.string("Discord channel"),

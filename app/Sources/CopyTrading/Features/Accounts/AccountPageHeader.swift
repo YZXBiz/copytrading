@@ -91,6 +91,7 @@ struct AccountPageHeader: View {
             }
             .font(DesignTokens.lede)
             .tracking(DesignTokens.ledeTracking)
+            .accessibilityElement(children: .combine)
         }
         .fixedSize(horizontal: true, vertical: false)
     }

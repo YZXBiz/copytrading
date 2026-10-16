@@ -101,6 +101,7 @@ struct DiagnosticsView: View {
             .fixedSize()
             TextField(L10n.string("Search"), text: $query)
                 .underlineField()
+                .accessibilityLabel(L10n.string("Search"))
                 .frame(width: 180)
                 .accessibilityIdentifier("diagnostics.search")
             Button(L10n.string("Refresh"), systemImage: "arrow.clockwise") {

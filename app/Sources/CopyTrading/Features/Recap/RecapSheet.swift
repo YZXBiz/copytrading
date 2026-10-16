@@ -18,7 +18,7 @@ struct RecapSheet: View {
             if !recap.moves.isEmpty {
                 SheetSection(L10n.string("Accounts")) {
                     ForEach(recap.moves, id: \.accountID) { move in
-                        SheetRow(title: move.accountID) {
+                        SheetRow(title: move.accountID, isReading: true) {
                             change(move.change)
                         }
                     }

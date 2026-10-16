@@ -61,7 +61,7 @@ struct SheetScaffold<Content: View, Leading: View, Actions: View>: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(kind.map { L10n.string("%@ %@", $0, title) } ?? title)
+            .accessibilityLabel(kind.map { L10n.string("%@, %@", $0, title) } ?? title)
             .accessibilityAddTraits(.isHeader)
             if let lede {
                 Text(lede)

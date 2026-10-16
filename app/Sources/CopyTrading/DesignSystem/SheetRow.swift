@@ -7,15 +7,30 @@ struct SheetRow<Trailing: View>: View {
     var hint: String?
     /// One worked example behind an "i" beside the name.
     var example: String?
+    /// The trailing control carries the title, so VoiceOver reads it once, on the control. The
+    /// hint stays readable text.
+    var labelsControl = false
+    /// The trailing side only shows a value, so VoiceOver hears the row as one reading:
+    /// "Requested by, claude".
+    var isReading = false
     @ViewBuilder let trailing: Trailing
 
-    var body: some View {
+    @ViewBuilder var body: some View {
+        if isReading {
+            row.accessibilityElement(children: .combine)
+        } else {
+            row
+        }
+    }
+
+    private var row: some View {
         HStack(alignment: .center, spacing: 20) {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 4) {
                     Text(title)
                         .font(DesignTokens.rowTitle)
                         .foregroundStyle(Palette.ink)
+                        .accessibilityHidden(labelsControl)
                     if let example {
                         ExampleMark(title: title, example: example)
                     }

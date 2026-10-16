@@ -7,9 +7,14 @@ struct SetupTourInlineHint: View {
     @Bindable var model: AppModel
     @State private var showsHelp = false
 
+    private var stopNumber: String {
+        L10n.string("Tour stop %lld of %lld", Int64(stop.rawValue + 1), Int64(SetupTourStop.allCases.count))
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(L10n.string("Tour stop %lld of %lld", Int64(stop.rawValue + 1), Int64(SetupTourStop.allCases.count)))
+            Text(stopNumber)
+                .accessibilityLabel(stopNumber)
                 .font(DesignTokens.eyebrow)
                 .tracking(DesignTokens.eyebrowTracking)
                 .textCase(.uppercase)

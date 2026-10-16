@@ -18,7 +18,7 @@ struct DestinationEditorSection: View {
                     .foregroundStyle(Palette.tertiaryInk)
                     .padding(.vertical, 12)
             } else {
-                SheetRow(title: L10n.string("Account")) {
+                SheetRow(title: L10n.string("Account"), labelsControl: true) {
                     SheetMenu(
                         label: L10n.string("Account"),
                         choices: (connection == nil ? [("", L10n.string("Choose an account"))] : [])

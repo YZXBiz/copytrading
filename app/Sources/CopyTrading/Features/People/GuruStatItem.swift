@@ -30,13 +30,18 @@ struct GuruStatItem: View {
                 }
             }
             .lineLimit(1)
-            Text(item.label.uppercased())
+            Text(item.label)
+                .accessibilityLabel(item.label)
+                .textCase(.uppercase)
                 .font(DesignTokens.eyebrow)
                 .tracking(DesignTokens.eyebrowTracking)
                 .foregroundStyle(item.isCaution ? Palette.amber : Palette.tertiaryInk)
                 .lineLimit(1)
         }
         .fixedSize()
-        .accessibilityElement(children: .combine)
+        // Named first, then the figure: "Posts today, 7", as a reading would be said.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(item.label)
+        .accessibilityValue(item.suffix.map { L10n.string("%@ %@", item.value, $0) } ?? item.value)
     }
 }

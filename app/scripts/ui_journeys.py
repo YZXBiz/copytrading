@@ -1477,7 +1477,7 @@ def _flip_ask_before_orders_and_apply_once(app: AppDriver, on: bool) -> None:
     deadline = time.monotonic() + 240
     while True:
         snapshot = app.see()
-        if snapshot.has("Setup Check") or snapshot.has("BEFORE COPYING STARTS"):
+        if snapshot.has("Setup Check") or snapshot.has("Before copying starts"):
             app.see("apply-once-setup-check")
             raise JourneyFailure("one press of Apply Changes opened Setup Check for a clean check")
         if not snapshot.has("You changed the setup"):
@@ -1874,8 +1874,8 @@ def j36_approve_and_skip(app: AppDriver) -> None:
         app.click("needsYou.copy")
         app.wait_for("review.primary", timeout=30, name="approval-sheet")
         app.click("review.primary")
-        app.wait_for("Confirm 1 order(s)", timeout=60, name="approval-preview")
-        app.click("Confirm 1 order(s)", outcome_checked=True)
+        app.wait_for("Confirm 1 order", timeout=60, name="approval-preview")
+        app.click("Confirm 1 order", outcome_checked=True)
         deadline = time.monotonic() + 180
         while not (bought := [lot for lot in _lots(app, symbol) if _open(lot)]):
             if time.monotonic() > deadline:

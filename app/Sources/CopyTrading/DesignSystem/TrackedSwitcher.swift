@@ -20,7 +20,8 @@ struct TrackedSwitcher<Choice: Hashable & Identifiable>: View {
                 Button {
                     withAnimation(reduceMotion ? nil : .smooth(duration: 0.3)) { selection = choice }
                 } label: {
-                    label(choice)
+                    // The button's own label names it; a lone text inside would lend its capitals.
+                    label(choice).accessibilityElement(children: .ignore)
                 }
                 .buttonStyle(QuietPressButtonStyle())
                 // A switcher has at most a handful of choices, so each gets a digit.
@@ -41,7 +42,9 @@ struct TrackedSwitcher<Choice: Hashable & Identifiable>: View {
         let number = count(choice)
         return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(L10n.string(title(choice)).uppercased())
+                Text(L10n.string(title(choice)))
+                    .accessibilityLabel(L10n.string(title(choice)))
+                    .textCase(.uppercase)
                     .font(DesignTokens.eyebrow)
                     .tracking(DesignTokens.eyebrowTracking)
                 if number > 0 {

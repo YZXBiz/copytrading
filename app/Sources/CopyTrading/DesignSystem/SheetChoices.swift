@@ -20,7 +20,9 @@ struct SheetChoices<Value: Hashable>: View {
                     withAnimation(reduceMotion ? nil : .smooth(duration: 0.25)) { selection = choice.value }
                 } label: {
                     VStack(alignment: .leading, spacing: 7) {
-                        Text(choice.title.uppercased())
+                        Text(choice.title)
+                            .accessibilityLabel(choice.title)
+                            .textCase(.uppercase)
                             .font(DesignTokens.eyebrow)
                             .tracking(DesignTokens.eyebrowTracking)
                             .foregroundStyle(isSelected ? Palette.ink : Palette.tertiaryInk)
@@ -36,6 +38,8 @@ struct SheetChoices<Value: Hashable>: View {
                     }
                     .fixedSize()
                     .contentShape(.rect)
+                    // The button's own label names it; a lone text inside would lend its capitals.
+                    .accessibilityElement(children: .ignore)
                 }
                 .buttonStyle(QuietPressButtonStyle())
                 .accessibilityLabel(choice.title)

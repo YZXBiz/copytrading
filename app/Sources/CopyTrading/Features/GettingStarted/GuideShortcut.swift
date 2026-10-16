@@ -5,6 +5,11 @@ struct GuideShortcut: Identifiable {
 
     var id: String { action }
 
+    /// The keys as VoiceOver says them: "⌘1 to 9", "⌃⌘S".
+    @MainActor var spokenKeys: String {
+        keys.map { $0 == "–" ? " \(L10n.string("to")) " : $0 }.joined()
+    }
+
     /// What the app's own commands do: Go (⌘1–⌘9 in sidebar order, ⌘K), the window (⌘[ ⌘] ⌘R,
     /// ⌃⌘S), Settings (⌘,), the assistant (⌘J), a page's tabs (⌃1–⌃4), the Find and Diagnostics
     /// lists, and the account chart's keys.

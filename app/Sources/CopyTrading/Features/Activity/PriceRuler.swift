@@ -81,7 +81,9 @@ struct PriceRuler: View {
 
     private func caption(_ label: String, _ value: Decimal, at x: CGFloat, in width: CGFloat) -> some View {
         VStack(spacing: 1) {
-            Text(label.uppercased())
+            Text(label)
+                .accessibilityLabel(label)
+                .textCase(.uppercase)
                 .font(DesignTokens.eyebrow)
                 .tracking(DesignTokens.eyebrowTracking)
                 .foregroundStyle(Palette.tertiaryInk)

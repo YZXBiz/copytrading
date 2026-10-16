@@ -12,16 +12,20 @@ struct SetupTourCard: View {
 
     static let width: CGFloat = 300
 
+    private var stopNumber: String {
+        L10n.string("Tour stop %lld of %lld", Int64(stop.rawValue + 1), Int64(SetupTourStop.allCases.count))
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(
-                L10n.string("Tour stop %lld of %lld", Int64(stop.rawValue + 1), Int64(SetupTourStop.allCases.count)).uppercased()
-            )
-            .font(DesignTokens.eyebrow)
-            .tracking(DesignTokens.eyebrowTracking)
-            .foregroundStyle(Palette.tertiaryInk)
-            .monospacedDigit()
-            .padding(.bottom, 8)
+            Text(stopNumber)
+                .accessibilityLabel(stopNumber)
+                .textCase(.uppercase)
+                .font(DesignTokens.eyebrow)
+                .tracking(DesignTokens.eyebrowTracking)
+                .foregroundStyle(Palette.tertiaryInk)
+                .monospacedDigit()
+                .padding(.bottom, 8)
             // A card's title sits below a page's: the stop in the display face, its point as a lede.
             Text(L10n.string(stop.title))
                 .font(DisplayFont.font(size: 19, weight: .medium, relativeTo: .title3))

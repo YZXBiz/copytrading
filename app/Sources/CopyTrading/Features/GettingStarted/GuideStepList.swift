@@ -25,6 +25,7 @@ struct GuideStepList: View {
                 .monospacedDigit()
                 .foregroundStyle(isNext ? Palette.ink : Palette.tertiaryInk)
                 .frame(width: 26, alignment: .leading)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
                 Text(L10n.string(step.title))
                     .font(DesignTokens.documentSubheading)
@@ -35,12 +36,17 @@ struct GuideStepList: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            // One element per step: what it is, what it is for, and whether it is done.
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(L10n.string("%@, %@", L10n.string(step.title), L10n.string(step.detail)))
+            .accessibilityValue(isDone ? L10n.string("Done") : "")
             if isDone {
                 Label(L10n.string("Done"), systemImage: "checkmark")
                     .font(DesignTokens.eyebrow)
                     .tracking(DesignTokens.eyebrowTracking)
                     .textCase(.uppercase)
                     .foregroundStyle(Palette.tertiaryInk)
+                    .accessibilityHidden(true)
             } else if isNext {
                 Button(L10n.string("Connections"), systemImage: "arrow.right", action: open)
                     .labelStyle(GuideTrailingIconLabelStyle())

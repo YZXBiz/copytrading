@@ -46,7 +46,8 @@ struct GeneralSettingsPage: View {
                 )
                 SettingsRow(
                     title: "Hold my orders before sending",
-                    detail: "After you press Sell or confirm a copy, the order waits this long with Undo before it leaves for Alpaca."
+                    detail: "After you press Sell or confirm a copy, the order waits this long with Undo before it leaves for Alpaca.",
+                    labelsControl: true
                 ) {
                     HStack(spacing: 18) {
                         ForEach([0.0, 5.0, 10.0], id: \.self) { seconds in
