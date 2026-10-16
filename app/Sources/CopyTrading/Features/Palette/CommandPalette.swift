@@ -2,11 +2,13 @@ import DesktopCore
 import SwiftUI
 
 /// ⌘K: one field that finds a page, a safe action, or a guru's post by its words, chosen
-/// with the arrow keys and Return. Starting copying is left to its own button, which checks live
+/// with the arrow keys and Return, or a click. A post opens where it is read in full. Starting copying is left to its own button, which checks live
 /// accounts first; nothing here can place an order.
 struct CommandPalette: View {
     @Bindable var model: AppModel
     let accountFeature: AccountFeatureModel
+    /// Opens a post selected on its account's page.
+    let openPost: (SourceActivity) -> Void
     @State private var query = ""
     @State private var highlighted = 0
     @FocusState private var isFocused: Bool
@@ -47,7 +49,7 @@ struct CommandPalette: View {
                 id: "post.\(post.id)", kind: .post, title: "“\(text)”",
                 detail: [directory.name(for: guruID), Humanize.feedTime(post.sourceAt)].compactMap(\.self).joined(separator: " · "),
                 symbol: "text.quote"
-            ) { model.selectedScreen = .guru(guruID) }
+            ) { openPost(post) }
         }
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         // Posts only answer a search; an empty field lists the pages and actions.
@@ -82,6 +84,7 @@ struct CommandPalette: View {
                     close()
                     return .handled
                 }
+                .accessibilityLabel(L10n.string("Find"))
                 .accessibilityIdentifier("palette.field")
             }
             .padding(.horizontal, 20)
@@ -90,12 +93,14 @@ struct CommandPalette: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                            row(item, isHighlighted: index == highlighted)
-                                .id(index)
-                                .onTapGesture {
-                                    highlighted = index
-                                    choose(items)
-                                }
+                            Button {
+                                highlighted = index
+                                choose(items)
+                            } label: {
+                                row(item, isHighlighted: index == highlighted)
+                            }
+                            .buttonStyle(.plain)
+                            .id(index)
                         }
                         if items.isEmpty {
                             Text(L10n.string("Nothing matches."))
@@ -148,7 +153,7 @@ struct CommandPalette: View {
         .padding(.vertical, 9)
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(isHighlighted ? [.isButton, .isSelected] : .isButton)
+        .accessibilityAddTraits(isHighlighted ? .isSelected : [])
     }
 
     private func pageKind(_ screen: AppModel.Screen) -> String? {

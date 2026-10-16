@@ -7,9 +7,6 @@ struct MainSplitView: View {
     let accountFeature: AccountFeatureModel
     @State private var showsSidebar = true
     @State private var sidebarToggleHovered = false
-    @State private var previousScreens: [AppModel.Screen] = []
-    @State private var nextScreens: [AppModel.Screen] = []
-    @State private var isHistoryNavigation = false
     /// Lock asks first when it would drop setup changes that aren't saved yet.
     @State private var confirmsLock = false
     /// Activity's filter and selection, here so the assistant knows which post "this post" is.
@@ -78,8 +75,10 @@ struct MainSplitView: View {
                         .ignoresSafeArea()
                         .onTapGesture { model.isShowingPalette = false }
                         .accessibilityHidden(true)
-                    CommandPalette(model: model, accountFeature: accountFeature)
-                        .padding(.top, 96)
+                    CommandPalette(model: model, accountFeature: accountFeature) { post in
+                        model.show(post) { activityState.focusActivity($0) }
+                    }
+                    .padding(.top, 96)
                 }
                 .transition(.opacity)
             }
@@ -105,12 +104,6 @@ struct MainSplitView: View {
             if new == .settings, old != .settings {
                 model.screenBeforeSettings = old
                 model.settingsTrail.removeAll()
-            }
-            if isHistoryNavigation {
-                isHistoryNavigation = false
-            } else {
-                previousScreens.append(old)
-                nextScreens.removeAll()
             }
         }
     }
@@ -167,15 +160,15 @@ struct MainSplitView: View {
 
     private var navigationHistory: some View {
         HStack(spacing: 2) {
-            Button(L10n.string("Back"), systemImage: "chevron.left", action: goBack)
+            Button(L10n.string("Back"), systemImage: "chevron.left", action: model.goBack)
                 .frame(width: 28, height: 32)
-                .disabled(previousScreens.isEmpty)
+                .disabled(model.screenHistory.back.isEmpty)
                 .keyboardShortcut("[", modifiers: .command)
                 .help(L10n.string("Back"))
                 .accessibilityIdentifier("toolbar.back")
-            Button(L10n.string("Forward"), systemImage: "chevron.right", action: goForward)
+            Button(L10n.string("Forward"), systemImage: "chevron.right", action: model.goForward)
                 .frame(width: 28, height: 32)
-                .disabled(nextScreens.isEmpty)
+                .disabled(model.screenHistory.forward.isEmpty)
                 .keyboardShortcut("]", modifiers: .command)
                 .help(L10n.string("Forward"))
                 .accessibilityIdentifier("toolbar.forward")
@@ -225,20 +218,6 @@ struct MainSplitView: View {
                 model.selectedScreen = screen
             }
         }
-    }
-
-    private func goBack() {
-        guard let screen = previousScreens.popLast() else { return }
-        nextScreens.append(model.selectedScreen)
-        isHistoryNavigation = true
-        model.selectedScreen = screen
-    }
-
-    private func goForward() {
-        guard let screen = nextScreens.popLast() else { return }
-        previousScreens.append(model.selectedScreen)
-        isHistoryNavigation = true
-        model.selectedScreen = screen
     }
 
     private var sidebarToggle: some View {

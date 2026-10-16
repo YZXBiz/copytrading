@@ -45,7 +45,7 @@ struct ConnectionsView: View {
                     .padding(.bottom, 36)
                     .id(SetupTourTarget.gurus)
                     SetupStepSection(
-                        number: 5, isDone: model.setupDraft.notificationsEnabled, isOptional: true,
+                        number: 5, isDone: model.alertsReady, isOptional: true,
                         title: ConnectionKind.alerts.title, subtitle: ConnectionKind.alerts.explanation
                     ) { section(.alerts) }
                     .padding(.bottom, 36)
@@ -158,7 +158,10 @@ struct ConnectionsView: View {
                 .accessibilityIdentifier("connections.importSetup")
         }
         Menu {
-            Button(L10n.string("Import Setup…"), systemImage: "square.and.arrow.down") { model.isShowingSetupImporter = true }
+            // Before a setup is saved, Import Setup… is the button beside this menu.
+            if model.savedTradingConfiguration != nil {
+                Button(L10n.string("Import Setup…"), systemImage: "square.and.arrow.down") { model.isShowingSetupImporter = true }
+            }
             Button(L10n.string(ideasHidden ? "Show Ideas" : "Hide Ideas"), systemImage: "lightbulb", action: toggleIdeas)
             Button(L10n.string("Open Getting Started"), systemImage: "hand.wave") { model.selectedScreen = .gettingStarted }
         } label: {

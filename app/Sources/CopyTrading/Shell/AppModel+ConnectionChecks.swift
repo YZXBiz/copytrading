@@ -7,19 +7,33 @@ extension AppModel {
     /// there is nothing to check yet or the engine cannot check right now.
     @discardableResult
     func checkConnection(_ subject: ConnectionCheckSubject) async -> TradingCapabilityCheck? {
-        guard isTradingUnlocked, let checker = connectionChecker,
-            let connection = connectionCheck(for: subject)
-        else { return nil }
+        guard isTradingUnlocked, let connection = connectionCheck(for: subject) else { return nil }
         let fingerprint = connectionFingerprint(subject)
         connectionChecks[subject] = ConnectionCheckResult(fingerprint: fingerprint, check: nil)
+        let check: TradingCapabilityCheck
         do {
-            let check = try await checker.checkConnection(connection)
-            connectionChecks[subject] = ConnectionCheckResult(fingerprint: fingerprint, check: check)
-            return check
+            // A check that can't run is a failure the owner reads, never a silent pass.
+            guard let checker = connectionChecker else { throw CancellationError() }
+            check = try await checker.checkConnection(connection)
         } catch {
-            connectionChecks[subject] = nil
-            return nil
+            check = unavailableCheck(subject)
         }
+        connectionChecks[subject] = ConnectionCheckResult(fingerprint: fingerprint, check: check)
+        return check
+    }
+
+    /// The failure a connection reads when the engine couldn't run its check.
+    private func unavailableCheck(_ subject: ConnectionCheckSubject) -> TradingCapabilityCheck {
+        let (name, account): (TradingCapabilityName, String?) =
+            switch subject {
+            case .discord: (.source, nil)
+            case .interpreter: (.model, nil)
+            case .alerts: (.notification, nil)
+            case .account(let id): (.broker, id)
+            }
+        return TradingCapabilityCheck(
+            name: name, state: .failed, subject: account, adapter: setupDraft.provider.rawValue,
+            reasonCode: ConnectionProblem.engineUnavailable)
     }
 
     /// The connection's latest check, unless something it checked has been edited since.

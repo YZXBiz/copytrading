@@ -111,12 +111,7 @@ extension AppModel {
         switch link.kind {
         case "post":
             guard let post = activity.first(where: { $0.sourceID == link.id }) else { return }
-            focusPost(post.id)
-            if let accountID = post.destinations.first?.accountID {
-                selectedScreen = .account(accountID)
-            } else if let guruID = post.guruID {
-                selectedScreen = .guru(guruID)
-            }
+            show(post, focusPost: focusPost)
         case "account":
             selectedScreen = .account(link.id)
         case "guru":

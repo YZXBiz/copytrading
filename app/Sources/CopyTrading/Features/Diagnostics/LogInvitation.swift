@@ -5,10 +5,6 @@ import SwiftUI
 struct LogInvitation: View {
     let model: AppModel
 
-    private var engineRunning: Bool {
-        model.runtimeState == .ready || model.runtimeState == .degraded
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             Text(L10n.string("The log starts here"))
@@ -32,10 +28,10 @@ struct LogInvitation: View {
                 HStack(spacing: 14) {
                     Button(L10n.string("Run Self-Test"), action: runSelfTest)
                         .buttonStyle(PageButtonStyle(isProminent: true))
-                        .disabled(!engineRunning || model.isRunningSelfTest)
+                        .disabled(!model.isEngineRunning || model.isRunningSelfTest)
                         .accessibilityIdentifier("diagnostics.runSelfTest")
                     Text(
-                        engineRunning
+                        model.isEngineRunning
                             ? L10n.string("A test message fills the log in a few seconds.")
                             : L10n.string("Start the engine and the log fills in as it works.")
                     )

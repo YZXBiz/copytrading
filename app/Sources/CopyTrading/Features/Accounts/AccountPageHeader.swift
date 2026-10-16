@@ -37,7 +37,7 @@ struct AccountPageHeader: View {
             }
             if let error = feature.errors[account.accountID] {
                 Callout(error, tone: .critical)
-                    .accessibilityLabel(L10n.string("Account command error: %@", error))
+                    .accessibilityLabel(L10n.string("%@: %@", account.accountID, error))
             }
             if let pendingNote {
                 // An edit is only in the setup until it is applied; say so where it shows.
