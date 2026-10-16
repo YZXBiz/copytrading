@@ -72,19 +72,26 @@ struct ConnectionsView: View {
             .background(Palette.page)
             .overlayPreferenceValue(ConnectionOriginKey.self) { origins in
                 GeometryReader { layer in
+                    // Beside the assistant, not under it: the owner may be asking about this panel.
+                    let placement = ConnectionPanelPlacement(
+                        pageWidth: layer.size.width, coveredTrailing: model.assistant.isOpen ? AssistantPanel.width + 8 : 0)
                     ZStack {
                         if let panel {
                             veil
                                 .transition(.opacity)
                             ConnectionPanelContent(
-                                page: panel.page, model: model, close: close, cancel: cancel, connecting: isEditingFromProviderRow
+                                page: panel.page, model: model, close: close, cancel: cancel, connecting: isEditingFromProviderRow,
+                                width: placement.width
                             )
+                            .position(x: placement.centerX, y: layer.size.height / 2)
                             .transition(
                                 ConnectionPanelTransition(
-                                    origin: origins[panel.origin].map { layer[$0] }, layer: layer.size, reduceMotion: reduceMotion))
+                                    origin: origins[panel.origin].map { layer[$0] }, layer: layer.size, centerX: placement.centerX,
+                                    reduceMotion: reduceMotion))
                         }
                     }
                     .frame(width: layer.size.width, height: layer.size.height)
+                    .animation(motion, value: placement)
                 }
             }
             .clipped()
