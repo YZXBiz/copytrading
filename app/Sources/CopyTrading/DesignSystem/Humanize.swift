@@ -67,12 +67,6 @@ enum Humanize {
         )
     }
 
-    static func age(since iso: String?, now: Date = .now) -> String? {
-        guard let date = date(iso) else { return nil }
-        let seconds = max(0, Int(now.timeIntervalSince(date)))
-        return Duration.seconds(seconds).formatted(.units(allowed: [.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 2))
-    }
-
     /// "1 account", "2 accounts" for String contexts where Text inflection is unavailable.
     @MainActor
     static func count(_ value: Int, _ singular: String, plural: String? = nil) -> String {

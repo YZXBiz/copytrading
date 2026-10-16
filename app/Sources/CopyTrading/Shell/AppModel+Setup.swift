@@ -375,7 +375,6 @@ extension AppModel {
             return
         }
         message = nil
-        copyingStartedAt = .now
         selectedScreen = homeScreen
         if let accountFeature {
             Task { await turnOnEveryAccount(feature: accountFeature) }

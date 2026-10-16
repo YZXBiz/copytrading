@@ -10,12 +10,13 @@ struct GuruPageHeader: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 16) {
             VStack(alignment: .leading, spacing: 8) {
+                // A person's name wraps rather than losing its middle to an ellipsis.
                 Text(name)
                     .font(DesignTokens.entityTitle)
                     .tracking(DesignTokens.entityTitleTracking)
                     .foregroundStyle(Palette.ink)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
                 if let destinations {
                     Text(destinations)
