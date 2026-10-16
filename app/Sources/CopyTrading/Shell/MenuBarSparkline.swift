@@ -44,7 +44,17 @@ struct MenuBarSparkline: View {
             .chartYAxis(.hidden)
             .chartYScale(domain: low...max(high, low + 1))
             .frame(height: 54)
+            // One element: its half-hour marks read as dates would say nothing the summary doesn't.
+            .accessibilityElement(children: .ignore)
             .accessibilityLabel(L10n.string("Equity today"))
+            .accessibilityValue(
+                L10n.string(
+                    "From %@ to %@, %@. High %@, low %@.", usd(first), usd(last),
+                    (last - first).formatted(.currency(code: "USD").sign(strategy: .always())), usd(high), usd(low)))
         }
+    }
+
+    private func usd(_ value: Double) -> String {
+        value.formatted(.currency(code: "USD"))
     }
 }

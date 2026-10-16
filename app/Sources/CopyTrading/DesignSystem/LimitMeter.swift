@@ -14,6 +14,14 @@ struct LimitMeter: View {
         return min(1, max(0, (used / limit).doubleValue))
     }
 
+    /// What is used and out of what, as drawn: "$14 of $250".
+    private var amounts: String? {
+        guard let used else { return nil }
+        return L10n.string(
+            "%@ %@", used.formatted(.currency(code: "USD").precision(.fractionLength(0))),
+            L10n.string("of %@", limit.formatted(.currency(code: "USD").precision(.fractionLength(0)))))
+    }
+
     /// Sky while there is room, butter once it is close enough to look at, blush at the cap.
     private var tint: Color {
         fraction >= 1 ? Palette.blush : fraction >= 0.8 ? Palette.butter : Palette.sky
@@ -65,7 +73,7 @@ struct LimitMeter: View {
         .accessibilityValue(
             used == nil
                 ? L10n.string("Not read yet")
-                : [L10n.string("%lld percent used", Int64((fraction * 100).rounded())), note].compactMap(\.self).joined(
-                    separator: ", "))
+                : [amounts, L10n.string("%lld percent used", Int64((fraction * 100).rounded())), note].compactMap(\.self)
+                    .reduce(into: "") { spoken, part in spoken = spoken.isEmpty ? part : L10n.string("%@, %@", spoken, part) })
     }
 }

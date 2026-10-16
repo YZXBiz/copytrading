@@ -33,6 +33,8 @@ struct SheetMenu<Value: Hashable>: View {
             // The chevron says it opens; no line under it.
             .padding(.vertical, 7)
             .contentShape(.rect)
+            // One menu button for VoiceOver, named by the label and value below, not one per word.
+            .accessibilityElement(children: .ignore)
         }
         .menuStyle(.button)
         .buttonStyle(.plain)

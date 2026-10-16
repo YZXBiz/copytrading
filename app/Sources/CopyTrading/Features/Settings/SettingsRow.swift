@@ -8,6 +8,9 @@ struct SettingsRow<Trailing: View>: View {
     var detail: String?
     var tone: StatusTone?
     var titleColor = Palette.ink
+    /// The trailing control is named by these words and hinted with the detail, so VoiceOver
+    /// reads them once, on the control, instead of once as text and again on the control.
+    var labelsControl = false
     @ViewBuilder var trailing: Trailing
 
     var body: some View {
@@ -17,6 +20,7 @@ struct SettingsRow<Trailing: View>: View {
                     Text(L10n.string(label))
                         .font(.system(.body, weight: .medium))
                         .foregroundStyle(Palette.tertiaryInk)
+                        .accessibilityHidden(labelsControl)
                 }
                 HStack(spacing: 6) {
                     if let tone {
@@ -29,12 +33,14 @@ struct SettingsRow<Trailing: View>: View {
                         .font(DesignTokens.bodyText)
                         .foregroundStyle(titleColor)
                         .textSelection(.enabled)
+                        .accessibilityHidden(labelsControl)
                 }
                 if let detail {
                     Text(L10n.string(detail))
                         .font(.body)
                         .foregroundStyle(Palette.secondaryInk)
                         .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityHidden(labelsControl)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

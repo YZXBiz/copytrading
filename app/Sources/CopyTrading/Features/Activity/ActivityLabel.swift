@@ -8,7 +8,9 @@ struct ActivityLabel: View {
     var color: Color = Palette.tertiaryInk
 
     var body: some View {
-        Text(text.uppercased())
+        Text(text)
+            .accessibilityLabel(text)
+            .textCase(.uppercase)
             .font(DesignTokens.eyebrow)
             .tracking(DesignTokens.eyebrowTracking)
             .foregroundStyle(color)

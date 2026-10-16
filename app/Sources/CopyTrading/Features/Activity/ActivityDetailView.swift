@@ -270,6 +270,8 @@ struct ActivityDetailView: View {
                     text: L10n.string(environment == .live ? "Live" : "Paper"),
                     color: environment == .live ? Palette.live : Palette.tertiaryInk)
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(L10n.string("%@, %@", account.id, L10n.string(environment == .live ? "Live" : "Paper")))
             if let story = stories[account.id] {
                 PositionStoryView(story: story, directory: directory, postText: postText)
             }

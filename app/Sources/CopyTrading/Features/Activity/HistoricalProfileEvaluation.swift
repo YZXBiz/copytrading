@@ -88,7 +88,7 @@ struct HistoricalProfileEvaluationSheet: View {
                         .foregroundStyle(Palette.tertiaryInk)
                         .padding(.vertical, 8)
                 } else {
-                    SheetRow(title: L10n.string("Saved guru")) {
+                    SheetRow(title: L10n.string("Saved guru"), labelsControl: true) {
                         SheetMenu(
                             label: L10n.string("Saved guru"),
                             choices: routes.map { (value: $0.id, title: SavedGuruLabel.text($0, in: configuration)) },
@@ -101,7 +101,8 @@ struct HistoricalProfileEvaluationSheet: View {
                         SheetRow(
                             title: connection.accountID,
                             hint: L10n.string(
-                                "Full position %@. A 1/6 call buys a sixth of it.", Humanize.usd(connection.fullPositionUSD))
+                                "Full position %@. A 1/6 call buys a sixth of it.", Humanize.usd(connection.fullPositionUSD)),
+                            isReading: true
                         ) {
                             EmptyView()
                         }

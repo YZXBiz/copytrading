@@ -8,10 +8,11 @@ struct SettingsToggleRow: View {
     var identifier: String?
 
     var body: some View {
-        SettingsRow(title: title, detail: detail) {
+        SettingsRow(title: title, detail: detail, labelsControl: true) {
             Toggle(L10n.string(title), isOn: $isOn)
                 .labelsHidden()
                 .compactSwitch()
+                .accessibilityHint(detail.map { L10n.string($0) } ?? "")
                 .accessibilityIdentifier(identifier ?? title)
         }
     }

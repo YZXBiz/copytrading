@@ -11,7 +11,9 @@ struct LotSaleShareChip: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title.uppercased())
+            Text(title)
+                .accessibilityLabel(title)
+                .textCase(.uppercase)
                 .font(.system(.title3, weight: .semibold))
                 .tracking(DesignTokens.eyebrowTracking)
                 .monospacedDigit()

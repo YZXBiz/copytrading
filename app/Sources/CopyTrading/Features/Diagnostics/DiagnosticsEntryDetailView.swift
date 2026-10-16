@@ -14,6 +14,7 @@ struct DiagnosticsEntryDetailView: View {
                             .font(DesignTokens.listHeading)
                             .tracking(DesignTokens.listHeadingTracking)
                             .foregroundStyle(Palette.ink)
+                            .accessibilityAddTraits(.isHeader)
                         Spacer(minLength: 12)
                         StatusBadge(entry.outcomeTitle, tone: entry.tone)
                     }
@@ -33,12 +34,16 @@ struct DiagnosticsEntryDetailView: View {
                     Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 6) {
                         ForEach(entry.displayFields, id: \.label) { field in
                             GridRow {
+                                // A grid row can't be one element: the value carries its label.
                                 Text(field.label)
                                     .foregroundStyle(Palette.tertiaryInk)
+                                    .accessibilityHidden(true)
                                 Text(field.value)
                                     .foregroundStyle(Palette.ink)
                                     .monospacedDigit()
                                     .fixedSize(horizontal: false, vertical: true)
+                                    .accessibilityLabel(field.label)
+                                    .accessibilityValue(field.value)
                             }
                         }
                     }
@@ -57,6 +62,7 @@ struct DiagnosticsEntryDetailView: View {
                             .padding(14)
                             .background(Palette.group, in: .rect(cornerRadius: DesignTokens.blockCornerRadius))
                             .accessibilityLabel(L10n.string("Redacted payload"))
+                            .accessibilityValue(payload)
                     }
                 } else if entry.payloadUnreadable {
                     Callout(

@@ -235,32 +235,32 @@ struct AccountEditorSheet: View {
     private func textLimit(
         _ title: String, hint: String, text: Binding<String>, example: String, focus: AccountEditorFocus? = nil
     ) -> some View {
-        SheetRow(title: L10n.string(title), hint: L10n.string(hint), example: example) {
+        SheetRow(title: L10n.string(title), hint: L10n.string(hint), example: example, labelsControl: true) {
             if let focus {
                 TextField(L10n.string(title), text: text)
                     .focused($focusedField, equals: focus)
-                    .limitField()
+                    .limitField(title, hint: hint)
                     .id(focus)
             } else {
-                TextField(L10n.string(title), text: text).limitField()
+                TextField(L10n.string(title), text: text).limitField(title, hint: hint)
             }
         }
     }
 
     private func numberLimit(_ title: String, hint: String, value: Binding<Int>, example: String) -> some View {
-        SheetRow(title: L10n.string(title), hint: L10n.string(hint), example: example) {
-            TextField(L10n.string(title), value: value, format: .number).limitField()
+        SheetRow(title: L10n.string(title), hint: L10n.string(hint), example: example, labelsControl: true) {
+            TextField(L10n.string(title), value: value, format: .number).limitField(title, hint: hint)
         }
     }
 
     private func numberLimit(_ title: String, hint: String, value: Binding<Double>, example: String) -> some View {
-        SheetRow(title: L10n.string(title), hint: L10n.string(hint), example: example) {
-            TextField(L10n.string(title), value: value, format: .number).limitField()
+        SheetRow(title: L10n.string(title), hint: L10n.string(hint), example: example, labelsControl: true) {
+            TextField(L10n.string(title), value: value, format: .number).limitField(title, hint: hint)
         }
     }
 
     private func behavior(_ title: String, hint: String, isOn: Binding<Bool>) -> some View {
-        SheetRow(title: L10n.string(title), hint: L10n.string(hint)) {
+        SheetRow(title: L10n.string(title), hint: L10n.string(hint), labelsControl: true) {
             Toggle(L10n.string(title), isOn: isOn)
                 .labelsHidden()
                 .compactSwitch()
@@ -305,8 +305,12 @@ struct AccountEditorSheet: View {
 
 extension View {
     /// A limit's value: a short underlined field, its number at the trailing edge.
-    fileprivate func limitField() -> some View {
+    /// A limit's number field. Its title is only a placeholder on macOS, and the row's words are
+    /// kept from VoiceOver, so the field carries its name and what it does.
+    fileprivate func limitField(_ title: String, hint: String) -> some View {
         labelsHidden()
+            .accessibilityLabel(L10n.string(title))
+            .accessibilityHint(L10n.string(hint))
             .multilineTextAlignment(.trailing)
             .monospacedDigit()
             .underlineField()

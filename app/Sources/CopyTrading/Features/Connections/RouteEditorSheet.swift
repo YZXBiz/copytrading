@@ -40,7 +40,7 @@ struct RouteEditorSheet: View {
                         .foregroundStyle(Palette.tertiaryInk)
                         .padding(.vertical, 12)
                 } else {
-                    SheetRow(title: L10n.string("Discord channel")) {
+                    SheetRow(title: L10n.string("Discord channel"), labelsControl: true) {
                         SheetMenu(
                             label: L10n.string("Discord channel"),
                             choices: [("", L10n.string("First channel in Connections (%@)", channelIDs[0]))]
