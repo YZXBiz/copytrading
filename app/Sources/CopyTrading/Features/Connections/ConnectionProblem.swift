@@ -52,20 +52,13 @@ enum ConnectionProblem {
             return L10n.string("The bot can't reach that chat. Send the bot a message first, then try again.")
         case "notification_credentials_missing", "notification_identity_invalid", "notification_auth_or_chat_access_failed":
             return L10n.string("Couldn't reach the alert service. Check the token and the chat.")
-        case "removed_account_holds_shares":
-            let one = check.symbols.count == 1
-            return L10n.string(
-                one
-                    ? "%1$@ still holds %2$@ that CopyTrading bought. Sell it from %1$@'s page, or keep %1$@ in the setup."
-                    : "%1$@ still holds %2$@ that CopyTrading bought. Sell them from %1$@'s page, or keep %1$@ in the setup.",
-                account, stocks(check.symbols))
         case "removed_account_has_open_orders":
             return L10n.string(
                 "%1$@ still has orders for %2$@ that CopyTrading placed. Let them fill or cancel them in Alpaca, or keep %1$@ in the setup.",
                 account, stocks(check.symbols))
         case "removed_account_needs_review":
             return L10n.string(
-                "%1$@ still has a post being copied or holdings to review. Open %1$@'s page to settle them, or keep %1$@ in the setup.",
+                "%1$@ still has a post being copied. Wait a moment, then check again, or keep %1$@ in the setup.",
                 account)
         case "removed_account_unreadable":
             return L10n.string(

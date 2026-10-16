@@ -155,7 +155,8 @@ def test_nonterminal_order_blocks_account_removal(tmp_path):
     assert unsettled_ownership(account_dir) == UnsettledOwnership(order_symbols=("ABC",))
 
 
-def test_remaining_app_owned_lot_blocks_account_removal(tmp_path):
+def test_shares_a_removed_account_still_holds_never_block_it(tmp_path):
+    """They stay at the broker; CopyTrading only stops tracking them."""
     account_dir = tmp_path / "paper-demo"
     message = _trade_message()
     order = _order(message, OrderStatus.FILLED)
@@ -178,7 +179,7 @@ def test_remaining_app_owned_lot_blocks_account_removal(tmp_path):
             lots={order.client_id: lot},
         ),
     )
-    assert unsettled_ownership(account_dir) == UnsettledOwnership(symbols=("ABC",))
+    assert unsettled_ownership(account_dir) is None
 
 
 @pytest.mark.parametrize("corruption", ["bad_json", "unknown_snapshot", "unknown_schema"])
@@ -235,7 +236,7 @@ def test_snapshot_environment_mismatch_fails_closed_on_removal(tmp_path):
         unsettled_ownership(account_dir)
 
 
-def test_open_ownership_incident_blocks_account_removal(tmp_path):
+def test_an_open_ownership_incident_does_not_block_account_removal(tmp_path):
     account_dir = tmp_path / "paper-demo"
     save_snapshot(
         account_dir,
@@ -253,7 +254,7 @@ def test_open_ownership_incident_blocks_account_removal(tmp_path):
             },
         ),
     )
-    assert unsettled_ownership(account_dir) == UnsettledOwnership(needs_review=True)
+    assert unsettled_ownership(account_dir) is None
 
 
 def test_unreadable_existing_database_fails_closed(tmp_path):
@@ -276,19 +277,16 @@ def test_an_empty_account_from_an_older_version_does_not_block_setup(tmp_path):
     ("contents", "held"),
     [
         (
-            {"lots": {"buy-1": {"symbol": "ABC", "remaining_qty": "1"}}},
-            UnsettledOwnership(symbols=("ABC",)),
-        ),
-        (
             {"orders": {"buy-1": {"symbol": "ABC", "status": "accepted"}}},
             UnsettledOwnership(order_symbols=("ABC",)),
         ),
         ({"messages": {"m-1": {"status": "queued"}}}, UnsettledOwnership(needs_review=True)),
-        ({"lots": {"buy-1": {"symbol": "ABC"}}}, UnsettledOwnership(needs_review=True)),
+        ({"orders": {"buy-1": {"symbol": "ABC"}}}, UnsettledOwnership(needs_review=True)),
+        ({"lots": {"buy-1": {"symbol": "ABC", "remaining_qty": "1"}}}, None),
     ],
-    ids=["shares", "open-order", "post-being-copied", "unreadable"],
+    ids=["open-order", "post-being-copied", "unreadable", "shares"],
 )
-def test_an_older_versions_account_holding_anything_still_blocks(tmp_path, contents, held):
+def test_an_older_versions_account_with_work_in_flight_still_blocks(tmp_path, contents, held):
     account_dir = tmp_path / "paper-demo"
     save_snapshot(account_dir, LedgerSnapshot(account_id="paper-demo"))
     as_earlier_version(account_dir, **contents)

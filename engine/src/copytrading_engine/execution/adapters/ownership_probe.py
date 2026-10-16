@@ -4,7 +4,6 @@ import json
 import sqlite3
 from contextlib import closing
 from dataclasses import dataclass
-from decimal import Decimal
 from pathlib import Path
 
 from copytrading_engine.execution.adapters.sqlite_ledger import (
@@ -18,19 +17,19 @@ from copytrading_engine.shared.sqlite import verify_schema
 
 @dataclass(frozen=True)
 class UnsettledOwnership:
-    """What a stopped account still holds of CopyTrading's, named so the owner can settle it."""
+    """Work a stopped account still has in flight, named so the owner can settle it. Shares it
+    holds are not work: a removed account keeps them at the broker, and CopyTrading stops
+    tracking them."""
 
-    # Stocks it still holds shares of from copied buys, A to Z.
-    symbols: tuple[str, ...] = ()
     # Stocks with an order CopyTrading placed that has not finished, A to Z.
     order_symbols: tuple[str, ...] = ()
-    # A post still being copied, entries halted, or holdings waiting for the owner's review.
+    # A post still being copied.
     needs_review: bool = False
 
 
 def unsettled_ownership(account_dir: Path) -> UnsettledOwnership | None:
-    """What an account still owns of the app's work or shares, or None when it owns nothing;
-    never create or modify its DB.
+    """The work an account still has in flight, or None when it has none; never create or
+    modify its DB.
 
     Missing state is empty. Existing state with an unknown schema, invalid identity, or
     unreadable snapshot raises so the caller can keep the account configuration.
@@ -66,32 +65,21 @@ def unsettled_ownership(account_dir: Path) -> UnsettledOwnership | None:
             ):
                 raise RuntimeError("Execution snapshot account identity is invalid")
             return _held(
-                symbols={lot.symbol for lot in ledger.lots.values() if lot.remaining_qty > 0},
                 order_symbols={
                     order.symbol for order in ledger.orders.values() if not order.terminal
                 },
-                needs_review=(
-                    any(message.status == "queued" for message in ledger.messages.values())
-                    or ledger.entry_halted
-                    or any(
-                        not incident.resolved for incident in ledger.ownership_incidents.values()
-                    )
+                needs_review=any(
+                    message.status == "queued" for message in ledger.messages.values()
                 ),
             )
     except (sqlite3.Error, ValueError) as error:
         raise RuntimeError("Execution ownership state is unreadable") from error
 
 
-def _held(
-    *, symbols: set[str], order_symbols: set[str], needs_review: bool
-) -> UnsettledOwnership | None:
-    if not symbols and not order_symbols and not needs_review:
+def _held(*, order_symbols: set[str], needs_review: bool) -> UnsettledOwnership | None:
+    if not order_symbols and not needs_review:
         return None
-    return UnsettledOwnership(
-        symbols=tuple(sorted(symbols)),
-        order_symbols=tuple(sorted(order_symbols)),
-        needs_review=needs_review,
-    )
+    return UnsettledOwnership(order_symbols=tuple(sorted(order_symbols)), needs_review=needs_review)
 
 
 def _older_snapshot(data: str) -> dict | None:
@@ -104,28 +92,19 @@ def _older_snapshot(data: str) -> dict | None:
 
 
 def _older_ownership(snapshot: dict) -> UnsettledOwnership | None:
-    """What a ledger an earlier CopyTrading wrote still holds of the app's: shares, an open order,
-    a post being copied, a halt, or an unresolved ownership incident. Read by name only, since its
-    format is not this version's; anything unreadable counts as needing review."""
+    """The work a ledger an earlier CopyTrading wrote still has in flight: an open order or a post
+    being copied. Read by name only, since its format is not this version's; anything unreadable
+    counts as needing review."""
     try:
         return _held(
-            symbols={
-                str(lot["symbol"])
-                for lot in snapshot.get("lots", {}).values()
-                if Decimal(str(lot["remaining_qty"])) > 0
-            },
             order_symbols={
                 str(order["symbol"])
                 for order in snapshot.get("orders", {}).values()
                 if not is_terminal(order["status"])
             },
-            needs_review=(
-                any(m["status"] == "queued" for m in snapshot.get("messages", {}).values())
-                or bool(snapshot.get("entry_halted"))
-                or any(
-                    not i.get("resolved") for i in snapshot.get("ownership_incidents", {}).values()
-                )
+            needs_review=any(
+                m["status"] == "queued" for m in snapshot.get("messages", {}).values()
             ),
         )
-    except KeyError, TypeError, ArithmeticError, ValueError, AttributeError:
+    except KeyError, TypeError, ValueError, AttributeError:
         return UnsettledOwnership(needs_review=True)

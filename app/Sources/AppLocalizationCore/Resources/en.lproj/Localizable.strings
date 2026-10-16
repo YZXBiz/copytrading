@@ -2239,10 +2239,8 @@
 "%lld checks need attention" = "%lld checks need attention";
 "Review them, then start again." = "Review them, then start again.";
 "This account has no Alpaca keys yet. Open it and add them." = "This account has no Alpaca keys yet. Open it and add them.";
-"%1$@ still holds %2$@ that CopyTrading bought. Sell it from %1$@'s page, or keep %1$@ in the setup." = "%1$@ still holds %2$@ that CopyTrading bought. Sell it from %1$@'s page, or keep %1$@ in the setup.";
-"%1$@ still holds %2$@ that CopyTrading bought. Sell them from %1$@'s page, or keep %1$@ in the setup." = "%1$@ still holds %2$@ that CopyTrading bought. Sell them from %1$@'s page, or keep %1$@ in the setup.";
 "%1$@ still has orders for %2$@ that CopyTrading placed. Let them fill or cancel them in Alpaca, or keep %1$@ in the setup." = "%1$@ still has orders for %2$@ that CopyTrading placed. Let them fill or cancel them in Alpaca, or keep %1$@ in the setup.";
-"%1$@ still has a post being copied or holdings to review. Open %1$@'s page to settle them, or keep %1$@ in the setup." = "%1$@ still has a post being copied or holdings to review. Open %1$@'s page to settle them, or keep %1$@ in the setup.";
+"%1$@ still has a post being copied. Wait a moment, then check again, or keep %1$@ in the setup." = "%1$@ still has a post being copied. Wait a moment, then check again, or keep %1$@ in the setup.";
 "CopyTrading couldn't read %1$@'s records to see what it still holds. Keep %1$@ in the setup for now." = "CopyTrading couldn't read %1$@'s records to see what it still holds. Keep %1$@ in the setup for now.";
 "Alpaca keys were sent for %@, which isn't in the setup. Check the setup again." = "Alpaca keys were sent for %@, which isn't in the setup. Check the setup again.";
 "Couldn't read CopyTrading's saved records to check the setup. Try again in a moment." = "Couldn't read CopyTrading's saved records to check the setup. Try again in a moment.";
