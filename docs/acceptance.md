@@ -14,7 +14,7 @@ Journeys that need a saved setup can reuse one: run J31 with `--keep-state`, the
 | ID | Journey | Passes when |
 | --- | --- | --- |
 | J1 | Launch and unlock | The window opens locked, unlock succeeds, and the sidebar lists each saved account under ACCOUNTS (`navigation.account.<id>`, with Paper or Live and its balance) and each guru under PEOPLE (`navigation.guru.<id>`, with "N need you" or "Quiet today"), then Connections, Getting Started, and Settings below a hairline, and the copying status with a Diagnostics button at the foot. With nothing saved there are no accounts or gurus, and a first launch opens into the setup tour on Connections, its first card welcoming the owner at the Discord row; End Tour closes it and is remembered. |
-| J2 | Local engine starts | Settings → Engine reaches Local engine Ready within 90 s. |
+| J2 | Local engine starts | Settings → Engine reaches Local engine Running within 90 s. |
 | J3 | First-run guidance | Getting Started shows "0 of 5", the sidebar says "Not set up yet", and the guide explains how a post becomes a trade. Show Me Around starts the setup tour, which opens Connections and points at the Discord row, with the tour strip at the foot. Until a setup is saved, the sidebar lists only the setup pages. |
 | J4 | Navigate every screen | Each sidebar page (Connections, Getting Started, Settings, and the Diagnostics button) opens with the right title, and Connections offers Connect Discord. Settings replaces the sidebar with its own, and Close Settings returns to the screens. |
 | J20 | Toolbar | Before setup, Start Copying is present but disabled and the freshness label says "Not copying"; the freshness button refreshes; Connections' Add a guru opens the guru editor, and Remove Guru takes the unsaved guru away again. |
@@ -54,7 +54,7 @@ Journeys that need a saved setup can reuse one: run J31 with `--keep-state`, the
 | J15 | Lock | The toolbar Lock returns to the locked screen and clears private data from view. |
 | J16 | Menu bar | The menu bar extra shows today's change when unlocked, the copying state, and can open the main window. |
 | J16b | Clean quit | Quitting the app stops the engine; nothing started by the app outlives it. |
-| J17 | Crash recovery | After the app is killed, the engine exits when its pipe closes; the next launch reaches Local engine Ready and leaves nothing from before running. |
+| J17 | Crash recovery | After the app is killed, the engine exits when its pipe closes; the next launch reaches Local engine Running and leaves nothing from before running. |
 
 ## Design bar
 

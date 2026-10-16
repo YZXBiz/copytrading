@@ -2,7 +2,7 @@ import SwiftUI
 
 /// A reading with nothing to change, on one line: the name at the leading edge and its value at
 /// the trailing edge, with any explanation under the name. VoiceOver hears both together,
-/// "Local engine, Ready".
+/// "Local engine, Running".
 struct SettingsValueRow: View {
     let label: String
     let value: String
