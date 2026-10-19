@@ -2,7 +2,6 @@ import CopyTradingUI
 import Foundation
 import SwiftUI
 
-@main
 @MainActor
 struct CopyTradingApp: App {
     @NSApplicationDelegateAdaptor(AppLifecycleDelegate.self) private var lifecycle

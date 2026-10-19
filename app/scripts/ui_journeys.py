@@ -13,6 +13,7 @@ import datetime as dt
 import functools
 import json
 import os
+import plistlib
 import select
 import shutil
 import subprocess
@@ -40,6 +41,12 @@ APP_NAME = "CopyTrading Debug"
 BUNDLE_ID = "dev.copytrading.app.uitest"
 APP_LOG = ROOT / "dist/ui-test/app-stderr.log"
 APPEARANCE_KEY = "appearance"  # AppAppearance.storageKey in the app
+SIGN_UPDATE = ROOT / "app/.build/artifacts/sparkle/Sparkle/bin/sign_update"
+# A throwaway EdDSA key pair that exists only to sign the journeys' local update. While a journey
+# runs, the debug bundle trusts its public half; release builds trust the release key in
+# Info.plist, so a signature made with this one installs nothing there.
+UPDATE_TEST_PRIVATE_KEY = "1NYTtvjmgZD24ipwBiCOlbLYixhHU+dRaaApgXjJpBA="
+UPDATE_TEST_PUBLIC_KEY = "PtU9L9PgHMn17DpXj0JhEB7MHrpja6p3PrXMw+T7uW4="
 
 
 ASSISTANT_ANSWER = "Copying is paused, so nothing is being copied right now."
@@ -93,14 +100,26 @@ class _QuietFiles(SimpleHTTPRequestHandler):
 class LocalAppcast:
     """A one-item update feed on a local port offering version 99.0, newer than any build.
 
-    A debug build reads it through COPYTRADING_UPDATE_FEED. The journey never installs: its
-    enclosure points nowhere and carries no valid signature.
+    A debug build reads it through COPYTRADING_UPDATE_FEED. By default the journey never
+    installs: the enclosure points nowhere and carries no valid signature. With `installable`
+    the enclosure is a real signed download of a stub app, so Sparkle installs it end to end.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, installable: bool = False) -> None:
         self._directory = Path(tempfile.mkdtemp(prefix="copytrading-appcast."))
+        self._server = ThreadingHTTPServer(
+            ("127.0.0.1", 0), functools.partial(_QuietFiles, directory=str(self._directory))
+        )
+        self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
+        self.relaunched = self._directory / "relaunched"
+        enclosure = (
+            self._signed_stub()
+            if installable
+            else 'url="http://127.0.0.1:9/CopyTrading-99.0.zip" length="1" '
+            'type="application/octet-stream" sparkle:edSignature="AAAA"'
+        )
         (self._directory / "appcast.xml").write_text(
-            """<?xml version="1.0" encoding="utf-8"?>
+            f"""<?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
     <title>CopyTrading journey feed</title>
@@ -108,19 +127,77 @@ class LocalAppcast:
       <title>99.0</title>
       <sparkle:version>99000</sparkle:version>
       <sparkle:shortVersionString>99.0</sparkle:shortVersionString>
-      <description><![CDATA[<p>A journey release. Never installed.</p>]]></description>
-      <enclosure url="http://127.0.0.1:9/CopyTrading-99.0.zip" length="1"
-        type="application/octet-stream" sparkle:edSignature="AAAA"/>
+      <description><![CDATA[<p>A journey release.</p>]]></description>
+      <enclosure {enclosure}/>
     </item>
   </channel>
 </rss>
 """,
             encoding="utf-8",
         )
-        self._server = ThreadingHTTPServer(
-            ("127.0.0.1", 0), functools.partial(_QuietFiles, directory=str(self._directory))
+
+    def _signed_stub(self) -> str:
+        """The enclosure for a stub app that replaces the debug bundle.
+
+        A Sparkle relaunch drops the journey's environment, so the real app would start on the
+        owner's own data. The stub has the debug bundle's identifier and name but is only a
+        program that records that it was relaunched and then waits to be stopped.
+        """
+        stub = self._directory / "stub" / DEBUG_APP.name
+        (stub / "Contents/MacOS").mkdir(parents=True)
+        source = self._directory / "stub.c"
+        source.write_text(
+            "#include <stdio.h>\n#include <unistd.h>\n"
+            "int main(void) {\n"
+            f'  FILE *f = fopen("{self.relaunched}", "w");\n'
+            '  if (f) { fputs("relaunched\\n", f); fclose(f); }\n'
+            "  sleep(600);\n  return 0;\n}\n"
         )
-        self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
+        subprocess.run(
+            ["cc", "-o", str(stub / "Contents/MacOS/CopyTrading"), str(source)], check=True
+        )
+        (stub / "Contents/Info.plist").write_bytes(
+            plistlib.dumps(
+                {
+                    "CFBundleExecutable": "CopyTrading",
+                    "CFBundleIdentifier": BUNDLE_ID,
+                    "CFBundleName": APP_NAME,
+                    "CFBundlePackageType": "APPL",
+                    "CFBundleShortVersionString": "99.0",
+                    "CFBundleVersion": "99000",
+                    "SUPublicEDKey": UPDATE_TEST_PUBLIC_KEY,
+                }
+            )
+        )
+        subprocess.run(
+            [
+                "codesign",
+                "--force",
+                "--sign",
+                local_identity() or "-",
+                "--identifier",
+                BUNDLE_ID,
+                str(stub),
+            ],
+            check=True,
+            capture_output=True,
+        )
+        archive = self._directory / "CopyTrading-99.0.zip"
+        subprocess.run(["ditto", "-c", "-k", "--keepParent", str(stub), str(archive)], check=True)
+        key_file = self._directory / "update-key"
+        key_file.write_text(UPDATE_TEST_PRIVATE_KEY)
+        key_file.chmod(0o600)
+        signed = subprocess.run(
+            [str(SIGN_UPDATE), "--ed-key-file", str(key_file), str(archive)],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        key_file.unlink()
+        port = self._server.server_address[1]
+        return (
+            f'url="http://127.0.0.1:{port}/{archive.name}" {signed} type="application/octet-stream"'
+        )
 
     @property
     def url(self) -> str:
@@ -401,7 +478,7 @@ class AppDriver:
                     raise
                 time.sleep(1)
         if name is not None:
-            self._capture_sheets(f"{self.shot_count:02d}-{name}")
+            self.capture_sheets(f"{self.shot_count:02d}-{name}")
             if problems := layout_problems(data):
                 self.layout[f"{self.shot_count:02d}-{name}"] = problems
         elements = [
@@ -424,7 +501,7 @@ class AppDriver:
         ]
         return Snapshot(id=str(data.get("snapshot_id", "")), elements=elements)
 
-    def _capture_sheets(self, stem: str) -> None:
+    def capture_sheets(self, stem: str) -> None:
         """A sheet is a window of its own, missing from the main window's capture: save each one
         beside the screenshot, so the shot shows what the owner sees."""
         with contextlib.suppress(JourneyFailure):
@@ -550,12 +627,7 @@ class AppDriver:
         quoted = text.replace("\\", "\\\\").replace('"', '\\"')
         # System Events names the process after its executable, "CopyTrading", which the
         # installed app shares; the debug bundle's process id tells them apart.
-        pids = subprocess.run(
-            ["pgrep", "-f", f"{DEBUG_APP.name}/Contents/MacOS/CopyTrading"],
-            capture_output=True,
-            text=True,
-            check=False,
-        ).stdout.split()
+        pids = _debug_app_pids()
         if len(pids) != 1:
             raise JourneyFailure(f"expected one {APP_NAME} process, found {len(pids)}")
         # Launch Services knows the front app at once; System Events can lag behind it.
@@ -842,17 +914,86 @@ def _bundle_processes() -> list[str]:
     return found.stdout.split()
 
 
-def quit_app() -> list[str]:
-    """Quit the way a user does and return whatever survived; then clean up forcibly."""
-    subprocess.run(
-        ["osascript", "-e", f'tell application id "{BUNDLE_ID}" to quit'],
-        capture_output=True,
-        timeout=90,
-        check=False,
+def _debug_app_pids() -> list[str]:
+    """The debug app's own process; the relaunch guard it starts names the same path."""
+    executable = str(DEBUG_APP / "Contents/MacOS/CopyTrading")
+    listing = subprocess.run(
+        ["ps", "-axo", "pid=,comm="], capture_output=True, text=True, check=False
+    ).stdout
+    return [
+        line.split(None, 1)[0]
+        for line in listing.splitlines()
+        if line.strip().split(None, 1)[1:] == [executable]
+    ]
+
+
+def press_dialog_button(title: str) -> bool:
+    """Press a button in any window of the app, such as the quit question or Sparkle's update
+    window. Peekaboo's capture lists only the main window, so this asks Accessibility directly;
+    System Events names the process "CopyTrading", which the installed app shares, so it picks
+    the debug bundle's process by id."""
+    pids = _debug_app_pids()
+    if len(pids) != 1:
+        return False
+    script = f"""
+tell application "System Events"
+    tell (first process whose unix id is {int(pids[0])})
+        repeat with w in windows
+            try
+                click button "{title}" of w
+                return "pressed"
+            end try
+        end repeat
+    end tell
+end tell
+return "none"
+"""
+    pressed = subprocess.run(
+        ["osascript", "-e", script], capture_output=True, text=True, timeout=30, check=False
     )
+    return pressed.stdout.strip() == "pressed"
+
+
+def wait_and_press_dialog_button(title: str, *, timeout: float = 30) -> None:
+    deadline = time.monotonic() + timeout
+    while not press_dialog_button(title):
+        if time.monotonic() > deadline:
+            raise JourneyFailure(f"no {title!r} button appeared within {timeout:.0f}s")
+        time.sleep(0.5)
+
+
+def send_quit() -> subprocess.Popen[str]:
+    """The quit Apple Event that `tell application to quit`, the Dock, and Sparkle's installer
+    send. It returns once the app has answered, which can wait on the quit question."""
+    return subprocess.Popen(
+        ["osascript", "-e", f'tell application id "{BUNDLE_ID}" to quit'],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+
+
+def wait_for_exit(timeout: float) -> bool:
+    deadline = time.monotonic() + timeout
+    while _bundle_processes():
+        if time.monotonic() > deadline:
+            return False
+        time.sleep(0.5)
+    return True
+
+
+def quit_app() -> list[str]:
+    """Quit the way a user does and return whatever survived; then clean up forcibly. Setup
+    edits a journey left behind make the app ask first; the answer here is to discard them."""
+    request = send_quit()
     deadline = time.monotonic() + 60
     while _bundle_processes() and time.monotonic() < deadline:
+        if request.poll() is None:
+            press_dialog_button("Quit and Discard")
         time.sleep(1)
+    with contextlib.suppress(subprocess.TimeoutExpired):
+        request.communicate(timeout=5)
+    request.kill()
     survivors = _bundle_processes()
     if survivors:
         subprocess.run(["kill", "-9", *survivors], check=False)
@@ -2437,6 +2578,171 @@ def j43_updates(app: AppDriver) -> None:
     app.wait_for(UNLOCKED, timeout=60)
 
 
+def j45_quit_with_sheet(app: AppDriver) -> None:
+    """A sheet never stops a quit. With setup edits in the guru sheet, Quit (the Apple Event and
+    the menu) asks once: Keep Editing leaves the app and the sheet as they were, Quit and Discard
+    quits. A sheet with nothing to lose quits with no question.
+    """
+    if app.state_root is None:
+        raise JourneySkipped("needs the run's state root")
+    launch(app.state_root)
+    app.wait_for(UNLOCKED, timeout=60)
+    app.open_screen("connections")
+    app.click("connections.gurus.add")
+    app.expect(app.see("quit-sheet-open"), "Remove Guru")
+
+    request = send_quit()
+    wait_and_press_dialog_button("Keep Editing")
+    request.communicate(timeout=30)
+    if wait_for_exit(3):
+        raise JourneyFailure("Keep Editing did not keep the app open")
+    app.expect(app.see("quit-kept-editing"), "Remove Guru")
+
+    request = send_quit()
+    # The question is a window of its own; Peekaboo's capture lists only the main window.
+    time.sleep(1.5)
+    app.capture_sheets("quit-question")
+    wait_and_press_dialog_button("Quit and Discard")
+    if not wait_for_exit(30):
+        app.see("quit-and-discard-stuck")
+        raise JourneyFailure("Quit and Discard did not quit the app")
+    _, error = request.communicate(timeout=30)
+    if request.returncode != 0:
+        raise JourneyFailure(f"the quit request failed: {error.strip()}")
+
+    # The menu's Quit takes the same way in.
+    launch(app.state_root, quit_first=False)
+    app.wait_for(UNLOCKED, timeout=60)
+    app.open_screen("connections")
+    app.click("connections.gurus.add")
+    app.expect(app.see("quit-menu-sheet-open"), "Remove Guru")
+    peekaboo("menu", "click", "--app", APP_NAME, "--path", f"{APP_NAME} > Quit {APP_NAME}")
+    wait_and_press_dialog_button("Quit and Discard")
+    if not wait_for_exit(30):
+        raise JourneyFailure("Quit in the menu did not quit with a sheet open")
+
+    # Nothing typed, nothing saved: the time zone sheet is open and Quit goes straight through.
+    launch(app.state_root, quit_first=False)
+    app.wait_for(UNLOCKED, timeout=60)
+    app.open_settings("general")
+    app.click("Choose Another Time Zone")
+    app.wait_for("Time Zone", timeout=15, name="quit-time-zone-sheet")
+    request = send_quit()
+    if not wait_for_exit(30):
+        raise JourneyFailure("a sheet with nothing to lose stopped Quit")
+    request.communicate(timeout=30)
+    if request.returncode != 0:
+        raise JourneyFailure("Quit with a plain sheet open reported an error")
+    launch(app.state_root, quit_first=False)
+    app.wait_for(UNLOCKED, timeout=60)
+
+
+def j46_update_with_sheet(app: AppDriver) -> None:
+    """Install and Relaunch works with a sheet open: Sparkle's quit reaches the app, the app asks
+    about the setup edits in the sheet, and once they are discarded the update installs and the
+    new version opens. The update is a signed stub app (see LocalAppcast); the real build is never
+    relaunched, because a Sparkle relaunch drops the journey's state root.
+    """
+    if app.state_root is None:
+        raise JourneySkipped("needs the run's state root")
+    backup_root = Path(tempfile.mkdtemp(prefix="copytrading-debug-backup."))
+    backup = backup_root / DEBUG_APP.name
+    quit_app()
+    subprocess.run(["ditto", str(DEBUG_APP), str(backup)], check=True)
+    try:
+        # The debug bundle trusts the journey's key for this run; the backup keeps the real one.
+        subprocess.run(
+            [
+                "/usr/libexec/PlistBuddy",
+                "-c",
+                f"Set :SUPublicEDKey {UPDATE_TEST_PUBLIC_KEY}",
+                str(DEBUG_APP / "Contents/Info.plist"),
+            ],
+            check=True,
+        )
+        subprocess.run(
+            [
+                "codesign",
+                "--force",
+                "--deep",
+                "--sign",
+                local_identity() or "-",
+                "--identifier",
+                BUNDLE_ID,
+                str(DEBUG_APP),
+            ],
+            check=True,
+            capture_output=True,
+        )
+        # An earlier run's download or half-finished install would be resumed instead.
+        shutil.rmtree(
+            Path.home() / "Library/Caches" / BUNDLE_ID / "org.sparkle-project.Sparkle",
+            ignore_errors=True,
+        )
+        subprocess.run(["defaults", "delete", BUNDLE_ID, "SUSkippedVersion"], capture_output=True)
+        with LocalAppcast(installable=True) as feed:
+            subprocess.run(
+                ["defaults", "write", BUNDLE_ID, "SUEnableAutomaticChecks", "-bool", "true"],
+                check=True,
+            )
+            subprocess.run(
+                [
+                    "defaults",
+                    "write",
+                    BUNDLE_ID,
+                    "SULastCheckTime",
+                    "-date",
+                    "2000-01-01 00:00:00 +0000",
+                ],
+                check=True,
+            )
+            launch(app.state_root, env={"COPYTRADING_UPDATE_FEED": feed.url})
+            app.wait_for(UNLOCKED, timeout=60)
+            app.wait_for("update.banner", timeout=60, name="update-with-sheet-banner")
+            app.click("update.install")
+            wait_for_sparkle_window = time.monotonic() + 30
+            while "Software Update" not in {
+                w.get("window_title")
+                for w in peekaboo("window", "list", "--app", APP_NAME).get("windows", [])
+            }:
+                if time.monotonic() > wait_for_sparkle_window:
+                    raise JourneyFailure("Install Update… opened no update window")
+                time.sleep(1)
+            app.open_screen("connections")
+            app.click("connections.gurus.add")
+            app.expect(app.see("update-sheet-open"), "Remove Guru")
+
+            wait_and_press_dialog_button("Install Update")
+            wait_and_press_dialog_button("Install and Relaunch", timeout=60)
+            # Sparkle's installer quits the app with the same Apple Event as Quit.
+            wait_and_press_dialog_button("Quit and Discard")
+            deadline = time.monotonic() + 90
+            while not feed.relaunched.exists():
+                if time.monotonic() > deadline:
+                    raise JourneyFailure(
+                        "the update did not install and reopen the app with a sheet open"
+                    )
+                time.sleep(1)
+        shown = plistlib.loads((DEBUG_APP / "Contents/Info.plist").read_bytes())
+        if shown.get("CFBundleShortVersionString") != "99.0":
+            raise JourneyFailure(
+                f"the installed version is {shown.get('CFBundleShortVersionString')}"
+            )
+    finally:
+        # The stub, and the relaunch guard that would reopen the bundle if the stub stopped.
+        survivors = _bundle_processes()
+        if survivors:
+            subprocess.run(["kill", "-9", *survivors], check=False)
+            time.sleep(1)
+        shutil.rmtree(DEBUG_APP, ignore_errors=True)
+        subprocess.run(["ditto", str(backup), str(DEBUG_APP)], check=True)
+        shutil.rmtree(backup_root, ignore_errors=True)
+        subprocess.run(["defaults", "delete", BUNDLE_ID, "SUSkippedVersion"], capture_output=True)
+    # Back to a launch with no feed, so later journeys see no banner.
+    launch(app.state_root, quit_first=False)
+    app.wait_for(UNLOCKED, timeout=60)
+
+
 def j44_find_and_go_back(app: AppDriver) -> None:
     """⌘K finds a page by name and opens it; Back and Forward retrace the owner's moves."""
     app.open_screen("connections")
@@ -2565,6 +2871,8 @@ JOURNEYS: list[tuple[str, Callable[[AppDriver], None]]] = [
     ("J26 help menu", j26_help_menu),
     ("J44 find and go back", j44_find_and_go_back),
     ("J43 updates", j43_updates),
+    ("J45 quit with a sheet open", j45_quit_with_sheet),
+    ("J46 update with a sheet open", j46_update_with_sheet),
     ("J15 lock", j15_lock),
     ("J17 crash recovery", j17_crash_recovery),
     ("J45 window comes back", j45_window_comes_back),
