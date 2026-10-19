@@ -80,6 +80,8 @@ CopyTrading 是一款原生 macOS 应用。它读取交易者在 Discord 上发�
 
 每个版本都附有 SHA-256 校验和，如何校验下载文件见 [releases](docs/releases.md)。
 
+**更新**在应用内进行：每天检查一次，安装前会先询问。请把 CopyTrading 放在 **应用程序** 文件夹中；macOS 不允许位于桌面、文稿或下载文件夹中的应用替换自己。如果从 alpha 版更新时应用退出后没有重新打开，请把它移到应用程序文件夹再打开，或重新下载上面的 DMG。
+
 **或者从源码构建：** 需要 [uv](https://docs.astral.sh/uv/) 和 Xcode 命令行工具。
 
 ```sh
