@@ -72,7 +72,7 @@ struct WindowSessionMonitor: NSViewRepresentable {
             _ = lifecycle.attach(to: window, sessionID: token.id)
             // The red button hides CopyTrading, as it does for Mail or Messages: the window keeps
             // its unlocked session and any setup still being edited, so coming back asks nothing.
-            // Closing it for real (Close in the File menu) still locks the app.
+            // Close in the File menu presses this same button, so it hides the app too.
             if let close = window.standardWindowButton(.closeButton) {
                 close.target = self
                 close.action = #selector(hideApp(_:))

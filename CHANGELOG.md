@@ -19,6 +19,7 @@ User-visible changes for each release are recorded here. Every GitHub release's 
   function it came from, so the cause survives a restart. The error's message is never kept.
 - **CopyTrading always shows its window when it opens.** Started hidden (`open -j`, a login item set to Hide), or reopened while hidden by anything but a Dock click, it stayed out of sight with the Touch ID unlock behind it, and copying stayed stopped until you clicked the Dock icon. Now a launch, `open`, and a reopen all show the window. The red button still hides the app.
 - A guru's example message, and the question box in the assistant, show every line you typed or pasted instead of dropping one until the pointer passes over it.
+- CopyTrading reads the engine's output on threads of its own. It used to hold two of the threads every task in the app shares for as long as the engine ran, so on a machine with few cores the engine could exit without the app ever hearing about it.
 
 ## 0.1.0-beta.1 — developer preview
 

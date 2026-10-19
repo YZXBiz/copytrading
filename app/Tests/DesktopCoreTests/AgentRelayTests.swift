@@ -12,7 +12,17 @@ private func shortStateRoot() throws -> URL {
 }
 
 /// Send one line the way the `copytrading` client does and return the single answer line.
-private func exchange(_ line: String, at socketURL: URL) throws -> String {
+/// One request and its answer, on a thread of its own: the socket read blocks, and blocking a
+/// cooperative thread can leave the relay's handler no thread to answer on.
+private func exchange(_ line: String, at socketURL: URL) async throws -> String {
+    try await withCheckedThrowingContinuation { continuation in
+        Thread.detachNewThread {
+            continuation.resume(with: Result { try exchangeBlocking(line, at: socketURL) })
+        }
+    }
+}
+
+private func exchangeBlocking(_ line: String, at socketURL: URL) throws -> String {
     let descriptor = socket(AF_UNIX, SOCK_STREAM, 0)
     guard descriptor >= 0 else { throw VerificationFailure(description: "client socket failed") }
     defer { close(descriptor) }
@@ -79,7 +89,7 @@ func runAgentRelayTests() async throws {
         lstat(socketURL.path, &entry) == 0 && entry.st_mode & S_IFMT == S_IFSOCK
             && entry.st_mode & 0o777 == 0o600, "the agent socket must be owner-only")
 
-    let answer = try await Task.detached { try exchange(#"{"hello":1}"#, at: socketURL) }.value
+    let answer = try await exchange(#"{"hello":1}"#, at: socketURL)
     try #require(answer == #"{"echo":{"hello":1}}"#, "the relay must pass the engine's line back unchanged")
     let context = recorded.all.first
     try #require(
@@ -89,14 +99,14 @@ func runAgentRelayTests() async throws {
         context?.callerPID == getpid() && context?.callerPath?.isEmpty == false,
         "the relay must identify the calling process for the audit trail")
 
-    let unavailable = try await Task.detached { try exchange("fail", at: socketURL) }.value
+    let unavailable = try await exchange("fail", at: socketURL)
     let unavailableCode = try errorCode(of: unavailable)
     try #require(
         unavailableCode == "unavailable",
         "an engine failure must become a contract error, not a dropped connection")
 
     let oversized = String(repeating: "x", count: AgentControlSocket.maximumLineBytes + 10)
-    let refused = try await Task.detached { try exchange(oversized, at: socketURL) }.value
+    let refused = try await exchange(oversized, at: socketURL)
     let refusedCode = try errorCode(of: refused)
     try #require(refusedCode == "invalid_request", "oversized lines must be refused")
 
@@ -108,10 +118,10 @@ func runAgentRelayTests() async throws {
     try relay.start()
     relay.stop()
 
-    try runAgentSocketLimitTests(root: root)
+    try await runAgentSocketLimitTests(root: root)
 }
 
-private func runAgentSocketLimitTests(root: URL) throws {
+private func runAgentSocketLimitTests(root: URL) async throws {
     let socketURL = AgentRelay.socketURL(stateRoot: root)
     let gate = Gate()
     let busy = AgentControlSocket(
@@ -124,14 +134,14 @@ private func runAgentSocketLimitTests(root: URL) throws {
         }
     )
     try busy.start()
-    let first = Thread.detachNewThreadWithResult { try? exchange("one", at: socketURL) }
-    Thread.sleep(forTimeInterval: 0.3)
-    let second = try exchange("two", at: socketURL)
+    let first = Task { try? await exchange("one", at: socketURL) }
+    try await Task.sleep(for: .milliseconds(300))
+    let second = try await exchange("two", at: socketURL)
     try #require(
         second == #"{"error":{"code":"busy"}}"#,
         "requests beyond the connection cap must be refused as busy")
     gate.open()
-    try #require(first.wait() == "done", "the admitted request must still be answered")
+    try #require(await first.value == "done", "the admitted request must still be answered")
     busy.stop()
 
     FileManager.default.createFile(atPath: socketURL.path, contents: Data("not a socket".utf8))
@@ -160,31 +170,6 @@ private final class Gate: @unchecked Sendable {
     var isOpen: Bool { lock.withLock { opened } }
 
     func open() { lock.withLock { opened = true } }
-}
-
-extension Thread {
-    fileprivate final class Result<Value: Sendable>: @unchecked Sendable {
-        private let done = DispatchSemaphore(value: 0)
-        private var value: Value?
-
-        func finish(_ result: Value?) {
-            value = result
-            done.signal()
-        }
-
-        func wait() -> Value? {
-            done.wait()
-            return value
-        }
-    }
-
-    fileprivate static func detachNewThreadWithResult<Value: Sendable>(
-        _ body: @escaping @Sendable () -> Value?
-    ) -> Result<Value> {
-        let result = Result<Value>()
-        detachNewThread { result.finish(body()) }
-        return result
-    }
 }
 
 private struct CLIResult {
