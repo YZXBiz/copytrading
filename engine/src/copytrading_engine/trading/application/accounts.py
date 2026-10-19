@@ -152,9 +152,11 @@ STREAM_SAFETY_SECONDS = 30.0
 UNREACHABLE_FIRST_RETRY_SECONDS = 1.0
 UNREACHABLE_RETRY_SECONDS = 60.0
 # A cycle that fails for any other reason (not Alpaca answering badly) is tried again after each of
-# these waits, about four minutes in all, before the account stays failed. Retrying cannot place an
-# order twice: an order's client ID comes from its post, its intent is committed before it goes
-# out, and a retried cycle only looks orders up by that ID, never resubmits them.
+# these waits, about four minutes in all, before the account stays failed. A wake (a new post or an
+# order update) cuts a wait short, so the tries can come sooner and the four minutes can be less.
+# Retrying cannot place an order twice: an order's client ID comes from its post, its intent is
+# committed before it goes out, and a retried cycle only looks orders up by that ID, never
+# resubmits them.
 CYCLE_RETRY_SECONDS: tuple[float, ...] = (15.0, 60.0, 180.0)
 
 
@@ -168,10 +170,10 @@ class AccountSupervisor:
         on_change: Callable[[], None],
         *,
         open_failure: str = "account_unavailable",
-        on_failed: Callable[[str], None] = lambda _account_id: None,
+        on_failed: Callable[[str, BaseException], None] = lambda _account_id, _error: None,
     ) -> None:
         """`open_failure` says why an account without an owner could not open; `on_failed` is told
-        once, with the account's id, when a running account stops on its own."""
+        once, with the account's id and the error, when a running account stops on its own."""
         self.id = account_id
         self.owner = owner
         self.poll_seconds = poll_seconds
@@ -351,6 +353,7 @@ class AccountSupervisor:
         self._account_status = AccountStatus(self.id, self.state, self.error_code)
         if self.owner is not None:
             self.owner.request_stop()
+        self.on_failed(self.id, exc)
         log.error(
             "trading_account_failed id=%s type=%s status=%s",
             self.id,
@@ -358,7 +361,6 @@ class AccountSupervisor:
             getattr(exc, "status", None),
         )
         self.on_change()
-        self.on_failed(self.id)
 
     async def close(self) -> None:
         if self.owner is not None:

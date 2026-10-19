@@ -1,5 +1,7 @@
 """Private observations for explicitly activated trading work, recorded in the local journal."""
 
+import re
+import traceback
 from collections.abc import Iterable, Iterator, Mapping
 from contextlib import AbstractContextManager, contextmanager
 from hashlib import sha256
@@ -77,6 +79,23 @@ class TradingTelemetry:
             safe_ledger_event(name),
             current_workflow_attempt(),
             facts,
+        )
+
+    def account_failed(self, error: BaseException) -> None:
+        """An account stopped on an error: the error's type and the engine function it was raised
+        in, so the journal says why without its message, which may carry broker or post text."""
+        frames = [frame for frame, _ in traceback.walk_tb(error.__traceback__)]
+        frame = frames[-1] if frames else None
+        self._record(
+            "account.failed",
+            "raised",
+            None,
+            None,
+            None,
+            {
+                "reason": _snake(type(error).__name__),
+                "status": frame.f_code.co_name.strip("_") if frame is not None else None,
+            },
         )
 
     def _record(
@@ -158,3 +177,8 @@ class TradingTelemetry:
 
 def signal_reference(message_id: str) -> str:
     return sha256(message_id.encode("utf-8", errors="replace")).hexdigest()[:32]
+
+
+def _snake(name: str) -> str:
+    """ "OperationalError" becomes "operational_error"."""
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()

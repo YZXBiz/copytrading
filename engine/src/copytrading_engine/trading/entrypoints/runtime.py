@@ -527,6 +527,7 @@ class TradingRuntime:
                         open_failure = exc.reason
                         refusals.append(exc.reason)
                     except Exception as exc:  # noqa: BLE001 - one account's failure is reported per account
+                        self._journal_failure(exc)
                         log.error(
                             "trading_account_open_failed id=%s type=%s",
                             account.id,
@@ -543,7 +544,7 @@ class TradingRuntime:
                     self._stop,
                     self._account_changed,
                     open_failure=open_failure,
-                    on_failed=self._account_stopped,
+                    on_failed=self._account_failed,
                 )
             self._account_changed()
             # Limits changed while the accounts opened reach them before the first post.
@@ -881,8 +882,14 @@ class TradingRuntime:
         }
         return reason if len(reasons) == 1 and (reason := reasons.pop()) else "account_unavailable"
 
-    def _account_stopped(self, account_id: str) -> None:
-        """A running account failed: the owner's alert channel hears of it once."""
+    def _journal_failure(self, error: BaseException) -> None:
+        if self._telemetry is not None:
+            self._telemetry.account_failed(error)
+
+    def _account_failed(self, account_id: str, error: BaseException) -> None:
+        """A running account stopped: the journal records the error, and the owner's alert channel
+        hears of it once."""
+        self._journal_failure(error)
         self._announcements.append(account_stopped_alert(account_id, dt.datetime.now(dt.UTC)))
 
     def _account_changed(self) -> None:

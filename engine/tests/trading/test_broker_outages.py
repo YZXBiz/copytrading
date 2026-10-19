@@ -84,3 +84,34 @@ async def test_rejected_keys_stop_the_account(tmp_path, monkeypatch):
     assert supervisor.state == "failed"
     assert supervisor.error_code == "account_unavailable"
     assert owner.cycles == 1
+
+
+async def test_the_error_that_stops_an_account_is_reported(tmp_path, monkeypatch):
+    monkeypatch.setattr(accounts, "CYCLE_RETRY_SECONDS", (0.01, 0.01, 0.01))
+
+    def broken_cycle():
+        raise KeyError("broker or post text never leaves the engine")
+
+    owner = _FlakyOwner(tmp_path, [])
+    owner.cycle = lambda now, *, halted: _raise(broken_cycle)
+    heard: list[tuple[str, BaseException]] = []
+    stop = asyncio.Event()
+    supervisor = AccountSupervisor(
+        owner.name,
+        owner,
+        0.05,
+        stop,
+        lambda: None,
+        on_failed=lambda account_id, error: heard.append((account_id, error)),
+    )
+    supervisor.start()
+    await asyncio.sleep(0.3)
+    stop.set()
+    await supervisor.close()
+
+    assert supervisor.state == "failed"
+    assert [(account_id, type(error)) for account_id, error in heard] == [(owner.name, KeyError)]
+
+
+async def _raise(function):
+    function()

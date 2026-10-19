@@ -8,6 +8,8 @@ User-visible changes for each release are recorded here. Every GitHub release's 
   instead of a bare 0.1.0.
 - **CopyTrading tells you when it comes back with copying stopped.** After a quit, a crash, or a Mac restart, copying waits for you to press Start Copying (and Touch ID), and nothing said so, so a relaunch could go unnoticed while posts were missed. If copying was on when CopyTrading last stopped, the window and the menu bar now say "Copying stopped when CopyTrading quit" with a Start Copying button, and one notification goes out in case the window is hidden. Stopping copying yourself doesn't trigger it, and copying still never starts on its own.
 - **An account that stops is no longer silent.** On October 19 an account failed 30 minutes into a session and stayed failed for 45 minutes with nothing to say so. A cycle that fails for a reason other than Alpaca is now retried three times over about four minutes first, and an account that still stops says so with a notification ("Copying into zhap-account-2 stopped"), a **Stopped** word in the sidebar, a warning mark and count in the menu bar, and a message to your Telegram or Discord alert channel when one is set. Rejected keys still stop an account at once.
+- When an error stops an account, the diagnostics journal records which error it was and the engine
+  function it came from, so the cause survives a restart. The error's message is never kept.
 
 ## 0.1.0-beta.1 — developer preview
 
