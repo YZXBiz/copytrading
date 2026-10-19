@@ -4,6 +4,14 @@ User-visible changes for each release are recorded here. Every GitHub release's 
 
 ## Unreleased
 
+- A ticker written right against its price, as in "14.1nfxl", is now read as the ticker instead of
+  sending the post to review. Tickers of one or two letters still have to stand apart, so "10pm"
+  never reads as PM.
+- An example's message shows every line in a guru's settings, not only the first until the
+  pointer passes over it.
+- An example that does not match says why in one line, a buy with no fraction no longer reads
+  "fraction none", and an account an example would not copy into says "Not copied".
+
 ## 0.1.0-beta.1 — developer preview
 
 The first beta. CopyTrading went through a full test pass in English and 简体中文: every trading flow on real Discord and Alpaca paper, every control, and every screen ([validation](docs/validation.md)). These are the fixes it led to. Start with a paper account; live trading is not yet qualified.

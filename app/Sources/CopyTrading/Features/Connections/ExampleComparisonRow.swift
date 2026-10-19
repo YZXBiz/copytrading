@@ -6,17 +6,27 @@ struct ExampleComparisonRow: View {
 
     @MainActor private var actualText: String {
         if let instruction = example.actual.instructions.first {
-            return L10n.string(
-                "%@ %@ · fraction %@",
-                L10n.string(Humanize.code(instruction.action.rawValue)),
-                instruction.symbol,
-                instruction.fraction.map(Humanize.fraction) ?? L10n.string("none")
-            )
+            return Self.call(
+                L10n.string(Humanize.code(instruction.action.rawValue)), instruction.symbol, instruction.fraction)
         }
         return L10n.string(
-            "%@ · %@", L10n.string(Humanize.code(example.actual.decision)),
-            L10n.string(Humanize.code(example.actual.reason))
+            "%@ · %@", L10n.string(Humanize.code(example.actual.decision)), Reason.text(example.actual.reason)
         )
+    }
+
+    /// "Sell all NFXL · fraction 1"; a buy that names no fraction is just "Buy NBIS".
+    @MainActor private static func call(_ action: String, _ symbol: String, _ fraction: String?) -> String {
+        guard let fraction else { return L10n.string("%@ %@", action, symbol) }
+        return L10n.string("%@ %@ · fraction %@", action, symbol, Humanize.fraction(fraction))
+    }
+
+    /// The reasons beyond what the rows already say: "Mismatch" covers a reading that is not one
+    /// trade, and the model row names why it was not.
+    private var extraReasons: [String] {
+        let shown: Set<String> = [
+            "example_did_not_produce_trade", "example_requires_exactly_one_instruction", example.actual.reason,
+        ]
+        return example.reviewReasons.filter { !shown.contains($0) }
     }
 
     var body: some View {
@@ -30,13 +40,7 @@ struct ExampleComparisonRow: View {
             Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 2) {
                 GridRow {
                     Text(L10n.string("Expected")).foregroundStyle(Palette.tertiaryInk)
-                    Text(
-                        L10n.string(
-                            "%@ %@ · fraction %@",
-                            example.expectedAction.title, example.expectedSymbol,
-                            example.expectedFraction.map(Humanize.fraction) ?? L10n.string("none")
-                        )
-                    )
+                    Text(Self.call(example.expectedAction.title, example.expectedSymbol, example.expectedFraction))
                 }
                 GridRow {
                     Text(L10n.string("Model")).foregroundStyle(Palette.tertiaryInk)
@@ -50,7 +54,7 @@ struct ExampleComparisonRow: View {
                 }
             }
             .font(DesignTokens.caption)
-            ForEach(example.reviewReasons, id: \.self) { reason in
+            ForEach(extraReasons, id: \.self) { reason in
                 Text(Reason.text(reason))
                     .font(.callout)
                     .foregroundStyle(Palette.live)

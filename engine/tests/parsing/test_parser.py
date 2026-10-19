@@ -651,6 +651,25 @@ def test_a_written_ticker_needs_no_playbook_but_must_be_a_whole_word():
     assert failure("25加了abc", trade(buy("AB", "25"))).issue.code == "partial_symbol"
 
 
+@pytest.mark.parametrize(
+    ("text", "ticker", "grounded"),
+    [
+        pytest.param("14.1加了14.1nfxl", "NFXL", True, id="glued-after-a-price"),
+        pytest.param("加了nfxl14.1", "NFXL", True, id="glued-before-a-price"),
+        pytest.param("14.1加了xnfxl", "NFXL", False, id="inside-a-longer-word"),
+        pytest.param("14.1加了 10pm", "PM", False, id="short-ticker-after-a-number"),
+        pytest.param("14.1加了 50k", "K", False, id="one-letter-after-a-number"),
+    ],
+)
+def test_a_ticker_of_three_letters_may_touch_its_price(text, ticker, grounded):
+    reading = trade(buy(ticker, "14.1"))
+
+    if grounded:
+        check(text, reading)
+    else:
+        assert failure(text, reading).issue.code == "partial_symbol"
+
+
 # --- The model gets one retry with the reason -------------------------------------------------
 
 

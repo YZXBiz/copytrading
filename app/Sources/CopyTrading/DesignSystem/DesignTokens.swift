@@ -39,7 +39,9 @@ enum DesignTokens {
     static let settingsHeading = DisplayFont.font(size: 22, weight: .medium, relativeTo: .title3)
     static let sectionTitle = Font.system(.body, design: .default, weight: .medium).scaled(by: 14.0 / 13)
     static let rowTitle = Font.system(.body, design: .default, weight: .medium).scaled(by: 14.0 / 13)
-    static let bodyText = Font.system(.body, design: .default, weight: .regular).scaled(by: 14.0 / 13)
+    /// A fixed 14 pt, not body scaled to 14: a vertical text field measures a scaled font at one
+    /// size and draws it at another, and then shows only its first line.
+    static let bodyText = Font.system(size: 14, weight: .regular)
     static let bodyEmphasis = Font.system(.body, design: .default, weight: .medium).scaled(by: 14.0 / 13)
     static let caption = Font.system(.caption, design: .default).scaled(by: 12.0 / 10)
 
