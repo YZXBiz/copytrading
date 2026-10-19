@@ -129,13 +129,18 @@ private func runAgentSocketLimitTests(root: URL) async throws {
         maximumConnections: 1,
         refusal: { _ in #"{"error":{"code":"busy"}}"# },
         handler: { _, _ in
+            gate.arrive()
             while !gate.isOpen { try? await Task.sleep(for: .milliseconds(20)) }
             return "done"
         }
     )
     try busy.start()
     let first = Task { try? await exchange("one", at: socketURL) }
-    try await Task.sleep(for: .milliseconds(300))
+    // "two" must find the one connection taken, so wait until "one" holds it rather than for a
+    // fixed time: on a loaded runner "one" can connect late and "two" would take the slot.
+    let deadline = ContinuousClock.now.advanced(by: .seconds(10))
+    while !gate.hasArrived, ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(20)) }
+    try #require(gate.hasArrived, "the first request never reached the handler")
     let second = try await exchange("two", at: socketURL)
     try #require(
         second == #"{"error":{"code":"busy"}}"#,
@@ -166,10 +171,13 @@ private func runAgentSocketLimitTests(root: URL) async throws {
 private final class Gate: @unchecked Sendable {
     private let lock = NSLock()
     private var opened = false
+    private var arrived = false
 
     var isOpen: Bool { lock.withLock { opened } }
+    var hasArrived: Bool { lock.withLock { arrived } }
 
     func open() { lock.withLock { opened = true } }
+    func arrive() { lock.withLock { arrived = true } }
 }
 
 private struct CLIResult {

@@ -10,7 +10,7 @@ func runProcessSupervisorTests() async throws {
             children: [
                 ProcessLaunchSpecification(
                     child: .engine,
-                    executableURL: URL(filePath: "/usr/bin/python3"),
+                    executableURL: try pinnedPython(),
                     arguments: ["-u", "-c", floodProgram],
                     environment: ["PATH": "/usr/bin:/bin"],
                     readiness: .processStarted
@@ -76,7 +76,7 @@ private func checkEngineDrainAcknowledgement(
             children: [
                 ProcessLaunchSpecification(
                     child: .engine,
-                    executableURL: URL(filePath: "/usr/bin/python3"),
+                    executableURL: try pinnedPython(),
                     arguments: ["-u", "-c", childProgram, ready.path, stopped.path],
                     environment: ["PATH": "/usr/bin:/bin"],
                     readiness: .processStarted,
@@ -154,7 +154,7 @@ private func runSuccessfulRestartTest() async throws {
         configuration: ProcessSupervisorConfiguration(
             children: [
                 ProcessLaunchSpecification(
-                    child: .engine, executableURL: URL(filePath: "/usr/bin/python3"),
+                    child: .engine, executableURL: try pinnedPython(),
                     arguments: ["-u", "-c", program, counter.path],
                     environment: ["PATH": "/usr/bin:/bin"], readiness: .processStarted
                 )
@@ -193,7 +193,7 @@ private func runScheduledRestartStopTest() async throws {
         configuration: ProcessSupervisorConfiguration(
             children: [
                 ProcessLaunchSpecification(
-                    child: .engine, executableURL: URL(filePath: "/usr/bin/python3"),
+                    child: .engine, executableURL: try pinnedPython(),
                     arguments: ["-u", "-c", program, counter.path],
                     environment: ["PATH": "/usr/bin:/bin"], readiness: .processStarted
                 )
@@ -227,7 +227,7 @@ private func runStartupOwnershipStopRaceTest() async throws {
             children: [
                 ProcessLaunchSpecification(
                     child: .engine,
-                    executableURL: URL(filePath: "/usr/bin/python3"),
+                    executableURL: try pinnedPython(),
                     arguments: ["-u", "-c", childProgram, ready.path],
                     environment: ["PATH": "/usr/bin:/bin"],
                     readiness: .processStarted,
@@ -541,7 +541,7 @@ private func runStartupOwnershipConcurrentStopJoinsTest() async throws {
             children: [
                 ProcessLaunchSpecification(
                     child: .engine,
-                    executableURL: URL(filePath: "/usr/bin/python3"),
+                    executableURL: try pinnedPython(),
                     arguments: ["-u", "-c", engineProgram, ready.path],
                     environment: ["PATH": "/usr/bin:/bin"],
                     readiness: .processStarted,
@@ -713,11 +713,35 @@ private actor StopReportBox {
     }
 }
 
-private func nextChildExit(from events: AsyncStream<RuntimeEvent>) async throws -> RuntimeEvent {
-    for await event in events {
-        if case .childExited = event { return event }
+/// The built app's own Python. `/usr/bin/python3` is Xcode's `xcrun` shim, and on a fresh CI
+/// runner its first launch could stall past the job's 40-minute timeout.
+private func pinnedPython() throws -> URL {
+    guard let runtimePath = ProcessInfo.processInfo.environment["COPYTRADING_RUNTIME_ROOT"] else {
+        throw VerificationFailure(description: "COPYTRADING_RUNTIME_ROOT is unset: run make desktop-tests")
     }
-    throw VerificationFailure(description: "supervisor event stream ended before child exit")
+    return try RuntimeResourceCatalog.runtimeManifest().executable(
+        named: "cpython", under: URL(filePath: runtimePath, directoryHint: .isDirectory))
+}
+
+/// The next child exit, failing after 30 seconds instead of waiting out the CI job.
+private func nextChildExit(from events: AsyncStream<RuntimeEvent>) async throws -> RuntimeEvent {
+    try await withThrowingTaskGroup(of: RuntimeEvent.self) { group in
+        group.addTask {
+            for await event in events {
+                if case .childExited = event { return event }
+            }
+            throw VerificationFailure(description: "supervisor event stream ended before child exit")
+        }
+        group.addTask {
+            try await Task.sleep(for: .seconds(30))
+            throw VerificationFailure(description: "no child exit within 30 seconds")
+        }
+        defer { group.cancelAll() }
+        guard let event = try await group.next() else {
+            throw VerificationFailure(description: "supervisor event stream ended before child exit")
+        }
+        return event
+    }
 }
 
 func runEngineClientProcessTests() async throws {
@@ -747,7 +771,7 @@ func runEngineClientProcessTests() async throws {
             children: [
                 ProcessLaunchSpecification(
                     child: .engine,
-                    executableURL: URL(filePath: "/usr/bin/python3"),
+                    executableURL: try pinnedPython(),
                     arguments: ["-u", "-c", program],
                     environment: ["PATH": "/usr/bin:/bin"],
                     readiness: .engineStatus(expectedInstanceID: "installation-1"),
@@ -816,7 +840,7 @@ func runEngineActionsBackupRestoreTests() async throws {
             children: [
                 ProcessLaunchSpecification(
                     child: .engine,
-                    executableURL: URL(filePath: "/usr/bin/python3"),
+                    executableURL: try pinnedPython(),
                     arguments: ["-u", "-c", program],
                     environment: ["PATH": "/usr/bin:/bin"],
                     readiness: .processStarted,
@@ -907,7 +931,7 @@ func runEngineActionsRestartTests() async throws {
         configuration: ProcessSupervisorConfiguration(
             children: [
                 ProcessLaunchSpecification(
-                    child: .engine, executableURL: URL(filePath: "/usr/bin/python3"),
+                    child: .engine, executableURL: try pinnedPython(),
                     arguments: ["-u", "-c", program, counter.path],
                     environment: ["PATH": "/usr/bin:/bin"],
                     readiness: .engineStatus(expectedInstanceID: "installation-1"), stdoutIsIPC: true

@@ -46,7 +46,8 @@ public final class AgentControlSocket: @unchecked Sendable {
     private let refusal: @Sendable (AgentRefusal) -> String
     private let handler: Handler
     private let lock = NSLock()
-    private var listener: Int32 = -1
+    /// Writing end of the running accept thread's wake pipe; closing it stops that thread.
+    private var wake: Int32 = -1
     private var active = 0
 
     public init(
@@ -81,34 +82,56 @@ public final class AgentControlSocket: @unchecked Sendable {
                 bind(descriptor, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
             }
         }
-        guard bound == 0, chmod(url.path, 0o600) == 0, listen(descriptor, 16) == 0 else {
+        var pipeEnds: [Int32] = [-1, -1]
+        guard bound == 0, chmod(url.path, 0o600) == 0, listen(descriptor, 16) == 0,
+            fcntl(descriptor, F_SETFL, fcntl(descriptor, F_GETFL) | O_NONBLOCK) == 0,
+            pipe(&pipeEnds) == 0
+        else {
             let code = errno
             close(descriptor)
             unlink(url.path)
             throw AgentControlSocketError.unavailable(errno: code)
         }
-        lock.withLock { listener = descriptor }
-        Thread.detachNewThread { [self] in acceptConnections(on: descriptor) }
+        let (wakeReader, wakeWriter) = (pipeEnds[0], pipeEnds[1])
+        // A child that inherited the wake pipe would hold it open, and closing ours would never
+        // stop the accept thread.
+        for end in [descriptor, wakeReader, wakeWriter] { _ = fcntl(end, F_SETFD, FD_CLOEXEC) }
+        lock.withLock { wake = wakeWriter }
+        Thread.detachNewThread { [self] in acceptConnections(on: descriptor, wake: wakeReader) }
     }
 
     /// Stop accepting, then remove the socket so a stopped app is never mistaken for a running one.
+    ///
+    /// Only the accept thread closes its listener. Closing it here could let a later `start`
+    /// reuse the descriptor number while that thread is still about to `accept` on it, and the
+    /// old thread would then answer the new socket's clients with the old handler.
     public func stop() {
         let descriptor = lock.withLock {
-            let current = listener
-            listener = -1
+            let current = wake
+            wake = -1
             return current
         }
         guard descriptor >= 0 else { return }
-        shutdown(descriptor, SHUT_RDWR)
         close(descriptor)
         try? Self.removeStaleSocket(at: url)
     }
 
-    private func acceptConnections(on descriptor: Int32) {
+    private func acceptConnections(on descriptor: Int32, wake: Int32) {
+        defer {
+            close(descriptor)
+            close(wake)
+        }
         while true {
+            var ready = [
+                pollfd(fd: wake, events: Int16(POLLIN), revents: 0),
+                pollfd(fd: descriptor, events: Int16(POLLIN), revents: 0),
+            ]
+            guard poll(&ready, 2, -1) >= 0 || errno == EINTR else { return }
+            if ready[0].revents != 0 { return }
+            guard ready[1].revents != 0 else { continue }
             let client = accept(descriptor, nil, nil)
             if client < 0 {
-                if errno == EINTR { continue }
+                if errno == EINTR || errno == EAGAIN || errno == ECONNABORTED { continue }
                 return
             }
             Self.configure(client)
@@ -178,6 +201,8 @@ public final class AgentControlSocket: @unchecked Sendable {
     }
 
     private static func configure(_ client: Int32) {
+        // A connection inherits the listener's non-blocking flag; its reads wait, with a timeout.
+        _ = fcntl(client, F_SETFL, fcntl(client, F_GETFL) & ~O_NONBLOCK)
         var enabled: Int32 = 1
         setsockopt(client, SOL_SOCKET, SO_NOSIGPIPE, &enabled, socklen_t(MemoryLayout<Int32>.size))
         var timeout = timeval(tv_sec: ioTimeoutSeconds, tv_usec: 0)
