@@ -11,6 +11,8 @@ User-visible changes for each release are recorded here. Every GitHub release's 
   pointer passes over it.
 - An example that does not match says why in one line, a buy with no fraction no longer reads
   "fraction none", and an account an example would not copy into says "Not copied".
+- An app built from source shows the release it grew from in Settings, such as 0.1.0-beta.1+4,
+  instead of a bare 0.1.0.
 
 ## 0.1.0-beta.1 — developer preview
 
