@@ -51,6 +51,7 @@ struct MainSplitView: View {
                 workspaceToolbar
                 UpdateAvailableBanner(model: model)
                 EngineStoppedBanner(model: model)
+                CopyingStoppedBanner(model: model, accountFeature: accountFeature)
                 StatusBanner(model: model)
                 ScreenDetailView(model: model, accountFeature: accountFeature, activityState: activityState)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
