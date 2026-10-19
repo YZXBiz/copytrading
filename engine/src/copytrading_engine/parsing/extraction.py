@@ -393,8 +393,11 @@ def _check_stock(stock: Stock, text: str, route: Route, path: str) -> None:
             path,
             "A company name becomes a ticker only when the playbook says so",
         )
+    # Posts often glue a ticker to its price ("14.1nfxl"). A ticker of three or more letters may
+    # touch a number; a shorter one may not, so "10pm" never reads as PM or "50k" as K.
+    edge = "A-Za-z" if len(stock.words.lstrip("$")) >= 3 else "A-Za-z0-9"
     if not named and not re.search(
-        r"(?<![A-Za-z0-9])" + re.escape(stock.words) + r"(?![A-Za-z0-9])", text
+        rf"(?<![{edge}])" + re.escape(stock.words) + rf"(?![{edge}])", text
     ):
         raise GroundingError("partial_symbol", path, "The ticker must be a whole word in the post")
 

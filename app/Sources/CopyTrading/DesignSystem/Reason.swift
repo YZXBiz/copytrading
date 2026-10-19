@@ -39,6 +39,9 @@ enum Reason {
     }
 
     private static let known: [String: String] = [
+        "partial_symbol": "The ticker is not a whole word in the post",
+        "example_interpretation_failed": "Not copied",
+        "example_requires_review": "Not copied",
         "lot_unavailable": "These shares are no longer held",
         "preview_expired": "The price check ran out before you confirmed",
         "account_facts_changed": "The account changed since you reviewed the sale",

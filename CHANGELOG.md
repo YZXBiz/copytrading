@@ -4,12 +4,20 @@ User-visible changes for each release are recorded here. Every GitHub release's 
 
 ## Unreleased
 
+- A ticker written right against its price, as in "14.1nfxl", is now read as the ticker instead of
+  sending the post to review. Tickers of one or two letters still have to stand apart, so "10pm"
+  never reads as PM.
+- An example's message shows every line in a guru's settings, not only the first until the
+  pointer passes over it.
+- An example that does not match says why in one line, a buy with no fraction no longer reads
+  "fraction none", and an account an example would not copy into says "Not copied".
 - An app built from source shows the release it grew from in Settings, such as 0.1.0-beta.1+4,
   instead of a bare 0.1.0.
 - **CopyTrading tells you when it comes back with copying stopped.** After a quit, a crash, or a Mac restart, copying waits for you to press Start Copying (and Touch ID), and nothing said so, so a relaunch could go unnoticed while posts were missed. If copying was on when CopyTrading last stopped, the window and the menu bar now say "Copying stopped when CopyTrading quit" with a Start Copying button, and one notification goes out in case the window is hidden. Stopping copying yourself doesn't trigger it, and copying still never starts on its own.
 - **An account that stops is no longer silent.** On October 19 an account failed 30 minutes into a session and stayed failed for 45 minutes with nothing to say so. A cycle that fails for a reason other than Alpaca is now retried three times over about four minutes first, and an account that still stops says so with a notification ("Copying into zhap-account-2 stopped"), a **Stopped** word in the sidebar, a warning mark and count in the menu bar, and a message to your Telegram or Discord alert channel when one is set. Rejected keys still stop an account at once.
 - When an error stops an account, the diagnostics journal records which error it was and the engine
   function it came from, so the cause survives a restart. The error's message is never kept.
+- **CopyTrading always shows its window when it opens.** Started hidden (`open -j`, a login item set to Hide), or reopened while hidden by anything but a Dock click, it stayed out of sight with the Touch ID unlock behind it, and copying stayed stopped until you clicked the Dock icon. Now a launch, `open`, and a reopen all show the window. The red button still hides the app.
 - A guru's example message, and the question box in the assistant, show every line you typed or pasted instead of dropping one until the pointer passes over it.
 
 ## 0.1.0-beta.1 — developer preview

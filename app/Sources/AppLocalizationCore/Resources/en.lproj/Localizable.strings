@@ -2337,6 +2337,7 @@
 "CopyTrading is in your %@ folder, where macOS won't let the updater replace it: the update would quit CopyTrading without installing. Move CopyTrading to Applications, open it from there, and check again." = "CopyTrading is in your %@ folder, where macOS won't let the updater replace it: the update would quit CopyTrading without installing. Move CopyTrading to Applications, open it from there, and check again.";
 "CopyTrading %@ is out, but can't install in %@." = "CopyTrading %@ is out, but can't install in %@.";
 "Move CopyTrading to Applications, then open it from there to install." = "Move CopyTrading to Applications, then open it from there to install.";
+"The ticker is not a whole word in the post" = "The ticker is not a whole word in the post";
 "Copying stopped when CopyTrading quit." = "Copying stopped when CopyTrading quit.";
 "Copying stopped when CopyTrading quit. Open CopyTrading and press Start Copying." = "Copying stopped when CopyTrading quit. Open CopyTrading and press Start Copying.";
 "Copying into %@ stopped" = "Copying into %@ stopped";
