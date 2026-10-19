@@ -80,6 +80,8 @@ You need an Apple silicon Mac running macOS 26 or later.
 
 Every release lists SHA-256 checksums, and [releases](docs/releases.md) explains how to verify a download.
 
+**Updates** arrive in the app: it checks once a day and asks before installing. Keep CopyTrading in **Applications**; macOS stops an app in Desktop, Documents, or Downloads from replacing itself. If an update from an alpha quit and CopyTrading did not reopen, move it to Applications and open it again, or download the DMG above.
+
 **Or build from source** with [uv](https://docs.astral.sh/uv/) and the Xcode Command Line Tools:
 
 ```sh
