@@ -8,6 +8,7 @@ User-visible changes for each release are recorded here. Every GitHub release's 
   instead of a bare 0.1.0.
 - **CopyTrading tells you when it comes back with copying stopped.** After a quit, a crash, or a Mac restart, copying waits for you to press Start Copying (and Touch ID), and nothing said so, so a relaunch could go unnoticed while posts were missed. If copying was on when CopyTrading last stopped, the window and the menu bar now say "Copying stopped when CopyTrading quit" with a Start Copying button, and one notification goes out in case the window is hidden. Stopping copying yourself doesn't trigger it, and copying still never starts on its own.
 - **CopyTrading always shows its window when it opens.** Started hidden (`open -j`, a login item set to Hide), or reopened while hidden by anything but a Dock click, it stayed out of sight with the Touch ID unlock behind it, and copying stayed stopped until you clicked the Dock icon. Now a launch, `open`, and a reopen all show the window. The red button still hides the app.
+- A guru's example message, and the question box in the assistant, show every line you typed or pasted instead of dropping one until the pointer passes over it.
 
 ## 0.1.0-beta.1 — developer preview
 
