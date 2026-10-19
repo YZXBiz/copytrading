@@ -63,11 +63,18 @@ before 0.1.0-alpha.4 have no updater and need that one DMG installed by hand.
   asset hashes.
 - `SHA256SUMS`: checksums for the ZIP, source, and records.
 
-Verify a download from the folder that holds it:
+Verify a download from the folder that holds it. For the DMG, download its
+`.sha256` file next to it:
 
 ```sh
-shasum -a 256 -c SHA256SUMS
 shasum -a 256 -c CopyTrading-<version>.dmg.sha256
+```
+
+For the ZIP, source, or records, download `SHA256SUMS`; `--ignore-missing`
+skips the files you did not download:
+
+```sh
+shasum -a 256 -c --ignore-missing SHA256SUMS
 ```
 
 The manifest and checksums describe provenance and integrity; they are not a

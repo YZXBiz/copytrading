@@ -116,7 +116,11 @@ make app
 
 ## 命令行与编程助手
 
-`copytrading` 命令行工具和 MCP 服务器让你、脚本或编程助手读取正在运行的应用，并可以暂停它。任何可能触发交易的操作都会变成一条提议，要在应用里用 Touch ID 批准。`copytrading accounts limits ACCOUNT --max-order-usd 300 …` 修改账户限额，`copytrading start` 按“开始跟单”同样的检查开始跟单；两者都要等你在应用里用 Touch ID 批准。先在 **设置 → 智能体访问** 中打开它；命令随应用附带，位于 `CopyTrading.app/Contents/Helpers/copytrading`。
+`copytrading` 命令行工具和 MCP 服务器让你、脚本或编程助手读取正在运行的应用，并可以暂停它。任何可能触发交易的操作都会变成一条提议，要在应用里用 Touch ID 批准。`copytrading accounts limits ACCOUNT --max-order-usd 300 …` 修改账户限额，`copytrading start` 按“开始跟单”同样的检查开始跟单；两者都要等你在应用里用 Touch ID 批准。先在 **设置 → 智能体访问** 中打开它，再把应用自带的命令加入 `PATH`：
+
+```sh
+mkdir -p ~/.local/bin && ln -sf /Applications/CopyTrading.app/Contents/Helpers/copytrading ~/.local/bin/copytrading
+```
 
 ```console
 $ copytrading status
