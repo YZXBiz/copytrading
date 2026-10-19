@@ -759,7 +759,14 @@ def build_debug_bundle() -> None:
     )
 
 
-def launch(state_root: Path, *, quit_first: bool = True, env: dict[str, str] | None = None) -> None:
+def launch(
+    state_root: Path,
+    *,
+    quit_first: bool = True,
+    env: dict[str, str] | None = None,
+    open_flags: tuple[str, ...] = ("-n",),
+) -> None:
+    """Opens the debug app and waits for its window; `open_flags` are `open`'s own, such as -j."""
     if quit_first:
         quit_app()
     # The tour's end, the last page, and the last tab are remembered per app; a run starts as a
@@ -769,7 +776,7 @@ def launch(state_root: Path, *, quit_first: bool = True, env: dict[str, str] | N
     subprocess.run(
         [
             "open",
-            "-n",
+            *open_flags,
             "--env",
             "COPYTRADING_UI_TEST_UNLOCK=1",
             "--env",
@@ -794,6 +801,37 @@ def launch(state_root: Path, *, quit_first: bool = True, env: dict[str, str] | N
             return
         time.sleep(1)
     raise JourneyFailure("main window did not open")
+
+
+# Counts the app's drawn windows in the window server's list; a hidden app keeps its window but
+# the server drops it from the on-screen list.
+_ON_SCREEN_WINDOWS = """
+ObjC.import('CoreGraphics');
+function run(argv) {
+  const pid = Number(argv[0]);
+  const windows = ObjC.deepUnwrap(ObjC.castRefToObject(
+    $.CGWindowListCopyWindowInfo($.kCGWindowListOptionOnScreenOnly, $.kCGNullWindowID)));
+  return String(windows.filter(w => w.kCGWindowOwnerPID === pid && w.kCGWindowLayer === 0
+    && w.kCGWindowBounds.Width >= 100 && w.kCGWindowBounds.Height >= 100).length);
+}
+"""
+
+
+def window_on_screen() -> bool:
+    """Whether the main window is really drawn. Peekaboo's `is_on_screen` comes from
+    Accessibility and stays true for a hidden app, so this asks the window server."""
+    try:
+        pid = peekaboo("window", "list", "--app", APP_NAME)["target_application_info"]["pid"]
+    except JourneyFailure, KeyError:
+        return False
+    counted = subprocess.run(
+        ["osascript", "-l", "JavaScript", "-e", _ON_SCREEN_WINDOWS, str(pid)],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    return counted.stdout.strip() not in ("", "0")
 
 
 def _bundle_processes() -> list[str]:
@@ -2446,6 +2484,61 @@ def j17_crash_recovery(app: AppDriver) -> None:
         )
 
 
+def j45_window_comes_back(app: AppDriver) -> None:
+    """The red button hides the app; starting it again by any route shows the window."""
+    if app.state_root is None:
+        raise JourneySkipped("needs the run's state root")
+    state_root = app.state_root
+
+    def wait_until(shown: bool, what: str) -> None:
+        deadline = time.monotonic() + 30
+        while window_on_screen() != shown:
+            if time.monotonic() > deadline:
+                raise JourneyFailure(what)
+            time.sleep(1)
+
+    def hide() -> None:
+        wait_until(True, "the window was not on screen before the red button")
+        app.click("close button")
+        wait_until(False, "the red button left the window on screen")
+
+    def wait_for_exit(what: str) -> None:
+        deadline = time.monotonic() + 90
+        while _bundle_processes():
+            if time.monotonic() > deadline:
+                raise JourneyFailure(f"{what} did not quit the app")
+            time.sleep(1)
+
+    def comes_back(route: str) -> None:
+        wait_until(True, f"the window stayed off screen after {route}")
+        app.wait_for(UNLOCKED, timeout=60)
+
+    hide()
+    peekaboo("menu", "click", "--app", APP_NAME, "--path", f"{APP_NAME} > Quit {APP_NAME}")
+    wait_for_exit("Quit in the app menu")
+    launch(state_root, quit_first=False, open_flags=())
+    comes_back("quitting hidden by menu and opening again")
+
+    hide()
+    quit_app()
+    launch(state_root, quit_first=False, open_flags=("-j",))
+    comes_back("quitting hidden and opening with -j")
+    app.see("window-after-open-j")
+
+    # The app is running and hidden again: opening it, and AppleScript reopen, both show it.
+    hide()
+    subprocess.run(["open", str(DEBUG_APP)], check=True)
+    comes_back("open on the hidden app")
+    hide()
+    subprocess.run(
+        ["osascript", "-e", f'tell application id "{BUNDLE_ID}" to reopen'],
+        capture_output=True,
+        timeout=30,
+        check=True,
+    )
+    comes_back("a reopen event on the hidden app")
+
+
 JOURNEYS: list[tuple[str, Callable[[AppDriver], None]]] = [
     ("J1 launch and unlock", j1_launch_and_unlock),
     ("J2 engine starts", j2_engine_starts),
@@ -2474,6 +2567,7 @@ JOURNEYS: list[tuple[str, Callable[[AppDriver], None]]] = [
     ("J43 updates", j43_updates),
     ("J15 lock", j15_lock),
     ("J17 crash recovery", j17_crash_recovery),
+    ("J45 window comes back", j45_window_comes_back),
     # Last: starting copying saves a setup that the journeys above expect to be empty.
     ("J31 agent approval", j31_agent_approval),
     ("J40 limits apply while copying", j40_live_limits),

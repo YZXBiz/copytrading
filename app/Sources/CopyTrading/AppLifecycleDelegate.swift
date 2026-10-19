@@ -33,6 +33,16 @@ public final class AppLifecycleDelegate: NSObject, NSApplicationDelegate {
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
         AppAppearance.saved.apply()
+        // `open -j`, a login item set to Hide, and Resume at login all start the app hidden. The
+        // window exists but stays off screen, and copying cannot start until someone unlocks it.
+        NSApp.unhide(nil)
+    }
+
+    /// `open`, a Dock click, and AppleScript `reopen` land here. A hidden app does not unhide for a
+    /// reopen on its own, so the window stayed away until something else activated the app.
+    public func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        sender.unhide(nil)
+        return true
     }
 
     public func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
