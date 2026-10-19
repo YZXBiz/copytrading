@@ -26,6 +26,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
     case backupRestoreNotes = "backup and restore notes"
     case learnedExamples = "learned examples"
     case updateOffer = "update offer banner"
+    case copyingStopped = "copying stopped notice"
     case guruFeed = "guru feed"
     case manualInstructionGuess = "manual instruction guess"
     case fillWatch = "fill notifications"
@@ -63,6 +64,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
         case .backupRestoreNotes: try await runBackupRestoreNoteTests()
         case .learnedExamples: try runLearnedExamplesTests()
         case .updateOffer: try runUpdateOfferTests()
+        case .copyingStopped: try runCopyingStoppedTests()
         case .guruFeed: try await runGuruFeedTests()
         case .manualInstructionGuess: try runManualInstructionGuessTests()
         case .fillWatch: try runFillWatchTests()
