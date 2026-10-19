@@ -12,7 +12,7 @@ func runProcessSupervisorTests() async throws {
                     child: .engine,
                     executableURL: try pinnedPython(),
                     arguments: ["-u", "-c", floodProgram],
-                    environment: ["PATH": "/usr/bin:/bin"],
+                    environment: childEnvironment,
                     readiness: .processStarted
                 )
             ],
@@ -78,7 +78,7 @@ private func checkEngineDrainAcknowledgement(
                     child: .engine,
                     executableURL: try pinnedPython(),
                     arguments: ["-u", "-c", childProgram, ready.path, stopped.path],
-                    environment: ["PATH": "/usr/bin:/bin"],
+                    environment: childEnvironment,
                     readiness: .processStarted,
                     stdoutIsIPC: true
                 )
@@ -156,7 +156,7 @@ private func runSuccessfulRestartTest() async throws {
                 ProcessLaunchSpecification(
                     child: .engine, executableURL: try pinnedPython(),
                     arguments: ["-u", "-c", program, counter.path],
-                    environment: ["PATH": "/usr/bin:/bin"], readiness: .processStarted
+                    environment: childEnvironment, readiness: .processStarted
                 )
             ], maximumRestarts: 1, restartDelay: .milliseconds(100), startupTimeout: .seconds(3)
         ))
@@ -195,7 +195,7 @@ private func runScheduledRestartStopTest() async throws {
                 ProcessLaunchSpecification(
                     child: .engine, executableURL: try pinnedPython(),
                     arguments: ["-u", "-c", program, counter.path],
-                    environment: ["PATH": "/usr/bin:/bin"], readiness: .processStarted
+                    environment: childEnvironment, readiness: .processStarted
                 )
             ], maximumRestarts: 2, restartDelay: .seconds(1), startupTimeout: .seconds(3)
         ))
@@ -229,7 +229,7 @@ private func runStartupOwnershipStopRaceTest() async throws {
                     child: .engine,
                     executableURL: try pinnedPython(),
                     arguments: ["-u", "-c", childProgram, ready.path],
-                    environment: ["PATH": "/usr/bin:/bin"],
+                    environment: childEnvironment,
                     readiness: .processStarted,
                     stdoutIsIPC: true
                 )
@@ -543,7 +543,7 @@ private func runStartupOwnershipConcurrentStopJoinsTest() async throws {
                     child: .engine,
                     executableURL: try pinnedPython(),
                     arguments: ["-u", "-c", engineProgram, ready.path],
-                    environment: ["PATH": "/usr/bin:/bin"],
+                    environment: childEnvironment,
                     readiness: .processStarted,
                     stdoutIsIPC: true
                 )
@@ -713,6 +713,10 @@ private actor StopReportBox {
     }
 }
 
+/// Children run the built app's Python, so they must never write `__pycache__` into its runtime:
+/// that breaks the bundle's signature.
+private let childEnvironment = ["PATH": "/usr/bin:/bin", "PYTHONDONTWRITEBYTECODE": "1"]
+
 /// The built app's own Python. `/usr/bin/python3` is Xcode's `xcrun` shim, and on a fresh CI
 /// runner its first launch could stall past the job's 40-minute timeout.
 private func pinnedPython() throws -> URL {
@@ -773,7 +777,7 @@ func runEngineClientProcessTests() async throws {
                     child: .engine,
                     executableURL: try pinnedPython(),
                     arguments: ["-u", "-c", program],
-                    environment: ["PATH": "/usr/bin:/bin"],
+                    environment: childEnvironment,
                     readiness: .engineStatus(expectedInstanceID: "installation-1"),
                     stdoutIsIPC: true
                 )
@@ -842,7 +846,7 @@ func runEngineActionsBackupRestoreTests() async throws {
                     child: .engine,
                     executableURL: try pinnedPython(),
                     arguments: ["-u", "-c", program],
-                    environment: ["PATH": "/usr/bin:/bin"],
+                    environment: childEnvironment,
                     readiness: .processStarted,
                     stdoutIsIPC: true
                 )
@@ -933,7 +937,7 @@ func runEngineActionsRestartTests() async throws {
                 ProcessLaunchSpecification(
                     child: .engine, executableURL: try pinnedPython(),
                     arguments: ["-u", "-c", program, counter.path],
-                    environment: ["PATH": "/usr/bin:/bin"],
+                    environment: childEnvironment,
                     readiness: .engineStatus(expectedInstanceID: "installation-1"), stdoutIsIPC: true
                 )
             ], maximumRestarts: 1, restartDelay: .milliseconds(100), startupTimeout: .seconds(3)
@@ -979,7 +983,7 @@ func runEngineClientCatPipeTests() async throws {
                     child: .engine,
                     executableURL: URL(filePath: "/bin/cat"),
                     arguments: [],
-                    environment: ["PATH": "/usr/bin:/bin"],
+                    environment: childEnvironment,
                     readiness: .processStarted,
                     stdoutIsIPC: true
                 )
