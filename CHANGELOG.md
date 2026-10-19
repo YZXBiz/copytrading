@@ -6,6 +6,8 @@ User-visible changes for each release are recorded here. Every GitHub release's 
 
 - When an error stops an account, the diagnostics journal records which error it was and the engine
   function it came from, so the cause survives a restart. The error's message is never kept.
+- An app built from source shows the release it grew from in Settings, such as 0.1.0-beta.1+4,
+  instead of a bare 0.1.0.
 
 ## 0.1.0-beta.1 — developer preview
 

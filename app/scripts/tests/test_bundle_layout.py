@@ -276,3 +276,17 @@ def test_replaced_native_binary_fails_integrity(app: Path) -> None:
         "bundle file digest" in problem
         for problem in verify_bundle.verify(app, inspect_macho=False)
     )
+
+
+@pytest.mark.parametrize(
+    ("described", "shown"),
+    [
+        ("v0.1.0-beta.1", "0.1.0-beta.1"),
+        ("v0.1.0-beta.1-4-g79d2a60e", "0.1.0-beta.1+4"),
+        ("v0.2.0", "0.2.0"),
+        ("", None),
+        ("not-a-release", None),
+    ],
+)
+def test_a_local_build_shows_the_release_it_grew_from(described, shown):
+    assert build_app.local_version(described) == shown
