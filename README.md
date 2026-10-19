@@ -116,7 +116,11 @@ A SwiftUI app supervises one local Python engine. The engine owns every decision
 
 ## Command line and agents
 
-The `copytrading` CLI and MCP server let you, a script, or a coding agent read the running app and pause it. Anything that could trade becomes a proposal you approve with Touch ID in the app. `copytrading accounts limits ACCOUNT --max-order-usd 300 …` changes an account's limits and `copytrading start` starts copying with Start Copying's own checks; both wait for your Touch ID in the app. Turn it on in **Settings → Agent Access**; the command ships inside the app at `CopyTrading.app/Contents/Helpers/copytrading`.
+The `copytrading` CLI and MCP server let you, a script, or a coding agent read the running app and pause it. Anything that could trade becomes a proposal you approve with Touch ID in the app. `copytrading accounts limits ACCOUNT --max-order-usd 300 …` changes an account's limits and `copytrading start` starts copying with Start Copying's own checks; both wait for your Touch ID in the app. Turn it on in **Settings → Agent Access**, then put the command that ships inside the app on your `PATH`:
+
+```sh
+mkdir -p ~/.local/bin && ln -sf /Applications/CopyTrading.app/Contents/Helpers/copytrading ~/.local/bin/copytrading
+```
 
 ```console
 $ copytrading status
