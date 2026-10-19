@@ -523,6 +523,7 @@ class TradingRuntime:
                         open_failure = exc.reason
                         refusals.append(exc.reason)
                     except Exception as exc:  # noqa: BLE001 - one account's failure is reported per account
+                        self._account_failed(exc)
                         log.error(
                             "trading_account_open_failed id=%s type=%s",
                             account.id,
@@ -539,6 +540,7 @@ class TradingRuntime:
                     self._stop,
                     self._account_changed,
                     open_failure=open_failure,
+                    on_failure=self._account_failed,
                 )
             self._account_changed()
             # Limits changed while the accounts opened reach them before the first post.
@@ -874,6 +876,10 @@ class TradingRuntime:
             account.error_code for account in self._accounts.values() if account.state == "failed"
         }
         return reason if len(reasons) == 1 and (reason := reasons.pop()) else "account_unavailable"
+
+    def _account_failed(self, error: BaseException) -> None:
+        if self._telemetry is not None:
+            self._telemetry.account_failed(error)
 
     def _account_changed(self) -> None:
         statuses = tuple(account.status for account in self._accounts.values())

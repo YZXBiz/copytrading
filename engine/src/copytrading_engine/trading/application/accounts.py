@@ -163,13 +163,16 @@ class AccountSupervisor:
         on_change: Callable[[], None],
         *,
         open_failure: str = "account_unavailable",
+        on_failure: Callable[[BaseException], None] = lambda _: None,
     ) -> None:
-        """`open_failure` says why an account without an owner could not open."""
+        """`open_failure` says why an account without an owner could not open; `on_failure` hears
+        the error that stops a running account, for the diagnostics journal."""
         self.id = account_id
         self.owner = owner
         self.poll_seconds = poll_seconds
         self.stop = stop
         self.on_change = on_change
+        self._on_failure = on_failure
         self.state: AccountRunState = "ready" if owner is not None else "failed"
         self.error_code: str | None = None if owner is not None else open_failure
         self._account_status = AccountStatus(self.id, self.state, self.error_code)
@@ -324,6 +327,7 @@ class AccountSupervisor:
         self._account_status = AccountStatus(self.id, self.state, self.error_code)
         if self.owner is not None:
             self.owner.request_stop()
+        self._on_failure(exc)
         log.error(
             "trading_account_failed id=%s type=%s status=%s",
             self.id,

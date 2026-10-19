@@ -52,6 +52,7 @@ _TRADING_OPERATIONS = frozenset(
         "execution.order_submission",
         "execution.quote_snapshot",
         "execution.ledger_event",
+        "account.failed",
     }
 )
 _TRADING_OUTCOMES = frozenset({"returned", "raised", "observed"})
