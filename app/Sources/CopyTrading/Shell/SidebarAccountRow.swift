@@ -11,8 +11,9 @@ struct SidebarAccountRow: View {
     private var screen: AppModel.Screen { .account(account.id) }
     private var isLive: Bool { account.environment == .live }
     private var overview: AccountOverview? { accountFeature.accounts.first { $0.accountID == account.id } }
+    private var isStopped: Bool { overview.map(AccountCopyState.isStopped) == true }
     private var copyWord: String {
-        L10n.string(overview.map { AccountCopyState($0).isCopying } == true ? "Copying" : "Off")
+        L10n.string(isStopped ? "Stopped" : overview.map { AccountCopyState($0).isCopying } == true ? "Copying" : "Off")
     }
     private var equity: Decimal? {
         accountFeature.accounts.first { $0.accountID == account.id }?.balance.flatMap { Decimal(engine: $0.equity) }
@@ -22,7 +23,7 @@ struct SidebarAccountRow: View {
         SidebarEntityRow(
             title: account.id,
             detail: L10n.string("%@ · %@", L10n.string(isLive ? "Live" : "Paper"), copyWord),
-            detailTint: isLive ? Palette.live : Palette.tertiaryInk,
+            detailTint: isStopped ? Palette.amber : isLive ? Palette.live : Palette.tertiaryInk,
             value: equity?.formatted(.currency(code: "USD")),
             identifier: screen.identifier,
             isSelected: model.selectedScreen == screen,

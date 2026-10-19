@@ -8,6 +8,7 @@ public struct TradingStatusBuilder {
     private var accounts = 0
     private var ready = false
     private var errorCode: String?
+    private var accountStates: [(id: String, state: String)] = []
 
     public init(_ state: TradingRunState = .paused) {
         self.state = state
@@ -18,6 +19,13 @@ public struct TradingStatusBuilder {
         var copy = self
         copy.accounts = 1
         copy.ready = true
+        return copy
+    }
+
+    /// An account the engine reports in this state: "running", "failed", or "paused".
+    public func account(_ id: String, _ state: String) -> Self {
+        var copy = self
+        copy.accountStates.append((id, state))
         return copy
     }
 
@@ -32,7 +40,7 @@ public struct TradingStatusBuilder {
             "state": state.rawValue, "configured_accounts": accounts, "active_accounts": accounts,
             "source_connected": ready, "model_ready": ready, "pending_source": 0,
             "pending_signals": 0, "processed_signals": 0, "error_code": errorCode ?? NSNull(),
-            "accounts": [Any](),
+            "accounts": accountStates.map { ["id": $0.id, "state": $0.state, "error_code": NSNull()] as [String: Any] },
         ]
         return try JSONDecoder().decode(TradingStatus.self, from: JSONSerialization.data(withJSONObject: payload))
     }

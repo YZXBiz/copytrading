@@ -2339,3 +2339,7 @@
 "Move CopyTrading to Applications, then open it from there to install." = "Move CopyTrading to Applications, then open it from there to install.";
 "Copying stopped when CopyTrading quit." = "Copying stopped when CopyTrading quit.";
 "Copying stopped when CopyTrading quit. Open CopyTrading and press Start Copying." = "Copying stopped when CopyTrading quit. Open CopyTrading and press Start Copying.";
+"Copying into %@ stopped" = "Copying into %@ stopped";
+"CopyTrading hit a problem it couldn't fix. Stop copying everywhere, then start again to reopen it." = "CopyTrading hit a problem it couldn't fix. Stop copying everywhere, then start again to reopen it.";
+"%lld stopped" = "%lld stopped";
+"%@ stopped" = "%@ stopped";

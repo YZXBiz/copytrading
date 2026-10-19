@@ -5,6 +5,7 @@ something long past is dropped instead of sent."""
 import asyncio
 import datetime as dt
 import logging
+from collections import deque
 from collections.abc import Callable, Iterable, Mapping
 from typing import Protocol
 
@@ -43,6 +44,7 @@ class AlertRelay:
         parser: NotificationOutbox,
         accounts: Callable[[], Iterable[AccountAlerts]],
         *,
+        announcements: deque[NotificationPayload] | None = None,
         clock: Callable[[], dt.datetime] = lambda: dt.datetime.now(dt.UTC),
         retry_seconds: tuple[float, ...] = ALERT_RETRY_SECONDS,
         idle_seconds: float = ALERT_IDLE_SECONDS,
@@ -52,6 +54,9 @@ class AlertRelay:
         self._sender = sender
         self._parser = parser
         self._accounts = accounts
+        # Alerts the runtime raises itself, such as an account that stopped. They are not in any
+        # outbox: they stay here until sent, and a stopped account has no outbox left to read.
+        self._announcements = announcements if announcements is not None else deque()
         self._clock = clock
         self._retry_seconds = retry_seconds
         self._idle_seconds = idle_seconds
@@ -78,6 +83,9 @@ class AlertRelay:
     async def deliver(self) -> None:
         """One pass over every outbox. A failed send leaves its alert for the next pass."""
         try:
+            while self._announcements:
+                await self._send(self._announcements[0])
+                self._announcements.popleft()
             await deliver_notifications(self._parser, lambda item: self._send(item.payload))
             for account in self._accounts():
                 for notification_id, _, _, value in await account.pending_notifications():
@@ -97,6 +105,26 @@ class AlertRelay:
         if self._clock() - payload.starts_at > ALERT_MAX_AGE:
             return
         await self._sender.send(payload)
+
+
+def account_stopped_alert(account_id: str, at: dt.datetime) -> NotificationPayload:
+    """Copying into an account stopped on its own and will not resume until the owner acts."""
+    return NotificationPayload(
+        labels={
+            "alertname": "AccountStopped",
+            "system": "copytrade",
+            "job": "execution",
+            "severity": "critical",
+            "account_id": account_id,
+        },
+        annotations={
+            "summary": f"Copying into {account_id} stopped",
+            "evidence": "CopyTrading hit an error it could not recover from after several tries.",
+            "impact": "No new orders are placed there. Orders already sent stay at Alpaca.",
+            "action": "In CopyTrading, stop copying everywhere, then start again to reopen it.",
+        },
+        starts_at=at,
+    )
 
 
 def execution_alert(value: Mapping[str, object]) -> NotificationPayload:

@@ -38,6 +38,7 @@ public struct CopyTradingScene: Scene {
                     FillNotifications.requestPermission()
                     model.announceAgentRequest = { AgentRequestNotifications.post($0) }
                     model.announceCopyingStopped = { CopyingStoppedNotification.post() }
+                    model.announceAccountStopped = { AccountStoppedNotifications.post($0) }
                     model.startIfNeeded()
                 }
         }

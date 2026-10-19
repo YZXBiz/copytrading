@@ -41,6 +41,13 @@ struct MenuBarView: View {
                     .foregroundStyle(Palette.tertiaryInk)
                     .padding(.top, 10)
             }
+            let stopped = model.isTradingUnlocked ? accountFeature.accounts.count(where: AccountCopyState.isStopped) : 0
+            if stopped > 0 {
+                Label(L10n.string("%@ stopped", Humanize.count(stopped, "account")), systemImage: "exclamationmark.triangle.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Palette.amber)
+                    .padding(.top, 10)
+            }
             let waiting = model.agentProposals.filter { $0.state == .pending }.count
             if waiting > 0 {
                 Label(L10n.string("%@ waiting for approval", Humanize.count(waiting, "agent request")), systemImage: "hand.raised.fill")

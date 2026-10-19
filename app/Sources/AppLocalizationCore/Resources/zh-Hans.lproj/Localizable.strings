@@ -2339,3 +2339,7 @@
 "Move CopyTrading to Applications, then open it from there to install." = "请把 CopyTrading 移到“应用程序”，从那里打开后再安装。";
 "Copying stopped when CopyTrading quit." = "CopyTrading 退出时，跟单已停止。";
 "Copying stopped when CopyTrading quit. Open CopyTrading and press Start Copying." = "CopyTrading 退出时，跟单已停止。请打开 CopyTrading，点“开始跟单”。";
+"Copying into %@ stopped" = "%@ 已停止跟单";
+"CopyTrading hit a problem it couldn't fix. Stop copying everywhere, then start again to reopen it." = "CopyTrading 遇到无法自行解决的问题。先停止所有跟单，再重新开始，即可重新打开该账户。";
+"%lld stopped" = "%lld个已停止";
+"%@ stopped" = "有%@已停止";

@@ -6,6 +6,7 @@ import sqlite3
 from contextlib import asynccontextmanager
 
 import pytest
+from pydantic import SecretStr
 
 from copytrading_engine.execution.adapters.ownership_probe import UnsettledOwnership
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore
@@ -20,7 +21,11 @@ from copytrading_engine.trading.adapters.routing import (
     RoutingChangePending,
     RoutingRevision,
 )
-from copytrading_engine.trading.domain.config import TradingConfiguration
+from copytrading_engine.trading.application import accounts
+from copytrading_engine.trading.domain.config import (
+    NotificationConfiguration,
+    TradingConfiguration,
+)
 from copytrading_engine.trading.entrypoints.factories import TradingFactories
 from copytrading_engine.trading.entrypoints.runtime import TradingRuntime
 
@@ -416,3 +421,56 @@ async def test_shutdown_waits_for_late_account_owner_close(tmp_path, caplog, lat
         assert opened["second"].closed
     else:
         assert "late_account_owner_close_failed type=OSError" in caplog.text
+
+
+async def test_an_account_that_stops_mid_session_reaches_the_alert_channel_once(
+    tmp_path, monkeypatch
+):
+    """On Oct 19 an account failed 30 minutes in and stayed failed for 45 minutes without a word."""
+    monkeypatch.setattr(accounts, "CYCLE_RETRY_SECONDS", (0.01, 0.01))
+
+    class Failing(Owner):
+        async def cycle(self, now, *, halted):
+            if self.name == "second":
+                self.cycles += 1
+                raise RuntimeError("the cycle cannot finish")
+            return await super().cycle(now, halted=halted)
+
+    sent: list[dict[str, str]] = []
+
+    class Sender:
+        async def send(self, payload):
+            sent.append(dict(payload.annotations))
+
+    async def owner_factory(path, credentials, policy, environment):
+        return Failing(path, {}, {})
+
+    async def decoder_factory(name, config):
+        return Decoder()
+
+    factories = TradingFactories(
+        owner=owner_factory,
+        decoder=decoder_factory,
+        session=lambda source, channels, authors, stop, report_failure: Session(source, None),
+        notifier=lambda configuration, secret: Sender(),
+    )
+    configuration = trading_configuration().model_copy(
+        update={"notification": NotificationConfiguration(chat_id="1")}
+    )
+    secrets = trading_secrets().model_copy(update={"notification_token": SecretStr("bot-token")})
+    runtime = TradingRuntime(tmp_path, factories=factories)
+    await runtime.start(configuration, secrets)
+    try:
+        await wait_for(
+            runtime,
+            lambda status: any(account.state == "failed" for account in status.accounts),
+        )
+        # The alert relay starts after the model probe, so give it time under a loaded suite.
+        async with asyncio.timeout(10):
+            while not sent:
+                await asyncio.sleep(0.01)
+        await asyncio.sleep(0.2)
+    finally:
+        await runtime.shutdown()
+
+    assert [alert["summary"] for alert in sent] == ["Copying into second stopped"]
