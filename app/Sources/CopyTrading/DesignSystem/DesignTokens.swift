@@ -11,8 +11,10 @@ enum DesignTokens {
     /// The rounded panels Connections and Settings draw their pages on, matching the sidebar's.
     static let panelCornerRadius: CGFloat = 22
 
-    // Semantic system styles keep the platform's text and legibility preferences. Titles are set
-    // in the display face; everything people read and press stays in SF Pro.
+    // Titles are set in the display face; everything people read and press stays in SF Pro. The
+    // SF Pro roles are fixed point sizes, never `Font.scaled(by:)`: a vertical-axis text field
+    // measures a scaled font at one size and draws it at another, so it shows only some of its
+    // lines, and any of these roles can end up on an editable field.
     /// A screen's name at the top of its page, as large as an account's name.
     static let pageTitle = DisplayFont.font(size: 42, weight: .medium, relativeTo: .largeTitle)
     /// An account's or guru's page: the name, then the balance under it.
@@ -22,36 +24,34 @@ enum DesignTokens {
     /// The balance is the page's one big figure: light enough to read as type, not a badge.
     static let balanceDisplay = DisplayFont.font(size: 68, weight: .regular, relativeTo: .largeTitle)
     static let balanceTracking: CGFloat = -0.5
-    static let statValue = Font.system(.body, weight: .semibold).scaled(by: 14.0 / 13)
+    static let statValue = Font.system(size: 14, weight: .semibold)
     static let listHeading = DisplayFont.font(size: 26, weight: .medium, relativeTo: .title2)
     static let listHeadingTracking: CGFloat = 0.2
     /// Small bold capitals spaced wide, like a studio site's navigation: labels, never sentences.
-    static let eyebrow = Font.system(.caption, weight: .bold).scaled(by: 11.0 / 10)
+    static let eyebrow = Font.system(size: 11, weight: .bold)
     static let eyebrowTracking: CGFloat = 1.4
     /// A quiet line under a big name, spaced a little wide so it reads as a caption to the title.
-    static let lede = Font.system(.body).scaled(by: 14.0 / 13)
+    static let lede = Font.system(size: 14)
     static let ledeTracking: CGFloat = 0.8
     static let feedTitle = Font.system(.body, weight: .semibold)
     /// The sidebar's account and guru rows.
     static let sidebarTitle = Font.system(.body, weight: .medium)
-    static let sidebarDetail = Font.system(.caption).scaled(by: 11.0 / 10)
+    static let sidebarDetail = Font.system(size: 11)
     /// A group of settings or a setup step: the display face, a size under a list heading.
     static let settingsHeading = DisplayFont.font(size: 22, weight: .medium, relativeTo: .title3)
-    static let sectionTitle = Font.system(.body, design: .default, weight: .medium).scaled(by: 14.0 / 13)
-    static let rowTitle = Font.system(.body, design: .default, weight: .medium).scaled(by: 14.0 / 13)
-    /// A fixed 14 pt, not body scaled to 14: a vertical text field measures a scaled font at one
-    /// size and draws it at another, and then shows only its first line.
+    static let sectionTitle = Font.system(size: 14, weight: .medium)
+    static let rowTitle = Font.system(size: 14, weight: .medium)
     static let bodyText = Font.system(size: 14, weight: .regular)
-    static let bodyEmphasis = Font.system(.body, design: .default, weight: .medium).scaled(by: 14.0 / 13)
-    static let caption = Font.system(.caption, design: .default).scaled(by: 12.0 / 10)
+    static let bodyEmphasis = Font.system(size: 14, weight: .medium)
+    static let caption = Font.system(size: 12)
 
     // The Getting Started guide reads like a studio site's front page: a hero headline, display
     // headings, and body text a step above the workspace's compact interface text.
     static let documentTitle = DisplayFont.font(size: 64, weight: .regular, relativeTo: .largeTitle)
     static let documentTitleTracking: CGFloat = -0.4
     static let documentHeading = DisplayFont.font(size: 26, weight: .medium, relativeTo: .title2)
-    static let documentSubheading = Font.system(.body, design: .default, weight: .semibold).scaled(by: 15.0 / 13)
-    static let documentBody = Font.system(.body, design: .default, weight: .regular).scaled(by: 15.0 / 13)
+    static let documentSubheading = Font.system(size: 15, weight: .semibold)
+    static let documentBody = Font.system(size: 15, weight: .regular)
     /// A closing section's title, such as "Setup Tips".
     static let displayTitle = DisplayFont.font(size: 26, weight: .medium, relativeTo: .title2)
     /// A panel's or a quiet hero's title: the assistant's welcome, the engine, the lock screen.
@@ -61,8 +61,8 @@ enum DesignTokens {
 
     // Activity's text: prose, then labels and IDs; numbers use monospaced digits wherever they line up.
     static let activityBody = Font.system(.body)
-    static let activityMeta = Font.system(.caption).scaled(by: 12.0 / 10)
-    static let activityIdentifier = Font.system(.caption, design: .monospaced).scaled(by: 12.0 / 10)
+    static let activityMeta = Font.system(size: 12)
+    static let activityIdentifier = Font.system(size: 12, design: .monospaced)
     /// The label column of Technical details' key/value rows.
     static let factLabelWidth: CGFloat = 116
 
