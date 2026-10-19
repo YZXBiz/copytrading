@@ -764,7 +764,7 @@ def launch(state_root: Path, *, quit_first: bool = True, env: dict[str, str] | N
         quit_app()
     # The tour's end, the last page, and the last tab are remembered per app; a run starts as a
     # first launch would.
-    for key in ("setupTour.ended", "window.lastScreen", "account.section"):
+    for key in ("setupTour.ended", "window.lastScreen", "account.section", "copying.wasOn"):
         subprocess.run(["defaults", "delete", BUNDLE_ID, key], capture_output=True, check=False)
     subprocess.run(
         [

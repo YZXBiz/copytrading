@@ -20,6 +20,10 @@ struct MenuBarView: View {
         VStack(alignment: .leading, spacing: 0) {
             header
                 .padding(.bottom, 14)
+            if model.showsCopyingStopped {
+                copyingStopped
+                    .padding(.bottom, 14)
+            }
             if model.isTradingUnlocked {
                 hero
                 MenuBarSparkline(accounts: accountFeature.accounts, histories: accountFeature.histories)
@@ -139,6 +143,29 @@ struct MenuBarView: View {
         }
     }
 
+    /// Copying was on when CopyTrading last stopped. The panel starts it as its Start Copying row
+    /// does; where that row is not offered (locked, or a live account) the Open CopyTrading row
+    /// below is the way in, so no second button repeats it.
+    private var copyingStopped: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(L10n.string("Copying stopped when CopyTrading quit."), systemImage: "pause.circle.fill")
+                .font(.system(size: 13))
+                .foregroundStyle(Palette.ink)
+                .fixedSize(horizontal: false, vertical: true)
+            if startsHere {
+                Button(L10n.string("Start Copying"), action: start)
+                    .buttonStyle(PageButtonStyle(isProminent: true))
+                    .disabled(model.isTradingCommandPending)
+                    .accessibilityIdentifier("menu.copyingStopped.start")
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("menu.copyingStopped")
+    }
+
+    /// The Start Copying row's own conditions: unlocked, and no live account to confirm.
+    private var startsHere: Bool { model.isTradingUnlocked && !model.hasLiveAccounts }
+
     private var actions: some View {
         VStack(spacing: 0) {
             MenuRow(title: "Open CopyTrading", symbol: "macwindow", action: openMainWindow)
@@ -146,7 +173,7 @@ struct MenuBarView: View {
                 if isCopying {
                     MenuRow(title: "Stop Copying", symbol: "stop", action: pause)
                         .disabled(model.isTradingCommandPending)
-                } else if !model.hasLiveAccounts {
+                } else if !model.hasLiveAccounts, !model.showsCopyingStopped {
                     MenuRow(title: "Start Copying", symbol: "play", action: start)
                         .disabled(model.isTradingCommandPending)
                 }

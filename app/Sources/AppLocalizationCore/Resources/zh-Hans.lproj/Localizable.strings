@@ -2338,3 +2338,5 @@
 "CopyTrading %@ is out, but can't install in %@." = "CopyTrading %@ 已发布，但无法在“%@”中安装。";
 "Move CopyTrading to Applications, then open it from there to install." = "请把 CopyTrading 移到“应用程序”，从那里打开后再安装。";
 "The ticker is not a whole word in the post" = "股票代码在帖子里不是一个完整的词";
+"Copying stopped when CopyTrading quit." = "CopyTrading 退出时，跟单已停止。";
+"Copying stopped when CopyTrading quit. Open CopyTrading and press Start Copying." = "CopyTrading 退出时，跟单已停止。请打开 CopyTrading，点“开始跟单”。";

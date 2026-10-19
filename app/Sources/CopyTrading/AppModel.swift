@@ -82,7 +82,10 @@ final class AppModel {
     }
     var engineStatus: EngineStatus?
     var tradingStatus: TradingStatus? {
-        didSet { holdMacAwakeWhileCopying() }
+        didSet {
+            holdMacAwakeWhileCopying()
+            trackCopyingAcrossLaunches()
+        }
     }
     var savedTradingConfiguration: TradingConfiguration?
     var hasTradingSecrets = false
@@ -549,9 +552,17 @@ final class AppModel {
     /// and never read the owner's Keychain.
     @ObservationIgnored private let launchPreferencesStore: LaunchPreferencesStore?
     /// Whether this launch already tried starting copying on the owner's behalf.
-    @ObservationIgnored private var didStartCopyingOnLaunch = false
+    @ObservationIgnored var didStartCopyingOnLaunch = false
     /// The engine stopped under copying that was running; once it is back, copying starts again.
     @ObservationIgnored var resumesAfterEngineRestart = false
+    /// Whether copying was on when the app last stopped, kept across launches.
+    @ObservationIgnored let copyingMemory: CopyingMemory
+    /// Copying was on when CopyTrading last stopped and has not started again. Read once at launch,
+    /// before the engine's first status can clear it, and ended by copying starting or a dismissal.
+    var copyingStoppedWithQuit: Bool
+    /// The macOS notification for it goes out once per launch.
+    @ObservationIgnored var didAnnounceCopyingStopped = false
+    @ObservationIgnored var announceCopyingStopped: () -> Void = {}
     /// How long the launch start waits before each retry after a failed connection check.
     @ObservationIgnored var launchStartRetryDelays: [Duration] = [.seconds(10), .seconds(30), .seconds(60)]
     @ObservationIgnored private var launchStartRetry: Task<Void, Never>?
@@ -580,9 +591,12 @@ final class AppModel {
         tradingStarter: (any TradingStarting)? = nil,
         appUnlock: AppUnlock? = nil,
         launchPreferencesStore: LaunchPreferencesStore? = nil,
+        copyingMemory: CopyingMemory = CopyingMemory(),
         agentProposalOperations: (any AgentProposalOperations)? = nil,
         sleepGuard: SleepGuard = SleepGuard()
     ) {
+        self.copyingMemory = copyingMemory
+        copyingStoppedWithQuit = copyingMemory.wasOn
         proposalOperations = agentProposalOperations
         self.sleepGuard = sleepGuard
         let stateRoot = Self.stateRoot
