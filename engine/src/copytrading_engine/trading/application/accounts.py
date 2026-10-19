@@ -151,6 +151,13 @@ STREAM_SAFETY_SECONDS = 30.0
 # notices.
 UNREACHABLE_FIRST_RETRY_SECONDS = 1.0
 UNREACHABLE_RETRY_SECONDS = 60.0
+# A cycle that fails for any other reason (not Alpaca answering badly) is tried again after each of
+# these waits, about four minutes in all, before the account stays failed. A wake (a new post or an
+# order update) cuts a wait short, so the tries can come sooner and the four minutes can be less.
+# Retrying cannot place an order twice: an order's client ID comes from its post, its intent is
+# committed before it goes out, and a retried cycle only looks orders up by that ID, never
+# resubmits them.
+CYCLE_RETRY_SECONDS: tuple[float, ...] = (15.0, 60.0, 180.0)
 
 
 class AccountSupervisor:
@@ -163,13 +170,16 @@ class AccountSupervisor:
         on_change: Callable[[], None],
         *,
         open_failure: str = "account_unavailable",
+        on_failed: Callable[[str, BaseException], None] = lambda _account_id, _error: None,
     ) -> None:
-        """`open_failure` says why an account without an owner could not open."""
+        """`open_failure` says why an account without an owner could not open; `on_failed` is told
+        once, with the account's id and the error, when a running account stops on its own."""
         self.id = account_id
         self.owner = owner
         self.poll_seconds = poll_seconds
         self.stop = stop
         self.on_change = on_change
+        self.on_failed = on_failed
         self.state: AccountRunState = "ready" if owner is not None else "failed"
         self.error_code: str | None = None if owner is not None else open_failure
         self._account_status = AccountStatus(self.id, self.state, self.error_code)
@@ -243,12 +253,14 @@ class AccountSupervisor:
     async def _reconcile(self) -> None:
         assert self.owner is not None
         failures = 0
+        faults = 0
         while not self.stop.is_set() and self.state == "running":
             # Cleared before the cycle: a wake during it starts the next cycle at once.
             self._wake.clear()
             try:
                 observation = await self.owner.cycle(dt.datetime.now(dt.UTC), halted=False)
                 self._outstanding_work = observation.ledger.has_outstanding_work
+                faults = 0
                 if failures:
                     failures = 0
                     self._reached()
@@ -267,8 +279,14 @@ class AccountSupervisor:
                 )
                 continue
             except Exception as exc:  # noqa: BLE001 - the supervisor records the account failure
-                self._fail(exc)
-                return
+                if faults >= len(CYCLE_RETRY_SECONDS):
+                    self._fail(exc)
+                    return
+                self._faulted(exc, faults + 1)
+                wait = CYCLE_RETRY_SECONDS[faults]
+                faults += 1
+                await self._idle(wait)
+                continue
             await self._idle()
 
     @property
@@ -309,6 +327,17 @@ class AccountSupervisor:
         self._account_status = dataclasses.replace(self._account_status, error_code=self.error_code)
         self.on_change()
 
+    def _faulted(self, exc: Exception, attempt: int) -> None:
+        """A cycle failed for a reason that is not the broker's; the account stays running and
+        tries again, and fails only if every try does."""
+        log.warning(
+            "trading_account_cycle_failed id=%s type=%s retry=%d/%d",
+            self.id,
+            type(exc).__name__,
+            attempt,
+            len(CYCLE_RETRY_SECONDS),
+        )
+
     def _reached(self) -> None:
         log.info("trading_account_reached id=%s", self.id)
         self.error_code = None
@@ -324,6 +353,7 @@ class AccountSupervisor:
         self._account_status = AccountStatus(self.id, self.state, self.error_code)
         if self.owner is not None:
             self.owner.request_stop()
+        self.on_failed(self.id, exc)
         log.error(
             "trading_account_failed id=%s type=%s status=%s",
             self.id,

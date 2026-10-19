@@ -146,3 +146,28 @@ def test_an_observer_without_a_sink_records_nothing_and_changes_nothing() -> Non
     observer.event("order_prepared")
     assert result == 42
     assert observer.register_secrets(("anything",))
+
+
+def test_an_account_failure_records_its_error_type_and_function_without_its_message(
+    tmp_path: Path,
+) -> None:
+    directory = tmp_path / "diagnostics"
+    sink = LocalTelemetry(TelemetryConfig(journal_directory=directory))
+    observer = TradingTelemetry(sink=sink)
+
+    def read_balance() -> None:
+        raise KeyError("PRIVATE broker text")
+
+    try:
+        try:
+            read_balance()
+        except KeyError as error:
+            observer.account_failed(error)
+        assert sink.flush(timeout_seconds=5)
+    finally:
+        sink.close(timeout_seconds=5)
+
+    [record] = _records(directory)
+    assert (record["operation"], record["outcome"]) == ("account.failed", "raised")
+    assert (record["reason"], record["status"]) == ("key_error", "read_balance")
+    assert "PRIVATE" not in json.dumps(record)

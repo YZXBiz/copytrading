@@ -16,6 +16,13 @@ struct AccountCopyState: Equatable {
         "account_in_use",
     ]
 
+    /// An account in the setup that is off because the engine could not keep it running or open it,
+    /// not because the owner stopped it: it needs a look. Stopping everything on purpose reads
+    /// `processing_stopped`, which is not this.
+    static func isStopped(_ account: AccountOverview) -> Bool {
+        account.activeConfiguration && unheld.contains(account.readiness) && account.readiness != "processing_stopped"
+    }
+
     init(_ account: AccountOverview) {
         guard account.activeConfiguration else {
             (isCopying, text, tone) = (false, "Not copying", .inactive)

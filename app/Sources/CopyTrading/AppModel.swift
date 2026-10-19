@@ -85,8 +85,14 @@ final class AppModel {
         didSet {
             holdMacAwakeWhileCopying()
             trackCopyingAcrossLaunches()
+            let stopped = stoppedWatch.stopped(in: tradingStatus)
+            if !stopped.isEmpty { announceAccountStopped(stopped) }
         }
     }
+    /// Accounts the engine stopped on its own, said once each. The real app sets
+    /// `announceAccountStopped`.
+    @ObservationIgnored private var stoppedWatch = StoppedWatch()
+    @ObservationIgnored var announceAccountStopped: ([String]) -> Void = { _ in }
     var savedTradingConfiguration: TradingConfiguration?
     var hasTradingSecrets = false
     var tradingValidation: TradingValidation?

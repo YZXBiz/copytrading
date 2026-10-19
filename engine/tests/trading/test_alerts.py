@@ -2,9 +2,10 @@
 
 import asyncio
 import datetime as dt
+from collections import deque
 
 from copytrading_engine.shared.notification_models import NotificationIntent, NotificationPayload
-from copytrading_engine.trading.application.alerts import AlertRelay
+from copytrading_engine.trading.application.alerts import AlertRelay, account_stopped_alert
 
 NOW = dt.datetime(2026, 10, 15, 15, tzinfo=dt.UTC)
 
@@ -104,3 +105,32 @@ async def test_a_failed_send_waits_before_the_next_try_and_keeps_its_alert():
     await relay.deliver()
     assert sender.sent == ["post"]
     assert not relay.failing
+
+
+async def test_a_stopped_account_is_announced_once_and_kept_until_it_is_sent():
+    """A stopped account has no outbox left to read, so its alert waits in the relay itself."""
+    announcements = deque([account_stopped_alert("paper-2", NOW)])
+    sender = Sender(fail=True)
+    relay = AlertRelay(
+        sender, Outbox(), tuple, announcements=announcements, clock=lambda: NOW, retry_seconds=(30,)
+    )
+
+    await relay.deliver()
+    assert sender.sent == []
+    assert len(announcements) == 1
+    assert relay.failing
+
+    sender.fail = False
+    await relay.deliver()
+    await relay.deliver()
+    assert sender.sent == ["Copying into paper-2 stopped"]
+    assert not announcements
+
+
+def test_the_stopped_alert_names_the_account_and_what_to_do():
+    payload = account_stopped_alert("paper-2", NOW)
+
+    assert payload.labels["severity"] == "critical"
+    assert payload.labels["account_id"] == "paper-2"
+    assert payload.annotations["summary"] == "Copying into paper-2 stopped"
+    assert "stop copying everywhere, then start again" in payload.annotations["action"]

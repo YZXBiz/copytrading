@@ -5,6 +5,7 @@ import dataclasses
 import datetime as dt
 import logging
 import os
+from collections import deque
 from collections.abc import AsyncIterator, Callable, Collection
 from contextlib import asynccontextmanager, nullcontext
 from dataclasses import replace
@@ -22,6 +23,7 @@ from copytrading_engine.parsing.providers.registry import ManagedDecoder
 from copytrading_engine.parsing.readiness import probe_model
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore
 from copytrading_engine.parsing.worker import ParseWorker
+from copytrading_engine.shared.notification_models import NotificationPayload
 from copytrading_engine.shared.raw_message import RawMessage
 from copytrading_engine.shared.route_keys import route_key
 from copytrading_engine.sources.application import Delivery, ForwardBatch
@@ -50,7 +52,7 @@ from copytrading_engine.trading.application.accounts import (
     AccountSupervisor,
     SignalFanout,
 )
-from copytrading_engine.trading.application.alerts import AlertRelay
+from copytrading_engine.trading.application.alerts import AlertRelay, account_stopped_alert
 from copytrading_engine.trading.application.manual_intervention import ManualInterventionService
 from copytrading_engine.trading.application.operator_service import OperatorQueryService
 from copytrading_engine.trading.application.paused_reader import PausedAccountReader, ReadKeys
@@ -151,6 +153,7 @@ class TradingRuntime:
         self._late_owner_opens: set[asyncio.Future[AccountOwner]] = set()
         self._late_owner_closes: set[asyncio.Task[None]] = set()
         self._failure_code: str | None = None
+        self._announcements: deque[NotificationPayload] = deque()
         evidence = SQLiteOperatorEvidence()
         access = AccountAccess(
             data_dir,
@@ -256,6 +259,7 @@ class TradingRuntime:
         self._source_retries = 0
         self._source_retry_at = None
         self._failure_code = None
+        self._announcements.clear()
         self._status = TradingStatus(
             state="starting", configured_accounts=len(configuration.accounts)
         )
@@ -523,6 +527,7 @@ class TradingRuntime:
                         open_failure = exc.reason
                         refusals.append(exc.reason)
                     except Exception as exc:  # noqa: BLE001 - one account's failure is reported per account
+                        self._journal_failure(exc)
                         log.error(
                             "trading_account_open_failed id=%s type=%s",
                             account.id,
@@ -539,6 +544,7 @@ class TradingRuntime:
                     self._stop,
                     self._account_changed,
                     open_failure=open_failure,
+                    on_failed=self._account_failed,
                 )
             self._account_changed()
             # Limits changed while the accounts opened reach them before the first post.
@@ -601,6 +607,7 @@ class TradingRuntime:
                         for account in self._accounts.values()
                         if account.state == "running" and account.owner is not None
                     ),
+                    announcements=self._announcements,
                 )
                 if notifier is not None
                 else None
@@ -874,6 +881,16 @@ class TradingRuntime:
             account.error_code for account in self._accounts.values() if account.state == "failed"
         }
         return reason if len(reasons) == 1 and (reason := reasons.pop()) else "account_unavailable"
+
+    def _journal_failure(self, error: BaseException) -> None:
+        if self._telemetry is not None:
+            self._telemetry.account_failed(error)
+
+    def _account_failed(self, account_id: str, error: BaseException) -> None:
+        """A running account stopped: the journal records the error, and the owner's alert channel
+        hears of it once."""
+        self._journal_failure(error)
+        self._announcements.append(account_stopped_alert(account_id, dt.datetime.now(dt.UTC)))
 
     def _account_changed(self) -> None:
         statuses = tuple(account.status for account in self._accounts.values())
