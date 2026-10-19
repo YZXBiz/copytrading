@@ -46,7 +46,7 @@ struct AppearanceSettingsPage: View {
                             .strokeBorder(isSelected ? Palette.ink : .clear, lineWidth: 2)
                     }
                 Text(L10n.string(option.title))
-                    .font(.system(.body, weight: .semibold).scaled(by: 14.0 / 13))
+                    .font(DesignTokens.statValue)
                     .foregroundStyle(isSelected ? Palette.ink : Palette.tertiaryInk)
             }
             .contentShape(.rect)
