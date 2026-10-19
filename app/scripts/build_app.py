@@ -255,12 +255,31 @@ def build_number() -> str:
     return run("git", "rev-list", "--count", "HEAD", cwd=ROOT, capture=True).strip()
 
 
+def local_version(described: str) -> str | None:
+    """`git describe` of a local build as the version it shows: "v0.1.0-beta.1" is 0.1.0-beta.1,
+    and four commits past it is 0.1.0-beta.1+4, so Settings never shows a bare 0.1.0."""
+    match = re.fullmatch(r"v(\d+\.\d+\.\d+(?:-[a-z]+\.\d+)?)(?:-(\d+)-g[0-9a-f]+)?", described)
+    if match is None:
+        return None
+    release, ahead = match.groups()
+    return release if ahead is None else f"{release}+{ahead}"
+
+
+def described_release() -> str:
+    try:
+        return run("git", "describe", "--tags", "--match", "v*", cwd=ROOT, capture=True).strip()
+    except subprocess.CalledProcessError:
+        return ""  # A shallow clone has no tags; the build keeps Info.plist's version.
+
+
 def stamp_versions(info_path: Path, version: str | None) -> None:
-    """A release shows its full version, such as 0.1.0-alpha.4; every build gets a build number."""
+    """A release shows its full version, such as 0.1.0-alpha.4, and a local build the release it
+    grew from; every build gets a build number."""
     with info_path.open("rb") as stream:
         info = plistlib.load(stream)
-    if version is not None:
-        info["CFBundleShortVersionString"] = version
+    shown = version if version is not None else local_version(described_release())
+    if shown is not None:
+        info["CFBundleShortVersionString"] = shown
     info["CFBundleVersion"] = build_number()
     with info_path.open("wb") as stream:
         plistlib.dump(info, stream)

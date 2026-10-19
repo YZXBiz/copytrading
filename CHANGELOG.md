@@ -4,6 +4,9 @@ User-visible changes for each release are recorded here. Every GitHub release's 
 
 ## Unreleased
 
+- An app built from source shows the release it grew from in Settings, such as 0.1.0-beta.1+4,
+  instead of a bare 0.1.0.
+
 ## 0.1.0-beta.1 — developer preview
 
 The first beta. CopyTrading went through a full test pass in English and 简体中文: every trading flow on real Discord and Alpaca paper, every control, and every screen ([validation](docs/validation.md)). These are the fixes it led to. Start with a paper account; live trading is not yet qualified.
