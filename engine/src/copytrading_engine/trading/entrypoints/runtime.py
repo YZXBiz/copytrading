@@ -6,7 +6,7 @@ import datetime as dt
 import logging
 import os
 from collections import deque
-from collections.abc import AsyncIterator, Callable, Collection
+from collections.abc import AsyncGenerator, Callable, Collection
 from contextlib import asynccontextmanager, nullcontext
 from dataclasses import replace
 from functools import partial
@@ -430,7 +430,7 @@ class TradingRuntime:
             log.error("late_account_owner_close_failed type=%s", type(error).__name__)
 
     @asynccontextmanager
-    async def maintenance_fence(self) -> AsyncIterator[None]:
+    async def maintenance_fence(self) -> AsyncGenerator[None]:
         """Stop and drain every trading-owned store before a consistent snapshot."""
         async with self._maintenance_lock:
             self._maintenance_active = True

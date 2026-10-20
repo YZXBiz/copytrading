@@ -7,7 +7,7 @@ import json
 import sqlite3
 import threading
 import uuid
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator
 from datetime import UTC, datetime
 from typing import Any
 
@@ -279,7 +279,9 @@ class SQLiteSelfTestStore:
             raise
 
     @contextlib.contextmanager
-    def _transaction(self, connection: sqlite3.Connection, *, write: bool = True) -> Iterator[None]:
+    def _transaction(
+        self, connection: sqlite3.Connection, *, write: bool = True
+    ) -> Generator[None]:
         connection.execute("BEGIN IMMEDIATE" if write else "BEGIN")
         try:
             yield

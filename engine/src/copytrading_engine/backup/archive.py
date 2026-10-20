@@ -10,7 +10,7 @@ import stat
 import tempfile
 import uuid
 import zipfile
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
@@ -126,7 +126,7 @@ def inspect_backup_archive(
 
 
 @contextmanager
-def open_archive(archive_path: Path) -> Iterator[zipfile.ZipFile]:
+def open_archive(archive_path: Path) -> Generator[zipfile.ZipFile]:
     """Open one regular archive without following a path replaced by a symlink."""
     descriptor = os.open(
         archive_path,
