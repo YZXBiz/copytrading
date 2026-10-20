@@ -11,11 +11,17 @@ extension AppModel {
     }
 
     /// Copy into one account. A live account can then buy with real money on its own, so it asks
-    /// for Touch ID first, once: starting copying already asks for live accounts.
+    /// for Touch ID first, once: starting copying already asks for live accounts. With setup
+    /// edits waiting and copying off, this is Connections' Start Copying: it checks the edits,
+    /// saves them, and starts, instead of starting the saved setup they replace.
     func startCopying(
         into accountID: String, environment: TradingEnvironment?, feature: AccountFeatureModel,
         using operations: (any AccountOperations)? = nil
     ) async {
+        if !isCopyingRunning, hasUnsavedSetupChanges, !hasOnlyLimitChanges {
+            checkAndStartCopying()
+            return
+        }
         var confirmed = false
         if !isCopyingRunning, savedTradingConfiguration != nil {
             await startTrading()
