@@ -4,6 +4,8 @@ User-visible changes for each release are recorded here. Every GitHub release's 
 
 ## Unreleased
 
+- **A guru's holdings count only the accounts you copy into.** After an account was removed from the setup, its shares stayed at the broker and still showed on the guru's page ("Holding $722 in 3 stocks from these calls") although CopyTrading no longer tracks them, and the account the guru copies into held none. The line now counts only accounts in the setup.
+
 ## 0.1.0-beta.3 — developer preview
 
 Three fixes to Start Copying, found while putting new Alpaca keys into a paper account.

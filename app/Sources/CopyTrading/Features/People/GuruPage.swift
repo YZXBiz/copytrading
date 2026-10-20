@@ -42,8 +42,12 @@ struct GuruPage: View {
                                 isRead: feature.lastUpdatedAt != nil)
                         )
                         .padding(.top, 36)
-                        GuruHoldingsLine(guruID: guruID, accounts: feature.accounts)
-                            .padding(.top, 20)
+                        GuruHoldingsLine(
+                            holdings: GuruHoldings(
+                                guruID: guruID, accounts: feature.accounts,
+                                setUpAccountIDs: Set(model.savedTradingConfiguration?.accounts.map(\.id) ?? []))
+                        )
+                        .padding(.top, 20)
                         GuruFeedList(
                             days: feed.days, guruName: guru?.name ?? guruID, isRead: feature.lastUpdatedAt != nil,
                             selection: $selectedID

@@ -3,28 +3,15 @@ import SwiftUI
 
 /// What the owner holds from one guru's calls right now, as one sentence under the guru's numbers:
 /// "Holding $1,234 in 4 stocks from these calls", then how that stands today, up or down with its
-/// own arrow. Nothing shows while nothing from this guru is held.
+/// own arrow. Nothing shows while nothing from this guru is held in a set-up account.
 struct GuruHoldingsLine: View {
-    let guruID: String
-    let accounts: [AccountOverview]
-
-    private var lots: [(lot: AccountLotView, symbol: String)] {
-        accounts.flatMap { account in
-            account.positions.flatMap { position in
-                position.lots.filter { $0.guruID == guruID && (Decimal(engine: $0.remainingQty) ?? 0) > 0 }
-                    .map { ($0, position.symbol) }
-            }
-        }
-    }
+    let holdings: GuruHoldings?
 
     var body: some View {
-        let lots = self.lots
-        if !lots.isEmpty {
-            let cost = lots.reduce(Decimal(0)) {
-                $0 + (Decimal(engine: $1.lot.remainingQty) ?? 0) * (Decimal(engine: $1.lot.averagePrice) ?? 0)
-            }
-            let gain = lots.compactMap { Decimal(engine: $0.lot.unrealizedPL) }.reduce(0, +)
-            let stocks = Set(lots.map(\.symbol)).count
+        if let holdings {
+            let cost = holdings.cost
+            let gain = holdings.gain
+            let stocks = holdings.stocks
             let direction = ChangeDirection(gain)
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text(
