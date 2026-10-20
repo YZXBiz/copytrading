@@ -4,6 +4,10 @@ User-visible changes for each release are recorded here. Every GitHub release's 
 
 ## Unreleased
 
+## 0.1.0-beta.3 — developer preview
+
+Three fixes to Start Copying, found while putting new Alpaca keys into a paper account.
+
 - **An account's Start Copying uses the keys you just typed.** With new keys or other edits waiting in Connections, Start Copying on the account's page started the saved setup, so old keys failed their check ("zhap-account-2 failed its connection check") while Connections read Connected. It now checks the edits, saves them, and starts, as Connections' Start Copying does.
 - **A connection that fails when copying starts says so on its row.** Start Copying on a saved setup ran every check, but Connections kept reading "Saved" for one that failed, so the reason ("Alpaca didn't accept these keys") was only under Review. The row now reads "Couldn't connect".
 - **Start Copying works after a long look at Setup Check.** The check's go-ahead lasted two minutes, so reading the examples for longer and then pressing Start Copying failed with "The engine stopped while starting". Start Copying now checks the connections again when the check is more than 90 seconds old, then starts.
