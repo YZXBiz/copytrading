@@ -114,6 +114,7 @@ struct TradingSettingsSaveTests {
         try await checkValidationCancellationDoesNotPersist(configuration: configuration, secrets: credentials)
         try await checkDiscardedCheckAndLockedDraft(configuration: configuration, secrets: credentials)
         try await checkSetupCheckKeepsKeysAndFollowsEdits(configuration: configuration, secrets: credentials)
+        try await checkAccountStartUsesTheEdits(configuration: configuration, secrets: credentials)
         try await checkApplyChangesWhileCopying(configuration: configuration, secrets: credentials)
         try await checkLimitOnlyChangesApplyWithoutAPause(configuration: configuration, secrets: credentials)
         try await checkConnectionClientRequest(provider: configuration.provider)
@@ -1544,6 +1545,46 @@ struct TradingSettingsSaveTests {
         let afterPass = try store.load()
         try check(afterPass != nil, "A passing check did not write the setup")
         print("CopyTradingContractTests: Start Copying checks first, keeps typed keys, and starts once the check passes")
+    }
+
+    /// New keys typed for an account wait in the draft; that account's own Start Copying checks
+    /// and saves them, as Connections' does, instead of starting the saved setup with the old keys.
+    private static func checkAccountStartUsesTheEdits(
+        configuration: TradingConfiguration, secrets: TradingSecrets
+    ) async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(
+            path: "app-model-account-start-edits-\(UUID().uuidString)", directoryHint: .isDirectory
+        )
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = TradingConfigurationStore(
+            url: directory.appending(path: "configuration.json"), secrets: TestSecretRevisions()
+        )
+        try store.save(
+            configuration: configuration, revision: fakeEngineRevision(configuration), secrets: secrets, when: .paused)
+        let starter = RecordingTradingStarter()
+        let model = AppModel(tradingConfigurationStore: store, tradingStarter: starter)
+        model.isTradingUnlocked = true
+        model.tradingStatus = try status(.paused)
+        model.savedTradingConfiguration = configuration
+        model.hasTradingSecrets = true
+
+        model.setupDraft.load(configuration)
+        model.setupDraft.discordToken = secrets.discordToken
+        model.setupDraft.providerAPIKey = secrets.providerAPIKey
+        model.setupDraft.accounts[0].key = "replacement-broker-key"
+        model.setupDraft.accounts[0].secret = "replacement-broker-secret"
+        try check(model.hasUnsavedSetupChanges, "New broker keys did not count as unsaved")
+
+        await model.startCopying(
+            into: "paper", environment: .paper, feature: AccountFeatureModel(), using: RecordingAccountActions())
+        for _ in 0..<2_000 where (try? store.load())??.secrets.brokers.first?.key != "replacement-broker-key" {
+            try await Task.sleep(for: .milliseconds(1))
+        }
+        let saved = try store.load()
+        try check(
+            saved?.secrets.brokers.first?.key == "replacement-broker-key",
+            "An account's Start Copying started the saved setup instead of the new keys: \(model.message ?? "nil")")
+        print("CopyTradingContractTests: an account's Start Copying checks and saves the edits waiting in Connections")
     }
 
     /// A limit changed while copying runs is applied in one press: copying pauses, the new setup
