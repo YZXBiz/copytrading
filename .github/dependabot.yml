@@ -4,7 +4,19 @@ updates:
     directory: /engine
     schedule:
       interval: weekly
+    # A release waits a week before it is proposed, so a hijacked version is likely pulled first.
+    cooldown:
+      default-days: 7
+    # Minor and patch bumps arrive as one pull request; each major still gets its own.
+    groups:
+      python:
+        update-types: [minor, patch]
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        update-types: [minor, patch]
