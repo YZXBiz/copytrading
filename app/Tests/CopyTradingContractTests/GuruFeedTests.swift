@@ -11,6 +11,20 @@ func runGuruFeedTests() async throws {
     try await theStripAndSidebarCountTheEnginesWholeDay()
     try theWaitingTabListsEveryCallTheCountSays()
     try await anAccountTheBrokerHasNoCurveForStopsReading()
+    try await holdingsCountOnlyAccountsInTheSetup()
+}
+
+/// A guru's holdings count only the accounts the setup copies into: an account removed from the
+/// setup keeps its shares at the broker, but they are no longer this guru's in CopyTrading.
+@MainActor
+private func holdingsCountOnlyAccountsInTheSetup() async throws {
+    let accounts = try await GuruDayActions().accounts(beforeAccountID: nil, limit: 50).items
+    let held = GuruHoldings(guruID: "alex", accounts: accounts, setUpAccountIDs: ["paper"])
+    #expect(held?.stocks == 1)
+    #expect(held?.cost == Decimal(string: "50.20"))
+    #expect(GuruHoldings(guruID: "alex", accounts: accounts, setUpAccountIDs: ["zhap-account-2"]) == nil)
+    #expect(GuruHoldings(guruID: "someone-else", accounts: accounts, setUpAccountIDs: ["paper"]) == nil)
+    print("CopyTradingContractTests: a guru's holdings count only the accounts in the setup")
 }
 
 /// The engine answers with no curve when it can't ask the broker for one. The account is marked
