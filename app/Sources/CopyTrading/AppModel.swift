@@ -583,7 +583,15 @@ final class AppModel {
         let revision: String
         let secrets: TradingSecrets
         let validationToken: String
+        /// When the engine granted `validationToken`. The grant lasts two minutes.
+        let checkedAt: ContinuousClock.Instant
     }
+
+    /// A check's grant ends two minutes after the engine gives it; a Start Copying later than this
+    /// checks the connections again first, so reading the examples never costs the start.
+    static let validationGrantFreshness: Duration = .seconds(90)
+    /// The time Setup Check grants are measured by; tests move it forward.
+    @ObservationIgnored var now: @MainActor () -> ContinuousClock.Instant = { .now }
 
     /// The installation root: `COPYTRADING_STATE_ROOT` when set, else Application Support.
     static var stateRoot: URL {
@@ -1272,7 +1280,8 @@ final class AppModel {
                 configuration: configuration,
                 revision: validation.report.configurationRevision,
                 secrets: secrets,
-                validationToken: activationToken
+                validationToken: activationToken,
+                checkedAt: now()
             )
             // The changes bar says the check passed; the readings still need a look when present.
             message = nil
@@ -1359,6 +1368,7 @@ final class AppModel {
         guard await confirmLiveStart(pending.configuration) else { return }
         let activationID = UUID().uuidString.lowercased()
         do {
+            guard let pending = try await freshlyGranted(pending, using: starter) else { return }
             try tradingConfigurationStore.stageValidatedActivation(
                 configuration: pending.configuration,
                 revision: pending.revision,
@@ -1382,6 +1392,33 @@ final class AppModel {
         } catch {
             message = Self.userMessage(for: error)
         }
+    }
+
+    /// The activation with a grant the engine still honors: an older check runs the connection
+    /// checks again for a new one. Nil when a connection fails now; Setup Check then shows it.
+    private func freshlyGranted(
+        _ pending: PendingTradingActivation, using starter: any TradingStarting
+    ) async throws -> PendingTradingActivation? {
+        guard now() - pending.checkedAt >= Self.validationGrantFreshness else { return pending }
+        let validation = try await starter.validateTrading(
+            configuration: pending.configuration, secrets: pending.secrets
+        )
+        tradingValidation = validation
+        recordConnectionChecks(validation.report.checks)
+        guard validation.report.activatable, let token = validation.activationToken,
+            validation.report.configurationRevision == pending.revision
+        else {
+            pendingTradingActivation = nil
+            message = L10n.string("Some connections need attention. Nothing was saved.")
+            isShowingSetupCheck = true
+            return nil
+        }
+        let renewed = PendingTradingActivation(
+            configuration: pending.configuration, revision: pending.revision, secrets: pending.secrets,
+            validationToken: token, checkedAt: now()
+        )
+        pendingTradingActivation = renewed
+        return renewed
     }
 
     func confirmLiveProcessing() async {

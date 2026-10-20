@@ -107,6 +107,7 @@ struct TradingSettingsSaveTests {
         try await checkResumeThatKeepsCopyingIsApplied(configuration: configuration, secrets: credentials)
         try await checkSavedLiveResumeUsesConfirmedActivationPath(configuration: configuration, secrets: credentials)
         try await checkLiveStartNeedsTheOwnerAndPaperDoesNot(configuration: configuration, secrets: credentials)
+        try await checkStartAfterALongLookChecksAgain(configuration: configuration, secrets: credentials)
         try await checkProfileExampleReviewActionPath()
         try await checkPlaybookLearningUsesSavedKeysAndExplainsFailures(configuration: configuration, secrets: credentials)
         try await checkRejectedValidationDoesNotPersist(configuration: configuration, secrets: credentials)
@@ -726,6 +727,38 @@ struct TradingSettingsSaveTests {
             }
         }
         print("CopyTradingContractTests: a live start needs Touch ID and a refusal stops it; paper never asks")
+    }
+
+    /// Setup Check's grant ends two minutes after the check, and reading the examples can take
+    /// longer: Start Copying then checks the connections again instead of failing the start.
+    private static func checkStartAfterALongLookChecksAgain(
+        configuration: TradingConfiguration, secrets credentials: TradingSecrets
+    ) async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(
+            path: "app-model-long-look-\(UUID().uuidString)", directoryHint: .isDirectory
+        )
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = TradingConfigurationStore(
+            url: directory.appending(path: "configuration.json"), secrets: TestSecretRevisions()
+        )
+        let starter = RecordingTradingStarter()
+        let model = AppModel(tradingConfigurationStore: store, tradingStarter: starter)
+        model.isTradingUnlocked = true
+        model.tradingStatus = try status(.paused)
+        let checkedAt = ContinuousClock.now
+        model.now = { checkedAt }
+
+        await model.validateTradingSettings(configuration, enteredSecrets: credentials)
+        await starter.expireGrant()
+        model.now = { checkedAt + .seconds(150) }
+        await model.activateValidatedTradingSettings()
+
+        let validations = await starter.validationCallCount()
+        try check(validations == 2, "A start after the grant ran out did not check again, saw \(validations) checks")
+        try check(
+            model.savedTradingConfiguration == configuration,
+            "A start after a long look at Setup Check failed: \(model.message ?? "nil")")
+        print("CopyTradingContractTests: Start Copying after a long look at Setup Check checks again and starts")
     }
 
     private static func checkPlaybookLearningUsesSavedKeysAndExplainsFailures(
@@ -3220,6 +3253,8 @@ private actor RecordingTradingStarter: TradingStarting {
     private var validationSuspended = false
     private var validationTimeouts = 0
     private var validations = 0
+    /// The last check's grant ran out, as the engine's does two minutes after a check.
+    private var grantExpired = false
     private var connectionChecks: [TradingConnectionCheck] = []
     private var connectionCheckFails = false
     private var activation: TradingActivationStatus?
@@ -3245,6 +3280,7 @@ private actor RecordingTradingStarter: TradingStarting {
         operationEvents.append("validate")
         validated = configuration
         validations += 1
+        grantExpired = false
         if validationTimeouts > 0 {
             validationTimeouts -= 1
             throw EngineTransportError.requestTimedOut
@@ -3275,6 +3311,8 @@ private actor RecordingTradingStarter: TradingStarting {
         )
     }
 
+    func expireGrant() { grantExpired = true }
+
     func checkConnection(_ connection: TradingConnectionCheck) async throws -> TradingCapabilityCheck {
         connectionChecks.append(connection)
         let name: TradingCapabilityName =
@@ -3296,7 +3334,7 @@ private actor RecordingTradingStarter: TradingStarting {
         validationToken: String,
         activationID: String
     ) async throws -> TradingStatus {
-        guard validationToken == "validation-grant" else {
+        guard validationToken == "validation-grant", !grantExpired else {
             throw ContractFailure("Start omitted the fresh validation grant")
         }
         guard !failStart else { throw ContractFailure("Simulated process failure before Start acknowledgement") }
