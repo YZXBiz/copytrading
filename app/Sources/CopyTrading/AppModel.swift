@@ -1546,6 +1546,7 @@ final class AppModel {
                 configuration: saved.configuration, secrets: saved.secrets
             )
             tradingValidation = validation
+            recordConnectionChecks(validation.report.checks)
             guard validation.report.activatable, let token = validation.activationToken else {
                 message = Self.failedChecksMessage(validation.report)
                 return
