@@ -21,6 +21,7 @@ User-visible changes for each release are recorded here. Every GitHub release's 
 - A guru's example message, and the question box in the assistant, show every line you typed or pasted instead of dropping one until the pointer passes over it.
 - CopyTrading reads the engine's output on threads of its own. It used to hold two of the threads every task in the app shares for as long as the engine ran, so on a machine with few cores the engine could exit without the app ever hearing about it.
 - After the agent connection restarted, a `copytrading` CLI or MCP request could be answered by the connection it replaced, with that connection's settings. Each one now stops for good before another takes its place.
+- **Quit and Install and Relaunch work while a sheet is open.** An open guru, account, or setup sheet made macOS refuse to quit CopyTrading, so an update never installed. Now quitting asks once whether to discard unsaved setup edits, then quits.
 
 ## 0.1.0-beta.1 — developer preview
 

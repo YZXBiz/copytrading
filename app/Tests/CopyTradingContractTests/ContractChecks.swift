@@ -9,6 +9,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
     case activityTimeline = "activity timeline"
     case liveSteps = "live steps"
     case appWindowLifecycle = "app window lifecycle"
+    case quitRequest = "quit with a sheet open"
     case connectionsDraft = "connections draft"
     case guidedSetup = "guided setup"
     case setupImport = "setup import"
@@ -47,6 +48,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
         case .activityTimeline: try runActivityTimelineTests()
         case .liveSteps: try runLiveStepTests()
         case .appWindowLifecycle: try await runAppWindowLifecycleTests()
+        case .quitRequest: try runQuitRequestTests()
         case .connectionsDraft: try runConnectionsDraftTests()
         case .guidedSetup: try runGuidedSetupTests()
         case .setupImport: try runSetupImportTests()
