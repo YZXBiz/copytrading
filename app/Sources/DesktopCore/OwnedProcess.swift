@@ -41,10 +41,10 @@ actor OwnedProcess: EngineTransport {
             let status = process.terminationStatus
             Task { await self?.didTerminate(status) }
         }
-        let errorHandle = standardError.fileHandleForReading
-        Task.detached { [weak self] in
+        let errorChunks = pipeChunks(standardError.fileHandleForReading)
+        Task { [weak self] in
             do {
-                while let chunk = try readPipeChunk(errorHandle) {
+                for try await chunk in errorChunks {
                     #if DEBUG
                         // Debug builds pass the engine's own warnings through, so a journey's
                         // dist/ui-test/app-stderr.log shows why a request failed.
@@ -59,10 +59,10 @@ actor OwnedProcess: EngineTransport {
             await self?.didFinishStderr()
         }
         if !specification.stdoutIsIPC {
-            let outputHandle = standardOutput.fileHandleForReading
-            Task.detached { [weak self] in
+            let outputChunks = pipeChunks(standardOutput.fileHandleForReading)
+            Task { [weak self] in
                 do {
-                    while let chunk = try readPipeChunk(outputHandle) {
+                    for try await chunk in outputChunks {
                         await self?.appendOutput(chunk)
                     }
                 } catch {
@@ -94,11 +94,11 @@ actor OwnedProcess: EngineTransport {
 
     func responseLines() -> AsyncThrowingStream<Data, any Error> {
         AsyncThrowingStream { continuation in
-            let outputHandle = standardOutput.fileHandleForReading
-            Task.detached {
+            let outputChunks = pipeChunks(standardOutput.fileHandleForReading)
+            Task {
                 var line = Data()
                 do {
-                    while let chunk = try readPipeChunk(outputHandle) {
+                    for try await chunk in outputChunks {
                         for byte in chunk {
                             if byte == 10 {
                                 continuation.yield(line)
@@ -188,6 +188,23 @@ actor OwnedProcess: EngineTransport {
         guard data.count > outputBufferLimit else { return }
         data.removeFirst(data.count - outputBufferLimit)
     }
+}
+
+/// A pipe's data, read on a thread of its own. `read` blocks until the child writes, and a task
+/// blocked in it holds one of Swift's few cooperative threads for the child's whole life; with
+/// stdout and stderr readers for each child, a Mac or CI runner with few cores ran out of threads
+/// and every other task, including the one that reports the child's exit, stopped.
+private func pipeChunks(_ handle: FileHandle) -> AsyncThrowingStream<Data, any Error> {
+    let (chunks, continuation) = AsyncThrowingStream<Data, any Error>.makeStream()
+    Thread.detachNewThread {
+        do {
+            while let chunk = try readPipeChunk(handle) { continuation.yield(chunk) }
+            continuation.finish()
+        } catch {
+            continuation.finish(throwing: error)
+        }
+    }
+    return chunks
 }
 
 private func readPipeChunk(_ handle: FileHandle, maximumSize: Int = 16_384) throws -> Data? {
