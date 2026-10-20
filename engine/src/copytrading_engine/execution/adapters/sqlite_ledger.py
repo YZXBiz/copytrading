@@ -3,7 +3,7 @@
 import datetime as dt
 import json
 import sqlite3
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -249,7 +249,7 @@ class Store:
             self.db.close()
 
     @contextmanager
-    def _transaction(self) -> Iterator[None]:
+    def _transaction(self) -> Generator[None]:
         self._require_usable()
         self.db.execute("BEGIN IMMEDIATE")
         try:

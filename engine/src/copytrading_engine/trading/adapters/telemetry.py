@@ -2,7 +2,7 @@
 
 import re
 import traceback
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Generator, Iterable, Mapping
 from contextlib import AbstractContextManager, contextmanager
 from hashlib import sha256
 
@@ -27,7 +27,7 @@ class TradingTelemetry:
         signal_ref: str | None = None,
         ledger_event: str | None = None,
         correlation: WorkflowAttempt | None = None,
-    ) -> Iterator[None]:
+    ) -> Generator[None]:
         outcome = "returned"
         try:
             yield

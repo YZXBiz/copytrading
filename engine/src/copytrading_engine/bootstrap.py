@@ -5,7 +5,7 @@ import asyncio
 import os
 import sys
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import cast
@@ -131,7 +131,7 @@ async def compose_engine(
     *,
     diagnostics_directory: Path,
     owner_support_directory: Path,
-) -> AsyncIterator[PipeServer]:
+) -> AsyncGenerator[PipeServer]:
     """The whole engine behind one request server, shut down cleanly on exit.
 
     The app drives it over an inherited pipe; the headless server drives the same requests

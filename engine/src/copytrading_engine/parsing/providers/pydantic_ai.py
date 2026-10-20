@@ -2,7 +2,7 @@
 
 import asyncio
 import json
-from collections.abc import AsyncIterable, AsyncIterator
+from collections.abc import AsyncGenerator, AsyncIterable
 from contextlib import asynccontextmanager
 from typing import Any, Protocol
 
@@ -207,7 +207,7 @@ def _checked(
 @asynccontextmanager
 async def _translated_errors(
     connection_errors: tuple[type[Exception], ...],
-) -> AsyncIterator[None]:
+) -> AsyncGenerator[None]:
     """Turn provider failures into DecodeError without keeping responses or secrets."""
     try:
         yield
