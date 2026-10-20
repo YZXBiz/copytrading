@@ -4,6 +4,8 @@ User-visible changes for each release are recorded here. Every GitHub release's 
 
 ## Unreleased
 
+- **Start Copying works after a long look at Setup Check.** The check's go-ahead lasted two minutes, so reading the examples for longer and then pressing Start Copying failed with "The engine stopped while starting". Start Copying now checks the connections again when the check is more than 90 seconds old, then starts.
+
 ## 0.1.0-beta.2 — developer preview
 
 Fixes from the first week of the beta: CopyTrading says when copying stopped, an update installs with a sheet open, and the window shows on every launch.
