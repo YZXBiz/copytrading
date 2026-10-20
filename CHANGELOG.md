@@ -4,6 +4,12 @@ User-visible changes for each release are recorded here. Every GitHub release's 
 
 ## Unreleased
 
+## 0.1.0-beta.2 — developer preview
+
+Fixes from the first week of the beta: CopyTrading says when copying stopped, an update installs with a sheet open, and the window shows on every launch.
+
+> **Updating from beta.1:** close any open guru, account, or setup sheet before you choose **Install and Relaunch**. Beta.1 can't quit while a sheet is open, so the update waits. From this release on, quitting closes the sheet itself.
+
 - A ticker written right against its price, as in "14.1nfxl", is now read as the ticker instead of
   sending the post to review. Tickers of one or two letters still have to stand apart, so "10pm"
   never reads as PM.
