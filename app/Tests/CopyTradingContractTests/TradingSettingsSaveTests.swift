@@ -427,6 +427,9 @@ struct TradingSettingsSaveTests {
         try check(
             model.message == "Interpreter failed its connection check. Processing remains paused.",
             "The failed check was not named: \(model.message ?? "no message")")
+        try check(
+            ConnectionStatus.interpreter(model)?.text == L10n.string("Couldn't connect"),
+            "The failed check's row in Connections did not say so: \(ConnectionStatus.interpreter(model)?.text ?? "nil")")
         await starter.setValidationActivatable(true)
         for _ in 0..<100 where model.tradingStatus?.state != .running { try await Task.sleep(for: .milliseconds(20)) }
         try check(model.tradingStatus?.state == .running, "The launch start did not retry after a failed check")
