@@ -1,6 +1,7 @@
 """Configurations, secrets, and waits the runtime tests build on."""
 
 import asyncio
+import time
 
 from copytrading_engine.trading.domain.config import TradingConfiguration, TradingSecrets
 from copytrading_engine.trading.domain.profiles import ProfileBuilder, ProfileDraft
@@ -72,8 +73,14 @@ def trading_secrets():
     )
 
 
+# Generous because a loaded runner can take seconds to start a runtime; a passing check returns as
+# soon as its state is reached, so only a real hang pays the full wait.
+WAIT_SECONDS = 30
+
+
 async def wait_for(runtime: TradingRuntime, predicate):
-    for _ in range(80):
+    deadline = time.monotonic() + WAIT_SECONDS
+    while time.monotonic() < deadline:
         status = runtime.status()
         if predicate(status):
             return status
@@ -95,7 +102,8 @@ def trading_secrets_for(*account_ids: str) -> TradingSecrets:
 
 
 async def wait_for_value(predicate):
-    for _ in range(80):
+    deadline = time.monotonic() + WAIT_SECONDS
+    while time.monotonic() < deadline:
         if predicate():
             return
         await asyncio.sleep(0.01)
