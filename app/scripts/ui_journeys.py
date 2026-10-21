@@ -28,7 +28,7 @@ from decimal import Decimal
 from http.server import BaseHTTPRequestHandler, SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from types import TracebackType
-from typing import Any
+from typing import Any, cast
 from zoneinfo import ZoneInfo
 
 from local_signing import local_identity
@@ -268,8 +268,6 @@ def _completion_chunks(index: int, *, model: str) -> list[dict[str, Any]]:
 
 
 class _ScriptedModelHandler(BaseHTTPRequestHandler):
-    server: ScriptedModelServer
-
     def do_POST(self) -> None:
         length = int(self.headers.get("Content-Length") or 0)
         try:
@@ -279,7 +277,7 @@ class _ScriptedModelHandler(BaseHTTPRequestHandler):
         if self.path.rstrip("/") != "/v1/chat/completions":
             self._send(404, "application/json", b'{"error": {"message": "not found"}}')
             return
-        index = self.server.take(body)
+        index = cast(ScriptedModelServer, self.server).take(body)
         model = str(body.get("model") or "scripted")
         if body.get("stream"):
             events = [f"data: {json.dumps(c)}\n\n" for c in _completion_chunks(index, model=model)]
