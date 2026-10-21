@@ -18,16 +18,26 @@ from copytrading_engine.trading.application.accounts import AccountUnavailable, 
 class _SlowAccount:
     """Takes a while to decide, and records how many accounts were deciding at once."""
 
-    def __init__(self, gauge: list[int], *, fails_with: BaseException | None = None) -> None:
+    def __init__(
+        self,
+        gauge: list[int],
+        *,
+        fails_with: BaseException | None = None,
+        meeting: asyncio.Barrier | None = None,
+    ) -> None:
         self.gauge = gauge
         self.fails_with = fails_with
+        self.meeting = meeting
         self.finished = False
 
     async def receive(self, delivery, now: dt.datetime) -> None:
         self.gauge[0] += 1
         self.gauge[1] = max(self.gauge[1], self.gauge[0])
         try:
-            await asyncio.sleep(0.1)
+            if self.meeting is None:
+                await asyncio.sleep(0.1)
+            else:
+                await self.meeting.wait()
             if self.fails_with is not None:
                 raise self.fails_with
             self.finished = True
@@ -65,16 +75,20 @@ async def _deliver(tmp_path, accounts: dict[str, _SlowAccount]) -> int:
 
 
 async def test_every_account_decides_on_a_post_at_the_same_time(tmp_path) -> None:
+    # Each account decides only once all three are deciding, so taking them in turn never ends
+    # and the timeout fails the test, however slow the machine.
+    meeting = asyncio.Barrier(3)
     gauge = [0, 0]
-    accounts = {name: _SlowAccount(gauge) for name in ("account-a", "account-b", "account-c")}
+    accounts = {
+        name: _SlowAccount(gauge, meeting=meeting)
+        for name in ("account-a", "account-b", "account-c")
+    }
 
-    started = asyncio.get_running_loop().time()
-    assert await _deliver(tmp_path, accounts) == 1
-    elapsed = asyncio.get_running_loop().time() - started
+    async with asyncio.timeout(30):
+        assert await _deliver(tmp_path, accounts) == 1
 
     assert gauge[1] == 3
     assert all(account.finished for account in accounts.values())
-    assert elapsed < 0.25, "three 0.1 s decisions in turn would take 0.3 s"
 
 
 async def test_an_unavailable_account_holds_the_post_without_stopping_the_others(tmp_path) -> None:
