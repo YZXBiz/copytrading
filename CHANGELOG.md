@@ -2,7 +2,9 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
-## Unreleased
+## 0.1.0-beta.4 — developer preview
+
+A guru's page stops counting shares in accounts you removed from the setup.
 
 - **A guru's holdings count only the accounts you copy into.** After an account was removed from the setup, its shares stayed at the broker and still showed on the guru's page ("Holding $722 in 3 stocks from these calls") although CopyTrading no longer tracks them, and the account the guru copies into held none. The line now counts only accounts in the setup.
 
