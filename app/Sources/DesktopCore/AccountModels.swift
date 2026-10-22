@@ -145,6 +145,8 @@ public struct AccountLotView: Codable, Equatable, Identifiable, Sendable {
     public let averagePrice: String
     /// The lot's remaining shares at the broker's current price, against what they cost.
     public let unrealizedPL: String?
+    /// Every buy of the stock from the guru that still holds shares, oldest first (ADR-0010).
+    public let buys: [AccountLotBuyView]
     public var id: String { lotID }
 
     enum CodingKeys: String, CodingKey {
@@ -157,6 +159,34 @@ public struct AccountLotView: Codable, Equatable, Identifiable, Sendable {
         case originalQty = "original_qty"
         case remainingQty = "remaining_qty"
         case averagePrice = "average_price"
+        case unrealizedPL = "unrealized_pl"
+        case buys
+    }
+}
+
+/// One buy in a lot: the post that made it, the shares it bought and has left, and their price.
+public struct AccountLotBuyView: Codable, Equatable, Identifiable, Sendable {
+    public let orderID: String
+    public let sourceID: String?
+    public let postedAt: String?
+    public let excerpt: String?
+    public let boughtAt: String?
+    public let boughtQty: String
+    public let remainingQty: String
+    public let price: String?
+    /// This buy's remaining shares at the broker's current price, against what they cost.
+    public let unrealizedPL: String?
+    public var id: String { orderID }
+
+    enum CodingKeys: String, CodingKey {
+        case orderID = "order_id"
+        case sourceID = "source_id"
+        case postedAt = "posted_at"
+        case excerpt
+        case boughtAt = "bought_at"
+        case boughtQty = "bought_qty"
+        case remainingQty = "remaining_qty"
+        case price
         case unrealizedPL = "unrealized_pl"
     }
 }

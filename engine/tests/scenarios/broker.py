@@ -88,6 +88,7 @@ class SimulatedBroker:
                     symbol=symbol,
                     qty=qty,
                     market_value=(qty * self.prices[symbol]).quantize(CENT),
+                    current_price=self.prices[symbol],
                     currency="USD",
                     asset_class="us_equity",
                 )

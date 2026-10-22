@@ -62,7 +62,7 @@ private func target(_ environment: TradingEnvironment) throws -> LotSaleTarget {
             """
             {"lot_id":"copy-lot","source_id":"discord:demo:1","guru_id":"alex","posted_at":"2026-09-26T14:30:00Z",\
             "excerpt":"ABC long here","bought_at":"2026-09-26T14:30:05Z","original_qty":"12","remaining_qty":"12",\
-            "average_price":"25.10"}
+            "average_price":"25.10","buys":[]}
             """.utf8))
     return LotSaleTarget(accountID: "primary", environment: environment, symbol: "ABC", lot: lot, guruName: "Alex")
 }
@@ -132,7 +132,7 @@ private func partsOfALotRoundDownToHundredthsAndAllIsExact() throws {
         from: Data(
             """
             {"lot_id":"copy-lot","source_id":null,"guru_id":null,"posted_at":null,"excerpt":null,"bought_at":null,\
-            "original_qty":"0.885","remaining_qty":"0.885","average_price":"110.75"}
+            "original_qty":"0.885","remaining_qty":"0.885","average_price":"110.75","buys":[]}
             """.utf8))
     let flow = LotSaleFlow(
         target: LotSaleTarget(accountID: "primary", environment: .paper, symbol: "WMT", lot: lot, guruName: nil))

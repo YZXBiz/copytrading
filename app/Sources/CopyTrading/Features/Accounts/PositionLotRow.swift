@@ -1,19 +1,17 @@
 import DesktopCore
 import SwiftUI
 
-/// One block of shares under its position, as one clean line: whose post bought it and when, what
-/// the post said, then "0.885 shares bought at $110.75   now $111.35"; the lot's own gain on the right,
-/// a quiet "Open post ↗" back to the post, and a black Sell pill.
+/// One block of shares under its position: every buy of the stock from one guru (ADR-0010), each
+/// as its own line with its post, price, and gain, and one black Sell pill for the whole lot.
 struct PositionLotRow: View {
     let lot: AccountLotView
     let guruName: String?
     /// Today's price of the symbol, from the position's valuation.
     let currentPrice: Decimal?
-    /// The post in loaded Activity, when it is there to open.
-    let post: SourceActivity?
+    /// A buy's post in loaded Activity, when it is there to open.
+    let post: (AccountLotBuyView) -> SourceActivity?
     let openPost: (SourceActivity) -> Void
     let sell: () -> Void
-    @State private var hoversOpen = false
 
     @MainActor private var who: String {
         guard lot.sourceID != nil else { return L10n.string("Earlier buy") }
@@ -21,7 +19,6 @@ struct PositionLotRow: View {
     }
 
     private var remaining: Decimal { Decimal(engine: lot.remainingQty) ?? 0 }
-    private var bought: Decimal? { Decimal(engine: lot.averagePrice) }
 
     /// "12 shares", or "5 of 12 shares" once some of the lot is sold, for VoiceOver.
     @MainActor private var shares: String {
@@ -30,60 +27,19 @@ struct PositionLotRow: View {
         return Humanize.shares(remaining, of: original)
     }
 
-    /// "0.885 shares bought at $110.75", or "0.5 of 2 shares bought at $40" once some are sold.
-    /// Shares show to three decimals, as a broker statement does, never with an "≈".
-    @MainActor private var holding: String {
-        let original = Decimal(engine: lot.originalQty) ?? remaining
-        let count = Self.count(remaining)
-        let shares =
-            original == remaining
-            ? L10n.string(remaining == 1 ? "%@ share" : "%@ shares", count)
-            : L10n.string(original == 1 ? "%@ of %@ share" : "%@ of %@ shares", count, Self.count(original))
-        guard let bought else { return shares }
-        return L10n.string("%@ bought at %@", shares, bought.formatted(.currency(code: "USD")))
-    }
-
-    private static func count(_ value: Decimal) -> String {
-        value.formatted(.number.precision(.fractionLength(0...3)))
-    }
-
     var body: some View {
         HStack(alignment: .center, spacing: 18) {
-            VStack(alignment: .leading, spacing: 5) {
-                HStack(spacing: 8) {
-                    GuruMonogram(name: who, size: 20)
-                    Text(who)
-                        .font(DesignTokens.bodyEmphasis)
-                        .foregroundStyle(Palette.ink)
-                    Text(Humanize.postTime(lot.postedAt ?? lot.boughtAt))
-                        .font(DesignTokens.caption)
-                        .foregroundStyle(Palette.tertiaryInk)
-                        .monospacedDigit()
+            VStack(spacing: 14) {
+                ForEach(lot.buys) { buy in
+                    PositionLotBuyLine(
+                        buy: buy,
+                        who: who,
+                        currentPrice: currentPrice,
+                        post: post(buy),
+                        openPost: openPost
+                    )
                 }
-                if let excerpt = lot.excerpt {
-                    Text("“\(excerpt)”")
-                        .font(DesignTokens.bodyText)
-                        .foregroundStyle(Palette.secondaryInk)
-                        .lineLimit(2)
-                } else if lot.sourceID == nil {
-                    Text(L10n.string("The buy that opened these shares is no longer on record."))
-                        .font(DesignTokens.bodyText)
-                        .foregroundStyle(Palette.secondaryInk)
-                }
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    Text(holding)
-                        .foregroundStyle(Palette.tertiaryInk)
-                    if let currentPrice {
-                        Text(L10n.string("now %@", currentPrice.formatted(.currency(code: "USD"))))
-                            .foregroundStyle(Palette.secondaryInk)
-                    }
-                }
-                .font(DesignTokens.caption)
-                .monospacedDigit()
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            gain
-            openButton
             Button(L10n.string("Sell"), action: sell)
                 .buttonStyle(PageButtonStyle(isProminent: true, horizontalPadding: 18))
                 .accessibilityLabel(L10n.string("Sell %@ from %@", shares, who))
@@ -91,46 +47,5 @@ struct PositionLotRow: View {
         }
         .padding(.vertical, 14)
         .accessibilityElement(children: .contain)
-    }
-
-    /// The lot's gain or loss, with the percent from what it cost to today's price under it.
-    @ViewBuilder
-    private var gain: some View {
-        if let gain = lot.unrealizedPL.flatMap({ Decimal(engine: $0) }) {
-            VStack(alignment: .trailing, spacing: 1) {
-                MoneyText(value: gain, style: .change, font: DesignTokens.bodyEmphasis)
-                if let bought, bought != 0, let currentPrice {
-                    let percent = (currentPrice - bought) / bought
-                    Text(percent, format: .percent.precision(.fractionLength(2)).sign(strategy: .always(includingZero: false)))
-                        .font(DesignTokens.caption)
-                        .monospacedDigit()
-                        .foregroundStyle(ChangeDirection(percent).color)
-                }
-            }
-            .fixedSize()
-        }
-    }
-
-    /// Back to the post in Activity: quiet words with a ↗, marked in butter under the pointer.
-    private var openButton: some View {
-        Button {
-            if let post { openPost(post) }
-        } label: {
-            HStack(spacing: 3) {
-                Text(L10n.string("Open post"))
-                    .markerHighlight(hoversOpen && post != nil)
-                Image(systemName: "arrow.up.right")
-                    .imageScale(.small)
-                    .fontWeight(.medium)
-            }
-            .font(DesignTokens.caption.weight(.medium))
-            .foregroundStyle(Palette.secondaryInk)
-            .contentShape(.rect)
-        }
-        .buttonStyle(QuietPressButtonStyle())
-        .disabled(post == nil)
-        .onHover { hoversOpen = $0 }
-        .help(L10n.string(post == nil ? "This post is older than what Activity has loaded" : "Open the post in Activity"))
-        .fixedSize()
     }
 }

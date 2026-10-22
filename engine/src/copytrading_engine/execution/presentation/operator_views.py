@@ -32,8 +32,25 @@ from copytrading_engine.execution.domain.values import Money, Positive, Quantity
 EXCERPT_LENGTH = 140
 
 
+class LotBuyView(Value):
+    """One buy in a lot that still holds shares: the post that made it, how many shares it bought
+    and has left, and the price they filled at."""
+
+    order_id: str
+    source_id: str | None
+    posted_at: AwareDatetime | None
+    excerpt: str | None
+    bought_at: AwareDatetime | None
+    bought_qty: Quantity
+    remaining_qty: Quantity
+    price: Positive | None
+    #: This buy's remaining shares at the broker's current price, against what they cost.
+    unrealized_pl: Money | None = None
+
+
 class LotView(Value):
-    """One block of shares the copier bought, and the post that bought it."""
+    """One block of shares the copier bought: every buy of one stock from one guru (ADR-0010),
+    keyed by the post that opened it."""
 
     lot_id: str
     source_id: str | None
@@ -46,6 +63,8 @@ class LotView(Value):
     average_price: Positive
     #: The lot's remaining shares at the broker's current price, against what they cost.
     unrealized_pl: Money | None = None
+    #: The buys that still hold shares, oldest first.
+    buys: tuple[LotBuyView, ...] = ()
 
 
 class PositionView(Value):
@@ -231,6 +250,31 @@ class AccountEventPage(Value):
     next_before_seq: int | None = None
 
 
+def _gain(price: Decimal | None, cost: Decimal | None, qty: Decimal) -> Decimal | None:
+    if price is None or cost is None:
+        return None
+    return ((price - cost) * qty).quantize(Decimal("0.01"))
+
+
+def _buy_view(
+    entry: str, remaining: Decimal, snapshot: LedgerSnapshot, current_price: Decimal | None
+) -> LotBuyView:
+    order = snapshot.orders.get(entry)
+    message = snapshot.messages.get(order.message_id) if order is not None else None
+    price = order.filled_avg_price if order is not None else None
+    return LotBuyView(
+        order_id=entry,
+        source_id=message.key if message is not None else None,
+        posted_at=message.timestamp if message is not None else None,
+        excerpt=_excerpt(message.text) if message is not None else None,
+        bought_at=order.created_at if order is not None else None,
+        bought_qty=order.filled_qty if order is not None else remaining,
+        remaining_qty=remaining,
+        price=price,
+        unrealized_pl=_gain(current_price, price, remaining),
+    )
+
+
 def _lot_view(
     key: str, lot: OwnedLot, snapshot: LedgerSnapshot, current_price: Decimal | None
 ) -> LotView:
@@ -247,10 +291,11 @@ def _lot_view(
         original_qty=lot.original_qty,
         remaining_qty=lot.remaining_qty,
         average_price=lot.average_price,
-        unrealized_pl=(
-            ((current_price - lot.average_price) * lot.remaining_qty).quantize(Decimal("0.01"))
-            if current_price is not None
-            else None
+        unrealized_pl=_gain(current_price, lot.average_price, lot.remaining_qty),
+        buys=tuple(
+            _buy_view(entry, lot.entry_remaining[entry], snapshot, current_price)
+            for entry in lot.entries(key)
+            if lot.entry_remaining.get(entry, Decimal(0)) > 0
         ),
     )
 
@@ -638,9 +683,13 @@ def with_live_facts(
         lots = tuple(
             lot.model_copy(
                 update={
-                    "unrealized_pl": ((price - lot.average_price) * lot.remaining_qty).quantize(
-                        Decimal("0.01")
-                    )
+                    "unrealized_pl": _gain(price, lot.average_price, lot.remaining_qty),
+                    "buys": tuple(
+                        buy.model_copy(
+                            update={"unrealized_pl": _gain(price, buy.price, buy.remaining_qty)}
+                        )
+                        for buy in lot.buys
+                    ),
                 }
             )
             if price is not None

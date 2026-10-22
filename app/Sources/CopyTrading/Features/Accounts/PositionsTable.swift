@@ -72,7 +72,7 @@ struct PositionsTable: View {
                                     lot: lot,
                                     guruName: guruName,
                                     currentPrice: position.currentPrice.flatMap { Decimal(engine: $0) },
-                                    post: lot.sourceID.flatMap { id in activity.first { $0.sourceID == id } },
+                                    post: { buy in buy.sourceID.flatMap { id in activity.first { $0.sourceID == id } } },
                                     openPost: openPost,
                                     sell: {
                                         selling = LotSaleTarget(

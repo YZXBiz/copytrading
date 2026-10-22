@@ -331,6 +331,26 @@ def test_repository_load_revalidates_a_mutated_snapshot():
         TradingLedger(repository, NoOpObserver())
 
 
+def test_loading_reprices_a_lot_from_what_its_buys_still_hold():
+    """A lot saved before Oct 22 2026 could carry an average that counted shares already sold;
+    loading the ledger prices it again from its buys' fills."""
+    from copytrading_engine.execution.application.ledger import TradingLedger
+    from copytrading_engine.execution.application.ports import NoOpObserver
+
+    engine, _, repository = system_with_queued_buy()
+    engine.process(NOW)
+    saved = engine.ledger.snapshot()
+    key, lot = next(iter(saved.lots.items()))
+    fill = saved.orders[key].filled_avg_price
+    assert fill is not None
+    stale = saved.model_copy(
+        update={"lots": {key: lot.model_copy(update={"average_price": fill + 7})}}
+    )
+    repository.load = lambda: stale
+
+    assert TradingLedger(repository, NoOpObserver()).snapshot().lots[key].average_price == fill
+
+
 def test_buy_plan_cannot_hide_an_empty_lot_reference():
     from copytrading_engine.execution.domain.orders import OrderPlan
 
