@@ -42,7 +42,7 @@ struct ConnectionsStartCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             if model.isValidatingTrading {
                 Button(L10n.string("Cancel Check"), role: .cancel, action: cancelCheck)
-            } else {
+            } else if !status.isWorking {
                 if canDiscard {
                     Button(L10n.string("Discard Changes"), role: .destructive, action: askToDiscard)
                         .confirmationDialog(L10n.string("Discard your setup changes?"), isPresented: $confirmDiscard) {
@@ -59,8 +59,10 @@ struct ConnectionsStartCard: View {
                         .accessibilityIdentifier("setup.review")
                 }
             }
-            StartCopyingButton(model: model)
-                .setupTourTarget(.startCopying)
+            if !status.isWorking {
+                StartCopyingButton(model: model)
+                    .setupTourTarget(.startCopying)
+            }
         }
         .buttonStyle(PageButtonStyle())
         .padding(.vertical, 20)
