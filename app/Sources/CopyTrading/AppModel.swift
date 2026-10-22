@@ -85,6 +85,7 @@ final class AppModel {
         didSet {
             holdMacAwakeWhileCopying()
             trackCopyingAcrossLaunches()
+            if wantsLaunchStart { Task { await startCopyingOnLaunchIfWanted() } }
             let stopped = stoppedWatch.stopped(in: tradingStatus)
             if !stopped.isEmpty { announceAccountStopped(stopped) }
         }
@@ -567,7 +568,10 @@ final class AppModel {
     /// before the engine's first status can clear it, and ended by copying starting or a dismissal.
     var copyingStoppedWithQuit: Bool
     /// The macOS notification for it goes out once per launch.
-    @ObservationIgnored var didAnnounceCopyingStopped = false
+    /// When the owner was last told copying is paused; it is said again every half hour while it
+    /// stays paused during trading hours.
+    @ObservationIgnored var copyingStoppedAnnouncedAt: Date?
+    @ObservationIgnored var clock: () -> Date = { .now }
     @ObservationIgnored var announceCopyingStopped: () -> Void = {}
     /// How long the launch start waits before each retry after a failed connection check.
     @ObservationIgnored var launchStartRetryDelays: [Duration] = [.seconds(10), .seconds(30), .seconds(60)]
@@ -1862,16 +1866,23 @@ final class AppModel {
         return configuration.accounts.allSatisfy { $0.environment == .paper }
     }
 
-    /// Starts copying once per launch when the owner asked for it, the setup is paper only,
-    /// and the engine reports copying paused. Start runs the same checks as the toolbar button.
+    /// A launch start is due: the owner asked for one, an update or an engine restart left copying
+    /// to resume, the setup is paper only, and the engine reports copying paused.
+    private var wantsLaunchStart: Bool {
+        wantsCopyingOnLaunch && !didStartCopyingOnLaunch && canStartCopyingOnLaunch
+            && tradingStatus?.state == .paused
+    }
+
+    /// Starts copying once per launch when it is due, with the same checks as the toolbar button.
+    /// It never waits for the window: Touch ID guards what the window shows and changes, and the
+    /// owner already chose to copy this saved, paper-only setup, so a Mac nobody is at, or an app
+    /// in the menu bar with its window closed, still copies.
     func startCopyingOnLaunchIfWanted() async {
-        guard wantsCopyingOnLaunch, !didStartCopyingOnLaunch, isTradingUnlocked,
-            canStartCopyingOnLaunch, tradingStatus?.state == .paused
-        else { return }
+        guard wantsLaunchStart else { return }
         didStartCopyingOnLaunch = true
         UserDefaults.standard.removeObject(forKey: Self.resumesAfterUpdateKey)
         resumesAfterEngineRestart = false
-        await startTrading()
+        await startTrading(resumingSavedSetup: true)
         retryLaunchStartWhileHeldBack()
     }
 
@@ -1885,13 +1896,13 @@ final class AppModel {
             for delay in self?.launchStartRetryDelays ?? [] {
                 try? await Task.sleep(for: delay)
                 guard let self, !Task.isCancelled, self.isHeldBackAtLaunch else { return }
-                await self.startTrading()
+                await self.startTrading(resumingSavedSetup: true)
             }
         }
     }
 
     private var isHeldBackAtLaunch: Bool {
-        wantsCopyingOnLaunch && isTradingUnlocked && tradingStatus?.state == .paused
+        wantsCopyingOnLaunch && tradingStatus?.state == .paused
             && (tradingValidation?.report.activatable == false || launchStartThrew)
     }
 
