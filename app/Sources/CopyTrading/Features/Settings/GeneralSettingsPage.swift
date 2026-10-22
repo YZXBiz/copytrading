@@ -47,16 +47,14 @@ struct GeneralSettingsPage: View {
                     detail: "Time to undo after you press Sell or confirm a copy.",
                     labelsControl: true
                 ) {
-                    HStack(spacing: 18) {
+                    Picker(L10n.string("Hold my orders before sending"), selection: $holdSeconds) {
                         ForEach([0.0, 5.0, 10.0], id: \.self) { seconds in
-                            ChoiceWord(
-                                title: seconds == 0 ? L10n.string("Off") : L10n.string("%lld s", Int64(seconds)),
-                                isOn: holdSeconds == seconds
-                            ) { holdSeconds = seconds }
+                            Text(seconds == 0 ? L10n.string("Off") : L10n.string("%lld s", Int64(seconds))).tag(seconds)
                         }
                     }
-                    .accessibilityElement(children: .contain)
-                    .accessibilityLabel(L10n.string("Hold my orders before sending"))
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
                 }
             }
             SettingsSection(title: "Help") {

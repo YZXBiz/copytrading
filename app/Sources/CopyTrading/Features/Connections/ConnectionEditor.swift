@@ -57,7 +57,7 @@ struct ConnectionEditor: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             ConnectionGuideCard(article: guide)
-            VStack(alignment: .leading, spacing: 14) {
+            SheetGroup {
                 fields
             }
             if let missing {
@@ -159,30 +159,24 @@ struct ConnectionEditor: View {
         }
     }
 
-    /// A field the setup tour can point at. While it does, the field and the tour's hint share
-    /// one outlined card inside the panel's column.
+    /// A field the setup tour can point at. While it does, the tour's hint sits under the field in
+    /// the same row.
     private func toured(_ stop: SetupTourStop, @ViewBuilder field: () -> some View) -> some View {
         let active = model.setupTourStop == stop
-        return VStack(alignment: .leading, spacing: 12) {
+        return VStack(alignment: .leading, spacing: 0) {
             field()
             if active {
                 SetupTourInlineHint(stop: stop, model: model)
+                    .padding(.bottom, 12)
                     .transition(.opacity)
-            }
-        }
-        .padding(active ? 12 : 0)
-        .background {
-            if active {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(Palette.ink, lineWidth: InkStroke.style.lineWidth)
             }
         }
         .setupTourTarget(stop.target)
     }
 
-    /// One field's row: VoiceOver hears its label.
+    /// One field's row in the panel's group, its name over the field: VoiceOver hears its label.
     private func row(_ label: String, @ViewBuilder field: () -> some View) -> some View {
-        ConnectionField(label: label) {
+        SheetField(title: L10n.string(label), stacked: true) {
             field()
                 .focused($focused, equals: label)
                 .accessibilityLabel(L10n.string(label))

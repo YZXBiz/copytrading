@@ -35,7 +35,6 @@
 ", and %@ %@ waiting" = "，另有 %@%@项待处理";
 "0 to 1" = "0到1";
 "a" = "";
-"A backup holds your records, saved setup, captured posts, and attachments. Keys and disposable logs are left out." = "备份包含你的记录、已保存的设置、捕获的帖子和附件。密钥和可丢弃的日志不会包含在内。";
 "A bot messages you for every order and every problem, wherever you are." = "无论你身在何处，机器人都会为每笔订单和每个问题给你发消息。";
 "A guru posts" = "信号源发布帖子";
 "A model on this Mac, with no key and no bill" = "在这台 Mac 上运行模型，无需密钥或费用";
@@ -87,7 +86,6 @@
 "Another open order is in the way" = "存在另一笔未完成订单";
 "Any service or server that speaks the OpenAI API" = "任何兼容 OpenAI API 的服务或服务器";
 "anyone who posts" = "不限作者";
-"Anything that could trade only becomes a request you approve here with Touch ID." = "任何可能进行交易的操作都会先变成审批请求，你可在此通过 Touch ID 批准。";
 "API key" = "API 密钥";
 "API Keys" = "API 密钥";
 "API secret" = "API 秘钥";
@@ -166,7 +164,6 @@
 "Close" = "关闭";
 "Close owned position" = "平掉自有持仓";
 "Close Settings" = "关闭设置";
-"Coding agents such as Claude Code reach CopyTrading through its copytrading command or MCP server, and only while the app runs. Posts from sources reach them as untrusted text." = "Claude Code 等编程智能体只能在应用运行时通过 copytrading 命令或 MCP 服务器访问 CopyTrading。来源帖子会作为不可信文本提供给智能体。";
 "Collapsed" = "已折叠";
 "Combined equity" = "总账户净值";
 "Comma-separated Discord channel IDs" = "以逗号分隔的 Discord 频道 ID";
@@ -207,13 +204,11 @@
 "Copying was halted" = "跟单已停止";
 "Copying with problems" = "跟单遇到问题";
 "CopyTrading" = "CopyTrading";
-"CopyTrading checks the price, the market session, and your account before showing what the sale would do." = "在展示卖出结果预览前，CopyTrading 会检查价格、市场时段和账户状态。";
 "copytrading command" = "CopyTrading 命令";
 "CopyTrading could not learn from this channel." = "CopyTrading 无法从此频道学习。";
 "CopyTrading data" = "CopyTrading 数据";
 "CopyTrading data, %@" = "CopyTrading 数据：%@";
 "CopyTrading did not get the broker’s answer. It checks again on its own and never sends the order twice." = "CopyTrading 未收到券商的回复。系统会自动再次查询，且绝不会重复发送订单。";
-"CopyTrading follows Reduce Motion, Reduce Transparency, and Increase Contrast from your Mac." = "CopyTrading 会遵循 Mac 上“减少动态效果”“减少透明度”和“增加对比度”的设置。";
 "CopyTrading is copying new posts into %@." = "CopyTrading 正在将新帖子跟单至 %@。";
 "CopyTrading is listening for the next post. It will show up here and in Activity, with what each account did." = "CopyTrading 正在等待下一条帖子。帖子及各账户的处理结果会显示在此处和“活动”中。";
 "CopyTrading is locked" = "CopyTrading 已锁定";
@@ -499,7 +494,6 @@
 "Nothing logged yet" = "暂无日志记录";
 "Nothing was sent" = "未发送任何卖单";
 "Off" = "关闭";
-"Older days go first, then the oldest part once the limit is reached. Trading data and backups are never touched." = "达到上限后，会先清理较早日期的日志，再删除最旧的部分。交易数据和备份不会受影响。";
 "Ollama runs the model on this Mac, so posts never leave it and nothing is billed. Reading posts well takes a capable model and a fast Mac." = "Ollama 会在这台 Mac 上运行模型，因此帖子不会离开本机，也不会产生费用。准确解析帖子需要性能足够的模型和速度较快的 Mac。";
 "On" = "已开启";
 "On disk" = "磁盘占用";
@@ -794,7 +788,6 @@
 "The channels your gurus post in, and the token CopyTrading reads them with." = "填写信号源发布内容的频道，以及 CopyTrading 用来读取频道的令牌。";
 "The engine" = "引擎";
 "The engine is stopped, so nothing can be sold right now. Start it from the banner or Settings." = "引擎已停止，因此目前无法卖出。可从横幅或“设置”启动引擎。";
-"The engine writes each stage, captured post, model request and reply, and trading outcome to a private file on this Mac. Keys are removed before anything is written." = "引擎会将每个阶段、捕获的帖子、模型请求和回复以及交易结果写入此 Mac 上的私有文件。写入前会移除密钥。";
 "The interpreter is the AI model that reads each post. %@ bills your account for what it reads." = "AI 模型负责读取每条帖子。%@ 会按读取量向你的账户收费。";
 "The last run is still on its way through." = "上次运行仍在处理中。";
 "The last run stopped before it was delivered. Diagnostics has the details." = "上次运行在交付前停止。详情请查看“诊断”。";
@@ -824,7 +817,6 @@
 "CopyTrading holds none of these shares" = "CopyTrading 没有持有这些股份";
 "This post is older than what Activity has loaded" = "这条帖子早于 Activity 当前加载的内容";
 "Nothing has changed yet. Restoring first checks the backup against your broker's account, orders, and holdings, and stops if they don't match." = "目前没有任何改动。恢复前会先将备份与券商的账户、订单和持仓核对，不一致就会停止。";
-"This sale can’t go out right now:" = "这笔卖单目前无法提交：";
 "Those shares are out of this lot. Activity shows the sale beside the post that bought them." = "这些股票已从此批次中卖出。你可以在“活动”中找到与买入帖子并列显示的卖出记录。";
 "Three months" = "3个月";
 "time" = "次";
@@ -1391,7 +1383,6 @@
 "the backup's files changed or failed their check" = "备份文件已更改或未通过检查";
 "Check for Updates…" = "检查更新…";
 "Shows what's new and asks before installing." = "先显示新内容，安装前会询问你。";
-"A check reads the public list of releases. Nothing about your accounts or trading is sent." = "检查更新只会读取公开的版本列表，不会发送任何账户或交易信息。";
 "Check for updates automatically" = "自动检查更新";
 "Once a day. You still choose when to install." = "每天一次。何时安装仍由你决定。";
 "Three things that differ from guru to guru." = "每位信号源不一样的三件事。";
@@ -1842,10 +1833,8 @@
 "Average cost %@" = "平均成本 %@";
 "From a post" = "来自一条帖子";
 "Bought at %@" = "买入价 %@";
-"Sell %@ shares" = "卖出 %@ 股";
 "About %@ at %@" = "约 %@，价格 %@";
 "Sell %@ %@…" = "卖出 %@ %@…";
-"Trade %lld of %lld" = "第 %lld 笔，共 %lld 笔";
 "Stock" = "股票";
 "From" = "卖出哪几笔";
 "Nothing CopyTrading bought is held in these accounts." = "这些账户里没有 CopyTrading 买入的持仓。";
@@ -2030,7 +2019,6 @@
 "You hold %@" = "你持有 %@";
 "How much" = "数量";
 "the guru's price" = "信号源的价格";
-"+ Another trade" = "+ 再加一笔";
 "%@ · checks your limits first" = "%@ · 先检查你的限额";
 "Waiting for your approval." = "等待你批准。";
 "Waiting for you to copy it." = "等待你跟单。";
@@ -2354,3 +2342,21 @@
 "So no post is missed. The screen can still turn off and lock." = "这样不会错过任何帖子。屏幕仍可关闭并锁定。";
 "A notification when each copied order goes out and when it fills." = "每笔跟单订单发出和成交时都会通知你。";
 "Time to undo after you press Sell or confirm a copy." = "按下卖出或确认跟单后，可撤销的时间。";
+"Agents such as Claude Code connect through the copytrading command or MCP server while the app runs." = "Claude Code 等代理在 App 运行时通过 copytrading 命令或 MCP 服务器连接。";
+"Anything that could trade waits for your Touch ID here." = "任何可能交易的操作都会在这里等你用触控 ID 批准。";
+"Follows Reduce Motion, Reduce Transparency, and Increase Contrast on your Mac." = "跟随你 Mac 上的减弱动态效果、降低透明度和增强对比度设置。";
+"Holds your records, setup, posts, and attachments. Keys and logs are left out." = "包含你的记录、设置、帖子和附件，不含密钥和日志。";
+"Each stage, post, model reply, and trade outcome, in a private file on this Mac. Keys are removed first." = "每个环节、帖子、模型回复和交易结果都写入这台 Mac 上的私有文件，写入前会先去除密钥。";
+"Oldest days go first. Trading data and backups are never touched." = "最早的日子先删除，交易数据和备份绝不会动。";
+"Reads the public list of releases. Nothing about your trading is sent." = "只读取公开的版本列表，不会发送任何交易信息。";
+"Add Trade" = "添加交易";
+"Amount" = "数量";
+"Approve Trade" = "批准交易";
+"Copy Trade" = "跟单交易";
+"Enter Trade" = "录入交易";
+"Lot" = "批次";
+"Post" = "帖子";
+"Side" = "方向";
+"The price, market session, and account are checked before anything is sent." = "发送前会先核对价格、交易时段和账户。";
+"This sale can’t go out right now" = "这笔卖出现在无法发出";
+"Trade %lld" = "交易 %lld";

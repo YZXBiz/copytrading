@@ -34,7 +34,7 @@ struct ConnectionIdeasSection: View {
                 ForEach(rows, id: \.first?.idea) { row in
                     GridRow {
                         ForEach(row, id: \.idea) { item in
-                            ConnectionIdeaCard(idea: item.idea, number: item.index + 1, provider: provider)
+                            ConnectionIdeaCard(idea: item.idea, provider: provider)
                         }
                     }
                 }

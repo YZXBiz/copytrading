@@ -82,7 +82,9 @@ struct AccountFacts: View {
     /// A label over a number, with an optional quiet word after it: "$500 at most".
     private func figure(_ title: String, _ amount: Decimal?, suffix: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Eyebrow(L10n.string(title))
+            Text(L10n.string(title))
+                .font(DesignTokens.caption)
+                .foregroundStyle(Palette.tertiaryInk)
             HStack(alignment: .firstTextBaseline, spacing: 5) {
                 if let amount {
                     MoneyText(

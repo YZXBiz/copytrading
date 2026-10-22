@@ -15,6 +15,15 @@ enum ManualReviewMode: Equatable {
         self = copying.awaitsApproval ? .approve : .copy
     }
 
+    /// The sheet's title: what the owner is about to do.
+    var title: String {
+        switch self {
+        case .approve: "Approve Trade"
+        case .copy: "Copy Trade"
+        case .enter: "Enter Trade"
+        }
+    }
+
     /// What the correction records as its reason, in the owner's words.
     var reason: String {
         switch self {

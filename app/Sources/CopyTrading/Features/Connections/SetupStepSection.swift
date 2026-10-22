@@ -23,7 +23,9 @@ struct SetupStepSection<Content: View>: View {
                             .foregroundStyle(Palette.ink)
                             .accessibilityAddTraits(.isHeader)
                         if isOptional {
-                            Eyebrow(L10n.string("Optional"))
+                            Text(L10n.string("Optional"))
+                                .font(DesignTokens.caption)
+                                .foregroundStyle(Palette.tertiaryInk)
                         }
                     }
                     Text(subtitle)

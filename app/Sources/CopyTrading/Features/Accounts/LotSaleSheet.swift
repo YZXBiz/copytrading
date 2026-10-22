@@ -1,10 +1,10 @@
 import DesktopCore
 import SwiftUI
 
-/// Selling shares from one lot, in the page's own register: the account in tracked capitals, a big
-/// "Sell WMT", where the lot came from, then a quarter, a half, three quarters, or all of it with a
-/// live line saying what that comes to. One black button checks the sale with the broker, the
-/// next sends it. Nothing reaches the broker until then, and a live account asks for Touch ID first.
+/// Selling shares from one lot, as every sheet reads: "Sell WMT" over the account, the lot it
+/// came from, then how much of it with a live line on what that comes to. One black button checks
+/// the sale with the broker, the next sends it. Nothing reaches the broker until then, and a live
+/// account asks for Touch ID first.
 struct LotSaleSheet: View {
     @State private var flow: LotSaleFlow
     /// The sale is held for a few seconds before it leaves, so it can be undone.
@@ -27,75 +27,51 @@ struct LotSaleSheet: View {
 
     private var target: LotSaleTarget { flow.target }
 
-    /// The chips' parts of the lot.
+    /// The parts of the lot to choose from.
     private static let parts: [(title: String, part: Decimal)] = [
-        ("¼", Decimal(string: "0.25")!), ("½", Decimal(string: "0.5")!), ("¾", Decimal(string: "0.75")!), ("", 1),
+        ("¼", Decimal(string: "0.25")!), ("½", Decimal(string: "0.5")!), ("¾", Decimal(string: "0.75")!), ("All", 1),
     ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            header
-            Group {
-                switch flow.phase {
-                case .choosing, .checking:
-                    choosing
-                case .reviewing(let preview), .selling(let preview):
-                    review(preview)
-                case .finished(let result):
-                    outcome(result)
-                }
+        SheetScaffold(
+            title: L10n.string("Sell %@", target.symbol),
+            lede: L10n.string("%@ · %@", target.accountID, L10n.string(target.environment == .live ? "Live" : "Paper")),
+            scrolls: false
+        ) {
+            lotSection
+            switch flow.phase {
+            case .choosing, .checking:
+                choosing
+            case .reviewing(let preview), .selling(let preview):
+                review(preview)
+            case .finished(let result):
+                outcome(result)
             }
-            .padding(.top, 30)
             if let problem = flow.problem {
-                Label(L10n.string(problem), systemImage: "exclamationmark.circle")
-                    .font(DesignTokens.bodyText)
-                    .foregroundStyle(Palette.ink)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 18)
+                Callout(L10n.string(problem), tone: .caution)
             }
-            Spacer(minLength: 34)
-            footer
+        } leading: {
+            leading
+        } actions: {
+            actions
         }
-        .padding(.horizontal, 36)
-        .padding(.top, 34)
-        .padding(.bottom, 26)
-        .frame(width: 480)
-        .frame(minHeight: 400)
-        .background(Palette.page)
+        .frame(width: 520)
         .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: flow.phase)
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 0) {
-                Eyebrow(target.accountID)
-                Eyebrow(" · ")
-                Eyebrow(
-                    L10n.string(target.environment == .live ? "Live" : "Paper"),
-                    color: target.environment == .live ? Palette.live : Palette.tertiaryInk)
-            }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(
-                L10n.string("%@, %@", target.accountID, L10n.string(target.environment == .live ? "Live" : "Paper")))
-            Text(L10n.string("Sell %@", target.symbol))
-                .font(DisplayFont.font(size: 40, weight: .medium, relativeTo: .largeTitle))
-                .tracking(DesignTokens.entityTitleTracking)
-                .foregroundStyle(Palette.ink)
-                .padding(.top, 10)
-                .accessibilityAddTraits(.isHeader)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(origin)
-                if let price = Decimal(engine: target.lot.averagePrice) {
-                    let amount = price.formatted(.currency(code: "USD"))
-                    Text(L10n.string(posts > 1 ? "Average cost %@" : "Bought at %@", amount))
+    /// Where the shares came from and what they cost.
+    private var lotSection: some View {
+        SheetSection(L10n.string("Lot")) {
+            SheetGroup {
+                SheetRow(title: origin, isReading: true) {
+                    if let price = Decimal(engine: target.lot.averagePrice) {
+                        Text(L10n.string(posts > 1 ? "Average cost %@" : "Bought at %@", price.formatted(.currency(code: "USD"))))
+                            .font(DesignTokens.bodyText)
+                            .foregroundStyle(Palette.secondaryInk)
+                            .monospacedDigit()
+                    }
                 }
             }
-            .font(DesignTokens.lede)
-            .tracking(DesignTokens.ledeTracking)
-            .monospacedDigit()
-            .foregroundStyle(Palette.tertiaryInk)
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.top, 8)
         }
     }
 
@@ -115,98 +91,89 @@ struct LotSaleSheet: View {
         return (buy?.postedAt ?? target.lot.postedAt).map { L10n.string("%@, %@", who, Humanize.postTime($0)) } ?? who
     }
 
+    /// The parts the lot can be split into; a part too small to sell is left out.
+    private var choices: [(title: String, part: Decimal)] {
+        Self.parts.filter { flow.amount($0.part) > 0 }
+    }
+
+    /// The chosen part, while the shares are exactly one of them.
+    private var part: Binding<Decimal> {
+        Binding(
+            get: { choices.first { flow.amount($0.part) == flow.shares }?.part ?? 0 },
+            set: { flow.shares = flow.amount($0) })
+    }
+
     private var choosing: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 26) {
-                ForEach(Self.parts, id: \.part) { chip in
-                    let amount = flow.amount(chip.part)
-                    LotSaleShareChip(
-                        title: chip.part == 1 ? L10n.string("All") : chip.title,
-                        isSelected: flow.shares == amount && amount > 0
-                    ) {
-                        flow.shares = amount
+        SheetSection(L10n.string("Amount")) {
+            SheetGroup {
+                SheetRow(title: L10n.string("Sell"), labelsControl: true) {
+                    Picker(L10n.string("Sell"), selection: part) {
+                        ForEach(choices, id: \.part) { choice in
+                            Text(L10n.string(choice.title)).tag(choice.part)
+                        }
                     }
-                    .disabled(amount <= 0 || flow.phase == .checking)
-                    .accessibilityLabel(L10n.string("Sell %@ shares", PositionRow.quantity(amount)))
-                    .accessibilityIdentifier("lotSale.part.\(chip.part)")
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
+                    .disabled(flow.phase == .checking)
+                    .accessibilityIdentifier("lotSale.part")
                 }
+                preview
             }
-            preview
-                .padding(.top, 22)
+        } footer: {
             Text(
                 operations == nil
                     ? L10n.string("The engine is stopped, so nothing can be sold right now. Start it from the banner or Settings.")
-                    : L10n.string(
-                        "CopyTrading checks the price, the market session, and your account before showing what the sale would do.")
+                    : L10n.string("The price, market session, and account are checked before anything is sent.")
             )
-            .font(DesignTokens.caption)
             .foregroundStyle(operations == nil ? Palette.ink : Palette.tertiaryInk)
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.top, 18)
         }
     }
 
     /// What the chosen part comes to at today's price, as it changes: "0.44 of 0.885 shares", then
     /// "About $49.01 at $110.75" and what those shares gained or lost.
-    @ViewBuilder
     private var preview: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(flow.sharesLine)
-                .font(DisplayFont.font(size: 22, weight: .medium, relativeTo: .title3))
-                .monospacedDigit()
-                .foregroundStyle(Palette.ink)
-                .contentTransition(.numericText(value: flow.shares.doubleValue))
-            if let price = target.currentPrice {
-                HStack(spacing: 8) {
-                    Text(
-                        L10n.string(
-                            "About %@ at %@", (flow.shares * price).formatted(.currency(code: "USD")),
-                            price.formatted(.currency(code: "USD")))
-                    )
-                    .foregroundStyle(Palette.secondaryInk)
-                    if let bought = Decimal(engine: target.lot.averagePrice) {
-                        MoneyText(value: flow.shares * (price - bought), style: .change, font: DesignTokens.bodyText)
-                    }
-                }
-                .font(DesignTokens.bodyText)
-                .monospacedDigit()
+        SheetRow(
+            title: flow.sharesLine,
+            hint: target.currentPrice.map {
+                L10n.string("About %@ at %@", (flow.shares * $0).formatted(.currency(code: "USD")), $0.formatted(.currency(code: "USD")))
+            },
+            isReading: true
+        ) {
+            if let price = target.currentPrice, let bought = Decimal(engine: target.lot.averagePrice) {
+                MoneyText(value: flow.shares * (price - bought), style: .change, font: DesignTokens.bodyText)
+                    .monospacedDigit()
             }
         }
-        .accessibilityElement(children: .combine)
+        .contentTransition(.numericText(value: flow.shares.doubleValue))
         .accessibilityIdentifier("lotSale.shares")
         .animation(reduceMotion ? nil : .smooth(duration: 0.2), value: flow.shares)
     }
 
     @ViewBuilder
     private func review(_ preview: LotSalePreview) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if let plan = preview.plan {
-                Text(saleSentence(plan, preview))
-                    .font(DesignTokens.documentBody)
-                    .foregroundStyle(Palette.ink)
-                    .lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("lotSale.review")
-                Text(L10n.string("Prices are checked again the moment you press Sell. If anything changed, nothing is sent."))
-                    .font(DesignTokens.caption)
-                    .foregroundStyle(Palette.tertiaryInk)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else {
-                HStack(alignment: .top, spacing: 12) {
-                    OutcomeMark(tone: .inactive).padding(.top, 4)
-                    Text(L10n.string("This sale can’t go out right now:"))
-                        .font(DisplayFont.font(size: 22, weight: .medium, relativeTo: .title3))
+        if let plan = preview.plan {
+            SheetSection(L10n.string("Review")) {
+                SheetGroup {
+                    Text(saleSentence(plan, preview))
+                        .font(DesignTokens.bodyText)
                         .foregroundStyle(Palette.ink)
+                        .lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityIdentifier("lotSale.review")
                 }
-                VStack(alignment: .leading, spacing: 6) {
+            } footer: {
+                Text(L10n.string("Prices are checked again the moment you press Sell. If anything changed, nothing is sent."))
+            }
+        } else {
+            SheetSection(L10n.string("This sale can’t go out right now")) {
+                SheetGroup {
                     ForEach(preview.reasons, id: \.self) { reason in
-                        Text(Reason.text(reason))
-                            .foregroundStyle(Palette.secondaryInk)
-                            .fixedSize(horizontal: false, vertical: true)
+                        SheetRow(title: Reason.text(reason), isReading: true) { EmptyView() }
                     }
                 }
-                .font(DesignTokens.bodyText)
-                .padding(.leading, 27)
             }
         }
     }
@@ -229,23 +196,27 @@ struct LotSaleSheet: View {
         ])
     }
 
-    @ViewBuilder
     private func outcome(_ result: LotSaleResult) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top, spacing: 12) {
-                OutcomeMark(tone: outcomeTone(result)).padding(.top, 4)
-                Text(outcomeTitle(result))
-                    .font(DisplayFont.font(size: 22, weight: .medium, relativeTo: .title3))
-                    .foregroundStyle(Palette.ink)
+        SheetSection(L10n.string("Result")) {
+            SheetGroup {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    OutcomeMark(tone: outcomeTone(result))
+                        .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(outcomeTitle(result))
+                            .font(DesignTokens.rowTitle)
+                            .foregroundStyle(Palette.ink)
+                        Text(outcomeDetail(result))
+                            .font(DesignTokens.caption)
+                            .foregroundStyle(Palette.tertiaryInk)
+                    }
                     .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("lotSale.outcome")
             }
-            .accessibilityElement(children: .combine)
-            .accessibilityIdentifier("lotSale.outcome")
-            Text(outcomeDetail(result))
-                .font(DesignTokens.bodyText)
-                .foregroundStyle(Palette.secondaryInk)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.leading, 27)
         }
     }
 
@@ -286,74 +257,77 @@ struct LotSaleSheet: View {
         }
     }
 
-    /// A quiet way out on the left, the one black action on the right.
+    /// The bar's way out: Cancel, Back, or Review Again; while a sale is held, the hold and Undo
+    /// take the whole bar.
     @ViewBuilder
-    private var footer: some View {
-        HStack(spacing: 12) {
-            switch flow.phase {
-            case .choosing, .checking:
-                quiet(L10n.string("Cancel"), action: dismiss.callAsFunction)
-                    .keyboardShortcut(.cancelAction)
-                Spacer()
-                Button(
-                    flow.phase == .checking
-                        ? L10n.string("Checking…")
-                        : L10n.string("Sell %@ %@…", PositionRow.quantity(flow.shares), target.symbol)
-                ) {
-                    Task { await flow.review(using: operations) }
-                }
-                .buttonStyle(PageButtonStyle(isProminent: true, horizontalPadding: 20))
-                .disabled(!flow.canReview || operations == nil)
-                .keyboardShortcut(.defaultAction)
-                .accessibilityIdentifier("lotSale.review.button")
-            case .reviewing(let preview) where isHolding:
-                OrderHold(
-                    title: sellTitle(preview), seconds: OrderHold.chosenSeconds,
-                    send: {
-                        isHolding = false
-                        Task { await flow.confirm(using: operations, confirmOwner: confirmOwner) }
-                    },
-                    undo: { isHolding = false })
-            case .reviewing(let preview):
-                quiet(L10n.string("Back")) { flow.startOver() }
-                    .keyboardShortcut(.cancelAction)
-                Spacer()
-                if preview.plan != nil {
-                    Button(sellTitle(preview)) {
-                        if OrderHold.chosenSeconds > 0 {
-                            isHolding = true
-                        } else {
-                            Task { await flow.confirm(using: operations, confirmOwner: confirmOwner) }
-                        }
-                    }
-                    .buttonStyle(PageButtonStyle(isProminent: true, horizontalPadding: 20))
-                    .keyboardShortcut(.defaultAction)
-                    .accessibilityIdentifier("lotSale.sell")
-                }
-            case .selling:
-                Spacer()
-                ProgressView().controlSize(.small)
-                Text(L10n.string("Sending…")).foregroundStyle(Palette.secondaryInk)
-            case .finished(let result):
-                if result.status == "rejected" {
-                    quiet(L10n.string("Review Again")) { flow.startOver() }
-                }
-                Spacer()
-                Button(L10n.string("Done")) {
-                    finished()
-                    dismiss()
-                }
-                .buttonStyle(PageButtonStyle(isProminent: true, horizontalPadding: 20))
-                .keyboardShortcut(.defaultAction)
+    private var leading: some View {
+        switch flow.phase {
+        case .choosing, .checking:
+            Button(L10n.string("Cancel"), action: dismiss.callAsFunction)
+                .buttonStyle(SheetButtonStyle())
+                .keyboardShortcut(.cancelAction)
+        case .reviewing(let preview) where isHolding:
+            OrderHold(
+                title: sellTitle(preview), seconds: OrderHold.chosenSeconds,
+                send: {
+                    isHolding = false
+                    Task { await flow.confirm(using: operations, confirmOwner: confirmOwner) }
+                },
+                undo: { isHolding = false })
+        case .reviewing:
+            Button(L10n.string("Back")) { flow.startOver() }
+                .buttonStyle(SheetButtonStyle())
+                .keyboardShortcut(.cancelAction)
+        case .selling:
+            EmptyView()
+        case .finished(let result):
+            if result.status == "rejected" {
+                Button(L10n.string("Review Again")) { flow.startOver() }
+                    .buttonStyle(SheetButtonStyle())
             }
         }
     }
 
-    private func quiet(_ title: String, action: @escaping () -> Void) -> some View {
-        Button(title, action: action)
-            .buttonStyle(QuietPressButtonStyle())
-            .font(DesignTokens.bodyText.weight(.medium))
-            .foregroundStyle(Palette.secondaryInk)
+    /// The bar's one black action: check the sale, send it, or close.
+    @ViewBuilder
+    private var actions: some View {
+        switch flow.phase {
+        case .choosing, .checking:
+            Button(
+                flow.phase == .checking
+                    ? L10n.string("Checking…")
+                    : L10n.string("Sell %@ %@…", PositionRow.quantity(flow.shares), target.symbol)
+            ) {
+                Task { await flow.review(using: operations) }
+            }
+            .buttonStyle(SheetButtonStyle(isPrimary: true))
+            .disabled(!flow.canReview || operations == nil)
+            .keyboardShortcut(.defaultAction)
+            .accessibilityIdentifier("lotSale.review.button")
+        case .reviewing(let preview) where !isHolding && preview.plan != nil:
+            Button(sellTitle(preview)) {
+                if OrderHold.chosenSeconds > 0 {
+                    isHolding = true
+                } else {
+                    Task { await flow.confirm(using: operations, confirmOwner: confirmOwner) }
+                }
+            }
+            .buttonStyle(SheetButtonStyle(isPrimary: true))
+            .keyboardShortcut(.defaultAction)
+            .accessibilityIdentifier("lotSale.sell")
+        case .reviewing:
+            EmptyView()
+        case .selling:
+            ProgressView().controlSize(.small)
+            Text(L10n.string("Sending…")).foregroundStyle(Palette.secondaryInk)
+        case .finished:
+            Button(L10n.string("Done")) {
+                finished()
+                dismiss()
+            }
+            .buttonStyle(SheetButtonStyle(isPrimary: true))
+            .keyboardShortcut(.defaultAction)
+        }
     }
 
     @MainActor private func sellTitle(_ preview: LotSalePreview) -> String {
@@ -364,3 +338,22 @@ struct LotSaleSheet: View {
         )
     }
 }
+
+#if DEBUG
+    #Preview("Sell SOXL") {
+        let lot = try! JSONDecoder().decode(
+            AccountLotView.self,
+            from: Data(
+                """
+                {"lot_id":"copy-lot","source_id":"discord:demo:1","guru_id":"zhao","posted_at":"2026-10-21T14:30:00Z",\
+                "excerpt":"93.2出一半","bought_at":"2026-10-21T14:30:05Z","original_qty":"2.779841","remaining_qty":"2.779841",\
+                "average_price":"89.37","buys":[]}
+                """.utf8))
+        return LotSaleSheet(
+            flow: LotSaleFlow(
+                target: LotSaleTarget(
+                    accountID: "zhap-account-2", environment: .paper, symbol: "SOXL", lot: lot, guruName: "Zhao",
+                    currentPrice: 93.20)),
+            operations: nil, confirmOwner: {}, finished: {})
+    }
+#endif

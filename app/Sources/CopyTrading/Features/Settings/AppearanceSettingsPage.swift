@@ -18,7 +18,7 @@ struct AppearanceSettingsPage: View {
 
             SettingsSection(
                 title: "Motion and Transparency",
-                subtitle: "CopyTrading follows Reduce Motion, Reduce Transparency, and Increase Contrast from your Mac."
+                subtitle: "Follows Reduce Motion, Reduce Transparency, and Increase Contrast on your Mac."
             ) {
                 SettingsActionRow(
                     title: "Open Accessibility Settings",

@@ -35,7 +35,6 @@
 ", and %@ %@ waiting" = ", and %@ %@ waiting";
 "0 to 1" = "0 to 1";
 "a" = "a";
-"A backup holds your records, saved setup, captured posts, and attachments. Keys and disposable logs are left out." = "A backup holds your records, saved setup, captured posts, and attachments. Keys and disposable logs are left out.";
 "A bot messages you for every order and every problem, wherever you are." = "A bot messages you for every order and every problem, wherever you are.";
 "A guru posts" = "A guru posts";
 "A model on this Mac, with no key and no bill" = "A model on this Mac, with no key and no bill";
@@ -87,7 +86,6 @@
 "Another open order is in the way" = "Another open order is in the way";
 "Any service or server that speaks the OpenAI API" = "Any service or server that speaks the OpenAI API";
 "anyone who posts" = "anyone who posts";
-"Anything that could trade only becomes a request you approve here with Touch ID." = "Anything that could trade only becomes a request you approve here with Touch ID.";
 "API key" = "API key";
 "API Keys" = "API Keys";
 "API secret" = "API secret";
@@ -166,7 +164,6 @@
 "Close" = "Close";
 "Close owned position" = "Close owned position";
 "Close Settings" = "Close Settings";
-"Coding agents such as Claude Code reach CopyTrading through its copytrading command or MCP server, and only while the app runs. Posts from sources reach them as untrusted text." = "Coding agents such as Claude Code reach CopyTrading through its copytrading command or MCP server, and only while the app runs. Posts from sources reach them as untrusted text.";
 "Collapsed" = "Collapsed";
 "Combined equity" = "Combined equity";
 "Comma-separated Discord channel IDs" = "Comma-separated Discord channel IDs";
@@ -207,13 +204,11 @@
 "Copying was halted" = "Copying was halted";
 "Copying with problems" = "Copying with problems";
 "CopyTrading" = "CopyTrading";
-"CopyTrading checks the price, the market session, and your account before showing what the sale would do." = "CopyTrading checks the price, the market session, and your account before showing what the sale would do.";
 "copytrading command" = "copytrading command";
 "CopyTrading could not learn from this channel." = "CopyTrading could not learn from this channel.";
 "CopyTrading data" = "CopyTrading data";
 "CopyTrading data, %@" = "CopyTrading data, %@";
 "CopyTrading did not get the broker’s answer. It checks again on its own and never sends the order twice." = "CopyTrading did not get the broker’s answer. It checks again on its own and never sends the order twice.";
-"CopyTrading follows Reduce Motion, Reduce Transparency, and Increase Contrast from your Mac." = "CopyTrading follows Reduce Motion, Reduce Transparency, and Increase Contrast from your Mac.";
 "CopyTrading is copying new posts into %@." = "CopyTrading is copying new posts into %@.";
 "CopyTrading is listening for the next post. It will show up here and in Activity, with what each account did." = "CopyTrading is listening for the next post. It will show up here and in Activity, with what each account did.";
 "CopyTrading is locked" = "CopyTrading is locked";
@@ -499,7 +494,6 @@
 "Nothing logged yet" = "Nothing logged yet";
 "Nothing was sent" = "Nothing was sent";
 "Off" = "Off";
-"Older days go first, then the oldest part once the limit is reached. Trading data and backups are never touched." = "Older days go first, then the oldest part once the limit is reached. Trading data and backups are never touched.";
 "Ollama runs the model on this Mac, so posts never leave it and nothing is billed. Reading posts well takes a capable model and a fast Mac." = "Ollama runs the model on this Mac, so posts never leave it and nothing is billed. Reading posts well takes a capable model and a fast Mac.";
 "On" = "On";
 "On disk" = "On disk";
@@ -794,7 +788,6 @@
 "The channels your gurus post in, and the token CopyTrading reads them with." = "The channels your gurus post in, and the token CopyTrading reads them with.";
 "The engine" = "The engine";
 "The engine is stopped, so nothing can be sold right now. Start it from the banner or Settings." = "The engine is stopped, so nothing can be sold right now. Start it from the banner or Settings.";
-"The engine writes each stage, captured post, model request and reply, and trading outcome to a private file on this Mac. Keys are removed before anything is written." = "The engine writes each stage, captured post, model request and reply, and trading outcome to a private file on this Mac. Keys are removed before anything is written.";
 "The interpreter is the AI model that reads each post. %@ bills your account for what it reads." = "The interpreter is the AI model that reads each post. %@ bills your account for what it reads.";
 "The last run is still on its way through." = "The last run is still on its way through.";
 "The last run stopped before it was delivered. Diagnostics has the details." = "The last run stopped before it was delivered. Diagnostics has the details.";
@@ -824,7 +817,6 @@
 "CopyTrading holds none of these shares" = "CopyTrading holds none of these shares";
 "This post is older than what Activity has loaded" = "This post is older than what Activity has loaded";
 "Nothing has changed yet. Restoring first checks the backup against your broker's account, orders, and holdings, and stops if they don't match." = "Nothing has changed yet. Restoring first checks the backup against your broker's account, orders, and holdings, and stops if they don't match.";
-"This sale can’t go out right now:" = "This sale can’t go out right now:";
 "Those shares are out of this lot. Activity shows the sale beside the post that bought them." = "Those shares are out of this lot. Activity shows the sale beside the post that bought them.";
 "Three months" = "Three months";
 "time" = "time";
@@ -1391,7 +1383,6 @@
 "the backup's files changed or failed their check" = "the backup's files changed or failed their check";
 "Check for Updates…" = "Check for Updates…";
 "Shows what's new and asks before installing." = "Shows what's new and asks before installing.";
-"A check reads the public list of releases. Nothing about your accounts or trading is sent." = "A check reads the public list of releases. Nothing about your accounts or trading is sent.";
 "Check for updates automatically" = "Check for updates automatically";
 "Once a day. You still choose when to install." = "Once a day. You still choose when to install.";
 "Three things that differ from guru to guru." = "Three things that differ from guru to guru.";
@@ -1842,10 +1833,8 @@
 "Average cost %@" = "Average cost %@";
 "From a post" = "From a post";
 "Bought at %@" = "Bought at %@";
-"Sell %@ shares" = "Sell %@ shares";
 "About %@ at %@" = "About %@ at %@";
 "Sell %@ %@…" = "Sell %@ %@…";
-"Trade %lld of %lld" = "Trade %lld of %lld";
 "Stock" = "Stock";
 "From" = "From";
 "Nothing CopyTrading bought is held in these accounts." = "Nothing CopyTrading bought is held in these accounts.";
@@ -2030,7 +2019,6 @@
 "You hold %@" = "You hold %@";
 "How much" = "How much";
 "the guru's price" = "the guru's price";
-"+ Another trade" = "+ Another trade";
 "%@ · checks your limits first" = "%@ · checks your limits first";
 "Waiting for your approval." = "Waiting for your approval.";
 "Waiting for you to copy it." = "Waiting for you to copy it.";
@@ -2354,3 +2342,21 @@
 "So no post is missed. The screen can still turn off and lock." = "So no post is missed. The screen can still turn off and lock.";
 "A notification when each copied order goes out and when it fills." = "A notification when each copied order goes out and when it fills.";
 "Time to undo after you press Sell or confirm a copy." = "Time to undo after you press Sell or confirm a copy.";
+"Agents such as Claude Code connect through the copytrading command or MCP server while the app runs." = "Agents such as Claude Code connect through the copytrading command or MCP server while the app runs.";
+"Anything that could trade waits for your Touch ID here." = "Anything that could trade waits for your Touch ID here.";
+"Follows Reduce Motion, Reduce Transparency, and Increase Contrast on your Mac." = "Follows Reduce Motion, Reduce Transparency, and Increase Contrast on your Mac.";
+"Holds your records, setup, posts, and attachments. Keys and logs are left out." = "Holds your records, setup, posts, and attachments. Keys and logs are left out.";
+"Each stage, post, model reply, and trade outcome, in a private file on this Mac. Keys are removed first." = "Each stage, post, model reply, and trade outcome, in a private file on this Mac. Keys are removed first.";
+"Oldest days go first. Trading data and backups are never touched." = "Oldest days go first. Trading data and backups are never touched.";
+"Reads the public list of releases. Nothing about your trading is sent." = "Reads the public list of releases. Nothing about your trading is sent.";
+"Add Trade" = "Add Trade";
+"Amount" = "Amount";
+"Approve Trade" = "Approve Trade";
+"Copy Trade" = "Copy Trade";
+"Enter Trade" = "Enter Trade";
+"Lot" = "Lot";
+"Post" = "Post";
+"Side" = "Side";
+"The price, market session, and account are checked before anything is sent." = "The price, market session, and account are checked before anything is sent.";
+"This sale can’t go out right now" = "This sale can’t go out right now";
+"Trade %lld" = "Trade %lld";
