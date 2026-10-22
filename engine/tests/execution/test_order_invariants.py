@@ -224,6 +224,21 @@ def test_an_order_rule_refuses_the_change_that_breaks_it(model, valid, change, r
         model.model_validate(valid | change)
 
 
+def test_a_whole_share_sale_splits_in_whole_shares_with_the_remainder_from_the_oldest_buy():
+    lot = OwnedLot.model_validate(
+        LOT
+        | {
+            "original_qty": Decimal(7),
+            "remaining_qty": Decimal(7),
+            "joined_entries": ("source-2",),
+            "entry_remaining": {"source-1": Decimal(4), "source-2": Decimal(3)},
+            "entry_prices": {"source-1": Decimal(10), "source-2": Decimal(11)},
+        }
+    )
+
+    assert lot.reduced(Decimal(3)).entry_remaining == {"source-1": 2, "source-2": 2}
+
+
 def test_a_sale_never_takes_more_than_the_lot_holds():
     lot = OwnedLot.model_validate(LOT)
 

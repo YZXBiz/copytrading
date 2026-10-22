@@ -193,7 +193,10 @@ class OwnedLot(Value):
 
     def reduced(self, qty: Decimal, entries: tuple[str, ...] | None = None) -> OwnedLot:
         """The lot after selling `qty`, taken from `entries` (all buys when None) in proportion to
-        what each has left; the rounding remainder comes from the oldest of them."""
+        what each has left; the rounding remainder comes from the oldest of them. A sale of whole
+        shares from buys that hold whole shares, as every sale of a stock that trades only in
+        whole shares is, splits in whole shares, so no buy is left a fraction it can't sell
+        (ADR-0010)."""
         chosen = tuple(
             entry
             for entry in (entries or tuple(self.entry_remaining))
@@ -202,10 +205,15 @@ class OwnedLot(Value):
         available = self.remaining_of(chosen)
         if qty > available:
             raise ValueError("A sale cannot take more than the buys it sells from hold")
+        whole = all(
+            amount == amount.to_integral_value()
+            for amount in (qty, *(self.entry_remaining[entry] for entry in chosen))
+        )
+        step = Decimal(1) if whole else SHARE_STEP
         taken: dict[str, Decimal] = {}
         for entry in chosen:
             share = (qty * self.entry_remaining[entry] / available) if available else Decimal(0)
-            taken[entry] = share.quantize(SHARE_STEP, rounding=ROUND_DOWN)
+            taken[entry] = share.quantize(step, rounding=ROUND_DOWN)
         leftover = qty - sum(taken.values(), Decimal(0))
         for entry in chosen:
             if leftover <= 0:

@@ -312,3 +312,27 @@ def test_entry_sizing_configuration_rejects_invalid_money(field, value):
 
     with pytest.raises(ValidationError, match=field):
         build()
+
+
+def test_closing_every_buy_of_a_whole_share_stock_leaves_nothing_behind(system):
+    """A "sell half" of two whole-share buys used to leave each a fraction of a share, so selling
+    each buy by its price later left one share that no sell naming a buy could reach."""
+    engine, broker, _ = system
+    original_asset = broker.asset
+    broker.asset = lambda symbol: original_asset(symbol).model_copy(update={"fractionable": False})
+
+    def at(minutes: int) -> dt.datetime:
+        return NOW + dt.timedelta(minutes=minutes)
+
+    deliver(engine, event("b1", "buy", "25", timestamp=at(0)), at(0))
+    deliver(engine, event("b2", "buy", "26", timestamp=at(1)), at(1))
+    deliver(engine, event("half", "reduce", "27", None, timestamp=at(2)), at(2))
+    [lot] = engine.ledger.lots()
+    assert all(left == left.to_integral_value() for left in lot.entry_remaining.values())
+
+    deliver(engine, event("c25", "close", "27", "25", timestamp=at(3)), at(3))
+    deliver(engine, event("c26", "close", "27", "26", timestamp=at(4)), at(4))
+
+    [lot] = engine.ledger.lots()
+    assert lot.remaining_qty == 0
+    assert broker.holdings["ABC"] == 0
