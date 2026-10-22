@@ -100,3 +100,23 @@ struct RecapSheet: View {
             : L10n.string("Bought %@ of %@ at %@", shares, fill.symbol, at)
     }
 }
+
+#if DEBUG
+    #Preview("Recap") {
+        RecapSheet(
+            recap: Recap(
+                since: .now.addingTimeInterval(-50_000),
+                fills: [
+                    FillWatch.Fill(
+                        clientID: "1", side: "buy", symbol: "SOXL", shares: 2.779841, price: 89.37, accountID: "zhap-account-2",
+                        guruID: nil),
+                    FillWatch.Fill(
+                        clientID: "2", side: "sell", symbol: "F", shares: 10, price: 12.40, accountID: "zhap-account-2", guruID: nil),
+                ],
+                moves: [Recap.Move(accountID: "zhap-account-2", change: 42.18)],
+                waiting: 1),
+            directory: GuruDirectory(nil)
+        )
+        .frame(width: 560, height: 640)
+    }
+#endif

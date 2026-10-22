@@ -65,3 +65,15 @@ struct SetupImportSheet: View {
         dismiss()
     }
 }
+
+#if DEBUG
+    #Preview("Setup imported") {
+        SetupImportSheet(
+            result: SetupImportResult(
+                fileURL: URL(filePath: "/Users/me/Desktop/copytrading-setup.txt"),
+                filled: ["Discord token", "Discord channel", "DeepSeek key", "Alpaca paper keys"],
+                missing: ["A guru to copy"]),
+            model: AppModel()
+        )
+    }
+#endif

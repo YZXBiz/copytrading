@@ -81,3 +81,10 @@ struct TimeZonePicker: View {
         .frame(minWidth: 460, idealWidth: 500, minHeight: 520, idealHeight: 600)
     }
 }
+
+#if DEBUG
+    #Preview("Time Zone") {
+        TimeZonePicker(choose: { _ in })
+            .frame(width: 500, height: 600)
+    }
+#endif
