@@ -70,7 +70,9 @@ struct ActivityCardOutcome {
             return account
         }
         let awaitsResume = accounts.contains(where: \.awaitsResume)
-        let orders = source.destinations.flatMap(\.orders).map { DestinationOutcome.order($0, count: 1) }
+        // The owner's own sales are theirs, not the post's: they never decide how the post did.
+        let copied = source.destinations.flatMap(\.orders).filter { !$0.isOwnerSale }
+        let orders = copied.map { DestinationOutcome.order($0, count: 1) }
         let trimmed = source.destinations.flatMap(\.orders).contains(where: Self.wasTrimmed)
         let anySkip = source.destinations.contains { destination in
             destination.instructionOutcomes.contains { !Self.carriedOn.contains($0) }

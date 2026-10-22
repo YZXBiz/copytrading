@@ -75,12 +75,9 @@ struct RecapSheet: View {
                 Text(sentence(fill))
                     .font(DesignTokens.bodyText)
                     .foregroundStyle(Palette.ink)
-                Text(
-                    directory.name(for: fill.guruID).map { L10n.string("From %@'s post · %@", $0, fill.accountID) }
-                        ?? L10n.string("Into %@", fill.accountID)
-                )
-                .font(DesignTokens.caption)
-                .foregroundStyle(Palette.tertiaryInk)
+                Text(FillNotifications.origin(fill, directory: directory))
+                    .font(DesignTokens.caption)
+                    .foregroundStyle(Palette.tertiaryInk)
             }
         }
         .padding(.vertical, 6)

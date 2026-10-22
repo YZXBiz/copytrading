@@ -272,6 +272,16 @@ private func aLotSoldByHandStaysTheOwners() throws {
         "summary was \(DestinationOutcome(destination))")
     let headlines = ActivityCardOutcome(source, skipped: false).accounts.first?.results.map(\.headline) ?? []
     try #require(headlines == ["Bought $245.70 of SOUN", "You sold $256.20 of SOUN"], "headlines were \(headlines)")
+
+    // The owner's sale resting or expiring unfilled is theirs; the post still traded.
+    var resting = order("lotsale-2", "sell", "6.40")
+    resting["status"] = "expired"
+    resting["filled_quantity"] = "0"
+    let expired = try soun()
+        .destination("zhao-paper", status: "done", outcomes: ["order_linked"], orders: [order("copy-1", "buy", "5.85"), resting])
+        .build()
+    let title = ActivityCardOutcome(expired, skipped: false).title
+    try #require(title == L10n.string("Traded"), "the post read \(title) while the owner's sale expired")
 }
 
 /// A buy that ran past a 1% allowance says the guru's price and the 1%, so a changed limit shows.

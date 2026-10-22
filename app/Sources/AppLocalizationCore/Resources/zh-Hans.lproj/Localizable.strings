@@ -1962,6 +1962,7 @@
 
 "From %@'s post · %@" = "来自 %@ 的消息 · %@";
 "Into %@" = "账户 %@";
+"Your sale · %@" = "你自己卖出 · %@";
 "Sold %@ of %@" = "卖出 %@（%@）";
 "Bought %@ of %@" = "买入 %@（%@）";
 "Tell me when a trade fills" = "成交时通知我";

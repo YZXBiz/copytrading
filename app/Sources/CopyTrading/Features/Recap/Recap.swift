@@ -26,13 +26,12 @@ struct Recap: Identifiable, Equatable {
         var fills: [FillWatch.Fill] = []
         for post in activity {
             for destination in post.destinations {
-                for order in destination.orders where order.status == "filled" {
-                    guard let placed = Humanize.date(order.createdAt), placed > since else { continue }
+                for order in destination.orders where FillWatch.ended(withFills: order) {
+                    // When it filled counts, not when it was placed: a limit can rest for minutes.
+                    guard let done = Humanize.date(order.endedAt ?? order.createdAt), done > since else { continue }
                     fills.append(
-                        FillWatch.Fill(
-                            clientID: order.clientID, side: order.side, symbol: order.symbol,
-                            shares: Decimal(string: order.filledQuantity) ?? 0,
-                            price: order.averageFillPrice.flatMap { Decimal(string: $0) },
+                        FillWatch.fill(
+                            order, shares: order.filledQuantity, price: order.averageFillPrice,
                             accountID: destination.accountID, guruID: post.guruID))
                 }
             }

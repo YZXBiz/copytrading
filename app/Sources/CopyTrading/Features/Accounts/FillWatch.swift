@@ -5,7 +5,7 @@ import Foundation
 /// can say each once. An order counts only if it was sent or filled after the app opened, so a
 /// restart never re-announces the day, and nothing that happened since is ever swallowed.
 struct FillWatch {
-    /// One copied order, with who it was copied from and where.
+    /// One order, with who it was copied from and where; the owner's own sale names no guru.
     struct Fill: Equatable {
         let clientID: String
         let side: String
@@ -14,6 +14,7 @@ struct FillWatch {
         let price: Decimal?
         let accountID: String
         let guruID: String?
+        var byOwner = false
     }
 
     /// What one read found: orders that went out, and orders that filled.
@@ -27,6 +28,13 @@ struct FillWatch {
     static let working: Set<String> = [
         "accepted", "pending_new", "accepted_for_bidding", "new", "partially_filled", "held",
     ]
+
+    /// An order that is done and bought or sold shares: filled, or partly filled before it was
+    /// cancelled or expired.
+    static func ended(withFills order: OrderActivity) -> Bool {
+        order.status != "prepared" && !working.contains(order.status)
+            && (Decimal(string: order.filledQuantity) ?? 0) > 0
+    }
 
     private let openedAt: Date
     private var sent: Set<String> = []
@@ -43,7 +51,7 @@ struct FillWatch {
         for post in activity {
             for destination in post.destinations {
                 for order in destination.orders {
-                    if order.status == "filled" {
+                    if Self.ended(withFills: order) {
                         guard filled.insert(order.clientID).inserted else { continue }
                         sent.insert(order.clientID)
                         guard isSince(order.endedAt ?? order.submittedAt) else { continue }
@@ -69,10 +77,14 @@ struct FillWatch {
     private func fill(
         _ order: OrderActivity, shares: String, price: String?, in destination: DestinationActivity, _ post: SourceActivity
     ) -> Fill {
+        Self.fill(order, shares: shares, price: price, accountID: destination.accountID, guruID: post.guruID)
+    }
+
+    static func fill(_ order: OrderActivity, shares: String, price: String?, accountID: String, guruID: String?) -> Fill {
         Fill(
             clientID: order.clientID, side: order.side, symbol: order.symbol,
             shares: Decimal(string: shares) ?? 0, price: price.flatMap { Decimal(string: $0) },
-            accountID: destination.accountID, guruID: post.guruID)
+            accountID: accountID, guruID: order.isOwnerSale ? nil : guruID, byOwner: order.isOwnerSale)
     }
 
     private static func date(_ stamp: String) -> Date? {
