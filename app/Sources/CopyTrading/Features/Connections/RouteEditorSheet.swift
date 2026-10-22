@@ -174,7 +174,6 @@ struct RouteEditorSheet: View {
             policies: ["zhap-account-2": policy],
             channelIDs: ["1517754775674949742"],
             learn: { _ in throw CancellationError() },
-            replay: { _ in throw CancellationError() },
             remove: {}
         )
         .frame(width: 660, height: 900)
