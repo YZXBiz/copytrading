@@ -343,6 +343,18 @@ async def test_a_repost_within_the_window_is_not_a_new_call():
     )
 
 
+async def test_a_repost_is_the_same_call_when_the_model_writes_its_fraction_as_a_float():
+    as_float = trade(
+        buy("SOUN", "5.85", fraction="0.16666666666666666", fraction_said="6分之一").model_copy(
+            update={"repeats": "c1"}
+        )
+    )
+
+    result = await _read("5.85加了6分之一soun", as_float, window=10, minutes_after=5)
+
+    assert (result.decision, result.reason) == ("ignore", "repeats_a_recent_call")
+
+
 async def test_a_repost_after_the_window_waits_for_the_owner():
     result = await _read("5.85加了6分之一soun", REPOST, window=10, minutes_after=30)
 

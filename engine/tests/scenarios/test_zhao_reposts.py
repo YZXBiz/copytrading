@@ -1,9 +1,15 @@
 """Reposts and chatter: a repeated alert never buys twice, and talk is never a trade."""
 
 import datetime as dt
+from decimal import Decimal
 
 from .rig import Account, Rig, outcomes
-from .zhao import buy
+from .zhao import buy, trim
+
+# A model can write 1/6 as the ratio "1/6", kept as Decimal(1) / 6, or as the JSON number
+# 0.16666666666666666; a re-read of the same post can come back either way.
+SIXTH, SIXTH_AS_FLOAT = str(Decimal(1) / 6), "0.16666666666666666"
+THIRD, THIRD_AS_FLOAT = str(Decimal(1) / 3), "0.3333333333333333"
 
 
 async def test_chatter_is_read_but_never_traded(tmp_path):
@@ -55,3 +61,43 @@ async def test_the_same_alert_after_ten_minutes_is_a_new_buy(tmp_path, clock):
         later = await rig.post(text)
         assert outcomes(later, "paper") == ("order_linked",)
         assert len(rig.brokers["paper"].submitted("buy")) == 2
+
+
+async def test_a_reposted_buy_is_one_call_however_the_model_writes_its_fraction(tmp_path):
+    """Oct 22 2026 audit: the repost checks compared fractions digit for digit, so a re-read
+    that wrote 1/6 the other way bought a second sixth."""
+    accounts = {"paper": Account(cash="5000", full_position_usd="1000")}
+    async with Rig(tmp_path, accounts, {"NVDA": "125"}) as rig:
+        post = "买入 NVDA 125 6分之一"
+        rig.reader.expect(post, buy("NVDA", "125", fraction=SIXTH, fraction_said="6分之一"))
+        await rig.post(post)
+        rig.reader.expect(
+            post, buy("NVDA", "125", fraction=SIXTH_AS_FLOAT, fraction_said="6分之一")
+        )
+        again = await rig.post(post)
+
+        assert outcomes(again, "paper") == ("duplicate",)
+        assert len(rig.brokers["paper"].submitted("buy")) == 1
+
+
+async def test_a_reposted_sell_is_one_call_however_the_model_writes_its_fraction(tmp_path):
+    """A sell repeated the same day sells once, or a recap of "sell a third" sells two thirds."""
+    accounts = {"paper": Account(cash="5000", full_position_usd="1000")}
+    async with Rig(tmp_path, accounts, {"NVDA": "100"}) as rig:
+        broker = rig.brokers["paper"]
+        rig.reader.expect("买入 NVDA 100", buy("NVDA", "100"))
+        await rig.post("买入 NVDA 100")
+        broker.move("NVDA", "130")
+        post = "NVDA 100买的 130 卖出三分之一"
+        rig.reader.expect(
+            post, trim("NVDA", "130", bought_at="100", fraction=THIRD, fraction_said="三分之一")
+        )
+        await rig.post(post)
+        rig.reader.expect(
+            post,
+            trim("NVDA", "130", bought_at="100", fraction=THIRD_AS_FLOAT, fraction_said="三分之一"),
+        )
+        again = await rig.post(post)
+
+        assert outcomes(again, "paper") == ("duplicate",)
+        assert len(broker.submitted("sell")) == 1

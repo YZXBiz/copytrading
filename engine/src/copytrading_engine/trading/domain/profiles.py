@@ -12,11 +12,11 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from copytrading_engine.execution.domain.risk import requested_entry_budget
 from copytrading_engine.execution.domain.sizing import RouteConnection
 from copytrading_engine.parsing.application import transform
-from copytrading_engine.parsing.extraction import DecodeError, Decoder, same_fraction
+from copytrading_engine.parsing.extraction import DecodeError, Decoder
 from copytrading_engine.parsing.routes import Route
 from copytrading_engine.shared.raw_message import RawMessage
 from copytrading_engine.shared.reading import PostReading
-from copytrading_engine.shared.signals import Instruction
+from copytrading_engine.shared.signals import Instruction, same_fraction
 
 type ExitBasis = Literal["original_position", "remaining_position"]
 PROFILE_EVALUATION_COST_NOTICE = (

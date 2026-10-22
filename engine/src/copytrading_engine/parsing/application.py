@@ -18,7 +18,7 @@ from copytrading_engine.parsing.extraction import (
 from copytrading_engine.parsing.history import RecentCall
 from copytrading_engine.parsing.routes import Route
 from copytrading_engine.shared import reading as r
-from copytrading_engine.shared.signals import Evidence, Instruction, StockSignal
+from copytrading_engine.shared.signals import Evidence, Instruction, StockSignal, same_fraction
 
 
 def outcome(
@@ -161,11 +161,11 @@ def _same_terms(earlier: RecentCall, call: r.Buy | r.Sell) -> bool:
             case r.All():
                 return earlier.action == "close"
             case r.Fraction(value=value):
-                return earlier.action == "reduce" and earlier.fraction == value
+                return earlier.action == "reduce" and same_fraction(earlier.fraction, value)
             case _:
                 return True
     if isinstance(call.size, r.Fraction):
-        return earlier.fraction == call.size.value
+        return same_fraction(earlier.fraction, call.size.value)
     if isinstance(call.size, r.Dollars):
         return earlier.usd_amount == call.size.value
     if isinstance(call.size, r.NotGiven):

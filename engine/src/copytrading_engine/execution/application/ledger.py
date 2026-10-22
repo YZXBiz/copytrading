@@ -106,7 +106,9 @@ def _repeats(
     be a real second buy at that price. A sell repeated the same trading day, naming the same lot,
     price, and size, is always the same sell: done twice it would sell the rest of the lot, as
     when a guru re-posts the day's calls in a recap. With the check off, every post is copied."""
-    if window_minutes is None or instruction not in earlier.instructions:
+    if window_minutes is None or not any(
+        instruction.same_call(other) for other in earlier.instructions
+    ):
         return False
     since = (at - earlier.timestamp).total_seconds()
     if since < 0:
