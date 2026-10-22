@@ -831,7 +831,7 @@
 "The sale could not be checked" = "无法核实这笔卖出";
 "The setup checklist and how a day in CopyTrading goes." = "查看设置清单，了解在 CopyTrading 中的一天。";
 "The trader whose calls CopyTrading copies." = "CopyTrading 跟单的信号源（交易者）。";
-"These shares are no longer held" = "已不再持有这些股份";
+"CopyTrading holds none of these shares" = "CopyTrading 没有持有这些股份";
 "This post is older than what Activity has loaded" = "这条帖子早于 Activity 当前加载的内容";
 "Nothing has changed yet. Restoring first checks the backup against your broker's account, orders, and holdings, and stops if they don't match." = "目前没有任何改动。恢复前会先将备份与券商的账户、订单和持仓核对，不一致就会停止。";
 "This sale can’t go out right now:" = "这笔卖单目前无法提交：";
