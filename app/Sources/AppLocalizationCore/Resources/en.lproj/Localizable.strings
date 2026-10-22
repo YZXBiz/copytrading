@@ -1960,6 +1960,7 @@
 
 "From %@'s post · %@" = "From %@'s post · %@";
 "Into %@" = "Into %@";
+"Your sale · %@" = "Your sale · %@";
 "Sold %@ of %@" = "Sold %@ of %@";
 "Bought %@ of %@" = "Bought %@ of %@";
 "Tell me when a trade fills" = "Tell me when a trade fills";

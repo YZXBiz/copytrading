@@ -27,10 +27,7 @@ enum FillNotifications {
         let requests = said.map { fill, heading, kind in
             let content = UNMutableNotificationContent()
             content.title = heading
-            let guru = directory.name(for: fill.guruID)
-            content.body =
-                guru.map { L10n.string("From %@'s post · %@", $0, fill.accountID) }
-                ?? L10n.string("Into %@", fill.accountID)
+            content.body = origin(fill, directory: directory)
             content.sound = .default
             content.threadIdentifier = fill.accountID
             return UNNotificationRequest(identifier: "\(kind)-\(fill.clientID)", content: content, trigger: nil)
@@ -41,6 +38,13 @@ enum FillNotifications {
                 try? await center.add(request)
             }
         }
+    }
+
+    /// "From Zhao's post · paper", "Your sale · paper", or "Into paper".
+    static func origin(_ fill: FillWatch.Fill, directory: GuruDirectory) -> String {
+        if fill.byOwner { return L10n.string("Your sale · %@", fill.accountID) }
+        return directory.name(for: fill.guruID).map { L10n.string("From %@'s post · %@", $0, fill.accountID) }
+            ?? L10n.string("Into %@", fill.accountID)
     }
 
     private static func sentTitle(_ fill: FillWatch.Fill) -> String {
