@@ -2,6 +2,10 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
+## Unreleased
+
+- **Every sheet and Settings page is one organized form.** The guru and account editors, Sell, the trade review sheet, Connections panels, Recap, Setup Check, Import, agent requests, and every Settings page now group their rows the same way: a heading, a bordered group with a line between rows, the setting's name and one short line on the left, and its control on the right. Fields are one height in one style, two to four fixed choices (Paper or Live, Buy or Sell, how much to sell) are a segmented control, and long explanations are cut to a line. The guru sheet says where its calls go ("Copies channel 1517…9742 into zhap-account-2") or what it still needs, and shows what each kind of call buys in that account. Remove Guru… and Remove Account… ask before removing.
+
 ## 0.1.0-beta.5 — developer preview
 
 Copying keeps going through restarts and updates, and every position shows what each of its buys cost. Found by checking a live paper account against Alpaca, order by order.

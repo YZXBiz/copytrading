@@ -1167,6 +1167,7 @@ def j20_toolbar(app: AppDriver) -> None:
     app.click("connections.gurus.add")
     app.expect(app.see("guru-from-connections"), "Details", "Remove Guru")
     app.click("Remove Guru")
+    app.click("Remove Guru")  # the confirmation's button, an exact label
     app.expect(app.see("guru-removed"), "connections.gurus.add", "Add a guru")
 
 
@@ -1259,8 +1260,10 @@ def j6_setup_editing(app: AppDriver) -> None:
     app.open_screen("connections")
     app.click("connections.guru")
     app.click("Remove Guru")
+    app.click("Remove Guru")  # the confirmation's button, an exact label
     app.click("connections.account.primary")
     app.click("Remove Account")
+    app.click("Remove Account")  # the confirmation's button, an exact label
     app.expect(app.see("setup-cleaned"), "connections.accounts.paper", "0 of 5 steps done")
 
 
@@ -1307,6 +1310,7 @@ def j23_learn_playbook(app: AppDriver) -> None:
             f"Learn did not say a channel is needed: {failure.text if failure else ''}"
         )
     app.click("Remove Guru")
+    app.click("Remove Guru")  # the confirmation's button, an exact label
 
 
 def j8_credential_gate(app: AppDriver) -> None:
