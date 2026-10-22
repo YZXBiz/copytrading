@@ -1275,7 +1275,7 @@
 "“%@” already copies “%@”. Each account copies one guru." = "“%@”已经在跟“%@”。每个账户只跟一个信号源。";
 "Every account already copies a guru. Add a broker account in Connections first." = "每个账户都已在跟一个信号源。请先在“连接”里添加一个券商账户。";
 "Choose an account" = "选择账户";
-"Each account follows one guru. Its max per stock is that guru's full position." = "每个账户只跟一位信号源。账户的单只股票上限就是这位信号源的满仓。";
+"Each account follows one guru. Its max per stock is that guru's full position." = "每个账户只跟一个信号源。账户的单只股票上限就是这位信号源的满仓。";
 "%@ Agent access stays off until you choose again." = "%@ 在你重新选择之前，智能体访问保持关闭。";
 "%@ Fix it under Interpreter in Connections." = "%@ 请在“连接”的“AI 模型”中修正。";
 "“%@” needs a Discord channel." = "“%@”需要一个 Discord 频道。";
@@ -2349,3 +2349,16 @@
 "CopyTrading hit a problem it couldn't fix. Stop copying everywhere, then start again to reopen it." = "CopyTrading 遇到无法自行解决的问题。先停止所有跟单，再重新开始，即可重新打开该账户。";
 "%lld stopped" = "%lld个已停止";
 "%@ stopped" = "有%@已停止";
+"Whose calls to copy, where they post, and which account copies them." = "要跟哪个信号源、它在哪发、由哪个账户跟。";
+"Guru's Discord user ID (optional)" = "信号源的 Discord 用户 ID（可选）";
+"Guru's Discord user ID" = "信号源的 Discord 用户 ID";
+"Leave blank if only the guru posts in this channel" = "如果频道里只有信号源发帖，可以留空";
+"Each account copies one guru." = "每个账户只跟一个信号源。";
+"The guru's full position is %@, this account's max per stock." = "信号源的满仓是 %@，也就是这个账户单只股票的上限。";
+"%@'s full position is %@, this account's max per stock." = "%@ 的满仓是 %@，也就是这个账户单只股票的上限。";
+"Remove Guru…" = "移除信号源…";
+"Remove %@?" = "移除 %@？";
+"this guru" = "这个信号源";
+"Keep" = "保留";
+"Their calls stop being copied once you start copying with this change. Shares they bought stay in the account." = "用这次修改开始跟单后，就不再跟它的单。已经买入的股票会留在账户里。";
+"How this guru writes buys, sells, and tickers, one rule per line. Learn drafts it from recent posts; edit anything. Name a company's ticker on its own line, such as “%@ means %@”." = "信号源怎么写买入、卖出和股票代码，一行一条规则。“学习”会根据最近的帖子起草，内容都可以改。公司名要单独一行写明代码，例如“%@ 就是 %@”。";

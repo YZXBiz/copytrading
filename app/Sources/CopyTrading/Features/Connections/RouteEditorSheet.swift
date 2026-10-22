@@ -15,12 +15,13 @@ struct RouteEditorSheet: View {
     let replay: (TradingRouteDraft) async throws -> GuruReplay
     let remove: () -> Void
     @Environment(\.dismiss) private var dismiss
+    @State private var confirmsRemove = false
 
     var body: some View {
         SheetScaffold(
             kind: L10n.string("Guru"),
             title: route.displayName.trimmed.isEmpty ? L10n.string("New") : route.displayName.trimmed,
-            lede: L10n.string("The trader whose calls CopyTrading copies.")
+            lede: L10n.string("Whose calls to copy, where they post, and which account copies them.")
         ) {
             // The name sits right under the title it fills in; the header already says "Guru".
             SheetField(title: L10n.string("Name")) {
@@ -31,10 +32,7 @@ struct RouteEditorSheet: View {
                 .accessibilityLabel(L10n.string("Name"))
             }
 
-            SheetSection(
-                L10n.string("Where they post"),
-                detail: L10n.string("The channel and, in a shared channel, the guru's Discord user ID.")
-            ) {
+            SheetSection(L10n.string("Where they post")) {
                 if channelIDs.isEmpty {
                     Text(L10n.string("Add the channel they post in under Discord in Connections first."))
                         .foregroundStyle(Palette.tertiaryInk)
@@ -48,12 +46,13 @@ struct RouteEditorSheet: View {
                             selection: channelSelection)
                     }
                 }
-                SheetField(title: L10n.string("Author ID")) {
+                SheetField(title: L10n.string("Guru's Discord user ID (optional)")) {
                     TextField(
-                        L10n.string("Author ID"), text: $route.authorID,
-                        prompt: Text(L10n.string("Needed when several people post there")).foregroundStyle(Palette.tertiaryInk)
+                        L10n.string("Guru's Discord user ID"), text: $route.authorID,
+                        prompt: Text(L10n.string("Leave blank if only the guru posts in this channel")).foregroundStyle(
+                            Palette.tertiaryInk)
                     )
-                    .accessibilityLabel(L10n.string("Author ID"))
+                    .accessibilityLabel(L10n.string("Guru's Discord user ID"))
                 }
             } accessory: {
                 HelpPopoverButton(articles: [SetupHelp.channelID, SetupHelp.userID])
@@ -62,7 +61,8 @@ struct RouteEditorSheet: View {
             DestinationEditorSection(
                 connection: $route.connection,
                 accountIDs: accountIDs,
-                policy: route.connection.flatMap { policies[$0.accountID.trimmed] }
+                policy: route.connection.flatMap { policies[$0.accountID.trimmed] },
+                guruName: route.displayName
             )
 
             PlaybookSection(route: $route, learn: learn)
@@ -91,9 +91,20 @@ struct RouteEditorSheet: View {
             GuruReplaySection(route: route, policies: policies, replay: replay)
 
         } leading: {
-            Button(L10n.string("Remove Guru"), role: .destructive, action: removeGuru)
+            Button(L10n.string("Remove Guru…"), role: .destructive) { confirmsRemove = true }
                 .buttonStyle(SheetQuietButtonStyle(isDestructive: true))
-                .help(L10n.string("Removing takes effect when the setup is checked and copying starts."))
+                .confirmationDialog(
+                    L10n.string("Remove %@?", route.displayName.trimmed.isEmpty ? L10n.string("this guru") : route.displayName.trimmed),
+                    isPresented: $confirmsRemove
+                ) {
+                    Button(L10n.string("Remove Guru"), role: .destructive, action: removeGuru)
+                    Button(L10n.string("Keep"), role: .cancel) {}
+                } message: {
+                    Text(
+                        L10n.string(
+                            "Their calls stop being copied once you start copying with this change. Shares they bought stay in the account."
+                        ))
+                }
         } actions: {
             Button(L10n.string("Done"), action: dismiss.callAsFunction)
                 .buttonStyle(SheetButtonStyle(isPrimary: true))
@@ -127,3 +138,31 @@ struct RouteEditorSheet: View {
         remove()
     }
 }
+
+#if DEBUG
+    #Preview("Guru: Zhao") {
+        @Previewable @State var route = TradingRouteDraft(
+            channelID: "1517754775674949742",
+            displayName: "Zhao-official",
+            playbook: """
+                5.90加了6分之一常规仓soun -> buy SOUN at 5.90, fraction 1/6
+                12.13加了6分之一常规仓f -> buy F at 12.13, fraction 1/6
+                93.2出一半92.3的soxl -> sell half of the SOXL bought at 92.3, at 93.2
+                """,
+            connection: TradingConnectionDraft(accountID: "zhap-account-2")
+        )
+        var policy = TradingAccountPolicy()
+        policy.maxOrderUSD = "250"
+        policy.maxSymbolUSD = "1000"
+        return RouteEditorSheet(
+            route: $route,
+            accountIDs: ["zhap-account-2"],
+            policies: ["zhap-account-2": policy],
+            channelIDs: ["1517754775674949742"],
+            learn: { _ in throw CancellationError() },
+            replay: { _ in throw CancellationError() },
+            remove: {}
+        )
+        .frame(width: 660, height: 900)
+    }
+#endif

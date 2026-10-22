@@ -41,14 +41,14 @@ struct PlaybookSection: View {
                 Callout(failure, tone: .critical)
                     .accessibilityIdentifier("playbook.failure")
             }
-            // No box: the text on a writing line, like every field in the sheet.
+            // In a soft well, like every field in the sheet, tall enough to read several lines.
             TextEditor(text: $route.playbook)
                 .font(DesignTokens.bodyText)
-                .frame(minHeight: 110)
+                .frame(minHeight: 160)
                 .scrollContentBackground(.hidden)
                 .focused($isEditing)
-                .padding(.bottom, 8)
-                .overlay(alignment: .bottom) { WritingLine(isActive: isEditing) }
+                .padding(8)
+                .background(Palette.well, in: .rect(cornerRadius: 8))
                 .accessibilityLabel(L10n.string("Playbook"))
                 .accessibilityIdentifier("playbook.text")
             Text(L10n.string("%@ of %@ characters", route.playbook.count.formatted(), tradingPlaybookMaxLength.formatted()))
@@ -60,7 +60,7 @@ struct PlaybookSection: View {
         } footer: {
             Text(
                 L10n.string(
-                    "Learn reads the channel's recent posts and drafts how this guru writes buys, sells, and names. Edit anything. A company name only resolves to a ticker when a line here says so, for example “%@ means %@”.",
+                    "How this guru writes buys, sells, and tickers, one rule per line. Learn drafts it from recent posts; edit anything. Name a company's ticker on its own line, such as “%@ means %@”.",
                     "英伟达", "NVDA"
                 )
             )

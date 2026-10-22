@@ -2349,3 +2349,16 @@
 "CopyTrading hit a problem it couldn't fix. Stop copying everywhere, then start again to reopen it." = "CopyTrading hit a problem it couldn't fix. Stop copying everywhere, then start again to reopen it.";
 "%lld stopped" = "%lld stopped";
 "%@ stopped" = "%@ stopped";
+"Whose calls to copy, where they post, and which account copies them." = "Whose calls to copy, where they post, and which account copies them.";
+"Guru's Discord user ID (optional)" = "Guru's Discord user ID (optional)";
+"Guru's Discord user ID" = "Guru's Discord user ID";
+"Leave blank if only the guru posts in this channel" = "Leave blank if only the guru posts in this channel";
+"Each account copies one guru." = "Each account copies one guru.";
+"The guru's full position is %@, this account's max per stock." = "The guru's full position is %@, this account's max per stock.";
+"%@'s full position is %@, this account's max per stock." = "%@'s full position is %@, this account's max per stock.";
+"Remove Guru…" = "Remove Guru…";
+"Remove %@?" = "Remove %@?";
+"this guru" = "this guru";
+"Keep" = "Keep";
+"Their calls stop being copied once you start copying with this change. Shares they bought stay in the account." = "Their calls stop being copied once you start copying with this change. Shares they bought stay in the account.";
+"How this guru writes buys, sells, and tickers, one rule per line. Learn drafts it from recent posts; edit anything. Name a company's ticker on its own line, such as “%@ means %@”." = "How this guru writes buys, sells, and tickers, one rule per line. Learn drafts it from recent posts; edit anything. Name a company's ticker on its own line, such as “%@ means %@”.";

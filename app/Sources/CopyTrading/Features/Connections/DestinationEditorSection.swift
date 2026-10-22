@@ -10,6 +10,8 @@ struct DestinationEditorSection: View {
     /// The chosen account's limits: its per-stock maximum is the guru's full position, and its
     /// per-order limit trims a bigger buy.
     let policy: TradingAccountPolicy?
+    /// Who the sizing sentence is about: "Zhao's full position is $1,000."
+    var guruName = ""
 
     var body: some View {
         SheetSection(L10n.string("Copies into")) {
@@ -18,7 +20,9 @@ struct DestinationEditorSection: View {
                     .foregroundStyle(Palette.tertiaryInk)
                     .padding(.vertical, 12)
             } else {
-                SheetRow(title: L10n.string("Account"), labelsControl: true) {
+                SheetRow(
+                    title: L10n.string("Account"), hint: L10n.string("Each account copies one guru."), labelsControl: true
+                ) {
                     SheetMenu(
                         label: L10n.string("Account"),
                         choices: (connection == nil ? [("", L10n.string("Choose an account"))] : [])
@@ -28,7 +32,7 @@ struct DestinationEditorSection: View {
             }
             if let draft = connection {
                 if let sizing = SizingSummary.of(draft, policy: policy) {
-                    sizingFigures(sizing)
+                    sizingLines(sizing)
                 } else {
                     Text(L10n.string("First set this account's max per stock. It's the guru's full position."))
                         .font(DesignTokens.caption)
@@ -36,43 +40,52 @@ struct DestinationEditorSection: View {
                         .padding(.top, 12)
                 }
             }
-        } footer: {
-            Text(L10n.string("Each account follows one guru. Its max per stock is that guru's full position."))
         }
     }
 
-    /// What each kind of call buys, as figures in a row: a tracked label over a clear amount. A
-    /// figure the per-order limit cut down carries a small marker and says what it was cut from,
-    /// and the note names the limit.
-    private func sizingFigures(_ sizing: SizingSummary) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 28) {
-                ForEach(sizing.figures) { figure in
-                    VStack(alignment: .leading, spacing: 6) {
-                        Eyebrow(figure.label)
-                        Text(figure.amount)
-                            .font(DisplayFont.font(size: 22, weight: .medium, relativeTo: .title3))
-                            .monospacedDigit()
-                            .foregroundStyle(Palette.ink)
-                            .markerHighlight(figure.isTrimmed)
+    /// What each kind of call buys, in plain lines: the guru's full position first, then each call
+    /// and what it buys, saying so when the per-order limit cut it down.
+    private func sizingLines(_ sizing: SizingSummary) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let full = sizing.figures.first {
+                Text(
+                    guruName.trimmed.isEmpty
+                        ? L10n.string("The guru's full position is %@, this account's max per stock.", full.amount)
+                        : L10n.string("%@'s full position is %@, this account's max per stock.", guruName.trimmed, full.amount)
+                )
+                .foregroundStyle(Palette.ink)
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(sizing.figures.dropFirst()) { figure in
+                    HStack(alignment: .firstTextBaseline, spacing: 12) {
+                        Text(figure.label)
+                            .foregroundStyle(Palette.secondaryInk)
+                        Spacer(minLength: 12)
                         if let asked = figure.cutFrom {
                             Text(L10n.string("cut from %@", asked))
                                 .font(DesignTokens.caption)
-                                .monospacedDigit()
                                 .foregroundStyle(Palette.tertiaryInk)
                         }
+                        Text(figure.amount)
+                            .font(DesignTokens.rowTitle)
+                            .foregroundStyle(Palette.ink)
                     }
-                    .fixedSize()
+                    .monospacedDigit()
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 9)
+                    if figure.id != sizing.figures.last?.id {
+                        Divider().padding(.leading, 12)
+                    }
                 }
-                Spacer(minLength: 0)
             }
+            .background(Palette.group, in: .rect(cornerRadius: 10))
             if let note = sizing.note {
                 Text(note)
                     .font(DesignTokens.caption)
                     .foregroundStyle(Palette.tertiaryInk)
             }
         }
-        .padding(.top, 14)
+        .padding(.top, 6)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("guru.sizingSummary")
     }
