@@ -98,6 +98,7 @@ struct TradingSettingsSaveTests {
         try await checkAgentLimitChangesSaveOverTheSavedSetup()
         try await checkAgentLimitChangesNeverTouchUnsavedWork()
         try await checkEngineRestartStartsCopyingAgain()
+        try await checkLaunchStartNeedsNoWindow()
         try await checkEngineRestartKeepsAPausedSetupPaused()
         try await checkAcceptedActivationWithLostResponseRemainsPending()
         try await checkPendingActivationReconcilesAfterAppReopen(configuration: configuration, secrets: credentials)
@@ -550,6 +551,20 @@ struct TradingSettingsSaveTests {
         await model.startCopyingOnLaunchIfWanted()
         try check(model.tradingStatus?.state == .running, "Copying stayed paused after the engine restarted")
         print("CopyTradingContractTests: an engine restart started copying again")
+    }
+
+    /// Oct 20 2026: an install relaunched the app while nobody was at the Mac, and copying stayed
+    /// paused behind Touch ID for 1h40m while Zhao posted. A launch start the owner chose runs on
+    /// the engine's status alone: no unlocked window, and no window at all.
+    private static func checkLaunchStartNeedsNoWindow() async throws {
+        let (model, starter, directory) = try await launchStartFixture()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        model.isTradingUnlocked = false
+        await starter.setValidationActivatable(true)
+        model.tradingStatus = try status(.paused)
+        for _ in 0..<100 where model.tradingStatus?.state != .running { try await Task.sleep(for: .milliseconds(20)) }
+        try check(model.tradingStatus?.state == .running, "A launch start waited for the window to unlock")
+        print("CopyTradingContractTests: a launch start copies without the window")
     }
 
     private static func checkEngineRestartKeepsAPausedSetupPaused() async throws {

@@ -21,10 +21,6 @@ struct MainSplitView: View {
 
     /// The launch start waits for the engine to report paused and for the window to unlock; either
     /// can come first, so a change in either asks again.
-    private var launchStartTrigger: String {
-        "\(model.tradingStatus?.state.rawValue ?? "none"):\(model.isTradingUnlocked):\(model.savedTradingConfiguration != nil)"
-    }
-
     var body: some View {
         content.environment(model.skippedCalls)
     }
@@ -97,9 +93,6 @@ struct MainSplitView: View {
         .environment(\.postProgressContext, progressContext)
         .task(id: refreshTrigger) {
             await liveRefresh()
-        }
-        .task(id: launchStartTrigger) {
-            await model.startCopyingOnLaunchIfWanted()
         }
         .onChange(of: model.selectedScreen) { old, new in
             if new == .settings, old != .settings {

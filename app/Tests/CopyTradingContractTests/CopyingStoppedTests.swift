@@ -3,8 +3,9 @@ import DesktopCore
 import Foundation
 import Testing
 
-/// Copying never starts without the owner, so when CopyTrading comes back paused after copying was
-/// on, the owner is told once and can start it in one press. A deliberate Stop Copying is not that.
+/// When CopyTrading comes back paused after copying was on, the owner is told, again every half
+/// hour while it stays paused during trading hours, and can start it in one press. A deliberate
+/// Stop Copying is not that.
 @MainActor
 func runCopyingStoppedTests() throws {
     try copyingMemoryFollowsWhatTheEngineReports()
@@ -13,6 +14,7 @@ func runCopyingStoppedTests() throws {
     try aCrashUnderCopyingIsToldOnTheNextLaunch()
     try aLaunchThatStartsCopyingItselfIsNotToldUntilItFails()
     try startingCopyingOrDismissingEndsTheNotice()
+    try aPauseThroughTradingHoursIsToldEveryHalfHour()
 }
 
 /// A throwaway preferences domain, so a check never touches the owner's.
@@ -198,4 +200,34 @@ private func startingCopyingOrDismissingEndsTheNotice() throws {
     noSetup.model.savedTradingConfiguration = nil
     noSetup.model.tradingStatus = try status(.paused)
     try #require(!noSetup.model.showsCopyingStopped, "the notice offered Start Copying with no setup to start")
+}
+
+/// A pause nobody answers costs every call the guru makes, so during trading hours the owner hears
+/// again every half hour; outside them, once is enough.
+@MainActor
+private func aPauseThroughTradingHoursIsToldEveryHalfHour() throws {
+    let (defaults, remove) = try scratchDefaults()
+    defer { remove() }
+    let last = try launch(defaults)
+    last.model.tradingStatus = try status(.running)
+    last.model.tradingStatus = nil
+
+    let next = try launch(defaults)
+    // Thursday Oct 22 2026, 10:00 AM in New York.
+    var now = ISO8601DateFormatter().date(from: "2026-10-22T14:00:00Z")!
+    next.model.clock = { now }
+    next.model.tradingStatus = try status(.paused)
+    try #require(next.announced() == 1, "the owner was not told at launch")
+    now += 20 * 60
+    next.model.tradingStatus = try status(.paused)
+    try #require(next.announced() == 1, "the owner was told again within half an hour")
+    now += 11 * 60
+    next.model.tradingStatus = try status(.paused)
+    try #require(next.announced() == 2, "a pause through trading hours was not told again after half an hour")
+    // Saturday: no market, no reminder.
+    now = ISO8601DateFormatter().date(from: "2026-10-24T15:00:00Z")!
+    next.model.tradingStatus = try status(.paused)
+    try #require(next.announced() == 2, "the owner was reminded on a weekend")
+    try #require(TradingHours.contains(ISO8601DateFormatter().date(from: "2026-10-22T08:15:00Z")!), "4:15 AM was not trading hours")
+    try #require(!TradingHours.contains(ISO8601DateFormatter().date(from: "2026-10-23T00:30:00Z")!), "8:30 PM was trading hours")
 }
