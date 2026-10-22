@@ -2363,3 +2363,16 @@
 "Their calls stop being copied once you start copying with this change. Shares they bought stay in the account." = "Their calls stop being copied once you start copying with this change. Shares they bought stay in the account.";
 "How this guru writes buys, sells, and tickers, one rule per line. Learn drafts it from recent posts; edit anything. Name a company's ticker on its own line, such as “%@ means %@”." = "How this guru writes buys, sells, and tickers, one rule per line. Learn drafts it from recent posts; edit anything. Name a company's ticker on its own line, such as “%@ means %@”.";
 "Set" = "Set";
+"Remove Account…" = "Remove Account…";
+"Its guru stops being copied once you start copying with this change. Shares in it stay with Alpaca." = "Its guru stops being copied once you start copying with this change. Shares in it stay with Alpaca.";
+"Letters, digits, “-” and “_”." = "Letters, digits, “-” and “_”.";
+"No channel yet" = "No channel yet";
+"No account yet" = "No account yet";
+"Full position %@" = "Full position %@";
+"Live · real money" = "Live · real money";
+"Paper · pretend money" = "Paper · pretend money";
+"Keys in Keychain" = "Keys in Keychain";
+"Keys needed" = "Keys needed";
+"%@ per order" = "%@ per order";
+"%@ per stock" = "%@ per stock";
+"%@ per order · %@ per stock" = "%@ per order · %@ per stock";

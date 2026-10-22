@@ -2363,3 +2363,16 @@
 "Their calls stop being copied once you start copying with this change. Shares they bought stay in the account." = "用这次修改开始跟单后，就不再跟它的单。已经买入的股票会留在账户里。";
 "How this guru writes buys, sells, and tickers, one rule per line. Learn drafts it from recent posts; edit anything. Name a company's ticker on its own line, such as “%@ means %@”." = "信号源怎么写买入、卖出和股票代码，一行一条规则。“学习”会根据最近的帖子起草，内容都可以改。公司名要单独一行写明代码，例如“%@ 就是 %@”。";
 "Set" = "已设置";
+"Remove Account…" = "移除账户…";
+"Its guru stops being copied once you start copying with this change. Shares in it stay with Alpaca." = "用这次修改开始跟单后，就不再跟它的信号源。账户里的股票会留在 Alpaca。";
+"Letters, digits, “-” and “_”." = "字母、数字、“-”和“_”。";
+"No channel yet" = "还没有频道";
+"No account yet" = "还没有账户";
+"Full position %@" = "满仓 %@";
+"Live · real money" = "实盘 · 真钱";
+"Paper · pretend money" = "模拟盘 · 虚拟资金";
+"Keys in Keychain" = "密钥在钥匙串中";
+"Keys needed" = "需要密钥";
+"%@ per order" = "每单 %@";
+"%@ per stock" = "每只股票 %@";
+"%@ per order · %@ per stock" = "每单 %@ · 每只股票 %@";

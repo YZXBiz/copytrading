@@ -21,7 +21,9 @@ struct RouteEditorSheet: View {
         SheetScaffold(
             kind: L10n.string("Guru"),
             title: route.displayName.trimmed.isEmpty ? L10n.string("New") : route.displayName.trimmed,
-            lede: L10n.string("Whose calls to copy, where they post, and which account copies them.")
+            lede: L10n.string("Whose calls to copy, where they post, and which account copies them."),
+            monogram: route.displayName.trimmed.isEmpty ? nil : route.displayName.trimmed,
+            facts: facts
         ) {
             // The name sits right under the title it fills in; the header already says "Guru".
             SheetField(title: L10n.string("Name")) {
@@ -113,6 +115,33 @@ struct RouteEditorSheet: View {
                 .keyboardShortcut(.defaultAction)
         }
         .frame(minWidth: 620, idealWidth: 660, minHeight: 680, idealHeight: 780)
+    }
+
+    /// The guru at a glance: where they post, where their calls go, and what a full position is.
+    private var facts: [SheetFact] {
+        var facts: [SheetFact] = []
+        let channel = channelSelection.wrappedValue
+        facts.append(
+            channel.isEmpty
+                ? SheetFact(symbol: "exclamationmark", text: L10n.string("No channel yet"), tint: Palette.butter)
+                : SheetFact(brand: "discord", text: Self.shortID(channel)))
+        if let accountID = route.connection?.accountID.trimmed, !accountID.isEmpty {
+            facts.append(SheetFact(brand: "alpaca", text: accountID, tint: Palette.sky))
+            if let full = policies[accountID]?.maxSymbolUSD.trimmed, let amount = Decimal(string: full), amount > 0 {
+                facts.append(
+                    SheetFact(
+                        symbol: "dollarsign",
+                        text: L10n.string("Full position %@", amount.formatted(.currency(code: "USD").precision(.fractionLength(0...2))))))
+            }
+        } else {
+            facts.append(SheetFact(symbol: "exclamationmark", text: L10n.string("No account yet"), tint: Palette.butter))
+        }
+        return facts
+    }
+
+    /// A Discord ID shortened to its ends: "1517…9742".
+    private static func shortID(_ id: String) -> String {
+        id.count > 10 ? "\(id.prefix(4))…\(id.suffix(4))" : id
     }
 
     private var channelSelection: Binding<String> {

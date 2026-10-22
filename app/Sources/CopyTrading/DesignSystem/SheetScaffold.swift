@@ -7,6 +7,10 @@ struct SheetScaffold<Content: View, Leading: View, Actions: View>: View {
     var kind: String?
     let title: String
     var lede: String?
+    /// Who or what the sheet is about, as a tinted monogram beside the title.
+    var monogram: String?
+    /// The sheet's subject at a glance under the title, read in place of a lede.
+    var facts: [SheetFact] = []
     /// Long sheets scroll; short ones size to their content.
     var scrolls = true
     @ViewBuilder let content: Content
@@ -54,16 +58,24 @@ struct SheetScaffold<Content: View, Leading: View, Actions: View>: View {
                 if let kind {
                     Eyebrow(kind)
                 }
-                Text(title)
-                    .font(DesignTokens.sheetTitle)
-                    .tracking(DesignTokens.sheetTitleTracking)
-                    .foregroundStyle(Palette.ink)
-                    .fixedSize(horizontal: false, vertical: true)
+                HStack(alignment: .center, spacing: 14) {
+                    if let monogram {
+                        GuruMonogram(name: monogram, size: 46, filled: true)
+                    }
+                    Text(title)
+                        .font(DesignTokens.sheetTitle)
+                        .tracking(DesignTokens.sheetTitleTracking)
+                        .foregroundStyle(Palette.ink)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(kind.map { L10n.string("%@, %@", $0, title) } ?? title)
             .accessibilityAddTraits(.isHeader)
-            if let lede {
+            if !facts.isEmpty {
+                FlowFacts(facts: facts)
+                    .padding(.top, 4)
+            } else if let lede {
                 Text(lede)
                     .font(DesignTokens.lede)
                     .tracking(DesignTokens.ledeTracking)
@@ -82,5 +94,17 @@ extension SheetScaffold where Leading == EmptyView {
         self.init(
             kind: kind, title: title, lede: lede, scrolls: scrolls, content: content, leading: { EmptyView() },
             actions: actions)
+    }
+}
+
+/// The fact chips under a sheet's title, wrapping onto a second line when the sheet is narrow.
+private struct FlowFacts: View {
+    let facts: [SheetFact]
+
+    var body: some View {
+        FlowRow {
+            ForEach(facts) { SheetFactChip(fact: $0) }
+        }
+        .accessibilityElement(children: .combine)
     }
 }

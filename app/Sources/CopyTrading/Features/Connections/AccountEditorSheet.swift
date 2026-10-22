@@ -26,15 +26,43 @@ struct AccountEditorSheet: View {
     /// Alpaca refused the keys on this sheet's last Done and they haven't changed since.
     @State private var keysRefused = false
     @FocusState private var focusedField: AccountEditorFocus?
+    @State private var confirmsRemove = false
 
     private var hasSavedCredentials: Bool { savedAccountIDs.contains(account.name.trimmed) }
+
+    /// The account at a glance: paper or live, whether its keys are in, and its two main limits.
+    private var facts: [SheetFact] {
+        let money = { (text: String) -> String? in
+            Decimal(string: text.trimmed).map { $0.formatted(.currency(code: "USD").precision(.fractionLength(0...2))) }
+        }
+        var facts = [
+            account.environment == .live
+                ? SheetFact(symbol: "bolt.fill", text: L10n.string("Live · real money"), tint: Palette.blush)
+                : SheetFact(brand: "alpaca", text: L10n.string("Paper · pretend money"), tint: Palette.sky),
+            hasSavedCredentials || (!account.key.isEmpty && !account.secret.isEmpty)
+                ? SheetFact(symbol: "key.fill", text: L10n.string("Keys in Keychain"), tint: Palette.sage)
+                : SheetFact(symbol: "key", text: L10n.string("Keys needed"), tint: Palette.butter),
+        ]
+        switch (money(account.policy.maxOrderUSD), money(account.policy.maxSymbolUSD)) {
+        case let (order?, stock?):
+            facts.append(SheetFact(symbol: "cart", text: L10n.string("%@ per order · %@ per stock", order, stock)))
+        case let (order?, nil):
+            facts.append(SheetFact(symbol: "cart", text: L10n.string("%@ per order", order)))
+        case let (nil, stock?):
+            facts.append(SheetFact(symbol: "cart", text: L10n.string("%@ per stock", stock)))
+        case (nil, nil):
+            break
+        }
+        return facts
+    }
 
     var body: some View {
         ScrollViewReader { proxy in
             SheetScaffold(
                 kind: L10n.string("Alpaca account"),
                 title: account.name.trimmed.isEmpty ? L10n.string("New") : account.name.trimmed,
-                lede: L10n.string(account.environment == .live ? "Live · real orders, real money" : "Paper · pretend money, real prices")
+                lede: L10n.string(account.environment == .live ? "Live · real orders, real money" : "Paper · pretend money, real prices"),
+                facts: facts
             ) {
                 accountSection
                 keysSection
@@ -42,9 +70,19 @@ struct AccountEditorSheet: View {
                 timingSection
                 behaviorSection
             } leading: {
-                Button(L10n.string("Remove Account"), role: .destructive, action: removeAccount)
+                Button(L10n.string("Remove Account…"), role: .destructive) { confirmsRemove = true }
                     .buttonStyle(SheetQuietButtonStyle(isDestructive: true))
-                    .help(L10n.string("Removing takes effect when the setup is checked and copying starts."))
+                    .confirmationDialog(
+                        L10n.string("Remove %@?", account.name.trimmed.isEmpty ? L10n.string("this account") : account.name.trimmed),
+                        isPresented: $confirmsRemove
+                    ) {
+                        Button(L10n.string("Remove Account"), role: .destructive, action: removeAccount)
+                        Button(L10n.string("Keep"), role: .cancel) {}
+                    } message: {
+                        Text(
+                            L10n.string(
+                                "Its guru stops being copied once you start copying with this change. Shares in it stay with Alpaca."))
+                    }
             } actions: {
                 if isChecking {
                     ProgressView()
@@ -73,7 +111,7 @@ struct AccountEditorSheet: View {
     }
 
     private var accountSection: some View {
-        SheetSection(L10n.string("Account"), detail: L10n.string("Letters, digits, “-” and “_”. Paper trades pretend money.")) {
+        SheetSection(L10n.string("Account"), detail: L10n.string("Letters, digits, “-” and “_”.")) {
             SheetField(title: L10n.string("Name")) {
                 TextField(
                     L10n.string("Name"), text: $account.name,
@@ -95,6 +133,8 @@ struct AccountEditorSheet: View {
                 Callout(L10n.string("Live accounts place real orders with real money."), tone: .caution)
             }
         }
+        .icon(brand: "alpaca")
+        .mark(account.name.trimmed.isEmpty || account.nameProblem != nil ? .needsYou : .done)
     }
 
     private var keysSection: some View {
@@ -121,6 +161,8 @@ struct AccountEditorSheet: View {
         } accessory: {
             HelpPopoverButton(articles: [SetupHelp.alpacaKeys(for: account.environment)])
         }
+        .icon(symbol: "key")
+        .mark(hasSavedCredentials || (!account.key.isEmpty && !account.secret.isEmpty) ? .done : .needsYou)
     }
 
     private var limitsSection: some View {
@@ -164,6 +206,7 @@ struct AccountEditorSheet: View {
         } footer: {
             limitsSavedNote
         }
+        .icon(symbol: "dollarsign.circle")
     }
 
     private var timingSection: some View {
@@ -183,6 +226,7 @@ struct AccountEditorSheet: View {
                 value: $account.policy.orderTimeoutSeconds,
                 example: LimitExamples.orderTimeout(maxAboveSignalPct: account.policy.maxAboveSignalPct))
         }
+        .icon(symbol: "clock")
     }
 
     private var behaviorSection: some View {
@@ -220,6 +264,7 @@ struct AccountEditorSheet: View {
                     "CopyTrading only sells shares it bought from a guru's call. Stocks you bought yourself are never sold, even when the guru sells the same stock."
                 ))
         }
+        .icon(symbol: "switch.2")
     }
 
     /// Limits saved without a check say so where they were typed.
@@ -314,7 +359,7 @@ struct AccountEditorSheet: View {
 }
 
 extension View {
-    /// A limit's value: a short underlined field, its number at the trailing edge.
+    /// A limit's value: a short field in a soft well, its number at the trailing edge.
     /// A hidden-label field still needs its name for VoiceOver, which `labelsHidden` drops, and the
     /// row's name is kept from VoiceOver, so the field carries it.
     fileprivate func limitField(_ label: String) -> some View {
@@ -322,7 +367,26 @@ extension View {
             .accessibilityLabel(label)
             .multilineTextAlignment(.trailing)
             .monospacedDigit()
-            .underlineField()
-            .frame(width: 110)
+            .textFieldStyle(.plain)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Palette.well, in: .rect(cornerRadius: 8))
+            .frame(width: 120)
     }
 }
+
+#if DEBUG
+    #Preview("Account: zhap-account-2") {
+        @Previewable @State var account: TradingAccountDraft = {
+            var policy = TradingAccountPolicy()
+            policy.maxOrderUSD = "250"
+            policy.maxSymbolUSD = "1000"
+            policy.maxTotalUSD = "3000"
+            policy.dailyLossCapUSD = "250"
+            policy.maxSignalAgeSeconds = 600
+            return TradingAccountDraft(name: "zhap-account-2", environment: .paper, policy: policy, savedName: "zhap-account-2")
+        }()
+        AccountEditorSheet(account: $account, savedAccountIDs: ["zhap-account-2"], remove: {})
+            .frame(width: 600, height: 900)
+    }
+#endif
