@@ -11,15 +11,16 @@ struct RecapSheet: View {
 
     var body: some View {
         SheetScaffold(
-            kind: L10n.string("While you were away"),
-            title: L10n.string("Here's what happened"),
+            title: L10n.string("While you were away"),
             lede: L10n.string("Since %@", recap.since.formatted(AppTime.style(.dateTime.weekday(.abbreviated).hour().minute())))
         ) {
             if !recap.moves.isEmpty {
                 SheetSection(L10n.string("Accounts")) {
-                    ForEach(recap.moves, id: \.accountID) { move in
-                        SheetRow(title: move.accountID, isReading: true) {
-                            change(move.change)
+                    SheetGroup {
+                        ForEach(recap.moves, id: \.accountID) { move in
+                            SheetRow(title: move.accountID, isReading: true) {
+                                change(move.change)
+                            }
                         }
                     }
                 }
@@ -31,8 +32,10 @@ struct RecapSheet: View {
                         .foregroundStyle(Palette.tertiaryInk)
                         .padding(.vertical, 8)
                 } else {
-                    ForEach(recap.fills, id: \.clientID) { fill in
-                        fillRow(fill)
+                    SheetGroup {
+                        ForEach(recap.fills, id: \.clientID) { fill in
+                            fillRow(fill)
+                        }
                     }
                 }
             }
@@ -80,7 +83,8 @@ struct RecapSheet: View {
                     .foregroundStyle(Palette.tertiaryInk)
             }
         }
-        .padding(.vertical, 6)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
         .accessibilityElement(children: .combine)
     }
 
@@ -96,3 +100,23 @@ struct RecapSheet: View {
             : L10n.string("Bought %@ of %@ at %@", shares, fill.symbol, at)
     }
 }
+
+#if DEBUG
+    #Preview("Recap") {
+        RecapSheet(
+            recap: Recap(
+                since: .now.addingTimeInterval(-50_000),
+                fills: [
+                    FillWatch.Fill(
+                        clientID: "1", side: "buy", symbol: "SOXL", shares: 2.779841, price: 89.37, accountID: "zhap-account-2",
+                        guruID: nil),
+                    FillWatch.Fill(
+                        clientID: "2", side: "sell", symbol: "F", shares: 10, price: 12.40, accountID: "zhap-account-2", guruID: nil),
+                ],
+                moves: [Recap.Move(accountID: "zhap-account-2", change: 42.18)],
+                waiting: 1),
+            directory: GuruDirectory(nil)
+        )
+        .frame(width: 560, height: 640)
+    }
+#endif

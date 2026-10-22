@@ -28,20 +28,25 @@ struct TimeZonePicker: View {
 
     var body: some View {
         SheetScaffold(
-            kind: L10n.string("Settings"),
             title: L10n.string("Time Zone"),
             lede: L10n.string("Search every zone by city or name.")
         ) {
-            VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 12) {
                 TextField(
                     L10n.string("Search"), text: $query, prompt: Text(L10n.string("City or time zone")).foregroundStyle(Palette.tertiaryInk)
                 )
-                .labelsHidden()
                 .accessibilityLabel(L10n.string("Search time zones"))
-                .underlineField()
-                .padding(.bottom, 12)
+                .sheetInput(width: nil)
+                // Hundreds of zones, so the rows are lazy and draw their own hairlines, as a
+                // `SheetGroup` would.
                 LazyVStack(alignment: .leading, spacing: 0) {
                     ForEach(zones) { zone in
+                        if zone.id != zones.first?.id {
+                            Rectangle()
+                                .fill(Palette.hairline)
+                                .frame(height: 1)
+                                .padding(.leading, DesignTokens.sheetRowInset)
+                        }
                         Button {
                             choose(zone.id)
                         } label: {
@@ -53,6 +58,7 @@ struct TimeZonePicker: View {
                                     .font(DesignTokens.caption)
                                     .foregroundStyle(Palette.tertiaryInk)
                             }
+                            .padding(.horizontal, DesignTokens.sheetRowInset)
                             .padding(.vertical, 10)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .contentShape(.rect)
@@ -60,6 +66,11 @@ struct TimeZonePicker: View {
                         .buttonStyle(QuietPressButtonStyle())
                         .accessibilityIdentifier("timeZone.\(zone.id)")
                     }
+                }
+                .background(Palette.page, in: .rect(cornerRadius: DesignTokens.sheetGroupRadius))
+                .overlay {
+                    RoundedRectangle(cornerRadius: DesignTokens.sheetGroupRadius)
+                        .strokeBorder(Palette.hairline)
                 }
             }
         } actions: {
@@ -70,3 +81,10 @@ struct TimeZonePicker: View {
         .frame(minWidth: 460, idealWidth: 500, minHeight: 520, idealHeight: 600)
     }
 }
+
+#if DEBUG
+    #Preview("Time Zone") {
+        TimeZonePicker(choose: { _ in })
+            .frame(width: 500, height: 600)
+    }
+#endif

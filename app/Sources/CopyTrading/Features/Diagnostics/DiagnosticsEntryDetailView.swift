@@ -53,7 +53,9 @@ struct DiagnosticsEntryDetailView: View {
 
                 if let payload = entry.payloadJSON {
                     VStack(alignment: .leading, spacing: 8) {
-                        Eyebrow(L10n.string("Payload"))
+                        Text(L10n.string("Payload"))
+                            .font(DesignTokens.rowTitle)
+                            .foregroundStyle(Palette.ink)
                         Text(payload)
                             .font(.system(.callout, design: .monospaced))
                             .foregroundStyle(Palette.ink)

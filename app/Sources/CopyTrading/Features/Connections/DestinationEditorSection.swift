@@ -13,68 +13,66 @@ struct DestinationEditorSection: View {
 
     var body: some View {
         SheetSection(L10n.string("Copies into")) {
-            if accountIDs.isEmpty && connection == nil {
-                Text(L10n.string("Every account already copies a guru. Add a broker account in Connections first."))
-                    .foregroundStyle(Palette.tertiaryInk)
-                    .padding(.vertical, 12)
-            } else {
-                SheetRow(title: L10n.string("Account"), labelsControl: true) {
-                    SheetMenu(
-                        label: L10n.string("Account"),
-                        choices: (connection == nil ? [("", L10n.string("Choose an account"))] : [])
-                            + accountChoices.map { ($0, $0) },
-                        selection: account)
-                }
-            }
-            if let draft = connection {
-                if let sizing = SizingSummary.of(draft, policy: policy) {
-                    sizingFigures(sizing)
+            SheetGroup {
+                if accountIDs.isEmpty && connection == nil {
+                    SheetRow(
+                        title: L10n.string("Account"),
+                        hint: L10n.string("Every account already copies a guru. Add a broker account in Connections first.")
+                    ) { EmptyView() }
                 } else {
-                    Text(L10n.string("First set this account's max per stock. It's the guru's full position."))
-                        .font(DesignTokens.caption)
-                        .foregroundStyle(Palette.tertiaryInk)
-                        .padding(.top, 12)
+                    SheetRow(
+                        title: L10n.string("Account"), hint: L10n.string("Each account copies one guru."), labelsControl: true
+                    ) {
+                        SheetMenu(
+                            label: L10n.string("Account"),
+                            choices: (connection == nil ? [("", L10n.string("Choose an account"))] : [])
+                                + accountChoices.map { ($0, $0) },
+                            selection: account)
+                    }
+                }
+                if let sizing {
+                    ForEach(sizing.figures) { figure in
+                        sizingRow(figure, isFull: figure.id == sizing.figures.first?.id)
+                    }
                 }
             }
+            .accessibilityIdentifier("guru.sizingSummary")
         } footer: {
-            Text(L10n.string("Each account follows one guru. Its max per stock is that guru's full position."))
+            if let sizing {
+                if let note = sizing.note {
+                    Text(note)
+                }
+            } else if connection != nil {
+                Text(L10n.string("First set this account's max per stock. It's the guru's full position."))
+            }
         }
     }
 
-    /// What each kind of call buys, as figures in a row: a tracked label over a clear amount. A
-    /// figure the per-order limit cut down carries a small marker and says what it was cut from,
-    /// and the note names the limit.
-    private func sizingFigures(_ sizing: SizingSummary) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 28) {
-                ForEach(sizing.figures) { figure in
-                    VStack(alignment: .leading, spacing: 6) {
-                        Eyebrow(figure.label)
-                        Text(figure.amount)
-                            .font(DisplayFont.font(size: 22, weight: .medium, relativeTo: .title3))
-                            .monospacedDigit()
-                            .foregroundStyle(Palette.ink)
-                            .markerHighlight(figure.isTrimmed)
-                        if let asked = figure.cutFrom {
-                            Text(L10n.string("cut from %@", asked))
-                                .font(DesignTokens.caption)
-                                .monospacedDigit()
-                                .foregroundStyle(Palette.tertiaryInk)
-                        }
-                    }
-                    .fixedSize()
+    private var sizing: SizingSummary? {
+        connection.flatMap { SizingSummary.of($0, policy: policy) }
+    }
+
+    /// What one kind of call buys, as a reading: the amount at the trailing edge, with what it
+    /// asked for beside it when the per-order limit cut it down.
+    private func sizingRow(_ figure: SizingSummary.Figure, isFull: Bool) -> some View {
+        SheetRow(
+            title: figure.label,
+            hint: isFull ? L10n.string("This account's max per stock.") : nil,
+            isReading: true
+        ) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                if let asked = figure.cutFrom {
+                    Text(L10n.string("cut from %@", asked))
+                        .font(DesignTokens.caption)
+                        .foregroundStyle(Palette.tertiaryInk)
                 }
-                Spacer(minLength: 0)
+                Text(figure.amount)
+                    .font(DesignTokens.rowTitle)
+                    .foregroundStyle(Palette.ink)
+                    .markerHighlight(figure.isTrimmed)
             }
-            if let note = sizing.note {
-                Text(note)
-                    .font(DesignTokens.caption)
-                    .foregroundStyle(Palette.tertiaryInk)
-            }
+            .monospacedDigit()
         }
-        .padding(.top, 14)
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("guru.sizingSummary")
     }
 
     private var accountChoices: [String] {

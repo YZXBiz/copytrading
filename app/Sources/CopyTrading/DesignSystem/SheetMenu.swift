@@ -1,11 +1,12 @@
 import SwiftUI
 
-/// A choice from a longer list in a sheet: the chosen words and a small chevron on the same
-/// underline as a field, opening the system menu. No popup-button box.
+/// A choice from a longer list in a sheet: the chosen words and a small up-down chevron in the same
+/// soft well and width as a field, so it reads as something to click, opening the system menu.
 struct SheetMenu<Value: Hashable>: View {
     let label: String
     let choices: [(value: Value, title: String)]
     @Binding var selection: Value
+    var width = DesignTokens.sheetFieldWidth
 
     var body: some View {
         Menu {
@@ -26,12 +27,15 @@ struct SheetMenu<Value: Hashable>: View {
                     .font(DesignTokens.bodyText)
                     .foregroundStyle(Palette.ink)
                     .lineLimit(1)
-                Image(systemName: "chevron.down")
+                    .truncationMode(.middle)
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.up.chevron.down")
                     .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(Palette.tertiaryInk)
+                    .foregroundStyle(Palette.secondaryInk)
             }
-            // The chevron says it opens; no line under it.
-            .padding(.vertical, 7)
+            .padding(.horizontal, 8)
+            .frame(width: width, height: 28)
+            .background(Palette.well, in: .rect(cornerRadius: DesignTokens.sheetControlRadius))
             .contentShape(.rect)
             // One menu button for VoiceOver, named by the label and value below, not one per word.
             .accessibilityElement(children: .ignore)

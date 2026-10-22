@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// One part of a sheet: its title in the display face, as the Settings pages head their groups,
-/// with an optional quiet line under it and an accessory at the trailing edge, then its rows, then
-/// a footnote. Space and the title's weight set sections apart; no rule or mark runs between them.
+/// with an optional quiet line under it and an accessory at the trailing edge, then its rows
+/// (in a `SheetGroup` on the editors), then a footnote.
 struct SheetSection<Content: View, Accessory: View, Footer: View>: View {
     let title: String
     let detail: String?
@@ -24,7 +24,7 @@ struct SheetSection<Content: View, Accessory: View, Footer: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(DesignTokens.cardTitle)
                         .tracking(DesignTokens.listHeadingTracking)
@@ -38,13 +38,12 @@ struct SheetSection<Content: View, Accessory: View, Footer: View>: View {
                     }
                 }
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel(detail.map { L10n.string("%@, %@", title, $0) } ?? title)
+                .accessibilityLabel([title, detail].compactMap(\.self).joined(separator: ", "))
                 .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 12)
                 accessory
             }
-            .padding(.top, 14)
-            .padding(.bottom, 6)
+            .padding(.bottom, 10)
             VStack(alignment: .leading, spacing: 0) {
                 content
             }
@@ -61,7 +60,7 @@ struct SheetSection<Content: View, Accessory: View, Footer: View>: View {
                 .font(DesignTokens.caption)
                 .foregroundStyle(Palette.tertiaryInk)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 10)
+                .padding(.top, 8)
         }
     }
 }

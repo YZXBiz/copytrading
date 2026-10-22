@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// One answer in a form row, as a plain word: the chosen one in ink, semibold, over a thin ink
-/// underline; the rest tertiary. `detail` is a quiet word beside it, such as the dollars a size
-/// buys. Butter is kept for the one choice the sheet turns on, so nothing here carries it.
+/// One answer among a few that don't fit a segmented control, such as the sizes a buy can take or
+/// the prices it can pay: a bordered option the height of every sheet control, the chosen one
+/// outlined in ink with its words in ink, the rest hairline-bordered and grey. `detail` sits beside
+/// the title in the same option, such as the dollars a size buys.
 struct FormChoice: View {
     let title: String
     var detail: String?
@@ -10,17 +11,14 @@ struct FormChoice: View {
     let isOn: Bool
     let action: () -> Void
     @State private var isHovered = false
+    @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
         Button(action: action) {
             HStack(alignment: .firstTextBaseline, spacing: 5) {
                 Text(title)
                     .font(DesignTokens.bodyText.weight(isOn ? .semibold : .regular))
-                    .foregroundStyle(isOn || isHovered ? Palette.ink : Palette.tertiaryInk)
-                    .padding(.bottom, 3)
-                    .overlay(alignment: .bottom) {
-                        Rectangle().fill(Palette.ink).frame(height: 1.5).opacity(isOn ? 1 : 0)
-                    }
+                    .foregroundStyle(isOn || isHovered ? Palette.ink : Palette.secondaryInk)
                 if let detail {
                     Text(detail)
                         .font(DesignTokens.caption)
@@ -30,6 +28,14 @@ struct FormChoice: View {
             .monospacedDigit()
             .lineLimit(1)
             .fixedSize()
+            .padding(.horizontal, 10)
+            .frame(height: 28)
+            .background(isOn ? Palette.well : Palette.page, in: .rect(cornerRadius: DesignTokens.sheetControlRadius))
+            .overlay {
+                RoundedRectangle(cornerRadius: DesignTokens.sheetControlRadius)
+                    .strokeBorder(isOn ? Palette.ink : Palette.hairline, lineWidth: isOn ? 1.5 : 1)
+            }
+            .opacity(isEnabled ? 1 : 0.4)
             .contentShape(.rect)
         }
         .buttonStyle(QuietPressButtonStyle())

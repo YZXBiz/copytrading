@@ -99,10 +99,9 @@ struct DiagnosticsView: View {
                 identifier: "diagnostics.filter"
             )
             .fixedSize()
-            TextField(L10n.string("Search"), text: $query)
-                .underlineField()
+            TextField(L10n.string("Search"), text: $query, prompt: Text(L10n.string("Search")).foregroundStyle(Palette.tertiaryInk))
                 .accessibilityLabel(L10n.string("Search"))
-                .frame(width: 180)
+                .sheetInput(width: 180)
                 .accessibilityIdentifier("diagnostics.search")
             Button(L10n.string("Refresh"), systemImage: "arrow.clockwise") {
                 Task { await model.reloadDiagnostics() }

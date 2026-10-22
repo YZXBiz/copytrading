@@ -29,7 +29,9 @@ struct LimitMeter: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Eyebrow(L10n.string(title))
+            Text(L10n.string(title))
+                .font(DesignTokens.caption)
+                .foregroundStyle(Palette.tertiaryInk)
             // What is used, large, then what it is out of, quiet: "$14 of $250".
             HStack(alignment: .firstTextBaseline, spacing: 5) {
                 Text(used?.formatted(.currency(code: "USD").precision(.fractionLength(0))) ?? "—")

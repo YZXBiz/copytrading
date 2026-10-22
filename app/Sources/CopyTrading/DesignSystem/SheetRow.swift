@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// One setting in a sheet: its name and a plain line on what it does at the leading edge, its
-/// control at the trailing edge. Rows are parted by whitespace, never by lines.
+/// One setting in a sheet's group: its name and a short line on what it does at the leading edge,
+/// its control at the trailing edge.
 struct SheetRow<Trailing: View>: View {
     let title: String
     var hint: String?
@@ -25,7 +25,7 @@ struct SheetRow<Trailing: View>: View {
 
     private var row: some View {
         HStack(alignment: .center, spacing: 20) {
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
                     Text(title)
                         .font(DesignTokens.rowTitle)
@@ -45,6 +45,7 @@ struct SheetRow<Trailing: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             trailing
         }
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
+        .frame(minHeight: 48)
     }
 }

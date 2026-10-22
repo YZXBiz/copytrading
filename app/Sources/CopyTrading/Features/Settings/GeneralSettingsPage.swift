@@ -32,33 +32,29 @@ struct GeneralSettingsPage: View {
             SettingsSection(title: "While Copying") {
                 SettingsToggleRow(
                     title: "Keep this Mac awake",
-                    detail:
-                        "So no post is missed. The screen can still turn off and lock. Plugged in, it stays awake with the lid closed too; on battery, closing the lid puts it to sleep.",
+                    detail: "So no post is missed. The screen can still turn off and lock.",
                     isOn: $keepsMacAwake,
                     identifier: "settings.keepsMacAwake"
                 )
                 SettingsToggleRow(
                     title: "Tell me when a trade fills",
-                    detail:
-                        "A notification with a sound when each copied buy or sell goes out and again when it fills, saying what and from whose post.",
+                    detail: "A notification when each copied order goes out and when it fills.",
                     isOn: $notifiesFills,
                     identifier: "settings.notifiesFills"
                 )
                 SettingsRow(
                     title: "Hold my orders before sending",
-                    detail: "After you press Sell or confirm a copy, the order waits this long with Undo before it leaves for Alpaca.",
+                    detail: "Time to undo after you press Sell or confirm a copy.",
                     labelsControl: true
                 ) {
-                    HStack(spacing: 18) {
+                    Picker(L10n.string("Hold my orders before sending"), selection: $holdSeconds) {
                         ForEach([0.0, 5.0, 10.0], id: \.self) { seconds in
-                            ChoiceWord(
-                                title: seconds == 0 ? L10n.string("Off") : L10n.string("%lld s", Int64(seconds)),
-                                isOn: holdSeconds == seconds
-                            ) { holdSeconds = seconds }
+                            Text(seconds == 0 ? L10n.string("Off") : L10n.string("%lld s", Int64(seconds))).tag(seconds)
                         }
                     }
-                    .accessibilityElement(children: .contain)
-                    .accessibilityLabel(L10n.string("Hold my orders before sending"))
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
                 }
             }
             SettingsSection(title: "Help") {

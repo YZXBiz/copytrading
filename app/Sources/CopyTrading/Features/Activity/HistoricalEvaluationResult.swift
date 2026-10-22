@@ -10,23 +10,16 @@ struct HistoricalEvaluationResult: View {
 
     var body: some View {
         SheetSection(L10n.string("Simulated result · no orders")) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text(L10n.string(Humanize.code(evaluation.decision)))
-                    .font(DesignTokens.rowTitle)
-                    .foregroundStyle(Palette.ink)
-                if let note = EvaluationNote.text(evaluation, post: post) {
-                    Text(note)
-                        .font(DesignTokens.caption)
-                        .foregroundStyle(Palette.tertiaryInk)
-                }
+            SheetGroup {
+                SheetRow(
+                    title: L10n.string(Humanize.code(evaluation.decision)), hint: EvaluationNote.text(evaluation, post: post)
+                ) { EmptyView() }
                 ForEach(Array(evaluation.instructions.enumerated()), id: \.offset) { _, instruction in
-                    Text(
-                        L10n.string(
+                    SheetRow(
+                        title: L10n.string(
                             "%@ %@ at %@", L10n.string(Humanize.code(instruction.action.rawValue)), instruction.symbol,
                             instruction.price.map { Humanize.usd($0) } ?? L10n.string("the market price"))
-                    )
-                    .font(DesignTokens.bodyText)
-                    .foregroundStyle(Palette.ink)
+                    ) { EmptyView() }
                 }
                 ForEach(Array(evaluation.destinations.enumerated()), id: \.offset) { _, destination in
                     SheetRow(
@@ -49,9 +42,10 @@ struct HistoricalEvaluationResult: View {
                     Text(Reason.text(reason))
                         .font(DesignTokens.caption)
                         .foregroundStyle(Palette.amber)
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            .padding(.top, 8)
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("activity.historicalEvaluation.noOrder")
         }

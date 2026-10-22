@@ -24,8 +24,7 @@ struct LogsSettingsPage: View {
         VStack(alignment: .leading, spacing: 30) {
             SettingsSection(
                 title: "Log Health",
-                subtitle:
-                    "The engine writes each stage, captured post, model request and reply, and trading outcome to a private file on this Mac. Keys are removed before anything is written."
+                subtitle: "Each stage, post, model reply, and trade outcome, in a private file on this Mac. Keys are removed first."
             ) {
                 if let engine = model.engineStatus {
                     SettingsValueRow(label: "Logging", value: engine.telemetryState.title, tone: engine.telemetryState.tone)
@@ -46,7 +45,7 @@ struct LogsSettingsPage: View {
 
             SettingsSection(
                 title: "Log Retention",
-                subtitle: "Older days go first, then the oldest part once the limit is reached. Trading data and backups are never touched."
+                subtitle: "Oldest days go first. Trading data and backups are never touched."
             ) {
                 SettingsRow(label: "Keep logs for", title: Humanize.count(ageDays, "day"), labelsControl: true) {
                     Stepper(

@@ -1,10 +1,10 @@
 import DesktopCore
 import SwiftUI
 
-/// The owner says what a post should do and sends it: the post in big type with one quiet line
-/// under it, then one calm form (Buy or Sell, then a row each for the stock, how much, the price,
-/// and the accounts), and a footer that always shows the order it makes and one button. Underneath it is the engine's manual correction: saved, previewed fresh in
-/// each account, then confirmed (ADR-0007).
+/// The owner says what a post should do and sends it: the post in its own group, then each trade's
+/// rows (Buy or Sell, the stock, how much, the price) and the accounts, and a bar that always shows
+/// the order it makes and one button. Underneath it is the engine's manual correction: saved,
+/// previewed fresh in each account, then confirmed (ADR-0007).
 struct ManualReviewSheet: View {
     let source: SourceActivity
     let accounts: [AccountOverview]
@@ -167,42 +167,61 @@ struct ManualReviewSheet: View {
     // MARK: Body
 
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 26) {
-                    header
-                    VStack(alignment: .leading, spacing: 0) {
-                        trades
-                        accountChoices
-                    }
-                    if correctionRequest != nil { results }
-                    ManualReviewHistory(source: source, feature: feature, operations: operations)
+        SheetScaffold(title: L10n.string(mode.title), lede: lede) {
+            if engineStopped || engineDisconnected {
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    Callout(L10n.string("CopyTrading's engine isn't running, so this can't be saved or placed yet."), tone: .caution)
+                    Button(L10n.string("Start Engine"), action: startEngine)
+                        .buttonStyle(SheetButtonStyle())
                 }
-                .padding(.horizontal, 40)
-                .padding(.top, 38)
-                .padding(.bottom, 28)
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .scrollEdgeEffectStyle(.soft, for: .bottom)
-            footer
-                .background(Palette.canvas)
+            postSection
+            trades
+            accountChoices
+            if correctionRequest != nil { results }
+            ManualReviewHistory(source: source, feature: feature, operations: operations)
+        } leading: {
+            if isHolding {
+                OrderHold(
+                    title: orderCount("Placing 1 order", "Placing %lld orders"),
+                    seconds: OrderHold.chosenSeconds,
+                    send: {
+                        isHolding = false
+                        Task { await feature.confirm(confirmationToSubmit, using: operations) }
+                    },
+                    undo: {
+                        isHolding = false
+                        confirmationToSubmit = []
+                    })
+            } else if correctionRequest == nil, let summary = estimate.summary {
+                // Wrapped, never cut off: the order is what the owner is about to send.
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(summary.order)
+                        .font(DesignTokens.bodyEmphasis)
+                        .foregroundStyle(Palette.ink)
+                        .monospacedDigit()
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(L10n.string("%@ · checks your limits first", summary.place))
+                        .font(DesignTokens.caption)
+                        .foregroundStyle(Palette.tertiaryInk)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("review.estimate")
+            }
+        } actions: {
+            if !isHolding {
+                // The buttons keep their whole labels; the summary beside them wraps instead.
+                Button(L10n.string("Close")) { dismiss() }
+                    .buttonStyle(SheetButtonStyle())
+                    .keyboardShortcut(.cancelAction)
+                    .accessibilityIdentifier("review.close")
+                    .fixedSize()
+                primaryButton
+                    .fixedSize()
+            }
         }
-        .overlay(alignment: .topTrailing) {
-            // The corner ✕ every panel in the app has, as well as Close in the footer.
-            Button(L10n.string("Close"), systemImage: "xmark") { dismiss() }
-                .labelStyle(.iconOnly)
-                .buttonStyle(QuietPressButtonStyle())
-                .font(.body.weight(.medium))
-                .foregroundStyle(Palette.tertiaryInk)
-                .frame(width: 28, height: 28)
-                .contentShape(.rect)
-                .help(L10n.string("Close"))
-                .accessibilityIdentifier("review.closeCorner")
-                .padding(.top, 12)
-                .padding(.trailing, 14)
-        }
-        .background(Palette.page)
-        .frame(minWidth: 560, idealWidth: 700, minHeight: 600, idealHeight: 780)
+        .frame(minWidth: 600, idealWidth: 700, minHeight: 600, idealHeight: 780)
         .confirmationDialog(
             L10n.string("Confirm manual orders?"),
             isPresented: $showsConfirmation,
@@ -224,20 +243,21 @@ struct ManualReviewSheet: View {
         .onDisappear { feature.clearPrivateEvidence() }
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            let text = source.readableText()
-            Text(text.isEmpty ? L10n.string("A post with no words") : "“\(text)”")
-                .font(DisplayFont.font(size: text.count > 90 ? 24 : 34, weight: .medium, relativeTo: .title))
-                .foregroundStyle(Palette.ink)
-                .lineSpacing(4)
-                .fixedSize(horizontal: false, vertical: true)
-                .textSelection(.enabled)
-                .accessibilityIdentifier("review.post")
-            Text(lede)
-                .font(DesignTokens.caption)
-                .foregroundStyle(Palette.tertiaryInk)
-                .fixedSize(horizontal: false, vertical: true)
+    /// The post the trade comes from, in its own group.
+    private var postSection: some View {
+        SheetSection(L10n.string("Post")) {
+            SheetGroup {
+                let text = source.readableText()
+                Text(text.isEmpty ? L10n.string("A post with no words") : text)
+                    .font(DesignTokens.bodyText)
+                    .foregroundStyle(Palette.ink)
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("review.post")
+            }
         }
     }
 
@@ -257,34 +277,38 @@ struct ManualReviewSheet: View {
         }
     }
 
+    /// Each trade in its own section, "Trade 2" with Remove when there are several.
     private var trades: some View {
-        VStack(alignment: .leading, spacing: 22) {
+        VStack(alignment: .leading, spacing: DesignTokens.sheetSectionSpacing) {
             let holdings = ManualHolding.holdings(in: accounts, accountIDs: selectedAccountIDs)
             let single = chosenAccounts.count == 1 ? chosenAccounts.first.flatMap { connections[$0.accountID] } : nil
             let cap = chosenAccounts.count == 1 ? chosenAccounts.first.flatMap { maxOrderUSD[$0.accountID] } : nil
             ForEach($instructions) { $instruction in
                 let index = instructions.firstIndex { $0.id == instruction.id } ?? 0
-                ManualInstructionEditor(
-                    draft: $instruction,
-                    holdings: holdings,
-                    quote: quotes[instruction.symbol.trimmed.uppercased()],
-                    refreshQuote: refreshingQuotes.contains(instruction.symbol.trimmed.uppercased())
-                        ? nil : { refreshQuote(instruction.symbol.trimmed.uppercased()) },
-                    fullPosition: single,
-                    maxOrderUSD: cap,
-                    position: instructions.count > 1 ? (index, instructions.count) : nil,
-                    remove: { instructions.removeAll { $0.id == instruction.id } }
-                )
+                SheetSection(
+                    instructions.count > 1 ? L10n.string("Trade %lld", Int64(index + 1)) : L10n.string("Trade")
+                ) {
+                    ManualInstructionEditor(
+                        draft: $instruction,
+                        holdings: holdings,
+                        quote: quotes[instruction.symbol.trimmed.uppercased()],
+                        refreshQuote: refreshingQuotes.contains(instruction.symbol.trimmed.uppercased())
+                            ? nil : { refreshQuote(instruction.symbol.trimmed.uppercased()) },
+                        fullPosition: single,
+                        maxOrderUSD: cap
+                    )
+                } accessory: {
+                    if instructions.count > 1 {
+                        Button(L10n.string("Remove")) { instructions.removeAll { $0.id == instruction.id } }
+                            .buttonStyle(SheetQuietButtonStyle(isDestructive: true))
+                    }
+                }
             }
             if correctionRequest == nil, instructions.count < 20 {
-                Button {
+                Button(L10n.string("Add Trade"), systemImage: "plus") {
                     instructions.append(ManualInstructionDraft())
-                } label: {
-                    Text(L10n.string("+ Another trade"))
-                        .font(DesignTokens.caption)
-                        .foregroundStyle(Palette.secondaryInk)
                 }
-                .buttonStyle(QuietPressButtonStyle())
+                .buttonStyle(SheetQuietButtonStyle())
                 .accessibilityIdentifier("review.addTrade")
             }
         }
@@ -292,126 +316,68 @@ struct ManualReviewSheet: View {
     }
 
     private var accountChoices: some View {
-        FormRow(label: L10n.string("Account")) {
-            if accounts.isEmpty {
-                Text(L10n.string("No account status is loaded"))
-                    .font(DesignTokens.bodyText)
-                    .foregroundStyle(Palette.tertiaryInk)
-            }
-            FlowRow(spacing: 22, lineSpacing: 12) {
+        SheetSection(L10n.string("Accounts")) {
+            SheetGroup {
+                if accounts.isEmpty {
+                    SheetRow(title: L10n.string("No account status is loaded"), isReading: true) { EmptyView() }
+                }
                 ForEach(accounts) { account in
-                    FormChoice(
-                        title: account.accountID,
-                        detail: account.environment == .live ? L10n.string("Live") : nil,
-                        detailTint: account.environment == .live ? Palette.live : nil,
-                        isOn: selectedAccountIDs.contains(account.accountID)
+                    SheetRow(
+                        title: account.accountID, hint: account.environment == .live ? L10n.string("Live") : nil,
+                        labelsControl: true
                     ) {
-                        if selectedAccountIDs.contains(account.accountID) {
-                            selectedAccountIDs.remove(account.accountID)
-                        } else {
-                            selectedAccountIDs.insert(account.accountID)
-                        }
+                        Toggle(
+                            account.accountID,
+                            isOn: Binding(
+                                get: { selectedAccountIDs.contains(account.accountID) },
+                                set: { on in
+                                    if on {
+                                        selectedAccountIDs.insert(account.accountID)
+                                    } else {
+                                        selectedAccountIDs.remove(account.accountID)
+                                    }
+                                })
+                        )
+                        .labelsHidden()
+                        .compactSwitch()
+                        .accessibilityLabel(Text(account.accountID))
+                        .accessibilityIdentifier("review.account.\(account.accountID)")
                     }
-                    .accessibilityLabel(Text(account.accountID))
-                    .accessibilityIdentifier("review.account.\(account.accountID)")
                 }
             }
             .disabled(correctionRequest != nil)
         }
-        .padding(.top, 2)
     }
 
     // MARK: After saving
 
     private var results: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Eyebrow(L10n.string("Checked just now"))
-            if let correctionRequest, let error = feature.errors[correctionRequest.correctionID] {
-                Callout(ManualRefusalText.line(error), tone: .critical)
-                    .accessibilityLabel(L10n.string("Correction error: %@", ManualRefusalText.line(error)))
-            }
-            if let saved = correctionRequest.flatMap({ feature.corrections[$0.correctionID] }) {
-                ForEach(saved.accounts.filter { $0.status != "recorded" }) { result in
-                    // The account, then why it did not save and what to do, in one line.
-                    Callout(
-                        L10n.string("%@: %@", result.accountID, ManualRefusalText.reason(result.reason ?? result.status)),
-                        tone: result.status == "unavailable" ? .caution : .critical)
+        SheetSection(L10n.string("Checked just now")) {
+            VStack(alignment: .leading, spacing: 12) {
+                if let correctionRequest, let error = feature.errors[correctionRequest.correctionID] {
+                    Callout(ManualRefusalText.line(error), tone: .critical)
+                        .accessibilityLabel(L10n.string("Correction error: %@", ManualRefusalText.line(error)))
                 }
-            }
-            ForEach(sortedPreviewRequests, id: \.previewID) { request in
-                ManualPreviewResult(request: request, confirmation: confirmationRequests[request.previewID], feature: feature)
-            }
-            if isChecking {
-                ProgressView(L10n.string("Checking current account and market state…"))
-                    .controlSize(.small)
-            }
-            if let approvalProblem {
-                Callout(approvalProblem, tone: .critical)
-            }
-        }
-    }
-
-    // MARK: Footer
-
-    private var footer: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if engineStopped || engineDisconnected {
-                HStack {
-                    Callout(L10n.string("CopyTrading's engine isn't running, so this can't be saved or placed yet."), tone: .caution)
-                    Button(L10n.string("Start Engine"), action: startEngine)
-                        .buttonStyle(InkActionButtonStyle(isProminent: false))
-                }
-            }
-            if isHolding {
-                OrderHold(
-                    title: orderCount("Placing 1 order", "Placing %lld orders"),
-                    seconds: OrderHold.chosenSeconds,
-                    send: {
-                        isHolding = false
-                        Task { await feature.confirm(confirmationToSubmit, using: operations) }
-                    },
-                    undo: {
-                        isHolding = false
-                        confirmationToSubmit = []
-                    })
-            } else {
-                HStack(alignment: .center, spacing: 14) {
-                    if correctionRequest == nil, let summary = estimate.summary {
-                        HStack(alignment: .firstTextBaseline, spacing: 10) {
-                            // The order the choices make, marked by the bead, which hops when it changes.
-                            InkBead(hop: summary.order.hashValue)
-                                .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
-                            VStack(alignment: .leading, spacing: 4) {
-                                // Wrapped, never cut off: the order is what the owner is about to send.
-                                Text(summary.order)
-                                    .font(DesignTokens.bodyEmphasis)
-                                    .foregroundStyle(Palette.ink)
-                                    .monospacedDigit()
-                                    .fixedSize(horizontal: false, vertical: true)
-                                Text(L10n.string("%@ · checks your limits first", summary.place))
-                                    .font(DesignTokens.caption)
-                                    .foregroundStyle(Palette.tertiaryInk)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                        }
-                        .accessibilityElement(children: .combine)
-                        .accessibilityIdentifier("review.estimate")
+                if let saved = correctionRequest.flatMap({ feature.corrections[$0.correctionID] }) {
+                    ForEach(saved.accounts.filter { $0.status != "recorded" }) { result in
+                        // The account, then why it did not save and what to do, in one line.
+                        Callout(
+                            L10n.string("%@: %@", result.accountID, ManualRefusalText.reason(result.reason ?? result.status)),
+                            tone: result.status == "unavailable" ? .caution : .critical)
                     }
-                    Spacer(minLength: 12)
-                    // The buttons keep their whole labels; the summary beside them wraps instead.
-                    Button(L10n.string("Close")) { dismiss() }
-                        .buttonStyle(InkActionButtonStyle(isProminent: false))
-                        .keyboardShortcut(.cancelAction)
-                        .accessibilityIdentifier("review.close")
-                        .fixedSize()
-                    primaryButton
-                        .fixedSize()
+                }
+                ForEach(sortedPreviewRequests, id: \.previewID) { request in
+                    ManualPreviewResult(request: request, confirmation: confirmationRequests[request.previewID], feature: feature)
+                }
+                if isChecking {
+                    ProgressView(L10n.string("Checking current account and market state…"))
+                        .controlSize(.small)
+                }
+                if let approvalProblem {
+                    Callout(approvalProblem, tone: .critical)
                 }
             }
         }
-        .padding(.horizontal, 40)
-        .padding(.vertical, 18)
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder private var primaryButton: some View {
@@ -439,7 +405,7 @@ struct ManualReviewSheet: View {
                 Button(L10n.string("Change It")) { startNewRevision() }
             }
         }
-        .buttonStyle(InkActionButtonStyle())
+        .buttonStyle(SheetButtonStyle(isPrimary: true))
         .keyboardShortcut(.defaultAction)
         .accessibilityIdentifier("review.primary")
     }
@@ -581,3 +547,22 @@ struct ManualReviewSheet: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Enter Trade") {
+        let source = try! JSONDecoder().decode(
+            SourceActivity.self,
+            from: Data(
+                """
+                {"sequence":1,"source_id":"discord:1:2","source_revision":1,"source_at":"2026-10-21T14:30:00Z",\
+                "captured_at":"2026-10-21T14:30:00Z","text":"12.13加了6分之一常规仓f","capture_status":"delivered",\
+                "parse_status":"complete","delivery_status":"delivered","decision":"no_trade","parser_reason":"x",\
+                "parser_profile":"stock-reading-v3","interpreted_by":"deepseek-flash","instructions":[],"suggested":[],\
+                "destinations":[],\
+                "source_event":{"event_type":"discord_message","content":"12.13加了6分之一常规仓f","embeds":[],"attachments":[],"attachments_omitted":0,"capture_status":"complete","payload_bytes":30}}
+                """.utf8))
+        return ManualReviewSheet(
+            source: source, accounts: [], operations: nil, feature: ManualReviewFeatureModel(), guruName: "Zhao",
+            confirmOrders: { _ in })
+    }
+#endif

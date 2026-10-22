@@ -16,44 +16,46 @@ struct ValidationResultsSection: View {
 
     var body: some View {
         SheetSection(L10n.string("Connection checks")) {
-            ForEach(report.checks) { check in
-                HStack(alignment: .firstTextBaseline) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(CapabilityCheckTitle.text(for: check))
-                            .font(DesignTokens.rowTitle)
-                            .foregroundStyle(Palette.ink)
-                        if let detail = detail(for: check) {
-                            Text(detail)
-                                .font(DesignTokens.caption)
-                                .foregroundStyle(check.state == .failed ? StatusTone.critical.color : Palette.tertiaryInk)
-                        }
-                        if let account = removedAccount(check) {
-                            HStack(spacing: 16) {
-                                if accountPages.contains(account), check.reasonCode != "removed_account_unreadable" {
-                                    Button(L10n.string("Open %@", account)) { openAccount(account) }
-                                        .accessibilityIdentifier("setupCheck.openAccount.\(account)")
+            SheetGroup {
+                ForEach(report.checks) { check in
+                    HStack(alignment: .firstTextBaseline) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(CapabilityCheckTitle.text(for: check))
+                                .font(DesignTokens.rowTitle)
+                                .foregroundStyle(Palette.ink)
+                            if let detail = detail(for: check) {
+                                Text(detail)
+                                    .font(DesignTokens.caption)
+                                    .foregroundStyle(check.state == .failed ? StatusTone.critical.color : Palette.tertiaryInk)
+                            }
+                            if let account = removedAccount(check) {
+                                HStack(spacing: 16) {
+                                    if accountPages.contains(account), check.reasonCode != "removed_account_unreadable" {
+                                        Button(L10n.string("Open %@", account)) { openAccount(account) }
+                                            .accessibilityIdentifier("setupCheck.openAccount.\(account)")
+                                    }
+                                    Button(L10n.string("Keep %@", account)) { keepAccount(account) }
+                                        .accessibilityIdentifier("setupCheck.keepAccount.\(account)")
                                 }
-                                Button(L10n.string("Keep %@", account)) { keepAccount(account) }
-                                    .accessibilityIdentifier("setupCheck.keepAccount.\(account)")
+                                .buttonStyle(SheetQuietButtonStyle())
+                                .padding(.top, 4)
                             }
-                            .buttonStyle(SheetQuietButtonStyle())
-                            .padding(.top, 4)
-                        }
-                        if let suggestion = check.suggestion {
-                            HStack(spacing: 8) {
-                                Text(L10n.string("Did you mean “%@”?", suggestion))
-                                    .font(DesignTokens.caption)
-                                Button(L10n.string("Use %@", suggestion)) { useModel(suggestion) }
-                                    .buttonStyle(SheetQuietButtonStyle())
-                                    .font(DesignTokens.caption)
+                            if let suggestion = check.suggestion {
+                                HStack(spacing: 8) {
+                                    Text(L10n.string("Did you mean “%@”?", suggestion))
+                                        .font(DesignTokens.caption)
+                                    Button(L10n.string("Use %@", suggestion)) { useModel(suggestion) }
+                                        .buttonStyle(SheetQuietButtonStyle())
+                                        .font(DesignTokens.caption)
+                                }
                             }
                         }
+                        Spacer(minLength: 12)
+                        StatusBadge(summary(for: check.state), tone: StatusTone(check.state))
                     }
-                    Spacer(minLength: 12)
-                    StatusBadge(summary(for: check.state), tone: StatusTone(check.state))
+                    .padding(.vertical, 12)
+                    .accessibilityElement(children: .combine)
                 }
-                .padding(.vertical, 12)
-                .accessibilityElement(children: .combine)
             }
         } accessory: {
             StatusBadge(

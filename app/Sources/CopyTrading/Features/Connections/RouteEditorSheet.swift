@@ -15,45 +15,47 @@ struct RouteEditorSheet: View {
     let replay: (TradingRouteDraft) async throws -> GuruReplay
     let remove: () -> Void
     @Environment(\.dismiss) private var dismiss
+    @State private var confirmsRemove = false
 
     var body: some View {
         SheetScaffold(
-            kind: L10n.string("Guru"),
-            title: route.displayName.trimmed.isEmpty ? L10n.string("New") : route.displayName.trimmed,
-            lede: L10n.string("The trader whose calls CopyTrading copies.")
+            title: route.displayName.trimmed.isEmpty ? L10n.string("New Guru") : route.displayName.trimmed,
+            lede: summary,
+            monogram: route.displayName.trimmed.isEmpty ? nil : route.displayName.trimmed
         ) {
-            // The name sits right under the title it fills in; the header already says "Guru".
-            SheetField(title: L10n.string("Name")) {
-                TextField(
-                    L10n.string("Name"), text: $route.displayName,
-                    prompt: Text(L10n.string("How you refer to this guru")).foregroundStyle(Palette.tertiaryInk)
-                )
-                .accessibilityLabel(L10n.string("Name"))
-            }
-
-            SheetSection(
-                L10n.string("Where they post"),
-                detail: L10n.string("The channel and, in a shared channel, the guru's Discord user ID.")
-            ) {
-                if channelIDs.isEmpty {
-                    Text(L10n.string("Add the channel they post in under Discord in Connections first."))
-                        .foregroundStyle(Palette.tertiaryInk)
-                        .padding(.vertical, 12)
-                } else {
-                    SheetRow(title: L10n.string("Discord channel"), labelsControl: true) {
-                        // Each channel once: a guru with no channel of its own reads as the first.
-                        SheetMenu(
-                            label: L10n.string("Discord channel"),
-                            choices: channelChoices.map { ($0, $0) },
-                            selection: channelSelection)
+            SheetSection(L10n.string("Details")) {
+                SheetGroup {
+                    SheetField(title: L10n.string("Name")) {
+                        TextField(
+                            L10n.string("Name"), text: $route.displayName,
+                            prompt: Text(L10n.string("How you refer to this guru")).foregroundStyle(Palette.tertiaryInk)
+                        )
+                        .accessibilityLabel(L10n.string("Name"))
                     }
-                }
-                SheetField(title: L10n.string("Author ID")) {
-                    TextField(
-                        L10n.string("Author ID"), text: $route.authorID,
-                        prompt: Text(L10n.string("Needed when several people post there")).foregroundStyle(Palette.tertiaryInk)
-                    )
-                    .accessibilityLabel(L10n.string("Author ID"))
+                    if channelIDs.isEmpty {
+                        SheetRow(
+                            title: L10n.string("Discord channel"),
+                            hint: L10n.string("Add the channel they post in under Discord in Connections first.")
+                        ) { EmptyView() }
+                    } else {
+                        SheetRow(title: L10n.string("Discord channel"), labelsControl: true) {
+                            // Each channel once: a guru with no channel of its own reads as the first.
+                            SheetMenu(
+                                label: L10n.string("Discord channel"),
+                                choices: channelChoices.map { ($0, $0) },
+                                selection: channelSelection)
+                        }
+                    }
+                    SheetField(
+                        title: L10n.string("Discord user ID"),
+                        hint: L10n.string("Optional. Only needed when others post in the channel.")
+                    ) {
+                        TextField(
+                            L10n.string("Discord user ID"), text: $route.authorID,
+                            prompt: Text(L10n.string("Any poster")).foregroundStyle(Palette.tertiaryInk)
+                        )
+                        .accessibilityLabel(L10n.string("Guru's Discord user ID"))
+                    }
                 }
             } accessory: {
                 HelpPopoverButton(articles: [SetupHelp.channelID, SetupHelp.userID])
@@ -91,15 +93,43 @@ struct RouteEditorSheet: View {
             GuruReplaySection(route: route, policies: policies, replay: replay)
 
         } leading: {
-            Button(L10n.string("Remove Guru"), role: .destructive, action: removeGuru)
+            Button(L10n.string("Remove Guru…"), role: .destructive) { confirmsRemove = true }
                 .buttonStyle(SheetQuietButtonStyle(isDestructive: true))
-                .help(L10n.string("Removing takes effect when the setup is checked and copying starts."))
+                .confirmationDialog(
+                    L10n.string("Remove %@?", route.displayName.trimmed.isEmpty ? L10n.string("this guru") : route.displayName.trimmed),
+                    isPresented: $confirmsRemove
+                ) {
+                    Button(L10n.string("Remove Guru"), role: .destructive, action: removeGuru)
+                    Button(L10n.string("Keep"), role: .cancel) {}
+                } message: {
+                    Text(
+                        L10n.string(
+                            "Their calls stop being copied once you start copying with this change. Shares they bought stay in the account."
+                        ))
+                }
         } actions: {
             Button(L10n.string("Done"), action: dismiss.callAsFunction)
                 .buttonStyle(SheetButtonStyle(isPrimary: true))
                 .keyboardShortcut(.defaultAction)
         }
         .frame(minWidth: 620, idealWidth: 660, minHeight: 680, idealHeight: 780)
+    }
+
+    /// Where the guru's calls come from and go, or what is still missing, in one line.
+    private var summary: String {
+        let channel = channelSelection.wrappedValue
+        let account = route.connection?.accountID.trimmed ?? ""
+        switch (channel.isEmpty, account.isEmpty) {
+        case (false, false): return L10n.string("Copies channel %@ into %@.", Self.shortID(channel), account)
+        case (true, false): return L10n.string("Needs a Discord channel.")
+        case (false, true): return L10n.string("Needs an account to copy into.")
+        case (true, true): return L10n.string("Needs a Discord channel and an account.")
+        }
+    }
+
+    /// A Discord ID shortened to its ends: "1517…9742".
+    private static func shortID(_ id: String) -> String {
+        id.count > 10 ? "\(id.prefix(4))…\(id.suffix(4))" : id
     }
 
     private var channelSelection: Binding<String> {
@@ -127,3 +157,31 @@ struct RouteEditorSheet: View {
         remove()
     }
 }
+
+#if DEBUG
+    #Preview("Guru: Zhao") {
+        @Previewable @State var route = TradingRouteDraft(
+            channelID: "1517754775674949742",
+            displayName: "Zhao-official",
+            playbook: """
+                5.90加了6分之一常规仓soun -> buy SOUN at 5.90, fraction 1/6
+                12.13加了6分之一常规仓f -> buy F at 12.13, fraction 1/6
+                93.2出一半92.3的soxl -> sell half of the SOXL bought at 92.3, at 93.2
+                """,
+            connection: TradingConnectionDraft(accountID: "zhap-account-2")
+        )
+        var policy = TradingAccountPolicy()
+        policy.maxOrderUSD = "250"
+        policy.maxSymbolUSD = "1000"
+        return RouteEditorSheet(
+            route: $route,
+            accountIDs: ["zhap-account-2"],
+            policies: ["zhap-account-2": policy],
+            channelIDs: ["1517754775674949742"],
+            learn: { _ in throw CancellationError() },
+            replay: { _ in throw CancellationError() },
+            remove: {}
+        )
+        .frame(width: 660, height: 900)
+    }
+#endif

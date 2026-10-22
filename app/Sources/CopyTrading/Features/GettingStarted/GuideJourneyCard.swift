@@ -16,7 +16,9 @@ struct GuideJourneyCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .center) {
-                Eyebrow(L10n.string("Step %lld of %lld", Int64(index + 1), Int64(count)))
+                Text(L10n.string("Step %lld of %lld", Int64(index + 1), Int64(count)))
+                    .font(DesignTokens.caption)
+                    .foregroundStyle(Palette.tertiaryInk)
                 Spacer()
                 stepper
             }

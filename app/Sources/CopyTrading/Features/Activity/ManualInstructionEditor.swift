@@ -1,9 +1,9 @@
 import DesktopCore
 import SwiftUI
 
-/// What should happen, as one calm form: Buy or Sell on top, the only butter; then a row each for
-/// the stock (for a sell, one CopyTrading holds, with what is held as a note), how much, which buys
-/// a sell takes from, and the price.
+/// What should happen, as one group of rows: Buy or Sell, then the stock (for a sell, one
+/// CopyTrading holds, with what is held as a note), how much, which buys a sell takes from, and
+/// the price.
 struct ManualInstructionEditor: View {
     @Binding var draft: ManualInstructionDraft
     /// What CopyTrading holds in the chosen accounts.
@@ -16,31 +16,23 @@ struct ManualInstructionEditor: View {
     let fullPosition: TradingRouteConnection?
     /// That account's max per order, which caps any one buy; nil when several are chosen.
     let maxOrderUSD: Decimal?
-    /// "Trade 2 of 3" with Remove, when the sheet holds more than one.
-    let position: (index: Int, count: Int)?
-    let remove: () -> Void
     @FocusState private var focusedField: String?
 
     private var symbol: String { draft.symbol.trimmed.uppercased() }
     private var holding: ManualHolding? { holdings.first { $0.symbol == symbol } }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if let position {
-                HStack {
-                    Text(L10n.string("Trade %lld of %lld", Int64(position.index + 1), Int64(position.count)))
-                        .font(DesignTokens.caption.weight(.semibold))
-                        .foregroundStyle(Palette.secondaryInk)
-                    Spacer()
-                    Button(L10n.string("Remove"), action: remove)
-                        .buttonStyle(QuietPressButtonStyle())
-                        .font(DesignTokens.caption)
-                        .foregroundStyle(Palette.secondaryInk)
+        SheetGroup {
+            FormRow(label: L10n.string("Side")) {
+                Picker(L10n.string("Side"), selection: Binding(get: { draft.isSell }, set: setSell)) {
+                    Text(L10n.string("Buy")).tag(false)
+                    Text(L10n.string("Sell")).tag(true)
                 }
-                .padding(.bottom, 10)
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .accessibilityIdentifier("review.side")
             }
-            TradeSideSwitch(isSell: draft.isSell, choose: setSell)
-                .padding(.bottom, 8)
             FormRow(label: L10n.string("Stock"), note: holdingNote) { stock }
             FormRow(label: L10n.string("How much"), note: capNote) { amount }
             if draft.isSell, !buyPrices.isEmpty {
@@ -70,7 +62,7 @@ struct ManualInstructionEditor: View {
                     .font(DesignTokens.bodyText)
                     .foregroundStyle(Palette.secondaryInk)
             } else {
-                FlowRow(spacing: 22, lineSpacing: 12) {
+                FlowRow(spacing: 8, lineSpacing: 8) {
                     ForEach(holdings) { held in
                         FormChoice(title: held.symbol, isOn: held.symbol == symbol) {
                             pick(held.symbol)
@@ -87,14 +79,9 @@ struct ManualInstructionEditor: View {
                 L10n.string("Ticker"), text: $draft.symbol,
                 prompt: Text(L10n.string("Type a ticker")).foregroundStyle(Palette.tertiaryInk)
             )
-            .textFieldStyle(.plain)
-            .font(draft.symbol.trimmed.isEmpty ? DesignTokens.bodyText : DesignTokens.bodyText.weight(.semibold))
-            .foregroundStyle(Palette.ink)
-            .padding(.bottom, 5)
-            .frame(width: 200)
             .focused($focusedField, equals: "symbol")
-            .overlay(alignment: .bottom) { WritingLine(isActive: focusedField == "symbol" || draft.symbol.trimmed.isEmpty) }
             .accessibilityLabel(L10n.string("Symbol"))
+            .sheetInput(width: DesignTokens.sheetNumberWidth)
             .accessibilityIdentifier("review.symbol")
         }
     }
@@ -117,7 +104,7 @@ struct ManualInstructionEditor: View {
     }
 
     @ViewBuilder private var amount: some View {
-        FlowRow(spacing: 22, lineSpacing: 12) {
+        FlowRow(spacing: 8, lineSpacing: 8) {
             if draft.isSell {
                 ForEach(ManualInstructionDraft.sellShares, id: \.self) { share in
                     FormChoice(title: shareTitle(share), isOn: ManualInstructionDraft.sameShare(share, draft.fraction)) {
@@ -185,7 +172,7 @@ struct ManualInstructionEditor: View {
     }
 
     private var buys: some View {
-        FlowRow(spacing: 22, lineSpacing: 12) {
+        FlowRow(spacing: 8, lineSpacing: 8) {
             FormChoice(title: L10n.string("Every buy"), isOn: draft.entryPrice.trimmed.isEmpty) { draft.entryPrice = "" }
             ForEach(buyPrices, id: \.self) { price in
                 FormChoice(
@@ -202,7 +189,7 @@ struct ManualInstructionEditor: View {
     /// what belongs to it wrap as one: ↻ never leaves Market, and the typed price never leaves
     /// Limit.
     @ViewBuilder private func price(now: Date) -> some View {
-        FlowRow(spacing: 22, lineSpacing: 12) {
+        FlowRow(spacing: 8, lineSpacing: 8) {
             if let post = Decimal(string: draft.postPrice.trimmed) {
                 FormChoice(
                     title: Humanize.dollars("\(post)"), detail: L10n.string("the guru's price"),
@@ -228,21 +215,16 @@ struct ManualInstructionEditor: View {
     }
 
     private var limitField: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 2) {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
             Text(verbatim: "$")
-                .font(DesignTokens.bodyText.weight(.semibold))
-                .foregroundStyle(Palette.ink)
+                .font(DesignTokens.bodyText)
+                .foregroundStyle(Palette.secondaryInk)
             TextField(L10n.string("Limit price"), text: $draft.price, prompt: Text(verbatim: ""))
-                .textFieldStyle(.plain)
-                .font(DesignTokens.bodyText.weight(.semibold))
-                .foregroundStyle(Palette.ink)
                 .monospacedDigit()
-                .padding(.bottom, 3)
-                .frame(width: 72)
                 .focused($focusedField, equals: "price")
-                .overlay(alignment: .bottom) { WritingLine(isActive: focusedField == "price" || draft.price.trimmed.isEmpty) }
                 .accessibilityLabel(L10n.string("Limit price"))
                 .accessibilityIdentifier("review.price")
+                .sheetInput(width: 96)
         }
     }
 

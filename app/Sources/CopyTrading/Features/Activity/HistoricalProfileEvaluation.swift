@@ -62,10 +62,18 @@ struct HistoricalProfileEvaluationSheet: View {
 
     var body: some View {
         SheetScaffold(
-            kind: L10n.string("Historical Evaluation"),
-            title: "“\(source.text)”",
+            title: L10n.string("Historical Evaluation"),
             lede: byline
         ) {
+            SheetGroup {
+                Text(source.text)
+                    .font(DesignTokens.bodyText)
+                    .foregroundStyle(Palette.ink)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
             // The answer leads, right under the post it read, so it shows without scrolling.
             if feature.isEvaluating {
                 HStack(spacing: 8) {
@@ -88,23 +96,25 @@ struct HistoricalProfileEvaluationSheet: View {
                         .foregroundStyle(Palette.tertiaryInk)
                         .padding(.vertical, 8)
                 } else {
-                    SheetRow(title: L10n.string("Saved guru"), labelsControl: true) {
-                        SheetMenu(
-                            label: L10n.string("Saved guru"),
-                            choices: routes.map { (value: $0.id, title: SavedGuruLabel.text($0, in: configuration)) },
-                            selection: Binding(
-                                get: { selectedRouteID ?? routes.first?.id ?? "" }, set: { selectedRouteID = $0 })
-                        )
-                        .accessibilityIdentifier("activity.historicalEvaluation.route")
-                    }
-                    ForEach(selectedRoute?.connections ?? []) { connection in
-                        SheetRow(
-                            title: connection.accountID,
-                            hint: L10n.string(
-                                "Full position %@. A 1/6 call buys a sixth of it.", Humanize.usd(connection.fullPositionUSD)),
-                            isReading: true
-                        ) {
-                            EmptyView()
+                    SheetGroup {
+                        SheetRow(title: L10n.string("Saved guru"), labelsControl: true) {
+                            SheetMenu(
+                                label: L10n.string("Saved guru"),
+                                choices: routes.map { (value: $0.id, title: SavedGuruLabel.text($0, in: configuration)) },
+                                selection: Binding(
+                                    get: { selectedRouteID ?? routes.first?.id ?? "" }, set: { selectedRouteID = $0 })
+                            )
+                            .accessibilityIdentifier("activity.historicalEvaluation.route")
+                        }
+                        ForEach(selectedRoute?.connections ?? []) { connection in
+                            SheetRow(
+                                title: connection.accountID,
+                                hint: L10n.string(
+                                    "Full position %@. A 1/6 call buys a sixth of it.", Humanize.usd(connection.fullPositionUSD)),
+                                isReading: true
+                            ) {
+                                EmptyView()
+                            }
                         }
                     }
                 }

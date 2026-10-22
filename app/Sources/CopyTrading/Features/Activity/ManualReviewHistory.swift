@@ -55,7 +55,7 @@ struct ManualReviewHistory: View {
                                     await feature.loadEarlierCommands(accountID: accountID, sourceID: source.sourceID, using: operations)
                                 }
                             }
-                            .buttonStyle(InkActionButtonStyle(isProminent: false))
+                            .buttonStyle(SheetQuietButtonStyle())
                             .disabled(feature.pendingCommandPages.contains(accountID))
                         }
                         if let error = feature.errors["history:\(accountID)"] {

@@ -15,8 +15,7 @@ struct BackupsSettingsPage: View {
 
             SettingsSection(
                 title: "Backup & Restore",
-                subtitle:
-                    "A backup holds your records, saved setup, captured posts, and attachments. Keys and disposable logs are left out."
+                subtitle: "Holds your records, setup, posts, and attachments. Keys and logs are left out."
             ) {
                 SettingsActionRow(
                     title: "Create Backup…", detail: "Copying waits a moment while it runs.", action: chooseBackupDestination

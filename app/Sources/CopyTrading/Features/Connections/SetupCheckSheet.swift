@@ -8,7 +8,6 @@ struct SetupCheckSheet: View {
 
     var body: some View {
         SheetScaffold(
-            kind: L10n.string("Before copying starts"),
             title: L10n.string("Setup Check"),
             lede: L10n.string("Each connection, and how each guru's examples were read.")
         ) {

@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// One line of a form: its label on the left in a fixed column, its choices on the right, and an
-/// optional quiet note under the choices.
+/// A row in a sheet's group whose answer is a few options that wrap: its name in a fixed column at
+/// the leading edge, the options beside it, and an optional quiet note under them.
 struct FormRow<Content: View>: View {
     let label: String
     var note: String?
@@ -10,8 +10,8 @@ struct FormRow<Content: View>: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
             Text(label)
-                .font(DesignTokens.bodyText)
-                .foregroundStyle(Palette.tertiaryInk)
+                .font(DesignTokens.rowTitle)
+                .foregroundStyle(Palette.ink)
                 .frame(width: 110, alignment: .leading)
             VStack(alignment: .leading, spacing: 6) {
                 content
@@ -26,5 +26,6 @@ struct FormRow<Content: View>: View {
             Spacer(minLength: 0)
         }
         .padding(.vertical, 10)
+        .frame(minHeight: 48)
     }
 }

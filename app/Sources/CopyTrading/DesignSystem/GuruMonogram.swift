@@ -5,6 +5,8 @@ import SwiftUI
 struct GuruMonogram: View {
     let name: String
     var size: CGFloat = 28
+    /// A soft fill of the guru's own tint inside the ring, where the guru is the subject.
+    var filled = false
 
     private static let tints: [Color] = [.indigo, .teal, .pink, .brown, .mint, .purple, .cyan, .orange]
 
@@ -27,6 +29,7 @@ struct GuruMonogram: View {
             .font(.system(size: size * 0.4, weight: .semibold, design: .rounded))
             .foregroundStyle(Palette.ink)
             .frame(width: size, height: size)
+            .background { if filled { Circle().fill(tint.opacity(0.28)) } }
             .overlay(Circle().strokeBorder(Palette.ink, lineWidth: 1.2))
             .accessibilityHidden(true)
     }

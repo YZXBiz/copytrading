@@ -13,6 +13,8 @@ enum Palette {
     static let panel = dynamic(light: rgb(0xF8F8F8), dark: rgb(0x1F1F21))
     /// Grouped settings rows sit in this soft well on `panel`.
     static let well = dynamic(light: rgb(0xEEEEEF), dark: rgb(0x2B2B2E))
+    /// The tile behind a symbol standing in for a service: white in light, a raised grey in dark.
+    static let tile = dynamic(light: rgb(0xFFFFFF), dark: rgb(0x2E2E30))
     /// Row dividers.
     static let hairline = dynamic(light: rgb(0xDADADD), dark: NSColor(white: 1, alpha: 0.08))
     /// The selected row in a list (#D9E0ED).

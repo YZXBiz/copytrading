@@ -13,7 +13,7 @@ struct UpdatesSettingsPage: View {
         VStack(alignment: .leading, spacing: 30) {
             SettingsSection(
                 title: "CopyTrading",
-                subtitle: "A check reads the public list of releases. Nothing about your accounts or trading is sent."
+                subtitle: "Reads the public list of releases. Nothing about your trading is sent."
             ) {
                 SettingsValueRow(label: "Version on this Mac", value: version)
                 SettingsActionRow(

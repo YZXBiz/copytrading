@@ -18,14 +18,13 @@ struct AgentAccessPage: View {
         VStack(alignment: .leading, spacing: 30) {
             SettingsSection(
                 title: "Allow Agents To",
-                subtitle:
-                    "Coding agents such as Claude Code reach CopyTrading through its copytrading command or MCP server, and only while the app runs. Posts from sources reach them as untrusted text."
+                subtitle: "Agents such as Claude Code connect through the copytrading command or MCP server while the app runs."
             ) {
                 choice("Nothing", detail: nil, .off)
                 choice("Read and pause", detail: "Reading needs the app unlocked. Pausing always works.", .readAndPause)
                 choice(
                     "Read, pause, and ask for approval",
-                    detail: "Anything that could trade only becomes a request you approve here with Touch ID.", .propose)
+                    detail: "Anything that could trade waits for your Touch ID here.", .propose)
             }
 
             SettingsSection(title: "Connection") {

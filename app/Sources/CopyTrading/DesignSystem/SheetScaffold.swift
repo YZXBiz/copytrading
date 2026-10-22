@@ -1,12 +1,12 @@
 import SwiftUI
 
-/// Every sheet's frame: what it edits in tracked capitals, its name in the display face and a quiet
-/// lede, the content on white, and one bar at the bottom whose only black action is the sheet's
-/// answer. No grey panels and no rules; sections open with an ink tick (`SheetSection`).
+/// Every sheet's frame: its name in the display face and a quiet lede, the content on white, and
+/// one bar at the bottom under a hairline, whose only black action is the sheet's answer.
 struct SheetScaffold<Content: View, Leading: View, Actions: View>: View {
-    var kind: String?
     let title: String
     var lede: String?
+    /// Who the sheet is about, as a tinted monogram beside the title.
+    var monogram: String?
     /// Long sheets scroll; short ones size to their content.
     var scrolls = true
     @ViewBuilder let content: Content
@@ -26,6 +26,9 @@ struct SheetScaffold<Content: View, Leading: View, Actions: View>: View {
                 page
                     .fixedSize(horizontal: false, vertical: true)
             }
+            Rectangle()
+                .fill(Palette.hairline)
+                .frame(height: 1)
             HStack(spacing: 10) {
                 leading
                 Spacer(minLength: 12)
@@ -50,9 +53,9 @@ struct SheetScaffold<Content: View, Leading: View, Actions: View>: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 10) {
-            VStack(alignment: .leading, spacing: 8) {
-                if let kind {
-                    Eyebrow(kind)
+            HStack(alignment: .center, spacing: 14) {
+                if let monogram {
+                    GuruMonogram(name: monogram, size: 40, filled: true)
                 }
                 Text(title)
                     .font(DesignTokens.sheetTitle)
@@ -61,7 +64,7 @@ struct SheetScaffold<Content: View, Leading: View, Actions: View>: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(kind.map { L10n.string("%@, %@", $0, title) } ?? title)
+            .accessibilityLabel(title)
             .accessibilityAddTraits(.isHeader)
             if let lede {
                 Text(lede)
@@ -76,11 +79,11 @@ struct SheetScaffold<Content: View, Leading: View, Actions: View>: View {
 
 extension SheetScaffold where Leading == EmptyView {
     init(
-        kind: String? = nil, title: String, lede: String? = nil, scrolls: Bool = true,
+        title: String, lede: String? = nil, scrolls: Bool = true,
         @ViewBuilder content: () -> Content, @ViewBuilder actions: () -> Actions
     ) {
         self.init(
-            kind: kind, title: title, lede: lede, scrolls: scrolls, content: content, leading: { EmptyView() },
+            title: title, lede: lede, scrolls: scrolls, content: content, leading: { EmptyView() },
             actions: actions)
     }
 }

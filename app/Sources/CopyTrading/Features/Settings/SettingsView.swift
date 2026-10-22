@@ -1,3 +1,4 @@
+import AppLocalizationCore
 import DesktopCore
 import SwiftUI
 
@@ -73,3 +74,10 @@ struct SettingsView: View {
         }
     }
 }
+
+#if DEBUG
+    #Preview("Settings: General", traits: .fixedLayout(width: 720, height: 1100)) {
+        SettingsView(model: AppModel())
+            .environment(AppLanguagePreference.shared)
+    }
+#endif

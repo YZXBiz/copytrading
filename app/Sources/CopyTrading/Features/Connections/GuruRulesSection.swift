@@ -7,29 +7,23 @@ struct GuruRulesSection: View {
     @Binding var route: TradingRouteDraft
 
     var body: some View {
-        SheetSection(L10n.string("Re-posted calls"), detail: L10n.string("When the guru posts the same call again.")) {
-            SheetRow(
-                title: L10n.string("Skip re-posted calls"), hint: L10n.string(Self.repostHint(route.repeatWindowMinutes)),
-                labelsControl: true
-            ) {
-                Toggle(L10n.string("Skip re-posted calls"), isOn: skipsReposts)
-                    .labelsHidden()
-                    .compactSwitch()
-            }
-            if route.repeatWindowMinutes != nil {
-                SheetRow(title: L10n.string("Counts as a re-post within")) {
-                    HStack(spacing: 6) {
-                        // A hidden label leaves VoiceOver nothing to read, so the field names itself.
+        SheetSection(L10n.string("Re-posted calls")) {
+            SheetGroup {
+                SheetRow(
+                    title: L10n.string("Skip re-posted calls"), hint: L10n.string(Self.repostHint(route.repeatWindowMinutes)),
+                    labelsControl: true
+                ) {
+                    Toggle(L10n.string("Skip re-posted calls"), isOn: skipsReposts)
+                        .labelsHidden()
+                        .compactSwitch()
+                }
+                if route.repeatWindowMinutes != nil {
+                    SheetRow(title: L10n.string("Re-post window (minutes)"), labelsControl: true) {
                         TextField(L10n.string("Re-post window in minutes"), value: repeatMinutes, format: .number)
-                            .labelsHidden()
                             .accessibilityLabel(L10n.string("Re-post window in minutes"))
                             .multilineTextAlignment(.trailing)
                             .monospacedDigit()
-                            .underlineField()
-                            .frame(width: 48)
-                        Text(L10n.string("minutes"))
-                            .foregroundStyle(Palette.tertiaryInk)
-                            .accessibilityHidden(true)
+                            .sheetInput(width: DesignTokens.sheetNumberWidth)
                     }
                 }
             }
@@ -38,8 +32,8 @@ struct GuruRulesSection: View {
 
     private static func repostHint(_ minutes: Int?) -> String {
         minutes == nil
-            ? "Every post is copied, even one that repeats an earlier call."
-            : "The same call again (same stock, price, and size) counts once. A repeated sell counts once all day."
+            ? "Every post is copied, even a repeat."
+            : "Same stock, price, and size counts once. A repeated sell counts once a day."
     }
 
     private var skipsReposts: Binding<Bool> {
