@@ -14,7 +14,33 @@ struct PlaybookSection: View {
 
     var body: some View {
         SheetSection(L10n.string("Playbook")) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
+            VStack(alignment: .leading, spacing: 8) {
+                if let learned {
+                    Callout(learnedSummary(learned), tone: .positive)
+                        .accessibilityIdentifier("playbook.summary")
+                }
+                if let failure {
+                    Callout(failure, tone: .critical)
+                        .accessibilityIdentifier("playbook.failure")
+                }
+                // In the same well as every field in the sheet, tall enough to read several lines.
+                TextEditor(text: $route.playbook)
+                    .font(DesignTokens.bodyText)
+                    .frame(minHeight: 160)
+                    .scrollContentBackground(.hidden)
+                    .focused($isEditing)
+                    .padding(8)
+                    .background(Palette.well, in: .rect(cornerRadius: DesignTokens.sheetControlRadius))
+                    .accessibilityLabel(L10n.string("Playbook"))
+                    .accessibilityIdentifier("playbook.text")
+            }
+        } accessory: {
+            HStack(spacing: 8) {
+                if isLearning {
+                    ProgressView()
+                        .controlSize(.small)
+                        .help(L10n.string("Reading recent posts…"))
+                }
                 Button(action: start) {
                     Label(
                         L10n.string(route.playbook.trimmedLines.isEmpty ? "Learn from Channel" : "Learn Again"),
@@ -24,49 +50,18 @@ struct PlaybookSection: View {
                 .buttonStyle(SheetQuietButtonStyle())
                 .disabled(isLearning)
                 .accessibilityIdentifier("playbook.learn")
-                if isLearning {
-                    ProgressView()
-                        .controlSize(.small)
-                    Text(L10n.string("Reading recent posts…"))
-                        .foregroundStyle(Palette.tertiaryInk)
-                }
-                Spacer(minLength: 0)
             }
-            .padding(.vertical, 12)
-            if let learned {
-                Callout(learnedSummary(learned), tone: .positive)
-                    .accessibilityIdentifier("playbook.summary")
-            }
-            if let failure {
-                Callout(failure, tone: .critical)
-                    .accessibilityIdentifier("playbook.failure")
-            }
-            // In a soft well, like every field in the sheet, tall enough to read several lines.
-            TextEditor(text: $route.playbook)
-                .font(DesignTokens.bodyText)
-                .frame(minHeight: 160)
-                .scrollContentBackground(.hidden)
-                .focused($isEditing)
-                .padding(8)
-                .background(Palette.well, in: .rect(cornerRadius: 8))
-                .accessibilityLabel(L10n.string("Playbook"))
-                .accessibilityIdentifier("playbook.text")
-            Text(L10n.string("%@ of %@ characters", route.playbook.count.formatted(), tradingPlaybookMaxLength.formatted()))
-                .font(DesignTokens.caption)
+        } footer: {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(L10n.string("One rule per line, such as “%@ means %@”.", "英伟达", "NVDA"))
+                Spacer(minLength: 12)
+                Text(
+                    L10n.string("%@ of %@ characters", route.playbook.count.formatted(), tradingPlaybookMaxLength.formatted())
+                )
                 .foregroundStyle(route.playbook.count > tradingPlaybookMaxLength ? Palette.loss : Palette.tertiaryInk)
                 .monospacedDigit()
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .padding(.top, 6)
-        } footer: {
-            Text(
-                L10n.string(
-                    "How this guru writes buys, sells, and tickers, one rule per line. Learn drafts it from recent posts; edit anything. Name a company's ticker on its own line, such as “%@ means %@”.",
-                    "英伟达", "NVDA"
-                )
-            )
+            }
         }
-        .icon(symbol: "text.book.closed")
-        .mark(route.playbook.trimmedLines.isEmpty ? .needsYou : .done)
     }
 
     /// What Learn did, truthfully: the playbook is drafted, and examples are named only when some

@@ -1,16 +1,13 @@
 import SwiftUI
 
-/// Every sheet's frame: what it edits in tracked capitals, its name in the display face and a quiet
-/// lede, the content on white, and one bar at the bottom whose only black action is the sheet's
-/// answer. No grey panels and no rules; sections open with an ink tick (`SheetSection`).
+/// Every sheet's frame: its name in the display face and a quiet lede, the content on white, and
+/// one bar at the bottom under a hairline, whose only black action is the sheet's answer.
 struct SheetScaffold<Content: View, Leading: View, Actions: View>: View {
     var kind: String?
     let title: String
     var lede: String?
-    /// Who or what the sheet is about, as a tinted monogram beside the title.
+    /// Who the sheet is about, as a tinted monogram beside the title.
     var monogram: String?
-    /// The sheet's subject at a glance under the title, read in place of a lede.
-    var facts: [SheetFact] = []
     /// Long sheets scroll; short ones size to their content.
     var scrolls = true
     @ViewBuilder let content: Content
@@ -30,6 +27,9 @@ struct SheetScaffold<Content: View, Leading: View, Actions: View>: View {
                 page
                     .fixedSize(horizontal: false, vertical: true)
             }
+            Rectangle()
+                .fill(Palette.hairline)
+                .frame(height: 1)
             HStack(spacing: 10) {
                 leading
                 Spacer(minLength: 12)
@@ -60,7 +60,7 @@ struct SheetScaffold<Content: View, Leading: View, Actions: View>: View {
                 }
                 HStack(alignment: .center, spacing: 14) {
                     if let monogram {
-                        GuruMonogram(name: monogram, size: 46, filled: true)
+                        GuruMonogram(name: monogram, size: 40, filled: true)
                     }
                     Text(title)
                         .font(DesignTokens.sheetTitle)
@@ -72,10 +72,7 @@ struct SheetScaffold<Content: View, Leading: View, Actions: View>: View {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(kind.map { L10n.string("%@, %@", $0, title) } ?? title)
             .accessibilityAddTraits(.isHeader)
-            if !facts.isEmpty {
-                FlowFacts(facts: facts)
-                    .padding(.top, 4)
-            } else if let lede {
+            if let lede {
                 Text(lede)
                     .font(DesignTokens.lede)
                     .tracking(DesignTokens.ledeTracking)
@@ -94,17 +91,5 @@ extension SheetScaffold where Leading == EmptyView {
         self.init(
             kind: kind, title: title, lede: lede, scrolls: scrolls, content: content, leading: { EmptyView() },
             actions: actions)
-    }
-}
-
-/// The fact chips under a sheet's title, wrapping onto a second line when the sheet is narrow.
-private struct FlowFacts: View {
-    let facts: [SheetFact]
-
-    var body: some View {
-        FlowRow {
-            ForEach(facts) { SheetFactChip(fact: $0) }
-        }
-        .accessibilityElement(children: .combine)
     }
 }

@@ -1,24 +1,16 @@
 import SwiftUI
 
-/// A field that takes a whole line, such as a name or a key: a small label above, then the field in
-/// a soft well, so it reads as something to type in at a glance.
+/// A row with a field to type in, such as a name or a key: its name and an optional line on what
+/// it is for at the leading edge, the field at the trailing edge.
 struct SheetField<Field: View>: View {
     let title: String
+    var hint: String?
     @ViewBuilder let field: Field
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(title)
-                .font(DesignTokens.caption)
-                .foregroundStyle(Palette.tertiaryInk)
-                .accessibilityHidden(true)
+        SheetRow(title: title, hint: hint, labelsControl: true) {
             field
-                .labelsHidden()
-                .textFieldStyle(.plain)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 7)
-                .background(Palette.well, in: .rect(cornerRadius: 8))
+                .sheetInput()
         }
-        .padding(.vertical, 10)
     }
 }

@@ -30,39 +30,11 @@ struct AccountEditorSheet: View {
 
     private var hasSavedCredentials: Bool { savedAccountIDs.contains(account.name.trimmed) }
 
-    /// The account at a glance: paper or live, whether its keys are in, and its two main limits.
-    private var facts: [SheetFact] {
-        let money = { (text: String) -> String? in
-            Decimal(string: text.trimmed).map { $0.formatted(.currency(code: "USD").precision(.fractionLength(0...2))) }
-        }
-        var facts = [
-            account.environment == .live
-                ? SheetFact(symbol: "bolt.fill", text: L10n.string("Live · real money"), tint: Palette.blush)
-                : SheetFact(brand: "alpaca", text: L10n.string("Paper · pretend money"), tint: Palette.sky),
-            hasSavedCredentials || (!account.key.isEmpty && !account.secret.isEmpty)
-                ? SheetFact(symbol: "key.fill", text: L10n.string("Keys in Keychain"), tint: Palette.sage)
-                : SheetFact(symbol: "key", text: L10n.string("Keys needed"), tint: Palette.butter),
-        ]
-        switch (money(account.policy.maxOrderUSD), money(account.policy.maxSymbolUSD)) {
-        case let (order?, stock?):
-            facts.append(SheetFact(symbol: "cart", text: L10n.string("%@ per order · %@ per stock", order, stock)))
-        case let (order?, nil):
-            facts.append(SheetFact(symbol: "cart", text: L10n.string("%@ per order", order)))
-        case let (nil, stock?):
-            facts.append(SheetFact(symbol: "cart", text: L10n.string("%@ per stock", stock)))
-        case (nil, nil):
-            break
-        }
-        return facts
-    }
-
     var body: some View {
         ScrollViewReader { proxy in
             SheetScaffold(
-                kind: L10n.string("Alpaca account"),
-                title: account.name.trimmed.isEmpty ? L10n.string("New") : account.name.trimmed,
-                lede: L10n.string(account.environment == .live ? "Live · real orders, real money" : "Paper · pretend money, real prices"),
-                facts: facts
+                title: account.name.trimmed.isEmpty ? L10n.string("New Account") : account.name.trimmed,
+                lede: L10n.string(account.environment == .live ? "Live · real orders, real money" : "Paper · pretend money, real prices")
             ) {
                 accountSection
                 keysSection
@@ -111,160 +83,161 @@ struct AccountEditorSheet: View {
     }
 
     private var accountSection: some View {
-        SheetSection(L10n.string("Account"), detail: L10n.string("Letters, digits, “-” and “_”.")) {
-            SheetField(title: L10n.string("Name")) {
-                TextField(
-                    L10n.string("Name"), text: $account.name,
-                    prompt: Text(L10n.string("e.g. %@", "primary")).foregroundStyle(Palette.tertiaryInk)
-                )
-                .accessibilityLabel(L10n.string("Account name"))
-            }
-            if let problem = account.nameProblem {
-                Callout(L10n.string(problem), tone: .caution)
-                    .accessibilityIdentifier("account.nameProblem")
-            }
-            SheetChoices(
-                label: L10n.string("Environment"),
-                choices: TradingEnvironment.allCases.map { ($0, environmentTitle($0)) },
-                selection: $account.environment, identifier: "account.environment"
-            )
-            .padding(.vertical, 14)
-            if account.environment == .live {
-                Callout(L10n.string("Live accounts place real orders with real money."), tone: .caution)
+        SheetSection(L10n.string("Account")) {
+            VStack(alignment: .leading, spacing: 8) {
+                SheetGroup {
+                    SheetField(title: L10n.string("Name"), hint: L10n.string("Letters, digits, “-” and “_”.")) {
+                        TextField(
+                            L10n.string("Name"), text: $account.name,
+                            prompt: Text(L10n.string("e.g. %@", "primary")).foregroundStyle(Palette.tertiaryInk)
+                        )
+                        .accessibilityLabel(L10n.string("Account name"))
+                    }
+                    SheetRow(title: L10n.string("Environment"), labelsControl: true) {
+                        Picker(L10n.string("Environment"), selection: $account.environment) {
+                            ForEach(TradingEnvironment.allCases, id: \.self) { environment in
+                                Text(environmentTitle(environment)).tag(environment)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .fixedSize()
+                        .accessibilityIdentifier("account.environment")
+                    }
+                }
+                if let problem = account.nameProblem {
+                    Callout(L10n.string(problem), tone: .caution)
+                        .accessibilityIdentifier("account.nameProblem")
+                }
+                if account.environment == .live {
+                    Callout(L10n.string("Live accounts place real orders with real money."), tone: .caution)
+                }
             }
         }
-        .icon(brand: "alpaca")
-        .mark(account.name.trimmed.isEmpty || account.nameProblem != nil ? .needsYou : .done)
     }
 
     private var keysSection: some View {
-        SheetSection(L10n.string("Alpaca keys"), detail: L10n.string("Kept in your Mac's Keychain, never in the setup file.")) {
-            SheetField(title: L10n.string("API key")) {
-                SecureField(
-                    L10n.string("API key"), text: $account.key,
-                    prompt: Text(L10n.string(hasSavedCredentials ? "Leave blank to keep the saved key" : "Required")).foregroundStyle(
-                        Palette.tertiaryInk)
-                )
-                .accessibilityLabel(L10n.string("Alpaca API key"))
-            }
-            SheetField(title: L10n.string("API secret")) {
-                SecureField(
-                    L10n.string("API secret"), text: $account.secret,
-                    prompt: Text(L10n.string(hasSavedCredentials ? "Leave blank to keep the saved secret" : "Required")).foregroundStyle(
-                        Palette.tertiaryInk)
-                )
-                .accessibilityLabel(L10n.string("Alpaca API secret"))
-            }
-            if let failedCheck {
-                ConnectionCheckCallout(check: failedCheck)
+        SheetSection(L10n.string("Alpaca keys")) {
+            VStack(alignment: .leading, spacing: 8) {
+                SheetGroup {
+                    SheetField(title: L10n.string("API key")) {
+                        SecureField(
+                            L10n.string("API key"), text: $account.key,
+                            prompt: Text(L10n.string(hasSavedCredentials ? "Saved" : "Required")).foregroundStyle(
+                                Palette.tertiaryInk)
+                        )
+                        .accessibilityLabel(L10n.string("Alpaca API key"))
+                    }
+                    SheetField(title: L10n.string("API secret")) {
+                        SecureField(
+                            L10n.string("API secret"), text: $account.secret,
+                            prompt: Text(L10n.string(hasSavedCredentials ? "Saved" : "Required")).foregroundStyle(
+                                Palette.tertiaryInk)
+                        )
+                        .accessibilityLabel(L10n.string("Alpaca API secret"))
+                    }
+                }
+                if let failedCheck {
+                    ConnectionCheckCallout(check: failedCheck)
+                }
             }
         } accessory: {
             HelpPopoverButton(articles: [SetupHelp.alpacaKeys(for: account.environment)])
+        } footer: {
+            Text(
+                L10n.string(
+                    hasSavedCredentials
+                        ? "Kept in your Mac's Keychain. Leave blank to keep the saved keys."
+                        : "Kept in your Mac's Keychain, never in the setup file."))
         }
-        .icon(symbol: "key")
-        .mark(hasSavedCredentials || (!account.key.isEmpty && !account.secret.isEmpty) ? .done : .needsYou)
     }
 
     private var limitsSection: some View {
         SheetSection(L10n.string("Position limits (USD)")) {
-            textLimit(
-                "Maximum per order", hint: "The most one buy can spend. A bigger buy is made smaller.",
-                text: $account.policy.maxOrderUSD,
-                example: LimitExamples.maxOrder,
-                focus: .limits)
-            textLimit(
-                "Maximum per stock",
-                hint:
-                    "The most this account can hold in one stock, including shares you bought yourself. It's also the guru's full position. A buy that would go over is skipped.",
-                text: $account.policy.maxSymbolUSD,
-                example: LimitExamples.maxSymbol)
-            textLimit(
-                "Maximum total exposure",
-                hint:
-                    "The most this account can hold in all stocks, including your own. A buy that would go over is skipped.",
-                text: $account.policy.maxTotalUSD,
-                example: LimitExamples.maxTotal)
-            textLimit(
-                "Daily loss cap",
-                hint: "If the account is down this much today, it stops buying until tomorrow. It still sells.",
-                text: $account.policy.dailyLossCapUSD,
-                example: LimitExamples.dailyLossCap)
-            textLimit(
-                "Maximum above signal price (%)",
-                hint:
-                    "The most a buy can pay above the guru's price. 0 means never more than the guru paid.",
-                text: $account.policy.maxAboveSignalPct,
-                example: LimitExamples.maxAboveSignal,
-                focus: .entryTolerance
-            )
-            textLimit(
-                "Maximum below signal price (%)",
-                hint:
-                    "The lowest a sell can go below the guru's price. A sell that can't fill by then is cancelled.",
-                text: $account.policy.maxBelowSignalPct,
-                example: LimitExamples.maxBelowSignal)
+            SheetGroup {
+                textLimit(
+                    "Maximum per order", hint: "A bigger buy is made smaller.",
+                    text: $account.policy.maxOrderUSD,
+                    example: LimitExamples.maxOrder,
+                    focus: .limits)
+                textLimit(
+                    "Maximum per stock", hint: "Includes your own shares. Also the guru's full position.",
+                    text: $account.policy.maxSymbolUSD,
+                    example: LimitExamples.maxSymbol)
+                textLimit(
+                    "Maximum total exposure", hint: "All stocks together, including your own.",
+                    text: $account.policy.maxTotalUSD,
+                    example: LimitExamples.maxTotal)
+                textLimit(
+                    "Daily loss cap", hint: "Stops buying for the day. Still sells.",
+                    text: $account.policy.dailyLossCapUSD,
+                    example: LimitExamples.dailyLossCap)
+                textLimit(
+                    "Maximum above signal price (%)", hint: "0 means never more than the guru paid.",
+                    text: $account.policy.maxAboveSignalPct,
+                    example: LimitExamples.maxAboveSignal,
+                    focus: .entryTolerance
+                )
+                textLimit(
+                    "Maximum below signal price (%)", hint: "A sell that can't fill by then is cancelled.",
+                    text: $account.policy.maxBelowSignalPct,
+                    example: LimitExamples.maxBelowSignal)
+            }
         } footer: {
             limitsSavedNote
         }
-        .icon(symbol: "dollarsign.circle")
     }
 
     private var timingSection: some View {
         SheetSection(L10n.string("Timing")) {
-            numberLimit(
-                "Entries per day", hint: "The most buys in one day. Sells don't count.",
-                value: $account.policy.maxEntriesPerDay,
-                example: LimitExamples.entriesPerDay)
-            numberLimit(
-                "Maximum signal age (seconds)",
-                hint:
-                    "If a post takes longer than this to arrive, it isn't copied. You can still copy it yourself in Activity.",
-                value: $account.policy.maxSignalAgeSeconds,
-                example: LimitExamples.maxSignalAge)
-            numberLimit(
-                "Order timeout (seconds)", hint: "An order that hasn't filled by then is cancelled.",
-                value: $account.policy.orderTimeoutSeconds,
-                example: LimitExamples.orderTimeout(maxAboveSignalPct: account.policy.maxAboveSignalPct))
+            SheetGroup {
+                numberLimit(
+                    "Entries per day", hint: "Sells don't count.",
+                    value: $account.policy.maxEntriesPerDay,
+                    example: LimitExamples.entriesPerDay)
+                numberLimit(
+                    "Maximum signal age (seconds)", hint: "Older posts aren't copied. You can copy them in Activity.",
+                    value: $account.policy.maxSignalAgeSeconds,
+                    example: LimitExamples.maxSignalAge)
+                numberLimit(
+                    "Order timeout (seconds)", hint: "An unfilled order is cancelled.",
+                    value: $account.policy.orderTimeoutSeconds,
+                    example: LimitExamples.orderTimeout(maxAboveSignalPct: account.policy.maxAboveSignalPct))
+            }
         }
-        .icon(symbol: "clock")
     }
 
     private var behaviorSection: some View {
         SheetSection(L10n.string("Behavior")) {
-            behavior(
-                "Trade in extended hours",
-                hint: L10n.string(
-                    "Also copy calls before and after regular hours, %@, with limit orders.",
-                    MarketHoursText.hours([((4, 0), (9, 30)), ((16, 0), (20, 0))])),
-                isOn: $account.policy.extendedHours
-            )
-            // Overnight runs only with extended hours, so turning those off ends it too.
-            .onChange(of: account.policy.extendedHours) { _, on in
-                if !on { account.policy.overnight = false }
+            SheetGroup {
+                behavior(
+                    "Trade in extended hours",
+                    hint: L10n.string(
+                        "%@, with limit orders.", MarketHoursText.hours([((4, 0), (9, 30)), ((16, 0), (20, 0))])),
+                    isOn: $account.policy.extendedHours
+                )
+                // Overnight runs only with extended hours, so turning those off ends it too.
+                .onChange(of: account.policy.extendedHours) { _, on in
+                    if !on { account.policy.overnight = false }
+                }
+                behavior(
+                    "Trade overnight",
+                    hint: L10n.string("%@. Needs extended hours.", MarketHoursText.hours([((20, 0), (4, 0))])),
+                    isOn: $account.policy.overnight
+                )
+                .onChange(of: account.policy.overnight) { _, on in
+                    if on { account.policy.extendedHours = true }
+                }
+                behavior(
+                    "Copy exits", hint: "Off means you sell copied shares yourself.",
+                    isOn: $account.policy.copyExits)
+                behavior(
+                    "Ask me before sending orders", hint: "Each order waits for your Touch ID.",
+                    isOn: $account.policy.approveOrders)
             }
-            behavior(
-                "Trade overnight",
-                hint: L10n.string(
-                    "Also copy calls overnight, %@. Needs extended hours on.", MarketHoursText.hours([((20, 0), (4, 0))])),
-                isOn: $account.policy.overnight
-            )
-            .onChange(of: account.policy.overnight) { _, on in
-                if on { account.policy.extendedHours = true }
-            }
-            behavior(
-                "Copy exits", hint: "Sell when the guru sells. Off means you sell copied shares yourself.",
-                isOn: $account.policy.copyExits)
-            behavior(
-                "Ask me before sending orders",
-                hint: "Nothing is sent by itself. Each order waits on the account's page until you approve it with Touch ID.",
-                isOn: $account.policy.approveOrders)
         } footer: {
-            Text(
-                L10n.string(
-                    "CopyTrading only sells shares it bought from a guru's call. Stocks you bought yourself are never sold, even when the guru sells the same stock."
-                ))
+            Text(L10n.string("Only shares CopyTrading bought are ever sold. Your own shares are never touched."))
         }
-        .icon(symbol: "switch.2")
     }
 
     /// Limits saved without a check say so where they were typed.
@@ -359,19 +332,14 @@ struct AccountEditorSheet: View {
 }
 
 extension View {
-    /// A limit's value: a short field in a soft well, its number at the trailing edge.
+    /// A limit's value: a number field, its digits at the trailing edge.
     /// A hidden-label field still needs its name for VoiceOver, which `labelsHidden` drops, and the
     /// row's name is kept from VoiceOver, so the field carries it.
     fileprivate func limitField(_ label: String) -> some View {
-        labelsHidden()
-            .accessibilityLabel(label)
+        accessibilityLabel(label)
             .multilineTextAlignment(.trailing)
             .monospacedDigit()
-            .textFieldStyle(.plain)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(Palette.well, in: .rect(cornerRadius: 8))
-            .frame(width: 120)
+            .sheetInput(width: DesignTokens.sheetNumberWidth)
     }
 }
 

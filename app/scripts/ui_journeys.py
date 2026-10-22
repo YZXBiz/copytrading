@@ -1165,7 +1165,7 @@ def j20_toolbar(app: AppDriver) -> None:
     app.click("toolbar.refresh")
     app.open_screen("connections")
     app.click("connections.gurus.add")
-    app.expect(app.see("guru-from-connections"), "Where they post", "Remove Guru")
+    app.expect(app.see("guru-from-connections"), "Details", "Remove Guru")
     app.click("Remove Guru")
     app.expect(app.see("guru-removed"), "connections.gurus.add", "Add a guru")
 
@@ -1236,22 +1236,20 @@ def j6_setup_editing(app: AppDriver) -> None:
     # One guru copies into one account, sized from that account's maximum per stock.
     app.expect(
         guru,
-        "Where they post",
+        "Details",
         "playbook.learn",
         "Re-posted calls",
         "Skip re-posted calls",
-        "Counts as a re-post within",
+        "Re-post window in minutes",
         "Copies into",
         "guru.sizingSummary",
     )
     # The re-post check is on at ten minutes; off, every post is copied and the minutes go away.
     app.click("Skip re-posted calls", role="checkbox")
-    app.wait_gone("Counts as a re-post within", timeout=10)
-    app.expect(
-        app.see("guru-reposts-off"), "Every post is copied, even one that repeats an earlier call."
-    )
+    app.wait_gone("Re-post window in minutes", timeout=10)
+    app.expect(app.see("guru-reposts-off"), "Every post is copied, even a repeat.")
     app.click("Skip re-posted calls", role="checkbox")
-    app.wait_for("Counts as a re-post within", timeout=10, name="guru-reposts-on")
+    app.wait_for("Re-post window in minutes", timeout=10, name="guru-reposts-on")
     app.click("Done")
     app.expect(app.see("guru-added"), "connections.guru", "Unnamed guru")
     # Unsaved accounts and gurus stay in Connections; the sidebar lists only saved ones.

@@ -19,54 +19,52 @@ struct RouteEditorSheet: View {
 
     var body: some View {
         SheetScaffold(
-            kind: L10n.string("Guru"),
-            title: route.displayName.trimmed.isEmpty ? L10n.string("New") : route.displayName.trimmed,
-            lede: L10n.string("Whose calls to copy, where they post, and which account copies them."),
-            monogram: route.displayName.trimmed.isEmpty ? nil : route.displayName.trimmed,
-            facts: facts
+            title: route.displayName.trimmed.isEmpty ? L10n.string("New Guru") : route.displayName.trimmed,
+            lede: summary,
+            monogram: route.displayName.trimmed.isEmpty ? nil : route.displayName.trimmed
         ) {
-            // The name sits right under the title it fills in; the header already says "Guru".
-            SheetField(title: L10n.string("Name")) {
-                TextField(
-                    L10n.string("Name"), text: $route.displayName,
-                    prompt: Text(L10n.string("How you refer to this guru")).foregroundStyle(Palette.tertiaryInk)
-                )
-                .accessibilityLabel(L10n.string("Name"))
-            }
-
-            SheetSection(L10n.string("Where they post")) {
-                if channelIDs.isEmpty {
-                    Text(L10n.string("Add the channel they post in under Discord in Connections first."))
-                        .foregroundStyle(Palette.tertiaryInk)
-                        .padding(.vertical, 12)
-                } else {
-                    SheetRow(title: L10n.string("Discord channel"), labelsControl: true) {
-                        // Each channel once: a guru with no channel of its own reads as the first.
-                        SheetMenu(
-                            label: L10n.string("Discord channel"),
-                            choices: channelChoices.map { ($0, $0) },
-                            selection: channelSelection)
+            SheetSection(L10n.string("Details")) {
+                SheetGroup {
+                    SheetField(title: L10n.string("Name")) {
+                        TextField(
+                            L10n.string("Name"), text: $route.displayName,
+                            prompt: Text(L10n.string("How you refer to this guru")).foregroundStyle(Palette.tertiaryInk)
+                        )
+                        .accessibilityLabel(L10n.string("Name"))
                     }
-                }
-                SheetField(title: L10n.string("Guru's Discord user ID (optional)")) {
-                    TextField(
-                        L10n.string("Guru's Discord user ID"), text: $route.authorID,
-                        prompt: Text(L10n.string("Leave blank if only the guru posts in this channel")).foregroundStyle(
-                            Palette.tertiaryInk)
-                    )
-                    .accessibilityLabel(L10n.string("Guru's Discord user ID"))
+                    if channelIDs.isEmpty {
+                        SheetRow(
+                            title: L10n.string("Discord channel"),
+                            hint: L10n.string("Add the channel they post in under Discord in Connections first.")
+                        ) { EmptyView() }
+                    } else {
+                        SheetRow(title: L10n.string("Discord channel"), labelsControl: true) {
+                            // Each channel once: a guru with no channel of its own reads as the first.
+                            SheetMenu(
+                                label: L10n.string("Discord channel"),
+                                choices: channelChoices.map { ($0, $0) },
+                                selection: channelSelection)
+                        }
+                    }
+                    SheetField(
+                        title: L10n.string("Discord user ID"),
+                        hint: L10n.string("Optional. Only needed when others post in the channel.")
+                    ) {
+                        TextField(
+                            L10n.string("Discord user ID"), text: $route.authorID,
+                            prompt: Text(L10n.string("Any poster")).foregroundStyle(Palette.tertiaryInk)
+                        )
+                        .accessibilityLabel(L10n.string("Guru's Discord user ID"))
+                    }
                 }
             } accessory: {
                 HelpPopoverButton(articles: [SetupHelp.channelID, SetupHelp.userID])
             }
-            .icon(brand: "discord")
-            .mark(channelIDs.isEmpty ? .needsYou : .done)
 
             DestinationEditorSection(
                 connection: $route.connection,
                 accountIDs: accountIDs,
-                policy: route.connection.flatMap { policies[$0.accountID.trimmed] },
-                guruName: route.displayName
+                policy: route.connection.flatMap { policies[$0.accountID.trimmed] }
             )
 
             PlaybookSection(route: $route, learn: learn)
@@ -117,26 +115,16 @@ struct RouteEditorSheet: View {
         .frame(minWidth: 620, idealWidth: 660, minHeight: 680, idealHeight: 780)
     }
 
-    /// The guru at a glance: where they post, where their calls go, and what a full position is.
-    private var facts: [SheetFact] {
-        var facts: [SheetFact] = []
+    /// Where the guru's calls come from and go, or what is still missing, in one line.
+    private var summary: String {
         let channel = channelSelection.wrappedValue
-        facts.append(
-            channel.isEmpty
-                ? SheetFact(symbol: "exclamationmark", text: L10n.string("No channel yet"), tint: Palette.butter)
-                : SheetFact(brand: "discord", text: Self.shortID(channel)))
-        if let accountID = route.connection?.accountID.trimmed, !accountID.isEmpty {
-            facts.append(SheetFact(brand: "alpaca", text: accountID, tint: Palette.sky))
-            if let full = policies[accountID]?.maxSymbolUSD.trimmed, let amount = Decimal(string: full), amount > 0 {
-                facts.append(
-                    SheetFact(
-                        symbol: "dollarsign",
-                        text: L10n.string("Full position %@", amount.formatted(.currency(code: "USD").precision(.fractionLength(0...2))))))
-            }
-        } else {
-            facts.append(SheetFact(symbol: "exclamationmark", text: L10n.string("No account yet"), tint: Palette.butter))
+        let account = route.connection?.accountID.trimmed ?? ""
+        switch (channel.isEmpty, account.isEmpty) {
+        case (false, false): return L10n.string("Copies channel %@ into %@.", Self.shortID(channel), account)
+        case (true, false): return L10n.string("Needs a Discord channel.")
+        case (false, true): return L10n.string("Needs an account to copy into.")
+        case (true, true): return L10n.string("Needs a Discord channel and an account.")
         }
-        return facts
     }
 
     /// A Discord ID shortened to its ends: "1517…9742".
