@@ -324,6 +324,20 @@ final class AccountFeatureModel {
         }
     }
 
+    /// Older pages of an account's activity until `complete` holds, the oldest row is read, or
+    /// `limit` pages are; a holding's story needs every trade back to the buy that opened it.
+    func loadFeed(
+        accountID: String, until complete: ([AccountFeedItem]) -> Bool, limit: Int = 40,
+        using actions: (any AccountOperations)?
+    ) async {
+        if feeds[accountID] == nil { await loadFeed(accountID: accountID, using: actions) }
+        for _ in 0..<limit {
+            guard let rows = feeds[accountID], !complete(rows), feedCursors[accountID] != nil else { return }
+            await loadFeed(accountID: accountID, more: true, using: actions)
+            guard (feeds[accountID]?.count ?? 0) > rows.count else { return }
+        }
+    }
+
     /// The newest page of every listed account's feed; an account already paged further keeps
     /// its older rows until the owner reloads it.
     func refreshFeeds(using actions: (any AccountOperations)?) async {

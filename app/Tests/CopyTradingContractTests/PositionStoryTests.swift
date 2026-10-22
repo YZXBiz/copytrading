@@ -6,7 +6,7 @@ import Testing
 /// buy that joined it, and the owner's sale of all of it, with what it came to. A holding that is
 /// still just the post's one buy has no story.
 @MainActor
-func runPositionStoryTests() throws {
+func runPositionStoryTests() async throws {
     func row(
         _ sequence: Int, _ at: String, _ kind: String, source: String, shares: String, price: String,
         message: String, lot: String?
@@ -50,4 +50,69 @@ func runPositionStoryTests() throws {
     let unnamed = try feed([row(1, "2026-10-12T17:52:19Z", "bought", source: "guru", shares: "1", price: "70", message: first, lot: nil)])
     try #require(PositionStory(post: first, feed: unnamed) == nil, "a row with no holding got a story")
     print("CopyTradingContractTests: a holding is told start to finish from every post that bought or sold it")
+    try await aStoryReadsBackToTheBuyThatOpenedTheHolding()
+}
+
+/// An account's activity comes 25 rows at a time, newest first. A holding opened days before a
+/// busy day's sell is read back to its opening buy, so its story doesn't start at the sell.
+@MainActor
+private func aStoryReadsBackToTheBuyThatOpenedTheHolding() async throws {
+    let sell = "discord:1:900"
+    var rows: [[String: Any]] = []
+    for sequence in 0..<70 {
+        let at = String(format: "2026-10-%02dT15:%02d:00Z", 10 + sequence / 60, sequence % 60)
+        let (kind, side, message, lot, order): (String, String, String, Any, String) =
+            switch sequence {
+            case 0: ("bought", "buy", "discord:1:100", "lot-soxl", "lot-soxl")
+            case 69: ("sold", "sell", sell, "lot-soxl", "o69")
+            default: ("paused", "", "", NSNull(), "")
+            }
+        rows.append([
+            "sequence": sequence, "at": at, "kind": kind, "source": "guru", "side": side.isEmpty ? NSNull() : side,
+            "symbol": side.isEmpty ? NSNull() : "SOXL", "shares": side.isEmpty ? NSNull() : "2",
+            "price": side.isEmpty ? NSNull() : "90", "amount": side.isEmpty ? NSNull() : "180",
+            "guru_id": NSNull(), "message_id": message.isEmpty ? NSNull() : message,
+            "order_id": order.isEmpty ? NSNull() : order, "lot_id": lot, "changes": [], "reason": NSNull(),
+        ])
+    }
+    let items = try JSONDecoder().decode(
+        [AccountFeedItem].self, from: JSONSerialization.data(withJSONObject: Array(rows.reversed())))
+    let actions = PagedFeed(items: items)
+    let feature = AccountFeatureModel()
+    feature.authorizePrivateEvidence()
+
+    await feature.loadFeed(accountID: "paper", using: actions)
+    try #require(!PositionStory.isComplete(post: sell, feed: feature.feeds["paper"] ?? []), "one page reached back")
+    await feature.loadFeed(
+        accountID: "paper", until: { PositionStory.isComplete(post: sell, feed: $0) }, using: actions)
+
+    let feed = feature.feeds["paper"] ?? []
+    try #require(feed.count == 70, "activity was read \(feed.count) rows back, not to the opening buy")
+    let story = try #require(PositionStory(post: sell, feed: feed), "the sell had no story")
+    try #require(story.steps.map(\.kind) == [.bought, .soldAll], "steps were \(story.steps.map(\.kind))")
+    try #require(story.result == 0, "result was \(String(describing: story.result))")
+}
+
+/// An account's activity, 25 rows a page, newest first; nothing else is asked of it.
+private actor PagedFeed: AccountOperations {
+    let items: [AccountFeedItem]
+    init(items: [AccountFeedItem]) { self.items = items }
+
+    func accountFeed(accountID: String, beforeSeq: Int?, limit: Int) throws -> AccountFeedPage {
+        let older = items.filter { beforeSeq == nil || $0.sequence < beforeSeq! }
+        let page = Array(older.prefix(limit))
+        let next = older.count > limit ? page.last.map { String($0.sequence) } ?? "null" : "null"
+        let encoded = String(decoding: try JSONEncoder().encode(page), as: UTF8.self)
+        let json = #"{"account_id":"\#(accountID)","items":\#(encoded),"next_before_seq":\#(next)}"#
+        return try JSONDecoder().decode(AccountFeedPage.self, from: Data(json.utf8))
+    }
+    func accounts(beforeAccountID: String?, limit: Int) throws -> AccountOverviewPage { throw Unused() }
+    func sourceActivity(beforeSeq: Int?, limit: Int) throws -> SourceActivityPage { throw Unused() }
+    func guruDayStats(dayStart: Date, dayEnd: Date) throws -> GuruDayStatsPage { throw Unused() }
+    func controlAccount(_ command: AccountControlCommand) throws -> AccountControlResult { throw Unused() }
+    func equityHistory(accountID: String, window: EquityHistoryWindow) throws -> EquityHistory? { throw Unused() }
+    func resolveOwnership(accountID: String, resolution: OwnershipResolutionRequest) throws -> OwnershipResolution {
+        throw Unused()
+    }
+    private struct Unused: Error {}
 }

@@ -70,7 +70,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
         case .guruFeed: try await runGuruFeedTests()
         case .manualInstructionGuess: try runManualInstructionGuessTests()
         case .fillWatch: try runFillWatchTests()
-        case .positionStory: try runPositionStoryTests()
+        case .positionStory: try await runPositionStoryTests()
         case .liveQuote: try runLiveQuoteTests()
         case .setupCheckProblems: try runSetupCheckProblemTests()
         case .copySheet: try runCopySheetTests()
