@@ -1870,6 +1870,8 @@
 "now %@" = "现价 %@";
 "Open post" = "打开帖子";
 "From %@’s post" = "来自 %@ 的帖子";
+"From %@’s %@" = "来自 %@ 的 %@";
+"Average cost %@" = "平均成本 %@";
 "From a post" = "来自一条帖子";
 "Bought at %@" = "买入价 %@";
 "Sell %@ shares" = "卖出 %@ 股";

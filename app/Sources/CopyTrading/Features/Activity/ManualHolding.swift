@@ -9,7 +9,7 @@ struct ManualHolding: Identifiable, Equatable {
     let shares: Decimal
     /// The broker's last price; nil when the broker was not read.
     let price: Decimal?
-    /// The prices the guru bought at, from the posts that opened each buy, oldest first.
+    /// The guru's price for each buy that still holds shares, oldest first.
     let buyPrices: [Decimal]
 
     var id: String { symbol }
@@ -24,9 +24,9 @@ struct ManualHolding: Identifiable, Equatable {
             let symbol = position.symbol.uppercased()
             let existing = bySymbol[symbol]
             var prices = existing?.buyPrices ?? []
-            for lot in position.lots {
-                guard let remaining = Decimal(string: lot.remainingQty), remaining > 0,
-                    let price = lot.excerpt.flatMap(ManualInstructionGuess.price(in:)), !prices.contains(price)
+            for buy in position.lots.flatMap(\.buys) {
+                guard let remaining = Decimal(string: buy.remainingQty), remaining > 0,
+                    let price = Decimal(string: buy.guruPrice), !prices.contains(price)
                 else { continue }
                 prices.append(price)
             }

@@ -173,6 +173,8 @@ public struct AccountLotBuyView: Codable, Equatable, Identifiable, Sendable {
     public let boughtAt: String?
     public let boughtQty: String
     public let remainingQty: String
+    /// The guru's price for the buy, which a sell naming a buy price is matched against.
+    public let guruPrice: String
     public let price: String?
     /// This buy's remaining shares at the broker's current price, against what they cost.
     public let unrealizedPL: String?
@@ -186,6 +188,7 @@ public struct AccountLotBuyView: Codable, Equatable, Identifiable, Sendable {
         case boughtAt = "bought_at"
         case boughtQty = "bought_qty"
         case remainingQty = "remaining_qty"
+        case guruPrice = "guru_price"
         case price
         case unrealizedPL = "unrealized_pl"
     }

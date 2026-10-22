@@ -22,7 +22,7 @@ struct PositionRow: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var posts: Int {
-        Set(position.lots.map { $0.sourceID ?? $0.lotID }).count
+        Set(position.lots.flatMap(\.buys).map { $0.sourceID ?? $0.orderID }).count
     }
 
     var body: some View {

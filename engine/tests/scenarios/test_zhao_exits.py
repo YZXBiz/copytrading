@@ -113,11 +113,18 @@ async def test_a_lot_shows_each_buy_and_costs_only_the_shares_still_held(tmp_pat
         [lot] = await rig.lots("paper", "NVDA")
         assert lot.remaining_qty == 7
         assert [
-            (buy.source_id, buy.bought_qty, buy.remaining_qty, buy.price, buy.unrealized_pl)
+            (
+                buy.source_id,
+                buy.bought_qty,
+                buy.remaining_qty,
+                buy.guru_price,
+                buy.price,
+                buy.unrealized_pl,
+            )
             for buy in lot.buys
         ] == [
-            (first.source_ids[0], 4, 2, 125, Decimal("-50.00")),
-            (added.source_ids[0], 5, 5, 100, Decimal("0.00")),
+            (first.source_ids[0], 4, 2, 125, 125, Decimal("-50.00")),
+            (added.source_ids[0], 5, 5, 100, 100, Decimal("0.00")),
         ]
         # 2 shares at $125 and 5 at $100 cost $750, so at $100 the lot is down $50, not the
         # $77.78 that 7 shares at the $111.11 every buy averaged would show.
