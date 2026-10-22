@@ -2,13 +2,21 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
-## Unreleased
+## 0.1.0-beta.5 — developer preview
 
+Copying keeps going through restarts and updates, and every position shows what each of its buys cost. Found by checking a live paper account against Alpaca, order by order.
+
+- **Copying comes back on its own after a restart or an update.** An update or a relaunch left copying paused until someone unlocked the window with Touch ID, so a guru's calls were missed for hours while nobody was at the Mac. When you chose to start copying on launch, an update relaunched it while copying, or the engine restarted, copying now resumes from the saved, paper-only setup without the window; Touch ID still guards what the window shows. A pause during trading hours (4 AM to 8 PM New York time) is told again every half hour.
+- **A call posted while CopyTrading was away is still copied if it's recent enough.** Posts read back after a reconnect were dropped as history after a fixed two minutes, whatever the account's maximum signal age said. They now follow that setting, up to ten minutes.
 - **A position lists every buy it holds, and costs only the shares still held.** When a guru bought a stock, sold half of that buy, then added more, the position showed only the first post ("2.78 of 3.674 shares bought at $90.13"), and priced the shares left at the average of every buy, sold ones included. Its loss read -$6.49 beside the broker's -$4.37, and the guru's page said "Holding $251 … $7.18". Each buy that still holds shares now has its own line, with its post, price, and gain, and the shares left are costed at the prices that bought them, so the numbers agree with the broker. The same cost now counts toward an account's stock limits.
 - **Closing every buy of a whole-share stock leaves nothing behind.** For a stock that trades only in whole shares, a "sell half" across two buys left each a fraction of a share, so selling each buy by its price later left one share that no such sell could reach. Sales of whole shares now split in whole shares, the remainder from the oldest buy.
 - **A stock held in two lots counts what both cost toward the limits.** The per-stock and total limits counted only the costlier lot.
 - **A re-posted call trades once, however the model writes its fraction.** The repost checks compared fractions digit for digit, so when a second reading of the same post gave "1/6" as 0.16666666666666666 instead of the exact ratio, the re-post bought another sixth, or a recap of "sell a third" sold a second third. Fractions now count as the same within rounding.
 - **Selling by hand and the Sell sheet know every buy in a position.** A sell typed by hand offered "the buy at $X" only for the post that opened the position, never a later add, and the Sell sheet named only that first post. Both now use every buy that still holds shares; a position of several buys reads "From Zhao’s 2 posts · Average cost $89.37", and VoiceOver counts its posts.
+- **A position's story reads back to the buy that opened it.** "Start to finish" under a post read only the newest 25 account events, so an older buy could drop out and the Result counted a whole sale as profit.
+- **Your own sales are yours.** A sale you made from a position was announced and recapped as the guru's, and while it rested or expired the guru's post read "Partly traded". A buy that filled part of its shares before it expired is now announced and recapped too.
+- **A sell of shares CopyTrading never bought says so:** "CopyTrading holds none of these shares", not "These shares are no longer held".
+- **The assistant sees only stocks an account holds,** with exposure in cents.
 
 ## 0.1.0-beta.4 — developer preview
 
