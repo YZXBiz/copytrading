@@ -3329,8 +3329,6 @@ private actor RecordingTradingStarter: TradingStarting {
         )
     }
 
-    }
-
     func learnGuruPlaybook(_ learning: GuruPlaybookLearningRequest) async throws -> LearnedGuruPlaybook {
         lastLearningRequest = learning
         operationEvents.append("learn")
