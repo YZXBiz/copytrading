@@ -11,7 +11,7 @@ from copytrading_engine.shared.raw_message import RawMessage
 from copytrading_engine.sources.sqlite import SQLiteSourceStore
 from copytrading_engine.trading.adapters.telemetry import TradingTelemetry
 from copytrading_engine.trading.domain.config import TradingConfiguration, TradingSecrets
-from copytrading_engine.trading.domain.profiles import ProfileBuilder, ProfileDraft, ProfileExample
+from copytrading_engine.trading.domain.profiles import ProfileBuilder, ProfileDraft
 from copytrading_engine.trading.entrypoints.factories import TradingFactories
 from copytrading_engine.trading.entrypoints.runtime import TradingRuntime
 
@@ -244,11 +244,11 @@ async def test_validate_adds_candidate_credentials_while_retaining_active_creden
     assert not leaked, f"credential categories reached the journal: {leaked}"
 
 
-async def test_preview_paths_register_provider_keys_before_decoder_factory(tmp_path):
+async def test_preview_path_registers_the_provider_key_before_decoder_factory(tmp_path):
     from copytrading_engine.execution.domain.sizing import RouteConnection
     from copytrading_engine.trading.domain.config import ProviderConfiguration
 
-    values = ("historical-preview-key", "example-preview-key")
+    values = ("historical-preview-key",)
 
     sink = journal_sink(tmp_path / "diagnostics")
     telemetry = TradingTelemetry(sink=sink)
@@ -289,13 +289,6 @@ async def test_preview_paths_register_provider_keys_before_decoder_factory(tmp_p
             guru_id="preview-guru",
             display_name="Preview Guru",
             playbook="",
-            examples=(
-                ProfileExample(
-                    message="Bought AAPL at 200",
-                    expected_action="buy",
-                    expected_symbol="AAPL",
-                ),
-            ),
         )
     )
     provider = ProviderConfiguration(name="anthropic", model="test-model")
@@ -306,9 +299,6 @@ async def test_preview_paths_register_provider_keys_before_decoder_factory(tmp_p
         provider,
         SecretStr(values[0]),
         destinations,
-    )
-    await runtime.profiles.review_profile_examples(
-        profile, provider, SecretStr(values[1]), destinations
     )
     assert sink.flush(timeout_seconds=5)
     journal = journal_text(tmp_path / "diagnostics")

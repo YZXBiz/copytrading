@@ -304,12 +304,11 @@ async def test_runtime_registered_credentials_never_reach_the_journal(
             guru_id="runtime-capture",
             display_name="Runtime Capture",
             playbook="",
-            examples=(),
         )
     )
     configuration = TradingConfiguration.model_validate(
         {
-            "version": 8,
+            "version": 9,
             "source": {"channel_ids": ["123"]},
             "provider": {"name": "deepseek", "model": "deepseek-flash"},
             "accounts": [{"id": "account-a", "environment": "paper"}],

@@ -33,23 +33,10 @@ func runTradingContractTests() throws {
         !String(decoding: encoded, as: UTF8.self).contains("token"),
         "saved trading configuration unexpectedly contains a credential field"
     )
-    try #require(configuration.version == 8, "profile configuration did not use v8")
+    try #require(configuration.version == 9, "profile configuration did not use v9")
     try #require(
-        profile.profileRevision == "18b62f43f483b96c21cad8e660f9e3c3ddb9022cf553cc28e0f94fe59fd0978e",
+        profile.profileRevision == "5e81804cd2ea614b72af174acf425fcab50ee5be4d995aac9bb4c042e4b601a2",
         "native content address differs from the engine profile builder")
-    let exampleProfile = try TradingProfileBuilder().build(
-        TradingProfileDraft(
-            guruID: "zhao", displayName: "Zhao", playbook: "Apple means AAPL",
-            examples: [
-                TradingProfileExample(
-                    message: "ALERT: Bought Apple at 200 1/6", expectedAction: .buy,
-                    expectedSymbol: "AAPL", expectedFraction: "0.1666666666666666666666666667"
-                )
-            ]
-        ))
-    try #require(
-        exampleProfile.profileRevision == "18822e829e0eb1d1b9ee670308c46322be5f7bc7abd39af16bd908e4556c6370",
-        "native profile examples do not use the engine canonical revision format")
     // A learned playbook is multi-line Chinese with quotes, tabs, and slashes: every one of those
     // must hash exactly as the engine hashes it, or activation would stall on a revision mismatch.
     let chineseProfile = try TradingProfileBuilder().build(
@@ -58,7 +45,7 @@ func runTradingContractTests() throws {
             playbook: "加了 means buy\n英伟达 means NVDA\n\"quoted\" words, a\ttab, and a / slash"
         ))
     try #require(
-        chineseProfile.profileRevision == "9237ba49572b46c039bea7611f103607d059d3cadbf45393605f8c6ffa02a508",
+        chineseProfile.profileRevision == "51c279b479a9c01019bee32412f0d67e1eb96ea1b862305116508176394abecc",
         "a multi-line Chinese playbook does not hash to the engine's revision")
     do {
         _ = try TradingProfileBuilder().build(
@@ -68,19 +55,6 @@ func runTradingContractTests() throws {
             ))
         throw VerificationFailure(description: "a playbook over the engine's limit was accepted")
     } catch TradingProfileBuilderError.invalidProfile {}
-    // An example's expected prices are part of the guru's revision, hashed as the engine does.
-    let pricedProfile = try TradingProfileBuilder().build(
-        TradingProfileDraft(
-            guruID: "analyst", displayName: "分析师",
-            examples: [
-                TradingProfileExample(
-                    message: "出一半39.5的iren 现价42", expectedAction: .reduce, expectedSymbol: "IREN",
-                    expectedFraction: "0.5", expectedPrice: "42", expectedBuyPrice: "39.5")
-            ]
-        ))
-    try #require(
-        pricedProfile.profileRevision == "ae9dafdbda8d0921acd90bfe7c635ee11bd95b1834b62d540eb6738bd06cc9a0",
-        "an example's expected prices do not hash to the engine's revision")
     try sizingMatchesTheEngineOnEverySharedExample()
     let prepared = try TradingProfileBuilder().preparedProfiles()
     try #require(prepared.map(\.guruID) == ["prepared-standard"], "prepared profiles changed")
@@ -88,8 +62,7 @@ func runTradingContractTests() throws {
         """
         {"version":1,"request_id":"learn-1","ok":{"type":"learned_playbook","playbook":{
         "posts_read":80,
-        "playbook":"加了 means buy","examples":[{"message":"赵哥-股票： 25加了abc",
-        "expected_action":"buy","expected_symbol":"ABC","expected_fraction":null}],
+        "playbook":"加了 means buy",
         "summary":"Buys lead with the price.","provider":"deepseek","model":"deepseek-flash",
         "cost_notice":"Model calls use the configured provider; provider charges may apply."}}}
         """.utf8)
@@ -101,7 +74,7 @@ func runTradingContractTests() throws {
         throw VerificationFailure(description: "a learned playbook did not decode as a learned result")
     }
     try #require(
-        draft.postsRead == 80 && draft.examples.count == 1,
+        draft.postsRead == 80 && draft.playbook == "加了 means buy",
         "a learned playbook lost its fields")
 
     try runTradingConfigurationPersistenceTests()

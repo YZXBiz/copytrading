@@ -25,7 +25,6 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
     case orderApproval = "order approval"
     case keepAwake = "keep the Mac awake while copying"
     case backupRestoreNotes = "backup and restore notes"
-    case learnedExamples = "learned examples"
     case updateOffer = "update offer banner"
     case copyingStopped = "copying stopped notice"
     case guruFeed = "guru feed"
@@ -64,7 +63,6 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
         case .orderApproval: try await runOrderApprovalTests()
         case .keepAwake: try runKeepAwakeTests()
         case .backupRestoreNotes: try await runBackupRestoreNoteTests()
-        case .learnedExamples: try runLearnedExamplesTests()
         case .updateOffer: try runUpdateOfferTests()
         case .copyingStopped: try runCopyingStoppedTests()
         case .guruFeed: try await runGuruFeedTests()

@@ -27,11 +27,7 @@ from copytrading_engine.trading.domain.config import (
     TradingConfiguration,
     TradingSecrets,
 )
-from copytrading_engine.trading.domain.profiles import (
-    ProfileBuilder,
-    ProfileDraft,
-    ProfileExample,
-)
+from copytrading_engine.trading.domain.profiles import ProfileBuilder, ProfileDraft
 
 type AgentAccess = Literal["off", "read_pause", "propose"]
 
@@ -73,15 +69,6 @@ class _Account(_Strict):
     limits: AccountPolicy = Field(default_factory=AccountPolicy)
 
 
-class _Example(_Strict):
-    message: str
-    action: Literal["buy", "reduce", "close"]
-    symbol: str
-    fraction: Decimal | None = None
-    price: Decimal | None = None
-    buy_price: Decimal | None = None
-
-
 class _Guru(_Strict):
     id: str
     name: str
@@ -89,7 +76,6 @@ class _Guru(_Strict):
     author: str | None = None
     playbook: str = ""
     playbook_file: str | None = None
-    examples: tuple[_Example, ...] = ()
     # One guru copies into one account; that account's max_symbol_usd is the guru's full position.
     account: str
 
@@ -157,17 +143,6 @@ def load_setup(path: Path) -> ServerSetup:
                         guru_id=guru.id,
                         display_name=guru.name,
                         playbook=playbook,
-                        examples=tuple(
-                            ProfileExample(
-                                message=example.message,
-                                expected_action=example.action,
-                                expected_symbol=example.symbol,
-                                expected_fraction=example.fraction,
-                                expected_price=example.price,
-                                expected_buy_price=example.buy_price,
-                            )
-                            for example in guru.examples
-                        ),
                     )
                 )
             )

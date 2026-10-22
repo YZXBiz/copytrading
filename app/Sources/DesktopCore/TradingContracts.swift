@@ -183,38 +183,6 @@ public struct TradingRouteConnection: Codable, Equatable, Identifiable, Sendable
     }
 }
 
-public struct TradingProfileExample: Codable, Equatable, Sendable {
-    public var message: String
-    public var expectedAction: TradingInstructionAction
-    public var expectedSymbol: String
-    public var expectedFraction: String?
-    /// The guru's price in the post, and for a sell the buy price it names (ADR-0010).
-    public var expectedPrice: String?
-    public var expectedBuyPrice: String?
-
-    public init(
-        message: String, expectedAction: TradingInstructionAction,
-        expectedSymbol: String, expectedFraction: String? = nil,
-        expectedPrice: String? = nil, expectedBuyPrice: String? = nil
-    ) {
-        self.message = message
-        self.expectedAction = expectedAction
-        self.expectedSymbol = expectedSymbol
-        self.expectedFraction = expectedFraction
-        self.expectedPrice = expectedPrice
-        self.expectedBuyPrice = expectedBuyPrice
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case message
-        case expectedAction = "expected_action"
-        case expectedSymbol = "expected_symbol"
-        case expectedFraction = "expected_fraction"
-        case expectedPrice = "expected_price"
-        case expectedBuyPrice = "expected_buy_price"
-    }
-}
-
 public enum TradingInstructionAction: String, Codable, CaseIterable, Sendable {
     case buy
     case reduce
@@ -233,19 +201,14 @@ public struct TradingProfileRevision: Codable, Equatable, Identifiable, Sendable
     public var guruID: String
     public var displayName: String
     public var playbook: String
-    public var examples: [TradingProfileExample]
     public var profileRevision: String
 
     public var id: String { "\(guruID):\(profileRevision)" }
 
-    public init(
-        guruID: String, displayName: String, playbook: String,
-        examples: [TradingProfileExample] = [], profileRevision: String
-    ) {
+    public init(guruID: String, displayName: String, playbook: String, profileRevision: String) {
         self.guruID = guruID
         self.displayName = displayName
         self.playbook = playbook
-        self.examples = examples
         self.profileRevision = profileRevision
     }
 
@@ -253,7 +216,6 @@ public struct TradingProfileRevision: Codable, Equatable, Identifiable, Sendable
         case guruID = "guru_id"
         case displayName = "display_name"
         case playbook
-        case examples
         case profileRevision = "profile_revision"
     }
 }
@@ -262,23 +224,17 @@ public struct TradingProfileDraft: Equatable, Sendable {
     public var guruID: String
     public var displayName: String
     public var playbook: String
-    public var examples: [TradingProfileExample]
 
-    public init(
-        guruID: String, displayName: String, playbook: String = "",
-        examples: [TradingProfileExample] = []
-    ) {
+    public init(guruID: String, displayName: String, playbook: String = "") {
         self.guruID = guruID
         self.displayName = displayName
         self.playbook = playbook
-        self.examples = examples
     }
 }
 
 public enum TradingProfileBuilderError: Error, Equatable, Sendable {
     case invalidIdentity
     case invalidProfile
-    case invalidExample
 }
 
 /// Builds profile revisions whose hash matches the engine's (sorted-key JSON, SHA-256).
@@ -297,60 +253,19 @@ public struct TradingProfileBuilder: Sendable {
         else { throw TradingProfileBuilderError.invalidIdentity }
         guard !draft.displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
             draft.displayName.count <= 100,
-            draft.playbook.count <= tradingPlaybookMaxLength,
-            draft.examples.count <= 32
+            draft.playbook.count <= tradingPlaybookMaxLength
         else { throw TradingProfileBuilderError.invalidProfile }
-        for example in draft.examples {
-            guard !example.message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                example.message.count <= 2_000,
-                example.expectedSymbol.range(
-                    of: "^[A-Z]{1,5}(?:[.][A-Z])?$", options: .regularExpression
-                ) != nil
-            else { throw TradingProfileBuilderError.invalidExample }
-            for price in [example.expectedPrice, example.expectedBuyPrice].compactMap({ $0 }) {
-                guard let value = Decimal(string: price), value > 0, value <= 100_000 else {
-                    throw TradingProfileBuilderError.invalidExample
-                }
-            }
-            if example.expectedAction == .buy, example.expectedBuyPrice != nil {
-                throw TradingProfileBuilderError.invalidExample
-            }
-            if let rawFraction = example.expectedFraction {
-                guard let value = Decimal(string: rawFraction), value > 0, value <= 1 else {
-                    throw TradingProfileBuilderError.invalidExample
-                }
-            }
-            if example.expectedAction != .buy {
-                guard let fraction = example.expectedFraction,
-                    let value = Decimal(string: fraction), value > 0, value <= 1,
-                    !(example.expectedAction == .close && value != 1),
-                    !(example.expectedAction == .reduce && value == 1)
-                else {
-                    throw TradingProfileBuilderError.invalidExample
-                }
-            }
-        }
 
         let base: [String: Any] = [
             "guru_id": draft.guruID,
             "display_name": draft.displayName,
             "playbook": draft.playbook,
-            "examples": draft.examples.map { example in
-                [
-                    "message": example.message,
-                    "expected_action": example.expectedAction.rawValue,
-                    "expected_symbol": example.expectedSymbol,
-                    "expected_fraction": example.expectedFraction as Any? ?? NSNull(),
-                    "expected_price": example.expectedPrice as Any? ?? NSNull(),
-                    "expected_buy_price": example.expectedBuyPrice as Any? ?? NSNull(),
-                ] as [String: Any]
-            },
         ]
         let data = try JSONSerialization.data(withJSONObject: base, options: [.sortedKeys, .withoutEscapingSlashes])
         let revision = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
         return TradingProfileRevision(
             guruID: draft.guruID, displayName: draft.displayName,
-            playbook: draft.playbook, examples: draft.examples, profileRevision: revision
+            playbook: draft.playbook, profileRevision: revision
         )
     }
 }
@@ -471,7 +386,7 @@ public struct TradingNotificationConfiguration: Codable, Equatable, Sendable {
 /// Saved to application support. This type deliberately contains no credentials.
 public struct TradingConfiguration: Codable, Equatable, Sendable {
     /// Matches the engine's CONFIGURATION_VERSION; older saved files are rejected, never migrated.
-    public static let currentVersion = 8
+    public static let currentVersion = 9
     public var version = TradingConfiguration.currentVersion
     public var source: TradingSourceConfiguration
     public var provider: TradingProviderConfiguration
@@ -879,24 +794,21 @@ public struct GuruPlaybookLearningRequest: Equatable, Sendable {
     }
 }
 
-/// A draft for the owner to edit: only verbatim, valid example posts survive the engine's checks.
+/// A draft for the owner to edit: nothing is saved or used until they save the guru.
 public struct LearnedGuruPlaybook: Codable, Equatable, Sendable {
     public var postsRead: Int
     public var playbook: String
-    public var examples: [TradingProfileExample]
     public var summary: String
     public var provider: String
     public var model: String
     public var costNotice: String
 
     public init(
-        postsRead: Int, playbook: String,
-        examples: [TradingProfileExample], summary: String, provider: String, model: String,
+        postsRead: Int, playbook: String, summary: String, provider: String, model: String,
         costNotice: String
     ) {
         self.postsRead = postsRead
         self.playbook = playbook
-        self.examples = examples
         self.summary = summary
         self.provider = provider
         self.model = model
@@ -905,30 +817,8 @@ public struct LearnedGuruPlaybook: Codable, Equatable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case postsRead = "posts_read"
-        case playbook, examples, summary, provider, model
+        case playbook, summary, provider, model
         case costNotice = "cost_notice"
-    }
-}
-
-public struct ProfileExampleReviewRequest: Codable, Equatable, Sendable {
-    public var profile: TradingProfileRevision
-    public var provider: TradingProviderConfiguration
-    public var providerAPIKey: String
-    public var destinations: [TradingRouteConnection]
-
-    public init(
-        profile: TradingProfileRevision, provider: TradingProviderConfiguration,
-        providerAPIKey: String, destinations: [TradingRouteConnection]
-    ) {
-        self.profile = profile
-        self.provider = provider
-        self.providerAPIKey = providerAPIKey
-        self.destinations = destinations
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case profile, provider, destinations
-        case providerAPIKey = "provider_api_key"
     }
 }
 
@@ -1053,80 +943,5 @@ public struct ProfileEvaluation: Codable, Equatable, Sendable {
         case costNotice = "cost_notice"
         case instructions, destinations
         case reviewReasons = "review_reasons"
-    }
-}
-
-public struct ProfileExampleComparison: Codable, Equatable, Sendable {
-    public var exampleIndex: Int
-    public var expectedAction: TradingInstructionAction
-    public var expectedSymbol: String
-    public var expectedFraction: String?
-    public var actual: ProfileEvaluation
-    public var matches: Bool
-    public var reviewReasons: [String]
-
-    public init(
-        exampleIndex: Int, expectedAction: TradingInstructionAction,
-        expectedSymbol: String, expectedFraction: String?, actual: ProfileEvaluation,
-        matches: Bool, reviewReasons: [String]
-    ) {
-        self.exampleIndex = exampleIndex
-        self.expectedAction = expectedAction
-        self.expectedSymbol = expectedSymbol
-        self.expectedFraction = expectedFraction
-        self.actual = actual
-        self.matches = matches
-        self.reviewReasons = reviewReasons
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case exampleIndex = "example_index"
-        case expectedAction = "expected_action"
-        case expectedSymbol = "expected_symbol"
-        case expectedFraction = "expected_fraction"
-        case actual, matches
-        case reviewReasons = "review_reasons"
-    }
-}
-
-public struct ProfileExampleReview: Codable, Equatable, Sendable {
-    public var guruID: String
-    public var profileRevision: String
-    public var provider: String
-    public var model: String
-    public var simulated: Bool
-    public var noOrder: Bool
-    public var costNotice: String
-    public var examples: [ProfileExampleComparison]
-    public var reviewReasons: [String]
-    public var automaticActivationAllowed: Bool
-
-    public init(
-        guruID: String, profileRevision: String,
-        provider: String, model: String, simulated: Bool = true, noOrder: Bool = true,
-        costNotice: String, examples: [ProfileExampleComparison],
-        reviewReasons: [String] = [], automaticActivationAllowed: Bool
-    ) {
-        self.guruID = guruID
-        self.profileRevision = profileRevision
-        self.provider = provider
-        self.model = model
-        self.simulated = simulated
-        self.noOrder = noOrder
-        self.costNotice = costNotice
-        self.examples = examples
-        self.reviewReasons = reviewReasons
-        self.automaticActivationAllowed = automaticActivationAllowed
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case guruID = "guru_id"
-        case profileRevision = "profile_revision"
-        case provider, model, simulated
-        case noOrder = "no_order"
-        case costNotice = "cost_notice"
-        case examples
-        case reviewReasons = "review_reasons"
-        case automaticActivationAllowed = "automatic_activation_allowed"
     }
 }

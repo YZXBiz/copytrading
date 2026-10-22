@@ -25,7 +25,7 @@ The first release supports Alpaca paper and live accounts, multiple gurus, and m
 | Missing fraction | Use an explicitly configured connection default; otherwise require review and submit no automated order. |
 | Existing investments | Support existing holdings and manual trading. External holdings stay distinct from app-owned lots. |
 | Ownership conflict | Pause the affected symbol/account and let the operator resolve ambiguous ownership. Other trading continues only where account-wide checks pass. |
-| Source setup | Prepared profiles plus a guided builder using examples and plain-language conventions, with previews and user review before activation. |
+| Source setup | Prepared profiles plus a guided builder using plain-language conventions, with previews and user review before activation. |
 | Signal formats | Text interpretation first. Preserve accessible attachment evidence and flag image-dependent messages for review. |
 | Human review | Allow corrected interpretations and separately confirmed manual orders after fresh price, risk, ownership, and duplicate-order checks. |
 | Background operation | Closing the window keeps the engine running. Provide menu-bar status and a separate Stop engine control. |
@@ -53,9 +53,9 @@ Onboarding inventories existing positions and open orders. It establishes extern
 
 ### Configure a guru and account destinations
 
-Users press Learn from Channel: the model reads the channel's recent posts and drafts a playbook (how this guru writes buys, trims, exits, and names), an exit basis, and example posts with what they mean. Users edit the draft; Validate runs the examples through the reader, and a mismatch blocks activation. Adding a guru never needs a code change. Prose steers interpretation but never bypasses grounding: every price, ticker, and fraction must be complete tokens of the post, and a company name resolves to a ticker only when a playbook line states it (ADR-0006).
+Users press Learn from Channel: the model reads the channel's recent posts and drafts a playbook (how this guru writes buys, trims, exits, and names) and an exit basis. Users edit the draft before it is saved. Adding a guru never needs a code change. Prose steers interpretation but never bypasses grounding: every price, ticker, and fraction must be complete tokens of the post, and a company name resolves to a ticker only when a playbook line states it (ADR-0006).
 
-A source profile owns interpretation: the playbook, examples, and exit basis. Each destination connection owns sizing. For example:
+A source profile owns interpretation: the playbook and exit basis. Each destination connection owns sizing. For example:
 
 | Connection | Policy | Source says `1/6` | Source says `1/3` |
 | --- | --- | --- | --- |
@@ -88,7 +88,7 @@ An ownership correction is not itself a broker order. An order confirmation is a
 | --- | --- |
 | Setup | Managed installation, connection forms, identities, readiness. |
 | Overview | Per-account capability/status, incidents, backlog, exposure, pause/resume. |
-| Sources | Prepared profiles, guided builder, examples, destinations, sizing, active revisions. |
+| Sources | Prepared profiles, guided builder, destinations, sizing, active revisions. |
 | Accounts | Paper/live identity, external/app-owned positions, limits, recovery preferences. |
 | Activity and review | Message-to-order evidence, ownership resolution, corrections, fresh preview/confirmation. |
 | Connections | Local credentials, connection checks, permissions, model quotas. |

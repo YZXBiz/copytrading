@@ -42,26 +42,6 @@ class SetupReport(BaseModel):
     checks: tuple[ConnectionCheck, ...] = ()
 
 
-class ExampleResult(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="ignore")
-
-    example_index: int
-    expected_action: str
-    expected_symbol: str
-    matches: bool
-    review_reasons: tuple[str, ...] = ()
-
-
-class ExampleReview(BaseModel):
-    """How the model read one guru's examples; a different reading blocks the start."""
-
-    model_config = ConfigDict(frozen=True, extra="ignore")
-
-    guru_id: str
-    automatic_activation_allowed: bool
-    examples: tuple[ExampleResult, ...] = ()
-
-
 ACTIVATION_TIMEOUT_SECONDS = 120.0
 
 
@@ -125,24 +105,6 @@ class HeadlessEngine:
         """Check every connection and the setup; nothing is saved or traded."""
         report, _token = await self._validate()
         return report
-
-    async def review_examples(self) -> tuple[ExampleReview, ...]:
-        """Have the model read each guru's examples, as Check Setup does in the app."""
-        configuration = self._setup.configuration
-        reviews = []
-        for profile in configuration.profiles:
-            if not profile.examples:
-                continue
-            route = next(r for r in configuration.routes if r.guru_id == profile.guru_id)
-            reply = await self.request(
-                "review_profile_examples",
-                profile=profile.model_dump(mode="json"),
-                provider=configuration.provider.model_dump(mode="json"),
-                provider_api_key=self._secrets.provider_api_key.get_secret_value(),
-                destinations=[item.model_dump(mode="json") for item in route.connections],
-            )
-            reviews.append(ExampleReview.model_validate(reply["review"]))
-        return tuple(reviews)
 
     async def start(self) -> None:
         """Check the setup, start copying, and wait until the engine reports it running."""

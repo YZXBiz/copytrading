@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A sheet's text-only action, such as Add Example or Remove: words in ink, no capsule. A
+/// A sheet's text-only action, such as Learn from Channel or Remove: words in ink, no capsule. A
 /// destructive one reads in red, the one colour that means "this takes something away".
 struct SheetQuietButtonStyle: ButtonStyle {
     var isDestructive = false

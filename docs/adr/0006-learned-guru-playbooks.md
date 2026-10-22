@@ -6,6 +6,10 @@ Accepted, September 2026.
 Amended October 2026: the guru's message prefix was removed. Each channel carries one guru, so
 every post in it is read; Learn no longer drafts a prefix.
 
+Amended October 2026 again: guru examples were removed, with decision 3 and the examples in
+decision 2. Learn drafts only the playbook, Start Copying no longer reads examples, and the
+configuration moves to version 9 without migration.
+
 ## Context
 Reading a guru's posts is the model's job, but guru knowledge had leaked into code and forms:
 an alias table (英伟达=NVDA) the owner typed by hand, a hard-coded list of Chinese and English

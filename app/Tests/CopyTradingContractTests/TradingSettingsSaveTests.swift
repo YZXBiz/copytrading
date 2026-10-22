@@ -89,7 +89,6 @@ struct TradingSettingsSaveTests {
         try check(model.tradingStatus?.state == .running, model.message ?? "AppModel start failed")
         try await checkValidationClientRequest(configuration: configuration, secrets: credentials)
         try await checkHistoricalEvaluationClientRequest(profile: profile)
-        try await checkProfileExampleReviewClientRequest(profile: profile)
         try await checkFailedActivationRestoresPriorRevision()
         try await checkLaunchStartRetriesAFailedCheck()
         try await checkLaunchStartRetriesATimedOutRequest()
@@ -110,7 +109,6 @@ struct TradingSettingsSaveTests {
         try await checkLiveStartNeedsTheOwnerAndPaperDoesNot(configuration: configuration, secrets: credentials)
         try await checkStartAfterALongLookChecksAgain(configuration: configuration, secrets: credentials)
         try await checkACheckedSetupIsNotStarting(configuration: configuration, secrets: credentials)
-        try await checkProfileExampleReviewActionPath()
         try await checkPlaybookLearningUsesSavedKeysAndExplainsFailures(configuration: configuration, secrets: credentials)
         try await checkRejectedValidationDoesNotPersist(configuration: configuration, secrets: credentials)
         try await checkValidationCancellationDoesNotPersist(configuration: configuration, secrets: credentials)
@@ -277,48 +275,6 @@ struct TradingSettingsSaveTests {
         try check(json["provider_api_key"] as? String == request.providerAPIKey, "Preview omitted configured model credentials")
         try check(json["command"] == nil && json["command_id"] == nil, "Preview request carried executable command fields")
         print("CopyTradingContractTests: historical evaluation used typed no-order IPC")
-    }
-
-    private static func checkProfileExampleReviewClientRequest(
-        profile: TradingProfileRevision
-    ) async throws {
-        let wire = Data(
-            """
-            {"version":1,"request_id":"example-review-request","ok":{"type":"profile_example_review",
-             "review":{"guru_id":"\(profile.guruID)","profile_revision":"\(profile.profileRevision)",
-              "state":"ready","provider":"anthropic","model":"test-model","simulated":true,
-              "no_order":true,"cost_notice":"Provider charges may apply.","examples":[],
-              "review_reasons":[],"automatic_activation_allowed":true}}}
-            """.utf8)
-        let transport = AccountPageTransport(responseFixture: wire)
-        let request = ProfileExampleReviewRequest(
-            profile: profile,
-            provider: TradingProviderConfiguration(name: .anthropic, model: "test-model"),
-            providerAPIKey: "private-provider-key",
-            destinations: [TradingRouteConnection(accountID: "paper", fullPositionUSD: "600")]
-        )
-        let result = try await EngineClient(transport: transport).reviewProfileExamples(request)
-        try check(
-            result.simulated && result.noOrder,
-            "Typed example response lost its no-order contract")
-        guard let bytes = await transport.sentRequest(),
-            let json = try JSONSerialization.jsonObject(with: bytes) as? [String: Any]
-        else {
-            throw ContractFailure("Profile example review request was not captured")
-        }
-        try check(
-            json["operation"] as? String == "review_profile_examples",
-            "Wrong profile example review operation")
-        try check(
-            json["profile"] != nil && json["destinations"] != nil,
-            "Example review omitted the finite profile or destination terms")
-        try check(
-            json["provider_api_key"] as? String == request.providerAPIKey,
-            "Example review omitted the configured model credential")
-        try check(
-            json["command"] == nil && json["command_id"] == nil,
-            "Example review request carried executable command fields")
-        print("CopyTradingContractTests: example comparison used typed no-order IPC")
     }
 
     private static func checkFailedActivationRestoresPriorRevision() async throws {
@@ -749,8 +705,8 @@ struct TradingSettingsSaveTests {
         print("CopyTradingContractTests: a live start needs Touch ID and a refusal stops it; paper never asks")
     }
 
-    /// Setup Check's grant ends two minutes after the check, and reading the examples can take
-    /// longer: Start Copying then checks the connections again instead of failing the start.
+    /// Setup Check's grant ends two minutes after the check, and looking it over can take longer:
+    /// Start Copying then checks the connections again instead of failing the start.
     private static func checkStartAfterALongLookChecksAgain(
         configuration: TradingConfiguration, secrets credentials: TradingSecrets
     ) async throws {
@@ -857,134 +813,6 @@ struct TradingSettingsSaveTests {
                 "The engine's reason for a failed learning run was not shown")
         }
         print("CopyTradingContractTests: playbook learning used saved keys, saved nothing, and explained failures")
-    }
-
-    private static func checkProfileExampleReviewActionPath() async throws {
-        let profile = try TradingProfileBuilder().build(
-            TradingProfileDraft(
-                guruID: "example-action-guru",
-                displayName: "Example Action Guru",
-
-                playbook: "Apple means AAPL",
-                examples: [
-                    TradingProfileExample(
-                        message: "ALERT: Bought Apple at 200 1/2",
-                        expectedAction: .buy,
-                        expectedSymbol: "AAPL",
-                        expectedFraction: "0.5"
-                    )
-                ]
-            ))
-        let configuration = TradingConfiguration(
-            source: TradingSourceConfiguration(channelIDs: ["123"]),
-            provider: TradingProviderConfiguration(name: .anthropic, model: "test-model"),
-            accounts: [
-                TradingAccountConfiguration(id: "paper-a", environment: .paper),
-                TradingAccountConfiguration(id: "paper-b", environment: .paper),
-            ],
-            profiles: [profile],
-            routes: [
-                TradingRouteConfiguration(
-                    channelID: "123", authorID: "456", guruID: profile.guruID,
-                    profileRevision: profile.profileRevision,
-                    // One guru per account; paper-b follows no one.
-                    connections: [TradingRouteConnection(accountID: "paper-a", fullPositionUSD: "600")]
-                )
-            ]
-        )
-        let credentials = TradingSecrets(
-            discordToken: "example-source", providerAPIKey: "example-provider",
-            brokers: [
-                TradingBrokerCredentials(accountID: "paper-a", key: "a-key", secret: "a-secret"),
-                TradingBrokerCredentials(accountID: "paper-b", key: "b-key", secret: "b-secret"),
-            ]
-        )
-
-        let matchingDirectory = FileManager.default.temporaryDirectory.appending(
-            path: "app-model-profile-example-match-\(UUID().uuidString)", directoryHint: .isDirectory
-        )
-        defer { try? FileManager.default.removeItem(at: matchingDirectory) }
-        let matchingStore = TradingConfigurationStore(
-            url: matchingDirectory.appending(path: "configuration.json"),
-            secrets: TestSecretRevisions()
-        )
-        let matchingStarter = RecordingTradingStarter()
-        let matchingModel = AppModel(tradingConfigurationStore: matchingStore, tradingStarter: matchingStarter)
-        matchingModel.isTradingUnlocked = true
-        matchingModel.tradingStatus = try status(.paused)
-
-        await matchingModel.validateTradingSettings(configuration, enteredSecrets: credentials)
-        let matchingEvents = await matchingStarter.events()
-        try check(
-            matchingEvents == ["review_examples", "validate"],
-            "Capability probes ran before profile examples were interpreted")
-        let review = matchingModel.profileExampleReviews.values.first
-        try check(
-            review?.simulated == true && review?.noOrder == true,
-            "Native profile review lost the no-order contract")
-        try check(
-            review?.automaticActivationAllowed == true,
-            "Matching example did not produce an activation-eligible review")
-        let reviewRequest = await matchingStarter.exampleReviewRequest()
-        try check(
-            reviewRequest?.providerAPIKey == credentials.providerAPIKey,
-            "Example review did not use the entered provider credential")
-        try check(
-            reviewRequest?.destinations == configuration.routes[0].connections,
-            "Example review omitted independent destination sizing")
-        await matchingModel.activateValidatedTradingSettings()
-        let unacknowledgedStart = await matchingStarter.startedConfiguration()
-        try check(
-            unacknowledgedStart == nil,
-            "A matching preview activated before operator acknowledgement")
-        try check(
-            matchingModel.message == "Look over how the examples were read before starting to copy.",
-            "Missing example acknowledgement was not explained")
-        matchingModel.acknowledgeProfileExamples()
-        await matchingModel.activateValidatedTradingSettings()
-        let finalEvents = await matchingStarter.events()
-        try check(
-            finalEvents == ["review_examples", "validate", "start"],
-            "Native action did not require example review, capability check, then Start")
-        let matchingStarted = await matchingStarter.startedConfiguration()
-        try check(
-            matchingStarted == configuration,
-            "Reviewed native action started a different configuration")
-        print("CopyTradingContractTests: matching examples were shown and acknowledged before native activation")
-
-        let mismatchDirectory = FileManager.default.temporaryDirectory.appending(
-            path: "app-model-profile-example-mismatch-\(UUID().uuidString)", directoryHint: .isDirectory
-        )
-        defer { try? FileManager.default.removeItem(at: mismatchDirectory) }
-        let mismatchSecrets = TestSecretRevisions()
-        let mismatchStore = TradingConfigurationStore(
-            url: mismatchDirectory.appending(path: "configuration.json"), secrets: mismatchSecrets
-        )
-        let mismatchStarter = RecordingTradingStarter()
-        await mismatchStarter.setExampleReviewMatches(false)
-        let mismatchModel = AppModel(tradingConfigurationStore: mismatchStore, tradingStarter: mismatchStarter)
-        mismatchModel.isTradingUnlocked = true
-        mismatchModel.tradingStatus = try status(.paused)
-
-        await mismatchModel.validateTradingSettings(configuration, enteredSecrets: credentials)
-        mismatchModel.acknowledgeProfileExamples()
-        await mismatchModel.activateValidatedTradingSettings()
-        try check(
-            mismatchModel.profileExampleReviews.values.first?.automaticActivationAllowed == false,
-            "Mismatched expected action/symbol/fraction was marked ready")
-        let mismatchEvents = await mismatchStarter.events()
-        try check(
-            mismatchEvents == ["review_examples"],
-            "A mismatch continued to capability probes or Start")
-        let mismatchStarted = await mismatchStarter.startedConfiguration()
-        try check(
-            mismatchStarted == nil,
-            "A mismatch was overridden by native acknowledgement")
-        let mismatchedSaved = try mismatchStore.load()
-        try check(
-            mismatchedSaved == nil && mismatchSecrets.storedCount == 0,
-            "Mismatched draft wrote config or credentials")
-        print("CopyTradingContractTests: mismatched examples blocked probes, persistence, and Start")
     }
 
     private static func checkPendingActivationReconcilesAfterAppReopen(
@@ -1717,7 +1545,6 @@ struct TradingSettingsSaveTests {
         model.setupDraft.providerAPIKey = secrets.providerAPIKey
         model.setupDraft.accounts[0].key = secrets.brokers[0].key
         model.setupDraft.accounts[0].secret = secrets.brokers[0].secret
-        model.profileExamplesAcknowledged = true
         model.checkAndStartCopying()
         for _ in 0..<2_000 where model.savedTradingConfiguration == nil || model.isActivatingTrading {
             try await Task.sleep(for: .milliseconds(1))
@@ -1742,7 +1569,6 @@ struct TradingSettingsSaveTests {
         model.checkAndStartCopying()
         for _ in 0..<4_000 where model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD != "200" {
             try await Task.sleep(for: .milliseconds(1))
-            if model.isShowingSetupCheck && model.awaitsExampleReview { model.checkAndStartCopying() }
         }
         let duringApply = Array(await starter.events().dropFirst(beforeApply))
         try check(
@@ -1750,7 +1576,7 @@ struct TradingSettingsSaveTests {
             "A second press during an apply paused or started twice: \(duringApply)")
         try check(
             model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD == "200",
-            "The new limit was not saved: applying \(model.isApplyingChanges) sheet \(model.isShowingSetupCheck) reviews \(model.profileExampleReviews.count) state \(String(describing: model.tradingStatus?.state)) message \(model.message ?? "nil") events \(await starter.events().suffix(6))"
+            "The new limit was not saved: applying \(model.isApplyingChanges) sheet \(model.isShowingSetupCheck) state \(String(describing: model.tradingStatus?.state)) message \(model.message ?? "nil") events \(await starter.events().suffix(6))"
         )
         try check(model.tradingStatus?.state == .running, "Copying did not run again with the new limit")
         let applied = await starter.events()
@@ -1762,7 +1588,7 @@ struct TradingSettingsSaveTests {
         try check(model.message == "Your changes are saved, and copying uses them now.", "Applying changes did not say they took effect")
         try check(
             !model.hasUnsavedSetupChanges && !model.hasSetupToStart,
-            "The changes bar stayed after a successful apply: unsaved \(model.hasUnsavedSetupChanges) typed \(model.setupDraft.hasTypedSecrets) validation \(model.tradingValidation != nil) reviews \(model.profileExampleReviews.count)"
+            "The changes bar stayed after a successful apply: unsaved \(model.hasUnsavedSetupChanges) typed \(model.setupDraft.hasTypedSecrets) validation \(model.tradingValidation != nil)"
         )
 
         // A new key alone changes nothing in the saved setup, yet it is a change to apply; once
@@ -1772,7 +1598,6 @@ struct TradingSettingsSaveTests {
         model.checkAndStartCopying()
         for _ in 0..<4_000 where model.setupDraft.hasTypedSecrets || model.isApplyingChanges {
             try await Task.sleep(for: .milliseconds(1))
-            if model.isShowingSetupCheck && model.awaitsExampleReview { model.checkAndStartCopying() }
         }
         try check(
             !model.hasUnsavedSetupChanges && !model.hasSetupToStart,
@@ -1797,53 +1622,24 @@ struct TradingSettingsSaveTests {
         await starter.setFailingConfiguration(nil)
         model.isShowingSetupCheck = false
 
-        // An example that reads as expected is no reason to stop: one press reads it, pauses,
-        // checks, and starts, and the owner is never sent to Setup Check.
-        model.setupDraft.routes[0].examples = [
-            TradingProfileExampleDraft(message: "Bought AAPL at 200", expectedAction: .buy, expectedSymbol: "AAPL")
-        ]
-        let beforeReview = await starter.events().count
-        var sawSetupCheck = false
+        // A change that cannot start, such as a new account with no keys, is caught before the
+        // pause: copying keeps running and nothing reaches the engine.
+        model.setupDraft.accounts.append(TradingAccountDraft(name: "spare"))
+        let beforeMissingKeys = await starter.events().count
         model.checkAndStartCopying()
-        for _ in 0..<4_000 where model.isApplyingChanges || model.isPausedToApplyChanges || model.isActivatingTrading {
-            try await Task.sleep(for: .milliseconds(1))
-            sawSetupCheck = sawSetupCheck || model.isShowingSetupCheck
-        }
-        let started = Array(await starter.events()[beforeReview...])
-        try check(
-            started == ["review_examples", "pause", "validate", "start"],
-            "One press did not read, pause, check, and start once: \(started)")
-        try check(!sawSetupCheck && !model.isShowingSetupCheck, "Examples that read as expected interrupted the apply")
-        try check(model.tradingStatus?.state == .running, "Copying did not run again after the readings")
-        try check(
-            model.savedTradingConfiguration?.profiles.first?.examples.count == 1, "The applied example was not saved")
-        try check(
-            !model.hasUnsavedSetupChanges && !model.hasSetupToStart && model.profileExampleReviews.isEmpty,
-            "The changes bar stayed after applying with examples: unsaved \(model.hasUnsavedSetupChanges) typed \(model.setupDraft.hasTypedSecrets) validation \(model.tradingValidation != nil) reviews \(model.profileExampleReviews.count)"
-        )
-        try check(model.message == "Your changes are saved, and copying uses them now.", "Applying with examples did not say so")
-
-        // An example read differently from what the owner expected is the one thing that stops
-        // the apply: Setup Check opens, copying keeps running, and nothing is saved.
-        await starter.setExampleReviewMatches(false)
-        model.setupDraft.routes[0].examples[0].expectedSymbol = "MSFT"
-        let beforeMismatch = await starter.events().count
-        model.checkAndStartCopying()
-        for _ in 0..<4_000 where !model.isShowingSetupCheck || model.isApplyingChanges {
+        for _ in 0..<4_000 where model.isApplyingChanges {
             try await Task.sleep(for: .milliseconds(1))
         }
-        let mismatched = Array(await starter.events()[beforeMismatch...])
-        try check(mismatched == ["review_examples"], "A mismatched reading went on to pause or start: \(mismatched)")
-        try check(model.isShowingSetupCheck, "A mismatched reading did not open Setup Check")
-        try check(model.tradingStatus?.state == .running, "Copying paused for a mismatched reading")
-        await starter.setExampleReviewMatches(true)
+        let missingKeys = Array(await starter.events()[beforeMissingKeys...])
+        try check(missingKeys.isEmpty, "A change missing its keys reached the engine: \(missingKeys)")
+        try check(
+            model.tradingStatus?.state == .running && !model.isPausedToApplyChanges, "A change missing its keys paused copying")
+        model.setupDraft.accounts.removeLast()
         model.cancelTradingActivation()
-        model.setupDraft.routes[0].examples = []
 
         // Locking while the check runs: the apply stops and the saved setup copies again.
         let savedBeforeLock = model.savedTradingConfiguration?.accounts[0].policy.maxOrderUSD
         model.setupDraft.accounts[0].policy.maxOrderUSD = "250"
-        model.setupDraft.routes[0].examples = []
         await starter.setValidationSuspended(true)
         model.checkAndStartCopying()
         for _ in 0..<4_000 where !(model.isValidatingTrading && model.tradingStatus?.state == .paused) {
@@ -3335,10 +3131,8 @@ private func secretRevision(in data: Data) throws -> UUID {
 private actor RecordingTradingStarter: TradingStarting {
     private var configuration: TradingConfiguration?
     private var lastEvaluationRequest: HistoricalProfileEvaluationRequest?
-    private var lastExampleReviewRequest: ProfileExampleReviewRequest?
     private var lastLearningRequest: GuruPlaybookLearningRequest?
     private var learningFailure: String?
-    private var exampleReviewMatches = true
     private var operationEvents: [String] = []
     private var failStart = false
     private var acceptStartAndLoseResponse = false
@@ -3535,73 +3329,6 @@ private actor RecordingTradingStarter: TradingStarting {
         )
     }
 
-    func reviewProfileExamples(
-        _ request: ProfileExampleReviewRequest
-    ) async throws -> ProfileExampleReview {
-        operationEvents.append("review_examples")
-        lastExampleReviewRequest = request
-        let comparisons = request.profile.examples.enumerated().map { index, example in
-            let fraction = example.expectedFraction
-            let actualFraction = exampleReviewMatches ? fraction : "0.25"
-            let instruction = ProfileInstructionEvaluation(
-                action: example.expectedAction,
-                symbol: example.expectedSymbol,
-                price: "200",
-                fraction: actualFraction,
-                exitBasis: nil,
-                actionEvidence: "Bought",
-                symbolEvidence: "Apple",
-                priceEvidence: "200",
-                fractionEvidence: fraction
-            )
-            let actualDestinations = request.destinations.map { destination in
-                let budget = destination.copiedBudgetUSD(
-                    sourceFraction: fraction.flatMap { Decimal(string: $0) }
-                )
-                return ProfileDestinationEvaluation(
-                    accountID: destination.accountID,
-                    action: example.expectedAction,
-                    symbol: example.expectedSymbol,
-                    budgetUSD: budget.map { NSDecimalNumber(decimal: $0).stringValue },
-                    estimatedQuantity: nil,
-                    exitBasis: nil,
-                    reason: "ready"
-                )
-            }
-            let actual = ProfileEvaluation(
-                messageIdentity: "profile_example:\(request.profile.profileRevision):\(index)",
-                guruID: request.profile.guruID,
-                profileRevision: request.profile.profileRevision,
-                provider: request.provider.name.rawValue,
-                model: request.provider.model,
-                decision: "trade",
-                reason: "explicit_entry",
-                simulated: true,
-                noOrder: true,
-                costNotice: "Test evaluation cost notice.",
-                instructions: [instruction],
-                destinations: actualDestinations,
-                reviewReasons: []
-            )
-            return ProfileExampleComparison(
-                exampleIndex: index,
-                expectedAction: example.expectedAction,
-                expectedSymbol: example.expectedSymbol,
-                expectedFraction: fraction,
-                actual: actual,
-                matches: exampleReviewMatches,
-                reviewReasons: exampleReviewMatches ? [] : ["example_fraction_mismatch"]
-            )
-        }
-        return ProfileExampleReview(
-            guruID: request.profile.guruID,
-            profileRevision: request.profile.profileRevision,
-            provider: request.provider.name.rawValue,
-            model: request.provider.model,
-            costNotice: "Provider charges may apply.",
-            examples: comparisons,
-            automaticActivationAllowed: exampleReviewMatches
-        )
     }
 
     func learnGuruPlaybook(_ learning: GuruPlaybookLearningRequest) async throws -> LearnedGuruPlaybook {
@@ -3612,7 +3339,7 @@ private actor RecordingTradingStarter: TradingStarting {
         }
         return LearnedGuruPlaybook(
             postsRead: 3,
-            playbook: "加了 means buy", examples: [], summary: "Buys lead with the price.",
+            playbook: "加了 means buy", summary: "Buys lead with the price.",
             provider: learning.provider.name.rawValue, model: learning.provider.model,
             costNotice: "Provider charges may apply."
         )
@@ -3624,7 +3351,6 @@ private actor RecordingTradingStarter: TradingStarting {
     func startedConfiguration() -> TradingConfiguration? { configuration }
     func validatedConfiguration() -> TradingConfiguration? { validated }
     func evaluationRequest() -> HistoricalProfileEvaluationRequest? { lastEvaluationRequest }
-    func exampleReviewRequest() -> ProfileExampleReviewRequest? { lastExampleReviewRequest }
     func events() -> [String] { operationEvents }
 
     func setStartFailure(_ value: Bool) { failStart = value }
@@ -3636,7 +3362,6 @@ private actor RecordingTradingStarter: TradingStarting {
     func setConnectionCheckFails(_ value: Bool) { connectionCheckFails = value }
     func checkedConnections() -> [TradingConnectionCheck] { connectionChecks }
     func setValidationSuspended(_ value: Bool) { validationSuspended = value }
-    func setExampleReviewMatches(_ value: Bool) { exampleReviewMatches = value }
     func validationCallCount() -> Int { validations }
 }
 

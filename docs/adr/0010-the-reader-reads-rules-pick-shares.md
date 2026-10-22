@@ -40,7 +40,6 @@ Waiting for You (`sell_names_no_buy`, `missing_or_ambiguous_lot`, `batch_size_un
 ## Consequences
 * Guru settings are where they post, the playbook, the account, and the re-post check. Money rules
   stay on the account.
-* Guru examples can state the expected price and, for a sell, the buy price it sells from.
 * The reader is held to the owner's corrections and the guru's open calls, so a mistake is not
   repeated on every later sell.
 

@@ -296,7 +296,6 @@ public enum EngineResult: Equatable, Sendable {
     case sourceActivity(SourceActivityPage)
     case guruDayStats(GuruDayStatsPage)
     case profileEvaluation(ProfileEvaluation)
-    case profileExampleReview(ProfileExampleReview)
     case learnedPlaybook(LearnedGuruPlaybook)
     case accountFeed(AccountFeedPage)
     case equityHistory(accountID: String, history: EquityHistory?)
@@ -420,7 +419,6 @@ public struct EngineSuccess: Decodable, Equatable, Sendable {
         case candidate
         case manualCommand = "command"
         case evaluation
-        case review
         case playbook
         case line
         case count
@@ -473,10 +471,6 @@ public struct EngineSuccess: Decodable, Equatable, Sendable {
             result = .guruDayStats(try container.decode(GuruDayStatsPage.self, forKey: .stats))
         case "profile_evaluation":
             result = .profileEvaluation(try container.decode(ProfileEvaluation.self, forKey: .evaluation))
-        case "profile_example_review":
-            result = .profileExampleReview(
-                try container.decode(ProfileExampleReview.self, forKey: .review)
-            )
         case "learned_playbook":
             result = .learnedPlaybook(
                 try container.decode(LearnedGuruPlaybook.self, forKey: .playbook)
@@ -598,7 +592,6 @@ enum EngineOperation: Sendable {
     /// Each guru's numbers for the owner's day, from its start up to its end.
     case guruDayStats(dayStart: Date, dayEnd: Date)
     case evaluateHistoricalProfile(HistoricalProfileEvaluationRequest)
-    case reviewProfileExamples(ProfileExampleReviewRequest)
     case learnGuruPlaybook(GuruPlaybookLearningRequest)
     case accountFeed(accountID: String, beforeSeq: Int?, limit: Int)
     case equityHistory(accountID: String, window: EquityHistoryWindow)
@@ -656,7 +649,6 @@ struct EngineRequest: Encodable, Sendable {
         case sourceID = "source_id"
         case beforeCommandID = "before_command_id"
         case profile
-        case review
         case provider
         case providerAPIKey = "provider_api_key"
         case destinations
@@ -772,12 +764,6 @@ struct EngineRequest: Encodable, Sendable {
             try container.encode(evaluation.provider, forKey: .provider)
             try container.encode(evaluation.providerAPIKey, forKey: .providerAPIKey)
             try container.encode(evaluation.destinations, forKey: .destinations)
-        case .reviewProfileExamples(let reviewRequest):
-            try container.encode("review_profile_examples", forKey: .operation)
-            try container.encode(reviewRequest.profile, forKey: .profile)
-            try container.encode(reviewRequest.provider, forKey: .provider)
-            try container.encode(reviewRequest.providerAPIKey, forKey: .providerAPIKey)
-            try container.encode(reviewRequest.destinations, forKey: .destinations)
         case .learnGuruPlaybook(let learning):
             try container.encode("learn_guru_playbook", forKey: .operation)
             try container.encode(learning.channelID, forKey: .channelID)

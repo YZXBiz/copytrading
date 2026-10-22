@@ -12,7 +12,7 @@ struct ConnectionsStartCard: View {
     private var status: SetupChangesStatus { SetupChangesStatus(model) }
 
     private var hasResults: Bool {
-        model.tradingValidation != nil || !model.profileExampleReviews.isEmpty
+        model.tradingValidation != nil
     }
 
     private var canDiscard: Bool {

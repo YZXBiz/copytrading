@@ -20,7 +20,6 @@ from copytrading_engine.trading.domain.profiles import (
     LearnedPlaybook,
     ProfileBuilder,
     ProfileDraft,
-    ProfileExampleReview,
 )
 from copytrading_engine.trading.domain.status import TradingStatus
 
@@ -33,12 +32,11 @@ def _configuration():
             guru_id="stable-guru",
             display_name="Stable Guru",
             playbook="",
-            examples=(),
         )
     )
     return TradingConfiguration.model_validate(
         {
-            "version": 8,
+            "version": 9,
             "source": {"channel_ids": ["123"]},
             "provider": {"name": "deepseek", "model": "test-model"},
             "accounts": [{"id": "paper", "environment": "paper"}],
@@ -69,7 +67,6 @@ class _Trading:
         self.starts = 0
         self.connection_checks = []
         self.evaluations = []
-        self.example_reviews = []
         self.learnings = []
         self.learning_error: str | None = None
         self.activation_id = None
@@ -168,24 +165,6 @@ class _Trading:
             model=provider.model,
         )
 
-    async def review_profile_examples(self, profile, provider, provider_api_key, destinations):
-        self.example_reviews.append(
-            (
-                profile.profile_revision,
-                provider.name,
-                provider_api_key.get_secret_value(),
-                destinations,
-            )
-        )
-        return ProfileExampleReview(
-            guru_id=profile.guru_id,
-            profile_revision=profile.profile_revision,
-            provider=provider.name,
-            model=provider.model,
-            examples=(),
-            automatic_activation_allowed=True,
-        )
-
 
 async def test_historical_evaluation_has_typed_no_order_pipe_operation(store: Path):
     trading = _Trading()
@@ -236,57 +215,6 @@ async def test_historical_evaluation_has_typed_no_order_pipe_operation(store: Pa
     rejected = json.loads(await server.handle_line(with_extra_order_field))
     assert rejected["error"]["code"] == "invalid_request"
     assert len(trading.evaluations) == 1
-
-
-async def test_profile_example_review_pipe_is_typed_and_cannot_submit_work(store: Path):
-    trading = _Trading()
-    server = PipeServer(
-        SelfTestService(store, SelfTestParser()),
-        EngineQueries(store, store.installation.instance_id),
-        services(trading),
-    )
-    profile = _configuration().profiles[0]
-    request = request_line(
-        "review_profile_examples",
-        "review-examples",
-        profile=profile.model_dump(mode="json"),
-        provider={"name": "deepseek", "model": "test-model"},
-        provider_api_key="private-provider-key",
-        destinations=[{"account_id": "paper", "full_position_usd": "100"}],
-    )
-
-    response = json.loads(await server.handle_line(request))
-
-    assert response["ok"]["type"] == "profile_example_review"
-    result = response["ok"]["review"]
-    assert result["simulated"] is True
-    assert result["no_order"] is True
-    assert result["automatic_activation_allowed"] is True
-    assert "provider charges may apply" in result["cost_notice"]
-    assert trading.example_reviews == [
-        (
-            profile.profile_revision,
-            "deepseek",
-            "private-provider-key",
-            [RouteConnection(account_id="paper", full_position_usd="100")],
-        )
-    ]
-    assert trading.starts == 0
-    status = await EngineQueries(store, store.installation.instance_id).status("running")
-    assert status.accepted == status.pending == status.completed == 0
-
-    with_order = request_line(
-        "review_profile_examples",
-        "review-examples-with-command",
-        profile=profile.model_dump(mode="json"),
-        provider={"name": "deepseek", "model": "test-model"},
-        provider_api_key="private-provider-key",
-        destinations=[],
-        command={"command_id": "bad", "text": "buy", "destination_ids": ["paper"]},
-    )
-    rejected = json.loads(await server.handle_line(with_order))
-    assert rejected["error"]["code"] == "invalid_request"
-    assert len(trading.example_reviews) == 1
 
 
 async def test_activation_grant_is_required_exact_and_single_use(store: Path):

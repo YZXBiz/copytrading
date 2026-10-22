@@ -93,7 +93,7 @@ def test_a_missing_playbook_file_is_named(tmp_path):
         ('provider = "deepseek"', 'provider = "skynet"', "model.provider"),
         ('account = "paper-main"', 'account = "nowhere"', "unknown account"),
         ('environment = "paper" ', 'environment = "demo" ', "accounts[0].environment"),
-        ('symbol = "NVDA"', 'symbol = "nvidia"', "gurus[0] (zhao)"),
+        ('name = "Zhao"', 'name = " "', "gurus[0] (zhao)"),
         ("[agents]", "[agents]\ncolour = 1", "agents.colour"),
     ],
 )

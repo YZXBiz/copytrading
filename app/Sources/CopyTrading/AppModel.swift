@@ -29,10 +29,6 @@ protocol TradingStarting: Sendable {
         _ evaluation: HistoricalProfileEvaluationRequest
     ) async throws -> ProfileEvaluation
 
-    func reviewProfileExamples(
-        _ request: ProfileExampleReviewRequest
-    ) async throws -> ProfileExampleReview
-
     func learnGuruPlaybook(
         _ learning: GuruPlaybookLearningRequest
     ) async throws -> LearnedGuruPlaybook
@@ -95,8 +91,6 @@ final class AppModel {
     var savedTradingConfiguration: TradingConfiguration?
     var hasTradingSecrets = false
     var tradingValidation: TradingValidation?
-    var profileExampleReviews: [String: ProfileExampleReview] = [:]
-    var profileExamplesAcknowledged = false
     var isValidatingTrading = false
     var isActivatingTrading = false
     /// A start was sent and the engine has not yet confirmed or rolled back the new setup.
@@ -107,7 +101,7 @@ final class AppModel {
     /// The accounts that were copying when Apply Changes paused; they copy again afterwards,
     /// whether the new setup started or the saved one came back.
     var accountsCopyingBeforeApply: Set<String> = []
-    /// An apply is under way, from reading the examples to copying again. Start Copying waits for
+    /// An apply is under way, from checking the draft to copying again. Start Copying waits for
     /// it: a second press would cancel it halfway and leave copying paused.
     var isApplyingChanges = false
     var isTradingCommandPending = false
@@ -542,7 +536,7 @@ final class AppModel {
     var validatedConfiguration: TradingConfiguration? { pendingTradingActivation?.configuration }
 
     @ObservationIgnored private var tradingValidationTask: Task<Void, Never>?
-    /// Applying changes while copying runs, from reading the examples to starting the new setup.
+    /// Applying changes while copying runs, from checking the draft to starting the new setup.
     @ObservationIgnored var applyChangesTask: Task<Void, Never>?
     @ObservationIgnored private var startupIntent = AppStartupIntent()
     @ObservationIgnored private let appUnlock: AppUnlock
@@ -592,7 +586,7 @@ final class AppModel {
     }
 
     /// A check's grant ends two minutes after the engine gives it; a Start Copying later than this
-    /// checks the connections again first, so reading the examples never costs the start.
+    /// checks the connections again first, so a slow start never costs the grant.
     static let validationGrantFreshness: Duration = .seconds(90)
     /// The time Setup Check grants are measured by; tests move it forward.
     @ObservationIgnored var now: @MainActor () -> ContinuousClock.Instant = { .now }
@@ -1112,14 +1106,12 @@ final class AppModel {
         }
     }
 
-    /// Checks the setup in two stages: how each guru's examples read, which needs no pause, then
-    /// every connection, which the engine runs only while copying is paused. `reviewOnly` stops
-    /// after the readings; `reviewed` skips them for readings the owner already looked over.
-    /// Returns whether every stage asked for passed with nothing left for the owner.
+    /// Checks the setup in two stages: the draft and its keys, which needs no pause, then every
+    /// connection, which the engine runs only while copying is paused. `beforePause` stops after
+    /// the first stage. Returns whether every stage asked for passed.
     @discardableResult
     func validateTradingSettings(
-        _ configuration: TradingConfiguration, enteredSecrets: TradingSecrets,
-        reviewOnly: Bool = false, reviewed: [String: ProfileExampleReview]? = nil
+        _ configuration: TradingConfiguration, enteredSecrets: TradingSecrets, beforePause: Bool = false
     ) async -> Bool {
         defer { checkOutcomeMessage = message }
         guard !isRunningBackupRestore else {
@@ -1134,7 +1126,7 @@ final class AppModel {
             message = L10n.string("CopyTrading is still starting. Check the setup again in a moment.")
             return false
         }
-        guard reviewOnly || tradingStatus?.state == .paused, !isTradingCommandPending else {
+        guard beforePause || tradingStatus?.state == .paused, !isTradingCommandPending else {
             message = L10n.string("Pause copying before checking the setup.")
             return false
         }
@@ -1145,13 +1137,7 @@ final class AppModel {
         guard !isValidatingTrading, !isActivatingTrading else { return false }
         isValidatingTrading = true
         tradingValidation = nil
-        if let reviewed {
-            profileExampleReviews = reviewed
-        } else {
-            profileExampleReviews = [:]
-            profileExamplesAcknowledged = false
-            isShowingSetupCheck = false
-        }
+        isShowingSetupCheck = false
         pendingTradingActivation = nil
         defer { isValidatingTrading = false }
         do {
@@ -1198,42 +1184,7 @@ final class AppModel {
                 discordToken: discordToken, providerAPIKey: providerAPIKey,
                 brokers: brokers, notificationToken: notificationToken
             )
-            let profilesByRevision = Dictionary(
-                configuration.profiles.map { ($0.profileRevision, $0) },
-                uniquingKeysWith: { first, _ in first }
-            )
-            var reviews = reviewed ?? [:]
-            for route in configuration.routes where reviewed == nil {
-                guard let profile = profilesByRevision[route.profileRevision] else {
-                    throw TradingSettingsError.invalidConfiguration(
-                        L10n.string(
-                            "The guru reading channel %@ has no saved details. Open them in Connections and check their fields.",
-                            route.channelID
-                        ))
-                }
-                guard !profile.examples.isEmpty else { continue }
-                let request = ProfileExampleReviewRequest(
-                    profile: profile,
-                    provider: configuration.provider,
-                    providerAPIKey: secrets.providerAPIKey,
-                    destinations: route.connections
-                )
-                let review = try await validator.reviewProfileExamples(request)
-                guard !Task.isCancelled else { throw CancellationError() }
-                try Self.validateProfileExampleReview(
-                    review, profile: profile, provider: configuration.provider,
-                    destinations: route.connections
-                )
-                reviews[route.id] = review
-            }
-            profileExampleReviews = reviews
-            guard !reviews.values.contains(where: { !$0.automaticActivationAllowed }) else {
-                message = L10n.string(
-                    "An example was read differently from what you expected. Fix the playbook or the example, then check again.")
-                isShowingSetupCheck = true
-                return false
-            }
-            if reviewOnly {
+            if beforePause {
                 message = nil
                 return true
             }
@@ -1255,9 +1206,8 @@ final class AppModel {
                 validationToken: activationToken,
                 checkedAt: now()
             )
-            // The changes bar says the check passed; the readings still need a look when present.
+            // The changes bar says the check passed.
             message = nil
-            if reviewed == nil { isShowingSetupCheck = !reviews.isEmpty }
             return true
         } catch {
             if error is CancellationError {
@@ -1270,8 +1220,8 @@ final class AppModel {
         }
     }
 
-    /// Checks the setup; with `thenStart`, starts copying straight after when everything passed
-    /// and there is nothing to look over, and otherwise shows what needs the owner.
+    /// Checks the setup; with `thenStart`, starts copying straight after when everything passed,
+    /// and otherwise shows what needs the owner.
     func beginTradingValidation(
         _ configuration: TradingConfiguration, enteredSecrets: TradingSecrets, thenStart: Bool = false
     ) {
@@ -1286,17 +1236,14 @@ final class AppModel {
         }
     }
 
-    /// Checks the setup, then starts it when everything passed and there is nothing to look
-    /// over; otherwise shows what needs the owner.
-    func checkThenStart(
-        _ configuration: TradingConfiguration, enteredSecrets: TradingSecrets,
-        reviewed: [String: ProfileExampleReview]? = nil
-    ) async {
-        await validateTradingSettings(configuration, enteredSecrets: enteredSecrets, reviewed: reviewed)
+    /// Checks the setup, then starts it when everything passed; otherwise shows what needs the
+    /// owner.
+    func checkThenStart(_ configuration: TradingConfiguration, enteredSecrets: TradingSecrets) async {
+        await validateTradingSettings(configuration, enteredSecrets: enteredSecrets)
         guard !Task.isCancelled else { return }
         if canStartCopyingFromCheck {
             await activateValidatedTradingSettings()
-        } else if tradingValidation != nil || !profileExampleReviews.isEmpty {
+        } else if tradingValidation != nil {
             isShowingSetupCheck = true
         }
     }
@@ -1315,14 +1262,6 @@ final class AppModel {
             let starter = tradingStarter ?? engineActions
         else {
             message = L10n.string("Check the setup before starting to copy.")
-            return
-        }
-        guard profileExampleReviews.values.allSatisfy(\.automaticActivationAllowed) else {
-            message = L10n.string("Fix the examples that were read differently, then check again.")
-            return
-        }
-        guard profileExampleReviews.isEmpty || profileExamplesAcknowledged else {
-            message = L10n.string("Look over how the examples were read before starting to copy.")
             return
         }
         guard tradingStatus?.state == .paused, !isTradingCommandPending,
@@ -1913,8 +1852,6 @@ final class AppModel {
         tradingValidationTask = nil
         pendingTradingActivation = nil
         tradingValidation = nil
-        profileExampleReviews = [:]
-        profileExamplesAcknowledged = false
         checkedSetupSignature = nil
         isShowingSetupCheck = false
         if let newMessage {
@@ -1929,19 +1866,6 @@ final class AppModel {
     /// what was saved comes straight back so the screens never show an empty setup by mistake.
     private func discardSetupWork() {
         discardSetupChanges()
-    }
-
-    var canAcknowledgeProfileExamples: Bool {
-        !profileExampleReviews.isEmpty
-            && profileExampleReviews.values.allSatisfy(\.automaticActivationAllowed)
-    }
-
-    func acknowledgeProfileExamples() {
-        guard canAcknowledgeProfileExamples else {
-            profileExamplesAcknowledged = false
-            return
-        }
-        profileExamplesAcknowledged = true
     }
 
     /// Checks the rules the engine also enforces, and names the first one a draft breaks.
@@ -1992,7 +1916,7 @@ final class AppModel {
             configuration.profiles.allSatisfy({ profile in
                 let draft = TradingProfileDraft(
                     guruID: profile.guruID, displayName: profile.displayName,
-                    playbook: profile.playbook, examples: profile.examples
+                    playbook: profile.playbook
                 )
                 return (try? TradingProfileBuilder().build(draft)) == profile
             })
@@ -2038,88 +1962,6 @@ final class AppModel {
         let sharedChannels = Dictionary(grouping: configuration.routes, by: { "\($0.source):\($0.channelID)" })
         guard sharedChannels.values.allSatisfy({ routes in routes.count == 1 || routes.allSatisfy { $0.authorID != nil } }) else {
             throw fail(L10n.string("Routes that share a channel each need an author ID."))
-        }
-    }
-
-    /// Models write 1/6 as 0.16666666666666666; the engine treats that as the stated sixth.
-    private static let fractionTolerance = Decimal(sign: .plus, exponent: -9, significand: 1)
-
-    private static func validateProfileExampleReview(
-        _ review: ProfileExampleReview,
-        profile: TradingProfileRevision,
-        provider: TradingProviderConfiguration,
-        destinations: [TradingRouteConnection]
-    ) throws {
-        guard review.simulated, review.noOrder,
-            review.guruID == profile.guruID,
-            review.profileRevision == profile.profileRevision,
-            review.provider == provider.name.rawValue,
-            review.model == provider.model,
-            review.examples.count == profile.examples.count
-        else {
-            throw TradingSettingsError.invalidEvaluationResult
-        }
-        var allMatch = true
-        for (index, pair) in zip(profile.examples, review.examples).enumerated() {
-            let (expected, actual) = pair
-            guard actual.exampleIndex == index,
-                actual.expectedAction == expected.expectedAction,
-                actual.expectedSymbol == expected.expectedSymbol,
-                actual.expectedFraction == expected.expectedFraction,
-                actual.actual.simulated, actual.actual.noOrder,
-                actual.actual.guruID == profile.guruID,
-                actual.actual.profileRevision == profile.profileRevision,
-                actual.actual.provider == provider.name.rawValue,
-                actual.actual.model == provider.model
-            else {
-                throw TradingSettingsError.invalidEvaluationResult
-            }
-            let instruction =
-                actual.actual.instructions.count == 1
-                ? actual.actual.instructions[0] : nil
-            let expectedFraction = expected.expectedFraction.flatMap { Decimal(string: $0) }
-            let actualFraction = instruction?.fraction.flatMap { Decimal(string: $0) }
-            // Same rule as the engine: both absent, or equal within 1e-9.
-            let fractionMatches =
-                switch (expectedFraction, actualFraction) {
-                case (nil, nil): true
-                case let (expected?, actual?): abs(expected - actual) <= Self.fractionTolerance
-                default: false
-                }
-            // Same rules as the engine: a stated price must match, and a sell's buy price must
-            // match what the example names (none means every buy).
-            let priceMatches =
-                expected.expectedPrice.flatMap { Decimal(string: $0) }.map { expectedPrice in
-                    instruction?.price.flatMap { Decimal(string: $0) } == expectedPrice
-                } ?? true
-            let checksBuyPrice = expected.expectedBuyPrice != nil || expected.expectedAction != .buy
-            let buyPriceMatches =
-                !checksBuyPrice
-                || instruction?.entryPrice.flatMap { Decimal(string: $0) }
-                    == expected.expectedBuyPrice.flatMap { Decimal(string: $0) }
-            let matches =
-                actual.actual.decision == "trade"
-                && instruction?.action == expected.expectedAction
-                && instruction?.symbol == expected.expectedSymbol
-                && fractionMatches
-                && priceMatches
-                && buyPriceMatches
-            guard actual.matches == matches else {
-                throw TradingSettingsError.invalidEvaluationResult
-            }
-            let destinationIDs = Set(actual.actual.destinations.map(\.accountID))
-            let expectedDestinationIDs = Set(destinations.map(\.accountID))
-            guard destinationIDs == expectedDestinationIDs,
-                actual.actual.destinations.allSatisfy({ destination in
-                    destinations.contains { $0.accountID == destination.accountID }
-                })
-            else {
-                throw TradingSettingsError.invalidEvaluationResult
-            }
-            allMatch = allMatch && matches
-        }
-        guard review.automaticActivationAllowed == allMatch else {
-            throw TradingSettingsError.invalidEvaluationResult
         }
     }
 

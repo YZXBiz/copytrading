@@ -123,12 +123,11 @@ def configuration(policy: Mapping[str, object]) -> TradingConfiguration:
             guru_id="replay-guru",
             display_name="Replay Guru",
             playbook="",
-            examples=(),
         )
     )
     return TradingConfiguration.model_validate(
         {
-            "version": 8,
+            "version": 9,
             "source": {"channel_ids": [CHANNEL]},
             "provider": {"name": "deepseek", "model": DEEPSEEK_MODEL},
             "accounts": [{"id": ACCOUNT, "environment": "paper", "policy": dict(policy)}],

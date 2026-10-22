@@ -52,7 +52,6 @@ from copytrading_engine.trading.domain.config import (
 from copytrading_engine.trading.domain.profiles import (
     LearnedPlaybook,
     ProfileEvaluation,
-    ProfileExampleReview,
     ProfileRevision,
 )
 from copytrading_engine.trading.domain.status import TradingStatus
@@ -150,14 +149,6 @@ class ProfileReview(Protocol):
         provider_api_key: SecretStr,
         destinations: list[RouteConnection],
     ) -> ProfileEvaluation: ...
-
-    async def review_profile_examples(
-        self,
-        profile: ProfileRevision,
-        provider: ProviderConfiguration,
-        provider_api_key: SecretStr,
-        destinations: list[RouteConnection],
-    ) -> ProfileExampleReview: ...
 
     async def learn_playbook(
         self,

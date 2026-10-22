@@ -37,7 +37,6 @@ extension AppModel {
     var hasSetupToStart: Bool {
         savedTradingConfiguration == nil
             || (hasUnsavedSetupChanges && !hasOnlyLimitChanges) || isValidatingTrading || isActivatingTrading || tradingValidation != nil
-            || !profileExampleReviews.isEmpty
     }
 
     /// How far the setup has come, for the guide, Today, and the sidebar.
@@ -69,31 +68,17 @@ extension AppModel {
         return Set(savedTradingConfiguration?.accounts.map(\.id) ?? [])
     }
 
-    /// Every check passed, the readings were looked at, and nothing changed since.
+    /// Every check passed and nothing changed since.
     var canStartCopyingFromCheck: Bool {
         tradingValidation?.report.activatable == true
             && tradingValidation?.activationToken != nil
             && !isActivatingTrading
-            && profileExampleReviews.values.allSatisfy(\.automaticActivationAllowed)
-            && (profileExampleReviews.isEmpty || profileExamplesAcknowledged)
             && checkedSetupSignature == setupDraft.signature
     }
 
-    /// How many rows Setup Check marks Needs attention: each failed check, and each guru whose
-    /// examples were read differently from what the owner expected.
+    /// How many rows Setup Check marks Needs attention: each failed check.
     var setupCheckProblemCount: Int {
-        let failedChecks = tradingValidation?.report.checks.filter { $0.state == .failed }.count ?? 0
-        let misreadExamples = profileExampleReviews.values.filter { !$0.automaticActivationAllowed }.count
-        return failedChecks + misreadExamples
-    }
-
-    /// Every connection passed and the examples read as expected; only looking them over is left.
-    var awaitsExampleReview: Bool {
-        tradingValidation?.report.activatable == true
-            && tradingValidation?.activationToken != nil
-            && !profileExampleReviews.isEmpty
-            && profileExampleReviews.values.allSatisfy(\.automaticActivationAllowed)
-            && !profileExamplesAcknowledged
+        tradingValidation?.report.checks.filter { $0.state == .failed }.count ?? 0
     }
 
     /// Refills the draft from the saved setup when that setup changed, never over unsaved edits
@@ -220,22 +205,14 @@ extension AppModel {
         setupDraft.routes.removeAll { $0.guruID.trimmed == guruID }
     }
 
-    /// The one Start Copying: a setup already checked starts; otherwise every connection and
-    /// example is checked first, then copying starts if nothing needs the owner. Typed keys stay
-    /// in the draft, so a failed check never makes the owner type them again. When only the
-    /// readings are left to look over, it shows them, and pressed beside them it approves them.
+    /// The one Start Copying: a setup already checked starts; otherwise every connection is
+    /// checked first, then copying starts if nothing needs the owner. Typed keys stay in the
+    /// draft, so a failed check never makes the owner type them again.
     func checkAndStartCopying() {
         guard !isApplyingChanges else { return }
         if isCopyingSavedSetup {
             applyChangesWhileCopying()
             return
-        }
-        if awaitsExampleReview && checkedSetupSignature == setupDraft.signature {
-            guard isShowingSetupCheck else {
-                isShowingSetupCheck = true
-                return
-            }
-            acknowledgeProfileExamples()
         }
         if canStartCopyingFromCheck {
             Task { await activateValidatedTradingSettings() }
@@ -272,10 +249,9 @@ extension AppModel {
     }
 
     /// The engine takes a new setup only while paused, so the pause is kept as short as the
-    /// check and the start. The examples are read first, while copying runs on; when they need a
-    /// look, the readings wait for the owner with copying still running, and pressing Start
-    /// Copying beside them pauses, checks, and starts. Posts that arrive during the pause are read
-    /// when copying starts again.
+    /// check and the start. The draft and its keys are checked first, while copying runs on, so a
+    /// setup that cannot start never pauses it. Posts that arrive during the pause are read when
+    /// copying starts again.
     private func applyChangesWhileCopying() {
         let submission: (TradingConfiguration, TradingSecrets)
         do {
@@ -284,26 +260,15 @@ extension AppModel {
             message = Self.setupProblem(for: error)
             return
         }
-        // Readings taken of this very setup, with every example as the owner expected, are reused.
-        let readingsTaken =
-            checkedSetupSignature == setupDraft.signature && !profileExampleReviews.isEmpty
-            && profileExampleReviews.values.allSatisfy(\.automaticActivationAllowed)
         checkedSetupSignature = setupDraft.signature
         applyChangesTask?.cancel()
         isApplyingChanges = true
         applyChangesTask = Task { [weak self] in
             guard let self else { return }
             defer { self.isApplyingChanges = false }
-            if !readingsTaken {
-                // Copying keeps running while the examples are read. A reading that differs from
-                // what the owner expected stops here and shows itself.
-                let read = await self.validateTradingSettings(
-                    submission.0, enteredSecrets: submission.1, reviewOnly: true)
-                guard read, !Task.isCancelled else { return }
-            }
-            // Every example read as expected, so pressing Apply Changes is the owner's yes to them.
-            let reviews = self.profileExampleReviews
-            self.profileExamplesAcknowledged = true
+            let ready = await self.validateTradingSettings(
+                submission.0, enteredSecrets: submission.1, beforePause: true)
+            guard ready, !Task.isCancelled else { return }
             self.isPausedToApplyChanges = true
             self.accountsCopyingBeforeApply = Set(
                 (self.accountFeature?.accounts ?? []).filter { AccountCopyState($0).isCopying }.map(\.accountID))
@@ -315,7 +280,7 @@ extension AppModel {
                 return
             }
             guard !Task.isCancelled else { return }
-            await self.checkThenStart(submission.0, enteredSecrets: submission.1, reviewed: reviews)
+            await self.checkThenStart(submission.0, enteredSecrets: submission.1)
             guard !Task.isCancelled else { return }
             await self.resumeSavedSetupIfPausedForChanges()
         }
@@ -393,8 +358,6 @@ extension AppModel {
         isPausedToApplyChanges = false
         checkedSetupSignature = nil
         isShowingSetupCheck = false
-        profileExampleReviews = [:]
-        profileExamplesAcknowledged = false
         guard !appliedChanges else {
             message = L10n.string("Your changes are saved, and copying uses them now.")
             turnOnAccountsCopyingBeforeApply()
@@ -468,14 +431,12 @@ extension AppModel {
             L10n.string("Each guru needs a name.")
         case TradingProfileBuilderError.invalidProfile:
             L10n.string(
-                "Each guru needs a name of up to 100 characters, a playbook under %@ characters, and at most 32 examples.",
+                "Each guru needs a name of up to 100 characters and a playbook under %@ characters.",
                 tradingPlaybookMaxLength.formatted())
-        case TradingProfileBuilderError.invalidExample:
-            L10n.string("Check each guru's examples: each needs a message, a ticker, and a fraction between 0 and 1 if given.")
         case let error as TradingSettingsError:
             Self.userMessage(for: error)
         default:
-            L10n.string("Check each guru's sizing and examples, then start copying again.")
+            L10n.string("Check each guru's sizing, then start copying again.")
         }
     }
 }

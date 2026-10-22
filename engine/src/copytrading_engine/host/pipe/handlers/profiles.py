@@ -1,18 +1,17 @@
-"""Guru profiles: evaluate a past post, review examples, learn a playbook."""
+"""Guru profiles: evaluate a past post, learn a playbook."""
 
 from copytrading_engine.host.pipe.requests import (
     EvaluateHistoricalProfileRequest,
     LearnGuruPlaybookRequest,
     PipeRequest,
     RequestHandler,
-    ReviewProfileExamplesRequest,
 )
 from copytrading_engine.host.pipe.responses import reply
 from copytrading_engine.host.pipe.services import TradingServices
 
 
 class ProfileHandlers:
-    """Evaluate, review, and learn guru profiles from past posts."""
+    """Evaluate and learn guru profiles from past posts."""
 
     def __init__(self, *, trading: TradingServices | None) -> None:
         self._trading = trading
@@ -20,7 +19,6 @@ class ProfileHandlers:
     def handlers(self) -> dict[type[PipeRequest], RequestHandler]:
         return {
             EvaluateHistoricalProfileRequest: self._on_evaluate_historical_profile,
-            ReviewProfileExamplesRequest: self._on_review_profile_examples,
             LearnGuruPlaybookRequest: self._on_learn_guru_playbook,
         }
 
@@ -42,24 +40,6 @@ class ProfileHandlers:
             ok={
                 "type": "profile_evaluation",
                 "evaluation": evaluation.model_dump(mode="json"),
-            },
-        )
-
-    async def _on_review_profile_examples(self, request: ReviewProfileExamplesRequest) -> bytes:
-        if self._trading is None:
-            return reply(request.version, request.request_id, error="unavailable")
-        review = await self._trading.profiles.review_profile_examples(
-            request.profile,
-            request.provider,
-            request.provider_api_key,
-            request.destinations,
-        )
-        return reply(
-            request.version,
-            request.request_id,
-            ok={
-                "type": "profile_example_review",
-                "review": review.model_dump(mode="json"),
             },
         )
 

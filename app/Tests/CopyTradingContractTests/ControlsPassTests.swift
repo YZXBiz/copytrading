@@ -15,7 +15,6 @@ func runControlsPassTests() async throws {
     try guideStopsOpenSomewhereEvenBeforeSetup()
     try guideShortcutsNameOnlyScreensThatExist()
     try showTipsAgainSaysWhenTheyReturn()
-    try examplesSayBuyOrSell()
     try await accountButtonsWithNoEngineSaySo()
     try selfTestWaitsForARunningEngine()
     try await chartRangesWithNoEngineSaySo()
@@ -152,17 +151,6 @@ private func showTipsAgainSaysWhenTheyReturn() throws {
     let model = AppModel()
     model.showTipsAgain()
     try #require(model.message?.contains("once copying is set up") == true, "Show Tips Again said nothing before setup")
-}
-
-@MainActor
-private func examplesSayBuyOrSell() throws {
-    let preference = AppLanguagePreference.shared
-    let original = preference.language
-    defer { preference.select(original) }
-    preference.select(.english)
-    try #require(
-        TradingInstructionAction.allCases.map(\.title) == ["Buy", "Sell part", "Sell all"],
-        "Example actions read \(TradingInstructionAction.allCases.map(\.title))")
 }
 
 @MainActor

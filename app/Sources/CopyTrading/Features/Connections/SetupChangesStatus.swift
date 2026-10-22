@@ -34,8 +34,6 @@ struct SetupChangesStatus: Equatable {
                 symbol: "exclamationmark.triangle.fill", tone: .caution)
         } else if model.canStartCopyingFromCheck {
             self.init("Everything checks out", "Start copying when you're ready.", "checkmark.circle.fill", .positive)
-        } else if model.awaitsExampleReview {
-            self.init("Everything checks out", "Look over how the examples were read.", "text.magnifyingglass", .neutral)
         } else if model.tradingStatus?.state != .paused && model.isCopyingSavedSetup {
             // Applying restarts copying; posts from those few seconds wait and are copied after.
             self.init(

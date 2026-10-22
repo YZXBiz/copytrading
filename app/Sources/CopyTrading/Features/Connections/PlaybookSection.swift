@@ -7,8 +7,6 @@ struct PlaybookSection: View {
     let learn: (TradingRouteDraft) async throws -> LearnedGuruPlaybook
     @State private var isLearning = false
     @State private var learned: LearnedGuruPlaybook?
-    /// How many of the learned examples were new to this guru.
-    @State private var addedExamples = 0
     @State private var failure: String?
     @FocusState private var isEditing: Bool
 
@@ -64,20 +62,14 @@ struct PlaybookSection: View {
         }
     }
 
-    /// What Learn did, truthfully: the playbook is drafted, and examples are named only when some
-    /// were added beside the owner's own.
+    /// What Learn did, truthfully: the playbook is drafted.
     @MainActor
     private func learnedSummary(_ learned: LearnedGuruPlaybook) -> String {
-        var sentences = [
+        let sentences = [
             L10n.string("Read %lld posts with %@.", Int64(learned.postsRead), learned.model),
             learned.summary,
             L10n.string("The playbook is drafted; read it over before you start copying."),
         ]
-        if addedExamples == 1 {
-            sentences.append(L10n.string("Added 1 example post below yours."))
-        } else if addedExamples > 1 {
-            sentences.append(L10n.string("Added %lld example posts below yours.", Int64(addedExamples)))
-        }
         return L10n.sentences(sentences.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty })
     }
 
@@ -89,7 +81,6 @@ struct PlaybookSection: View {
             do {
                 let result = try await learn(route)
                 route.playbook = result.playbook
-                addedExamples = route.addLearnedExamples(result.examples)
                 learned = result
             } catch {
                 learned = nil

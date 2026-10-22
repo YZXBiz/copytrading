@@ -12,7 +12,7 @@ from pathlib import Path
 from copytrading_engine.bootstrap import compose_engine, persist_installation_id
 from copytrading_engine.control.wire import MAX_LINE_BYTES
 from copytrading_engine.headless.config import ServerSetup
-from copytrading_engine.headless.engine import ExampleReview, HeadlessEngine, SetupReport
+from copytrading_engine.headless.engine import HeadlessEngine, SetupReport
 from copytrading_engine.headless.owner import (
     Approve,
     AskStatus,
@@ -96,19 +96,7 @@ class _Discard:
         return None
 
 
-@dataclass(frozen=True)
-class CheckResult:
-    report: SetupReport
-    reviews: tuple[ExampleReview, ...]
-
-    @property
-    def passed(self) -> bool:
-        return self.report.activatable and all(
-            review.automatic_activation_allowed for review in self.reviews
-        )
-
-
-async def check_setup(setup: ServerSetup, secrets: TradingSecrets) -> CheckResult:
+async def check_setup(setup: ServerSetup, secrets: TradingSecrets) -> SetupReport:
     """Run the app's setup check in a throwaway state folder; nothing is saved or traded."""
     with tempfile.TemporaryDirectory(prefix="copytrading-check-") as scratch:
         paths = ServerPaths(Path(scratch).resolve())
@@ -119,8 +107,7 @@ async def check_setup(setup: ServerSetup, secrets: TradingSecrets) -> CheckResul
             diagnostics_directory=paths.logs,
             owner_support_directory=paths.support,
         ) as server:
-            engine = HeadlessEngine(server, setup, secrets)
-            return CheckResult(await engine.validate(), await engine.review_examples())
+            return await HeadlessEngine(server, setup, secrets).validate()
 
 
 async def run_server(

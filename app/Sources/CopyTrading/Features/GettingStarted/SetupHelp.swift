@@ -132,7 +132,7 @@ enum SetupHelp {
         id: "setup.start",
         title: "Start copying",
         steps: [
-            "Choose **Start Copying**. CopyTrading first signs in to Discord, your interpreter, and Alpaca, and reads each example the way it will read real posts.",
+            "Choose **Start Copying**. CopyTrading first signs in to Discord, your interpreter, and Alpaca.",
             "If anything is marked, choose **Review…**, fix it, then choose **Start Copying** again.",
             "To stop copying into one account, open it and choose **Stop Copying**. Sells of what it copied still follow.",
         ]

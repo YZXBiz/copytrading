@@ -148,13 +148,6 @@ public struct EngineActions: Sendable {
         return try await client.evaluateHistoricalProfile(evaluation)
     }
 
-    public func reviewProfileExamples(
-        _ request: ProfileExampleReviewRequest
-    ) async throws -> ProfileExampleReview {
-        let client = try await supervisor.engineClient()
-        return try await client.reviewProfileExamples(request)
-    }
-
     public func learnGuruPlaybook(
         _ learning: GuruPlaybookLearningRequest
     ) async throws -> LearnedGuruPlaybook {

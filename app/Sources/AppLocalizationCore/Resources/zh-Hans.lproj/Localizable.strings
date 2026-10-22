@@ -5,7 +5,6 @@
 "%@ %@ %@, %@, in %@" = "%@ %@ %@，%@，账户 %@";
 "%@ %@ at %@" = "%@ %@，价格 %@";
 "%@ %@ of %@" = "%@ %@ %@";
-"%@ %@ · fraction %@" = "%@ %@ · 仓位 %@";
 "%@ (%@)" = "%@（%@）";
 "%@ and %lld more" = "%@，另有%lld项";
 "%@ at %@" = "%@，成交价 %@";
@@ -62,7 +61,6 @@
 "Activity" = "活动";
 "Add a broker account" = "添加券商账户";
 "Add a guru" = "添加信号源";
-"Add Example" = "添加示例";
 "Add Instruction" = "添加指令";
 "Add it to Claude Code as an MCP server." = "将其作为 MCP 服务器添加到 Claude Code。";
 "Add the channel they post in under Discord in Connections first." = "请先在“连接”的 Discord 部分添加他们发帖的频道。";
@@ -215,7 +213,7 @@
 "CopyTrading reads channels as you. Your token lets it, and stays in your Keychain." = "CopyTrading 会以你的身份读取频道。令牌用于授权访问，并保存在钥匙串中。";
 "CopyTrading reads it" = "CopyTrading 解析帖子";
 "CopyTrading reads your gurus' channels as you, with your Discord account's token. It works like a password: anyone who has it can use your account." = "CopyTrading 会使用你的 Discord 账户令牌，以你的身份读取信号源的频道。它就像密码：任何拿到令牌的人都能使用你的账户。";
-"CopyTrading tests every connection and reads your examples while you watch. Nothing is saved or traded before this." = "CopyTrading 会逐一检查连接，并在你查看时解析示例。此步骤完成前，不会保存设置或下单。";
+"CopyTrading tests every connection while you watch. Nothing is saved or traded before this." = "CopyTrading 会在你查看时逐一检查连接。此步骤完成前，不会保存设置或下单。";
 "CopyTrading, %@" = "CopyTrading，%@";
 "Correction" = "更正";
 "Correction error: %@" = "更正错误：%@";
@@ -292,15 +290,10 @@
 "Evaluate Message" = "评估消息";
 "Evaluate with Saved Profile…" = "使用已保存的配置评估…";
 "Evaluating with the configured model" = "正在使用已配置的模型评估";
-"Everything checks out. Look over how the examples were read." = "所有检查均已通过。请查看示例的解析结果。";
 "Everything checks out. Start copying when you're ready." = "所有检查均已通过。准备好后即可开始跟单。";
 "Everything CopyTrading records stays here, on this Mac." = "CopyTrading 记录的所有内容都保存在这台 Mac 上。";
-"Example %lld" = "示例%lld";
 "Exit fractions apply to" = "平仓比例适用于";
 "Expanded" = "已展开";
-"Expected" = "预期";
-"Expected action" = "预期操作";
-"Expected ticker" = "预期股票代码";
 "Expired unfilled" = "已过期，未成交";
 "Expires" = "到期时间";
 "Failed" = "失败";
@@ -356,7 +349,6 @@
 "Holdings need your review" = "持仓需要你审核";
 "Holdings review resolved" = "持仓核对问题已解决";
 "How many shares?" = "卖出多少股？";
-"How the examples were read" = "示例解读";
 "How you refer to this guru" = "你对这个信号源的称呼";
 "Hundreds of models with one key" = "一个密钥即可使用数百种模型";
 "Ignored" = "已忽略";
@@ -418,7 +410,6 @@
 "Make sure the account switcher at the top left shows your **Paper** account." = "确认左上角的账户切换器显示你的 **模拟账户**。";
 "Manual" = "手动";
 "Many services and local servers, such as LM Studio, vLLM, and LiteLLM, answer the same way OpenAI does. CopyTrading can read posts through any of them." = "许多服务和本地服务器（例如 LM Studio、vLLM、LiteLLM）都使用与 OpenAI 相同的接口响应。CopyTrading 可以通过其中任意一种服务读取帖子。";
-"Matches" = "一致";
 "Maximum above signal price (%)" = "高于信号价格的最高幅度（%）";
 "Maximum per order" = "单笔订单上限";
 "Maximum per stock" = "单只股票上限";
@@ -427,7 +418,6 @@
 "Measure a move" = "衡量涨跌幅";
 "Message" = "消息";
 "Message **@userinfobot** to get your chat ID, and paste it into **Chat ID**." = "向 **@userinfobot** 发消息获取聊天 ID，并将其粘贴到 **聊天 ID**。";
-"Mismatch" = "不一致";
 "Missing" = "缺失";
 "Mistral models" = "Mistral 模型";
 "Model" = "模型";
@@ -538,7 +528,6 @@
 "Paper" = "模拟盘";
 "Partly filled" = "部分成交";
 "Passed validation" = "验证通过";
-"Paste an exact source message" = "粘贴完整的原始消息";
 "Paste it into **API key**, and enter a model name such as **%@** under **Model**." = "粘贴到 **API 密钥** 字段，并在 **模型** 下输入模型名称，例如 **%@**。";
 "Paste it into **Channel IDs**. Separate several channels with commas." = "将其粘贴到 **频道 ID** 中。多个频道 ID 之间用逗号分隔。";
 "Pause Copying stops reading new posts and placing orders for every account. Start Copying picks up again." = "暂停跟单会停止读取新帖子，并停止为所有账户下单。重新开始跟单后会继续。";
@@ -584,7 +573,6 @@
 "Read" = "已读取";
 "Read and pause" = "读取并暂停";
 "Read by" = "解读模型";
-"Read by %@" = "由 %@ 解读";
 "Read Calls From" = "读取喊单来源 ";
 "Read new posts and copy them into your accounts." = "读取新帖子并为你的账户跟单。";
 "Read Posts With" = "解读帖子所用模型 ";
@@ -1022,12 +1010,9 @@
 "Unlock CopyTrading first." = "请先解锁 CopyTrading。";
 "CopyTrading is still starting. Check the setup again in a moment." = "CopyTrading 仍在启动。请稍后再检查设置。";
 "Pause copying before checking the setup." = "请先暂停跟单，再检查设置。";
-"An example was read differently from what you expected. Fix the playbook or the example, then check again." = "某条示例的解读与你的预期不同。请修正操作指南或示例，然后再次检查。";
 "Some connections need attention. Nothing was saved." = "有些连接需要处理。没有保存任何内容。";
 "Wait for the backup or restore to finish, then start copying." = "请等备份或恢复完成后，再开始跟单。";
 "Check the setup before starting to copy." = "请先检查设置，再开始跟单。";
-"Fix the examples that were read differently, then check again." = "请修正解读不一致的示例，然后再次检查。";
-"Look over how the examples were read before starting to copy." = "开始跟单前，请先查看示例是如何被解读的。";
 "Pause copying before starting a new setup." = "请先暂停跟单，再启用新设置。";
 "CopyTrading didn't hear back after starting. It keeps checking whether the new setup took effect." = "启动后 CopyTrading 没有收到回应，会继续检查新设置是否已生效。";
 "Configuration activation is pending; engine status is unavailable. Credentials are retained." = "配置启用尚未完成，暂时无法获取引擎状态。凭据已保留。";
@@ -1083,7 +1068,6 @@
 "Your setup was saved by an older version of CopyTrading. Set it up again from Getting Started, including your keys." = "你的设置由旧版 CopyTrading 保存。请从“快速开始”重新设置，包括你的密钥。";
 "A required connection check failed. Processing remains paused." = "有一项必需的连接检查未通过。处理仍保持暂停。";
 "Each guru needs a name." = "每个信号源都需要一个名称。";
-"Check each guru's examples: each needs a message, a ticker, and a fraction between 0 and 1 if given." = "请检查每个信号源的示例：每条都需要消息和股票代码；如果填写了比例，必须介于0和1之间。";
 "Starting your new setup…" = "正在启动你的新设置…";
 "The setup changed after it was checked. Check it again." = "检查之后设置又改动了。请重新检查。";
 "The engine did not accept the validated trading configuration." = "引擎没有接受已验证的交易配置。";
@@ -1192,19 +1176,16 @@
 "Who you copy, and the account each one copies into." = "跟单谁，以及每位信号源跟单到哪个账户。";
 "You have changes that aren't saved yet. Starting checks and saves them." = "你有尚未保存的更改。开始跟单时会先检查再保存。";
 "Your broker accounts show here once you set them up in Connections. Start with an Alpaca paper account: it trades pretend money at real prices." = "在“连接”中设置券商账户后，账户会显示在这里。建议先用 Alpaca 模拟盘账户：虚拟资金，真实价格。";
-"The guru reading channel %@ has no saved details. Open them in Connections and check their fields." = "读取频道 %@ 的信号源没有已保存的详细信息。请在“连接”中打开并检查各项内容。";
 "Add a broker account in Connections." = "请在“连接”中添加券商账户。";
 "Add a guru to copy in Connections." = "请在“连接”中添加要跟单的信号源。";
 "A guru's details don't line up. Open the guru in Connections and check its fields." = "信号源的详细信息不一致。请在“连接”中打开该信号源并检查各项内容。";
 "“%@” doesn't match its saved details. Open the guru in Connections and check its fields." = "“%@”与已保存的详细信息不一致。请在“连接”中打开该信号源并检查各项内容。";
 "Two gurus read the same channel and author. Give each guru a different author ID in Connections." = "两个信号源读取了相同的频道和作者。请在“连接”中为每个信号源设置不同的作者 ID。";
-"Check each guru's sizing and examples, then start copying again." = "请检查每个信号源的仓位设置和示例，然后重新开始跟单。";
+"Check each guru's sizing, then start copying again." = "请检查每个信号源的仓位设置，然后重新开始跟单。";
 "The engine is stopped. Start it, then start copying." = "引擎已停止。请先启动引擎，再开始跟单。";
-"An example was read differently from what you expected. Fix the playbook or the example in Connections, then start again." = "有示例的解读与预期不同。请在“连接”中修正解读规则或示例，然后重新开始。";
-"Start Copying first reads each example with the interpreter. A different reading stops copying from starting." = "“开始跟单”会先用 AI 模型逐条读取示例。如果解读不同，将无法开始跟单。";
-"Start Copying tests every connection and example first. The results appear here." = "“开始跟单”会先测试每个连接和示例。结果会显示在这里。";
+"Start Copying tests every connection first. The results appear here." = "“开始跟单”会先测试每个连接。结果会显示在这里。";
 "In **Connections**, under **Gurus**, choose **Add a guru** and give them a name." = "在 **连接** 的 **信号源** 下，选择 **添加信号源** 并为其命名。";
-"Choose **Start Copying**. CopyTrading first signs in to Discord, your interpreter, and Alpaca, and reads each example the way it will read real posts." = "选择 **开始跟单**。CopyTrading 会先登录 Discord、AI 模型和 Alpaca，并按处理真实帖子的方式解析每个示例。";
+"Choose **Start Copying**. CopyTrading first signs in to Discord, your interpreter, and Alpaca." = "选择 **开始跟单**。CopyTrading 会先登录 Discord、AI 模型和 Alpaca。";
 "If anything is marked, choose **Review…**, fix it, then choose **Start Copying** again." = "如有标记的问题，请选择 **检查…**，修正后再次选择 **开始跟单**。";
 "New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**." = "新账户默认关闭开仓，在 **账户** 中选择 **启用开仓** 之前不会买入任何股票。";
 "These are paper keys. Choose Paper, or enter this account's live keys." = "这是模拟盘密钥。请选择“模拟盘”，或填写这个账户的实盘密钥。";
@@ -1259,8 +1240,6 @@
 "“%@” uses channel %@, which is not listed under Discord in Connections." = "“%@”使用的频道 %@ 不在“连接”的 Discord 列表中。";
 "“%@” needs an account to copy into." = "“%@”需要一个跟单账户。";
 "“%@” copies into “%@”, which isn't one of your broker accounts." = "“%@”跟单到“%@”，但它不是你的券商账户。";
-"Expected size" = "预期仓位";
-"e.g. 1/6, optional" = "例如 1/6，可不填";
 "Copies into %@ · full position %@" = "跟单到 %@ · 满仓 %@";
 "Full position %@. A 1/6 call buys a sixth of it." = "满仓 %@。1/6 的喊单买它的六分之一。";
 "First set this account's max per stock. It's the guru's full position." = "先设置这个账户的单只股票上限，它就是信号源的满仓。";
@@ -1398,11 +1377,6 @@
 "Minutes" = "分钟";
 "Click **Open Connections** below." = "点击下方的 **打开连接**。";
 "Under **Discord**, paste it into **Channel IDs**. Separate several channels with commas." = "在 **Discord** 下，将其粘贴到 **频道 ID** 中。多个频道 ID 之间用逗号分隔。";
-"Expected buy price" = "预期买入价";
-"Expected sell price" = "预期卖出价";
-"e.g. %@, optional" = "例如 %@，可留空";
-"Sells from the buy at" = "卖出的是这笔买入";
-"e.g. %@, or empty for every buy" = "例如 %@，留空表示所有买入";
 "Re-posted calls" = "重复发布的喊单";
 "None of your buys is at the buy price the guru named" = "你没有信号源所说价格的买入";
 "The sell doesn't say how much" = "这次卖出没有说卖多少";
@@ -1425,7 +1399,7 @@
 "Connect tries the key right away. It stays in this Mac's Keychain." = "点击连接会立即试用密钥。密钥只保存在这台 Mac 的钥匙串里。";
 "Click **Connect** on the paper account and paste its two Alpaca keys." = "在模拟账户上点击 **连接**，粘贴它的两个 Alpaca 密钥。";
 "Click **Add**, name them, and choose the account that copies them." = "点击 **添加**，填上名字，再选好跟单的账户。";
-"Click **Start Copying**. Each connection is tested and your examples are read before anything is saved." = "点击 **开始跟单**。保存之前会测试每个连接，并读一遍你的示例。";
+"Click **Start Copying**. Each connection is tested before anything is saved." = "点击 **开始跟单**。保存之前会测试每个连接。";
 "Waiting for Connect" = "等待点击连接";
 "Moves on once an ID is in" = "填好 ID 后自动继续";
 "Waiting for you to pick one" = "等你选一个";
@@ -1474,7 +1448,6 @@
 "The post repeats an earlier call of the guru's" = "这条帖子重复了信号源之前的一条喊单";
 "A re-post of a call already copied" = "已跟过的喊单被重新发了一遍";
 "%@ A re-post of an earlier call." = "%@（重复之前的喊单）";
-"Start Copying says these readings are what you meant." = "Start Copying 即表示这些解读符合你的本意。";
 "Every post in your channels, the moment it arrives." = "你频道里的每条帖子，一发出就读取。";
 "Channels and gurus" = "频道和信号源";
 "Turned into an exact call: the stock and the price." = "变成确切的指令：股票和价格。";
@@ -1495,7 +1468,6 @@
 "%@ answered as %@" = "%@ 以 %@ 作答";
 "Alpaca live account found" = "找到 Alpaca 实盘账户";
 "Alpaca paper account found" = "找到 Alpaca 模拟账户";
-"Each example is one request to your model service, which may charge for it." = "每个示例都会向你的模型服务发送一次请求，可能产生费用。";
 "Apply Changes" = "应用更改";
 "Apply Changes pauses copying for a moment, checks the new setup, and copies with it. Posts in between aren't missed." = "应用更改会短暂暂停跟单，检查新设置后用它继续跟单。期间的帖子不会漏掉。";
 "Your changes weren't saved, so copying continues with the saved setup." = "你的更改没有保存，跟单继续使用已保存的设置。";
@@ -1538,8 +1510,6 @@
 "Enter %@ to connect." = "填写%@后再连接。";
 "Read %lld posts with %@." = "读了 %lld 条帖子，使用 %@。";
 "The playbook is drafted; read it over before you start copying." = "策略手册已起草；开始跟单前请通读一遍。";
-"Added 1 example post below yours." = "在你的示例下方添加了 1 条示例帖子。";
-"Added %lld example posts below yours." = "在你的示例下方添加了 %lld 条示例帖子。";
 "The holdings couldn't be settled: %@. Check the broker for open orders in %@, then try again." = "持仓无法确认：%@。请检查券商里 %@ 的未成交订单，然后再试。";
 "Clear the Old Count" = "清除旧的计数";
 "Review in Accounts" = "在账户中确认";
@@ -1878,6 +1848,10 @@
 "At the bid" = "按买一价";
 "Agent request" = "智能体请求";
 "Each connection, and how each guru's examples were read." = "每个连接的检查结果，以及每个信号源的示例是怎么读的。";
+"The request" = "请求内容";
+"Before copying starts" = "开始复制之前";
+"Import" = "导入";
+"Each connection and what its test found." = "每个连接及其检查结果。";
 "Live · real orders, real money" = "实盘 · 真实下单，真金白银";
 "Paper · pretend money, real prices" = "模拟盘 · 虚拟资金，真实价格";
 "CopyTrading's count of %@ is out of date" = "CopyTrading 对 %@ 的持仓记录已过时";
@@ -1909,7 +1883,6 @@
 "Start it, then start copying." = "先启动它，再开始复制。";
 "Everything checks out" = "全部检查通过";
 "Start copying when you're ready." = "准备好后开始复制。";
-"Look over how the examples were read." = "看看示例是如何被解读的。";
 "You changed the setup" = "你更改了设置";
 "Every connection is checked first." = "会先检查每个连接。";
 "You have unsaved changes" = "你有未保存的更改";
@@ -2111,8 +2084,6 @@
 "%@ → %@" = "%@ → %@";
 "Holding %@ in 1 stock from these calls" = "这些喊单目前持有 %@，共 1 只股票";
 "Holding %@ in %lld stocks from these calls" = "这些喊单目前持有 %@，共 %lld 只股票";
-"Reduce a position" = "减仓";
-"Close a position" = "清仓";
 "Deadline today: %@ %@" = "今天 %@（%@）";
 "Deadline tomorrow: %@ %@" = "明天 %@（%@）";
 "Deadline on a weekday: %@ %@ %@" = "%@ %@（%@）";
@@ -2279,7 +2250,7 @@
 "Keep the name to 64 characters." = "名称不能超过 64 个字符。";
 "Use only letters, digits, “-” and “_” in the name: no spaces." = "名称只能包含字母、数字、“-”和“_”，不能有空格。";
 "Needs a valid name" = "名称无效";
-"Each guru needs a name of up to 100 characters, a playbook under %@ characters, and at most 32 examples." = "每个信号源都需要一个不超过 100 个字符的名称、少于 %@ 个字符的操作指南，以及最多 32 个示例。";
+"Each guru needs a name of up to 100 characters and a playbook under %@ characters." = "每个信号源都需要一个不超过 100 个字符的名称，以及少于 %@ 个字符的操作指南。";
 "Search time zones" = "搜索时区";
 "Nothing was sent: the engine isn't running. Start it in Settings → Engine, then try again." = "没有发送任何指令：引擎没有运行。请在“设置 → 引擎”中启动它，然后重试。";
 "Start the engine to run the self-test." = "启动引擎后才能运行自检。";
