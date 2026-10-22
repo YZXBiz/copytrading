@@ -6,6 +6,11 @@ User-visible changes for each release are recorded here. Every GitHub release's 
 
 - **A position lists every buy it holds, and costs only the shares still held.** When a guru bought a stock, sold half of that buy, then added more, the position showed only the first post ("2.78 of 3.674 shares bought at $90.13"), and priced the shares left at the average of every buy, sold ones included. Its loss read -$6.49 beside the broker's -$4.37, and the guru's page said "Holding $251 … $7.18". Each buy that still holds shares now has its own line, with its post, price, and gain, and the shares left are costed at the prices that bought them, so the numbers agree with the broker. The same cost now counts toward an account's stock limits.
 
+## Unreleased
+
+- **Closing every buy of a whole-share stock leaves nothing behind.** For a stock that trades only in whole shares, a "sell half" across two buys left each a fraction of a share, so selling each buy by its price later left one share that no such sell could reach. Sales of whole shares now split in whole shares, the remainder from the oldest buy.
+- **A stock held in two lots counts what both cost toward the limits.** The per-stock and total limits counted only the costlier lot.
+
 ## 0.1.0-beta.4 — developer preview
 
 A guru's page stops counting shares in accounts you removed from the setup.

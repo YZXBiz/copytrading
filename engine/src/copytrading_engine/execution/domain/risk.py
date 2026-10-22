@@ -122,10 +122,15 @@ def account_exposure(
         if position.currency != "USD" or value is None or not value.is_finite() or value <= 0:
             raise ValueError("Broker position valuation is unavailable or non-USD")
         by_symbol[position.symbol] = value
+    # What the copied shares of each stock cost, all of its lots together.
+    cost: dict[str, Decimal] = {}
     for lot in lots:
         if lot.remaining_qty:
-            basis = lot.remaining_qty * lot.average_price
-            by_symbol[lot.symbol] = max(by_symbol.get(lot.symbol, Decimal(0)), basis)
+            cost[lot.symbol] = (
+                cost.get(lot.symbol, Decimal(0)) + lot.remaining_qty * lot.average_price
+            )
+    for symbol, basis in cost.items():
+        by_symbol[symbol] = max(by_symbol.get(symbol, Decimal(0)), basis)
     for order in pending:
         if order.pending and order.side == "buy":
             if order.limit_price is None:

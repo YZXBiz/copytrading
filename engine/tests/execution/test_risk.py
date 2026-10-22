@@ -191,3 +191,32 @@ def test_a_dollar_size_is_still_trimmed_by_the_maximum_per_order():
     decision = decide(limits, connection=FULL_3000, usd=Decimal(200))
 
     assert (decision.budget, decision.requested) == (Decimal(150), Decimal("200.00"))
+
+
+def test_a_stock_held_in_two_lots_counts_what_both_cost():
+    def lot(source: str, entry: str) -> OwnedLot:
+        return OwnedLot(
+            symbol="NVDA",
+            entry_price=Decimal(100),
+            source_key=source,
+            original_qty=Decimal(10),
+            remaining_qty=Decimal(10),
+            average_price=Decimal(100),
+            entry_remaining={entry: Decimal(10)},
+            entry_prices={entry: Decimal(100)},
+        )
+
+    # 20 copied shares that cost $2,000 in all, worth $1,800 now.
+    held = Position(
+        symbol="NVDA",
+        qty=Decimal(20),
+        market_value=Decimal(1800),
+        currency="USD",
+        asset_class="us_equity",
+    )
+
+    exposure = account_exposure(
+        (held,), (lot("discord:a", "a1"), lot("discord:b", "b1")), (), account_currency="USD"
+    )
+
+    assert exposure.symbol("NVDA") == Decimal(2000)
