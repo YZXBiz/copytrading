@@ -185,6 +185,11 @@ private func checkAccountValuationFixturesDecode() throws {
     }
     try #require(lot.sourceID == "discord:demo:1", "a lot lost the post that bought it")
     try #require(lot.remainingQty == "2" && lot.averagePrice == "25.10", "a lot's shares or price changed while decoding")
+    guard let buy = lot.buys.first, lot.buys.count == 1 else {
+        throw VerificationFailure(description: "a lot lost the buys it is made of")
+    }
+    try #require(buy.sourceID == "discord:demo:1" && buy.boughtQty == "2", "a buy lost its post or shares")
+    try #require(buy.remainingQty == "2" && buy.price == "25.10", "a buy's shares left or price changed while decoding")
     try #require(page.items.first?.positions.first?.currentPrice == nil, "an unread broker produced a price")
 
     // A position the broker valued: cost, price, value, and gain, for the position and its lot.
@@ -197,7 +202,7 @@ private func checkAccountValuationFixturesDecode() throws {
              "unrealized_pl":"1.37","unrealized_plpc":"0.0069",
              "lots":[{"lot_id":"l1","source_id":null,"guru_id":null,"posted_at":null,"excerpt":null,
                "bought_at":null,"original_qty":"1","remaining_qty":"1","average_price":"199.59",
-               "unrealized_pl":"1.37"}]}
+               "unrealized_pl":"1.37","buys":[]}]}
             """.utf8))
     try #require(valued.avgEntryPrice == "199.59" && valued.currentPrice == "200.96", "a position's prices did not decode")
     try #require(valued.marketValue == "200.96" && valued.unrealizedPL == "1.37", "a position's value or gain did not decode")

@@ -2147,7 +2147,9 @@ struct TradingSettingsSaveTests {
             return try JSONDecoder().decode(OwnershipIncidentView.self, from: Data(json.utf8))
         }
         func position(_ symbol: String, broker: String?, lots: [(String, String)]) throws -> AccountPositionView {
-            let lotJSON = lots.map { #"{"lot_id":"\#($0.0)","original_qty":"\#($0.1)","remaining_qty":"\#($0.1)","average_price":"10"}"# }
+            let lotJSON = lots.map {
+                #"{"lot_id":"\#($0.0)","original_qty":"\#($0.1)","remaining_qty":"\#($0.1)","average_price":"10","buys":[]}"#
+            }
             let brokerJSON = broker.map { #""\#($0)""# } ?? "null"
             let json =
                 #"{"symbol":"\#(symbol)","owned_qty":"0","external_qty":"0","broker_qty":\#(brokerJSON),"lots":[\#(lotJSON.joined(separator: ","))]}"#

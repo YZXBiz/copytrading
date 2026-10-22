@@ -161,6 +161,16 @@ class _OrderChanges(TypedDict, total=False):
     raw_broker_status: str | None
 
 
+def _priced(orders: dict[str, OrderRecord], key: str, lot: OwnedLot) -> OwnedLot:
+    """The lot keyed by `key`, its average set from each of its buys' fill prices."""
+    fills = {
+        entry: order.filled_avg_price
+        for entry in lot.entries(key)
+        if (order := orders.get(entry)) is not None and order.filled_avg_price is not None
+    }
+    return lot.priced(fills)
+
+
 class TradingLedger:
     """Own validated state, isolated from repository and caller-owned containers.
 
@@ -170,7 +180,13 @@ class TradingLedger:
 
     def __init__(self, repository: LedgerRepository, observer: ExecutionObserver) -> None:
         self._repository = repository
-        self._snapshot = LedgerSnapshot.model_validate(repository.load().model_dump())
+        loaded = LedgerSnapshot.model_validate(repository.load().model_dump())
+        # A lot saved before its average followed only the shares still held is repriced here.
+        self._snapshot = loaded.model_copy(
+            update={
+                "lots": {key: _priced(loaded.orders, key, lot) for key, lot in loaded.lots.items()}
+            }
+        )
         self._observer = observer
 
     @property
@@ -372,7 +388,9 @@ class TradingLedger:
         else:
             if lot is None or sale.order.filled_qty > lot.remaining_qty:
                 raise ValueError("Manual sale exceeds remaining owned lot shares")
-            updated = lot.reduced(sale.order.filled_qty)
+            updated = _priced(
+                self._snapshot.orders, sale.lot_id, lot.reduced(sale.order.filled_qty)
+            )
             state = self._replace(
                 lots=self._snapshot.lots | {sale.lot_id: updated},
                 manual_sales=self._snapshot.manual_sales | {sale.order.id: sale},
@@ -814,7 +832,9 @@ class TradingLedger:
             if target > before.remaining_qty:
                 raise ValueError("Ownership resolution cannot invent app-owned shares")
             reductions[key] = before.remaining_qty - target
-            lots[key] = before.reduced(before.remaining_qty - target)
+            lots[key] = _priced(
+                self._snapshot.orders, key, before.reduced(before.remaining_qty - target)
+            )
         allocation_revision = 1 + max(
             (
                 prior.allocation_revision
@@ -1250,29 +1270,28 @@ class TradingLedger:
                 lot = lots.get(lot_key)
                 entries = (*lot.entries(lot_key), key) if lot is not None else (key,)
                 entries = tuple(dict.fromkeys(entries))
-                # The lot's cost is every buy's own fills at its own average price.
                 filled = {entry: self.order(entry) for entry in entries if entry != key}
-                cost = sum(
-                    (o.filled_qty * (o.filled_avg_price or ZERO) for o in filled.values()), ZERO
-                )
                 total = sum((o.filled_qty for o in filled.values()), ZERO) + update.filled_qty
                 entry_remaining = dict(lot.entry_remaining) if lot is not None else {}
                 entry_prices = dict(lot.entry_prices) if lot is not None else {}
                 entry_remaining[key] = entry_remaining.get(key, ZERO) + delta
                 entry_prices[key] = order.entry_price
-                updated_lot = OwnedLot(
-                    symbol=order.symbol,
-                    entry_price=lot.entry_price if lot is not None else order.entry_price,
-                    source_key=order.source_key,
-                    original_qty=total,
-                    remaining_qty=(lot.remaining_qty if lot else ZERO) + delta,
-                    # A lot of one buy keeps that buy's exact average.
-                    average_price=(cost + update.filled_qty * average) / total
-                    if filled
-                    else average,
-                    joined_entries=entries[1:],
-                    entry_remaining=entry_remaining,
-                    entry_prices=entry_prices,
+                # Priced from what each buy still holds, this fill at its own average.
+                updated_lot = _priced(
+                    self._snapshot.orders
+                    | {key: order.model_copy(update={"filled_avg_price": average})},
+                    lot_key,
+                    OwnedLot(
+                        symbol=order.symbol,
+                        entry_price=lot.entry_price if lot is not None else order.entry_price,
+                        source_key=order.source_key,
+                        original_qty=total,
+                        remaining_qty=(lot.remaining_qty if lot else ZERO) + delta,
+                        average_price=average,
+                        joined_entries=entries[1:],
+                        entry_remaining=entry_remaining,
+                        entry_prices=entry_prices,
+                    ),
                 )
                 lots = lots | {lot_key: updated_lot}
             else:
@@ -1292,7 +1311,11 @@ class TradingLedger:
                 if applied_delta:
                     # Taken from the buys the sell named, in proportion to what each has left.
                     lots = lots | {
-                        order.lot_id: lot.reduced(applied_delta, order.from_entries or None)
+                        order.lot_id: _priced(
+                            self._snapshot.orders,
+                            order.lot_id,
+                            lot.reduced(applied_delta, order.from_entries or None),
+                        )
                     }
                 if previous_quarantine is not None or unapplied_delta:
                     incident_client_ids = tuple(

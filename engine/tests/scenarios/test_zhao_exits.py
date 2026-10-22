@@ -6,7 +6,7 @@ from decimal import Decimal
 from copytrading_engine.shared.reading import Fraction
 
 from .rig import Account, Rig, orders, outcomes
-from .zhao import buy, close, sell_now
+from .zhao import buy, close, sell_now, trim
 
 
 async def test_selling_a_stock_never_bought_sends_nothing(tmp_path):
@@ -82,6 +82,47 @@ async def test_two_buys_join_one_lot_and_a_sell_names_which_buy(tmp_path):
         assert sale.quantity == 5
         [left] = await rig.lots("paper", "NVDA")
         assert left.remaining_qty == 4
+
+
+async def test_a_lot_shows_each_buy_and_costs_only_the_shares_still_held(tmp_path):
+    """Oct 22 2026: Zhao bought SOXL, sold half of that buy, then added at a lower price. The
+    lot showed only the first post and priced what was left at the average of every buy, so its
+    loss read -$6.49 beside the broker's -$4.37. Each buy that still holds shares is listed with
+    its own post and price, and the lot costs those shares at the prices that bought them."""
+    accounts = {"paper": Account(cash="2000", full_position_usd="1000")}
+    async with Rig(tmp_path, accounts, {"NVDA": "125"}) as rig:
+        broker = rig.brokers["paper"]
+        rig.reader.expect(
+            "买入 NVDA 125 一半", buy("NVDA", "125", fraction="0.5", fraction_said="一半")
+        )
+        rig.reader.expect(
+            "NVDA 125买的 130 卖出一半",
+            trim("NVDA", "130", bought_at="125", fraction="0.5", fraction_said="一半"),
+        )
+        rig.reader.expect(
+            "加仓 NVDA 100 一半",
+            buy("NVDA", "100", said="加仓", fraction="0.5", fraction_said="一半"),
+        )
+
+        first = await rig.post("买入 NVDA 125 一半")
+        broker.move("NVDA", "130")
+        await rig.post("NVDA 125买的 130 卖出一半")
+        broker.move("NVDA", "100")
+        added = await rig.post("加仓 NVDA 100 一半")
+
+        [lot] = await rig.lots("paper", "NVDA")
+        assert lot.remaining_qty == 7
+        assert [
+            (buy.source_id, buy.bought_qty, buy.remaining_qty, buy.price, buy.unrealized_pl)
+            for buy in lot.buys
+        ] == [
+            (first.source_ids[0], 4, 2, 125, Decimal("-50.00")),
+            (added.source_ids[0], 5, 5, 100, Decimal("0.00")),
+        ]
+        # 2 shares at $125 and 5 at $100 cost $750, so at $100 the lot is down $50, not the
+        # $77.78 that 7 shares at the $111.11 every buy averaged would show.
+        assert lot.unrealized_pl == Decimal("-50.00")
+        assert (lot.average_price * 7).quantize(Decimal("0.01")) == 750
 
 
 async def test_exits_are_skipped_when_the_account_does_not_copy_them(tmp_path):

@@ -1,6 +1,7 @@
 """Validated order terms and records."""
 
 import datetime as dt
+from collections.abc import Mapping
 from decimal import ROUND_DOWN, Decimal
 from typing import Literal, Self
 
@@ -156,6 +157,7 @@ class OwnedLot(Value):
     source_key: Identifier
     original_qty: Positive
     remaining_qty: Quantity
+    # What each share still held cost: every buy's remaining shares at that buy's own fill price.
     average_price: Positive
     # Later buys of the stock from the same guru, in the order they joined.
     joined_entries: tuple[Identifier, ...] = ()
@@ -178,6 +180,16 @@ class OwnedLot(Value):
 
     def remaining_of(self, entries: tuple[str, ...]) -> Decimal:
         return sum((self.entry_remaining[entry] for entry in entries), Decimal(0))
+
+    def priced(self, fills: Mapping[str, Decimal]) -> OwnedLot:
+        """The lot with its average set from `fills`, each buy's fill price by its order. A buy
+        that was partly sold weighs only what it has left, so a sale of one buy moves the average
+        toward the others. A sold-out lot, or one missing a held buy's fill, keeps its average."""
+        held = {entry: left for entry, left in self.entry_remaining.items() if left > 0}
+        if not held or any(entry not in fills for entry in held):
+            return self
+        cost = sum((left * fills[entry] for entry, left in held.items()), Decimal(0))
+        return self.model_copy(update={"average_price": cost / self.remaining_qty})
 
     def reduced(self, qty: Decimal, entries: tuple[str, ...] | None = None) -> OwnedLot:
         """The lot after selling `qty`, taken from `entries` (all buys when None) in proportion to
