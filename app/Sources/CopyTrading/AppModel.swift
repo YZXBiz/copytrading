@@ -101,6 +101,8 @@ final class AppModel {
     var profileExamplesAcknowledged = false
     var isValidatingTrading = false
     var isActivatingTrading = false
+    /// A start was sent and the engine has not yet confirmed or rolled back the new setup.
+    var isConfirmingActivation = false
     /// Copying was paused only to apply setup changes; anything short of starting the new setup
     /// resumes the saved one, so copying never stays paused by surprise.
     var isPausedToApplyChanges = false
@@ -1438,7 +1440,12 @@ final class AppModel {
         guard let tradingConfigurationStore,
             let pending = try? tradingConfigurationStore.pendingActivation(),
             pending.activationID.isEmpty == false
-        else { return }
+        else {
+            isConfirmingActivation = false
+            return
+        }
+        isConfirmingActivation = true
+        defer { isConfirmingActivation = (try? tradingConfigurationStore.pendingActivation()) != nil }
         do {
             let status = try await control.tradingActivation(activationID: pending.activationID)
             if let current = try? await control.tradingStatus() {

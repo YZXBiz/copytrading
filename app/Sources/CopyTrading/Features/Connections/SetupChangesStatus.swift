@@ -17,8 +17,9 @@ struct SetupChangesStatus: Equatable {
             self.init("Checking every connection…", working: true)
         } else if model.isApplyingChanges && !model.isShowingSetupCheck {
             self.init("Applying your changes…", working: true)
-        } else if model.isActivatingTrading || (model.validatedConfiguration != nil && model.tradingStatus?.state != .paused) {
-            // Copying can report started before the engine confirms the new setup is the one running.
+        } else if model.isActivatingTrading || model.isConfirmingActivation {
+            // Only while a start is under way: sent, or waiting for the engine to confirm it. A setup
+            // that passed its check and waits for Start Copying is not starting.
             self.init("Saving and starting…", working: true)
         } else if model.tradingStatus == nil && (model.runtimeState == .stopped || model.runtimeState == .failed) {
             self.init("The engine is stopped", "Start it, then start copying.", "stop.circle.fill", .inactive)

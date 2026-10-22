@@ -109,6 +109,7 @@ struct TradingSettingsSaveTests {
         try await checkSavedLiveResumeUsesConfirmedActivationPath(configuration: configuration, secrets: credentials)
         try await checkLiveStartNeedsTheOwnerAndPaperDoesNot(configuration: configuration, secrets: credentials)
         try await checkStartAfterALongLookChecksAgain(configuration: configuration, secrets: credentials)
+        try await checkACheckedSetupIsNotStarting(configuration: configuration, secrets: credentials)
         try await checkProfileExampleReviewActionPath()
         try await checkPlaybookLearningUsesSavedKeysAndExplainsFailures(configuration: configuration, secrets: credentials)
         try await checkRejectedValidationDoesNotPersist(configuration: configuration, secrets: credentials)
@@ -778,6 +779,37 @@ struct TradingSettingsSaveTests {
             model.savedTradingConfiguration == configuration,
             "A start after a long look at Setup Check failed: \(model.message ?? "nil")")
         print("CopyTradingContractTests: Start Copying after a long look at Setup Check checks again and starts")
+    }
+
+    /// Oct 22 2026: a setup that passed its check while copying ran read "Saving and starting…" with
+    /// a spinner, and Discard Changes, Review and Start Copying beside it, though nothing was
+    /// starting. Only a start under way is "Saving and starting…".
+    private static func checkACheckedSetupIsNotStarting(
+        configuration: TradingConfiguration, secrets credentials: TradingSecrets
+    ) async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(
+            path: "app-model-checked-setup-\(UUID().uuidString)", directoryHint: .isDirectory
+        )
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = TradingConfigurationStore(
+            url: directory.appending(path: "configuration.json"), secrets: TestSecretRevisions()
+        )
+        let starter = RecordingTradingStarter()
+        let model = AppModel(tradingConfigurationStore: store, tradingStarter: starter)
+        model.isTradingUnlocked = true
+        model.tradingStatus = try status(.paused)
+        await model.validateTradingSettings(configuration, enteredSecrets: credentials)
+        try check(model.validatedConfiguration != nil, "The setup did not pass its check")
+        model.tradingStatus = try status(.running)
+
+        let waiting = SetupChangesStatus(model)
+        try check(
+            !waiting.isWorking && waiting.text != L10n.string("Saving and starting…"),
+            "A checked setup waiting for Start Copying read \(waiting.text)")
+
+        model.isConfirmingActivation = true
+        try check(SetupChangesStatus(model).isWorking, "A start waiting for the engine did not read as starting")
+        print("CopyTradingContractTests: only a start under way reads Saving and starting")
     }
 
     private static func checkPlaybookLearningUsesSavedKeysAndExplainsFailures(
