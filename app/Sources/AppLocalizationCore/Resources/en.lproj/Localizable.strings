@@ -831,7 +831,7 @@
 "The sale could not be checked" = "The sale could not be checked";
 "The setup checklist and how a day in CopyTrading goes." = "The setup checklist and how a day in CopyTrading goes.";
 "The trader whose calls CopyTrading copies." = "The trader whose calls CopyTrading copies.";
-"These shares are no longer held" = "These shares are no longer held";
+"CopyTrading holds none of these shares" = "CopyTrading holds none of these shares";
 "This post is older than what Activity has loaded" = "This post is older than what Activity has loaded";
 "Nothing has changed yet. Restoring first checks the backup against your broker's account, orders, and holdings, and stops if they don't match." = "Nothing has changed yet. Restoring first checks the backup against your broker's account, orders, and holdings, and stops if they don't match.";
 "This sale can’t go out right now:" = "This sale can’t go out right now:";

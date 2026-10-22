@@ -10,7 +10,7 @@ REASONS = {
     "partial_symbol": "The ticker is not a whole word in the post",
     "example_interpretation_failed": "Not copied",
     "example_requires_review": "Not copied",
-    "lot_unavailable": "These shares are no longer held",
+    "lot_unavailable": "CopyTrading holds none of these shares",
     "preview_expired": "The price check ran out before you confirmed",
     "account_facts_changed": "The account changed since you reviewed the sale",
     "account_changed": "The account changed since you reviewed the sale",
