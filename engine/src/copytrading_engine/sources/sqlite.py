@@ -383,6 +383,9 @@ def _insert_rejection(
     return True
 
 
+DEFAULT_CATCH_UP_SECONDS = 120
+
+
 class SQLiteSourceStore:
     def __init__(
         self,
@@ -393,6 +396,9 @@ class SQLiteSourceStore:
         on_captured: Callable[[], None] | None = None,
     ) -> None:
         self._unit = unit
+        # How old a post read back after a reconnect may be and still be copied: the accounts'
+        # maximum signal age, which the runtime sets from the saved setup.
+        self.catch_up_seconds = DEFAULT_CATCH_UP_SECONDS
         self._attachment_root = path.parent / "attachments"
         self._diagnostics = diagnostics
         self._attachment_transport = attachment_transport
@@ -557,7 +563,10 @@ class SQLiteSourceStore:
                     captured_at=assigned_at,
                     recovered=True,
                     mode=delivery_mode(
-                        recovered=True, source_at=event.timestamp, assigned_at=assigned_at
+                        recovered=True,
+                        source_at=event.timestamp,
+                        assigned_at=assigned_at,
+                        catch_up_seconds=self.catch_up_seconds,
                     ),
                     workflow_id=workflow_id,
                     trace_id=trace_id,

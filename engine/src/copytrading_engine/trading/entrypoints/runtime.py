@@ -178,6 +178,7 @@ class TradingRuntime:
         self._maintenance_active = False
         self._limits_lock = asyncio.Lock()
         self._worker: ParseWorker | None = None
+        self._source: SQLiteSourceStore | None = None
 
     def status(self) -> TradingStatus:
         return self._status
@@ -310,6 +311,8 @@ class TradingRuntime:
                     )
         if self._worker is not None:
             self._worker.max_age = _max_signal_age(configuration)
+        if self._source is not None:
+            self._source.catch_up_seconds = _max_signal_age(configuration)
 
     async def check_connection(self, connection: ConnectionCheck) -> CapabilityCheck:
         """Check one service with the keys typed for it; nothing is saved or started."""
@@ -457,6 +460,8 @@ class TradingRuntime:
                 ),
                 on_captured=self._wake,
             )
+            source.catch_up_seconds = _max_signal_age(configuration)
+            self._source = source
             parser = await SQLiteExtractionStore.open(database)
             routing = await RoutingRevision.open(database)
             stage = "routing_state_unavailable"
@@ -655,6 +660,7 @@ class TradingRuntime:
             )
             self._accounts.clear()
             self._worker = None
+            self._source = None
             if decoder is not None:
                 try:
                     await decoder.close()
