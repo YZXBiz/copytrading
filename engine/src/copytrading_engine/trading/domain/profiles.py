@@ -1,6 +1,5 @@
-"""Guru profiles (learned playbook, checked examples) and read-only evaluation."""
+"""Guru profiles (learned playbook) and read-only evaluation."""
 
-import datetime as dt
 import hashlib
 import json
 from collections.abc import Sequence
@@ -12,10 +11,10 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from copytrading_engine.execution.domain.risk import requested_entry_budget
 from copytrading_engine.execution.domain.sizing import RouteConnection
 from copytrading_engine.parsing.application import transform
-from copytrading_engine.parsing.extraction import DecodeError, Decoder
+from copytrading_engine.parsing.extraction import Decoder
 from copytrading_engine.parsing.routes import Route
 from copytrading_engine.shared.raw_message import RawMessage
-from copytrading_engine.shared.signals import Instruction, same_fraction
+from copytrading_engine.shared.signals import Instruction
 
 type ExitBasis = Literal["original_position", "remaining_position"]
 PROFILE_EVALUATION_COST_NOTICE = (
@@ -23,39 +22,11 @@ PROFILE_EVALUATION_COST_NOTICE = (
 )
 
 
-class ProfileExample(BaseModel):
-    """A source example paired with a finite, typed expected interpretation."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
-
-    message: str = Field(min_length=1, max_length=2_000)
-    expected_action: Literal["buy", "reduce", "close"]
-    expected_symbol: str = Field(pattern=r"^[A-Z]{1,5}(?:[.][A-Z])?$")
-    expected_fraction: Decimal | None = Field(default=None, gt=0, le=1)
-    # The guru's price in the post, and for a sell the buy price it names (ADR-0010).
-    expected_price: Decimal | None = Field(default=None, gt=0, le=100000)
-    expected_buy_price: Decimal | None = Field(default=None, gt=0, le=100000)
-
-    @model_validator(mode="after")
-    def validate_expectation(self) -> Self:
-        if self.expected_action == "buy":
-            if self.expected_buy_price is not None:
-                raise ValueError("A buy example names no buy price to sell from")
-            return self
-        if self.expected_fraction is None:
-            raise ValueError("Exit examples require an explicit fraction")
-        if self.expected_action == "close" and self.expected_fraction != 1:
-            raise ValueError("Close examples use the full remaining quantity")
-        if self.expected_action == "reduce" and self.expected_fraction == 1:
-            raise ValueError("A full exit must use the close action")
-        return self
-
-
 PLAYBOOK_MAX_LENGTH = 8_000
 
 
 class ProfileDraft(BaseModel):
-    """What the owner saves for one guru: a playbook prompt and checked examples.
+    """What the owner saves for one guru: a playbook prompt.
 
     The playbook is owner-written (usually edited from a learned draft) and reaches the model as
     trusted guidance. It never bypasses grounding: a ticker must appear in the post itself, or the
@@ -67,15 +38,11 @@ class ProfileDraft(BaseModel):
     guru_id: str = Field(pattern=r"^[a-zA-Z0-9_-]{1,64}$")
     display_name: str = Field(min_length=1, max_length=100)
     playbook: str = Field(max_length=PLAYBOOK_MAX_LENGTH)
-    examples: tuple[ProfileExample, ...] = Field(default=(), max_length=32)
 
     @model_validator(mode="after")
     def validate_inputs(self) -> Self:
         if not self.display_name.strip():
             raise ValueError("Profile name is required")
-        for example in self.examples:
-            if not example.message.strip():
-                raise ValueError("Profile examples cannot be blank")
         return self
 
 
@@ -86,7 +53,6 @@ class LearnedPlaybook(BaseModel):
 
     posts_read: int = Field(ge=0)
     playbook: str = Field(max_length=PLAYBOOK_MAX_LENGTH)
-    examples: tuple[ProfileExample, ...] = ()
     summary: str
     provider: str
     model: str
@@ -106,7 +72,6 @@ class ProfileRevision(BaseModel):
     guru_id: str = Field(pattern=r"^[a-zA-Z0-9_-]{1,64}$")
     display_name: str = Field(min_length=1, max_length=100)
     playbook: str = Field(max_length=PLAYBOOK_MAX_LENGTH)
-    examples: tuple[ProfileExample, ...] = Field(default=(), max_length=32)
     profile_revision: str = Field(pattern=r"^[0-9a-f]{64}$")
 
     @model_validator(mode="after")
@@ -138,7 +103,6 @@ class ProfileBuilder:
                     guru_id="prepared-standard",
                     display_name="Standard stock alerts",
                     playbook="",
-                    examples=(),
                 )
             ),
         )
@@ -238,166 +202,6 @@ class ProfileEvaluation(BaseModel):
     instructions: tuple[InstructionEvaluation, ...] = ()
     destinations: tuple[DestinationEvaluation, ...] = ()
     review_reasons: tuple[str, ...] = ()
-
-
-class ProfileExampleComparison(BaseModel):
-    """A typed expectation compared with one read-only interpretation."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    example_index: int = Field(ge=0, le=31)
-    expected_action: Literal["buy", "reduce", "close"]
-    expected_symbol: str
-    expected_fraction: Decimal | None
-    actual: ProfileEvaluation
-    matches: bool
-    review_reasons: tuple[str, ...] = ()
-
-
-class ProfileExampleReview(BaseModel):
-    """Preview results; only fully matching examples permit activation."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    guru_id: str
-    profile_revision: str
-    provider: str
-    model: str
-    simulated: Literal[True] = True
-    no_order: Literal[True] = True
-    cost_notice: str = PROFILE_EVALUATION_COST_NOTICE
-    examples: tuple[ProfileExampleComparison, ...] = ()
-    review_reasons: tuple[str, ...] = ()
-    automatic_activation_allowed: bool
-
-
-class ProfileExampleReviewService:
-    """Interpret finite examples for operator review without creating execution policy."""
-
-    def __init__(self, decoder: Decoder, *, provider: str, model: str) -> None:
-        self._decoder = decoder
-        self.provider = provider
-        self.model = model
-
-    async def evaluate(
-        self,
-        profile: ProfileRevision,
-        *,
-        destinations: tuple[RouteConnection, ...],
-    ) -> ProfileExampleReview:
-        if len(destinations) > 20 or len({item.account_id for item in destinations}) != len(
-            destinations
-        ):
-            raise ValueError("Evaluation destinations must be unique and bounded")
-
-        comparisons: list[ProfileExampleComparison] = []
-        all_reasons: list[str] = []
-        evaluator = ProfileEvaluationService(
-            self._decoder, provider=self.provider, model=self.model
-        )
-        for index, example in enumerate(profile.examples):
-            message = RawMessage(
-                schema_version=1,
-                event_type="raw_message",
-                source="profile_example",
-                channel_id="profile_examples",
-                id=f"{profile.profile_revision[:24]}_{index}",
-                timestamp=dt.datetime.now(dt.UTC),
-                text=example.message,
-            )
-            try:
-                actual = await evaluator.evaluate(message, profile, destinations=destinations)
-            except DecodeError as exc:
-                reason = exc.issues[0].code if exc.issues else exc.reason
-                actual = ProfileEvaluation(
-                    message_identity=message.identity,
-                    guru_id=profile.guru_id,
-                    profile_revision=profile.profile_revision,
-                    provider=self.provider,
-                    model=self.model,
-                    decision="review",
-                    reason=reason,
-                    destinations=tuple(
-                        DestinationEvaluation(
-                            account_id=connection.account_id,
-                            action=example.expected_action,
-                            symbol=example.expected_symbol,
-                            budget_usd=None,
-                            estimated_quantity=None,
-                            exit_basis=None,
-                            reason="example_interpretation_failed",
-                        )
-                        for connection in destinations
-                    ),
-                    review_reasons=(reason,),
-                )
-            if not actual.destinations and destinations:
-                actual = actual.model_copy(
-                    update={
-                        "destinations": tuple(
-                            DestinationEvaluation(
-                                account_id=connection.account_id,
-                                action=example.expected_action,
-                                symbol=example.expected_symbol,
-                                budget_usd=None,
-                                estimated_quantity=None,
-                                exit_basis=None,
-                                reason="example_requires_review",
-                            )
-                            for connection in destinations
-                        )
-                    }
-                )
-            reasons: list[str] = []
-            if actual.decision != "trade":
-                reasons.append("example_did_not_produce_trade")
-            if len(actual.instructions) != 1:
-                reasons.append("example_requires_exactly_one_instruction")
-            if len(actual.instructions) == 1:
-                instruction = actual.instructions[0]
-                if instruction.action != example.expected_action:
-                    reasons.append("example_action_mismatch")
-                if instruction.symbol != example.expected_symbol:
-                    reasons.append("example_symbol_mismatch")
-                if not same_fraction(instruction.fraction, example.expected_fraction):
-                    reasons.append("example_fraction_mismatch")
-                if (
-                    example.expected_price is not None
-                    and instruction.price != example.expected_price
-                ):
-                    reasons.append("example_price_mismatch")
-                if (
-                    example.expected_buy_price is not None or instruction.action != "buy"
-                ) and instruction.entry_price != example.expected_buy_price:
-                    reasons.append("example_buy_price_mismatch")
-            matches = not reasons
-            if not matches:
-                all_reasons.extend(reasons)
-            all_reasons.extend(actual.review_reasons)
-            comparisons.append(
-                ProfileExampleComparison(
-                    example_index=index,
-                    expected_action=example.expected_action,
-                    expected_symbol=example.expected_symbol,
-                    expected_fraction=example.expected_fraction,
-                    actual=actual,
-                    matches=matches,
-                    review_reasons=tuple(dict.fromkeys((*reasons, *actual.review_reasons))),
-                )
-            )
-
-        cost_notice = "Each example is one request to your model service, which may charge for it."
-        activation_allowed = all(comparison.matches for comparison in comparisons)
-        return ProfileExampleReview(
-            guru_id=profile.guru_id,
-            profile_revision=profile.profile_revision,
-            provider=self.provider,
-            model=self.model,
-            cost_notice=cost_notice,
-            examples=tuple(comparisons),
-            review_reasons=tuple(dict.fromkeys(all_reasons)),
-            automatic_activation_allowed=activation_allowed,
-        )
 
 
 class ProfileEvaluationService:

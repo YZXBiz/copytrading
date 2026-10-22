@@ -93,7 +93,7 @@ enum SetupTourStop: Int, CaseIterable, Identifiable {
         case .interpreterKey: "Then click the blue button below; CopyTrading tries the key. It stays in this Mac's Keychain."
         case .accounts: "Open the paper account and paste its two Alpaca keys. **Help** shows where Alpaca keeps them."
         case .gurus: "Give them a name and choose the account that copies them."
-        case .startCopying: "Click **Start Copying**. Each connection is tested and your examples are read before anything is saved."
+        case .startCopying: "Click **Start Copying**. Each connection is tested before anything is saved."
         }
     }
 

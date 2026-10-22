@@ -25,12 +25,7 @@ from copytrading_engine.control.wire import (
     StartProcessingSubject,
 )
 from copytrading_engine.headless.config import ConfigError, load_secrets, load_setup
-from copytrading_engine.headless.engine import (
-    EngineRefused,
-    ExampleReview,
-    SetupNotReady,
-    SetupReport,
-)
+from copytrading_engine.headless.engine import EngineRefused, SetupNotReady, SetupReport
 from copytrading_engine.headless.owner import (
     Approve,
     AskStatus,
@@ -154,17 +149,15 @@ def _check(args: argparse.Namespace, paths: ServerPaths, out: TextIO, err: TextI
     setup = load_setup(Path(args.config))
     secrets = load_secrets(setup.configuration)
     print("Checking Discord, the model, and each account…", file=out)
-    result = asyncio.run(check_setup(setup, secrets))
-    _print_report(result.report, out)
-    for review in result.reviews:
-        _print_review(review, out)
+    report = asyncio.run(check_setup(setup, secrets))
+    _print_report(report, out)
     print(
         "✓ Ready. Start with `copytrading-server run`."
-        if result.passed
+        if report.activatable
         else "✗ Not ready. Fix the lines marked ✗ and check again.",
         file=out,
     )
-    return EXIT_OK if result.passed else EXIT_FAILED
+    return EXIT_OK if report.activatable else EXIT_FAILED
 
 
 def _run(args: argparse.Namespace, paths: ServerPaths, out: TextIO, err: TextIO) -> int:
@@ -286,17 +279,6 @@ def _print_report(report: SetupReport, out: TextIO) -> None:
         print(
             f"{'✓' if check.passed else '✗'} {_plain(check.name)}{subject}{environment} — "
             f"{_plain(check.state)}{reason}",
-            file=out,
-        )
-
-
-def _print_review(review: ExampleReview, out: TextIO) -> None:
-    for example in review.examples:
-        reasons = ", ".join(_plain(reason) for reason in example.review_reasons)
-        print(
-            f"{'✓' if example.matches else '✗'} {review.guru_id} example "
-            f"{example.example_index + 1}: expected {example.expected_action} "
-            f"{example.expected_symbol}" + (f" — {reasons}" if reasons else ""),
             file=out,
         )
 

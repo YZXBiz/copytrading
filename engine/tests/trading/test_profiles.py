@@ -15,7 +15,7 @@ from copytrading_engine.execution.domain.sizing import RouteConnection
 from copytrading_engine.parsing.extraction import Answer
 from copytrading_engine.shared.raw_message import RawMessage
 
-from ..readings import buy, sell, trade
+from ..readings import buy, trade
 
 SIXTH = str(Decimal(1) / Decimal(6))
 THIRD = str(Decimal(1) / Decimal(3))
@@ -32,14 +32,6 @@ def _draft(module, *, guru_id: str, symbol: str):
         guru_id=guru_id,
         display_name=guru_id.title(),
         playbook=f"Apple means {symbol}",
-        examples=(
-            module.ProfileExample(
-                message="Bought Apple at 200 1/6",
-                expected_action="buy",
-                expected_symbol=symbol,
-                expected_fraction=Decimal("1") / Decimal("6"),
-            ),
-        ),
     )
 
 
@@ -86,206 +78,6 @@ def test_profile_revisions_are_immutable_and_content_addressed():
     assert original.playbook == "Apple means AAPL"
     with pytest.raises((ValidationError, AttributeError, TypeError)):
         original.display_name = "Changed in place"
-    with pytest.raises((ValidationError, AttributeError, TypeError)):
-        original.examples[0].expected_symbol = "TSLA"
-
-
-def test_profile_examples_compare_expected_and_actual_without_execution():
-    module = _profiles_module()
-    profile = module.ProfileBuilder().build(
-        _draft(
-            module,
-            guru_id="example-guru",
-            symbol="AAPL",
-        )
-    )
-
-    class Decoder:
-        calls = 0
-
-        async def answer(self, text, route, recent=()):
-            self.calls += 1
-            return Answer(
-                trade(
-                    buy(
-                        _mapped(route, "Apple"),
-                        "200",
-                        said="Bought",
-                        ticker_said="Apple",
-                        fraction=SIXTH,
-                        fraction_said="1/6",
-                    )
-                )
-            )
-
-    decoder = Decoder()
-    service = module.ProfileExampleReviewService(decoder, provider="deepseek", model="test-model")
-    result = asyncio.run(
-        service.evaluate(
-            profile,
-            destinations=(
-                RouteConnection(account_id="paper-500", full_position_usd="500"),
-                RouteConnection(account_id="paper-3000", full_position_usd="3000"),
-            ),
-        )
-    )
-
-    assert result.simulated is True
-    assert result.no_order is True
-    assert result.guru_id == profile.guru_id
-    assert result.profile_revision == profile.profile_revision
-    assert result.provider == "deepseek"
-    assert result.model == "test-model"
-    assert "may charge" in result.cost_notice
-    assert len(result.examples) == 1
-    assert result.examples[0].matches is True
-    assert result.examples[0].actual.instructions[0].symbol == "AAPL"
-    assert {
-        destination.account_id: destination.budget_usd
-        for destination in result.examples[0].actual.destinations
-    } == {"paper-500": Decimal("83.33"), "paper-3000": Decimal("500.00")}
-    assert decoder.calls == 1
-    assert not hasattr(result, "orders")
-
-
-def test_profile_example_mismatch_requires_settings_correction_and_rerun():
-    module = _profiles_module()
-    draft = _draft(
-        module,
-        guru_id="mismatch-guru",
-        symbol="AAPL",
-    )
-    profile = module.ProfileBuilder().build(
-        draft.model_copy(
-            update={
-                "examples": (
-                    module.ProfileExample(
-                        message="Bought Apple at 200 1/3",
-                        expected_action="buy",
-                        expected_symbol="AAPL",
-                        expected_fraction=Decimal("1") / Decimal("6"),
-                    ),
-                )
-            }
-        )
-    )
-
-    class Decoder:
-        async def answer(self, text, route, recent=()):
-            return Answer(
-                trade(
-                    buy(
-                        _mapped(route, "Apple"),
-                        "200",
-                        said="Bought",
-                        ticker_said="Apple",
-                        fraction=THIRD,
-                        fraction_said="1/3",
-                    )
-                )
-            )
-
-    review = asyncio.run(
-        module.ProfileExampleReviewService(
-            Decoder(), provider="deepseek", model="test-model"
-        ).evaluate(profile, destinations=())
-    )
-    assert review.examples[0].matches is False
-    assert review.examples[0].review_reasons == ("example_fraction_mismatch",)
-    assert review.automatic_activation_allowed is False
-
-
-def test_ungrounded_example_interpretation_returns_review_and_never_activates():
-    module = _profiles_module()
-    profile = module.ProfileBuilder().build(
-        _draft(
-            module,
-            guru_id="ungrounded-example-guru",
-            symbol="AAPL",
-        )
-    )
-
-    class Decoder:
-        async def answer(self, text, route, recent=()):
-            return Answer(
-                trade(
-                    buy(
-                        "MSFT",
-                        "200",
-                        said="Bought",
-                        ticker_said="Apple",
-                        fraction=SIXTH,
-                        fraction_said="1/6",
-                    )
-                )
-            )
-
-    review = asyncio.run(
-        module.ProfileExampleReviewService(
-            Decoder(), provider="deepseek", model="test-model"
-        ).evaluate(
-            profile,
-            destinations=(RouteConnection(account_id="paper", full_position_usd="500"),),
-        )
-    )
-    assert review.simulated is True
-    assert review.no_order is True
-    assert review.automatic_activation_allowed is False
-    comparison = review.examples[0]
-    assert comparison.matches is False
-    assert comparison.actual.decision == "review"
-    assert comparison.actual.review_reasons == ("symbol_not_in_playbook",)
-    assert comparison.actual.destinations[0].reason == "example_interpretation_failed"
-
-
-def test_matching_exit_example_preserves_position_sizing_review_without_blocking_profile():
-    module = _profiles_module()
-    profile = module.ProfileBuilder().build(
-        module.ProfileDraft(
-            guru_id="exit-example-guru",
-            display_name="Exit Example Guru",
-            playbook="Apple means AAPL",
-            examples=(
-                module.ProfileExample(
-                    message="TRADE: Sold Apple half at 200 from 150",
-                    expected_action="reduce",
-                    expected_symbol="AAPL",
-                    expected_fraction=Decimal("0.5"),
-                    expected_buy_price=Decimal("150"),
-                ),
-            ),
-        )
-    )
-
-    class Decoder:
-        async def answer(self, text, route, recent=()):
-            return Answer(
-                trade(
-                    sell(
-                        "AAPL",
-                        "200",
-                        bought_at="150",
-                        said="Sold",
-                        ticker_said="Apple",
-                        fraction="0.5",
-                        fraction_said="half",
-                    )
-                )
-            )
-
-    review = asyncio.run(
-        module.ProfileExampleReviewService(
-            Decoder(), provider="deepseek", model="test-model"
-        ).evaluate(
-            profile,
-            destinations=(RouteConnection(account_id="paper", full_position_usd="500"),),
-        )
-    )
-    comparison = review.examples[0]
-    assert comparison.matches is True
-    assert comparison.actual.destinations[0].reason == "sells_from_holdings"
-    assert review.review_reasons == ()
-    assert review.automatic_activation_allowed is True
 
 
 @pytest.mark.parametrize(
@@ -490,7 +282,6 @@ def test_profile_schema_rejects_arbitrary_executable_convention_fields():
                 "guru_id": "custom",
                 "display_name": "Custom",
                 "playbook": "",
-                "examples": [],
                 "python_code": "import os; os.system('anything')",
             }
         )

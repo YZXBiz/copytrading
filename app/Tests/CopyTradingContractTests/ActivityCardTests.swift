@@ -71,8 +71,8 @@ private func aSavedGuruIsChosenByNameNotByNumbers() throws {
     try #require(label == "Zhao · primary, swing", "the saved guru read \(label)")
 }
 
-/// In 简体中文 the guru page and its examples keep no English: an ignored post, the holdings line,
-/// an example's action, and a waiting call's deadline in Chinese word order.
+/// In 简体中文 the guru page keeps no English: an ignored post, the holdings line, and a waiting
+/// call's deadline in Chinese word order.
 @MainActor
 private func theGuruPageReadsInChinese() throws {
     let language = AppLanguagePreference.shared
@@ -86,9 +86,6 @@ private func theGuruPageReadsInChinese() throws {
 
     let holding = L10n.string("Holding %@ in %lld stocks from these calls", "$650", Int64(3))
     try #require(holding == "这些喊单目前持有 $650，共 3 只股票", "the holdings line read \(holding)")
-
-    let actions = TradingInstructionAction.allCases.map(\.title)
-    try #require(actions == ["买入", "减仓", "清仓"], "an example's actions read \(actions)")
 
     let deadline = WaitingCall.endOfTradingDay(of: try Date("2026-10-05T15:00:00Z", strategy: .iso8601))
     let morning = try Date("2026-10-05T15:00:00Z", strategy: .iso8601)

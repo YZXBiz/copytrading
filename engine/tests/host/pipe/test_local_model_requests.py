@@ -9,7 +9,6 @@ PROFILE = {
     "guru_id": "zhao",
     "display_name": "Zhao",
     "playbook": "",
-    "examples": [],
 }
 
 
@@ -44,25 +43,19 @@ def test_a_cloud_model_without_a_key_is_refused_by_its_reader():
         request.provider.reader(request.provider_api_key, timeout=5)
 
 
-def test_the_other_provider_requests_accept_an_empty_key_for_a_local_model():
-    ollama = {"name": "ollama", "model": "llama3.2"}
-    review = {
+def test_historical_evaluation_accepts_an_empty_key_for_a_local_model():
+    evaluate = {
         "version": 1,
         "request_id": "r-2",
-        "operation": "review_profile_examples",
-        "profile": PROFILE,
-        "provider": ollama,
-        "provider_api_key": "",
-        "destinations": [],
-    }
-    evaluate = review | {
         "operation": "evaluate_historical_profile",
         "source_id": "discord:123:1",
+        "profile": PROFILE,
+        "provider": {"name": "ollama", "model": "llama3.2"},
+        "provider_api_key": "",
         "destinations": [{"account_id": "paper", "full_position_usd": "100"}],
     }
-    for payload in (review, evaluate):
-        try:
-            REQUEST_ADAPTER.validate_python(payload)
-        except ValidationError as error:
-            fields = {".".join(map(str, item["loc"])) for item in error.errors()}
-            assert not any("provider_api_key" in field for field in fields), fields
+    try:
+        REQUEST_ADAPTER.validate_python(evaluate)
+    except ValidationError as error:
+        fields = {".".join(map(str, item["loc"])) for item in error.errors()}
+        assert not any("provider_api_key" in field for field in fields), fields

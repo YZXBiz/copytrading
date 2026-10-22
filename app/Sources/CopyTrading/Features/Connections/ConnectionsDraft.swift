@@ -93,7 +93,6 @@ struct ConnectionsDraft {
                 displayName: profile?.displayName ?? route.guruID,
                 playbook: profile?.playbook ?? "",
                 repeatWindowMinutes: route.repeatWindowMinutes,
-                examples: profile?.examples.map(TradingProfileExampleDraft.init(example:)) ?? [],
                 connection: route.connections.first.map { TradingConnectionDraft(accountID: $0.accountID) }
             )
         }
@@ -129,8 +128,7 @@ struct ConnectionsDraft {
                 TradingProfileDraft(
                     guruID: route.guruID.trimmed,
                     displayName: route.displayName.trimmed,
-                    playbook: route.playbook.trimmedLines,
-                    examples: route.examples.map(\.profileExample)
+                    playbook: route.playbook.trimmedLines
                 ))
             profileByRevision[profile.profileRevision] = profile
             convertedRoutes.append(
@@ -187,20 +185,6 @@ struct ConnectionsDraft {
     /// Splits on ASCII and full-width commas, so text typed with a Chinese keyboard works too.
     static func split(_ value: String) -> [String] {
         value.split(whereSeparator: { $0 == "," || $0 == "，" }).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
-    }
-}
-
-extension TradingProfileExampleDraft {
-    var profileExample: TradingProfileExample {
-        TradingProfileExample(
-            message: message.trimmedLines,
-            expectedAction: expectedAction,
-            expectedSymbol: expectedSymbol.trimmed.uppercased(),
-            expectedFraction: expectedFraction.trimmed.nilIfEmpty,
-            expectedPrice: expectedPrice.trimmed.nilIfEmpty,
-            // A buy names no buy price to sell from.
-            expectedBuyPrice: expectedAction == .buy ? nil : expectedBuyPrice.trimmed.nilIfEmpty
-        )
     }
 }
 

@@ -32,38 +32,6 @@ struct TradingAccountDraft: Identifiable {
     }
 }
 
-struct TradingProfileExampleDraft: Identifiable {
-    let id = UUID()
-    var message: String
-    var expectedAction: TradingInstructionAction
-    var expectedSymbol: String
-    var expectedFraction: String
-    /// The guru's price in the post, and for a sell the buy price it names; empty when unchecked.
-    var expectedPrice: String
-    var expectedBuyPrice: String
-
-    init(
-        message: String = "", expectedAction: TradingInstructionAction = .buy,
-        expectedSymbol: String = "AAPL", expectedFraction: String = "",
-        expectedPrice: String = "", expectedBuyPrice: String = ""
-    ) {
-        self.message = message
-        self.expectedAction = expectedAction
-        self.expectedSymbol = expectedSymbol
-        self.expectedFraction = expectedFraction
-        self.expectedPrice = expectedPrice
-        self.expectedBuyPrice = expectedBuyPrice
-    }
-
-    init(example: TradingProfileExample) {
-        self.init(
-            message: example.message, expectedAction: example.expectedAction,
-            expectedSymbol: example.expectedSymbol, expectedFraction: example.expectedFraction ?? "",
-            expectedPrice: example.expectedPrice ?? "", expectedBuyPrice: example.expectedBuyPrice ?? ""
-        )
-    }
-}
-
 /// The one account a guru copies into (ADR-0007). Its maximum per stock is the guru's full
 /// position; a call that names no size asks for all of it, trimmed by the maximum per order
 /// (ADR-0010).
@@ -91,7 +59,6 @@ struct TradingRouteDraft: Identifiable {
     var playbook: String
     /// Minutes within which the same call again is a re-post; nil copies every post.
     var repeatWindowMinutes: Int?
-    var examples: [TradingProfileExampleDraft]
     /// The one account this guru copies into, once the owner has chosen it.
     var connection: TradingConnectionDraft?
 
@@ -106,7 +73,6 @@ struct TradingRouteDraft: Identifiable {
         guruID: String = TradingRouteDraft.newGuruID(), displayName: String = "",
         playbook: String = "",
         repeatWindowMinutes: Int? = TradingRouteConfiguration.defaultRepeatWindowMinutes,
-        examples: [TradingProfileExampleDraft] = [],
         connection: TradingConnectionDraft? = nil
     ) {
         self.channelID = channelID
@@ -115,7 +81,6 @@ struct TradingRouteDraft: Identifiable {
         self.displayName = displayName
         self.playbook = playbook
         self.repeatWindowMinutes = repeatWindowMinutes
-        self.examples = examples
         self.connection = connection
     }
 }

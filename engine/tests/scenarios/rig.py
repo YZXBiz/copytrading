@@ -123,14 +123,13 @@ class Rig:
                     guru_id=self.guru_id(name),
                     display_name=NAME,
                     playbook="",
-                    examples=(),
                 )
             )
             for name in self.accounts
         }
         return TradingConfiguration.model_validate(
             {
-                "version": 8,
+                "version": 9,
                 "source": {"channel_ids": list(self.channels.values())},
                 "provider": {"name": "deepseek", "model": "scripted-zhao"},
                 "accounts": [

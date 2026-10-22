@@ -13,7 +13,6 @@ def _profile(guru_id: str, prefix: str):
             guru_id=guru_id,
             display_name=guru_id,
             playbook="",
-            examples=(),
         )
     )
 
@@ -31,7 +30,7 @@ def _route(profile, account_id: str, author_id: str | None):
 def _configuration(routes):
     profile_list = (_profile("guru-a", "ALERT:"), _profile("guru-b", "SIGNAL:"))
     return {
-        "version": 8,
+        "version": 9,
         "source": {"channel_ids": ["123"]},
         "provider": {"name": "anthropic", "model": "test-model"},
         "accounts": [
@@ -93,7 +92,6 @@ def test_configuration_with_removed_alias_fields_is_rejected():
             guru_id="guru-a",
             display_name="Guru A",
             playbook="",
-            examples=(),
         )
     )
     raw = _configuration(lambda _: [_route(profile, "paper-a", "100")])

@@ -209,15 +209,6 @@ class EvaluateHistoricalProfileRequest(PipeRequest):
     destinations: list[RouteConnection] = Field(min_length=1, max_length=20)
 
 
-class ReviewProfileExamplesRequest(PipeRequest):
-    operation: Literal["review_profile_examples"]
-    profile: ProfileRevision
-    provider: ProviderConfiguration
-    # Empty for a model on this Mac or a custom address; ProviderConfiguration.reader() decides.
-    provider_api_key: SecretStr
-    destinations: list[RouteConnection] = Field(max_length=20)
-
-
 class LearnGuruPlaybookRequest(PipeRequest):
     operation: Literal["learn_guru_playbook"]
     channel_id: str = Field(pattern=r"^[0-9]{1,32}$")
@@ -402,7 +393,6 @@ RequestType = Annotated[
     | GetSourceActivityRequest
     | GetGuruDayStatsRequest
     | EvaluateHistoricalProfileRequest
-    | ReviewProfileExamplesRequest
     | LearnGuruPlaybookRequest
     | GetAccountFeedRequest
     | GetEquityHistoryRequest

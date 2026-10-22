@@ -1,8 +1,7 @@
-"""Learning a guru's playbook: only verifiable parts of the model's draft reach the owner."""
+"""Learning a guru's playbook: the model's draft reaches the owner to edit, nothing is saved."""
 
 # ruff: noqa: RUF001 - the guru's real posts and prefix use a fullwidth colon
 
-from decimal import Decimal
 from pathlib import Path
 from typing import cast
 
@@ -10,7 +9,7 @@ import pytest
 from pydantic import SecretStr
 
 from copytrading_engine.parsing.extraction import DecodeError
-from copytrading_engine.parsing.learning import LearnedExample, PlaybookProposal
+from copytrading_engine.parsing.learning import PlaybookProposal
 from copytrading_engine.shared.owner_facing import OwnerFacingError
 from copytrading_engine.trading.application.ports import OperatorEvidence
 from copytrading_engine.trading.application.profile_review import ProfileReviewService
@@ -53,17 +52,6 @@ class _Learner:
 def _proposal(**changes) -> PlaybookProposal:
     values = dict(
         playbook="  加 means buy\nabc is a literal ticker  ",
-        examples=(
-            LearnedExample(message=POSTS[0], expected_action="buy", expected_symbol="ABC"),
-            LearnedExample(
-                message="赵哥-股票：invented post",
-                expected_action="buy",
-                expected_symbol="ABC",
-            ),
-            LearnedExample(
-                message=POSTS[2], expected_action="reduce", expected_symbol="ABC"
-            ),  # a reduce without its fraction is not a valid example
-        ),
         summary=" Buys lead with the price. ",
     )
     return PlaybookProposal.model_validate(values | changes)
@@ -94,7 +82,7 @@ async def _learn(tmp_path: Path, history: _History, learner: _Learner):
     return result, registered
 
 
-async def test_draft_keeps_only_verbatim_valid_examples(tmp_path):
+async def test_draft_reads_the_channel_and_trims_the_playbook(tmp_path):
     history, learner = _History(POSTS), _Learner(_proposal())
 
     draft, registered = await _learn(tmp_path, history, learner)
@@ -105,7 +93,6 @@ async def test_draft_keeps_only_verbatim_valid_examples(tmp_path):
     assert registered == ["discord-token", "provider-key"]
     assert draft.posts_read == 3
     assert draft.playbook == "加 means buy\nabc is a literal ticker"
-    assert [example.message for example in draft.examples] == [POSTS[0]]
     assert draft.summary == "Buys lead with the price."
 
 
@@ -126,21 +113,3 @@ async def test_provider_failure_becomes_an_owner_sentence_and_closes_the_client(
 
     assert "provider_rejected" not in str(failure.value)
     assert learner.closed
-
-
-@pytest.mark.parametrize(
-    ("written", "exact"),
-    [
-        ("1/6", Decimal(1) / Decimal(6)),
-        (" 1 / 2 ", Decimal("0.5")),
-        ("0.5", Decimal("0.5")),
-        ("1/0", None),
-        ("a sixth", None),
-        (None, None),
-    ],
-)
-def test_learned_fractions_are_read_exactly(written, exact):
-    example = LearnedExample(
-        message="post", expected_action="buy", expected_symbol="ABC", expected_fraction=written
-    )
-    assert example.exact_fraction() == exact

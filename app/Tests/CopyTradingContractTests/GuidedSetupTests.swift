@@ -198,13 +198,7 @@ private func unsavedChangesFollowTheSavedSetup() throws {
 private func aSavedDraftIsNotAChange() throws {
     let profile = try TradingProfileBuilder().build(
         TradingProfileDraft(
-            guruID: "alex", displayName: "Alex", playbook: "Reads calls as buys.",
-            examples: [
-                TradingProfileExample(message: "Bought AAPL at 200", expectedAction: .buy, expectedSymbol: "AAPL"),
-                TradingProfileExample(
-                    message: "Trimmed half of AAPL at 210", expectedAction: .reduce, expectedSymbol: "AAPL",
-                    expectedFraction: "0.5", expectedPrice: "210", expectedBuyPrice: "200"),
-            ]))
+            guruID: "alex", displayName: "Alex", playbook: "Reads calls as buys."))
     var policy = TradingAccountPolicy()
     policy.maxSymbolUSD = "1200"
     policy.maxOrderUSD = "400"
@@ -250,8 +244,7 @@ private func aSavedDraftIsNotAChange() throws {
 private func aGuruEditSaysItIsNotSavedYet() throws {
     let profile = try TradingProfileBuilder().build(
         TradingProfileDraft(
-            guruID: "alex", displayName: "Alex", playbook: "Reads calls as buys.",
-            examples: [TradingProfileExample(message: "Bought AAPL at 200", expectedAction: .buy, expectedSymbol: "AAPL")]))
+            guruID: "alex", displayName: "Alex", playbook: "Reads calls as buys."))
     let saved = TradingConfiguration(
         source: TradingSourceConfiguration(channelIDs: ["123"], authorIDs: []),
         provider: TradingProviderConfiguration(name: .ollama, model: "llama", baseURL: "http://localhost:11434"),

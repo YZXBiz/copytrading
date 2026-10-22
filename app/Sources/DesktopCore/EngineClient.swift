@@ -215,16 +215,6 @@ public actor EngineClient {
         return value
     }
 
-    public func reviewProfileExamples(
-        _ reviewRequest: ProfileExampleReviewRequest
-    ) async throws -> ProfileExampleReview {
-        let result = try await request(.reviewProfileExamples(reviewRequest))
-        guard case .profileExampleReview(let value) = result else {
-            throw EngineContractError.missingResult
-        }
-        return value
-    }
-
     public func learnGuruPlaybook(
         _ learning: GuruPlaybookLearningRequest
     ) async throws -> LearnedGuruPlaybook {

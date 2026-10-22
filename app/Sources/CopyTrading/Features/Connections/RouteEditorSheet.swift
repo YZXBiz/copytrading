@@ -67,25 +67,6 @@ struct RouteEditorSheet: View {
 
             PlaybookSection(route: $route, learn: learn)
 
-            ForEach($route.examples) { $example in
-                ExampleEditorSection(
-                    example: $example,
-                    index: route.examples.firstIndex { $0.id == example.id } ?? 0,
-                    remove: { removeExample(example.id) }
-                )
-            }
-            VStack(alignment: .leading, spacing: 8) {
-                Button(L10n.string("Add Example"), systemImage: "plus", action: addExample)
-                    .buttonStyle(SheetQuietButtonStyle())
-                Text(
-                    L10n.string(
-                        "Start Copying first reads each example with the interpreter. A different reading stops copying from starting.")
-                )
-                .font(DesignTokens.caption)
-                .foregroundStyle(Palette.tertiaryInk)
-                .fixedSize(horizontal: false, vertical: true)
-            }
-
             GuruRulesSection(route: $route)
         } leading: {
             Button(L10n.string("Remove Guru…"), role: .destructive) { confirmsRemove = true }
@@ -137,14 +118,6 @@ struct RouteEditorSheet: View {
         route.channelID.isEmpty || channelIDs.contains(route.channelID)
             ? channelIDs
             : channelIDs + [route.channelID]
-    }
-
-    private func addExample() {
-        route.examples.append(TradingProfileExampleDraft())
-    }
-
-    private func removeExample(_ id: UUID) {
-        route.examples.removeAll { $0.id == id }
     }
 
     private func removeGuru() {

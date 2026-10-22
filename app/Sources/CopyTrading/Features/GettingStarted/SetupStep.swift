@@ -36,7 +36,7 @@ enum SetupStep: Int, CaseIterable, Identifiable, Hashable {
         case .account: "Where orders go. Start with an Alpaca paper account: it trades pretend money at real prices."
         case .guru: "Each guru's channel, how to read their calls, and the account that copies them."
         case .start:
-            "CopyTrading tests every connection and reads your examples while you watch. Nothing is saved or traded before this."
+            "CopyTrading tests every connection while you watch. Nothing is saved or traded before this."
         }
     }
 

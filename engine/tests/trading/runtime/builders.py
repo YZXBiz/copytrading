@@ -27,7 +27,6 @@ def guru(account_id: str):
             guru_id=f"{account_id}-guru",
             display_name=f"{account_id.title()} Guru",
             playbook="",
-            examples=(),
         )
     )
 
@@ -48,7 +47,7 @@ def trading_configuration(*accounts: str, policy: dict | None = None):
     account_policy = {} if policy is None else {"policy": policy}
     return TradingConfiguration.model_validate(
         {
-            "version": 8,
+            "version": 9,
             "source": {"channel_ids": [channel(account) for account in accounts]},
             "provider": {"name": "anthropic", "model": "test-model"},
             "accounts": [

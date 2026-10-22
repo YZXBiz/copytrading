@@ -1,15 +1,14 @@
-"""Read-only profile work: learn a playbook, evaluate history, and check examples."""
+"""Read-only profile work: learn a playbook and evaluate history."""
 
 import asyncio
 import logging
 from collections.abc import Callable, Collection
 from pathlib import Path
 
-from pydantic import SecretStr, ValidationError
+from pydantic import SecretStr
 
 from copytrading_engine.execution.domain.sizing import RouteConnection
-from copytrading_engine.parsing.extraction import DecodeError, normalize
-from copytrading_engine.parsing.learning import PlaybookProposal
+from copytrading_engine.parsing.extraction import DecodeError
 from copytrading_engine.parsing.providers.registry import NamedDecoderFactory
 from copytrading_engine.shared.cleanup import close_logged
 from copytrading_engine.shared.owner_facing import OwnerFacingError
@@ -19,9 +18,6 @@ from copytrading_engine.trading.domain.profiles import (
     LearnedPlaybook,
     ProfileEvaluation,
     ProfileEvaluationService,
-    ProfileExample,
-    ProfileExampleReview,
-    ProfileExampleReviewService,
     ProfileRevision,
 )
 
@@ -75,36 +71,6 @@ class ProfileReviewService:
         finally:
             await close_logged(decoder.close, resource="provider", log=log)
 
-    async def review_profile_examples(
-        self,
-        profile: ProfileRevision,
-        provider: ProviderConfiguration,
-        provider_api_key: SecretStr,
-        destinations: list[RouteConnection],
-    ) -> ProfileExampleReview:
-        """Interpret draft examples in memory without opening execution owners or stores."""
-        self._register_secrets((provider_api_key.get_secret_value(),))
-        if not profile.examples:
-            return ProfileExampleReview(
-                guru_id=profile.guru_id,
-                profile_revision=profile.profile_revision,
-                provider=provider.name,
-                model=provider.model,
-                cost_notice="No examples, so no provider call was made.",
-                automatic_activation_allowed=True,
-            )
-        decoder = await self._decoder(
-            provider.name,
-            provider.reader(provider_api_key, timeout=20),
-        )
-        try:
-            service = ProfileExampleReviewService(
-                decoder, provider=provider.name, model=provider.model
-            )
-            return await service.evaluate(profile, destinations=tuple(destinations))
-        finally:
-            await close_logged(decoder.close, resource="provider", log=log)
-
     async def learn_playbook(
         self,
         channel_id: str,
@@ -132,7 +98,13 @@ class ProfileReviewService:
             raise OwnerFacingError(_LEARNING_FAILURES.get(exc.reason, _LEARNING_FAILED)) from None
         finally:
             await close_logged(decoder.close, resource="provider", log=log)
-        return _verified_draft(proposal, posts, provider)
+        return LearnedPlaybook(
+            posts_read=len(posts),
+            playbook=proposal.playbook.strip(),
+            summary=proposal.summary.strip(),
+            provider=provider.name,
+            model=provider.model,
+        )
 
 
 _LEARNING_FAILED = "The model could not draft a playbook. Try again."
@@ -143,42 +115,3 @@ _LEARNING_FAILURES = {
     "provider_unavailable": "The model provider is unavailable right now. Try again shortly.",
     "provider_timeout": "The model took too long to answer. Try again.",
 }
-
-
-def _verified_draft(
-    proposal: PlaybookProposal, posts: tuple[str, ...], provider: ProviderConfiguration
-) -> LearnedPlaybook:
-    """Keep only what checks out, compared the way the live pipeline reads posts.
-
-    An example must be one of the posts read (after the same normalization the pipeline
-    applies) and must pass ProfileExample validation.
-    """
-    by_normal_form = {normalize(post): post for post in posts}
-    examples: list[ProfileExample] = []
-    for item in proposal.examples:
-        post = by_normal_form.get(normalize(item.message))
-        if post is None:
-            continue
-        try:
-            examples.append(
-                ProfileExample(
-                    message=post,
-                    expected_action=item.expected_action,
-                    expected_symbol=item.expected_symbol,
-                    expected_fraction=item.exact_fraction(),
-                    expected_price=item.expected_price,
-                    expected_buy_price=item.expected_buy_price
-                    if item.expected_action != "buy"
-                    else None,
-                )
-            )
-        except ValidationError:
-            continue
-    return LearnedPlaybook(
-        posts_read=len(posts),
-        playbook=proposal.playbook.strip(),
-        examples=tuple(examples),
-        summary=proposal.summary.strip(),
-        provider=provider.name,
-        model=provider.model,
-    )

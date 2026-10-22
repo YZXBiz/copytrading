@@ -91,5 +91,5 @@ same as his 1/6.
 * Two gurus cannot share an account. Live trading with two gurus needs a second broker account
   until a guru's own full position inside a shared account is added.
 * Sizes given in percent, dollars, or share counts wait for the owner in this version.
-* A wrong reading can still trade when its words are in the post. The examples gate from
-  ADR-0006, the price check, and the account's limits bound that risk.
+* A wrong reading can still trade when its words are in the post. The price check and the
+  account's limits bound that risk.

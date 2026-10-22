@@ -50,7 +50,7 @@ Keys never go in the file, so the file can be shared or kept in Git.
 ## Check, then run
 
 ```sh
-copytrading-server check     # signs in to Discord, the model, and Alpaca; reads each example
+copytrading-server check     # signs in to Discord, the model, and Alpaca
 copytrading-server run       # starts copying; Ctrl-C or SIGTERM pauses and stops cleanly
 ```
 

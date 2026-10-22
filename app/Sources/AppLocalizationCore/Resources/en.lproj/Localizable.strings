@@ -5,7 +5,6 @@
 "%@ %@ %@, %@, in %@" = "%@ %@ %@, %@, in %@";
 "%@ %@ at %@" = "%@ %@ at %@";
 "%@ %@ of %@" = "%@ %@ of %@";
-"%@ %@ · fraction %@" = "%@ %@ · fraction %@";
 "%@ (%@)" = "%@ (%@)";
 "%@ and %lld more" = "%@ and %lld more";
 "%@ at %@" = "%@ at %@";
@@ -62,7 +61,6 @@
 "Activity" = "Activity";
 "Add a broker account" = "Add a broker account";
 "Add a guru" = "Add a guru";
-"Add Example" = "Add Example";
 "Add Instruction" = "Add Instruction";
 "Add it to Claude Code as an MCP server." = "Add it to Claude Code as an MCP server.";
 "Add the channel they post in under Discord in Connections first." = "Add the channel they post in under Discord in Connections first.";
@@ -215,7 +213,7 @@
 "CopyTrading reads channels as you. Your token lets it, and stays in your Keychain." = "CopyTrading reads channels as you. Your token lets it, and stays in your Keychain.";
 "CopyTrading reads it" = "CopyTrading reads it";
 "CopyTrading reads your gurus' channels as you, with your Discord account's token. It works like a password: anyone who has it can use your account." = "CopyTrading reads your gurus' channels as you, with your Discord account's token. It works like a password: anyone who has it can use your account.";
-"CopyTrading tests every connection and reads your examples while you watch. Nothing is saved or traded before this." = "CopyTrading tests every connection and reads your examples while you watch. Nothing is saved or traded before this.";
+"CopyTrading tests every connection while you watch. Nothing is saved or traded before this." = "CopyTrading tests every connection while you watch. Nothing is saved or traded before this.";
 "CopyTrading, %@" = "CopyTrading, %@";
 "Correction" = "Correction";
 "Correction error: %@" = "Correction error: %@";
@@ -292,15 +290,10 @@
 "Evaluate Message" = "Evaluate Message";
 "Evaluate with Saved Profile…" = "Evaluate with Saved Profile…";
 "Evaluating with the configured model" = "Evaluating with the configured model";
-"Everything checks out. Look over how the examples were read." = "Everything checks out. Look over how the examples were read.";
 "Everything checks out. Start copying when you're ready." = "Everything checks out. Start copying when you're ready.";
 "Everything CopyTrading records stays here, on this Mac." = "Everything CopyTrading records stays here, on this Mac.";
-"Example %lld" = "Example %lld";
 "Exit fractions apply to" = "Exit fractions apply to";
 "Expanded" = "Expanded";
-"Expected" = "Expected";
-"Expected action" = "Expected action";
-"Expected ticker" = "Expected ticker";
 "Expired unfilled" = "Expired unfilled";
 "Expires" = "Expires";
 "Failed" = "Failed";
@@ -356,7 +349,6 @@
 "Holdings need your review" = "Holdings need your review";
 "Holdings review resolved" = "Holdings review resolved";
 "How many shares?" = "How many shares?";
-"How the examples were read" = "How the examples were read";
 "How you refer to this guru" = "How you refer to this guru";
 "Hundreds of models with one key" = "Hundreds of models with one key";
 "Ignored" = "Ignored";
@@ -418,7 +410,6 @@
 "Make sure the account switcher at the top left shows your **Paper** account." = "Make sure the account switcher at the top left shows your **Paper** account.";
 "Manual" = "Manual";
 "Many services and local servers, such as LM Studio, vLLM, and LiteLLM, answer the same way OpenAI does. CopyTrading can read posts through any of them." = "Many services and local servers, such as LM Studio, vLLM, and LiteLLM, answer the same way OpenAI does. CopyTrading can read posts through any of them.";
-"Matches" = "Matches";
 "Maximum above signal price (%)" = "Maximum above signal price (%)";
 "Maximum per order" = "Maximum per order";
 "Maximum per stock" = "Maximum per stock";
@@ -427,7 +418,6 @@
 "Measure a move" = "Measure a move";
 "Message" = "Message";
 "Message **@userinfobot** to get your chat ID, and paste it into **Chat ID**." = "Message **@userinfobot** to get your chat ID, and paste it into **Chat ID**.";
-"Mismatch" = "Mismatch";
 "Missing" = "Missing";
 "Mistral models" = "Mistral models";
 "Model" = "Model";
@@ -538,7 +528,6 @@
 "Paper" = "Paper";
 "Partly filled" = "Partly filled";
 "Passed validation" = "Passed validation";
-"Paste an exact source message" = "Paste an exact source message";
 "Paste it into **API key**, and enter a model name such as **%@** under **Model**." = "Paste it into **API key**, and enter a model name such as **%@** under **Model**.";
 "Paste it into **Channel IDs**. Separate several channels with commas." = "Paste it into **Channel IDs**. Separate several channels with commas.";
 "Pause Copying stops reading new posts and placing orders for every account. Start Copying picks up again." = "Pause Copying stops reading new posts and placing orders for every account. Start Copying picks up again.";
@@ -584,7 +573,6 @@
 "Read" = "Read";
 "Read and pause" = "Read and pause";
 "Read by" = "Read by";
-"Read by %@" = "Read by %@";
 "Read Calls From" = "Read Calls From";
 "Read new posts and copy them into your accounts." = "Read new posts and copy them into your accounts.";
 "Read Posts With" = "Read Posts With";
@@ -1022,12 +1010,9 @@
 "Unlock CopyTrading first." = "Unlock CopyTrading first.";
 "CopyTrading is still starting. Check the setup again in a moment." = "CopyTrading is still starting. Check the setup again in a moment.";
 "Pause copying before checking the setup." = "Pause copying before checking the setup.";
-"An example was read differently from what you expected. Fix the playbook or the example, then check again." = "An example was read differently from what you expected. Fix the playbook or the example, then check again.";
 "Some connections need attention. Nothing was saved." = "Some connections need attention. Nothing was saved.";
 "Wait for the backup or restore to finish, then start copying." = "Wait for the backup or restore to finish, then start copying.";
 "Check the setup before starting to copy." = "Check the setup before starting to copy.";
-"Fix the examples that were read differently, then check again." = "Fix the examples that were read differently, then check again.";
-"Look over how the examples were read before starting to copy." = "Look over how the examples were read before starting to copy.";
 "Pause copying before starting a new setup." = "Pause copying before starting a new setup.";
 "CopyTrading didn't hear back after starting. It keeps checking whether the new setup took effect." = "CopyTrading didn't hear back after starting. It keeps checking whether the new setup took effect.";
 "Configuration activation is pending; engine status is unavailable. Credentials are retained." = "Configuration activation is pending; engine status is unavailable. Credentials are retained.";
@@ -1083,7 +1068,6 @@
 "Your setup was saved by an older version of CopyTrading. Set it up again from Getting Started, including your keys." = "Your setup was saved by an older version of CopyTrading. Set it up again from Getting Started, including your keys.";
 "A required connection check failed. Processing remains paused." = "A required connection check failed. Processing remains paused.";
 "Each guru needs a name." = "Each guru needs a name.";
-"Check each guru's examples: each needs a message, a ticker, and a fraction between 0 and 1 if given." = "Check each guru's examples: each needs a message, a ticker, and a fraction between 0 and 1 if given.";
 "Starting your new setup…" = "Starting your new setup…";
 "The setup changed after it was checked. Check it again." = "The setup changed after it was checked. Check it again.";
 "The engine did not accept the validated trading configuration." = "The engine did not accept the validated trading configuration.";
@@ -1192,19 +1176,16 @@
 "Who you copy, and the account each one copies into." = "Who you copy, and the account each one copies into.";
 "You have changes that aren't saved yet. Starting checks and saves them." = "You have changes that aren't saved yet. Starting checks and saves them.";
 "Your broker accounts show here once you set them up in Connections. Start with an Alpaca paper account: it trades pretend money at real prices." = "Your broker accounts show here once you set them up in Connections. Start with an Alpaca paper account: it trades pretend money at real prices.";
-"The guru reading channel %@ has no saved details. Open them in Connections and check their fields." = "The guru reading channel %@ has no saved details. Open them in Connections and check their fields.";
 "Add a broker account in Connections." = "Add a broker account in Connections.";
 "Add a guru to copy in Connections." = "Add a guru to copy in Connections.";
 "A guru's details don't line up. Open the guru in Connections and check its fields." = "A guru's details don't line up. Open the guru in Connections and check its fields.";
 "“%@” doesn't match its saved details. Open the guru in Connections and check its fields." = "“%@” doesn't match its saved details. Open the guru in Connections and check its fields.";
 "Two gurus read the same channel and author. Give each guru a different author ID in Connections." = "Two gurus read the same channel and author. Give each guru a different author ID in Connections.";
-"Check each guru's sizing and examples, then start copying again." = "Check each guru's sizing and examples, then start copying again.";
+"Check each guru's sizing, then start copying again." = "Check each guru's sizing, then start copying again.";
 "The engine is stopped. Start it, then start copying." = "The engine is stopped. Start it, then start copying.";
-"An example was read differently from what you expected. Fix the playbook or the example in Connections, then start again." = "An example was read differently from what you expected. Fix the playbook or the example in Connections, then start again.";
-"Start Copying first reads each example with the interpreter. A different reading stops copying from starting." = "Start Copying first reads each example with the interpreter. A different reading stops copying from starting.";
-"Start Copying tests every connection and example first. The results appear here." = "Start Copying tests every connection and example first. The results appear here.";
+"Start Copying tests every connection first. The results appear here." = "Start Copying tests every connection first. The results appear here.";
 "In **Connections**, under **Gurus**, choose **Add a guru** and give them a name." = "In **Connections**, under **Gurus**, choose **Add a guru** and give them a name.";
-"Choose **Start Copying**. CopyTrading first signs in to Discord, your interpreter, and Alpaca, and reads each example the way it will read real posts." = "Choose **Start Copying**. CopyTrading first signs in to Discord, your interpreter, and Alpaca, and reads each example the way it will read real posts.";
+"Choose **Start Copying**. CopyTrading first signs in to Discord, your interpreter, and Alpaca." = "Choose **Start Copying**. CopyTrading first signs in to Discord, your interpreter, and Alpaca.";
 "If anything is marked, choose **Review…**, fix it, then choose **Start Copying** again." = "If anything is marked, choose **Review…**, fix it, then choose **Start Copying** again.";
 "New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**." = "New accounts start with entries off, so nothing is bought until you choose **Enable Entries** in **Accounts**.";
 "These are paper keys. Choose Paper, or enter this account's live keys." = "These are paper keys. Choose Paper, or enter this account's live keys.";
@@ -1259,8 +1240,6 @@
 "“%@” uses channel %@, which is not listed under Discord in Connections." = "“%@” uses channel %@, which is not listed under Discord in Connections.";
 "“%@” needs an account to copy into." = "“%@” needs an account to copy into.";
 "“%@” copies into “%@”, which isn't one of your broker accounts." = "“%@” copies into “%@”, which isn't one of your broker accounts.";
-"Expected size" = "Expected size";
-"e.g. 1/6, optional" = "e.g. 1/6, optional";
 "Copies into %@ · full position %@" = "Copies into %@ · full position %@";
 "Full position %@. A 1/6 call buys a sixth of it." = "Full position %@. A 1/6 call buys a sixth of it.";
 "First set this account's max per stock. It's the guru's full position." = "First set this account's max per stock. It's the guru's full position.";
@@ -1398,11 +1377,6 @@
 "Minutes" = "Minutes";
 "Click **Open Connections** below." = "Click **Open Connections** below.";
 "Under **Discord**, paste it into **Channel IDs**. Separate several channels with commas." = "Under **Discord**, paste it into **Channel IDs**. Separate several channels with commas.";
-"Expected buy price" = "Expected buy price";
-"Expected sell price" = "Expected sell price";
-"e.g. %@, optional" = "e.g. %@, optional";
-"Sells from the buy at" = "Sells from the buy at";
-"e.g. %@, or empty for every buy" = "e.g. %@, or empty for every buy";
 "Re-posted calls" = "Re-posted calls";
 "None of your buys is at the buy price the guru named" = "None of your buys is at the buy price the guru named";
 "The sell doesn't say how much" = "The sell doesn't say how much";
@@ -1425,7 +1399,7 @@
 "Connect tries the key right away. It stays in this Mac's Keychain." = "Connect tries the key right away. It stays in this Mac's Keychain.";
 "Click **Connect** on the paper account and paste its two Alpaca keys." = "Click **Connect** on the paper account and paste its two Alpaca keys.";
 "Click **Add**, name them, and choose the account that copies them." = "Click **Add**, name them, and choose the account that copies them.";
-"Click **Start Copying**. Each connection is tested and your examples are read before anything is saved." = "Click **Start Copying**. Each connection is tested and your examples are read before anything is saved.";
+"Click **Start Copying**. Each connection is tested before anything is saved." = "Click **Start Copying**. Each connection is tested before anything is saved.";
 "Waiting for Connect" = "Waiting for Connect";
 "Moves on once an ID is in" = "Moves on once an ID is in";
 "Waiting for you to pick one" = "Waiting for you to pick one";
@@ -1474,7 +1448,6 @@
 "The post repeats an earlier call of the guru's" = "The post repeats an earlier call of the guru's";
 "A re-post of a call already copied" = "A re-post of a call already copied";
 "%@ A re-post of an earlier call." = "%@ A re-post of an earlier call.";
-"Start Copying says these readings are what you meant." = "Start Copying says these readings are what you meant.";
 "Every post in your channels, the moment it arrives." = "Every post in your channels, the moment it arrives.";
 "Channels and gurus" = "Channels and gurus";
 "Turned into an exact call: the stock and the price." = "Turned into an exact call: the stock and the price.";
@@ -1495,7 +1468,6 @@
 "%@ answered as %@" = "%@ answered as %@";
 "Alpaca live account found" = "Alpaca live account found";
 "Alpaca paper account found" = "Alpaca paper account found";
-"Each example is one request to your model service, which may charge for it." = "Each example is one request to your model service, which may charge for it.";
 "Apply Changes" = "Apply Changes";
 "Apply Changes pauses copying for a moment, checks the new setup, and copies with it. Posts in between aren't missed." = "Apply Changes pauses copying for a moment, checks the new setup, and copies with it. Posts in between aren't missed.";
 "Your changes weren't saved, so copying continues with the saved setup." = "Your changes weren't saved, so copying continues with the saved setup.";
@@ -1538,8 +1510,6 @@
 "Enter %@ to connect." = "Enter %@ to connect.";
 "Read %lld posts with %@." = "Read %lld posts with %@.";
 "The playbook is drafted; read it over before you start copying." = "The playbook is drafted; read it over before you start copying.";
-"Added 1 example post below yours." = "Added 1 example post below yours.";
-"Added %lld example posts below yours." = "Added %lld example posts below yours.";
 "The holdings couldn't be settled: %@. Check the broker for open orders in %@, then try again." = "The holdings couldn't be settled: %@. Check the broker for open orders in %@, then try again.";
 "Clear the Old Count" = "Clear the Old Count";
 "Review in Accounts" = "Review in Accounts";
@@ -1878,6 +1848,10 @@
 "At the bid" = "At the bid";
 "Agent request" = "Agent request";
 "Each connection, and how each guru's examples were read." = "Each connection, and how each guru's examples were read.";
+"The request" = "The request";
+"Before copying starts" = "Before copying starts";
+"Import" = "Import";
+"Each connection and what its test found." = "Each connection and what its test found.";
 "Live · real orders, real money" = "Live · real orders, real money";
 "Paper · pretend money, real prices" = "Paper · pretend money, real prices";
 "CopyTrading's count of %@ is out of date" = "CopyTrading's count of %@ is out of date";
@@ -1909,7 +1883,6 @@
 "Start it, then start copying." = "Start it, then start copying.";
 "Everything checks out" = "Everything checks out";
 "Start copying when you're ready." = "Start copying when you're ready.";
-"Look over how the examples were read." = "Look over how the examples were read.";
 "You changed the setup" = "You changed the setup";
 "Every connection is checked first." = "Every connection is checked first.";
 "You have unsaved changes" = "You have unsaved changes";
@@ -2111,8 +2084,6 @@
 "%@ → %@" = "%@ → %@";
 "Holding %@ in 1 stock from these calls" = "Holding %@ in 1 stock from these calls";
 "Holding %@ in %lld stocks from these calls" = "Holding %@ in %lld stocks from these calls";
-"Reduce a position" = "Sell part";
-"Close a position" = "Sell all";
 "Deadline today: %@ %@" = "%@ %@ today";
 "Deadline tomorrow: %@ %@" = "%@ %@ tomorrow";
 "Deadline on a weekday: %@ %@ %@" = "%@ %@ %@";
@@ -2279,7 +2250,7 @@
 "Keep the name to 64 characters." = "Keep the name to 64 characters.";
 "Use only letters, digits, “-” and “_” in the name: no spaces." = "Use only letters, digits, “-” and “_” in the name: no spaces.";
 "Needs a valid name" = "Needs a valid name";
-"Each guru needs a name of up to 100 characters, a playbook under %@ characters, and at most 32 examples." = "Each guru needs a name of up to 100 characters, a playbook under %@ characters, and at most 32 examples.";
+"Each guru needs a name of up to 100 characters and a playbook under %@ characters." = "Each guru needs a name of up to 100 characters and a playbook under %@ characters.";
 "Search time zones" = "Search time zones";
 "Nothing was sent: the engine isn't running. Start it in Settings → Engine, then try again." = "Nothing was sent: the engine isn't running. Start it in Settings → Engine, then try again.";
 "Start the engine to run the self-test." = "Start the engine to run the self-test.";
