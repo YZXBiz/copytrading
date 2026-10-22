@@ -33,6 +33,7 @@ from copytrading_engine.shared.reading import (
     Suggestion,
     TradeMade,
 )
+from copytrading_engine.shared.signals import same_fraction
 
 PROMPT_VERSION = "stock-reading-v7"
 
@@ -168,17 +169,6 @@ def normalize(text: str) -> str:
     decimal points written as ".", and mass mentions removed."""
     text = unicodedata.normalize("NFKC", text)
     return without_mentions(CHINESE_DECIMAL_POINT.sub(".", text))
-
-
-# Models write 1/6 as 0.16666666666666666; Decimal division gives 28 digits. Same fraction.
-FRACTION_TOLERANCE = Decimal("1e-9")
-
-
-def same_fraction(first: Decimal | None, second: Decimal | None) -> bool:
-    """Both absent, or equal within rounding."""
-    if first is None or second is None:
-        return first is second
-    return abs(first - second) <= FRACTION_TOLERANCE
 
 
 def number_is_grounded(value: Decimal, evidence: str | None, text: str) -> bool:

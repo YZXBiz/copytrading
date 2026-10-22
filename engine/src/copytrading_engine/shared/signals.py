@@ -8,6 +8,16 @@ from pydantic_core import PydanticCustomError
 
 from copytrading_engine.shared.reading import PostReading
 
+# Models write 1/6 as 0.16666666666666666; Decimal division gives 28 digits. Same fraction.
+FRACTION_TOLERANCE = Decimal("1e-9")
+
+
+def same_fraction(first: Decimal | None, second: Decimal | None) -> bool:
+    """Both absent, or equal within rounding."""
+    if first is None or second is None:
+        return first is second
+    return abs(first - second) <= FRACTION_TOLERANCE
+
 
 class SourceIdentityConflict(ValueError):
     """An existing source message identity was reused with different content."""
@@ -15,6 +25,13 @@ class SourceIdentityConflict(ValueError):
 
 class Instruction(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
+
+    def same_call(self, other: Instruction) -> bool:
+        """The same instruction, its fraction equal within rounding however it was written."""
+        return same_fraction(self.fraction, other.fraction) and (
+            self.model_copy(update={"fraction": other.fraction}) == other
+        )
+
     action: Literal["buy", "reduce", "close"]
     symbol: str = Field(pattern=r"^[A-Z]{1,5}(?:[.][A-Z])?$")
     # The guru's price. A sell the post gives no price, or says is at the market, has none: it
