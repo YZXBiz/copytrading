@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// A titled group of settings: a heading in the display face, then its rows on the page, parted by
-/// space alone. No line runs anywhere in the group.
+/// A titled group of settings: a heading in the display face, then its rows in one bordered box
+/// with a hairline between each, as the sheets group theirs (`SheetGroup`).
 struct SettingsSection<Content: View>: View {
     var title: String?
     var subtitle: String?
@@ -28,11 +28,23 @@ struct SettingsSection<Content: View>: View {
             }
             Group(subviews: content) { rows in
                 if !rows.isEmpty {
-                    VStack(spacing: 4) {
+                    // Rows carry their own inset, so the box adds none.
+                    VStack(spacing: 0) {
                         ForEach(rows) { row in
+                            if row.id != rows.first?.id {
+                                Rectangle()
+                                    .fill(Palette.hairline)
+                                    .frame(height: 1)
+                                    .padding(.leading, DesignTokens.sheetRowInset)
+                            }
                             row
-                                .padding(.horizontal, -14)
                         }
+                    }
+                    .background(Palette.page)
+                    .clipShape(.rect(cornerRadius: DesignTokens.sheetGroupRadius))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: DesignTokens.sheetGroupRadius)
+                            .strokeBorder(Palette.hairline)
                     }
                 }
             }

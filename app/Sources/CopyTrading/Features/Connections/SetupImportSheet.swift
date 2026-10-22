@@ -9,7 +9,6 @@ struct SetupImportSheet: View {
 
     var body: some View {
         SheetScaffold(
-            kind: L10n.string("Import"),
             title: L10n.string("Setup imported"),
             lede: L10n.string("From %@. Nothing is saved until Connect and Start Copying check it.", result.fileURL.lastPathComponent),
             scrolls: false
@@ -35,23 +34,23 @@ struct SetupImportSheet: View {
         .accessibilityIdentifier("setupImport.sheet")
     }
 
-    /// Each line on a hairline, after a bead: butter in an ink ring once it's filled, an empty ring
-    /// while it still waits.
+    /// Each line in the section's group, after a check once it's filled or an empty circle while
+    /// it still waits.
     private func list(_ title: String, _ lines: [String], isDone: Bool) -> some View {
         SheetSection(title) {
-            ForEach(lines, id: \.self) { line in
-                HStack(spacing: 12) {
-                    Circle()
-                        .fill(isDone ? Palette.sage : Color.clear)
-                        .overlay(Circle().strokeBorder(isDone ? Palette.ink : Palette.tertiaryInk, lineWidth: InkStroke.width))
-                        .frame(width: 11, height: 11)
-                        .accessibilityHidden(true)
-                    Text(line)
-                        .foregroundStyle(isDone ? Palette.ink : Palette.secondaryInk)
-                        .fixedSize(horizontal: false, vertical: true)
+            SheetGroup {
+                ForEach(lines, id: \.self) { line in
+                    HStack(spacing: 10) {
+                        Image(systemName: isDone ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(isDone ? StatusTone.positive.color : Palette.tertiaryInk)
+                            .accessibilityHidden(true)
+                        Text(line)
+                            .foregroundStyle(isDone ? Palette.ink : Palette.secondaryInk)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 }
-                .padding(.vertical, 9)
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }

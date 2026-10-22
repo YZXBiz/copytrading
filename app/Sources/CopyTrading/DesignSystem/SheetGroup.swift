@@ -20,7 +20,8 @@ struct SheetGroup<Content: View>: View {
                 }
             }
         }
-        .background(Palette.page, in: .rect(cornerRadius: DesignTokens.sheetGroupRadius))
+        .background(Palette.page)
+        .clipShape(.rect(cornerRadius: DesignTokens.sheetGroupRadius))
         .overlay {
             RoundedRectangle(cornerRadius: DesignTokens.sheetGroupRadius)
                 .strokeBorder(Palette.hairline)

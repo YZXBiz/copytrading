@@ -1352,7 +1352,6 @@
 "Set to **60**. The guru buys NVDA at **$200.00**. With **Maximum above signal price** at **%@%%**, your buy fills at **%@ or less**. The price jumps to **%@** and stays there, so nothing fills. After **60 seconds** the order is cancelled, so it can't fill hours later." = "设为 **60**。信号源以 **$200.00** 买入 NVDA。**高于信号价格的最高幅度**为 **%@%%** 时，你的买单最高只以 **%@ 或更低** 成交。价格涨到 **%@** 并停在那里，所以不会成交。**60 秒**后订单会被取消，不会过几个小时才成交。";
 "While Copying" = "跟单时";
 "Keep this Mac awake" = "让这台 Mac 保持唤醒";
-"So no post is missed. The screen can still turn off and lock. Plugged in, it stays awake with the lid closed too; on battery, closing the lid puts it to sleep." = "这样不会漏掉任何帖子。屏幕仍会关闭和锁定。接着电源时，合上盖子也保持唤醒；用电池时，合上盖子会让它睡眠。";
 "%lld waiting" = "%lld项待处理";
 "How a post becomes a trade" = "帖子是怎样变成交易的";
 "Before you go" = "开始前要知道";
@@ -1882,9 +1881,6 @@
 "Filled in from the post's words. Check it, then send." = "已按帖子的文字填好。核对后发送。";
 "At the bid" = "按买一价";
 "Agent request" = "智能体请求";
-"The request" = "请求内容";
-"Before copying starts" = "开始复制之前";
-"Import" = "导入";
 "Each connection, and how each guru's examples were read." = "每个连接的检查结果，以及每个信号源的示例是怎么读的。";
 "Live · real orders, real money" = "实盘 · 真实下单，真金白银";
 "Paper · pretend money, real prices" = "模拟盘 · 虚拟资金，真实价格";
@@ -1937,7 +1933,6 @@
 "Tell me when a trade fills" = "成交时通知我";
 "A notification with a sound for each copied buy or sell, saying what filled and from whose post." = "每笔复制的买卖成交时，发出带提示音的通知，说明成交内容和来源。";
 "While you were away" = "你离开期间";
-"Here's what happened" = "发生了这些";
 "Since %@" = "自 %@ 起";
 "Nothing filled while you were away." = "你离开期间没有成交。";
 "They're at the top of each account's page." = "在每个账户页面的顶部。";
@@ -1947,7 +1942,6 @@
 "Sending in %lld s" = "%lld 秒后发送";
 "%@, sending soon" = "%@，即将发送";
 "Hold my orders before sending" = "发送前保留订单";
-"After you press Sell or confirm a copy, the order waits this long with Undo before it leaves for Alpaca." = "按下卖出或确认复制后，订单会等待这段时间并可撤销，然后才发往 Alpaca。";
 "5 seconds" = "5 秒";
 "10 seconds" = "10 秒";
 "An order placed outside CopyTrading is still open. Let it fill or cancel it, then resume." = "有一笔在 CopyTrading 之外下的订单仍未完成。等它成交或取消后再恢复。";
@@ -2029,7 +2023,6 @@
 "Buying %@ of %@" = "正在买入 %@ %@";
 "Selling %@ of %@ at %@ or more" = "正在卖出 %@ %@，最低 %@";
 "Buying %@ of %@ at up to %@" = "正在买入 %@ %@，最高 %@";
-"A notification with a sound when each copied buy or sell goes out and again when it fills, saying what and from whose post." = "每笔跟单买卖发出时和成交时各通知一次并响铃，说明是什么、来自谁的帖子。";
 "Guru's price" = "信号源的价格";
 "%@ + %@ allowed" = "%@，允许高出 %@";
 "%@ − %@ allowed" = "%@，允许低于 %@";
@@ -2358,3 +2351,6 @@
 "Sells don't count." = "卖出不计入。";
 "Stops buying for the day. Still sells." = "当天停止买入，仍会卖出。";
 "This account's max per stock." = "即这个账户的单只股票上限。";
+"So no post is missed. The screen can still turn off and lock." = "这样不会错过任何帖子。屏幕仍可关闭并锁定。";
+"A notification when each copied order goes out and when it fills." = "每笔跟单订单发出和成交时都会通知你。";
+"Time to undo after you press Sell or confirm a copy." = "按下卖出或确认跟单后，可撤销的时间。";
