@@ -190,6 +190,7 @@ private func checkAccountValuationFixturesDecode() throws {
     }
     try #require(buy.sourceID == "discord:demo:1" && buy.boughtQty == "2", "a buy lost its post or shares")
     try #require(buy.remainingQty == "2" && buy.price == "25.10", "a buy's shares left or price changed while decoding")
+    try #require(buy.guruPrice == "25", "a buy lost the guru's price a sell names it by")
     try #require(page.items.first?.positions.first?.currentPrice == nil, "an unread broker produced a price")
 
     // A position the broker valued: cost, price, value, and gain, for the position and its lot.

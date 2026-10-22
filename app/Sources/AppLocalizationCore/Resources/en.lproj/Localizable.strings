@@ -1870,6 +1870,8 @@
 "now %@" = "now %@";
 "Open post" = "Open post";
 "From %@’s post" = "From %@’s post";
+"From %@’s %@" = "From %@’s %@";
+"Average cost %@" = "Average cost %@";
 "From a post" = "From a post";
 "Bought at %@" = "Bought at %@";
 "Sell %@ shares" = "Sell %@ shares";

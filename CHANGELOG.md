@@ -8,6 +8,7 @@ User-visible changes for each release are recorded here. Every GitHub release's 
 - **Closing every buy of a whole-share stock leaves nothing behind.** For a stock that trades only in whole shares, a "sell half" across two buys left each a fraction of a share, so selling each buy by its price later left one share that no such sell could reach. Sales of whole shares now split in whole shares, the remainder from the oldest buy.
 - **A stock held in two lots counts what both cost toward the limits.** The per-stock and total limits counted only the costlier lot.
 - **A re-posted call trades once, however the model writes its fraction.** The repost checks compared fractions digit for digit, so when a second reading of the same post gave "1/6" as 0.16666666666666666 instead of the exact ratio, the re-post bought another sixth, or a recap of "sell a third" sold a second third. Fractions now count as the same within rounding.
+- **Selling by hand and the Sell sheet know every buy in a position.** A sell typed by hand offered "the buy at $X" only for the post that opened the position, never a later add, and the Sell sheet named only that first post. Both now use every buy that still holds shares; a position of several buys reads "From Zhao’s 2 posts · Average cost $89.37", and VoiceOver counts its posts.
 
 ## 0.1.0-beta.4 — developer preview
 

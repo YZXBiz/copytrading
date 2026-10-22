@@ -86,7 +86,8 @@ struct LotSaleSheet: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(origin)
                 if let price = Decimal(engine: target.lot.averagePrice) {
-                    Text(L10n.string("Bought at %@", price.formatted(.currency(code: "USD"))))
+                    let amount = price.formatted(.currency(code: "USD"))
+                    Text(L10n.string(posts > 1 ? "Average cost %@" : "Bought at %@", amount))
                 }
             }
             .font(DesignTokens.lede)
@@ -98,10 +99,20 @@ struct LotSaleSheet: View {
         }
     }
 
-    /// "From Zhao’s post, Oct 9 at 7:47 AM"
+    /// The posts whose buys still hold shares in the lot.
+    private var posts: Int {
+        Set(target.lot.buys.map { $0.sourceID ?? $0.orderID }).count
+    }
+
+    /// "From Zhao’s post, Oct 9 at 7:47 AM", or "From Zhao’s 2 posts" for a lot of several buys.
     @MainActor private var origin: String {
+        guard posts <= 1 else {
+            let count = Humanize.count(posts, "post")
+            return target.guruName.map { L10n.string("From %@’s %@", $0, count) } ?? L10n.string("From %@", count)
+        }
+        let buy = target.lot.buys.first
         let who = target.guruName.map { L10n.string("From %@’s post", $0) } ?? L10n.string("From a post")
-        return target.lot.postedAt.map { L10n.string("%@, %@", who, Humanize.postTime($0)) } ?? who
+        return (buy?.postedAt ?? target.lot.postedAt).map { L10n.string("%@, %@", who, Humanize.postTime($0)) } ?? who
     }
 
     private var choosing: some View {

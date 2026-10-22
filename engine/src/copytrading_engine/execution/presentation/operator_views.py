@@ -43,6 +43,8 @@ class LotBuyView(Value):
     bought_at: AwareDatetime | None
     bought_qty: Quantity
     remaining_qty: Quantity
+    #: The guru's price for the buy, which a sell naming a buy price is matched against.
+    guru_price: Positive
     price: Positive | None
     #: This buy's remaining shares at the broker's current price, against what they cost.
     unrealized_pl: Money | None = None
@@ -257,7 +259,11 @@ def _gain(price: Decimal | None, cost: Decimal | None, qty: Decimal) -> Decimal 
 
 
 def _buy_view(
-    entry: str, remaining: Decimal, snapshot: LedgerSnapshot, current_price: Decimal | None
+    entry: str,
+    remaining: Decimal,
+    guru_price: Decimal,
+    snapshot: LedgerSnapshot,
+    current_price: Decimal | None,
 ) -> LotBuyView:
     order = snapshot.orders.get(entry)
     message = snapshot.messages.get(order.message_id) if order is not None else None
@@ -270,6 +276,7 @@ def _buy_view(
         bought_at=order.created_at if order is not None else None,
         bought_qty=order.filled_qty if order is not None else remaining,
         remaining_qty=remaining,
+        guru_price=guru_price,
         price=price,
         unrealized_pl=_gain(current_price, price, remaining),
     )
@@ -293,7 +300,13 @@ def _lot_view(
         average_price=lot.average_price,
         unrealized_pl=_gain(current_price, lot.average_price, lot.remaining_qty),
         buys=tuple(
-            _buy_view(entry, lot.entry_remaining[entry], snapshot, current_price)
+            _buy_view(
+                entry,
+                lot.entry_remaining[entry],
+                lot.entry_prices[entry],
+                snapshot,
+                current_price,
+            )
             for entry in lot.entries(key)
             if lot.entry_remaining.get(entry, Decimal(0)) > 0
         ),

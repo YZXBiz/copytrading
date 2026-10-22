@@ -9,6 +9,7 @@ func runLotSaleFlowTests() async throws {
     try await aRetryAfterALostConnectionReusesTheSaleIdentity()
     try partsOfALotRoundDownToHundredthsAndAllIsExact()
     try allOfALotSaysAllOnce()
+    try aSellByHandOffersEveryBuyStillHeld()
     print("CopyTradingContractTests: lot sales review first, ask for Touch ID on live accounts, and never send twice")
 }
 
@@ -148,4 +149,31 @@ private func allOfALotSaysAllOnce() throws {
     try #require(flow.sharesLine == "All 12 shares", "all of the lot read \(flow.sharesLine)")
     flow.shares = flow.amount(Decimal(string: "0.25")!)
     try #require(flow.sharesLine == "3 of 12 shares", "a quarter read \(flow.sharesLine)")
+}
+
+/// A sell typed by hand offers "the buy at $X" for every buy that still holds shares, by the
+/// guru's price, not only the post that opened the lot.
+private func aSellByHandOffersEveryBuyStillHeld() throws {
+    let contracts = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent().deletingLastPathComponent()
+        .deletingLastPathComponent().appending(path: "Resources/Contracts")
+    var json = try String(contentsOf: contracts.appending(path: "account-overviews-response.json"), encoding: .utf8)
+    let opening = #""guru_price":"25","price":"25.10","unrealized_pl":null}"#
+    try #require(json.contains(opening), "the fixture's buy changed shape")
+    json = json.replacingOccurrences(
+        of: opening,
+        with: opening
+            + #",{"order_id":"added","source_id":"discord:demo:2","posted_at":null,"excerpt":"ABC 24 add","#
+            + #""bought_at":null,"bought_qty":"1","remaining_qty":"1","guru_price":"24","price":"24.05","unrealized_pl":null}"#
+            + #",{"order_id":"sold","source_id":"discord:demo:3","posted_at":null,"excerpt":"ABC 23","#
+            + #""bought_at":null,"bought_qty":"1","remaining_qty":"0","guru_price":"23","price":"23","unrealized_pl":null}"#)
+    let response = try JSONDecoder().decode(EngineResponse.self, from: Data(json.utf8))
+    guard case .accounts(let page) = try response.successValue() else {
+        struct NoAccounts: Error {}
+        throw NoAccounts()
+    }
+
+    let holdings = ManualHolding.holdings(in: page.items, accountIDs: [])
+
+    try #require(holdings.map(\.buyPrices) == [[25, 24]], "a sell by hand did not offer every buy still held: \(holdings)")
 }
