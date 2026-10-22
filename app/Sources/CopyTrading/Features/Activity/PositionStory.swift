@@ -84,6 +84,15 @@ struct PositionStory: Equatable {
         result = held <= Self.tolerance && sold > 0 ? sold - bought : nil
     }
 
+    /// Whether `feed` reaches back far enough to tell the story of `sourceID`'s holding: it holds
+    /// the post's own trade and the buy that opened the holding, whose order names the holding.
+    static func isComplete(post sourceID: String, feed: [AccountFeedItem]) -> Bool {
+        guard let lotID = feed.first(where: { $0.messageID == sourceID && $0.lotID != nil })?.lotID else {
+            return false
+        }
+        return feed.contains { $0.kind == "bought" && $0.orderID == lotID }
+    }
+
     /// The engine's ISO 8601 times, with or without fractional seconds.
     private static func date(_ text: String) -> Date? {
         let fractional = ISO8601DateFormatter()

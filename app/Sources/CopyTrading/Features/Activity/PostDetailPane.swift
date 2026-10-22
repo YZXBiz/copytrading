@@ -70,10 +70,20 @@ struct PostDetailPane: View {
         feature.activity.first { $0.sourceID == sourceID }?.text
     }
 
-    /// A post opened from a guru page may come before its accounts' activity has been read.
+    /// Each account's activity, read back far enough to tell the story of this post's holding. A
+    /// post opened from a guru page may come before its accounts' activity has been read at all.
     private func loadFeeds() async {
-        for destination in item.destinations where feature.feeds[destination.accountID] == nil {
-            await feature.loadFeed(accountID: destination.accountID, using: model.accountActions())
+        for destination in item.destinations {
+            if destination.orders.isEmpty {
+                if feature.feeds[destination.accountID] == nil {
+                    await feature.loadFeed(accountID: destination.accountID, using: model.accountActions())
+                }
+            } else {
+                await feature.loadFeed(
+                    accountID: destination.accountID,
+                    until: { PositionStory.isComplete(post: item.sourceID, feed: $0) },
+                    using: model.accountActions())
+            }
         }
     }
 
