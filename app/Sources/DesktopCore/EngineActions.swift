@@ -162,11 +162,6 @@ public struct EngineActions: Sendable {
         return try await client.learnGuruPlaybook(learning)
     }
 
-    public func replayGuruPosts(_ replay: GuruReplayRequest) async throws -> GuruReplay {
-        let client = try await supervisor.engineClient()
-        return try await client.replayGuruPosts(replay)
-    }
-
     public func accountFeed(
         accountID: String, beforeSeq: Int? = nil, limit: Int = 50
     ) async throws -> AccountFeedPage {

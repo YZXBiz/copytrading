@@ -11,8 +11,6 @@ struct RouteEditorSheet: View {
     let policies: [String: TradingAccountPolicy]
     let channelIDs: [String]
     let learn: (TradingRouteDraft) async throws -> LearnedGuruPlaybook
-    /// Reads recent posts with this draft before the guru is switched on.
-    let replay: (TradingRouteDraft) async throws -> GuruReplay
     let remove: () -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var confirmsRemove = false
@@ -89,9 +87,6 @@ struct RouteEditorSheet: View {
             }
 
             GuruRulesSection(route: $route)
-
-            GuruReplaySection(route: route, policies: policies, replay: replay)
-
         } leading: {
             Button(L10n.string("Remove Guru…"), role: .destructive) { confirmsRemove = true }
                 .buttonStyle(SheetQuietButtonStyle(isDestructive: true))
@@ -179,7 +174,6 @@ struct RouteEditorSheet: View {
             policies: ["zhap-account-2": policy],
             channelIDs: ["1517754775674949742"],
             learn: { _ in throw CancellationError() },
-            replay: { _ in throw CancellationError() },
             remove: {}
         )
         .frame(width: 660, height: 900)

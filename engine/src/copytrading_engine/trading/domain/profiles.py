@@ -15,7 +15,6 @@ from copytrading_engine.parsing.application import transform
 from copytrading_engine.parsing.extraction import DecodeError, Decoder
 from copytrading_engine.parsing.routes import Route
 from copytrading_engine.shared.raw_message import RawMessage
-from copytrading_engine.shared.reading import PostReading
 from copytrading_engine.shared.signals import Instruction, same_fraction
 
 type ExitBasis = Literal["original_position", "remaining_position"]
@@ -221,32 +220,6 @@ def size_destinations(
                     )
                 )
     return tuple(evaluations)
-
-
-class ReplayedPost(BaseModel):
-    """What one recent post would have done under a guru's draft (ADR-0007); nothing was placed."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    text: str
-    decision: Literal["trade", "ignore", "review"]
-    reason: str
-    reading: PostReading | None
-    instructions: tuple[Instruction, ...]
-    suggested: tuple[Instruction, ...]
-    # What each of the guru's accounts would buy or sell, after the owner's limits.
-    destinations: tuple[DestinationEvaluation, ...]
-
-
-class ProfileReplay(BaseModel):
-    """A guru's recent posts read with the draft playbook and rules, before switching them on."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    posts: tuple[ReplayedPost, ...]
-    provider: str
-    model: str
-    cost_notice: str = PROFILE_EVALUATION_COST_NOTICE
 
 
 class ProfileEvaluation(BaseModel):
