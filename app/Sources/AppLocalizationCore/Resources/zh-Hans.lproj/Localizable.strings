@@ -1322,6 +1322,14 @@
 "See what their last posts would have done with these settings." = "看看按这些设置，他们最近的帖子会怎样处理。";
 "Replay Recent Posts" = "重放最近的帖子";
 "Replay Again" = "再次重放";
+"The most one buy can spend. A bigger buy is made smaller." = "一笔买入最多花这么多。更大的买入会被缩小。";
+"The most this account can hold in one stock, including shares you bought yourself. It's also the guru's full position. A buy that would go over is skipped." = "这个账户在一只股票上最多持有这么多，包括你自己买的。它也是信号源的满仓金额。会超过的买入会被跳过。";
+"The most this account can hold in all stocks, including your own. A buy that would go over is skipped." = "这个账户所有股票加起来最多持有这么多，包括你自己买的。会超过的买入会被跳过。";
+"If the account is down this much today, it stops buying until tomorrow. It still sells." = "如果账户今天亏了这么多，就停止买入到明天。卖出照常。";
+"The most a buy can pay above the guru's price. 0 means never more than the guru paid." = "买入最多比信号源的价格高这么多。0 表示不超过信号源的价格。";
+"The most buys in one day. Sells don't count." = "一天最多买入几次。卖出不算。";
+"If a post takes longer than this to arrive, it isn't copied. You can still copy it yourself in Activity." = "帖子如果超过这个时间才到，就不跟单。你仍可以在“活动”里自己跟单。";
+"An order that hasn't filled by then is cancelled." = "订单到时还没成交就取消。";
 "Set to **$1,000**. The guru's call would buy **$2,500** of NVDA. You buy **$1,000** instead." = "设为 **$1,000**。信号源的喊单要买 **$2,500** 的 NVDA，你只买 **$1,000**。";
 "Set to **$3,000**. That's the guru's full position, so a 1/6 call buys **$500**. If you already hold **$2,500** of NVDA, a **$1,000** NVDA buy would make $3,500, so it's **skipped**." = "设为 **$3,000**。这就是信号源的满仓，所以 1/6 的喊单买 **$500**。如果你已持有 **$2,500** 的 NVDA，再买 **$1,000** 会到 $3,500，所以这笔被**跳过**。";
 "Set to **$10,000**. You hold **$9,500** in all. A new **$1,000** buy would go over, so it's **skipped**." = "设为 **$10,000**。你总共持有 **$9,500**，再买 **$1,000** 会超过，所以这笔被**跳过**。";
@@ -1528,7 +1536,6 @@
 "the chat ID" = "聊天 ID";
 "the bot token" = "机器人令牌";
 "Enter %@ to connect." = "填写%@后再连接。";
-"%@ into %@" = "%@ 买入 %@";
 "Read %lld posts with %@." = "读了 %lld 条帖子，使用 %@。";
 "The playbook is drafted; read it over before you start copying." = "策略手册已起草；开始跟单前请通读一遍。";
 "Added 1 example post below yours." = "在你的示例下方添加了 1 条示例帖子。";

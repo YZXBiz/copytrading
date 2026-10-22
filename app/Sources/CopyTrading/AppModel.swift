@@ -36,8 +36,6 @@ protocol TradingStarting: Sendable {
     func learnGuruPlaybook(
         _ learning: GuruPlaybookLearningRequest
     ) async throws -> LearnedGuruPlaybook
-
-    func replayGuruPosts(_ replay: GuruReplayRequest) async throws -> GuruReplay
 }
 
 extension EngineActions: TradingStarting {}
@@ -1111,38 +1109,6 @@ final class AppModel {
             throw TradingSettingsError.invalidConfiguration(message)
         } catch is EngineContractError {
             throw TradingSettingsError.invalidConfiguration(L10n.string("The engine could not learn from this channel. Try again."))
-        }
-    }
-
-    /// Reads the guru's recent posts with this draft's playbook and rules and says what each would
-    /// have done (ADR-0007). Nothing is placed or saved.
-    func replayPosts(for route: TradingRouteDraft, in draft: ConnectionsDraft) async throws -> GuruReplay {
-        let reading = try channelReading(
-            for: route, in: draft, locked: L10n.string("Unlock CopyTrading before replaying posts."),
-            stopped: L10n.string("The engine isn't running. Start it in Settings → Engine. If another CopyTrading is open, quit it first."))
-        let profile = try TradingProfileBuilder().build(
-            TradingProfileDraft(
-                guruID: route.guruID.trimmed,
-                displayName: route.displayName.trimmed.isEmpty ? route.guruID.trimmed : route.displayName.trimmed,
-                playbook: route.playbook.trimmedLines,
-                examples: []
-            ))
-        do {
-            return try await reading.engine.replayGuruPosts(
-                GuruReplayRequest(
-                    channelID: reading.channelID,
-                    authorID: route.authorID.trimmed.nilIfEmpty,
-                    discordToken: reading.discordToken,
-                    provider: draft.providerConfiguration,
-                    providerAPIKey: reading.providerAPIKey,
-                    profile: profile,
-                    destinations: route.connection.map { [$0.terms(fullPositionUSD: draft.fullPosition(for: $0))] }?
-                        .filter { (Decimal(string: $0.fullPositionUSD) ?? 0) > 0 } ?? []
-                ))
-        } catch EngineContractError.remote(code: _, message: let message?, reason: _) {
-            throw TradingSettingsError.invalidConfiguration(message)
-        } catch is EngineContractError {
-            throw TradingSettingsError.invalidConfiguration(L10n.string("The engine could not replay this channel. Try again."))
         }
     }
 

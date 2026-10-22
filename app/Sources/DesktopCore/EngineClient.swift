@@ -235,14 +235,6 @@ public actor EngineClient {
         return value
     }
 
-    public func replayGuruPosts(_ replay: GuruReplayRequest) async throws -> GuruReplay {
-        let result = try await request(.replayGuruPosts(replay))
-        guard case .guruReplay(let value) = result else {
-            throw EngineContractError.missingResult
-        }
-        return value
-    }
-
     public func accountFeed(
         accountID: String, beforeSeq: Int? = nil, limit: Int = 50
     ) async throws -> AccountFeedPage {

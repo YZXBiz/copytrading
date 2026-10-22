@@ -63,7 +63,6 @@ from copytrading_engine.host.pipe.requests import (
     PrepareRestoreCandidateRequest,
     PreviewManualOrderRequest,
     PreviewRestoreRequest,
-    ReplayGuruPostsRequest,
     RequestHandler,
     ResolveOwnershipRequest,
     RestoreCandidateStatusRequest,
@@ -248,7 +247,6 @@ class PipeServer:
                 (
                     EvaluateHistoricalProfileRequest,
                     LearnGuruPlaybookRequest,
-                    ReplayGuruPostsRequest,
                     CreateBackupRequest,
                     PreviewRestoreRequest,
                     PrepareRestoreCandidateRequest,
@@ -335,7 +333,6 @@ class PipeServer:
                     GetGuruDayStatsRequest,
                     EvaluateHistoricalProfileRequest,
                     LearnGuruPlaybookRequest,
-                    ReplayGuruPostsRequest,
                     GetAccountFeedRequest,
                     GetEquityHistoryRequest,
                     GetQuoteRequest,
