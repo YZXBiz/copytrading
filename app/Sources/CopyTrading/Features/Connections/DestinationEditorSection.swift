@@ -41,6 +41,8 @@ struct DestinationEditorSection: View {
                 }
             }
         }
+        .icon(brand: "alpaca")
+        .mark(connection == nil ? .needsYou : .done)
     }
 
     /// What each kind of call buys, in plain lines: the guru's full position first, then each call
@@ -69,6 +71,7 @@ struct DestinationEditorSection: View {
                         Text(figure.amount)
                             .font(DesignTokens.rowTitle)
                             .foregroundStyle(Palette.ink)
+                            .markerHighlight(figure.isTrimmed)
                     }
                     .monospacedDigit()
                     .padding(.horizontal, 12)

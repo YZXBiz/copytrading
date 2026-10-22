@@ -25,7 +25,10 @@ struct GuruRulesSection: View {
                             .accessibilityLabel(L10n.string("Re-post window in minutes"))
                             .multilineTextAlignment(.trailing)
                             .monospacedDigit()
-                            .underlineField()
+                            .textFieldStyle(.plain)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                            .background(Palette.well, in: .rect(cornerRadius: 8))
                             .frame(width: 48)
                         Text(L10n.string("minutes"))
                             .foregroundStyle(Palette.tertiaryInk)
@@ -34,6 +37,7 @@ struct GuruRulesSection: View {
                 }
             }
         }
+        .icon(symbol: "arrow.trianglehead.2.clockwise")
     }
 
     private static func repostHint(_ minutes: Int?) -> String {

@@ -57,6 +57,8 @@ struct RouteEditorSheet: View {
             } accessory: {
                 HelpPopoverButton(articles: [SetupHelp.channelID, SetupHelp.userID])
             }
+            .icon(brand: "discord")
+            .mark(channelIDs.isEmpty ? .needsYou : .done)
 
             DestinationEditorSection(
                 connection: $route.connection,

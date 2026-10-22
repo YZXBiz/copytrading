@@ -2362,3 +2362,4 @@
 "Keep" = "保留";
 "Their calls stop being copied once you start copying with this change. Shares they bought stay in the account." = "用这次修改开始跟单后，就不再跟它的单。已经买入的股票会留在账户里。";
 "How this guru writes buys, sells, and tickers, one rule per line. Learn drafts it from recent posts; edit anything. Name a company's ticker on its own line, such as “%@ means %@”." = "信号源怎么写买入、卖出和股票代码，一行一条规则。“学习”会根据最近的帖子起草，内容都可以改。公司名要单独一行写明代码，例如“%@ 就是 %@”。";
+"Set" = "已设置";

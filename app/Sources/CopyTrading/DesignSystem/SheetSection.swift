@@ -9,6 +9,10 @@ struct SheetSection<Content: View, Accessory: View, Footer: View>: View {
     let content: Content
     let accessory: Accessory
     let footer: Footer
+    /// The service or subject the section is about, on a small tile before the title.
+    var icon: ServiceIcon?
+    /// How far the section has come, beside the title.
+    var mark: SheetSectionMark?
 
     init(
         _ title: String, detail: String? = nil, @ViewBuilder content: () -> Content, @ViewBuilder accessory: () -> Accessory,
@@ -23,13 +27,22 @@ struct SheetSection<Content: View, Accessory: View, Footer: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
+                if let icon {
+                    icon
+                }
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(title)
-                        .font(DesignTokens.cardTitle)
-                        .tracking(DesignTokens.listHeadingTracking)
-                        .foregroundStyle(Palette.ink)
-                        .fixedSize(horizontal: false, vertical: true)
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        Text(title)
+                            .font(DesignTokens.cardTitle)
+                            .tracking(DesignTokens.listHeadingTracking)
+                            .foregroundStyle(Palette.ink)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if let mark {
+                            SheetSectionMarkView(mark: mark)
+                                .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
+                        }
+                    }
                     if let detail {
                         Text(detail)
                             .font(DesignTokens.caption)
@@ -38,7 +51,9 @@ struct SheetSection<Content: View, Accessory: View, Footer: View>: View {
                     }
                 }
                 .accessibilityElement(children: .ignore)
-                .accessibilityLabel(detail.map { L10n.string("%@, %@", title, $0) } ?? title)
+                .accessibilityLabel(
+                    [title, mark?.label, detail].compactMap(\.self).joined(separator: ", ")
+                )
                 .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 12)
                 accessory
@@ -53,6 +68,20 @@ struct SheetSection<Content: View, Accessory: View, Footer: View>: View {
             footerView
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The section with its subject's tile before the title: a service's logo, or a symbol.
+    func icon(brand: String? = nil, symbol: String = "server.rack") -> Self {
+        var copy = self
+        copy.icon = ServiceIcon(brand: brand, symbol: symbol, size: 28)
+        return copy
+    }
+
+    /// The section with how far it has come beside its title.
+    func mark(_ mark: SheetSectionMark?) -> Self {
+        var copy = self
+        copy.mark = mark
+        return copy
     }
 
     @ViewBuilder private var footerView: some View {

@@ -65,6 +65,8 @@ struct PlaybookSection: View {
                 )
             )
         }
+        .icon(symbol: "text.book.closed")
+        .mark(route.playbook.trimmedLines.isEmpty ? .needsYou : .done)
     }
 
     /// What Learn did, truthfully: the playbook is drafted, and examples are named only when some
