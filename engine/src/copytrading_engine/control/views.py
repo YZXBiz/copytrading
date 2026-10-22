@@ -4,6 +4,8 @@ Only the fields an operator or agent needs cross this boundary. Broker identitie
 configuration fingerprints and raw payload evidence stay inside the engine.
 """
 
+from decimal import Decimal
+
 from copytrading_engine.control import wire
 from copytrading_engine.control.proposals import (
     Closed,
@@ -29,9 +31,12 @@ from copytrading_engine.execution.presentation.operator_views import (
     AccountOverviewPage,
     AccountUnavailable,
     DestinationView,
+    PositionView,
 )
 from copytrading_engine.trading.domain.status import TradingStatus
 from copytrading_engine.trading.presentation.operator_models import SourceActivityPage
+
+CENT = Decimal("0.01")
 
 
 def processing(status: TradingStatus) -> wire.ProcessingView:
@@ -73,6 +78,16 @@ def _unavailable(items: tuple[AccountUnavailable, ...]) -> tuple[wire.Unavailabl
     )
 
 
+def _sold_out(position: PositionView) -> bool:
+    """A stock the account no longer holds any of, kept in the ledger only as history."""
+    return (
+        not position.lots
+        and not position.owned_qty
+        and not position.external_qty
+        and (position.broker_qty is None or not Decimal(position.broker_qty))
+    )
+
+
 def _account(item: AccountOverview) -> wire.AccountView:
     return wire.AccountView(
         account_id=item.account_id,
@@ -84,7 +99,9 @@ def _account(item: AccountOverview) -> wire.AccountView:
         risk_reason=item.account_risk_reason,
         activity_status=item.account_activity_status,
         activity_reason=item.account_activity_reason,
-        total_exposure_usd=item.total_exposure_usd,
+        total_exposure_usd=None
+        if item.total_exposure_usd is None
+        else item.total_exposure_usd.quantize(CENT),
         positions=tuple(
             wire.PositionView(
                 symbol=position.symbol,
@@ -106,6 +123,7 @@ def _account(item: AccountOverview) -> wire.AccountView:
                 ),
             )
             for position in item.positions
+            if not _sold_out(position)
         ),
         ownership_incidents=len(item.ownership_incidents),
         pending_orders=item.pending_orders,
