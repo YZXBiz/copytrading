@@ -645,6 +645,33 @@ def test_a_name_becomes_a_ticker_only_through_the_playbook(playbook, grounded):
         assert failure("25加了苹果", reading, route).issue.code == "symbol_not_in_playbook"
 
 
+@pytest.mark.parametrize(
+    ("text", "words"),
+    [
+        pytest.param("81000加了btc", "btc", id="the-coins-ticker"),
+        pytest.param("81000加了BTC/USD", "BTC/USD", id="its-pair"),
+        pytest.param("81000加了 $BTC", "$BTC", id="a-cashtag"),
+        pytest.param("81000加了比特币", "比特币", id="its-chinese-name"),
+        pytest.param("81000加了 Bitcoin", "Bitcoin", id="its-english-name"),
+        pytest.param("81000加了大饼", "大饼", id="its-nickname"),
+    ],
+)
+def test_a_coin_is_its_pair_however_the_post_writes_it(text, words):
+    check(text, trade(buy("BTC/USD", "81000", ticker_said=words)))
+
+
+def test_a_coins_name_never_stands_for_another_coin():
+    reading = trade(buy("ETH/USD", "81000", ticker_said="比特币"))
+
+    assert failure("81000加了比特币", reading).issue.code == "symbol_not_in_playbook"
+
+
+def test_a_coin_the_playbook_names_is_grounded_by_the_playbook():
+    reading = trade(buy("SOL/USD", "180", ticker_said="大索"))
+
+    check("180加了大索", reading, Route(playbook="大索 means SOL/USD"))
+
+
 def test_a_written_ticker_needs_no_playbook_but_must_be_a_whole_word():
     check("25加了abc", trade(buy("ABC", "25")))
 

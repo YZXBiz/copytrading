@@ -89,7 +89,7 @@ struct RecapSheet: View {
     }
 
     private func sentence(_ fill: FillWatch.Fill) -> String {
-        let shares = Humanize.shares(fill.shares)
+        let shares = Humanize.sharesOf(fill.shares, symbol: fill.symbol)
         guard let price = fill.price else {
             return fill.side == "sell"
                 ? L10n.string("Sold %@ of %@", shares, fill.symbol) : L10n.string("Bought %@ of %@", shares, fill.symbol)

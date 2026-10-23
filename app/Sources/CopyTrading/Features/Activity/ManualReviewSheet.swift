@@ -477,7 +477,8 @@ struct ManualReviewSheet: View {
     @MainActor private var confirmationSummary: String {
         confirmationToSubmit.compactMap { request in
             guard let plan = feature.previews[request.previewID]?.plan else { return nil }
-            let shares = Decimal(engine: plan.quantity).map { Humanize.shares($0) } ?? plan.quantity
+            let quantity = Decimal(engine: plan.quantity)
+            let shares = quantity.map { Humanize.shares($0, of: plan.symbol) } ?? plan.quantity
             let limit = Decimal(engine: plan.limitPrice).map(Humanize.usd) ?? "—"
             if let budget = Decimal(engine: plan.budgetUSD) {
                 return L10n.string(
@@ -485,7 +486,8 @@ struct ManualReviewSheet: View {
                     shares, limit)
             }
             let side = L10n.string(plan.side.lowercased() == "sell" ? "Sell" : "Buy")
-            return L10n.string("%@: %@ %@ of %@ at %@", request.accountID, side, shares, plan.symbol, limit)
+            let sold = quantity.map { Humanize.sharesOf($0, symbol: plan.symbol) } ?? plan.quantity
+            return L10n.string("%@: %@ %@ of %@ at %@", request.accountID, side, sold, plan.symbol, limit)
         }.joined(separator: "\n")
     }
 

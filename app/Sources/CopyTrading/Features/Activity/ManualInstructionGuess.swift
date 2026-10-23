@@ -68,7 +68,7 @@ enum ManualInstructionGuess {
     static func price(in text: String) -> Decimal? {
         for word in words(in: text.lowercased()) where !word.contains("/") && !word.hasSuffix("%") {
             let digits = word.trimmingCharacters(in: CharacterSet(charactersIn: "$@"))
-            guard digits.first?.isNumber == true, let value = Decimal(string: digits), value > 0, value <= 100_000 else {
+            guard digits.first?.isNumber == true, let value = Decimal(string: digits), value > 0, value <= 10_000_000 else {
                 continue
             }
             return value

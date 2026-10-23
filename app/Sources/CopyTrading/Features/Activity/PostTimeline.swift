@@ -97,7 +97,7 @@ struct PostTimeline {
             var parts: [String] = []
             // Dollar first, then the shares it came to: "$200 of PM · ≈1 share · limit $201.00".
             if let order, let amount = OrderAmount.planned(order) { parts.append(amount) }
-            if let quantity { parts.append(Humanize.shares(quantity)) }
+            if let quantity { parts.append(Humanize.shares(quantity, of: order?.symbol ?? "")) }
             if let limit { parts.append(L10n.string("limit %@", limit)) }
             if let accepted = date(step("accepted")), accepted.timeIntervalSince(sent) >= measurable {
                 parts.append(L10n.string("accepted by Alpaca in %@", duration(accepted.timeIntervalSince(sent))))
@@ -120,8 +120,8 @@ struct PostTimeline {
             }
             if let quantity {
                 parts.append(
-                    price.map { L10n.string("%@ at %@", Humanize.shares(quantity), Humanize.usd($0)) }
-                        ?? Humanize.shares(quantity))
+                    price.map { L10n.string("%@ at %@", Humanize.shares(quantity, of: order?.symbol ?? ""), Humanize.usd($0)) }
+                        ?? Humanize.shares(quantity, of: order?.symbol ?? ""))
             }
             let detail = parts.joined(separator: " · ").nilIfEmpty
             add(named(L10n.string(end.step == "filled" ? "Filled" : "Partly filled")), endedAt, start, detail, waits, false)

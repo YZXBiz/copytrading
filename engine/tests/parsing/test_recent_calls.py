@@ -159,7 +159,7 @@ async def test_the_reader_gets_the_playbook_then_the_recent_calls_after_its_fixe
     finally:
         await decoder.close()
     [instructions] = shown
-    fixed = instructions.index("Read one stock or ETF post")
+    fixed = instructions.index("Read one stock, ETF or crypto post")
     playbook = instructions.index("艾伦 means IREN")
     listed = instructions.index("c1 · buy · IREN · at 39.5")
     assert fixed < playbook < listed

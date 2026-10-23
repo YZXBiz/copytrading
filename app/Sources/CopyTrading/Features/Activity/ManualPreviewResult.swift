@@ -50,7 +50,7 @@ struct ManualPreviewResult: View {
         if let budget = Decimal(engine: plan.budgetUSD) {
             return L10n.string("Buy %@ of %@ in %@", Humanize.dollars("\(budget)"), plan.symbol, request.accountID)
         }
-        let quantity = Decimal(engine: plan.quantity).map { Humanize.shareCount($0) } ?? plan.quantity
+        let quantity = Decimal(engine: plan.quantity).map { Humanize.shareCount($0, of: plan.symbol) } ?? plan.quantity
         let limit = Decimal(engine: plan.limitPrice).map(Humanize.usd)
         let side = L10n.string(plan.side.lowercased() == "sell" ? "Sell" : "Buy")
         return limit.map { L10n.string("%@ %@ %@ at %@ in %@", side, quantity, plan.symbol, $0, request.accountID) }
@@ -65,7 +65,7 @@ struct ManualPreviewResult: View {
         if let plan = preview.plan, plan.budgetUSD != nil, let quantity = Decimal(engine: plan.quantity),
             let limit = Decimal(engine: plan.limitPrice)
         {
-            parts.append(L10n.string("%@ at %@ or less", Humanize.shares(quantity), Humanize.usd(limit)))
+            parts.append(L10n.string("%@ at %@ or less", Humanize.shares(quantity, of: plan.symbol), Humanize.usd(limit)))
         }
         // A buy is checked against the ask and a sell against the bid.
         let side = preview.instruction.action == .buy ? "Ask %@" : "Bid %@"

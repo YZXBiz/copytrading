@@ -28,6 +28,7 @@ from copytrading_engine.execution.domain.manual_commands import (
 from copytrading_engine.execution.domain.market import HistoryWindow
 from copytrading_engine.execution.domain.ownership import OwnershipResolutionRequest
 from copytrading_engine.execution.domain.sizing import RouteConnection
+from copytrading_engine.shared.symbols import SYMBOL_PATTERN
 from copytrading_engine.trading.domain.config import (
     BrokerCheck,
     ModelCheck,
@@ -264,11 +265,11 @@ class GetEquityHistoryRequest(PipeRequest):
 
 
 class GetQuoteRequest(PipeRequest):
-    """The latest quote for a stock the owner typed into the trade sheet."""
+    """The latest quote for a stock, or a coin's pair, the owner typed into the trade sheet."""
 
     operation: Literal["get_quote"]
     account_id: str = Field(min_length=1, max_length=64)
-    symbol: str = Field(pattern=r"^[A-Z][A-Z0-9.]{0,9}$")
+    symbol: str = Field(pattern=SYMBOL_PATTERN)
 
 
 class SaveManualCorrectionRequest(PipeRequest):

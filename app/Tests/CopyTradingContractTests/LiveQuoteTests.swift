@@ -37,6 +37,11 @@ func runLiveQuoteTests() throws {
     try #require(untimed.price(isSell: true) == Decimal(string: "10.02") && !untimed.isLive())
     try #require(untimed.problem(isSell: true) == "No live quote for F")
     try #require(LiveQuote.canQuote("BRK.B") && !LiveQuote.canQuote("") && !LiveQuote.canQuote("aapl"))
+    // A coin is quoted by its dollar pair, at any hour.
+    try #require(LiveQuote.canQuote("BTC/USD") && !LiveQuote.canQuote("BTC/EUR") && !LiveQuote.canQuote("btc/usd"))
+    try #require(Humanize.shares(Decimal(string: "0.001231481")!, of: "BTC/USD") == "0.001231481 BTC")
+    try #require(Humanize.sharesOf(Decimal(string: "0.001231481")!, symbol: "BTC/USD") == "0.001231481")
+    try #require(Humanize.shares(Decimal(string: "2.985")!, of: "PM") == "2.985 shares")
 
     try anEstimateUsesTheLiveQuote()
 }

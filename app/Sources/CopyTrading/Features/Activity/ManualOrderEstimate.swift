@@ -83,7 +83,7 @@ struct ManualOrderEstimate {
         }
         let limit = Self.limit(ask, abovePct: maxAbovePct[account.accountID] ?? 0)
         // The sentence says the count is an estimate; the count never adds a second "≈".
-        let shares = Humanize.shares(budget / limit, marksRounding: false)
+        let shares = Humanize.shares(budget / limit, of: symbol, marksRounding: false)
         return checked != nil
             ? L10n.string("Buy %@ of %@ ≈ %@ at %@", dollars, symbol, shares, Humanize.usd(limit))
             : L10n.string("Buy up to %@ of %@ ≈ %@ at %@", dollars, symbol, shares, Humanize.usd(limit))

@@ -8,6 +8,7 @@ func runLotSaleFlowTests() async throws {
     try await liveSalesAskForTouchIDAndSendNothingWithoutIt()
     try await aRetryAfterALostConnectionReusesTheSaleIdentity()
     try partsOfALotRoundDownToHundredthsAndAllIsExact()
+    try partsOfACoinLotRoundToTheBillionthAndReadInTheCoin()
     try allOfALotSaysAllOnce()
     try aSellByHandOffersEveryBuyStillHeld()
     print("CopyTradingContractTests: lot sales review first, ask for Touch ID on live accounts, and never send twice")
@@ -140,6 +141,25 @@ private func partsOfALotRoundDownToHundredthsAndAllIsExact() throws {
     try #require(flow.amount(Decimal(string: "0.25")!) == Decimal(string: "0.22")!, "A quarter of a lot did not round down")
     try #require(flow.amount(Decimal(string: "0.5")!) == Decimal(string: "0.44")!, "Half a lot did not round down")
     try #require(flow.amount(1) == Decimal(string: "0.885")!, "All of a lot was not the whole lot")
+}
+
+/// A coin's lot splits to the billionth Alpaca keeps it in, never to hundredths that would round
+/// it to nothing, and reads in the coin: "All 0.001231481 BTC".
+@MainActor
+private func partsOfACoinLotRoundToTheBillionthAndReadInTheCoin() throws {
+    let lot = try JSONDecoder().decode(
+        AccountLotView.self,
+        from: Data(
+            """
+            {"lot_id":"copy-lot","source_id":null,"guru_id":null,"posted_at":null,"excerpt":null,"bought_at":null,\
+            "original_qty":"0.001231481","remaining_qty":"0.001231481","average_price":"81000","buys":[]}
+            """.utf8))
+    let flow = LotSaleFlow(
+        target: LotSaleTarget(accountID: "primary", environment: .paper, symbol: "BTC/USD", lot: lot, guruName: nil))
+    try #require(flow.amount(Decimal(string: "0.5")!) == Decimal(string: "0.00061574")!, "Half a coin lot was \(flow.amount(0.5))")
+    try #require(flow.sharesLine == "All 0.001231481 BTC", "all of a coin lot read \(flow.sharesLine)")
+    flow.shares = flow.amount(Decimal(string: "0.5")!)
+    try #require(flow.sharesLine == "0.00061574 of 0.001231481 BTC", "half a coin lot read \(flow.sharesLine)")
 }
 
 /// Choosing all of a lot reads "All 12 shares", not "12 of 12 shares".

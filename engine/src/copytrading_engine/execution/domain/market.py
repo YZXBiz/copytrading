@@ -49,6 +49,15 @@ class Asset(Value):
     attributes: tuple[str, ...] = ()
     overnight_tradable: bool = False
     overnight_halted: bool = False
+    # A coin's trading steps, which Alpaca gives only for crypto: the smallest order in coins, the
+    # step a quantity moves in, and the step a price moves in.
+    min_order_size: Positive | None = None
+    min_trade_increment: Positive | None = None
+    price_increment: Positive | None = None
+
+    @property
+    def crypto(self) -> bool:
+        return self.asset_class == "crypto"
 
 
 class Position(Value):
@@ -102,7 +111,8 @@ class BrokerOrder(Value):
         return self
 
 
-type QuoteFeed = Literal["iex", "delayed_sip", "overnight"]
+# Stock feeds by the hour (adapters.alpaca.broker.quote_feeds), and Alpaca's crypto feed.
+type QuoteFeed = Literal["iex", "delayed_sip", "overnight", "crypto"]
 
 
 class Quote(Value):

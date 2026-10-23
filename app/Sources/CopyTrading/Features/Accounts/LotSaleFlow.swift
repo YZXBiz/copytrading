@@ -32,6 +32,11 @@ final class LotSaleFlow {
     /// The chosen part in words: "0.44 of 0.885 shares", or "All 0.885 shares" rather than the
     /// same number twice.
     var sharesLine: String {
+        if Humanize.isCoin(target.symbol) {
+            return shares == remaining
+                ? L10n.string("All %@", Humanize.shares(remaining, of: target.symbol))
+                : Humanize.shares(shares, of: remaining, symbol: target.symbol)
+        }
         let quantity = { (value: Decimal) in value.formatted(.number.precision(.fractionLength(0...4))) }
         return shares == remaining
             ? L10n.string("All %@ shares", quantity(remaining))
@@ -39,12 +44,13 @@ final class LotSaleFlow {
     }
 
     /// A part of the lot for the sheet's chips (a quarter, a half, three quarters, or all of it).
-    /// Parts round down to hundredths of a share, so a sale never asks for more than the lot holds.
+    /// Parts round down to hundredths of a share, or a coin to the billionth Alpaca keeps it in, so
+    /// a sale never asks for more than the lot holds.
     func amount(_ part: Decimal) -> Decimal {
         guard part < 1 else { return remaining }
         var exact = remaining * part
         var rounded = Decimal()
-        NSDecimalRound(&rounded, &exact, 2, .down)
+        NSDecimalRound(&rounded, &exact, Humanize.isCoin(target.symbol) ? 9 : 2, .down)
         return rounded
     }
 

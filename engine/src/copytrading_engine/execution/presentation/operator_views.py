@@ -296,7 +296,8 @@ def _buy_view(
         posted_at=message.timestamp if message is not None else None,
         excerpt=_excerpt(message.text) if message is not None else None,
         bought_at=order.created_at if order is not None else None,
-        bought_qty=order.filled_qty if order is not None else remaining,
+        # What the buy brought in: a coin's fill less the fee Alpaca kept of it.
+        bought_qty=order.received_qty if order is not None else remaining,
         remaining_qty=remaining,
         guru_price=guru_price,
         price=price,

@@ -35,6 +35,7 @@ def destination_signal(
     revision: str = "a" * 64,
     account_id: str = "paper-demo",
     repeat_window_minutes: int | None = 10,
+    environment: str = "paper",
 ) -> DestinationSignal:
     return DestinationSignal(
         signal=signal,
@@ -45,7 +46,7 @@ def destination_signal(
                     "full_position_usd": full_position_usd,
                 }
             ),
-            environment="paper",
+            environment=environment,
             configuration_revision=revision,
             repeat_window_minutes=repeat_window_minutes,
         ),

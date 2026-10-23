@@ -1,17 +1,19 @@
 """Test doubles for execution: an in-memory repository and a scripted broker."""
 
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from copytrading_engine.execution.adapters.alpaca.models import (
     decode_account,
     decode_asset,
     decode_broker_order,
     decode_calendar,
+    decode_positions,
 )
 from copytrading_engine.execution.application.ports import BrokerError
 from copytrading_engine.execution.domain.events import JournalEvent
 from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
-from copytrading_engine.execution.domain.market import Position
+
+COIN = Decimal("0.000000001")
 
 
 class MemoryRepository:
@@ -45,6 +47,7 @@ class FakeBroker:
         # What Alpaca says an order is when it is sent; it can hold one as pending_new first.
         self.submitted_status = "new"
         self.market_fill_price = "24.50"
+        self.crypto_fee_rate = Decimal("0.0025")
         # Symbols Alpaca does not list: asking for one answers 404.
         self.unknown_symbols: set[str] = set()
         self.account_data = {
@@ -66,6 +69,20 @@ class FakeBroker:
     def asset(self, symbol):
         if symbol in self.unknown_symbols:
             raise BrokerError(404)
+        if "/" in symbol:
+            # As Alpaca lists BTC/USD (paper, 23 October 2026).
+            return decode_asset(
+                {
+                    "symbol": symbol,
+                    "class": "crypto",
+                    "status": "active",
+                    "tradable": True,
+                    "fractionable": True,
+                    "min_order_size": "0.000012307",
+                    "min_trade_increment": "0.000000001",
+                    "price_increment": "0.000000001",
+                }
+            )
         return decode_asset(
             {
                 "symbol": symbol,
@@ -80,15 +97,18 @@ class FakeBroker:
         return decode_calendar([{"date": date, "open": "09:30", "close": "16:00"}])
 
     def positions(self):
-        return tuple(
-            Position(
-                symbol=symbol,
-                qty=qty,
-                market_value=qty * Decimal("25"),
-                currency="USD",
-                asset_class="us_equity",
-            )
-            for symbol, qty in self.holdings.items()
+        # Alpaca lists a coin held without its pair's slash (BTCUSD), as the adapter decodes it.
+        return decode_positions(
+            [
+                {
+                    "symbol": symbol.replace("/", ""),
+                    "qty": str(qty),
+                    "market_value": str(qty * Decimal("25")),
+                    "currency": "USD",
+                    "asset_class": "crypto" if "/" in symbol else "us_equity",
+                }
+                for symbol, qty in self.holdings.items()
+            ]
         )
 
     def open_orders(self):
@@ -106,7 +126,12 @@ class FakeBroker:
         o = self.orders[client_id]
         delta = Decimal(qty) - Decimal(o["filled_qty"])
         side = 1 if o["side"] == "buy" else -1
-        self.holdings[o["symbol"]] = self.holdings.get(o["symbol"], Decimal(0)) + side * delta
+        received = delta
+        if "/" in o["symbol"] and o["side"] == "buy":
+            # Alpaca keeps its fee out of the coin bought: 0.25% at tier 1, to the billionth.
+            fee = (delta * self.crypto_fee_rate).quantize(COIN, rounding=ROUND_HALF_UP)
+            received = delta - fee
+        self.holdings[o["symbol"]] = self.holdings.get(o["symbol"], Decimal(0)) + side * received
         o.update(
             filled_qty=str(qty),
             filled_avg_price=o.get("limit_price") or self.market_fill_price,

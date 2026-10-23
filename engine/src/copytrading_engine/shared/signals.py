@@ -1,4 +1,4 @@
-"""Version 2 stock signal contract. Prices and quantities are decimal strings."""
+"""Version 2 signal contract, for stocks and coins. Prices and quantities are decimal strings."""
 
 from decimal import Decimal
 from typing import Literal, Self
@@ -8,7 +8,10 @@ from pydantic_core import PydanticCustomError
 
 from copytrading_engine.shared.reading import PostReading
 from copytrading_engine.shared.route_keys import guru_for_channel
+from copytrading_engine.shared.symbols import SYMBOL_PATTERN
 
+# The highest price a call may carry: a coin's, such as bitcoin's, runs above any stock's.
+MAX_PRICE = Decimal(10_000_000)
 # Models write 1/6 as 0.16666666666666666; Decimal division gives 28 digits. Same fraction.
 FRACTION_TOLERANCE = Decimal("1e-9")
 
@@ -34,11 +37,12 @@ class Instruction(BaseModel):
         )
 
     action: Literal["buy", "reduce", "close"]
-    symbol: str = Field(pattern=r"^[A-Z]{1,5}(?:[.][A-Z])?$")
+    # A stock, or a coin's US dollar pair (shared.symbols).
+    symbol: str = Field(pattern=SYMBOL_PATTERN)
     # The guru's price. A sell the post gives no price, or says is at the market, has none: it
     # sells at the market when it is placed, as a limit just under the live bid (ADR-0007).
-    price: Decimal | None = Field(gt=0, le=100000)
-    entry_price: Decimal | None = Field(default=None, gt=0, le=100000)
+    price: Decimal | None = Field(gt=0, le=MAX_PRICE)
+    entry_price: Decimal | None = Field(default=None, gt=0, le=MAX_PRICE)
     fraction: Decimal | None = Field(default=None, gt=0, le=1, allow_inf_nan=False)
     # A buy the post sizes in dollars ("$200 of NFLX"): that amount, never more than the account's
     # full position for the guru, instead of a share of the full position.

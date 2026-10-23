@@ -13,6 +13,9 @@ class Session(StrEnum):
     REGULAR = "regular"
     EXTENDED = "extended"
     OVERNIGHT = "overnight"
+    # Crypto trades every hour of every day; no stock session, extended hours, or overnight rule
+    # applies to it (ADR-0014).
+    AROUND_THE_CLOCK = "around_the_clock"
 
 
 def trade_date(now: dt.datetime) -> dt.date:

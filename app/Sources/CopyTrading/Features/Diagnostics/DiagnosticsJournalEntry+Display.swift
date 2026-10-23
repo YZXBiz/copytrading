@@ -115,6 +115,8 @@ extension DiagnosticsJournalEntry {
             "destination_id", "attempt", "signal_ref", "payload_bytes", "redacted_fields",
         ]
         let byName = Dictionary(fields.map { ($0.name, $0.value) }, uniquingKeysWith: { first, _ in first })
+        // A coin's quantities read to the billionth; a stock's, as shares.
+        let symbol = byName["symbol"] ?? ""
         return shown.compactMap { name in
             guard let value = byName[name] else { return nil }
             switch name {
@@ -122,11 +124,11 @@ extension DiagnosticsJournalEntry {
             case "symbol":
                 let side = byName["side"].map { L10n.string($0 == "sell" ? "Sell" : "Buy") }
                 return (L10n.string("Stock"), [side, value].compactMap { $0 }.joined(separator: " "))
-            case "qty": return (L10n.string("Shares"), Decimal(engine: value).map { Humanize.shareCount($0) } ?? value)
+            case "qty": return (L10n.string("Shares"), Decimal(engine: value).map { Humanize.shareCount($0, of: symbol) } ?? value)
             case "limit_price": return (L10n.string("Limit price"), Decimal(engine: value).map(Humanize.usd) ?? value)
             case "source_price": return (L10n.string("Guru's price"), Decimal(engine: value).map(Humanize.usd) ?? value)
             case "status": return (L10n.string("Status"), L10n.string(Humanize.code(value)))
-            case "filled_qty": return (L10n.string("Filled"), Decimal(engine: value).map { Humanize.shareCount($0) } ?? value)
+            case "filled_qty": return (L10n.string("Filled"), Decimal(engine: value).map { Humanize.shareCount($0, of: symbol) } ?? value)
             case "filled_avg_price": return (L10n.string("Average fill"), Decimal(engine: value).map(Humanize.usd) ?? value)
             case "reason": return (L10n.string("Reason"), Reason.text(value))
             case "previous_stage": return (L10n.string("After"), L10n.string(Self.stageTitles[value] ?? Humanize.code(value)))

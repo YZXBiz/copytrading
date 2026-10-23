@@ -13,11 +13,26 @@ from typing import Annotated, Literal, Self
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
+from copytrading_engine.shared.symbols import SYMBOL_PATTERN, crypto_pair
+
 Words = Annotated[str, Field(min_length=1, max_length=200)]
 """The post's exact words behind a value."""
 
-Money = Annotated[Decimal, Field(gt=0, le=100000, allow_inf_nan=False)]
-Ticker = Annotated[str, Field(pattern=r"^[A-Z]{1,5}(?:[.][A-Z])?$")]
+# Up to a coin's price, such as bitcoin's (signals.MAX_PRICE).
+Money = Annotated[Decimal, Field(gt=0, le=10_000_000, allow_inf_nan=False)]
+_WRITTEN_PAIR = re.compile(r"[A-Za-z]{2,10}[/-]?(?:USDT|USDC|USD)", re.IGNORECASE)
+
+
+def _pair(value: object) -> object:
+    """A coin the reader writes as a pair in another spelling (BTCUSD, btc-usd) is its pair,
+    BTC/USD. A bare ticker is left alone: BTC is an ETF as well as a coin."""
+    if isinstance(value, str) and _WRITTEN_PAIR.fullmatch(value.strip()):
+        return crypto_pair(value) or value
+    return value
+
+
+# A stock, or a coin's US dollar pair (shared.symbols).
+Ticker = Annotated[str, BeforeValidator(_pair), Field(pattern=SYMBOL_PATTERN)]
 
 
 class _Part(BaseModel):
@@ -130,7 +145,8 @@ type SellFrom = Annotated[Lot | NotSaid, Field(discriminator="kind")]
 
 
 class Stock(_Part):
-    """The ticker, and the post's words for it: the ticker itself or a name the playbook maps."""
+    """The ticker, or a coin's US dollar pair (BTC/USD), and the post's words for it: the ticker
+    itself, a coin's ticker or name (BTC, bitcoin, 比特币), or a name the playbook maps."""
 
     ticker: Ticker
     words: Words
