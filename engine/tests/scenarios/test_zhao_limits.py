@@ -34,14 +34,20 @@ async def test_the_symbol_cap_stops_a_second_buy_of_the_same_stock_only(tmp_path
         assert outcomes(other, "paper") == ("order_linked",)
 
 
-async def test_the_total_cap_stops_buys_across_stocks(tmp_path):
+async def test_the_total_cap_cuts_the_next_buy_to_the_room_left_across_stocks(tmp_path):
     accounts = {"paper": Account(cash="10000", limits={"max_total_usd": "900"})}
     async with Rig(tmp_path, accounts, {"NVDA": "125", "AMD": "100"}) as rig:
         rig.reader.expect("买入 NVDA 125", buy("NVDA", "125"))
         rig.reader.expect("买入 AMD 100", buy("AMD", "100"))
-        await rig.post("买入 NVDA 125")
+        first = await rig.post("买入 NVDA 125")
         second = await rig.post("买入 AMD 100")
-        assert outcomes(second, "paper") == ("total_exposure_cap",)
+        assert outcomes(second, "paper") == ("order_linked",)
+        [nvda] = orders(first, "paper")
+        [amd] = orders(second, "paper")
+        assert amd.limited_by == "total_exposure_cap"
+        assert nvda.budget_usd is not None
+        assert amd.budget_usd is not None
+        assert nvda.budget_usd + amd.budget_usd <= Decimal(900)
 
 
 async def test_the_daily_entry_cap_counts_buys_not_sells(tmp_path):
@@ -103,12 +109,13 @@ async def test_paused_entries_skip_buys_keep_sells_and_resume(tmp_path):
         assert outcomes(resumed, "paper") == ("order_linked",)
 
 
-async def test_a_post_that_arrives_late_goes_to_review_and_is_not_traded(tmp_path):
+async def test_a_buy_that_arrives_late_is_read_and_not_traded(tmp_path):
     async with Rig(tmp_path, {"paper": Account(cash="1000")}, {"NVDA": "125"}) as rig:
         rig.reader.expect("买入 NVDA 125", buy("NVDA", "125"))
-        late = await rig.post("买入 NVDA 125", age_seconds=600)
+        # Past the ten minutes a buy may be (ADR-0010).
+        late = await rig.post("买入 NVDA 125", age_seconds=660)
         destination = next(d for d in late.destinations if d.account_id == "paper")
-        assert destination.status == "review_required"
+        assert destination.status == "stale"
         assert rig.brokers["paper"].submitted() == []
 
 

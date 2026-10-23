@@ -75,16 +75,17 @@ def test_exposure_rejection_names_both_limits_and_saved_amounts():
     engine.process(NOW)
     engine.config = CopyConfig(
         sources=["discord:demo"],
-        max_symbol_usd=Decimal(150),
-        max_total_usd=Decimal(150),
+        # $100 held leaves 50 cents under each: less than Alpaca's $1 minimum.
+        max_symbol_usd=Decimal("100.50"),
+        max_total_usd=Decimal("100.50"),
     )
     later = NOW + dt.timedelta(minutes=11)
     receive(engine, StockSignal.model_validate(event(id="second", timestamp=later)), later)
     engine.process(later)
     notice = repository.notices[-1].payload.annotations
     assert "Symbol and total exposure limits" in notice["evidence"]
-    assert "Symbol cost exposure $100 + proposed budget $100 > $150 limit" in notice["evidence"]
-    assert "Total cost exposure $100 + proposed budget $100 > $150 limit" in notice["evidence"]
+    assert "Symbol cost exposure $100 + proposed budget $100 > $100.5 limit" in notice["evidence"]
+    assert "Total cost exposure $100 + proposed budget $100 > $100.5 limit" in notice["evidence"]
     assert broker.calls == 1
 
 

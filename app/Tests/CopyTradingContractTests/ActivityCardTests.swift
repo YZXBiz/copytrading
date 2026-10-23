@@ -10,6 +10,13 @@ func runActivityCardTests() throws {
     try readAsSaysEachCallInPlainWords()
     try aRepeatedNumberIsMarkedBesideTheOtherCitedWords()
     try aTrimmedBuyIsTradedSmallerAndSaysByHowMuch()
+    try aBuyCutToTheRoomLeftNamesTheLimitThatCutIt()
+    try aSellReadLateWaitsAtItsFloorUnderTheGurusPrice()
+    try aSellCancelledWithTheMarketAboveItsFloorNeverReadsAsOverALimit()
+    try aSellNotFilledByTheCloseSaysTheMarketStayedUnderItsFloor()
+    try aPostOfBuysReadTooLateSaysHowLate()
+    try aSellOlderThanEveryBuyHeldSaysWhenEachWasPosted()
+    try aSellWithNoBidYetSaysItWaitsForAPrice()
     try aLotSoldByHandStaysTheOwners()
     try aPostTheOwnerTradedByHandReadsAsTheirs()
     try aBuyNamesTheGurusPriceAndTheAllowanceItsLimitUsed()
@@ -237,7 +244,7 @@ private func aTrimmedBuyIsTradedSmallerAndSaysByHowMuch() throws {
         result.facts
             == [
                 .init(label: "Shares", value: "42 shares"),
-                .init(label: "Order", value: "$250 · your max per order"),
+                .init(label: "Order", value: "$250 · your largest single buy"),
                 .init(label: "The call asked for", value: "$333.33"),
             ],
         "facts were \(result.facts)")
@@ -341,23 +348,225 @@ private func aSkipNamesTheLimitWithItsNumbers() throws {
     let source = try soun()
         .destination(
             "zhao-paper", status: "done", outcomes: ["symbol_exposure_cap"],
-            limits: [["part": 0, "scope": "symbol", "current": "1900", "proposed": "333.33", "limit": "2000"]]
+            limits: [["part": 0, "scope": "symbol", "current": "1999.50", "proposed": "333.33", "limit": "2000"]]
         )
         .build()
 
     let outcome = ActivityCardOutcome(source, skipped: false)
 
     try #require(outcome.title == "Skipped", "badge was \(outcome.title)")
+    // A cap cuts a buy to the room left; it skips one only when less than Alpaca's $1 minimum is left.
     try #require(
         outcome.accounts.first?.results
             == [
                 .init(
-                    headline: "Not bought: over your SOUN limit",
+                    headline: "Not bought: SOUN is at your limit for one stock",
                     facts: [
-                        .init(label: "Holding SOUN", value: "$1,900"), .init(label: "This buy", value: "$333.33"),
-                        .init(label: "Limit", value: "$2,000"),
-                    ])
+                        .init(label: "Holding SOUN", value: "$1,999.50"), .init(label: "Limit", value: "$2,000"),
+                        .init(label: "Room left", value: "$0.50"),
+                    ],
+                    note: "Less than $1 is left, Alpaca's smallest order.")
             ], "results were \(outcome.accounts.first?.results ?? [])")
+}
+
+/// A sixth of SOUN with $1,900 of a $2,000 per-stock limit held: it buys the $100 left, not nothing,
+/// and says which limit cut it (ADR-0010).
+@MainActor
+private func aBuyCutToTheRoomLeftNamesTheLimitThatCutIt() throws {
+    let source = try soun()
+        .destination(
+            "zhao-paper", status: "done", outcomes: ["order_linked"],
+            orders: [
+                [
+                    "client_id": "c1", "symbol": "SOUN", "side": "buy", "status": "filled", "quantity": "17",
+                    "filled_quantity": "17", "limit_price": "5.85", "average_fill_price": "5.85", "broker_id": "b1",
+                    "created_at": "2026-10-05T14:30:01Z", "instruction_index": 0, "requested_usd": "333.33",
+                    "budget_usd": "100", "limited_by": "symbol_exposure_cap",
+                ]
+            ]
+        )
+        .build()
+
+    let result = try #require(ActivityCardOutcome(source, skipped: false).accounts.first?.results.first)
+
+    try #require(
+        result.facts.contains(.init(label: "Order", value: "$100 · the room left under your SOUN limit")),
+        "facts were \(result.facts)")
+    try #require(result.facts.contains(.init(label: "The call asked for", value: "$333.33")), "facts were \(result.facts)")
+}
+
+/// Zhao's "soxl 日内撤" read two hours late, after the stock fell: it still goes out, at its floor
+/// under the guru's price, and waits there for the market (ADR-0010).
+@MainActor
+private func aSellReadLateWaitsAtItsFloorUnderTheGurusPrice() throws {
+    let source = try SourceActivityBuilder()
+        .decision("trade", reason: "Sold")
+        .posted(at: "2026-10-05T14:30:00Z")
+        .calls([
+            [
+                "action": "close", "symbol": "SOXL", "price": "92.30", "entry_price": NSNull(), "fraction": "1",
+                "exit_basis": NSNull(),
+            ]
+        ])
+        .destination(
+            "zhap-account-2", status: "done", outcomes: ["order_linked"],
+            orders: [
+                [
+                    "client_id": "s1", "symbol": "SOXL", "side": "sell", "status": "new", "quantity": "2.779841",
+                    "filled_quantity": "0", "limit_price": "91.38", "average_fill_price": NSNull(),
+                    "broker_id": "b1", "created_at": "2026-10-05T16:30:00Z", "instruction_index": 0,
+                    "source_price": "92.30", "entry_tolerance_pct": "1", "quote_bid": "86.10", "quote_ask": "86.12",
+                ]
+            ]
+        )
+        .build()
+
+    let result = try #require(ActivityCardOutcome(source, skipped: false).accounts.first?.results.first)
+
+    try #require(
+        result.note
+            == "Read 120 min after the guru posted it. A sell is always copied, at no less than your lowest price.",
+        "note was \(String(describing: result.note))")
+    try #require(
+        result.facts.contains(.init(label: "Lowest sell price", value: "$91.38 (1% under the guru's $92.30)")),
+        "facts were \(result.facts)")
+    try #require(result.facts.contains(.init(label: "Market", value: "$86.10, under it")), "facts were \(result.facts)")
+}
+
+/// The SOXS sell of Oct 23: a floor of $53.66 under the guru's $54.20 and a bid of $53.85. The market
+/// was above the floor, so nothing about it reads as over a limit, and the ruler marks no miss.
+@MainActor
+private func aSellCancelledWithTheMarketAboveItsFloorNeverReadsAsOverALimit() throws {
+    let source = try SourceActivityBuilder()
+        .decision("trade", reason: "Sold")
+        .posted(at: "2026-10-23T13:30:27Z")
+        .calls([
+            [
+                "action": "reduce", "symbol": "SOXS", "price": "54.20", "entry_price": "53.50", "fraction": "0.5",
+                "exit_basis": "original_position",
+            ]
+        ])
+        .destination(
+            "zhap-account-2", status: "done", outcomes: ["order_linked"],
+            orders: [
+                [
+                    "client_id": "s1", "symbol": "SOXS", "side": "sell", "status": "canceled", "quantity": "1.542291",
+                    "filled_quantity": "0", "limit_price": "53.66", "average_fill_price": NSNull(),
+                    "broker_id": "b1", "created_at": "2026-10-23T13:30:29Z", "instruction_index": 0,
+                    "source_price": "54.20", "entry_tolerance_pct": "1", "quote_bid": "53.85", "quote_ask": "53.96",
+                    "cancel_reason": "timeout", "submitted_at": "2026-10-23T13:30:29Z",
+                    "ended_at": "2026-10-23T13:31:49Z",
+                ]
+            ]
+        )
+        .build()
+
+    let result = try #require(ActivityCardOutcome(source, skipped: false).accounts.first?.results.first)
+
+    try #require(result.headline == "Not sold: not filled in time", "headline was \(result.headline)")
+    let prices = try #require(result.prices)
+    try #require(!prices.buying && prices.market > prices.limit, "prices were \(prices)")
+    try #require(
+        result.facts.first == .init(label: "Guru's price", value: "$54.20 − 1% allowed"), "facts were \(result.facts)")
+    try #require(!result.facts.contains { $0.value.contains("over your limit") }, "facts were \(result.facts)")
+}
+
+/// A sell still at its floor when the trading day ended: Alpaca expired it, and the card says the
+/// market never came up to the floor.
+@MainActor
+private func aSellNotFilledByTheCloseSaysTheMarketStayedUnderItsFloor() throws {
+    let source = try SourceActivityBuilder()
+        .decision("trade", reason: "Sold")
+        .posted(at: "2026-10-23T19:30:00Z")
+        .calls([
+            [
+                "action": "close", "symbol": "F", "price": "12.00", "entry_price": NSNull(), "fraction": "1",
+                "exit_basis": NSNull(),
+            ]
+        ])
+        .destination(
+            "zhap-account-2", status: "done", outcomes: ["order_linked"],
+            orders: [
+                [
+                    "client_id": "s1", "symbol": "F", "side": "sell", "status": "expired", "quantity": "7",
+                    "filled_quantity": "0", "limit_price": "11.88", "average_fill_price": NSNull(),
+                    "broker_id": "b1", "created_at": "2026-10-23T19:30:02Z", "instruction_index": 0,
+                    "source_price": "12.00", "entry_tolerance_pct": "1", "quote_bid": "11.60", "quote_ask": "11.61",
+                    "cancel_reason": "expired", "ended_at": "2026-10-23T20:00:00Z",
+                ]
+            ]
+        )
+        .build()
+
+    let result = try #require(ActivityCardOutcome(source, skipped: false).accounts.first?.results.first)
+
+    try #require(
+        result.headline == "Not sold by the close: the market stayed under your lowest price $11.88",
+        "headline was \(result.headline)")
+}
+
+/// Zhao sold SOXL on Monday while copying was stopped and bought again on Wednesday: Monday's sell,
+/// read back afterwards, leaves Wednesday's shares and says why, with both times.
+@MainActor
+private func aSellOlderThanEveryBuyHeldSaysWhenEachWasPosted() throws {
+    let source = try SourceActivityBuilder()
+        .decision("trade", reason: "Sold")
+        .posted(at: "2026-10-05T17:02:00Z")
+        .calls([
+            [
+                "action": "close", "symbol": "SOXL", "price": "92.30", "entry_price": NSNull(), "fraction": "1",
+                "exit_basis": NSNull(),
+            ]
+        ])
+        .destination(
+            "zhap-account-2", status: "done", outcomes: ["bought_after_sell"],
+            laterBuys: [["part": 0, "bought_at": "2026-10-07T16:41:00Z"]]
+        )
+        .build()
+
+    let result = try #require(ActivityCardOutcome(source, skipped: false).accounts.first?.results.first)
+
+    try #require(
+        result.headline.hasPrefix("Not sold: zhap-account-2's SOXL was bought after this sell was posted ("),
+        "headline was \(result.headline)")
+    try #require(result.headline.contains("Wed") && result.headline.contains("Mon"), "headline was \(result.headline)")
+}
+
+/// A sell at the market read while Alpaca has no fresh bid: it keeps working, and says what for.
+@MainActor
+private func aSellWithNoBidYetSaysItWaitsForAPrice() throws {
+    let source = try SourceActivityBuilder()
+        .decision("trade", reason: "Sold")
+        .calls([
+            [
+                "action": "close", "symbol": "SOXL", "price": NSNull(), "entry_price": NSNull(), "fraction": "1",
+                "exit_basis": NSNull(),
+            ]
+        ])
+        .destination("zhap-account-2", status: "queued", outcomes: ["waiting_for_quote"])
+        .build()
+
+    let card = ActivityCardOutcome(source, skipped: false)
+    let result = try #require(card.accounts.first?.results.first)
+
+    try #require(result.headline == "Waiting for a price to sell at", "headline was \(result.headline)")
+    try #require(card.title != "Skipped", "title was \(card.title)")
+}
+
+/// A buy read 14 minutes after it was posted, past the account's signal age: it says how late.
+@MainActor
+private func aPostOfBuysReadTooLateSaysHowLate() throws {
+    let late = try soun()
+        .posted(at: "2026-10-05T14:30:00Z").captured(at: "2026-10-05T14:44:00Z")
+        .destination("zhao-paper", status: "stale", outcomes: ["pending"])
+        .build()
+
+    let result = try #require(ActivityCardOutcome(late, skipped: false).accounts.first?.results.first)
+
+    try #require(result.headline == "Not copied", "headline was \(result.headline)")
+    try #require(
+        result.note == "Read 14 min after it was posted: older than this account copies buys. A sell is always copied.",
+        "note was \(String(describing: result.note))")
 }
 
 @MainActor

@@ -25,9 +25,10 @@ CATALOGS = ROOT / "app" / "Sources" / "AppLocalizationCore" / "Resources"
 ENTRY = re.compile(r'^"((?:[^"\\]|\\.)*)"\s*=\s*"((?:[^"\\]|\\.)*)";$')
 CJK = re.compile(r"[一-鿿]")
 
-# Not a refusal the flow shows: a success, a warning it does not show, and the hold for approval
-# that a copy by hand has already passed.
-NOT_A_REFUSAL = {"ready", "plan_unavailable", "approval_required"}
+# Not a refusal the flow shows: a success, a warning it does not show, the hold for approval
+# that a copy by hand has already passed, and a preview's note that a call names no size (the
+# flow sizes it with the account's largest single buy).
+NOT_A_REFUSAL = {"ready", "plan_unavailable", "approval_required", "unsized_buy"}
 # Codes the engine derives where they are read, not where they are written down.
 DERIVED = {"not_sent", "broker_rejected", "uncertain", "record_failed", "account_unavailable"}
 
@@ -95,7 +96,9 @@ def emitted() -> set[str]:
         "execution/application/manual_commands.py", {"_confirmation_block", "_evaluate"}
     )
     codes |= written_in("execution/application/engine.py", {"decide", "_market_bid"})
-    codes |= written_in("execution/domain/risk.py", {"entry_budget", "requested_entry_budget"})
+    codes |= written_in(
+        "execution/domain/risk.py", {"entry_budget", "requested_entry_budget", "_asked"}
+    )
     # Built from the scope that was breached.
     codes |= {"symbol_exposure_cap", "total_exposure_cap", "symbol_and_total_exposure_cap"}
     codes |= written_in("execution/domain/ownership.py", {"account_activity_reason"})

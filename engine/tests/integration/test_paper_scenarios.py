@@ -548,3 +548,26 @@ async def test_a_sell_with_no_price_goes_at_a_limit_under_the_bid(tmp_path):
         assert (sold.side, sold.quantity) == ("sell", bought.filled_quantity), sold
         assert sold.limit_price <= bid, sold
         assert sold.limit_price >= (bid * Decimal("0.98")).quantize(CENT), sold
+
+
+# Sells that wait
+
+
+async def test_a_sell_above_the_market_keeps_working_past_the_timeout(tmp_path):
+    """The guru sold above where the stock is now: the copy waits at its floor, 1% under the guru's
+    price, and is not cancelled when the order timeout passes (ADR-0010). Goes out unmarked for
+    extended hours in the regular session."""
+    price = await guru_price(SYMBOL)
+    bid, _ = await quote(SYMBOL)
+    high = (bid * Decimal("1.03")).quantize(CENT)
+    posts = (Post(f"Bought {SYMBOL} at {price}"), Post(f"Sold all my {SYMBOL} at {high}"))
+    async with Rig(tmp_path, posts, policy={"order_timeout_seconds": 15}) as rig:
+        bought = _one(await rig.post(0, until=filled))
+        sold = _one(await rig.post(1, until=placed))
+        assert (sold.side, sold.quantity) == ("sell", bought.filled_quantity), sold
+        assert sold.limit_price == (high * Decimal("0.99")).quantize(CENT, rounding=ROUND_UP)
+        await asyncio.sleep(40)
+        resting = await open_orders(SYMBOL)
+        assert [order["client_order_id"] for order in resting] == [sold.client_id], resting
+        if sold.session == "regular":
+            assert resting[0]["extended_hours"] is False, resting

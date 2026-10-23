@@ -50,8 +50,9 @@ def decide(limits=None, facts=FACTS, connection=FIXED, fraction=None, usd=None):
         ({"account_active": False}, "account_blocked"),
         ({"equity": Decimal(4750)}, "daily_loss_cap"),
         ({"entries_today": 30}, "daily_entry_cap"),
-        ({"symbol_exposure": Decimal("500.01")}, "symbol_exposure_cap"),
-        ({"total_exposure": Decimal("2400.01")}, "total_exposure_cap"),
+        # Less than Alpaca's $1 minimum left under a cap.
+        ({"symbol_exposure": Decimal("599.01")}, "symbol_exposure_cap"),
+        ({"total_exposure": Decimal("2499.01")}, "total_exposure_cap"),
         ({"cash": Decimal("99.99")}, "insufficient_cash"),
         ({"buying_power": Decimal("99.99")}, "insufficient_cash"),
     ],
@@ -74,13 +75,50 @@ def test_exact_exposure_and_cash_caps_allow_the_budget():
 
 
 def test_both_exposure_caps_report_current_proposed_and_limit():
-    facts = replace(FACTS, symbol_exposure=Decimal("550"), total_exposure=Decimal("2450"))
+    facts = replace(FACTS, symbol_exposure=Decimal("599.50"), total_exposure=Decimal("2499.50"))
     decision = decide(facts=facts)
     assert decision.reason == "symbol_and_total_exposure_cap"
     assert [(b.scope, b.current, b.proposed, b.limit) for b in decision.breaches] == [
-        ("symbol", Decimal(550), Decimal(100), Decimal(600)),
-        ("total", Decimal(2450), Decimal(100), Decimal(2500)),
+        ("symbol", Decimal("599.50"), Decimal(100), Decimal(600)),
+        ("total", Decimal("2499.50"), Decimal(100), Decimal(2500)),
     ]
+
+
+@pytest.mark.parametrize(
+    ("changes", "budget", "limit"),
+    [
+        pytest.param(
+            {"symbol_exposure": Decimal(550)}, Decimal(50), "symbol_exposure_cap", id="stock"
+        ),
+        pytest.param(
+            {"total_exposure": Decimal(2470)}, Decimal(30), "total_exposure_cap", id="total"
+        ),
+        pytest.param(
+            {"symbol_exposure": Decimal(550), "total_exposure": Decimal(2480)},
+            Decimal(20),
+            "total_exposure_cap",
+            id="the-tighter-of-both",
+        ),
+        pytest.param(
+            {"symbol_exposure": Decimal(599)}, Decimal(1), "symbol_exposure_cap", id="one-dollar"
+        ),
+    ],
+)
+def test_a_cap_trims_a_buy_to_the_room_left_and_says_which(changes, budget, limit):
+    decision = decide(facts=replace(FACTS, **changes))
+
+    assert (decision.budget, decision.requested, decision.limited_by) == (
+        budget,
+        Decimal(100),
+        limit,
+    )
+    assert decision.trimmed
+
+
+def test_the_daily_loss_cap_still_refuses_outright():
+    decision = decide(facts=replace(FACTS, equity=Decimal(4750), symbol_exposure=Decimal(0)))
+
+    assert (decision.budget, decision.reason) == (None, "daily_loss_cap")
 
 
 @given(
@@ -135,9 +173,31 @@ def test_shares_round_down_so_six_sixths_never_pass_the_full_position():
 
 
 def test_the_requested_budget_needs_no_account_facts():
-    assert requested_entry_budget(FULL_3000, Decimal(1) / 6).budget == Decimal("500.00")
-    # A call with no size asks for the full position (ADR-0010).
-    assert requested_entry_budget(FULL_3000, None).budget == Decimal("3000.00")
+    asked = requested_entry_budget(FULL_3000, Decimal(1) / 6, None, unsized_usd=Decimal(200))
+    assert asked.budget == Decimal("500.00")
+    # A call with no size buys the largest single buy, never more than the full position.
+    assert requested_entry_budget(
+        FULL_3000, None, None, unsized_usd=Decimal(200)
+    ).budget == Decimal("200.00")
+    assert requested_entry_budget(
+        FULL_3000, None, None, unsized_usd=Decimal(9000)
+    ).budget == Decimal("3000.00")
+    # Without one, a preview says the call has no size, for the app to name the amount.
+    assert requested_entry_budget(FULL_3000, None, None, unsized_usd=None).reason == "unsized_buy"
+
+
+def test_a_call_with_no_size_buys_the_largest_single_buy_untrimmed():
+    limits = Limits(max_order_usd=Decimal(200), max_symbol_usd=Decimal(1000))
+    connection = RouteConnection(account_id="a", full_position_usd=Decimal(1000))
+
+    decision = decide(limits, connection=connection)
+
+    assert (decision.budget, decision.requested, decision.limited_by) == (
+        Decimal(200),
+        Decimal(200),
+        None,
+    )
+    assert not decision.trimmed
 
 
 def test_the_maximum_per_order_trims_a_buy_and_says_so():
@@ -146,15 +206,16 @@ def test_the_maximum_per_order_trims_a_buy_and_says_so():
 
     decision = decide(limits, connection=connection, fraction=Decimal("0.5"))
 
-    assert (decision.budget, decision.requested, decision.trimmed) == (
+    assert (decision.budget, decision.requested, decision.trimmed, decision.limited_by) == (
         Decimal(100),
         Decimal("300.00"),
         True,
+        "largest_single_buy",
     )
     assert not decide(limits, connection=connection, fraction=Decimal(1) / 6).trimmed
 
 
-def test_a_sold_lot_leaves_in_stocks_while_shares_held_outside_still_count():
+def test_a_sold_lot_leaves_and_the_owners_own_shares_are_not_counted():
     sold = OwnedLot(
         symbol="PM",
         entry_price=Decimal("201"),
@@ -176,8 +237,37 @@ def test_a_sold_lot_leaves_in_stocks_while_shares_held_outside_still_count():
 
     exposure = account_exposure((outside, closed), (sold,), (), account_currency="USD")
 
-    assert exposure.by_symbol == {"CBRS": Decimal("2086")}
-    assert exposure.total == Decimal("2086")
+    # The limits bound what CopyTrading does: the owner's CBRS is theirs.
+    assert exposure.by_symbol == {}
+    assert exposure.total == Decimal(0)
+
+
+def test_only_the_copied_shares_of_a_stock_count_at_what_they_are_worth_or_cost():
+    copied = OwnedLot(
+        symbol="SOXL",
+        entry_price=Decimal(90),
+        source_key="discord:1",
+        original_qty=Decimal(2),
+        remaining_qty=Decimal(2),
+        average_price=Decimal(90),
+        entry_remaining={"b1": Decimal(2)},
+        entry_prices={"b1": Decimal(90)},
+    )
+
+    def held(value: str) -> Position:
+        # 2 copied shares and 8 of the owner's own, 10 in all.
+        return Position(
+            symbol="SOXL",
+            qty=Decimal(10),
+            market_value=Decimal(value),
+            currency="USD",
+            asset_class="us_equity",
+        )
+
+    # Worth $100 a share now: the 2 copied shares count $200, not the position's $1,000.
+    assert account_exposure((held("1000"),), (copied,), (), account_currency="USD").total == 200
+    # Worth less than they cost: they count what they cost.
+    assert account_exposure((held("500"),), (copied,), (), account_currency="USD").total == 180
 
 
 def test_a_dollar_size_buys_that_amount_never_more_than_the_full_position():

@@ -150,8 +150,9 @@ def size_destinations(
         for instruction in instructions:
             if instruction.action == "buy":
                 assert instruction.price is not None  # a buy always has the guru's price
+                # A call with no size buys the account's largest single buy, which the app shows.
                 sized = requested_entry_budget(
-                    connection, instruction.fraction, instruction.usd_amount
+                    connection, instruction.fraction, instruction.usd_amount, unsized_usd=None
                 )
                 quantity = (
                     (sized.budget / instruction.price).quantize(
@@ -247,7 +248,9 @@ class ProfileEvaluationService:
         evaluations = size_destinations(instructions, destinations)
         review_reasons = [signal.reason] if signal.decision == "review" else []
         review_reasons += [
-            item.reason for item in evaluations if item.action == "buy" and item.reason != "ready"
+            item.reason
+            for item in evaluations
+            if item.action == "buy" and item.reason not in {"ready", "unsized_buy"}
         ]
         return ProfileEvaluation(
             message_identity=message.identity,

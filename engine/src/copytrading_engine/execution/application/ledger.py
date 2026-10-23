@@ -10,6 +10,7 @@ from copytrading_engine.execution.application.ports import ExecutionObserver, Le
 from copytrading_engine.execution.domain.events import (
     AccountControlChanged,
     AccountInventoried,
+    CancelRequested,
     CashAnchorRecorded,
     Exposure,
     JournalEvent,
@@ -31,6 +32,8 @@ from copytrading_engine.execution.domain.events import (
     OrderUpdate,
     OwnershipIncidentOpened,
     OwnershipResolved,
+    SellWaiting,
+    SendAborted,
     SubmissionAborted,
     SubmissionUncertain,
     SubmitError,
@@ -63,7 +66,14 @@ from copytrading_engine.execution.domain.order_lifecycle import (
     map_broker_status,
     validate_transition,
 )
-from copytrading_engine.execution.domain.orders import OrderPlan, OrderRecord, OwnedLot
+from copytrading_engine.execution.domain.orders import (
+    LIVE_AT_BROKER,
+    CancelReason,
+    OrderPlan,
+    OrderRecord,
+    OwnedLot,
+    copy_client_id,
+)
 from copytrading_engine.execution.domain.ownership import (
     ExternalPosition,
     OwnershipIncident,
@@ -77,6 +87,7 @@ from copytrading_engine.execution.domain.progress import (
     InstructionProgress,
     OrderLinked,
     Pending,
+    SellWait,
     Skipped,
 )
 from copytrading_engine.execution.domain.recovery import (
@@ -149,6 +160,10 @@ class _SnapshotChanges(TypedDict, total=False):
     manual_commands: dict[str, ManualCommandRecord]
     lot_sale_previews: dict[str, LotSalePreview]
     lot_sales: dict[str, LotSaleRecord]
+
+
+# Why a late post's buy is skipped as soon as the post is received (ADR-0010).
+LATE_SKIPS = frozenset({"stale", "out_of_order"})
 
 
 class _MessageChanges(TypedDict, total=False):
@@ -894,18 +909,28 @@ class TradingLedger:
             status = "ignored"
         else:
             status = "review_required"
-        if status == "queued" and (age < -5 or age > max_age):
+        # Only buys can be too old: a post of nothing but buys is stale; a late post's sells are
+        # still copied, and its buys are skipped as stale (ADR-0010).
+        too_old = age < -5 or age > max_age
+        if status == "queued" and too_old and all(i.action == "buy" for i in signal.instructions):
             status = "stale"
         previous = tuple(m for m in self._snapshot.messages.values() if m.source_key == source_key)
-        if status == "queued" and any(
+        # A post older than one already received is out of order. Its buys are not copied; its
+        # sells still are, and take only from buys posted before them (ADR-0010).
+        out_of_order = status == "queued" and any(
             m.decision == "trade"
             and m.status not in {"stale", "out_of_order"}
             and signal.timestamp < m.timestamp
             for m in previous
-        ):
+        )
+        if out_of_order and all(i.action == "buy" for i in signal.instructions):
             status = "out_of_order"
         parts = tuple(
-            Skipped(reason="duplicate")
+            Skipped(reason="stale")
+            if status == "queued" and too_old and instruction.action == "buy"
+            else Skipped(reason="out_of_order")
+            if status == "queued" and out_of_order and instruction.action == "buy"
+            else Skipped(reason="duplicate")
             if status == "queued"
             and any(
                 _repeats(
@@ -940,6 +965,18 @@ class TradingLedger:
                 ),
             ),
         )
+        # A late post's buys skipped as too old or out of order are on its timeline like any other
+        # skip, though the post's sells still go out.
+        for part, progress in enumerate(parts):
+            if isinstance(progress, Skipped) and progress.reason in LATE_SKIPS:
+                self.record(
+                    JournalEvent(
+                        at=now,
+                        payload=SkippedEvent(
+                            message_id=key, part=part, reason=progress.reason, exposure=None
+                        ),
+                    )
+                )
 
     def _message_state(self, key: str, **changes: Unpack[_MessageChanges]) -> LedgerSnapshot:
         message = MessageRecord.model_validate(self.message(key).model_dump() | changes)
@@ -975,12 +1012,13 @@ class TradingLedger:
         now: dt.datetime,
         *,
         exposure: tuple[Exposure, ...] | None = None,
+        bought_at: dt.datetime | None = None,
     ) -> None:
         message = self.message(key)
         if message.status != "queued" or not isinstance(message.parts[part], Pending):
             raise RuntimeError("Instruction was already processed")
         parts = list(message.parts)
-        parts[part] = Skipped(reason=reason, exposure=exposure or ())
+        parts[part] = Skipped(reason=reason, exposure=exposure or (), bought_at=bought_at)
         self._commit(
             self._message_state(key, parts=tuple(parts)),
             JournalEvent(
@@ -990,8 +1028,24 @@ class TradingLedger:
                     part=part,
                     reason=reason,
                     exposure=exposure,
+                    bought_at=bought_at,
                 ),
             ),
+        )
+
+    def sell_waiting(self, key: str, part: int, reason: SellWait, now: dt.datetime) -> None:
+        """Note why a sell is still waiting to go out, once each time the reason changes."""
+        message = self.message(key)
+        waiting = Pending(waiting=reason)
+        if message.status != "queued" or not isinstance(message.parts[part], Pending):
+            raise RuntimeError("Instruction was already processed")
+        if message.parts[part] == waiting:
+            return
+        parts = list(message.parts)
+        parts[part] = waiting
+        self._commit(
+            self._message_state(key, parts=tuple(parts)),
+            JournalEvent(at=now, payload=SellWaiting(message_id=key, part=part, reason=reason)),
         )
 
     def complete(self, key: str, now: dt.datetime) -> None:
@@ -1023,11 +1077,23 @@ class TradingLedger:
             raise RuntimeError("Order plan differs from its source instruction")
         if plan.side == "buy" and self._snapshot.entry_halted:
             raise RuntimeError("Unresolved late-order incidents halt new buy orders")
-        if self.pending(plan.symbol):
-            raise RuntimeError("A pending order already owns this symbol")
-        client_id = "copy-" + hashlib.sha256(f"{key}:{part}".encode()).hexdigest()[:40]
-        if client_id in self._snapshot.orders:
-            raise RuntimeError("Order intent already exists")
+        # One open buy of a stock at a time, and never a sell of more than the open sells leave.
+        pending = self.pending(plan.symbol)
+        if plan.side == "buy" and any(order.side == "buy" for order in pending):
+            raise RuntimeError("An open buy already owns this symbol")
+        if plan.side == "sell" and plan.qty > self.owned(plan.symbol) - sum(
+            (order.qty - order.filled_qty for order in pending if order.side == "sell"), ZERO
+        ):
+            raise RuntimeError("A sell cannot take shares an open sell is selling")
+        # A sell aborted before it was sent goes out again under the next attempt's ID.
+        attempt = 1
+        while (
+            earlier := self._snapshot.orders.get(copy_client_id(key, part, attempt))
+        ) is not None:
+            if earlier.status != OrderStatus.ABORTED_BEFORE_SUBMIT or earlier.side != "sell":
+                raise RuntimeError("Order intent already exists")
+            attempt += 1
+        client_id = copy_client_id(key, part, attempt)
         order = OrderRecord(
             **plan.model_dump(),
             client_id=client_id,
@@ -1069,6 +1135,18 @@ class TradingLedger:
         )
         return order
 
+    def cancel_requested(self, key: str, reason: CancelReason, now: dt.datetime) -> None:
+        """Note that CopyTrading asked Alpaca to cancel the order, and why: the journal keeps the
+        reason, and Activity reads it from there."""
+        order = self.order(key)
+        self._commit(
+            self._snapshot,
+            JournalEvent(
+                at=now,
+                payload=CancelRequested(client_id=key, message_id=order.message_id, reason=reason),
+            ),
+        )
+
     def _order_state(self, key: str, **changes: Unpack[_OrderChanges]) -> LedgerSnapshot:
         order = OrderRecord.model_validate(self.order(key).model_dump() | changes)
         return self._replace(orders=self._snapshot.orders | {key: order})
@@ -1094,6 +1172,39 @@ class TradingLedger:
         if order.status != "prepared" or order.broker_id is not None or order.filled_qty:
             raise RuntimeError("Only an unsubmitted prepared order can be aborted")
         validate_transition(order.status, OrderStatus.ABORTED_BEFORE_SUBMIT)
+        message = self._snapshot.messages.get(order.message_id)
+        part = order.instruction_index
+        if (
+            order.side == "sell"
+            and message is not None
+            and message.status == "queued"
+            and message.parts[part] == OrderLinked(client_id=key)
+        ):
+            # A copied sell is never lost (ADR-0010): its call waits again, in the same commit,
+            # so a crash here can neither lose it nor send it twice.
+            parts = list(message.parts)
+            parts[part] = Pending()
+            aborted = OrderRecord.model_validate(
+                order.model_dump() | {"status": OrderStatus.ABORTED_BEFORE_SUBMIT}
+            )
+            self._commit(
+                self._replace(
+                    orders=self._snapshot.orders | {key: aborted},
+                    messages=self._snapshot.messages
+                    | {
+                        order.message_id: MessageRecord.model_validate(
+                            message.model_dump() | {"parts": tuple(parts)}
+                        )
+                    },
+                ),
+                JournalEvent(
+                    at=now,
+                    payload=SendAborted(
+                        client_id=key, message_id=order.message_id, part=part, reason=reason
+                    ),
+                ),
+            )
+            return
         self._commit(
             self._order_state(key, status=OrderStatus.ABORTED_BEFORE_SUBMIT),
             JournalEvent(
@@ -1382,6 +1493,8 @@ class TradingLedger:
                     "broker_id": update.id,
                     "raw_broker_status": update.status,
                     "filled_avg_price": update.filled_avg_price or order.filled_avg_price,
+                    # The order's timeout runs from when Alpaca first had it live on the market.
+                    "accepted_at": order.accepted_at or (now if status in LIVE_AT_BROKER else None),
                 }
             )
             incidents = self._snapshot.late_order_incidents

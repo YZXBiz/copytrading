@@ -15,7 +15,7 @@ from copytrading_engine.execution.domain.events import (
 from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
 from copytrading_engine.execution.domain.order_lifecycle import OrderStatus
 from copytrading_engine.execution.domain.orders import OwnedLot
-from copytrading_engine.execution.domain.progress import Skipped
+from copytrading_engine.execution.domain.progress import OrderLinked, Skipped
 from copytrading_engine.execution.domain.recovery import IncidentClearanceEvidence, ReleaseEvidence
 from copytrading_engine.execution.domain.signals import CopyConfig
 from copytrading_engine.shared.signals import StockSignal
@@ -277,10 +277,9 @@ def test_late_sell_overflow_is_quarantined_atomically_cumulatively_and_reloaded(
     ]
     receive(engine, StockSignal.model_validate(unrelated_exit), def_close_at)
     engine.process(def_close_at)
-    assert broker.holdings["DEF"] == 4
-    assert engine.ledger.message("discord:demo:def-close").parts == (
-        Skipped(reason="unresolved_order_incident"),
-    )
+    # The incident is on ABC: it stops every buy, but a sell of another stock still goes out.
+    assert broker.holdings["DEF"] == 0
+    assert isinstance(engine.ledger.message("discord:demo:def-close").parts[0], OrderLinked)
     assert engine.ledger.snapshot().entry_halted
 
 

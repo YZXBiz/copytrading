@@ -70,11 +70,12 @@ private func anEstimateUsesTheLiveQuote() throws {
     var buy = ManualInstructionDraft()
     buy.symbol = "XYZ"
     buy.price = "250"
+    buy.fraction = "1"
     let xyz = LiveQuote(symbol: "XYZ", quote: MarketQuote(feed: "iex", bid: "249.9", ask: "250", timestamp: nil))
     let buying = ManualOrderEstimate(
         drafts: [buy], accounts: [account], connections: connections, maxOrderUSD: [:], mode: .enter, quotes: ["XYZ": xyz])
     try #require(
-        buying.summary?.order == "Buy $1,000 of XYZ ≈ 4 shares at $250.00",
+        buying.summary?.order == "Buy up to $1,000 of XYZ ≈ 4 shares at $250.00",
         "a dollar budget in shares: \(buying.summary?.order ?? "nil")")
 
     // A count that doesn't come out even still says "≈" once.
@@ -83,6 +84,6 @@ private func anEstimateUsesTheLiveQuote() throws {
         drafts: [buy], accounts: [account], connections: connections, maxOrderUSD: [:], mode: .enter,
         quotes: ["XYZ": LiveQuote(symbol: "XYZ", quote: MarketQuote(feed: "iex", bid: "299", ask: "300", timestamp: nil))])
     try #require(
-        uneven.summary?.order == "Buy $1,000 of XYZ ≈ 3.333 shares at $300.00",
+        uneven.summary?.order == "Buy up to $1,000 of XYZ ≈ 3.333 shares at $300.00",
         "an uneven count: \(uneven.summary?.order ?? "nil")")
 }

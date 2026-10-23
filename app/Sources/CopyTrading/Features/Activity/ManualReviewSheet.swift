@@ -13,7 +13,7 @@ struct ManualReviewSheet: View {
     let guruName: String?
     /// This guru's full position in each account it copies to, by account.
     let connections: [String: TradingRouteConnection]
-    /// Each account's max per order, which caps any one buy.
+    /// Each account's largest single buy, which caps any one buy.
     let maxOrderUSD: [String: Decimal]
     /// How far above the price each account's buy limit sits, in percent.
     let maxAbovePct: [String: Decimal]
@@ -118,7 +118,10 @@ struct ManualReviewSheet: View {
     private var estimate: ManualOrderEstimate {
         ManualOrderEstimate(
             drafts: instructions, accounts: chosenAccounts, connections: connections, maxOrderUSD: maxOrderUSD,
-            maxAbovePct: maxAbovePct, mode: mode, quotes: quotes)
+            maxAbovePct: maxAbovePct, mode: mode, quotes: quotes,
+            planned: previewRequests.compactMapValues { request in
+                Decimal(engine: feature.previews[request.previewID]?.plan?.budgetUSD)
+            })
     }
 
     /// The account whose read keys quote the stocks: the first chosen, else the first listed.

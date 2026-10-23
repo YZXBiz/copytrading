@@ -2,7 +2,7 @@
 
 from typing import Annotated, Literal
 
-from pydantic import Field
+from pydantic import AwareDatetime, Field
 
 from copytrading_engine.execution.domain.values import Identifier, Quantity, Value
 
@@ -16,8 +16,13 @@ class Exposure(Value):
     limit: Quantity
 
 
+# Why a sell is still waiting to go out: Alpaca has no fresh bid to price it from (ADR-0010).
+type SellWait = Literal["quote_stale", "quote_unavailable"]
+
+
 class Pending(Value):
     kind: Literal["pending"] = "pending"
+    waiting: SellWait | None = None
 
 
 class OrderLinked(Value):
@@ -30,6 +35,8 @@ class Skipped(Value):
     reason: Annotated[str, Field(min_length=1)]
     # The limit a skipped buy would have passed, with its numbers, so Activity can say which.
     exposure: tuple[Exposure, ...] = ()
+    # For a sell skipped as `bought_after_sell`: when the buy it would have sold was posted.
+    bought_at: AwareDatetime | None = None
 
 
 InstructionProgress = Annotated[

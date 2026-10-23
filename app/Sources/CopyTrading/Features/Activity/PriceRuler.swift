@@ -13,11 +13,19 @@ struct PriceRuler: View {
     /// Past the limit is the wrong side: above it for a buy, below it for a sell.
     private var isPast: Bool { points.buying ? points.market > points.limit : points.market < points.limit }
 
-    /// The gap in plain words: "+3.9% over your limit", or for a few cents, "1¢ under your limit".
+    /// The limit's name: a buy's most it pays, a sell's lowest price.
+    private var limitLabel: String { L10n.string(points.buying ? "Your limit" : "Lowest sell price") }
+
+    /// The gap in plain words: "3.9% over your limit" for a buy, "0.4% above your lowest price" for
+    /// a sell, or for a few cents, "1¢ under your limit". A sell's market above its floor is good
+    /// news, so it never reads as over a limit.
     private var gapText: String? {
         let gap = points.market - points.limit
-        guard gap != 0 else { return L10n.string("At your limit") }
-        let side = L10n.string(gap > 0 ? "over your limit" : "under your limit")
+        guard gap != 0 else { return L10n.string(points.buying ? "At your limit" : "At your lowest price") }
+        let side =
+            points.buying
+            ? L10n.string(gap > 0 ? "over your limit" : "under your limit")
+            : L10n.string(gap > 0 ? "above your lowest price" : "under your lowest price")
         if abs(gapFraction) < 0.001 {
             let cents = (abs(gap) * 100).doubleValue.rounded()
             return L10n.string("%@ %@", cents < 100 ? "\(Int(cents))¢" : abs(gap).formatted(.currency(code: "USD")), side)
@@ -42,12 +50,15 @@ struct PriceRuler: View {
                     path.addLine(to: CGPoint(x: width, y: 34))
                 }
                 .stroke(Palette.hairline, style: InkStroke.style)
-                // The gap that decided the order, filled the way a studio drawing fills one shape.
-                Capsule()
-                    .fill(Palette.butter)
-                    .overlay(Capsule().strokeBorder(Palette.ink, lineWidth: InkStroke.width))
-                    .frame(width: max(abs(marketX - limitX), 6), height: 12)
-                    .position(x: (limitX + marketX) / 2, y: 34)
+                // A market past the limit is the gap that held the order, filled the way a studio
+                // drawing fills one shape; a market on the right side of it is no miss to fill.
+                if isPast {
+                    Capsule()
+                        .fill(Palette.butter)
+                        .overlay(Capsule().strokeBorder(Palette.ink, lineWidth: InkStroke.width))
+                        .frame(width: max(abs(marketX - limitX), 6), height: 12)
+                        .position(x: (limitX + marketX) / 2, y: 34)
+                }
                 Rectangle()
                     .fill(Palette.ink)
                     .frame(width: InkStroke.width, height: 16)
@@ -68,7 +79,7 @@ struct PriceRuler: View {
                 let close = abs(limitX - marketX) < 110
                 let spread: CGFloat = close ? 56 : 0
                 let limitLeads = limitX <= marketX
-                caption(L10n.string("Your limit"), points.limit, at: limitX + (limitLeads ? -spread : spread), in: width)
+                caption(limitLabel, points.limit, at: limitX + (limitLeads ? -spread : spread), in: width)
                 caption(points.marketLabel, points.market, at: marketX + (limitLeads ? spread : -spread), in: width)
             }
         }
@@ -76,7 +87,8 @@ struct PriceRuler: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
             L10n.string(
-                "Your limit %@, %@ %@", money(points.limit), points.marketLabel.lowercased(), money(points.market)))
+                "%@ %@, %@ %@", limitLabel, money(points.limit), points.marketLabel.lowercased(),
+                money(points.market)))
     }
 
     private func caption(_ label: String, _ value: Decimal, at x: CGFloat, in width: CGFloat) -> some View {

@@ -132,8 +132,11 @@ def account_activity_reason(
     known_open_orders: tuple[OrderRecord, ...],
     *,
     unresolved_order_incidents: bool,
+    symbol: str | None = None,
 ) -> str | None:
-    """Check an observed open-order page against persisted account activity."""
+    """Check an observed open-order page against persisted account activity. The page is checked
+    whole, since a full or repeating page can't be trusted for any stock; with `symbol` (a sell),
+    only an order on that stock that CopyTrading didn't place holds it (ADR-0010)."""
     if unresolved_order_incidents:
         return "unresolved_order_incident"
     if len(open_orders) >= 500:
@@ -146,6 +149,7 @@ def account_activity_reason(
         (saved := known_by_id.get(observed.client_order_id)) is None
         or not _same_order(observed, saved)
         for observed in open_orders
+        if symbol is None or observed.symbol == symbol
     ):
         return "unresolved_account_order"
     return None

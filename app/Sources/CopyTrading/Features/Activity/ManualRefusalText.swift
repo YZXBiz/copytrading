@@ -100,6 +100,8 @@ enum ManualRefusalText {
         "lot_unavailable": "You hold no shares of this call to sell. Check the account's holdings.",
         "missing_or_ambiguous_lot": "Several copied buys match. Name the buy price, then review again.",
         "named_buy_not_held": "None of your buys is at that price. Change it, then review again.",
+        "bought_after_sell": "Every buy is newer than this sell. See the account page to sell.",
+        "already_selling": "Open sells already cover these shares. Wait for them to end.",
         "insufficient_owned_shares": "Not enough copied shares to sell. Lower the size, then review again.",
 
         // What became of the order.

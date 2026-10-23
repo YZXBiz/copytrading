@@ -86,7 +86,7 @@ extension AccountFeedItem {
         Decimal(engine: value)?.formatted(.currency(code: "USD")) ?? "—"
     }
 
-    /// "per order $200 → $500".
+    /// "largest single buy $200 → $500".
     @MainActor private static func phrase(_ change: AccountLimitChange) -> String {
         let (name, unit) = setting(change.setting)
         return L10n.string("%@ %@ → %@", name, value(change.before, unit), value(change.after, unit))
@@ -96,7 +96,7 @@ extension AccountFeedItem {
 
     @MainActor private static func setting(_ code: String) -> (String, Unit) {
         switch code {
-        case "max_order_usd": (L10n.string("per order"), .dollars)
+        case "max_order_usd": (L10n.string("largest single buy"), .dollars)
         case "max_symbol_usd": (L10n.string("per stock"), .dollars)
         case "max_total_usd": (L10n.string("total exposure"), .dollars)
         case "daily_loss_cap_usd": (L10n.string("daily loss cap"), .dollars)

@@ -48,31 +48,54 @@ async def test_live_capture_survives_restart_and_identity_is_stable(tmp_path):
     await source.close()
 
 
-async def test_recovery_page_and_cursor_are_atomic_and_history_is_audit_only(tmp_path):
+async def test_recovery_page_and_cursor_are_atomic_and_a_late_post_is_still_read(tmp_path):
     path = tmp_path / "app.db"
     source = await SQLiteSourceStore.open(path)
     start = await source.recovery_start(7, 10)
     assert start.last_id == 10
-    history = raw(11, age=3600)
+    # An hour late: its buys are too old, but a sell in it is still copied, so it is read
+    # (ADR-0010); the ledger judges each call's age.
+    late = raw(11, age=3600)
     rejected = RejectedCapture({"source": "discord", "channel_id": "7", "id": "12"}, "invalid")
-    await source.capture_recovery_page(7, [history], [rejected], 12)
+    await source.capture_recovery_page(7, [late], [rejected], 12)
     assert (await source.recovery_start(7, 1)).last_id == 12
-    assert await source.claim_batch() == ()
+    assert [delivery.key for delivery in await source.claim_batch()] == [late.identity]
+    assert [delivery.mode for delivery in await source.claim_batch()] == ["live"]
+    await source.confirm(late.identity)
     assert await source.rejected_count() == 1
     # A post edited after it was captured comes back changed in the next catch-up: the first
     # version stays, the cursor moves past it, and reading carries on.
+    after = raw(13, age=3600)
     await source.capture_recovery_page(
-        7, [history.model_copy(update={"text": "changed"}), raw(13, age=3600)], [], 13
+        7, [late.model_copy(update={"text": "changed"}), after], [], 13
     )
     assert (await source.recovery_start(7, 1)).last_id == 13
+    assert [delivery.key for delivery in await source.claim_batch()] == [after.identity]
+    await source.confirm(after.identity)
     await source.close()
 
     source = await SQLiteSourceStore.open(path)
     assert (await source.recovery_start(7, 1)).last_id == 13
     assert await source.claim_batch() == ()
     with closing(sqlite3.connect(path)) as db:
-        stored = db.execute("SELECT payload FROM source_captures WHERE id=?", (history.identity,))
+        stored = db.execute("SELECT payload FROM source_captures WHERE id=?", (late.identity,))
         assert '"signal"' in stored.fetchone()[0]
+    await source.close()
+
+
+async def test_a_post_older_than_a_day_is_captured_but_not_read_back(tmp_path):
+    """After a weekend away, only the last day's posts go to the model: an older one is kept as
+    history, not read, so a long stop doesn't send every missed post to the reader."""
+    source = await SQLiteSourceStore.open(tmp_path / "app.db")
+    await source.recovery_start(7, 10)
+    recent = raw(11, age=23 * 3600)
+    old = raw(12, age=25 * 3600)
+    await source.capture_recovery_page(7, [old, recent], [], 12)
+
+    assert [delivery.key for delivery in await source.claim_batch()] == [recent.identity]
+    with closing(sqlite3.connect(tmp_path / "app.db")) as db:
+        mode = db.execute("SELECT mode FROM source_captures WHERE id=?", (old.identity,))
+        assert mode.fetchone()[0] == "historical"
     await source.close()
 
 

@@ -1,19 +1,20 @@
 import Foundation
 
 /// One worked example per account limit, shown behind the "i" beside its name, in short plain
-/// sentences. Each matches what the engine does: the per-order limit makes a buy smaller, the
-/// holding limits skip it.
+/// sentences. Each matches what the engine does (ADR-0010): every limit cuts a buy to what it
+/// allows, and only the shares CopyTrading bought count.
 enum LimitExamples {
     static let maxOrder = """
-        Set to **$1,000**. The guru's call would buy **$2,500** of NVDA. You buy **$1,000** instead.
+        Set to **$1,000**. The guru's call would buy **$2,500** of NVDA, or the post is misread as \
+        that much. You buy **$1,000**. A call that gives no size buys **$1,000** too.
         """
     static let maxSymbol = """
-        Set to **$3,000**. That's the guru's full position, so a 1/6 call buys **$500**. If you \
-        already hold **$2,500** of NVDA, a **$1,000** NVDA buy would make $3,500, so it's **skipped**.
+        Set to **$3,000**. CopyTrading holds **$2,500** of NVDA. A **$1,000** NVDA buy is cut to \
+        **$500**, the room left. NVDA shares you bought yourself don't count.
         """
     static let maxTotal = """
-        Set to **$10,000**. You hold **$9,500** in all. A new **$1,000** buy would go over, so it's \
-        **skipped**.
+        Set to **$10,000**. CopyTrading holds **$9,500** in all. A new **$1,000** buy is cut to \
+        **$500**, the room left.
         """
     static let dailyLossCap = """
         Set to **$500**. The account closed yesterday at **$20,000**. If it drops to **$19,500** \
@@ -24,16 +25,17 @@ enum LimitExamples {
         **$200** at most.
         """
     static let maxBelowSignal = """
-        Set to **1**. The guru sells AAPL at **$200**. You sell at **$198** or better. At **0**, you \
-        sell at **$200** or better.
+        Set to **1**. The guru sells AAPL at **$200**. When CopyTrading sells, AAPL is at **$190**. \
+        You sell at **$188.10** or better, so a sell read late still gets out.
         """
     static let entriesPerDay = """
         Set to **5**. After 5 buys today, more buys are skipped until tomorrow. Sells still go \
         through.
         """
     static let maxSignalAge = """
-        Set to **120**. The guru posts at **9:31:00**. If it reaches CopyTrading after **9:33:00** \
-        (say your Mac was asleep), it isn't copied. You can still copy it yourself in **Activity**.
+        Set to **600**. The guru posts a buy at **9:31**. If it reaches CopyTrading after **9:41** \
+        (say your Mac was asleep), it isn't copied; you can copy it yourself in **Activity**. A sell \
+        is copied whenever it arrives.
         """
     /// The order timeout, priced with this account's own tolerance above the guru's price, so the
     /// example never disagrees with the setting just above it.

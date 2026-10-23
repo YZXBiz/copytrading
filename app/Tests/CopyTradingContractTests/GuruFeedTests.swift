@@ -109,7 +109,7 @@ private func eachAccountSaysWhatItDidInAFewWords() throws {
         .calls([SourceActivityBuilder.buy("SOUN", "5.85", fraction: "0.1667")])
         .destination(
             "primary", status: "done", outcomes: ["symbol_exposure_cap"],
-            limits: [["part": 0, "scope": "symbol", "current": "1900", "proposed": "333.33", "limit": "2000"]]
+            limits: [["part": 0, "scope": "symbol", "current": "1999.50", "proposed": "333.33", "limit": "2000"]]
         )
         .destination(
             "ira", status: "done", outcomes: ["order_linked"],
@@ -128,7 +128,7 @@ private func eachAccountSaysWhatItDidInAFewWords() throws {
 
     try #require(
         outcomes == [
-            .init(accountID: "primary", summary: "Not bought: over your SOUN limit", kind: .notTraded),
+            .init(accountID: "primary", summary: "Not bought: SOUN is at your limit for one stock", kind: .notTraded),
             .init(accountID: "ira", summary: "Bought $245.70 of SOUN", kind: .traded),
             .init(accountID: "roth", summary: "Waiting for your approval", kind: .waiting),
         ], "outcomes were \(outcomes)")

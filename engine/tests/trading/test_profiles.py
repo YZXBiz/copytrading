@@ -5,6 +5,8 @@ import datetime as dt
 import hashlib
 import importlib
 import importlib.util
+import sqlite3
+from contextlib import closing
 from decimal import Decimal
 from pathlib import Path
 
@@ -182,6 +184,12 @@ def test_historical_source_lookup_returns_only_the_immutable_historical_capture(
         )
         await store.add(live)
         await store.close()
+        # A post read back now is read like any other; only a capture saved as history before
+        # that change is still history, so the test saves one as history.
+        with closing(sqlite3.connect(tmp_path / "application.db")) as db, db:
+            db.execute(
+                "UPDATE source_captures SET mode='historical' WHERE id=?", (historic.identity,)
+            )
         return historic, live
 
     historic, live = asyncio.run(capture())
@@ -245,6 +253,8 @@ def test_runtime_historical_profile_action_does_not_open_execution_owners(tmp_pa
         await source_store.recovery_start(123, 1)
         await source_store.capture_recovery_page(123, [source], [], 1001)
         await source_store.close()
+        with closing(sqlite3.connect(tmp_path / "application.db")) as db, db:
+            db.execute("UPDATE source_captures SET mode='historical'")
         before = hashlib.sha256((tmp_path / "application.db").read_bytes()).hexdigest()
         runtime = TradingRuntime(
             tmp_path,

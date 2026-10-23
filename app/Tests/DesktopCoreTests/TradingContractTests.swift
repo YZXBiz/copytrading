@@ -179,16 +179,17 @@ private func sizingMatchesTheEngineOnEverySharedExample() throws {
     for example in examples {
         let connection = TradingRouteConnection(accountID: "paper", fullPositionUSD: example.fullPositionUSD)
         let source = example.fraction.map { Decimal($0.numerator) / Decimal($0.denominator) }
-        let budget = connection.copiedBudgetUSD(sourceFraction: source)
+        let cap = example.maxOrderUSD.flatMap { Decimal(string: $0) }
+        let budget = connection.copiedBudgetUSD(sourceFraction: source, unsizedUSD: cap)
         try #require(
             budget == example.budgetUSD.flatMap { Decimal(string: $0) },
             "sizing differs from the engine: \(example.case) gave \(String(describing: budget))")
         // The copy sheet's footer and button: the same dollars the engine's plan spends.
-        if let cap = example.maxOrderUSD.flatMap({ Decimal(string: $0) }) {
+        if let cap {
             let spent = connection.spentUSD(sourceFraction: source, maxOrderUSD: cap)
             try #require(
                 spent == example.spentUSD.flatMap { Decimal(string: $0) },
-                "the max per order cut differs from the engine: \(example.case) gave \(String(describing: spent))")
+                "the largest single buy's cut differs from the engine: \(example.case) gave \(String(describing: spent))")
         }
     }
 }

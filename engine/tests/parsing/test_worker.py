@@ -121,19 +121,16 @@ async def test_parser_retry_attempts_bind_the_same_persisted_workflow_lineage():
     assert [first.attempt, second.attempt] == [1, 2]
 
 
-async def test_stale_message_never_spends_model_budget():
-    box, decoder, worker = box_and_worker(age=121)
+async def test_a_late_post_is_still_read_since_a_sell_in_it_is_still_copied():
+    # The reader cannot know a post is a sell before reading it; the ledger skips its buys as too
+    # old and copies its sells (ADR-0010).
+    _, decoder, worker = box_and_worker(age=3600)
     await worker.process_next(NOW)
-    assert decoder.calls == 0
-    assert box.pending()[0].signal.reason == "stale_signal"
-    assert box.reservations == ()
+    assert decoder.calls == 1
 
 
-@pytest.mark.parametrize(
-    ("age", "reason"),
-    [(120, None), (120.001, "stale_signal"), (-5, None), (-5.001, "future_signal")],
-)
-async def test_timing_boundaries_have_distinct_reasons_and_no_model_spend(age, reason):
+@pytest.mark.parametrize(("age", "reason"), [(3600, None), (-5, None), (-5.001, "future_signal")])
+async def test_only_a_post_from_the_future_is_refused_unread(age, reason):
     box, decoder, worker = box_and_worker(age=age)
     await worker.process_next(NOW)
     result = box.pending()[0].signal
@@ -147,12 +144,11 @@ async def test_timing_boundaries_have_distinct_reasons_and_no_model_spend(age, r
         assert decoder.calls == 1
 
 
-@pytest.mark.parametrize(("jump", "reason"), [(-60, "future_signal"), (121, "stale_signal")])
-async def test_clock_change_between_enqueue_and_processing_is_reported(jump, reason):
+async def test_clock_change_between_enqueue_and_processing_is_reported():
     box, decoder, worker = box_and_worker()
-    await worker.process_next(NOW + dt.timedelta(seconds=jump))
+    await worker.process_next(NOW + dt.timedelta(seconds=-60))
     result = box.pending()[0].signal
-    assert result.reason == reason
+    assert result.reason == "future_signal"
     assert result.instructions == ()
     assert decoder.calls == 0
 

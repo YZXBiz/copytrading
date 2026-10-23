@@ -156,16 +156,16 @@ struct AccountEditorSheet: View {
         SheetSection(L10n.string("Position limits (USD)")) {
             SheetGroup {
                 textLimit(
-                    "Maximum per order", hint: "A bigger buy is made smaller.",
+                    "Largest single buy", hint: "The most one buy spends, and what a call with no size buys.",
                     text: $account.policy.maxOrderUSD,
                     example: LimitExamples.maxOrder,
                     focus: .limits)
                 textLimit(
-                    "Maximum per stock", hint: "Includes your own shares. Also the guru's full position.",
+                    "Maximum per stock", hint: "Shares CopyTrading bought. Your own aren't counted.",
                     text: $account.policy.maxSymbolUSD,
                     example: LimitExamples.maxSymbol)
                 textLimit(
-                    "Maximum total exposure", hint: "All stocks together, including your own.",
+                    "Maximum total exposure", hint: "Every stock CopyTrading bought. Your own aren't counted.",
                     text: $account.policy.maxTotalUSD,
                     example: LimitExamples.maxTotal)
                 textLimit(
@@ -179,7 +179,7 @@ struct AccountEditorSheet: View {
                     focus: .entryTolerance
                 )
                 textLimit(
-                    "Maximum below signal price (%)", hint: "A sell that can't fill by then is cancelled.",
+                    "Lowest sell price (% under the guru's)", hint: "A sell waits at this price or better until it fills.",
                     text: $account.policy.maxBelowSignalPct,
                     example: LimitExamples.maxBelowSignal)
             }
@@ -196,11 +196,11 @@ struct AccountEditorSheet: View {
                     value: $account.policy.maxEntriesPerDay,
                     example: LimitExamples.entriesPerDay)
                 numberLimit(
-                    "Maximum signal age (seconds)", hint: "Older posts aren't copied. You can copy them in Activity.",
+                    "Maximum signal age (seconds)", hint: "Older buys aren't copied. A sell always is.",
                     value: $account.policy.maxSignalAgeSeconds,
                     example: LimitExamples.maxSignalAge)
                 numberLimit(
-                    "Order timeout (seconds)", hint: "An unfilled order is cancelled.",
+                    "Order timeout (seconds)", hint: "An unfilled buy is cancelled. A sell keeps waiting.",
                     value: $account.policy.orderTimeoutSeconds,
                     example: LimitExamples.orderTimeout(maxAboveSignalPct: account.policy.maxAboveSignalPct))
             }

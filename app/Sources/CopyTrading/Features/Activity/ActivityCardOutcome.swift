@@ -43,9 +43,9 @@ struct ActivityCardOutcome {
     let tone: StatusTone
     let accounts: [Account]
 
-    /// Outcomes that are not a skip: an order went out, the part is still working, or the owner
-    /// approved a held call by hand.
-    static let carriedOn: Set<String> = ["order_linked", "pending", "approved_by_owner"]
+    /// Outcomes that are not a skip: an order went out, the part is still working (a sell may be
+    /// waiting for a price to sell at), or the owner approved a held call by hand.
+    static let carriedOn: Set<String> = ["order_linked", "pending", "waiting_for_quote", "approved_by_owner"]
 
     init(
         _ source: SourceActivity, skipped: Bool, resume: ResumeWait = .none, now: Date = .now,
@@ -111,7 +111,8 @@ struct ActivityCardOutcome {
         for destination: DestinationActivity, in source: SourceActivity, waits: Bool, open: Bool, skipped: Bool,
         resumeBy: Date?, now: Date, deadline: String
     ) -> [Result] {
-        var results = destination.orders.map(orderResult)
+        let postedAt = Humanize.date(source.sourceAt)
+        var results = destination.orders.map { orderResult($0, postedAt: postedAt) }
         for (part, outcome) in destination.instructionOutcomes.enumerated()
         // A call waiting for the owner says why once, in its own result below; not as "Not bought" too.
         where !Self.carriedOn.contains(outcome) && !WaitingCall.heldForOwner.contains(outcome)
@@ -120,14 +121,25 @@ struct ActivityCardOutcome {
             let selling = source.instructions.indices.contains(part) && source.instructions[part].action != "buy"
             if let limit = destination.limitsHit.first(where: { $0.part == part }) {
                 results.append(limitResult(limit, selling: selling, in: source, part: part))
+            } else if let later = destination.laterBuys.first(where: { $0.part == part }),
+                let headline = laterBuyHeadline(later, account: destination.accountID, in: source, part: part)
+            {
+                results.append(Result(headline: headline))
             } else {
                 results.append(Result(headline: L10n.string(selling ? "Not sold" : "Not bought"), note: Reason.text(outcome)))
             }
         }
+        // A sell with no fresh bid yet keeps waiting, and asks Alpaca again every 30 seconds.
+        if destination.instructionOutcomes.contains("waiting_for_quote") {
+            results.append(Result(headline: Reason.text("waiting_for_quote")))
+        }
         if waits {
             results.append(waitingResult(destination, in: source, open: open, skipped: skipped, deadline: deadline))
         } else if ["stale", "out_of_order"].contains(destination.status), results.isEmpty {
-            results.append(Result(headline: L10n.string("Not copied"), note: Reason.text(destination.status)))
+            results.append(
+                Result(
+                    headline: L10n.string("Not copied"),
+                    note: destination.status == "stale" ? staleNote(source) : Reason.text(destination.status)))
         }
         if results.isEmpty, let resumeBy {
             // After a restart an account waits for its Start Copying; the buy waits with it while it is fresh.
@@ -148,10 +160,28 @@ struct ActivityCardOutcome {
         return results
     }
 
+    /// Why a post of buys wasn't copied: how late it was read, against the account's signal age.
+    private static func staleNote(_ source: SourceActivity) -> String {
+        guard let posted = Humanize.date(source.sourceAt), let read = Humanize.date(source.capturedAt) else {
+            return Reason.text("stale")
+        }
+        return L10n.string(
+            "Read %@ after it was posted: older than this account copies buys. A sell is always copied.",
+            PostTimeline.duration(read.timeIntervalSince(posted)))
+    }
+
     /// One order, takeaway first: what it bought, or why it bought nothing, with the numbers that
-    /// decided it.
-    static func orderResult(_ order: OrderActivity) -> Result {
+    /// decided it. A sell read long after the post says so: it sold from the market then.
+    static func orderResult(_ order: OrderActivity, postedAt: Date? = nil) -> Result {
         let buying = order.side != "sell"
+        var note: String?
+        if !buying, let postedAt, let placed = Humanize.date(order.createdAt),
+            placed.timeIntervalSince(postedAt) >= lateSellSeconds
+        {
+            note = L10n.string(
+                "Read %@ after the guru posted it. A sell is always copied, at no less than your lowest price.",
+                PostTimeline.duration(placed.timeIntervalSince(postedAt)))
+        }
         let limit = money(order.limitPrice)
         let planned = OrderAmount.planned(order) ?? order.symbol
         var facts: [Fact] = []
@@ -183,18 +213,30 @@ struct ActivityCardOutcome {
             facts.append(Fact(label: L10n.string("Price"), value: money(order.averageFillPrice) ?? "—"))
         case .working:
             headline = L10n.string(buying ? "Buying %@" : "Selling %@", planned)
-            if let limit { facts.append(Fact(label: L10n.string("Your limit"), value: limit)) }
+            if buying {
+                if let limit { facts.append(Fact(label: L10n.string("Your limit"), value: limit)) }
+            } else {
+                // A sell keeps working at its floor until the market reaches it (ADR-0010).
+                if let floor = sellFloor(order) { facts.append(Fact(label: L10n.string("Lowest sell price"), value: floor)) }
+                if let market = sellMarket(order) { facts.append(Fact(label: L10n.string("Market"), value: market)) }
+            }
         case .failed:
             headline = L10n.string(buying ? "Not bought: Alpaca rejected it" : "Not sold: Alpaca rejected it")
         case .needsReview:
             headline = L10n.string("Waiting for Alpaca to confirm")
         default:
             let market = money(buying ? order.quoteAsk : order.quoteBid)
-            headline = L10n.string(buying ? "Not bought: %@" : "Not sold: %@", cancelReason(order))
+            if !buying, order.status == "expired" || order.cancelReason == "expired", let limit {
+                headline = L10n.string("Not sold by the close: the market stayed under your lowest price %@", limit)
+            } else {
+                headline = L10n.string(buying ? "Not bought: %@" : "Not sold: %@", cancelReason(order))
+            }
             if let limitPrice, let met = Decimal(engine: buying ? order.quoteAsk : order.quoteBid) {
                 prices = PricePoints(limit: limitPrice, market: met, marketLabel: L10n.string("Market"), buying: buying)
             } else {
-                if let limit { facts.append(Fact(label: L10n.string("Your limit"), value: limit)) }
+                if let limit {
+                    facts.append(Fact(label: L10n.string(buying ? "Your limit" : "Lowest sell price"), value: limit))
+                }
                 if let market { facts.append(Fact(label: L10n.string("Market"), value: market)) }
             }
             if let waited = CancelReasonText.waitedSeconds(order), order.cancelReason == "timeout" {
@@ -204,27 +246,68 @@ struct ActivityCardOutcome {
                 suggestion = .allowAboveGuru
             }
         }
-        if prices != nil, let guru = guruPrice(order) {
+        if prices != nil, let basis = guruPrice(order) {
             // The ruler shows the limit; this says where it came from, so a changed allowance shows.
-            facts.insert(Fact(label: L10n.string("Guru's price"), value: guru), at: 0)
+            facts.insert(Fact(label: L10n.string("Guru's price"), value: basis), at: 0)
         }
         if let budget = Decimal(engine: order.budgetUSD) {
             if wasTrimmed(order) {
-                // Capped by the account's max per order: say so, and what the call asked for.
-                facts.append(
-                    Fact(
-                        label: L10n.string("Order"),
-                        value: L10n.string("%@ · your max per order", Humanize.dollars(order.budgetUSD))))
+                // Cut by one of the account's limits: say which, and what the call asked for.
+                facts.append(Fact(label: L10n.string("Order"), value: cut(order)))
                 facts.append(Fact(label: L10n.string("The call asked for"), value: Humanize.dollars(order.requestedUSD)))
             } else {
                 facts.append(Fact(label: L10n.string("Order"), value: OrderAmount.dollars(budget)))
             }
         }
-        return Result(headline: headline, facts: Array(facts.prefix(4)), suggestion: suggestion, prices: prices)
+        return Result(
+            headline: headline, facts: Array(facts.prefix(4)), note: note, suggestion: suggestion, prices: prices)
     }
 
-    /// The guru's price and the allowance the limit added to it: "$69.80 + 1% allowed" for a buy,
-    /// "$69.80 − 1% allowed" for a sell. Nil with no allowance, where the limit is the guru's price.
+    /// "Not sold: zhap-account-2's SOXL was bought after this sell was posted (Wed 9:41 vs Mon 10:02)."
+    private static func laterBuyHeadline(_ later: LaterBuy, account: String, in source: SourceActivity, part: Int)
+        -> String?
+    {
+        guard let bought = Humanize.date(later.boughtAt), let sold = Humanize.date(source.sourceAt) else { return nil }
+        let symbol = source.instructions.indices.contains(part) ? source.instructions[part].symbol : ""
+        let style = AppTime.style(.dateTime.weekday(.abbreviated).hour().minute())
+        return L10n.string(
+            "Not sold: %@'s %@ was bought after this sell was posted (%@ vs %@).", account, symbol,
+            bought.formatted(style), sold.formatted(style))
+    }
+
+    /// A sell placed this long after its post was read late, so the card says so.
+    static let lateSellSeconds: TimeInterval = 600
+
+    /// What a cut buy spent, and the limit that cut it: "$200 · your largest single buy".
+    static func cut(_ order: OrderActivity) -> String {
+        let amount = Humanize.dollars(order.budgetUSD)
+        switch order.limitedBy {
+        case "symbol_exposure_cap": return L10n.string("%@ · the room left under your %@ limit", amount, order.symbol)
+        case "total_exposure_cap": return L10n.string("%@ · the room left under your total limit", amount)
+        default: return L10n.string("%@ · your largest single buy", amount)
+        }
+    }
+
+    /// A sell's floor and where it came from: "$53.66 (1% under the guru's $54.20)" (ADR-0010).
+    static func sellFloor(_ order: OrderActivity) -> String? {
+        guard let limit = money(order.limitPrice) else { return nil }
+        guard let guru = money(order.sourcePrice), let allowance = Decimal(engine: order.entryTolerancePct),
+            allowance > 0
+        else { return limit }
+        let percent = (allowance / 100).formatted(.percent.precision(.fractionLength(0...2)))
+        return L10n.string("%@ (%@ under the guru's %@)", limit, percent, guru)
+    }
+
+    /// The bid when a sell went out, against its floor: "$53.85, above it".
+    static func sellMarket(_ order: OrderActivity) -> String? {
+        guard let bid = Decimal(engine: order.quoteBid), let market = money(order.quoteBid) else { return nil }
+        guard let floor = Decimal(engine: order.limitPrice) else { return market }
+        return L10n.string(bid >= floor ? "%@, above it" : "%@, under it", market)
+    }
+
+    /// The price the limit came from and the allowance added to it: "$69.80 + 1% allowed" for a buy,
+    /// "$54.20 − 1% allowed" for a sell, both from the guru's price. Nil with no allowance, where
+    /// the limit is that price.
     private static func guruPrice(_ order: OrderActivity) -> String? {
         guard let source = money(order.sourcePrice),
             let allowance = Decimal(engine: order.entryTolerancePct), allowance > 0
@@ -295,20 +378,24 @@ struct ActivityCardOutcome {
         "batch_size_not_given": "no batch size given",
     ]
 
+    /// A buy with less than Alpaca's $1 minimum of room left under a limit: a cap only cuts a buy
+    /// to the room left, so this is the one way it skips one (ADR-0010).
     private static func limitResult(_ limit: LimitHit, selling: Bool, in source: SourceActivity, part: Int) -> Result {
         let symbol = source.instructions.indices.contains(part) ? source.instructions[part].symbol : ""
-        let over =
+        let full =
             limit.scope == "symbol"
-            ? L10n.string("over your %@ limit", symbol) : L10n.string("over your total limit")
+            ? L10n.string("%@ is at your limit for one stock", symbol) : L10n.string("you're at your total limit")
+        let room = (Decimal(engine: limit.limit) ?? 0) - (Decimal(engine: limit.current) ?? 0)
         return Result(
-            headline: L10n.string(selling ? "Not sold: %@" : "Not bought: %@", over),
+            headline: L10n.string(selling ? "Not sold: %@" : "Not bought: %@", full),
             facts: [
                 Fact(
                     label: L10n.string(limit.scope == "symbol" ? "Holding %@" : "Holding in total", symbol),
                     value: Humanize.dollars(limit.current)),
-                Fact(label: L10n.string("This buy"), value: Humanize.dollars(limit.proposed)),
                 Fact(label: L10n.string("Limit"), value: Humanize.dollars(limit.limit)),
-            ])
+                Fact(label: L10n.string("Room left"), value: Humanize.dollars("\(max(room, 0))")),
+            ],
+            note: L10n.string("Less than $1 is left, Alpaca's smallest order."))
     }
 
     private static func money(_ value: String?) -> String? {

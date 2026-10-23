@@ -14,6 +14,87 @@ func runConnectionsDraftTests() throws {
     try skippedCallsAreKeptAWeek()
     try orderTimeoutExampleUsesTheAccountsTolerance()
     try alertsSayWhatConnectStillNeeds()
+    try aGuruKeepsItsOwnFullPosition()
+    try aFullPositionEqualToTheMaximumStaysWhenTheMaximumChanges()
+    try theGuruSheetSizesFromItsFullPositionAndWarnsAboveTheCap()
+}
+
+/// A guru's full position is its own (ADR-0010): saved and loaded as typed, and one left empty
+/// takes the account's maximum per stock when it is saved.
+@MainActor
+private func aGuruKeepsItsOwnFullPosition() throws {
+    var policy = TradingAccountPolicy()
+    policy.maxSymbolUSD = "1000"
+    var seed = ConnectionsDraft()
+    seed.channels = "111"
+    seed.accounts = [TradingAccountDraft(name: "zhap-account-2", environment: .paper, policy: policy)]
+    seed.routes = [
+        TradingRouteDraft(
+            channelID: "111", displayName: "赵哥",
+            connection: TradingConnectionDraft(accountID: "zhap-account-2", fullPositionUSD: "1500"))
+    ]
+
+    let (own, _) = try seed.submission()
+    try #require(own.routes.first?.connections.first?.fullPositionUSD == "1500", "the guru's own full position was lost")
+    var loaded = ConnectionsDraft()
+    loaded.load(own)
+    try #require(loaded.routes.first?.connection?.fullPositionUSD == "1500", "a loaded guru lost its full position")
+
+    seed.routes[0].connection?.fullPositionUSD = ""
+    let (following, _) = try seed.submission()
+    try #require(
+        following.routes.first?.connections.first?.fullPositionUSD == "1000",
+        "an empty full position did not follow the account's maximum per stock")
+    loaded.load(following)
+    try #require(
+        loaded.routes.first?.connection?.fullPositionUSD == "1000",
+        "a saved full position equal to the maximum per stock was not kept as its own")
+}
+
+/// A guru saved with a $1,000 full position, the same as the account's maximum per stock: raising
+/// the maximum to $2,000 later must not raise the guru's full position with it.
+@MainActor
+private func aFullPositionEqualToTheMaximumStaysWhenTheMaximumChanges() throws {
+    var policy = TradingAccountPolicy()
+    policy.maxSymbolUSD = "1000"
+    var seed = ConnectionsDraft()
+    seed.channels = "111"
+    seed.accounts = [TradingAccountDraft(name: "zhap-account-2", environment: .paper, policy: policy)]
+    seed.routes = [
+        TradingRouteDraft(
+            channelID: "111", displayName: "赵哥",
+            connection: TradingConnectionDraft(accountID: "zhap-account-2", fullPositionUSD: "1000"))
+    ]
+    let (saved, _) = try seed.submission()
+
+    var draft = ConnectionsDraft()
+    draft.load(saved)
+    draft.accounts[0].policy.maxSymbolUSD = "2000"
+    let (resaved, _) = try draft.submission()
+
+    try #require(
+        resaved.routes.first?.connections.first?.fullPositionUSD == "1000",
+        "the guru's full position followed the new maximum per stock")
+}
+
+/// The guru sheet's figures: a 1/6 and a 1/2 call from the guru's own full position, cut to the
+/// largest single buy, and a call with no size buying the largest single buy, untrimmed.
+@MainActor
+private func theGuruSheetSizesFromItsFullPositionAndWarnsAboveTheCap() throws {
+    var policy = TradingAccountPolicy()
+    policy.maxSymbolUSD = "1000"
+    policy.maxOrderUSD = "200"
+    let own = try #require(
+        SizingSummary.of(TradingConnectionDraft(accountID: "a", fullPositionUSD: "1500"), policy: policy))
+    try #require(
+        own.figures.map { [$0.label, $0.amount, $0.cutFrom ?? ""] }
+            == [["A 1/6 call", "$200", "$250"], ["A 1/2 call", "$200", "$750"], ["No size given", "$200", ""]],
+        "figures were \(own.figures)")
+    try #require(own.warning != nil, "a full position above the maximum per stock was not warned about")
+
+    let following = try #require(SizingSummary.of(TradingConnectionDraft(accountID: "a"), policy: policy))
+    try #require(following.warning == nil, "the account's own maximum was warned about")
+    try #require(following.figures.first?.cutFrom == nil, "a sixth of $1,000 was cut by a $200 largest single buy")
 }
 
 /// An alerts sheet names what is missing instead of closing; a secret saved for the same service

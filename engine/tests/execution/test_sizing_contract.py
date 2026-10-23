@@ -34,14 +34,20 @@ def _source(example: dict) -> Decimal | None:
 
 @pytest.mark.parametrize("example", EXAMPLES, ids=[example["case"] for example in EXAMPLES])
 def test_the_engine_sizes_every_shared_example(example):
-    budget = requested_entry_budget(_connection(example), _source(example)).budget
+    largest = example.get("max_order_usd")
+    budget = requested_entry_budget(
+        _connection(example),
+        _source(example),
+        None,
+        unsized_usd=None if largest is None else Decimal(largest),
+    ).budget
 
     expected = example["budget_usd"]
     assert budget == (None if expected is None else Decimal(expected))
 
 
 @pytest.mark.parametrize("example", CAPPED, ids=[example["case"] for example in CAPPED])
-def test_the_engine_spends_what_the_copy_sheet_shows_after_the_max_per_order(example):
+def test_the_engine_spends_what_the_copy_sheet_shows_after_the_largest_single_buy(example):
     """The copy sheet's footer and button show `spent_usd`; the engine's plan spends the same."""
     limits = CopyConfig(
         sources=("discord:demo",),

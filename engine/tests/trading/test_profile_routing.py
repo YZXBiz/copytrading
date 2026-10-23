@@ -118,14 +118,9 @@ def _two_gurus(accounts=("paper-a", "paper-b"), full_position="600"):
             "an account copies one guru",
             id="two-gurus-into-one-account",
         ),
-        pytest.param(
-            lambda raw: raw["routes"][0]["connections"][0].update(full_position_usd="100"),
-            "maximum per stock",
-            id="full-position-differs-from-the-maximum-per-stock",
-        ),
     ],
 )
-def test_one_guru_copies_into_one_account_at_its_maximum_per_stock(change, problem):
+def test_one_guru_copies_into_one_account(change, problem):
     from copytrading_engine.trading.domain.config import TradingConfiguration
 
     raw = _two_gurus()
@@ -159,3 +154,17 @@ def test_a_repeat_window_outside_one_minute_to_a_day_is_refused(value):
 
     with pytest.raises(ValidationError):
         TradingConfiguration.model_validate(_configuration(routes))
+
+
+@pytest.mark.parametrize("full", ["100", "600", "1500"], ids=["under", "equal", "over"])
+def test_a_gurus_full_position_is_its_own_whatever_the_accounts_maximum_per_stock(full):
+    """The maximum per stock only caps what is bought (ADR-0010); the app warns when the full
+    position is above it."""
+    from copytrading_engine.trading.domain.config import TradingConfiguration
+
+    raw = _two_gurus()
+    raw["routes"][0]["connections"][0]["full_position_usd"] = full
+
+    configuration = TradingConfiguration.model_validate(raw)
+
+    assert str(configuration.routes[0].connections[0].full_position_usd) == full

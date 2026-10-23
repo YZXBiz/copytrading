@@ -32,15 +32,17 @@ struct TradingAccountDraft: Identifiable {
     }
 }
 
-/// The one account a guru copies into (ADR-0007). Its maximum per stock is the guru's full
-/// position; a call that names no size asks for all of it, trimmed by the maximum per order
-/// (ADR-0010).
+/// The one account a guru copies into (ADR-0007), and the guru's full position in it: what the
+/// guru's whole position is in dollars, so a 1/6 call buys a sixth of it (ADR-0010). Empty uses the
+/// account's maximum per stock, which also caps what is bought.
 struct TradingConnectionDraft: Identifiable {
     let id = UUID()
     var accountID: String
+    var fullPositionUSD: String
 
-    init(accountID: String = "primary") {
+    init(accountID: String = "primary", fullPositionUSD: String = "") {
         self.accountID = accountID
+        self.fullPositionUSD = fullPositionUSD
     }
 
     /// The saved connection: what the engine sizes from, and what the sizing example uses.

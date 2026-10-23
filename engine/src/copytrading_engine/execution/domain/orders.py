@@ -1,6 +1,7 @@
 """Validated order terms and records."""
 
 import datetime as dt
+import hashlib
 from collections.abc import Mapping
 from decimal import ROUND_DOWN, Decimal
 from typing import Literal, Self
@@ -51,8 +52,40 @@ class OrderRequest(OrderTerms):
 _SIZE_TOLERANCE = Decimal("1.02")
 # Fields a fresh quote recomputes; see OrderPlan.same_order_as.
 _PRICED = frozenset(
-    {"limit_price", "source_price", "entry_price", "qty", "requested_usd", "budget_usd"}
+    {
+        "limit_price",
+        "source_price",
+        "entry_price",
+        "qty",
+        "requested_usd",
+        "budget_usd",
+        "limited_by",
+    }
 )
+
+
+# Why CopyTrading asked Alpaca to cancel an order: it went unfilled for the account's order
+# timeout, a sell of the same stock replaced a buy still waiting, or copying stopped.
+def copy_client_id(message_key: str, part: int, attempt: int = 1) -> str:
+    """The client order ID of a copied call: one per post and call, so a retried submit can't
+    place it twice, and `-2`, `-3` after it for a sell sent again after an abort (ADR-0010)."""
+    base = "copy-" + hashlib.sha256(f"{message_key}:{part}".encode()).hexdigest()[:40]
+    return base if attempt == 1 else f"{base}-{attempt}"
+
+
+type CancelReason = Literal["timeout", "replaced_by_sell", "copying_stopped"]
+# Statuses that say Alpaca has the order live on the market; an order's timeout runs from the first
+# of them, not from when it was sent, since Alpaca can hold an order before it goes out.
+LIVE_AT_BROKER = frozenset(
+    {
+        OrderStatus.NEW,
+        OrderStatus.PARTIALLY_FILLED,
+        OrderStatus.FILLED,
+    }
+)
+
+# What cut a buy below what its call asked for (risk.BuyLimit).
+type BuyLimit = Literal["largest_single_buy", "symbol_exposure_cap", "total_exposure_cap"]
 
 
 class OrderPlan(OrderTerms):
@@ -67,9 +100,11 @@ class OrderPlan(OrderTerms):
     joins_lot: Identifier | None = None
     # A sell takes from these buys in its lot, or from every buy when empty (ADR-0010).
     from_entries: tuple[Identifier, ...] = ()
-    # What the call asked for, and what the maximum per order allowed of it (ADR-0007).
+    # What the call asked for, what the account's limits allowed of it, and the limit that cut
+    # it, if one did (ADR-0010).
     requested_usd: Positive | None = None
     budget_usd: Positive | None = None
+    limited_by: BuyLimit | None = None
 
     def still_allowed_by(self, fresh: OrderPlan) -> bool:
         """The approved order may still go out: the same order, and no larger than what the
@@ -89,6 +124,7 @@ class OrderPlan(OrderTerms):
             self.joins_lot is not None
             or self.requested_usd is not None
             or self.budget_usd is not None
+            or self.limited_by is not None
         ):
             raise ValueError("Only buys join a lot or carry a requested amount")
         if self.side == "buy" and self.from_entries:
@@ -115,6 +151,8 @@ class OrderRecord(OrderPlan):
     raw_broker_status: Identifier | None = None
     submit_started_at: AwareDatetime | None = None
     filled_avg_price: Positive | None = None
+    # When Alpaca first reported the order live on the market; its timeout runs from here.
+    accepted_at: AwareDatetime | None = None
 
     @model_validator(mode="after")
     def valid_fill(self) -> Self:

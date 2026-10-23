@@ -14,13 +14,13 @@ from copytrading_engine.execution.domain.manual_commands import (
 )
 from copytrading_engine.execution.domain.market import Quote
 from copytrading_engine.execution.domain.order_lifecycle import OrderStatus
-from copytrading_engine.execution.domain.orders import OrderPlan
+from copytrading_engine.execution.domain.orders import CancelReason, OrderPlan
 from copytrading_engine.execution.domain.ownership import (
     ExternalPosition,
     OwnershipIncident,
     OwnershipResolution,
 )
-from copytrading_engine.execution.domain.progress import Exposure
+from copytrading_engine.execution.domain.progress import Exposure, SellWait
 from copytrading_engine.execution.domain.recovery import (
     IncidentClearanceEvidence,
     LateOrderIncident,
@@ -107,6 +107,25 @@ class Skipped(EventPayloadValue):
     part: int = Field(ge=0)
     reason: Identifier
     exposure: tuple[Exposure, ...] | None
+    bought_at: AwareDatetime | None = None
+
+
+class SellWaiting(EventPayloadValue):
+    """A sell that has no price to sell at yet: it waits, and asks again later."""
+
+    kind: Literal["sell_waiting"] = "sell_waiting"
+    message_id: Identifier
+    part: int = Field(ge=0)
+    reason: SellWait
+
+
+class ReadBackSummary(EventPayloadValue):
+    """What came of the posts read back after CopyTrading was off, told to the owner once."""
+
+    kind: Literal["read_back_summary"] = "read_back_summary"
+    posts: int = Field(ge=1)
+    sells_copied: int = Field(ge=0)
+    buys_too_old: int = Field(ge=0)
 
 
 class MessageDone(EventPayloadValue):
@@ -144,6 +163,17 @@ class SubmissionAborted(EventPayloadValue):
     reason: Identifier
 
 
+class SendAborted(EventPayloadValue):
+    """A copied sell stopped before it reached Alpaca (CopyTrading stopping, or the session
+    changing): its call waits again, and its next attempt goes out under a new client ID."""
+
+    kind: Literal["send_aborted"] = "send_aborted"
+    client_id: Identifier
+    message_id: Identifier
+    part: int = Field(ge=0)
+    reason: Identifier
+
+
 class SubmissionUncertain(EventPayloadValue):
     kind: Literal["submission_uncertain"] = "submission_uncertain"
     client_id: Identifier
@@ -154,11 +184,6 @@ class BrokerAcknowledged(EventPayloadValue):
     kind: Literal["broker_acknowledged"] = "broker_acknowledged"
     client_id: Identifier
     message_id: Identifier
-
-
-# Why CopyTrading asked Alpaca to cancel an order: it went unfilled for the account's order
-# timeout, a sell of the same stock replaced a buy still waiting, or copying stopped.
-CancelReason = Literal["timeout", "replaced_by_sell", "copying_stopped"]
 
 
 class CancelRequested(EventPayloadValue):
@@ -311,10 +336,13 @@ type EventPayload = Annotated[
     | Message
     | CashAnchorRecorded
     | Skipped
+    | SellWaiting
+    | ReadBackSummary
     | MessageDone
     | OrderPrepared
     | SubmitStarted
     | SubmissionAborted
+    | SendAborted
     | SubmissionUncertain
     | BrokerAcknowledged
     | CancelRequested

@@ -17,7 +17,12 @@ from copytrading_engine.execution.domain.order_lifecycle import (
     is_pending,
     map_broker_status,
 )
-from copytrading_engine.execution.domain.orders import OrderPlan, OrderRecord, OwnedLot
+from copytrading_engine.execution.domain.orders import (
+    OrderPlan,
+    OrderRecord,
+    OwnedLot,
+    copy_client_id,
+)
 from copytrading_engine.execution.domain.ownership import (
     ExternalPosition,
     OwnershipIncident,
@@ -519,9 +524,20 @@ class LedgerSnapshot(Value):
             if key != order.client_id or message is None or order.source_key != message.source_key:
                 raise ValueError("Snapshot order identity mismatch")
             manual = key in manual_order_ids
-            if not manual and (
-                order.instruction_index >= len(message.parts)
-                or message.parts[order.instruction_index] != OrderLinked(client_id=key)
+            # A copied sell stopped before it was sent gives its call back to wait again; a later
+            # attempt of the same call, or the waiting call itself, holds the reservation.
+            sent_again = (
+                order.side == "sell"
+                and order.status == OrderStatus.ABORTED_BEFORE_SUBMIT
+                and key.startswith(copy_client_id(order.message_id, order.instruction_index))
+            )
+            if (
+                not manual
+                and not sent_again
+                and (
+                    order.instruction_index >= len(message.parts)
+                    or message.parts[order.instruction_index] != OrderLinked(client_id=key)
+                )
             ):
                 raise ValueError("Recorded order has no matching instruction reservation")
             if (

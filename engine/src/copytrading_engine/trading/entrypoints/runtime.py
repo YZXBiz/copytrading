@@ -357,10 +357,6 @@ class TradingRuntime:
                         account.id,
                         ",".join(change.setting for change in changes),
                     )
-        if self._worker is not None:
-            self._worker.max_age = _max_signal_age(configuration)
-        if self._source is not None:
-            self._source.catch_up_seconds = _max_signal_age(configuration)
 
     async def check_connection(self, connection: ConnectionCheck) -> CapabilityCheck:
         """Check one service with the keys typed for it; nothing is saved or started."""
@@ -508,7 +504,6 @@ class TradingRuntime:
                 ),
                 on_captured=self._wake,
             )
-            source.catch_up_seconds = _max_signal_age(configuration)
             self._source = source
             parser = await SQLiteExtractionStore.open(database)
             routing = await RoutingRevision.open(database)
@@ -536,7 +531,6 @@ class TradingRuntime:
                 decoder,
                 routes,
                 configuration.provider.model,
-                max_age=_max_signal_age(configuration),
                 observe=self._telemetry.model_span if self._telemetry else lambda _: nullcontext(),
                 observe_workflow=(
                     self._telemetry.workflow_span if self._telemetry else lambda _: nullcontext()
@@ -1030,7 +1024,3 @@ def _copy_policy(configuration: TradingConfiguration, account_id: str) -> CopyCo
         entry_pricing=EntryPricingPolicy(**account.policy.model_dump(include=pricing)),
         **account.policy.model_dump(exclude=pricing),
     )
-
-
-def _max_signal_age(configuration: TradingConfiguration) -> int:
-    return max(account.policy.max_signal_age_seconds for account in configuration.accounts)

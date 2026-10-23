@@ -14,7 +14,8 @@ struct ManualInstructionEditor: View {
     var refreshQuote: (() -> Void)?
     /// A full position for this guru in the one chosen account; nil when several are chosen.
     let fullPosition: TradingRouteConnection?
-    /// That account's max per order, which caps any one buy; nil when several are chosen.
+    /// That account's largest single buy, which caps any one buy and is what a buy with no size
+    /// spends; nil when several are chosen.
     let maxOrderUSD: Decimal?
     @FocusState private var focusedField: String?
 
@@ -94,10 +95,10 @@ struct ManualInstructionEditor: View {
 
     // MARK: Amount
 
-    /// The usual buy sizes, with those the max per order makes the same merged into one.
+    /// The usual buy sizes, with those the largest single buy makes the same merged into one.
     private var buySizes: [BuySize] { BuySize.choices(fullPosition: fullPosition, maxOrderUSD: maxOrderUSD) }
 
-    /// A dollar amount the post named, and what it spends after the max per order.
+    /// A dollar amount the post named, and what it spends after the largest single buy.
     private var namedUSD: (asked: Decimal, spent: Decimal)? {
         guard !draft.isSell, let usd = Decimal(string: draft.usdAmount.trimmed), usd > 0 else { return nil }
         return (usd, fullPosition?.spentUSD(sourceFraction: nil, sourceUSD: usd, maxOrderUSD: maxOrderUSD) ?? usd)
@@ -141,22 +142,23 @@ struct ManualInstructionEditor: View {
         }
     }
 
-    /// One plain line once the max per order cuts any size: "Bigger sizes stop at your $250 max
-    /// per order."
+    /// One plain line once the largest single buy cuts any size: "Bigger sizes stop at your $250
+    /// largest single buy."
     @MainActor private var capNote: String? {
         guard !draft.isSell, let maxOrderUSD else { return nil }
         let cut = buySizes.contains { $0.shares.count > 1 } || namedUSD.map { $0.spent < $0.asked } == true
-        return cut ? L10n.string("Bigger sizes stop at your %@ max per order.", Humanize.dollars("\(maxOrderUSD)")) : nil
+        return cut ? L10n.string("Bigger sizes stop at your %@ largest single buy.", Humanize.dollars("\(maxOrderUSD)")) : nil
     }
 
-    /// "⅙", "Full", or "¼ or more" for the sizes the max per order made the same.
+    /// "⅙", "No size", or "¼ or more" for the sizes the largest single buy made the same. A buy with
+    /// no size buys the largest single buy (ADR-0010).
     @MainActor private func sizeTitle(_ size: BuySize) -> String {
         let first = shareTitle(size.shares[0])
         return size.shares.count > 1 ? L10n.string("%@ or more", first) : first
     }
 
     @MainActor private func shareTitle(_ share: String) -> String {
-        if share.isEmpty { return L10n.string("Full") }
+        if share.isEmpty { return L10n.string("No size") }
         let fraction = Humanize.fraction(share)
         if fraction == "1" { return L10n.string(draft.isSell ? "All" : "Full") }
         let glyphs = ["1/6": "⅙", "1/4": "¼", "1/3": "⅓", "1/2": "½", "2/3": "⅔", "3/4": "¾", "1/5": "⅕", "1/8": "⅛"]

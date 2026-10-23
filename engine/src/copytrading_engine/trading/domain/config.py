@@ -184,16 +184,14 @@ class TradingConfiguration(BaseModel):
             profile = profile_revisions.get(route.profile_revision)
             if profile is None or profile.guru_id != route.guru_id:
                 raise ValueError("route references an unknown guru profile revision")
-            # One guru copies into one account, and its full position is that account's
-            # maximum per stock (ADR-0007).
+            # One guru copies into one account (ADR-0007). Its full position is its own; the
+            # account's maximum per stock only caps what is bought (ADR-0010).
             if len(route.connections) != 1:
                 raise ValueError("a guru copies into exactly one account")
             [connection] = route.connections
             account = accounts.get(connection.account_id)
             if account is None:
                 raise ValueError("route references an unknown account")
-            if connection.full_position_usd != account.policy.max_symbol_usd:
-                raise ValueError("a guru's full position is its account's maximum per stock")
         copied_into = [route.connections[0].account_id for route in self.routes]
         if len(set(copied_into)) != len(copied_into):
             raise ValueError("an account copies one guru")

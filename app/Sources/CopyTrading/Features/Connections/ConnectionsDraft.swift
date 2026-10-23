@@ -109,7 +109,12 @@ struct ConnectionsDraft {
                 displayName: profile?.displayName ?? route.guruID,
                 playbook: profile?.playbook ?? "",
                 repeatWindowMinutes: route.repeatWindowMinutes,
-                connection: route.connections.first.map { TradingConnectionDraft(accountID: $0.accountID) }
+                // A saved full position is the guru's own, even one equal to the account's maximum
+                // per stock: changing the maximum later doesn't change it. Only a new guru's empty
+                // field takes the maximum, when it is saved.
+                connection: route.connections.first.map {
+                    TradingConnectionDraft(accountID: $0.accountID, fullPositionUSD: $0.fullPositionUSD)
+                }
             )
         }
         notificationsEnabled = saved.notification != nil
@@ -182,8 +187,9 @@ struct ConnectionsDraft {
 
     /// The guru's full position: the account's current maximum per stock, so the two can never
     /// disagree (ADR-0007).
+    /// The guru's own full position, or the account's maximum per stock when none is set.
     func fullPosition(for connection: TradingConnectionDraft) -> String {
-        policy(of: connection.accountID)?.maxSymbolUSD.trimmed ?? ""
+        connection.fullPositionUSD.trimmed.nilIfEmpty ?? policy(of: connection.accountID)?.maxSymbolUSD.trimmed ?? ""
     }
 
     func policy(of accountID: String) -> TradingAccountPolicy? {

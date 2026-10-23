@@ -22,11 +22,22 @@ from copytrading_engine.execution.domain.events import (
     SubmitStarted,
 )
 from copytrading_engine.execution.domain.events import Skipped as SkippedEvent
-from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
+from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot, MessageRecord
 from copytrading_engine.execution.domain.market import Account, Position
-from copytrading_engine.execution.domain.orders import OwnedLot
+from copytrading_engine.execution.domain.order_lifecycle import OrderStatus
+from copytrading_engine.execution.domain.orders import (
+    BuyLimit,
+    OrderRecord,
+    OwnedLot,
+    copy_client_id,
+)
 from copytrading_engine.execution.domain.ownership import OwnershipInspection
-from copytrading_engine.execution.domain.progress import InstructionProgress, Skipped
+from copytrading_engine.execution.domain.progress import (
+    InstructionProgress,
+    OrderLinked,
+    Pending,
+    Skipped,
+)
 from copytrading_engine.execution.domain.values import Money, Positive, Quantity, Value
 
 EXCERPT_LENGTH = 140
@@ -180,11 +191,12 @@ class OrderView(Value):
     # copying_stopped), Alpaca's (cancelled_at_broker, expired), or rejected.
     cancel_reason: str | None = None
     ended_at: AwareDatetime | None = None
-    # Which of the post's calls this order places, and for a buy what the call asked for and
-    # what the maximum per order allowed of it (ADR-0007).
+    # Which of the post's calls this order places, and for a buy what the call asked for, what
+    # the account's limits allowed of it, and the limit that cut it (ADR-0010).
     instruction_index: int
     requested_usd: Positive | None
     budget_usd: Positive | None
+    limited_by: BuyLimit | None = None
 
 
 class LimitHit(Value):
@@ -226,12 +238,20 @@ class TimelineStep(Value):
     price: Positive | None = None
 
 
+class LaterBuy(Value):
+    """A sell skipped because every buy it would have sold was posted after it."""
+
+    part: int
+    bought_at: AwareDatetime
+
+
 class DestinationView(Value):
     account_id: str
     environment: str
     status: str
     instruction_outcomes: tuple[str, ...]
     limits_hit: tuple[LimitHit, ...]
+    later_buys: tuple[LaterBuy, ...] = ()
     orders: tuple[OrderView, ...]
     timeline: tuple[TimelineStep, ...] = ()
 
@@ -611,9 +631,10 @@ def destination_views(
                 instruction_index=order.instruction_index,
                 requested_usd=order.requested_usd,
                 budget_usd=order.budget_usd,
+                limited_by=order.limited_by,
             ).model_copy(update=_order_detail(tuple(by_order.get(order.client_id, ()))))
             for order in snapshot.orders.values()
-            if order.message_id == message.key
+            if order.message_id == message.key and not _sent_again(order, message)
         )
         views[source_id] = DestinationView(
             account_id=message.destination.connection.account_id,
@@ -628,13 +649,32 @@ def destination_views(
                 if isinstance(part, Skipped)
                 for exposure in part.exposure
             ),
+            later_buys=tuple(
+                LaterBuy(part=index, bought_at=part.bought_at)
+                for index, part in enumerate(message.parts)
+                if isinstance(part, Skipped) and part.bought_at is not None
+            ),
             orders=orders,
             timeline=_timeline(tuple(by_message.get(message.key, ())), tuple(resumes)),
         )
     return views
 
 
+def _sent_again(order: OrderRecord, message: MessageRecord) -> bool:
+    """A copied sell's attempt that was stopped before it reached Alpaca and is being tried again:
+    the call's later attempt stands for it in Activity."""
+    return (
+        order.status is OrderStatus.ABORTED_BEFORE_SUBMIT
+        and order.side == "sell"
+        and order.client_id.startswith(copy_client_id(message.key, order.instruction_index))
+        and message.parts[order.instruction_index] != OrderLinked(client_id=order.client_id)
+    )
+
+
 def _outcome(part: InstructionProgress, *, approved: bool) -> str:
+    if isinstance(part, Pending) and part.waiting is not None:
+        # A sell with no fresh bid yet: still working, waiting for a price to sell at.
+        return "waiting_for_quote"
     if not isinstance(part, Skipped):
         return part.kind
     if part.reason == "approval_required" and approved:
