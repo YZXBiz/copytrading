@@ -2,6 +2,13 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
+## 0.1.0-beta.7 — developer preview
+
+When copying doesn't start, it says which account, what happened, and what to do, and you can try again right away. Found while setting up again after beta.6.
+
+- **A failed start names the account and the reason.** Copying that didn't start said only "The account could not be reached. Try again." whatever went wrong. It now says, for each account, what happened and what to do: its Alpaca keys are for a different Alpaca account than the one CopyTrading recorded under this name (use the name that account had before, or a new name), Alpaca didn't accept the keys, or Alpaca couldn't be reached. Discord, the model service, and CopyTrading's own data say the same way what stopped them.
+- **Start Copying works again after a failed start.** A start that failed left Start Copying greyed out with no way to try again; it now reads "Ready to start".
+
 ## 0.1.0-beta.6 — developer preview
 
 Every sheet and Settings page reads as one organized form, and the guru sheet loses two features the playbook made unnecessary. **After updating, set up again:** the saved setup changes format and is not carried over, so copying stays stopped until you re-enter your connections, accounts, and gurus in Connections.
