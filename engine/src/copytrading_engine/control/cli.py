@@ -10,12 +10,16 @@ from decimal import Decimal
 from fractions import Fraction
 from typing import Final, TextIO, assert_never
 
-from copytrading_engine.control import wire
+from copytrading_engine.control import cli_setup, wire
 from copytrading_engine.control.client import (
+    OLDER_CLIENT,
     AppUnavailable,
     ControlClient,
+    NoAnswer,
     ProtocolMismatch,
+    RequestTooLarge,
     UnsafeSocket,
+    is_server_socket,
     new_request_id,
     socket_path,
 )
@@ -73,8 +77,9 @@ def _parser() -> argparse.ArgumentParser:
 
     parser = argparse.ArgumentParser(
         prog="copytrading",
-        description="Check and steer a running CopyTrading. Actions that can trade "
-        "only create proposals; the owner approves them in the app.",
+        description="Check, steer and set up a running CopyTrading. Actions that can trade, "
+        "and setup that touches a live account, only create proposals; the owner approves "
+        "them in the app.",
     )
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("status", parents=[output], help="engine, processing and accounts")
@@ -147,14 +152,18 @@ def _parser() -> argparse.ArgumentParser:
     wait.add_argument("proposal_id")
     wait.add_argument("--timeout", type=float, default=300.0)
 
+    cli_setup.add_setup_parser(commands, output)
+
     commands.add_parser("schema", help="print the contract's JSON Schema")
     commands.add_parser("mcp", help="serve the same operations as an MCP stdio server")
     return parser
 
 
-def request_for(args: argparse.Namespace) -> wire.Request:
+def request_for(args: argparse.Namespace, stdin: TextIO | None = None) -> wire.Request:
     """Translate parsed arguments into exactly one contract request."""
     request_id = new_request_id()
+    if args.command == "setup":
+        return cli_setup.setup_request(args, request_id, stdin or sys.stdin)
     match args.command, getattr(args, "action", None):
         case "status", _:
             return wire.GetStatus(request_id=request_id)
@@ -232,6 +241,7 @@ def main(
     *,
     stdout: TextIO | None = None,
     stderr: TextIO | None = None,
+    stdin: TextIO | None = None,
     client_factory: Callable[[], ControlClient] | None = None,
 ) -> int:
     stdout = stdout or sys.stdout
@@ -250,14 +260,38 @@ def main(
 
         serve()
         return EXIT_OK
+    if args.command == "setup" and client_factory is None and is_server_socket():
+        print(cli_setup.SERVER_REFUSAL, file=stderr)
+        return EXIT_APP_UNAVAILABLE
+    # A command that reads a key first makes sure the app is the one answering (below).
+    request: wire.Request | None = None
+    if not cli_setup.reads_secret(args):
+        try:
+            request = request_for(args, stdin)
+        except ValueError as error:
+            print(f"Invalid arguments: {error}", file=stderr)
+            return EXIT_USAGE
+    timeout = cli_setup.timeout_for(args)
+    client = (
+        client_factory()
+        if client_factory
+        else ControlClient(socket_path())
+        if timeout is None
+        else ControlClient(socket_path(), timeout=timeout)
+    )
     try:
-        request = request_for(args)
-    except ValueError as error:
-        print(f"Invalid arguments: {error}", file=stderr)
+        return asyncio.run(_execute(client, args, request, stdin, stdout, stderr))
+    except RequestTooLarge as large:
+        print(
+            f"The request is too large ({large.args[0]:,} bytes): CopyTrading takes at most "
+            f"{wire.MAX_LINE_BYTES // 1024} KB. For `setup import`, keep only the setup's lines "
+            "in the file.",
+            file=stderr,
+        )
         return EXIT_USAGE
-    client = client_factory() if client_factory else ControlClient(socket_path())
-    try:
-        return asyncio.run(_execute(client, args, request, stdout, stderr))
+    except NoAnswer as silent:
+        print(cli_setup.no_answer(args, silent.args[0] if silent.args else None), file=stderr)
+        return EXIT_NOT_COMPLETED
     except AppUnavailable:
         print("CopyTrading is not running, or agent access is turned off.", file=stderr)
         return EXIT_APP_UNAVAILABLE
@@ -265,6 +299,9 @@ def main(
         print(f"Refusing to use {unsafe}: it is not the app's private socket.", file=stderr)
         return EXIT_FAILURE
     except ProtocolMismatch as mismatch:
+        if str(mismatch) == OLDER_CLIENT:
+            print(f"CopyTrading answered with something new: {OLDER_CLIENT}.", file=stderr)
+            return EXIT_FAILURE
         print(f"Unexpected answer from CopyTrading: {mismatch}", file=stderr)
         return EXIT_FAILURE
 
@@ -272,10 +309,24 @@ def main(
 async def _execute(
     client: ControlClient,
     args: argparse.Namespace,
-    request: wire.Request,
+    request: wire.Request | None,
+    stdin: TextIO | None,
     stdout: TextIO,
     stderr: TextIO,
 ) -> int:
+    if request is None:
+        # Keys go only to the Mac app: it must answer `get_setup` before any key is read.
+        checked = await client.send(wire.GetSetup(request_id=new_request_id()))
+        if checked.error is not None:
+            print(checked.error.message, file=stderr)
+            return error_exit_code(checked.error.code)
+        if not isinstance(checked.ok, wire.SetupView):
+            raise ProtocolMismatch("the socket did not answer as the CopyTrading app")
+        try:
+            request = request_for(args, stdin)
+        except ValueError as error:
+            print(f"Invalid arguments: {error}", file=stderr)
+            return EXIT_USAGE
     response = await client.send(request)
     if args.command == "proposals" and args.action == "wait":
         response = await _wait(client, response, args.timeout)
@@ -290,7 +341,11 @@ async def _execute(
         raise ProtocolMismatch("response has no result")
     if not args.json:
         print(render(result), file=stdout)
-    return proposal_exit_code(result) if isinstance(result, wire.ProposalView) else EXIT_OK
+    if isinstance(result, wire.ProposalView):
+        return proposal_exit_code(result)
+    if isinstance(result, wire.SetupApplied):
+        return cli_setup.setup_exit_code(result)
+    return EXIT_OK
 
 
 async def _wait(client: ControlClient, response: wire.Response, timeout: float) -> wire.Response:
@@ -392,6 +447,12 @@ def render(result: wire.Result) -> str:
         case wire.AccountControlView():
             word = _BUYS.get(result.entry_permission, "not_started")
             return f"{result.account_id}: {wire.COPYING_WORDS[word]}."
+        case wire.SetupView():
+            return cli_setup.render_setup(result)
+        case wire.SetupImported():
+            return cli_setup.render_imported(result)
+        case wire.SetupApplied():
+            return cli_setup.render_applied(result)
         case _:
             assert_never(result)
 
@@ -544,6 +605,8 @@ def _render_proposal(proposal: wire.ProposalView) -> str:
             what = f"set recovery for {subject.account_id} to {subject.preference}"
         case wire.StartProcessingSubject():
             what = "start copying"
+        case wire.ApplySetupSubject():
+            what = cli_setup.describe_apply_proposal(subject)
         case wire.LimitsSubject():
             what = f"change {subject.account_id}: " + ", ".join(
                 f"{_words(change.field)} = {change.value}" for change in subject.changes

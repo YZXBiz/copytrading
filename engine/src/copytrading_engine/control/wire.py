@@ -8,7 +8,16 @@ name Discord text `untrusted_source_text` so no consumer mistakes it for instruc
 from decimal import Decimal
 from typing import Annotated, Any, Final, Literal, Self
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, TypeAdapter, model_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    PlainSerializer,
+    SecretStr,
+    TypeAdapter,
+    model_validator,
+)
 
 SCHEMA_VERSION: Final = 1
 MAX_LINE_BYTES: Final = 64 * 1024
@@ -53,7 +62,42 @@ type Operation = Literal[
     "propose_manual_order",
     "propose_set_account_limits",
     "propose_start_processing",
+    "get_setup",
+    "edit_setup_discord",
+    "edit_setup_model",
+    "edit_setup_account",
+    "edit_setup_guru",
+    "edit_setup_alerts",
+    "import_setup",
+    "apply_setup",
+    "discard_setup",
 ]
+
+# The setup operations the app answers itself: their keys go to the Keychain, never the engine.
+type SetupOperation = Literal[
+    "get_setup",
+    "edit_setup_discord",
+    "edit_setup_model",
+    "edit_setup_account",
+    "edit_setup_guru",
+    "edit_setup_alerts",
+    "import_setup",
+    "apply_setup",
+    "discard_setup",
+]
+SETUP_OPERATIONS: Final[frozenset[str]] = frozenset(
+    (
+        "get_setup",
+        "edit_setup_discord",
+        "edit_setup_model",
+        "edit_setup_account",
+        "edit_setup_guru",
+        "edit_setup_alerts",
+        "import_setup",
+        "apply_setup",
+        "discard_setup",
+    )
+)
 
 type ErrorCode = Literal[
     "access_off",
@@ -211,6 +255,197 @@ class ProposeManualOrder(RequestHeader):
     preview_id: Identifier
 
 
+# Setup: the CLI edits the app's own draft, the same one Connections edits, then applies it.
+
+
+def _reveal(value: SecretStr) -> str:
+    return value.get_secret_value()
+
+
+# A key, token or secret. It travels only in a request line to the app, which saves it in the
+# Keychain; its repr, errors and Python dumps are masked, and no response ever carries one.
+Secret = Annotated[
+    SecretStr,
+    Field(min_length=1, max_length=4096),
+    PlainSerializer(_reveal, return_type=str, when_used="json"),
+]
+# Discord channel, user and webhook-free identifiers are decimal strings (snowflakes).
+DiscordId = Annotated[str, Field(pattern=r"^[0-9]{1,32}$")]
+AccountName = Annotated[str, Field(pattern=r"^[A-Za-z0-9_-]{1,64}$")]
+GuruRef = Annotated[str, Field(min_length=1, max_length=100)]
+Environment = Literal["paper", "live"]
+type ModelService = Literal[
+    "anthropic",
+    "openai",
+    "google",
+    "deepseek",
+    "openrouter",
+    "groq",
+    "xai",
+    "mistral",
+    "together",
+    "fireworks",
+    "cerebras",
+    "moonshotai",
+    "ollama",
+    "openai_compatible",
+]
+AlertService = Literal["telegram", "discord"]
+PLAYBOOK_MAX_LENGTH: Final = 8_000
+IMPORT_MAX_LENGTH: Final = 60_000
+REPEAT_WINDOW_MAX_MINUTES: Final = 1440
+
+
+def _require_a_change(model: BaseModel, fields: tuple[str, ...]) -> None:
+    if all(getattr(model, name) is None for name in fields):
+        raise ValueError("Name at least one thing to change")
+
+
+class GetSetup(RequestHeader):
+    """The setup as Connections shows it: saved values plus unsaved edits, keys as saved or not."""
+
+    operation: Literal["get_setup"] = "get_setup"
+
+
+class EditSetupDiscord(RequestHeader):
+    operation: Literal["edit_setup_discord"] = "edit_setup_discord"
+    channel_ids: Annotated[tuple[DiscordId, ...], Field(min_length=1, max_length=50)] | None = None
+    # An empty list copies every author in the channels.
+    author_ids: Annotated[tuple[DiscordId, ...], Field(max_length=50)] | None = None
+    token: Secret | None = None
+
+    @model_validator(mode="after")
+    def changes_something(self) -> Self:
+        _require_a_change(self, ("channel_ids", "author_ids", "token"))
+        return self
+
+
+class EditSetupModel(RequestHeader):
+    operation: Literal["edit_setup_model"] = "edit_setup_model"
+    service: ModelService | None = None
+    model: Annotated[str, Field(min_length=1, max_length=200)] | None = None
+    # Only for ollama and openai_compatible; an empty string clears it.
+    base_url: Annotated[str, Field(max_length=2048)] | None = None
+    key: Secret | None = None
+
+    @model_validator(mode="after")
+    def changes_something(self) -> Self:
+        _require_a_change(self, ("service", "model", "base_url", "key"))
+        return self
+
+
+class EditSetupAccount(RequestHeader):
+    operation: Literal["edit_setup_account"] = "edit_setup_account"
+    action: Literal["add", "edit", "remove"]
+    account_id: AccountName
+    rename: AccountName | None = None
+    environment: Environment | None = None
+    # The Alpaca API key ID and its secret, always together.
+    key: Secret | None = None
+    secret: Secret | None = None
+    limits: Annotated[tuple[LimitChange, ...], Field(max_length=len(LIMIT_FIELDS))] = ()
+    # What the account does after a restart: wait for the owner (manual), or carry on by itself.
+    recovery_preference: RecoveryPreference | None = None
+
+    @model_validator(mode="after")
+    def consistent(self) -> Self:
+        if (self.key is None) != (self.secret is None):
+            raise ValueError("Give the Alpaca key and its secret together")
+        if len({change.field for change in self.limits}) != len(self.limits):
+            raise ValueError("A setting is named twice")
+        changes = (
+            self.rename,
+            self.environment,
+            self.key,
+            self.recovery_preference,
+        ) != (None, None, None, None) or self.limits
+        if self.action == "remove" and changes:
+            raise ValueError("Removing an account takes only its name")
+        if self.action == "add" and self.rename is not None:
+            raise ValueError("A new account is named once")
+        if self.action == "edit" and not changes:
+            raise ValueError("Name at least one thing to change")
+        return self
+
+
+class EditSetupGuru(RequestHeader):
+    operation: Literal["edit_setup_guru"] = "edit_setup_guru"
+    action: Literal["add", "edit", "remove"]
+    # The guru's name, or its ID; for add, the new guru's name.
+    guru: GuruRef
+    rename: GuruRef | None = None
+    # An empty string follows the first source channel.
+    channel_id: DiscordId | Literal[""] | None = None
+    # An empty string copies every author in the channel.
+    author_id: DiscordId | Literal[""] | None = None
+    account_id: AccountName | None = None
+    # The guru's own full position in their account: a 1/6 call buys a sixth of it (ADR-0010).
+    full_position_usd: Annotated[str, Field(min_length=1, max_length=32)] | None = None
+    playbook: Annotated[str, Field(max_length=PLAYBOOK_MAX_LENGTH)] | None = None
+    # Minutes within which the same call again is a re-post; 0 copies every post.
+    repeat_window_minutes: Annotated[int, Field(ge=0, le=REPEAT_WINDOW_MAX_MINUTES)] | None = None
+
+    @model_validator(mode="after")
+    def consistent(self) -> Self:
+        fields = (
+            "rename",
+            "channel_id",
+            "author_id",
+            "account_id",
+            "full_position_usd",
+            "playbook",
+            "repeat_window_minutes",
+        )
+        changes = any(getattr(self, name) is not None for name in fields)
+        if self.action == "remove" and changes:
+            raise ValueError("Removing a guru takes only their name")
+        if self.action == "add" and self.rename is not None:
+            raise ValueError("A new guru is named once")
+        if self.action == "edit" and not changes:
+            raise ValueError("Name at least one thing to change")
+        return self
+
+
+class EditSetupAlerts(RequestHeader):
+    operation: Literal["edit_setup_alerts"] = "edit_setup_alerts"
+    enabled: bool | None = None
+    service: AlertService | None = None
+    # Telegram's chat; a Discord webhook names its own channel.
+    chat_id: Annotated[str, Field(max_length=64)] | None = None
+    # Telegram's bot token, or the Discord webhook URL.
+    token: Secret | None = None
+
+    @model_validator(mode="after")
+    def changes_something(self) -> Self:
+        _require_a_change(self, ("enabled", "service", "chat_id", "token"))
+        return self
+
+
+class ImportSetup(RequestHeader):
+    """A setup file's text, read the way the app's Import Setup reads it."""
+
+    operation: Literal["import_setup"] = "import_setup"
+    text: Annotated[
+        SecretStr,
+        Field(min_length=1, max_length=IMPORT_MAX_LENGTH),
+        PlainSerializer(_reveal, return_type=str, when_used="json"),
+    ]
+
+
+class ApplySetup(RequestHeader):
+    """Check every connection, then save. Copying that runs starts again with the new setup;
+    copying that is paused stays paused unless `start` asks to start it, as Start Copying does."""
+
+    operation: Literal["apply_setup"] = "apply_setup"
+    start: bool = False
+
+
+class DiscardSetup(RequestHeader):
+    """Drop the unsaved edits, as Connections' Discard does."""
+
+    operation: Literal["discard_setup"] = "discard_setup"
+
+
 type Request = Annotated[
     GetStatus
     | ListAccounts
@@ -227,7 +462,16 @@ type Request = Annotated[
     | ProposeRecoveryPreference
     | ProposeManualOrder
     | ProposeSetAccountLimits
-    | ProposeStartProcessing,
+    | ProposeStartProcessing
+    | GetSetup
+    | EditSetupDiscord
+    | EditSetupModel
+    | EditSetupAccount
+    | EditSetupGuru
+    | EditSetupAlerts
+    | ImportSetup
+    | ApplySetup
+    | DiscardSetup,
     Field(discriminator="operation"),
 ]
 REQUEST: Final = TypeAdapter[Request](Request)
@@ -500,12 +744,27 @@ class StartProcessingSubject(Wire):
     kind: Literal["start_processing"] = "start_processing"
 
 
+class ApplySetupSubject(Wire):
+    """Applying the setup touches real money: what in it does, by account."""
+
+    kind: Literal["apply_setup"] = "apply_setup"
+    # Accounts the setup makes live, new or switched from paper.
+    made_live: tuple[str, ...]
+    # Live accounts with new Alpaca keys to save.
+    new_live_keys: tuple[str, ...]
+    # Live accounts whose limits or switches change.
+    changed_live: tuple[str, ...]
+    # Live accounts copying starts again with.
+    starts_live: tuple[str, ...]
+
+
 type ProposalSubject = Annotated[
     ResumeAccountSubject
     | RecoverySubject
     | ManualOrderSubject
     | LimitsSubject
-    | StartProcessingSubject,
+    | StartProcessingSubject
+    | ApplySetupSubject,
     Field(discriminator="kind"),
 ]
 
@@ -561,6 +820,100 @@ class AccountControlView(Wire):
     applied_at: AwareDatetime
 
 
+# Setup results. Keys are only ever "saved", "missing", "entered" (typed, not saved yet), or
+# "not_needed" (a model on the owner's own machine).
+type KeyState = Literal["saved", "missing", "entered", "not_needed"]
+
+
+class SetupCheckView(Wire):
+    """A connection's latest check, as its row in Connections reads."""
+
+    connection: Literal["discord", "model", "account", "alerts", "setup"]
+    subject: str | None = None
+    state: Literal["passed", "failed", "not_configured"]
+    reason: str | None = None
+    # What happened and what to do, in the app's words; set when the check failed.
+    message: str | None = None
+
+
+class SetupDiscordView(Wire):
+    channel_ids: tuple[str, ...]
+    author_ids: tuple[str, ...]
+    token: KeyState
+    check: SetupCheckView | None = None
+
+
+class SetupModelView(Wire):
+    service: str
+    model: str
+    base_url: str | None = None
+    key: KeyState
+    check: SetupCheckView | None = None
+
+
+class SetupAccountView(Wire):
+    account_id: str
+    environment: Environment
+    keys: KeyState
+    limits: tuple[LimitChange, ...]
+    recovery_preference: RecoveryPreference
+    check: SetupCheckView | None = None
+
+
+class SetupGuruView(Wire):
+    # The ID the guru's channel gives them (`route_keys.guru_for_channel`); None until they have
+    # a channel.
+    guru_id: str | None = None
+    name: str
+    # The channel the guru is read from; the first source channel when they name none.
+    channel_id: str | None = None
+    author_id: str | None = None
+    account_id: str | None = None
+    full_position_usd: str | None = None
+    repeat_window_minutes: int | None = None
+    playbook_characters: int
+
+
+class SetupAlertsView(Wire):
+    enabled: bool
+    service: AlertService
+    chat_id: str | None = None
+    token: KeyState
+    check: SetupCheckView | None = None
+
+
+class SetupView(Wire):
+    type: Literal["setup"] = "setup"
+    # A setup has been checked, saved and started at least once.
+    saved: bool
+    # The draft differs from what is saved; `setup apply` checks and saves it.
+    unsaved_changes: bool
+    # One of the five words the owner sees for copying (`COPYING_WORDS`).
+    copying: CopyingWord
+    discord: SetupDiscordView
+    model: SetupModelView
+    accounts: tuple[SetupAccountView, ...]
+    gurus: tuple[SetupGuruView, ...]
+    alerts: SetupAlertsView
+
+
+class SetupImported(Wire):
+    type: Literal["setup_imported"] = "setup_imported"
+    # What the file filled and what the setup still needs, by name; never a value.
+    filled: tuple[str, ...]
+    missing: tuple[str, ...]
+    setup: SetupView
+
+
+class SetupApplied(Wire):
+    type: Literal["setup_applied"] = "setup_applied"
+    # applied: checked, saved, and copying uses it; unchanged: nothing to apply; failed_checks:
+    # a connection needs attention and nothing was saved; failed: it did not start (see message).
+    status: Literal["applied", "unchanged", "failed_checks", "failed"]
+    message: str | None = None
+    checks: tuple[SetupCheckView, ...] = ()
+
+
 type Result = Annotated[
     StatusView
     | AccountsPage
@@ -572,7 +925,10 @@ type Result = Annotated[
     | ProposalView
     | ProposalsPage
     | ProcessingPaused
-    | AccountControlView,
+    | AccountControlView
+    | SetupView
+    | SetupImported
+    | SetupApplied,
     Field(discriminator="type"),
 ]
 

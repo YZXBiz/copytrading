@@ -58,9 +58,16 @@ private func errorCode(of line: String) throws -> String? {
 private final class Recorded: @unchecked Sendable {
     private let lock = NSLock()
     private var contexts: [AgentRequestContext] = []
+    private var received: [String] = []
 
-    func append(_ context: AgentRequestContext) { lock.withLock { contexts.append(context) } }
+    func append(_ context: AgentRequestContext, line: String = "") {
+        lock.withLock {
+            contexts.append(context)
+            received.append(line)
+        }
+    }
     var all: [AgentRequestContext] { lock.withLock { contexts } }
+    var lines: [String] { lock.withLock { received } }
 }
 
 func runAgentRelayTests() async throws {
@@ -73,7 +80,7 @@ func runAgentRelayTests() async throws {
         accessLevel: .readAndPause,
         isUnlocked: { false },
         send: { line, context in
-            recorded.append(context)
+            recorded.append(context, line: line)
             if line.contains("fail") { throw EngineTransportError.disconnected }
             return #"{"echo":"# + line + "}"
         }
@@ -109,11 +116,47 @@ func runAgentRelayTests() async throws {
     let refused = try await exchange(oversized, at: socketURL)
     let refusedCode = try errorCode(of: refused)
     try #require(refusedCode == "invalid_request", "oversized lines must be refused")
+    try #require(refused.contains("too large"), "an oversized line must be told it is too large: \(refused)")
+
+    let setupLine = #"{"schema_version":1,"request_id":"s1","operation":"edit_setup_discord","token":"never-to-the-engine"}"#
+    let unanswered = try await exchange(setupLine, at: socketURL)
+    let unansweredCode = try errorCode(of: unanswered)
+    try #require(unansweredCode == "unavailable", "a relay without a setup handler must refuse setup requests")
+    try #require(
+        !recorded.lines.contains { $0.contains("never-to-the-engine") }, "a setup request's key must never reach the engine")
 
     relay.stop()
     try #require(
         !FileManager.default.fileExists(atPath: socketURL.path),
         "stopping must remove the socket so clients see the app as not running")
+
+    let answered = Recorded()
+    let setupRelay = AgentRelay(
+        socketURL: socketURL,
+        accessLevel: .propose,
+        setupChanges: true,
+        isUnlocked: { true },
+        send: { line, context in
+            recorded.append(context, line: line)
+            return #"{"engine":true}"#
+        },
+        setup: { line, context in
+            answered.append(context, line: line)
+            return #"{"app":true}"#
+        }
+    )
+    try setupRelay.start()
+    let fromApp = try await exchange(setupLine, at: socketURL)
+    try #require(fromApp == #"{"app":true}"#, "a setup request must be answered by the app")
+    try #require(
+        answered.all.first?.accessLevel == .propose && answered.all.first?.unlocked == true
+            && answered.all.first?.setupChanges == true,
+        "the app's setup handler must get the owner's access level and lock state")
+    let fromEngine = try await exchange(#"{"operation":"get_status"}"#, at: socketURL)
+    try #require(fromEngine == #"{"engine":true}"#, "every other request must still go to the engine")
+    try #require(
+        !recorded.lines.contains { $0.contains("never-to-the-engine") }, "a setup request's key must never reach the engine")
+    setupRelay.stop()
 
     try relay.start()
     relay.stop()
@@ -191,24 +234,27 @@ private struct CLIResult {
 /// The client blocks until it exits, so it waits on its own thread: the relay answers it from
 /// Swift's cooperative pool, which has only a few threads on a small machine.
 private func runCLI(
-    _ arguments: [String], python: URL, pythonPath: String, stateRoot: URL
+    _ arguments: [String], python: URL, pythonPath: String, stateRoot: URL, input: String = ""
 ) async throws -> CLIResult {
     try await withCheckedThrowingContinuation { continuation in
         Thread.detachNewThread {
             continuation.resume(
                 with: Result {
-                    try runCLIBlocking(arguments, python: python, pythonPath: pythonPath, stateRoot: stateRoot)
+                    try runCLIBlocking(
+                        arguments, python: python, pythonPath: pythonPath, stateRoot: stateRoot, input: input)
                 })
         }
     }
 }
 
 private func runCLIBlocking(
-    _ arguments: [String], python: URL, pythonPath: String, stateRoot: URL
+    _ arguments: [String], python: URL, pythonPath: String, stateRoot: URL, input: String
 ) throws -> CLIResult {
     let process = Process()
     let output = Pipe()
     let errors = Pipe()
+    let standardInput = Pipe()
+    process.standardInput = standardInput
     process.executableURL = python
     process.arguments = ["-m", "copytrading_engine.control"] + arguments
     process.environment = [
@@ -221,12 +267,44 @@ private func runCLIBlocking(
     process.standardOutput = output
     process.standardError = errors
     try process.run()
+    standardInput.fileHandleForWriting.write(Data(input.utf8))
+    try standardInput.fileHandleForWriting.close()
     let data = output.fileHandleForReading.readDataToEndOfFile()
     let errorData = errors.fileHandleForReading.readDataToEndOfFile()
     process.waitUntilExit()
     return CLIResult(
         status: process.terminationStatus, output: String(decoding: data, as: UTF8.self),
         errorOutput: String(decoding: errorData, as: UTF8.self))
+}
+
+/// Stands in for the app's setup handler: it asks the real engine, then answers as the app does.
+private func answerSetup(
+    _ line: String, context: AgentRequestContext, actions: EngineActions, received: Recorded
+) async -> String {
+    let request: AgentSetupRequest
+    do {
+        request = try AgentSetupRequest(line: line)
+    } catch {
+        return AgentSetupResponse.errorLine(requestID: error.requestID, code: "invalid_request", message: error.message)
+    }
+    if case .discord(let discord) = request.edit { received.append(context, line: discord.token?.value ?? "") }
+    let facts = request.operation == .apply ? AgentSetupApplyFacts(madeLive: ["live-1"], startsLive: ["live-1"]) : nil
+    let authorization = try? await actions.authorizeSetup(
+        AgentSetupAuthorizationRequest(operation: request.operation, requestID: request.requestID, apply: facts),
+        context: context)
+    switch authorization {
+    case .answered(let answer):
+        return answer
+    case .allowed:
+        let view = AgentSetupView(
+            saved: true, unsavedChanges: true, copying: "paused",
+            discord: .init(channelIDs: ["111"], authorIDs: [], token: .entered, check: nil),
+            model: .init(service: "deepseek", model: "deepseek-flash", baseURL: nil, key: .saved, check: nil),
+            accounts: [], gurus: [], alerts: .init(enabled: false, service: .telegram, chatID: nil, token: .missing, check: nil))
+        return AgentSetupResponse.line(requestID: request.requestID, result: .setup(view))
+    case nil:
+        return AgentSetupResponse.errorLine(requestID: request.requestID, code: "unavailable", message: "engine")
+    }
 }
 
 private final class LockSwitch: @unchecked Sendable {
@@ -287,11 +365,14 @@ func runAgentControlEngineTests() async throws {
         ))
     let actions = EngineActions(supervisor: supervisor)
     let lockSwitch = LockSwitch()
+    let received = Recorded()
     let relay = AgentRelay(
         socketURL: AgentRelay.socketURL(stateRoot: root),
         accessLevel: .propose,
+        setupChanges: true,
         isUnlocked: { lockSwitch.isUnlocked },
-        send: { line, context in try await actions.control(line: line, context: context) }
+        send: { line, context in try await actions.control(line: line, context: context) },
+        setup: { line, context in await answerSetup(line, context: context, actions: actions, received: received) }
     )
     do {
         try await supervisor.start()
@@ -307,6 +388,22 @@ func runAgentControlEngineTests() async throws {
 
         let resume = try await cli(["accounts", "resume", "nobody"])
         try #require(resume.status == 6, "the engine must refuse to propose for an unknown account")
+
+        let token = "token-from-standard-input"
+        let discord = try await runCLI(
+            ["setup", "discord", "--channels", "111", "--secret-stdin"], python: python, pythonPath: pythonPath,
+            stateRoot: root, input: token + "\n")
+        try #require(
+            discord.status == 0 && discord.output.contains("token entered, not saved yet"),
+            "the CLI must change the setup through the app: exit \(discord.status), \(discord.output) \(discord.errorOutput)")
+        try #require(received.lines == [token], "the token must reach the app's setup handler from standard input")
+        try #require(
+            !(discord.output + discord.errorOutput).contains(token), "the CLI must never print the token it sent")
+        let live = try await cli(["setup", "apply"])
+        try #require(
+            live.status == 10 && live.output.contains("makes live-1 live"),
+            "applying a live setup must wait for the owner: exit \(live.status), \(live.output) \(live.errorOutput)")
+        _ = try await actions.discardProposals()
 
         lockSwitch.set(unlocked: false)
         let locked = try await cli(["accounts"])

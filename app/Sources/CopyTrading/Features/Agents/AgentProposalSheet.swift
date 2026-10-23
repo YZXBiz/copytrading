@@ -33,6 +33,9 @@ struct AgentProposalSheet: View {
                             value(L10n.string("%@ → %@", row.now, row.after))
                         }
                     }
+                    ForEach(Array(model.setupRows(of: proposal).enumerated()), id: \.offset) { _, row in
+                        SheetRow(title: row.title, isReading: true) { value(row.value) }
+                    }
                     SheetRow(title: L10n.string("Requested by"), isReading: true) { value(proposal.requester) }
                     SheetRow(title: L10n.string("Expires"), isReading: true) { value(Humanize.timestamp(proposal.expiresAt)) }
                 }

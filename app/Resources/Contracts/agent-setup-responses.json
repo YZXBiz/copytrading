@@ -1,0 +1,76 @@
+{
+  "responses": [
+    {
+      "schema_version": 1,
+      "request_id": "s1",
+      "ok": {
+        "type": "setup",
+        "saved": true,
+        "unsaved_changes": true,
+        "copying": "copying",
+        "discord": {
+          "channel_ids": ["111"],
+          "author_ids": [],
+          "token": "saved",
+          "check": {"connection": "discord", "state": "passed"}
+        },
+        "model": {"service": "ollama", "model": "qwen3", "base_url": "http://localhost:11434/v1", "key": "not_needed"},
+        "accounts": [
+          {
+            "account_id": "zhap-account-2",
+            "environment": "paper",
+            "keys": "entered",
+            "limits": [{"field": "max_order_usd", "value": "100"}, {"field": "overnight", "value": "false"}],
+            "recovery_preference": "automatic",
+            "check": {
+              "connection": "account",
+              "subject": "zhap-account-2",
+              "state": "failed",
+              "reason": "broker_auth_or_permissions_failed",
+              "message": "zhap-account-2: Alpaca didn't accept these keys. Check that they are for a paper or live account as chosen."
+            }
+          }
+        ],
+        "gurus": [
+          {
+            "guru_id": "guru-dbe948ba",
+            "name": "Alex",
+            "channel_id": "111",
+            "account_id": "zhap-account-2",
+            "full_position_usd": "600",
+            "repeat_window_minutes": 10,
+            "playbook_characters": 0
+          }
+        ],
+        "alerts": {"enabled": false, "service": "telegram", "token": "missing"}
+      }
+    },
+    {
+      "schema_version": 1,
+      "request_id": "s12",
+      "ok": {
+        "type": "setup_applied",
+        "status": "failed_checks",
+        "message": "Some connections need attention. Nothing was saved.",
+        "checks": [
+          {"connection": "discord", "state": "passed"},
+          {
+            "connection": "account",
+            "subject": "zhap-account-2",
+            "state": "failed",
+            "reason": "broker_auth_or_permissions_failed",
+            "message": "zhap-account-2: Alpaca didn't accept these keys. Check that they are for a paper or live account as chosen."
+          }
+        ]
+      }
+    },
+    {
+      "schema_version": 1,
+      "request_id": "s13",
+      "error": {
+        "code": "not_found",
+        "message": "There is no account called paper-9 in the setup. Add it with `copytrading setup account add paper-9`, or see the names with `copytrading setup show`."
+      }
+    }
+  ]
+}

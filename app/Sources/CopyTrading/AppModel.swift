@@ -114,6 +114,8 @@ final class AppModel {
         didSet { if oldValue != isTradingUnlocked { shareAccountReadKeys() } }
     }
     var agentAccess: AgentAccessSetting = .off
+    /// "Allow setup changes from the command line": off until the owner turns it on with Touch ID.
+    var agentSetupChanges = false
     var isAgentRelayListening = false
     var isChangingAgentAccess = false
     var agentProposals: [AgentProposal] = []
@@ -182,6 +184,7 @@ final class AppModel {
     /// assistant makes proposals too.
     func discardAgentProposals() async {
         agentProposals = []
+        agentSetupProposals = [:]
         guard let operations = agentProposalOperations() else { return }
         _ = try? await operations.discardProposals()
     }
@@ -507,6 +510,11 @@ final class AppModel {
     var limitsSaveRefused = false
     /// Limits edited while copying was starting; they save as soon as the start settles.
     var limitsAwaitingStart = false
+    /// The accounts whose limits wait for that start; only theirs save when it settles.
+    @ObservationIgnored var limitsAwaitingAccountIDs: Set<String> = []
+    /// Accounts whose limits an agent changed in the unsaved setup. A live one's changes never save
+    /// from its sheet: only an approved `setup apply`, or the owner's own Start Copying, saves them.
+    @ObservationIgnored var agentLimitEdits: Set<String> = []
     /// Accounts and activity, shared with the window and the menu bar; an account's own Start
     /// Copying turns its buys on through it.
     var accountFeature: AccountFeatureModel?
@@ -516,6 +524,12 @@ final class AppModel {
     var checkedSetupSignature: SetupDraftSignature?
     /// Each connection's latest check, kept only while what it checked stays as typed.
     var connectionChecks: [ConnectionCheckSubject: ConnectionCheckResult] = [:]
+    /// Every check the latest full check of the setup ran, for an agent's `setup apply`.
+    @ObservationIgnored var latestSetupChecks: [TradingCapabilityCheck] = []
+    /// Setups an agent asked to apply that touch a live account, by proposal: the draft as the
+    /// owner was asked to approve it, so approving never applies a setup edited since.
+    /// `start` is whether the agent asked to start copying with it.
+    @ObservationIgnored var agentSetupProposals: [String: (signature: SetupDraftSignature, start: Bool)] = [:]
     var isShowingSetupCheck = false
     /// A Getting Started section asked for from the Help menu; the guide clears it.
     var guideAnchor: GuideAnchor?
@@ -1234,11 +1248,12 @@ final class AppModel {
 
     /// Checks the setup; with `thenStart`, starts copying straight after when everything passed,
     /// and otherwise shows what needs the owner.
+    @discardableResult
     func beginTradingValidation(
         _ configuration: TradingConfiguration, enteredSecrets: TradingSecrets, thenStart: Bool = false
-    ) {
+    ) -> Task<Void, Never> {
         tradingValidationTask?.cancel()
-        tradingValidationTask = Task { [weak self] in
+        let task = Task { [weak self] in
             guard let self else { return }
             if thenStart {
                 await self.checkThenStart(configuration, enteredSecrets: enteredSecrets)
@@ -1246,6 +1261,8 @@ final class AppModel {
                 await self.validateTradingSettings(configuration, enteredSecrets: enteredSecrets)
             }
         }
+        tradingValidationTask = task
+        return task
     }
 
     /// Checks the setup, then starts it when everything passed; otherwise shows what needs the
@@ -1523,25 +1540,40 @@ final class AppModel {
 
     /// When limits are all the draft changes, copying takes them now: no check, no Apply Changes,
     /// no pause. The engine answers with the new setup's revision, which is saved with it, so the
-    /// next check and Start match the engine. Returns nil when the draft changes more than
-    /// limits, which wait for the full check; otherwise whether the limits were saved.
+    /// next check and Start match the engine. `accounts` names the accounts to save: an account
+    /// sheet saves only its own, and a live account whose limits an agent changed never saves this
+    /// way. nil saves every changed account, for an agent's apply the engine allowed. Returns nil
+    /// when the draft changes more than limits, which wait for the full check; otherwise whether
+    /// the limits were saved.
     @discardableResult
-    func saveLimitOnlyChanges() async -> Bool? {
+    func saveLimitOnlyChanges(for accounts: Set<String>? = nil) async -> Bool? {
         limitsSaveRefused = false
         guard isTradingUnlocked, !setupDraft.hasTypedSecrets,
             let saved = savedTradingConfiguration,
-            let edited = try? setupDraft.submission().0,
-            let changed = edited.limitOnlyChanges(from: saved),
+            let draft = try? setupDraft.submission().0,
+            let allChanged = draft.limitOnlyChanges(from: saved),
             let tradingConfigurationStore,
             let control: (any TradingStarting) = tradingStarter ?? engineActions
         else { return nil }
+        let liveAgentEdits = Set(
+            draft.accounts.filter { $0.environment == .live && agentLimitEdits.contains($0.id) }.map(\.id))
+        let chosen = accounts.map { Set(allChanged).intersection($0) } ?? Set(allChanged)
+        if accounts != nil, !chosen.isDisjoint(with: liveAgentEdits) { return nil }
+        guard !chosen.isEmpty else { return true }
+        var edited = saved
+        for index in edited.accounts.indices where chosen.contains(edited.accounts[index].id) {
+            if let policy = draft.accounts.first(where: { $0.id == edited.accounts[index].id })?.policy {
+                edited.accounts[index].policy = policy
+            }
+        }
         // A start in flight owns the saved setup; the limits wait for it and save right after,
         // whether copying started or not.
         guard !isTradingCommandPending, !isValidatingTrading, !isActivatingTrading, pendingTradingActivation == nil,
             (try? tradingConfigurationStore.pendingActivation()) == nil
         else {
             limitsAwaitingStart = true
-            limitsSavedAccountIDs.formUnion(changed)
+            limitsAwaitingAccountIDs.formUnion(chosen)
+            limitsSavedAccountIDs.formUnion(chosen)
             return true
         }
         limitsAwaitingStart = false
@@ -1554,7 +1586,8 @@ final class AppModel {
             savedTradingConfiguration = edited
             setupDraftSource = edited
             tradingValidation = nil
-            limitsSavedAccountIDs.formUnion(changed)
+            limitsSavedAccountIDs.formUnion(chosen)
+            agentLimitEdits.subtract(chosen)
             limitsSaveRefused = false
             message = nil
             return true
@@ -1563,6 +1596,35 @@ final class AppModel {
             message = Self.userMessage(for: error)
             return false
         }
+    }
+
+    /// A start is being confirmed, so the saved setup is not the app's to change yet.
+    var hasPendingActivation: Bool {
+        pendingTradingActivation != nil || (try? tradingConfigurationStore?.pendingActivation()) != nil
+    }
+
+    /// Saves the setup the latest check passed, keys included, without starting copying: an
+    /// agent's apply while copying is paused keeps it paused. The next Start Copying checks it
+    /// again and starts it. Returns whether it was saved.
+    func saveCheckedSetupWithoutStarting() -> Bool {
+        guard let pending = pendingTradingActivation, let tradingConfigurationStore, tradingStatus?.state == .paused
+        else { return false }
+        do {
+            try tradingConfigurationStore.save(
+                configuration: pending.configuration, revision: pending.revision, secrets: pending.secrets,
+                when: .paused)
+        } catch {
+            message = Self.userMessage(for: error)
+            return false
+        }
+        pendingTradingActivation = nil
+        tradingValidation = nil
+        checkedSetupSignature = nil
+        savedTradingConfiguration = pending.configuration
+        hasTradingSecrets = true
+        settleSetupDraftAfterStart()
+        message = nil
+        return true
     }
 
     /// Start Copying as an agent asked for and the owner approved: the button's own checks and start.
@@ -1636,7 +1698,9 @@ final class AppModel {
     func saveLimitsAwaitingStart() async {
         guard limitsAwaitingStart, !isTradingCommandPending else { return }
         limitsAwaitingStart = false
-        await saveLimitOnlyChanges()
+        let accounts = limitsAwaitingAccountIDs
+        limitsAwaitingAccountIDs = []
+        await saveLimitOnlyChanges(for: accounts)
     }
 
     /// While unlocked, the engine may read every saved account live, so a paused account still

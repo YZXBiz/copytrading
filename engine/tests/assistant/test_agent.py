@@ -2,6 +2,7 @@
 
 from copytrading_engine.assistant.agent import AGENT, INSTRUCTIONS, LIMITS, SETTINGS
 from copytrading_engine.assistant.knowledge import HELP
+from copytrading_engine.control import wire
 
 
 def test_instructions_state_the_tiers_and_untrusted_text():
@@ -53,3 +54,6 @@ def test_the_agent_offers_the_assistant_tools_and_nothing_else():
         "propose_resume_account",
         "propose_recovery_preference",
     }
+    # The assistant in the window never changes the setup.
+    assert names.isdisjoint(wire.SETUP_OPERATIONS)
+    assert not any("setup" in name for name in names)

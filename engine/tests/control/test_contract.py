@@ -46,3 +46,26 @@ def test_app_fixtures_match_the_contract():
     assert audit["entries"]
     fields = {"at", "actor", "caller_pid", "caller_path", "operation", "tier", "outcome"}
     assert all(set(entry) == fields | {"proposal_id"} for entry in audit["entries"])
+
+
+def test_setup_fixtures_match_the_contract():
+    """The app decodes these requests and emits these responses; both sides check the files."""
+    for request in contract("agent-setup-requests.json")["requests"]:
+        parsed = wire.REQUEST.validate_json(json.dumps(request))
+        assert parsed.operation in wire.SETUP_OPERATIONS
+        assert json.loads(wire.REQUEST.dump_json(parsed)) == request
+    assert {item["operation"] for item in contract("agent-setup-requests.json")["requests"]} == set(
+        wire.SETUP_OPERATIONS
+    )
+    for response in contract("agent-setup-responses.json")["responses"]:
+        wire.Response.model_validate_json(json.dumps(response))
+
+
+def test_the_apps_setup_authorization_matches_the_pipe_contract():
+    from copytrading_engine.host.pipe.requests import REQUEST_ADAPTER, AuthorizeSetupRequest
+
+    request = REQUEST_ADAPTER.validate_json(json.dumps(contract("authorize-setup-request.json")))
+    assert isinstance(request, AuthorizeSetupRequest)
+    assert request.setup.apply is not None
+    assert request.setup.apply.touches_live
+    assert contract("setup-allowed-response.json")["ok"] == {"type": "setup_allowed"}

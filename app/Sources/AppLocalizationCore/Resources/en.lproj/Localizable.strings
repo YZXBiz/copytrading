@@ -2422,3 +2422,10 @@
 "The saved setup is from before CopyTrading could carry setups over." = "The saved setup is from before CopyTrading could carry setups over.";
 "The saved setup is from a newer CopyTrading." = "The saved setup is from a newer CopyTrading.";
 "Your setup is from a CopyTrading too old to carry over. It's kept in %@; set up again in Connections." = "Your setup is from a CopyTrading too old to carry over. It's kept in %@; set up again in Connections.";
+"Apply the setup, with live accounts" = "Apply the setup, with live accounts";
+"Becomes live" = "Becomes live";
+"New keys" = "New keys";
+"Limits change" = "Limits change";
+"Allow setup changes from the command line" = "Allow setup changes from the command line";
+"Turn off setup changes from the command line" = "Turn off setup changes from the command line";
+"copytrading setup may change keys, the model, accounts, and gurus. Live accounts still wait for you." = "copytrading setup may change keys, the model, accounts, and gurus. Live accounts still wait for you.";

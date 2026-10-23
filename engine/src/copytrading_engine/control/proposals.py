@@ -63,22 +63,42 @@ class StartProcessing:
     """Start copying the saved setup; the app runs its own Start Copying checks and start."""
 
 
-type Subject = ResumeAccount | SetRecovery | ConfirmManualOrder | SetAccountLimits | StartProcessing
+@dataclass(frozen=True, slots=True)
+class ApplySetup:
+    """Check, save and start the app's unsaved setup, which touches these live accounts. The app
+    keeps the setup itself, keys included, and applies only the one the owner was shown."""
+
+    made_live: tuple[str, ...]
+    new_live_keys: tuple[str, ...]
+    changed_live: tuple[str, ...]
+    starts_live: tuple[str, ...]
+
+
+type Subject = (
+    ResumeAccount
+    | SetRecovery
+    | ConfirmManualOrder
+    | SetAccountLimits
+    | StartProcessing
+    | ApplySetup
+)
 type Kind = Literal[
     "resume_account",
     "set_recovery",
     "confirm_manual_order",
     "set_account_limits",
     "start_processing",
+    "apply_setup",
 ]
 
 # Kinds only the app can perform, because the setup file and its keys are the app's. Approving
 # one leaves it running until the app reports how it went.
 APP_PERFORMED: Final[frozenset[Kind]] = frozenset(
-    {"set_recovery", "set_account_limits", "start_processing"}
+    {"set_recovery", "set_account_limits", "start_processing", "apply_setup"}
 )
-# How long the app has to report before the outcome is called unknown.
-APP_REPORT_WINDOW: Final = dt.timedelta(minutes=2)
+# How long the app has to report before the outcome is called unknown: applying a setup runs
+# every connection check, may pause copying first, and asks for Touch ID for a live account.
+APP_REPORT_WINDOW: Final = dt.timedelta(minutes=5)
 type Outcome = Literal["succeeded", "failed", "outcome_unknown"]
 
 
@@ -94,6 +114,8 @@ def kind_of(subject: Subject) -> Kind:
             return "set_account_limits"
         case StartProcessing():
             return "start_processing"
+        case ApplySetup():
+            return "apply_setup"
 
 
 def digest(subject: Subject) -> str:

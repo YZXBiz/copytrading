@@ -1,0 +1,521 @@
+{
+  "about": "What `setup apply` does to live accounts, for the engine to decide whether the owner approves. The app (agentApplyFacts) and the CLI tests' stand-in app both compute these from the saved setup and the unsaved draft. Accounts are known by the name they were saved under (saved_name; null for a new one), and a guru by their channel, which gives them their ID. `start` is `setup apply --start` (false when absent).",
+  "cases": [
+    {
+      "name": "a live account's limits change while copying runs",
+      "copying": true,
+      "saved": {
+        "accounts": [
+          {
+            "id": "live-main",
+            "environment": "live",
+            "max_order_usd": "100"
+          }
+        ],
+        "routes": [
+          {
+            "channel": "123",
+            "account": "live-main"
+          }
+        ]
+      },
+      "draft": {
+        "accounts": [
+          {
+            "id": "live-main",
+            "saved_name": "live-main",
+            "environment": "live",
+            "max_order_usd": "50000",
+            "keys_typed": false
+          }
+        ],
+        "routes": [
+          {
+            "channel": "123",
+            "account": "live-main"
+          }
+        ]
+      },
+      "facts": {
+        "made_live": [],
+        "new_live_keys": [],
+        "changed_live": [
+          "live-main"
+        ],
+        "starts_live": []
+      }
+    },
+    {
+      "name": "a live account's after-restart choice changes while copying is paused",
+      "copying": false,
+      "saved": {
+        "accounts": [
+          {
+            "id": "live-main",
+            "environment": "live",
+            "max_order_usd": "100",
+            "recovery_preference": "manual"
+          }
+        ],
+        "routes": [
+          {
+            "channel": "123",
+            "account": "live-main"
+          }
+        ]
+      },
+      "draft": {
+        "accounts": [
+          {
+            "id": "live-main",
+            "saved_name": "live-main",
+            "environment": "live",
+            "max_order_usd": "100",
+            "keys_typed": false,
+            "recovery_preference": "automatic"
+          }
+        ],
+        "routes": [
+          {
+            "channel": "123",
+            "account": "live-main"
+          }
+        ]
+      },
+      "facts": {
+        "made_live": [],
+        "new_live_keys": [],
+        "changed_live": [
+          "live-main"
+        ],
+        "starts_live": []
+      }
+    },
+    {
+      "name": "a paper account's limits change while copying runs",
+      "copying": true,
+      "saved": {
+        "accounts": [
+          {
+            "id": "paper",
+            "environment": "paper",
+            "max_order_usd": "100"
+          }
+        ],
+        "routes": [
+          {
+            "channel": "123",
+            "account": "paper"
+          }
+        ]
+      },
+      "draft": {
+        "accounts": [
+          {
+            "id": "paper",
+            "saved_name": "paper",
+            "environment": "paper",
+            "max_order_usd": "250",
+            "keys_typed": false
+          }
+        ],
+        "routes": [
+          {
+            "channel": "123",
+            "account": "paper"
+          }
+        ]
+      },
+      "facts": {
+        "made_live": [],
+        "new_live_keys": [],
+        "changed_live": [],
+        "starts_live": []
+      }
+    },
+    {
+      "name": "a paper account switched to live while copying is paused",
+      "copying": false,
+      "saved": {
+        "accounts": [
+          {
+            "id": "paper",
+            "environment": "paper",
+            "max_order_usd": "100"
+          }
+        ],
+        "routes": [
+          {
+            "channel": "123",
+            "account": "paper"
+          }
+        ]
+      },
+      "draft": {
+        "accounts": [
+          {
+            "id": "paper",
+            "saved_name": "paper",
+            "environment": "live",
+            "max_order_usd": "100",
+            "keys_typed": false
+          }
+        ],
+        "routes": [
+          {
+            "channel": "123",
+            "account": "paper"
+          }
+        ]
+      },
+      "facts": {
+        "made_live": [
+          "paper"
+        ],
+        "new_live_keys": [],
+        "changed_live": [],
+        "starts_live": []
+      }
+    },
+    {
+      "name": "new keys for a live account while copying runs",
+      "copying": true,
+      "saved": {
+        "accounts": [
+          {
+            "id": "live-main",
+            "environment": "live",
+            "max_order_usd": "100"
+          }
+        ],
+        "routes": [
+          {
+            "channel": "123",
+            "account": "live-main"
+          }
+        ]
+      },
+      "draft": {
+        "accounts": [
+          {
+            "id": "live-main",
+            "saved_name": "live-main",
+            "environment": "live",
+            "max_order_usd": "100",
+            "keys_typed": true
+          }
+        ],
+        "routes": [
+          {
+            "channel": "123",
+            "account": "live-main"
+          }
+        ]
+      },
+      "facts": {
+        "made_live": [],
+        "new_live_keys": [
+          "live-main"
+        ],
+        "changed_live": [],
+        "starts_live": [
+          "live-main"
+        ]
+      }
+    },
+    {
+      "name": "a paper account renamed to a removed live account's name and made live",
+      "copying": true,
+      "saved": {
+        "accounts": [
+          {
+            "id": "live-main",
+            "environment": "live",
+            "max_order_usd": "100"
+          },
+          {
+            "id": "paper",
+            "environment": "paper",
+            "max_order_usd": "100"
+          }
+        ],
+        "routes": [
+          {
+            "channel": "123",
+            "account": "paper"
+          }
+        ]
+      },
+      "draft": {
+        "accounts": [
+          {
+            "id": "live-main",
+            "saved_name": "paper",
+            "environment": "live",
+            "max_order_usd": "100",
+            "keys_typed": false
+          }
+        ],
+        "routes": [
+          {
+            "channel": "123",
+            "account": "live-main"
+          }
+        ]
+      },
+      "facts": {
+        "made_live": [
+          "live-main"
+        ],
+        "new_live_keys": [],
+        "changed_live": [],
+        "starts_live": [
+          "live-main"
+        ]
+      }
+    },
+    {
+      "name": "a live account renamed",
+      "copying": false,
+      "saved": {
+        "accounts": [
+          {
+            "id": "live-main",
+            "environment": "live",
+            "max_order_usd": "100"
+          }
+        ],
+        "routes": [
+          {
+            "channel": "123",
+            "account": "live-main"
+          }
+        ]
+      },
+      "draft": {
+        "accounts": [
+          {
+            "id": "live-2",
+            "saved_name": "live-main",
+            "environment": "live",
+            "max_order_usd": "100",
+            "keys_typed": false
+          }
+        ],
+        "routes": [
+          {
+            "channel": "123",
+            "account": "live-2"
+          }
+        ]
+      },
+      "facts": {
+        "made_live": [
+          "live-2"
+        ],
+        "new_live_keys": [],
+        "changed_live": [],
+        "starts_live": []
+      }
+    },
+    {
+      "name": "a guru routed into a live account while copying runs",
+      "copying": true,
+      "saved": {
+        "accounts": [
+          {
+            "id": "live-main",
+            "environment": "live",
+            "max_order_usd": "100"
+          },
+          {
+            "id": "paper",
+            "environment": "paper",
+            "max_order_usd": "100"
+          }
+        ],
+        "routes": [
+          {
+            "channel": "123",
+            "account": "paper"
+          }
+        ]
+      },
+      "draft": {
+        "accounts": [
+          {
+            "id": "live-main",
+            "saved_name": "live-main",
+            "environment": "live",
+            "max_order_usd": "100",
+            "keys_typed": false
+          },
+          {
+            "id": "paper",
+            "saved_name": "paper",
+            "environment": "paper",
+            "max_order_usd": "100",
+            "keys_typed": false
+          }
+        ],
+        "routes": [
+          {
+            "channel": "123",
+            "account": "live-main"
+          }
+        ]
+      },
+      "facts": {
+        "made_live": [],
+        "new_live_keys": [],
+        "changed_live": [
+          "live-main"
+        ],
+        "starts_live": [
+          "live-main"
+        ]
+      }
+    },
+    {
+      "name": "a new live account while copying is paused",
+      "copying": false,
+      "saved": {
+        "accounts": [
+          {
+            "id": "paper",
+            "environment": "paper",
+            "max_order_usd": "100"
+          }
+        ],
+        "routes": [
+          {
+            "channel": "123",
+            "account": "paper"
+          }
+        ]
+      },
+      "draft": {
+        "accounts": [
+          {
+            "id": "paper",
+            "saved_name": "paper",
+            "environment": "paper",
+            "max_order_usd": "100",
+            "keys_typed": false
+          },
+          {
+            "id": "live-new",
+            "saved_name": null,
+            "environment": "live",
+            "max_order_usd": "100",
+            "keys_typed": true
+          }
+        ],
+        "routes": [
+          {
+            "channel": "123",
+            "account": "paper"
+          }
+        ]
+      },
+      "facts": {
+        "made_live": [
+          "live-new"
+        ],
+        "new_live_keys": [
+          "live-new"
+        ],
+        "changed_live": [],
+        "starts_live": []
+      }
+    },
+    {
+      "name": "--start while copying is paused, with an unchanged live account",
+      "copying": false,
+      "start": true,
+      "saved": {
+        "accounts": [
+          {
+            "id": "live-main",
+            "environment": "live",
+            "max_order_usd": "100"
+          }
+        ],
+        "routes": [
+          {
+            "channel": "123",
+            "account": "live-main"
+          }
+        ]
+      },
+      "draft": {
+        "accounts": [
+          {
+            "id": "live-main",
+            "saved_name": "live-main",
+            "environment": "live",
+            "max_order_usd": "100",
+            "keys_typed": false
+          }
+        ],
+        "routes": [
+          {
+            "channel": "123",
+            "account": "live-main"
+          }
+        ]
+      },
+      "facts": {
+        "made_live": [],
+        "new_live_keys": [],
+        "changed_live": [],
+        "starts_live": [
+          "live-main"
+        ]
+      }
+    },
+    {
+      "name": "--start while copying is paused, paper only",
+      "copying": false,
+      "start": true,
+      "saved": {
+        "accounts": [
+          {
+            "id": "paper",
+            "environment": "paper",
+            "max_order_usd": "100"
+          }
+        ],
+        "routes": [
+          {
+            "channel": "123",
+            "account": "paper"
+          }
+        ]
+      },
+      "draft": {
+        "accounts": [
+          {
+            "id": "paper",
+            "saved_name": "paper",
+            "environment": "paper",
+            "max_order_usd": "100",
+            "keys_typed": false
+          }
+        ],
+        "routes": [
+          {
+            "channel": "123",
+            "account": "paper"
+          }
+        ]
+      },
+      "facts": {
+        "made_live": [],
+        "new_live_keys": [],
+        "changed_live": [],
+        "starts_live": []
+      }
+    }
+  ]
+}

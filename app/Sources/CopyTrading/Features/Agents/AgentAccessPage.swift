@@ -25,6 +25,17 @@ struct AgentAccessPage: View {
                 choice(
                     "Read, pause, and ask for approval",
                     detail: "Anything that could trade waits for your Touch ID here.", .propose)
+                if model.agentAccess == .propose {
+                    SettingsToggleRow(
+                        title: "Allow setup changes from the command line",
+                        detail: "copytrading setup may change keys, the model, accounts, and gurus. Live accounts still wait for you.",
+                        isOn: Binding(
+                            get: { model.agentSetupChanges },
+                            set: { allowed in Task { await model.setAgentSetupChanges(allowed) } }),
+                        identifier: "agents.setupChanges"
+                    )
+                    .disabled(model.isChangingAgentAccess)
+                }
             }
 
             SettingsSection(title: "Connection") {

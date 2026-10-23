@@ -190,3 +190,62 @@ async def test_owner_reads_the_agent_audit_trail(tmp_path):
         ("propose_resume_account", "proposed")
     ]
     assert entries[0]["caller_path"] == "/usr/bin/agent"
+
+
+async def test_the_app_asks_the_engine_before_answering_a_setup_request(tmp_path):
+    installation, store, _, build = _server(tmp_path / "application.db")
+    with installation, store:
+        server = build()
+        allowed = await _call(
+            server,
+            "authorize_setup",
+            setup={"operation": "edit_setup_account", "request_id": "agent-7"},
+            context=context().model_dump(mode="json"),
+        )
+        assert allowed["ok"] == {"type": "setup_allowed"}
+
+        live = {"made_live": ["live-1"], "starts_live": ["live-1"]}
+        proposed = await _call(
+            server,
+            "authorize_setup",
+            setup={"operation": "apply_setup", "request_id": "agent-8", "apply": live},
+            context=context().model_dump(mode="json"),
+        )
+        answer = json.loads(proposed["ok"]["line"])
+        assert answer["request_id"] == "agent-8"
+        assert answer["ok"]["subject"] == {
+            "kind": "apply_setup",
+            "made_live": ["live-1"],
+            "new_live_keys": [],
+            "changed_live": [],
+            "starts_live": ["live-1"],
+        }
+
+        refused = await _call(
+            server,
+            "authorize_setup",
+            setup={"operation": "edit_setup_model", "request_id": "agent-9"},
+            context=context("read_pause").model_dump(mode="json"),
+        )
+        assert json.loads(refused["ok"]["line"])["error"]["code"] == "forbidden"
+
+        keys = await _call(
+            server,
+            "authorize_setup",
+            setup={"operation": "edit_setup_discord", "request_id": "x", "token": "secret"},
+            context=context().model_dump(mode="json"),
+        )
+        assert keys["error"]["code"] == "invalid_request"
+        assert "secret" not in json.dumps(keys)
+
+
+async def test_a_setup_request_without_a_control_service_is_unavailable(tmp_path):
+    installation, store, _, build = _server(tmp_path / "application.db", with_control=False)
+    with installation, store:
+        answer = await _call(
+            build(),
+            "authorize_setup",
+            setup={"operation": "get_setup", "request_id": "agent-1"},
+            context=context().model_dump(mode="json"),
+        )
+        assert answer["error"]["code"] == "unavailable"

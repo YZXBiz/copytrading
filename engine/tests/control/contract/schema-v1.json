@@ -1,6 +1,592 @@
 {
   "request": {
     "$defs": {
+      "ApplySetup": {
+        "additionalProperties": false,
+        "description": "Check every connection, then save. Copying that runs starts again with the new setup;\ncopying that is paused stays paused unless `start` asks to start it, as Start Copying does.",
+        "properties": {
+          "operation": {
+            "const": "apply_setup",
+            "default": "apply_setup",
+            "title": "Operation",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "start": {
+            "default": false,
+            "title": "Start",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "request_id"
+        ],
+        "title": "ApplySetup",
+        "type": "object"
+      },
+      "DiscardSetup": {
+        "additionalProperties": false,
+        "description": "Drop the unsaved edits, as Connections' Discard does.",
+        "properties": {
+          "operation": {
+            "const": "discard_setup",
+            "default": "discard_setup",
+            "title": "Operation",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request_id"
+        ],
+        "title": "DiscardSetup",
+        "type": "object"
+      },
+      "EditSetupAccount": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "action": {
+            "enum": [
+              "add",
+              "edit",
+              "remove"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "environment": {
+            "anyOf": [
+              {
+                "enum": [
+                  "paper",
+                  "live"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Environment"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "format": "password",
+                "maxLength": 4096,
+                "minLength": 1,
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Key"
+          },
+          "limits": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/LimitChange"
+            },
+            "maxItems": 14,
+            "title": "Limits",
+            "type": "array"
+          },
+          "operation": {
+            "const": "edit_setup_account",
+            "default": "edit_setup_account",
+            "title": "Operation",
+            "type": "string"
+          },
+          "recovery_preference": {
+            "anyOf": [
+              {
+                "enum": [
+                  "manual",
+                  "automatic"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Recovery Preference"
+          },
+          "rename": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9_-]{1,64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Rename"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "secret": {
+            "anyOf": [
+              {
+                "format": "password",
+                "maxLength": 4096,
+                "minLength": 1,
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Secret"
+          }
+        },
+        "required": [
+          "request_id",
+          "action",
+          "account_id"
+        ],
+        "title": "EditSetupAccount",
+        "type": "object"
+      },
+      "EditSetupAlerts": {
+        "additionalProperties": false,
+        "properties": {
+          "chat_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Chat Id"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Enabled"
+          },
+          "operation": {
+            "const": "edit_setup_alerts",
+            "default": "edit_setup_alerts",
+            "title": "Operation",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "service": {
+            "anyOf": [
+              {
+                "enum": [
+                  "telegram",
+                  "discord"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Service"
+          },
+          "token": {
+            "anyOf": [
+              {
+                "format": "password",
+                "maxLength": 4096,
+                "minLength": 1,
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Token"
+          }
+        },
+        "required": [
+          "request_id"
+        ],
+        "title": "EditSetupAlerts",
+        "type": "object"
+      },
+      "EditSetupDiscord": {
+        "additionalProperties": false,
+        "properties": {
+          "author_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "pattern": "^[0-9]{1,32}$",
+                  "type": "string"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Author Ids"
+          },
+          "channel_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "pattern": "^[0-9]{1,32}$",
+                  "type": "string"
+                },
+                "maxItems": 50,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Channel Ids"
+          },
+          "operation": {
+            "const": "edit_setup_discord",
+            "default": "edit_setup_discord",
+            "title": "Operation",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "token": {
+            "anyOf": [
+              {
+                "format": "password",
+                "maxLength": 4096,
+                "minLength": 1,
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Token"
+          }
+        },
+        "required": [
+          "request_id"
+        ],
+        "title": "EditSetupDiscord",
+        "type": "object"
+      },
+      "EditSetupGuru": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9_-]{1,64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Account Id"
+          },
+          "action": {
+            "enum": [
+              "add",
+              "edit",
+              "remove"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "author_id": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9]{1,32}$",
+                "type": "string"
+              },
+              {
+                "const": "",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Author Id"
+          },
+          "channel_id": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9]{1,32}$",
+                "type": "string"
+              },
+              {
+                "const": "",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Channel Id"
+          },
+          "full_position_usd": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Full Position Usd"
+          },
+          "guru": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Guru",
+            "type": "string"
+          },
+          "operation": {
+            "const": "edit_setup_guru",
+            "default": "edit_setup_guru",
+            "title": "Operation",
+            "type": "string"
+          },
+          "playbook": {
+            "anyOf": [
+              {
+                "maxLength": 8000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Playbook"
+          },
+          "rename": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Rename"
+          },
+          "repeat_window_minutes": {
+            "anyOf": [
+              {
+                "maximum": 1440,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Repeat Window Minutes"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request_id",
+          "action",
+          "guru"
+        ],
+        "title": "EditSetupGuru",
+        "type": "object"
+      },
+      "EditSetupModel": {
+        "additionalProperties": false,
+        "properties": {
+          "base_url": {
+            "anyOf": [
+              {
+                "maxLength": 2048,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Base Url"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "format": "password",
+                "maxLength": 4096,
+                "minLength": 1,
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Key"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Model"
+          },
+          "operation": {
+            "const": "edit_setup_model",
+            "default": "edit_setup_model",
+            "title": "Operation",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "service": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ModelService"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "request_id"
+        ],
+        "title": "EditSetupModel",
+        "type": "object"
+      },
       "GetManualCommand": {
         "additionalProperties": false,
         "properties": {
@@ -77,6 +663,35 @@
         "title": "GetProposal",
         "type": "object"
       },
+      "GetSetup": {
+        "additionalProperties": false,
+        "description": "The setup as Connections shows it: saved values plus unsaved edits, keys as saved or not.",
+        "properties": {
+          "operation": {
+            "const": "get_setup",
+            "default": "get_setup",
+            "title": "Operation",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request_id"
+        ],
+        "title": "GetSetup",
+        "type": "object"
+      },
       "GetStatus": {
         "additionalProperties": false,
         "properties": {
@@ -103,6 +718,44 @@
           "request_id"
         ],
         "title": "GetStatus",
+        "type": "object"
+      },
+      "ImportSetup": {
+        "additionalProperties": false,
+        "description": "A setup file's text, read the way the app's Import Setup reads it.",
+        "properties": {
+          "operation": {
+            "const": "import_setup",
+            "default": "import_setup",
+            "title": "Operation",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "text": {
+            "format": "password",
+            "maxLength": 60000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "request_id",
+          "text"
+        ],
+        "title": "ImportSetup",
         "type": "object"
       },
       "LimitChange": {
@@ -387,6 +1040,25 @@
         ],
         "title": "ListProposals",
         "type": "object"
+      },
+      "ModelService": {
+        "enum": [
+          "anthropic",
+          "openai",
+          "google",
+          "deepseek",
+          "openrouter",
+          "groq",
+          "xai",
+          "mistral",
+          "together",
+          "fireworks",
+          "cerebras",
+          "moonshotai",
+          "ollama",
+          "openai_compatible"
+        ],
+        "type": "string"
       },
       "PauseAccount": {
         "additionalProperties": false,
@@ -697,9 +1369,18 @@
     },
     "discriminator": {
       "mapping": {
+        "apply_setup": "#/$defs/ApplySetup",
+        "discard_setup": "#/$defs/DiscardSetup",
+        "edit_setup_account": "#/$defs/EditSetupAccount",
+        "edit_setup_alerts": "#/$defs/EditSetupAlerts",
+        "edit_setup_discord": "#/$defs/EditSetupDiscord",
+        "edit_setup_guru": "#/$defs/EditSetupGuru",
+        "edit_setup_model": "#/$defs/EditSetupModel",
         "get_manual_command": "#/$defs/GetManualCommand",
         "get_proposal": "#/$defs/GetProposal",
+        "get_setup": "#/$defs/GetSetup",
         "get_status": "#/$defs/GetStatus",
+        "import_setup": "#/$defs/ImportSetup",
         "list_account_events": "#/$defs/ListAccountEvents",
         "list_accounts": "#/$defs/ListAccounts",
         "list_activity": "#/$defs/ListActivity",
@@ -764,6 +1445,33 @@
       },
       {
         "$ref": "#/$defs/ProposeStartProcessing"
+      },
+      {
+        "$ref": "#/$defs/GetSetup"
+      },
+      {
+        "$ref": "#/$defs/EditSetupDiscord"
+      },
+      {
+        "$ref": "#/$defs/EditSetupModel"
+      },
+      {
+        "$ref": "#/$defs/EditSetupAccount"
+      },
+      {
+        "$ref": "#/$defs/EditSetupGuru"
+      },
+      {
+        "$ref": "#/$defs/EditSetupAlerts"
+      },
+      {
+        "$ref": "#/$defs/ImportSetup"
+      },
+      {
+        "$ref": "#/$defs/ApplySetup"
+      },
+      {
+        "$ref": "#/$defs/DiscardSetup"
       }
     ]
   },
@@ -1337,6 +2045,54 @@
         "title": "ActivityPage",
         "type": "object"
       },
+      "ApplySetupSubject": {
+        "additionalProperties": false,
+        "description": "Applying the setup touches real money: what in it does, by account.",
+        "properties": {
+          "changed_live": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Changed Live",
+            "type": "array"
+          },
+          "kind": {
+            "const": "apply_setup",
+            "default": "apply_setup",
+            "title": "Kind",
+            "type": "string"
+          },
+          "made_live": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Made Live",
+            "type": "array"
+          },
+          "new_live_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "New Live Keys",
+            "type": "array"
+          },
+          "starts_live": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Starts Live",
+            "type": "array"
+          }
+        },
+        "required": [
+          "made_live",
+          "new_live_keys",
+          "changed_live",
+          "starts_live"
+        ],
+        "title": "ApplySetupSubject",
+        "type": "object"
+      },
       "BalanceView": {
         "additionalProperties": false,
         "properties": {
@@ -1681,6 +2437,15 @@
         ],
         "title": "InstructionView",
         "type": "object"
+      },
+      "KeyState": {
+        "enum": [
+          "saved",
+          "missing",
+          "entered",
+          "not_needed"
+        ],
+        "type": "string"
       },
       "LimitChange": {
         "additionalProperties": false,
@@ -2488,6 +3253,7 @@
       "ProposalSubject": {
         "discriminator": {
           "mapping": {
+            "apply_setup": "#/$defs/ApplySetupSubject",
             "confirm_manual_order": "#/$defs/ManualOrderSubject",
             "resume_account": "#/$defs/ResumeAccountSubject",
             "set_account_limits": "#/$defs/LimitsSubject",
@@ -2511,6 +3277,9 @@
           },
           {
             "$ref": "#/$defs/StartProcessingSubject"
+          },
+          {
+            "$ref": "#/$defs/ApplySetupSubject"
           }
         ]
       },
@@ -2681,6 +3450,9 @@
             "processing": "#/$defs/ProcessingPaused",
             "proposal": "#/$defs/ProposalView",
             "proposals": "#/$defs/ProposalsPage",
+            "setup": "#/$defs/SetupView",
+            "setup_applied": "#/$defs/SetupApplied",
+            "setup_imported": "#/$defs/SetupImported",
             "status": "#/$defs/StatusView"
           },
           "propertyName": "type"
@@ -2718,6 +3490,15 @@
           },
           {
             "$ref": "#/$defs/AccountControlView"
+          },
+          {
+            "$ref": "#/$defs/SetupView"
+          },
+          {
+            "$ref": "#/$defs/SetupImported"
+          },
+          {
+            "$ref": "#/$defs/SetupApplied"
           }
         ]
       },
@@ -2739,6 +3520,502 @@
           "account_id"
         ],
         "title": "ResumeAccountSubject",
+        "type": "object"
+      },
+      "SetupAccountView": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "title": "Account Id",
+            "type": "string"
+          },
+          "check": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/SetupCheckView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "environment": {
+            "enum": [
+              "paper",
+              "live"
+            ],
+            "title": "Environment",
+            "type": "string"
+          },
+          "keys": {
+            "$ref": "#/$defs/KeyState"
+          },
+          "limits": {
+            "items": {
+              "$ref": "#/$defs/LimitChange"
+            },
+            "title": "Limits",
+            "type": "array"
+          },
+          "recovery_preference": {
+            "enum": [
+              "manual",
+              "automatic"
+            ],
+            "title": "Recovery Preference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "environment",
+          "keys",
+          "limits",
+          "recovery_preference"
+        ],
+        "title": "SetupAccountView",
+        "type": "object"
+      },
+      "SetupAlertsView": {
+        "additionalProperties": false,
+        "properties": {
+          "chat_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Chat Id"
+          },
+          "check": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/SetupCheckView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "service": {
+            "enum": [
+              "telegram",
+              "discord"
+            ],
+            "title": "Service",
+            "type": "string"
+          },
+          "token": {
+            "$ref": "#/$defs/KeyState"
+          }
+        },
+        "required": [
+          "enabled",
+          "service",
+          "token"
+        ],
+        "title": "SetupAlertsView",
+        "type": "object"
+      },
+      "SetupApplied": {
+        "additionalProperties": false,
+        "properties": {
+          "checks": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/SetupCheckView"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Message"
+          },
+          "status": {
+            "enum": [
+              "applied",
+              "unchanged",
+              "failed_checks",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "type": {
+            "const": "setup_applied",
+            "default": "setup_applied",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "SetupApplied",
+        "type": "object"
+      },
+      "SetupCheckView": {
+        "additionalProperties": false,
+        "description": "A connection's latest check, as its row in Connections reads.",
+        "properties": {
+          "connection": {
+            "enum": [
+              "discord",
+              "model",
+              "account",
+              "alerts",
+              "setup"
+            ],
+            "title": "Connection",
+            "type": "string"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Message"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Reason"
+          },
+          "state": {
+            "enum": [
+              "passed",
+              "failed",
+              "not_configured"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Subject"
+          }
+        },
+        "required": [
+          "connection",
+          "state"
+        ],
+        "title": "SetupCheckView",
+        "type": "object"
+      },
+      "SetupDiscordView": {
+        "additionalProperties": false,
+        "properties": {
+          "author_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Author Ids",
+            "type": "array"
+          },
+          "channel_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Channel Ids",
+            "type": "array"
+          },
+          "check": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/SetupCheckView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "token": {
+            "$ref": "#/$defs/KeyState"
+          }
+        },
+        "required": [
+          "channel_ids",
+          "author_ids",
+          "token"
+        ],
+        "title": "SetupDiscordView",
+        "type": "object"
+      },
+      "SetupGuruView": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Account Id"
+          },
+          "author_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Author Id"
+          },
+          "channel_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Channel Id"
+          },
+          "full_position_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Full Position Usd"
+          },
+          "guru_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Guru Id"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "playbook_characters": {
+            "title": "Playbook Characters",
+            "type": "integer"
+          },
+          "repeat_window_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Repeat Window Minutes"
+          }
+        },
+        "required": [
+          "name",
+          "playbook_characters"
+        ],
+        "title": "SetupGuruView",
+        "type": "object"
+      },
+      "SetupImported": {
+        "additionalProperties": false,
+        "properties": {
+          "filled": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Filled",
+            "type": "array"
+          },
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "setup": {
+            "$ref": "#/$defs/SetupView"
+          },
+          "type": {
+            "const": "setup_imported",
+            "default": "setup_imported",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "filled",
+          "missing",
+          "setup"
+        ],
+        "title": "SetupImported",
+        "type": "object"
+      },
+      "SetupModelView": {
+        "additionalProperties": false,
+        "properties": {
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Base Url"
+          },
+          "check": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/SetupCheckView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "key": {
+            "$ref": "#/$defs/KeyState"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "service": {
+            "title": "Service",
+            "type": "string"
+          }
+        },
+        "required": [
+          "service",
+          "model",
+          "key"
+        ],
+        "title": "SetupModelView",
+        "type": "object"
+      },
+      "SetupView": {
+        "additionalProperties": false,
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/$defs/SetupAccountView"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "alerts": {
+            "$ref": "#/$defs/SetupAlertsView"
+          },
+          "copying": {
+            "enum": [
+              "copying",
+              "sells_only",
+              "paused",
+              "stopped",
+              "not_started"
+            ],
+            "title": "Copying",
+            "type": "string"
+          },
+          "discord": {
+            "$ref": "#/$defs/SetupDiscordView"
+          },
+          "gurus": {
+            "items": {
+              "$ref": "#/$defs/SetupGuruView"
+            },
+            "title": "Gurus",
+            "type": "array"
+          },
+          "model": {
+            "$ref": "#/$defs/SetupModelView"
+          },
+          "saved": {
+            "title": "Saved",
+            "type": "boolean"
+          },
+          "type": {
+            "const": "setup",
+            "default": "setup",
+            "title": "Type",
+            "type": "string"
+          },
+          "unsaved_changes": {
+            "title": "Unsaved Changes",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "saved",
+          "unsaved_changes",
+          "copying",
+          "discord",
+          "model",
+          "accounts",
+          "gurus",
+          "alerts"
+        ],
+        "title": "SetupView",
         "type": "object"
       },
       "StartProcessingSubject": {

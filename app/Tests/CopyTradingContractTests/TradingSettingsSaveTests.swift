@@ -3323,7 +3323,7 @@ private func secretRevision(in data: Data) throws -> UUID {
     return revision
 }
 
-private actor RecordingTradingStarter: TradingStarting {
+actor RecordingTradingStarter: TradingStarting {
     private var configuration: TradingConfiguration?
     private var lastEvaluationRequest: HistoricalProfileEvaluationRequest?
     private var lastLearningRequest: GuruPlaybookLearningRequest?
@@ -3562,7 +3562,7 @@ private actor RecordingTradingStarter: TradingStarting {
     func validationCallCount() -> Int { validations }
 }
 
-private final class TestSecretRevisions: TradingSecretRevisionStore, @unchecked Sendable {
+final class TestSecretRevisions: TradingSecretRevisionStore, @unchecked Sendable {
     private let lock = NSLock()
     private var values: [UUID: TradingSecrets] = [:]
 
@@ -3598,7 +3598,7 @@ private final class ToggleConfigurationWriter: TradingConfigurationWriter, @unch
 }
 
 /// Unlocks the window like the owner did at launch, then answers each later confirmation.
-private actor OwnerAnswers: AppOwnerAuthenticator {
+actor OwnerAnswers: AppOwnerAuthenticator {
     private let confirms: Bool
     private var calls = 0
     init(confirms: Bool) { self.confirms = confirms }
@@ -3615,7 +3615,7 @@ private actor OwnerAnswers: AppOwnerAuthenticator {
 }
 
 @MainActor
-private func unlocked(by owner: OwnerAnswers) async throws -> AppUnlock {
+func unlocked(by owner: OwnerAnswers) async throws -> AppUnlock {
     let unlock = AppUnlock(authenticator: owner)
     try await unlock.openWindow(UUID())
     return unlock

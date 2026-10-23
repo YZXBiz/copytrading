@@ -16,13 +16,18 @@ public struct AgentRequestContext: Encodable, Equatable, Sendable {
     public let callerPath: String?
     /// Always true here: the app can change its own saved setup once the owner approves.
     public let appActions: Bool
+    /// The owner turned on "Allow setup changes from the command line".
+    public let setupChanges: Bool
 
-    public init(accessLevel: AgentAccessLevel, unlocked: Bool, callerPID: Int32?, callerPath: String?) {
+    public init(
+        accessLevel: AgentAccessLevel, unlocked: Bool, callerPID: Int32?, callerPath: String?, setupChanges: Bool
+    ) {
         self.accessLevel = accessLevel
         self.unlocked = unlocked
         self.callerPID = callerPID
         self.callerPath = callerPath
         self.appActions = true
+        self.setupChanges = setupChanges
     }
 
     enum CodingKeys: String, CodingKey {
@@ -31,6 +36,31 @@ public struct AgentRequestContext: Encodable, Equatable, Sendable {
         case callerPID = "caller_pid"
         case callerPath = "caller_path"
         case appActions = "app_actions"
+        case setupChanges = "setup_changes"
+    }
+}
+
+/// What the owner allows agents: how far they may go, and, separately, whether the `copytrading
+/// setup` commands may change the setup. Setup changes are off until the owner turns them on.
+public struct AgentAccessChoice: Codable, Equatable, Sendable {
+    public var access: AgentAccessSetting
+    public var setupChanges: Bool
+
+    public init(access: AgentAccessSetting, setupChanges: Bool = false) {
+        self.access = access
+        self.setupChanges = setupChanges
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case access
+        case setupChanges = "setup_changes"
+    }
+
+    /// A choice saved before setup changes existed reads as setup changes off.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        access = try container.decode(AgentAccessSetting.self, forKey: .access)
+        setupChanges = try container.decodeIfPresent(Bool.self, forKey: .setupChanges) ?? false
     }
 }
 
@@ -73,7 +103,7 @@ public struct AgentManualOrder: Decodable, Equatable, Sendable {
 }
 
 /// One account setting an agent asked to change, with the value as the text it sent.
-public struct AgentLimitChange: Decodable, Equatable, Sendable {
+public struct AgentLimitChange: Codable, Equatable, Sendable {
     public let field: String
     public let value: String
 
@@ -104,6 +134,8 @@ public struct AgentProposal: Decodable, Equatable, Identifiable, Sendable {
         case setAccountLimits(accountID: String, changes: [AgentLimitChange])
         /// Start copying the saved setup, with Start Copying's own checks.
         case startProcessing
+        /// Check, save and start the app's unsaved setup, which touches these live accounts.
+        case applySetup(AgentSetupApplyFacts)
     }
 
     public struct Caller: Decodable, Equatable, Sendable {
@@ -168,6 +200,8 @@ public struct AgentProposal: Decodable, Equatable, Identifiable, Sendable {
             )
         case "start_processing":
             self.subject = .startProcessing
+        case "apply_setup":
+            self.subject = .applySetup(try container.decode(AgentSetupApplyFacts.self, forKey: .subject))
         case "confirm_manual_order":
             self.subject = .manualOrder(try container.decode(AgentManualOrder.self, forKey: .subject))
         default:

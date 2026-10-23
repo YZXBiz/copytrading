@@ -8,6 +8,7 @@ from decimal import Decimal
 
 from copytrading_engine.control import copying, wire
 from copytrading_engine.control.proposals import (
+    ApplySetup,
     Closed,
     ConfirmManualOrder,
     Finished,
@@ -324,6 +325,7 @@ def proposal(item: Proposal) -> wire.ProposalView:
         | wire.ManualOrderSubject
         | wire.LimitsSubject
         | wire.StartProcessingSubject
+        | wire.ApplySetupSubject
     )
     match item.subject:
         case ResumeAccount(account_id=account_id):
@@ -337,6 +339,13 @@ def proposal(item: Proposal) -> wire.ProposalView:
             )
         case StartProcessing():
             subject = wire.StartProcessingSubject()
+        case ApplySetup() as setup:
+            subject = wire.ApplySetupSubject(
+                made_live=setup.made_live,
+                new_live_keys=setup.new_live_keys,
+                changed_live=setup.changed_live,
+                starts_live=setup.starts_live,
+            )
         case ConfirmManualOrder() as order:
             subject = wire.ManualOrderSubject(
                 account_id=order.account_id,

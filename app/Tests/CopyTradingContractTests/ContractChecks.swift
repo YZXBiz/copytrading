@@ -19,6 +19,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
     case lotSaleFlow = "lot sale flow"
     case assistantModel = "assistant model"
     case assistantProposals = "assistant proposals"
+    case agentSetupFlow = "agent setup from the command line"
     case assistantHelp = "assistant help"
     case assistantPanel = "assistant panel"
     case settingsSaveFlow = "settings save and start flow"
@@ -57,6 +58,7 @@ enum ContractCheck: String, CaseIterable, Sendable, CustomTestStringConvertible 
         case .lotSaleFlow: try await runLotSaleFlowTests()
         case .assistantModel: try await runAssistantModelTests()
         case .assistantProposals: try await runAssistantProposalTests()
+        case .agentSetupFlow: try await runAgentSetupFlowTests()
         case .assistantHelp: try runAssistantHelpTests()
         case .assistantPanel: try runAssistantPanelTests()
         case .settingsSaveFlow: try await TradingSettingsSaveTests.runSettingsSaveFlow()

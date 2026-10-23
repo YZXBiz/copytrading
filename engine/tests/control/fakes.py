@@ -19,6 +19,7 @@ from copytrading_engine.control.audit import AuditEntry
 from copytrading_engine.control.policy import AccessLevel, RateWindow
 from copytrading_engine.control.proposals import ProposalBook
 from copytrading_engine.control.service import ControlContext, ControlService
+from copytrading_engine.control.wire import SETUP_OPERATIONS
 from copytrading_engine.execution.domain.lifecycle import (
     AccountControlCommand,
     AccountControlResult,
@@ -46,6 +47,7 @@ from copytrading_engine.trading.domain.status import AccountStatus, TradingStatu
 from copytrading_engine.trading.presentation.operator_models import SourceActivityPage
 
 from ..contracts import CONTRACTS
+from .fake_setup_app import FakeSetupApp
 
 # The manual preview fixture expires at 15:00:33Z, so proposals built from it are valid now.
 NOW = dt.datetime(2026, 9, 26, 15, 0, 10, tzinfo=dt.UTC)
@@ -210,7 +212,11 @@ def service(
 
 
 def context(
-    access: AccessLevel = "propose", *, unlocked: bool = True, app_actions: bool = True
+    access: AccessLevel = "propose",
+    *,
+    unlocked: bool = True,
+    app_actions: bool = True,
+    setup_changes: bool = True,
 ) -> ControlContext:
     return ControlContext(
         access_level=access,
@@ -218,6 +224,7 @@ def context(
         caller_pid=4242,
         caller_path="/usr/bin/agent",
         app_actions=app_actions,
+        setup_changes=setup_changes,
     )
 
 
@@ -228,6 +235,10 @@ class Relay:
     path: Path
     access: AccessLevel = "propose"
     unlocked: bool = True
+    # The owner's "Allow setup changes from the command line".
+    setup_changes: bool = True
+    # The app's own setup handler, when the relay stands in for the whole app.
+    setup: Any = None
 
 
 @asynccontextmanager
@@ -251,6 +262,7 @@ async def app_socket(
                 caller_pid=os.getpid(),
                 caller_path="/usr/bin/agent",
                 app_actions=True,
+                setup_changes=relay.setup_changes,
             ),
         )
         writer.write(answer.encode() + b"\n")
@@ -267,6 +279,14 @@ async def app_socket(
         directory.rmdir()
 
 
+def _operation(line: str) -> object:
+    try:
+        payload = json.loads(line)
+    except ValueError:
+        return None
+    return payload.get("operation") if isinstance(payload, dict) else None
+
+
 @asynccontextmanager
 async def running_app(database: Path, control: ControlService) -> AsyncIterator[Relay]:
     """A real PipeServer behind a fake app socket: the path every CLI and MCP call takes."""
@@ -277,7 +297,12 @@ async def running_app(database: Path, control: ControlService) -> AsyncIterator[
             control=control,
         )
 
+        setup = FakeSetupApp(server)
+
         async def forward(line: str, relay_context: ControlContext) -> str:
+            if _operation(line) in SETUP_OPERATIONS:
+                # The app answers setup requests itself, as AgentRelay routes them.
+                return await setup.handle(line, relay_context)
             request = {
                 "version": 1,
                 "request_id": "relay",
@@ -289,4 +314,5 @@ async def running_app(database: Path, control: ControlService) -> AsyncIterator[
             return reply["ok"]["line"]
 
         async with app_socket(forward) as relay:
+            relay.setup = setup
             yield relay

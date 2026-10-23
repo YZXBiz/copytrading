@@ -2422,3 +2422,10 @@
 "The saved setup is from before CopyTrading could carry setups over." = "保存的设置来自更早的版本，无法沿用。";
 "The saved setup is from a newer CopyTrading." = "保存的设置来自更新版本的 CopyTrading。";
 "Your setup is from a CopyTrading too old to carry over. It's kept in %@; set up again in Connections." = "你的设置来自过旧的 CopyTrading，无法沿用。已保留在 %@；请在“连接”中重新设置。";
+"Apply the setup, with live accounts" = "应用设置（含实盘账户）";
+"Becomes live" = "改为实盘";
+"New keys" = "新密钥";
+"Limits change" = "限额变更";
+"Allow setup changes from the command line" = "允许通过命令行修改设置";
+"Turn off setup changes from the command line" = "关闭通过命令行修改设置";
+"copytrading setup may change keys, the model, accounts, and gurus. Live accounts still wait for you." = "copytrading setup 可以修改密钥、AI 模型、账户和信号源。实盘账户仍要等你批准。";

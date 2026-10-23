@@ -27,6 +27,7 @@ def tier(operation: Operation) -> Tier:
             | "preview_manual_order"
             | "list_proposals"
             | "get_proposal"
+            | "get_setup"
         ):
             return "read"
         case "pause_processing" | "pause_account":
@@ -37,6 +38,14 @@ def tier(operation: Operation) -> Tier:
             | "propose_manual_order"
             | "propose_set_account_limits"
             | "propose_start_processing"
+            | "edit_setup_discord"
+            | "edit_setup_model"
+            | "edit_setup_account"
+            | "edit_setup_guru"
+            | "edit_setup_alerts"
+            | "import_setup"
+            | "apply_setup"
+            | "discard_setup"
         ):
             return "approval"
         case _:
@@ -61,9 +70,35 @@ class Refuse:
 type Decision = Run | Propose | Refuse
 
 
-def decide(operation: Operation, access: AccessLevel, *, unlocked: bool) -> Decision:
+# Setup changes need the propose level like every approval-tier operation, but the owner
+# granted that level for them: an edit only changes the unsaved draft, and applying a paper-only
+# setup runs Start Copying's own checks. Anything that touches a live account is a proposal.
+SETUP_CHANGES: Final[frozenset[Operation]] = frozenset(
+    {
+        "edit_setup_discord",
+        "edit_setup_model",
+        "edit_setup_account",
+        "edit_setup_guru",
+        "edit_setup_alerts",
+        "import_setup",
+        "apply_setup",
+        "discard_setup",
+    }
+)
+
+
+def decide(
+    operation: Operation,
+    access: AccessLevel,
+    *,
+    unlocked: bool,
+    owner_needed: bool = True,
+    setup_changes: bool = False,
+) -> Decision:
     """Pausing is always allowed; everything else needs an unlocked app, and proposals need
-    the owner to have granted the propose level."""
+    the owner to have granted the propose level. A setup change also needs the owner's separate
+    "Allow setup changes from the command line" (`setup_changes`); one the owner need not see then
+    runs, and `owner_needed` says whether it touches real money."""
     kind = tier(operation)
     if kind == "safer":
         return Run()
@@ -73,6 +108,10 @@ def decide(operation: Operation, access: AccessLevel, *, unlocked: bool) -> Deci
         return Run()
     if access != "propose":
         return Refuse("forbidden")
+    if operation in SETUP_CHANGES and not setup_changes:
+        return Refuse("forbidden")
+    if operation in SETUP_CHANGES and not owner_needed:
+        return Run()
     return Propose()
 
 

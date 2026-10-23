@@ -10,6 +10,7 @@ from hypothesis import strategies as st
 from copytrading_engine.control import wire
 from copytrading_engine.control.policy import RateWindow
 from copytrading_engine.control.proposals import ProposalRefused
+from copytrading_engine.control.service import SETUP_IN_APP_ONLY, ApplyFacts, SetupAuthorization
 
 from .fakes import BROKER_IDENTITIES, context, service
 
@@ -255,3 +256,106 @@ async def test_actions_happen_only_through_approval_and_at_most_once(steps, appr
         assert proposal.proposal_id not in approved
         approved.add(proposal.proposal_id)
     assert len(engine.actions()) == len(approved)
+
+
+# Setup requests the app answers itself
+
+
+async def test_a_setup_line_that_reaches_the_engine_is_refused_without_its_key():
+    control, _, audit, _ = service()
+    line = json.dumps(
+        {
+            "schema_version": 1,
+            "request_id": "s1",
+            "operation": "edit_setup_discord",
+            "token": "never-store-this",
+        }
+    )
+    response = await control.handle(line, context(app_actions=False), engine_state="running")
+    assert response.error is not None
+    assert (response.error.code, response.error.message) == ("unavailable", SETUP_IN_APP_ONLY)
+    assert "never-store-this" not in repr(audit.entries)
+
+
+@pytest.mark.parametrize(
+    ("operation", "apply"),
+    [("apply_setup", None), ("edit_setup_model", ApplyFacts())],
+)
+async def test_an_apply_carries_its_facts_and_nothing_else_does(operation, apply):
+    control, *_ = service()
+    answer = await control.authorize_setup(
+        SetupAuthorization(operation=operation, request_id="s2", apply=apply), context()
+    )
+    assert answer is not None
+    assert answer.error is not None
+    assert answer.error.code == "invalid_request"
+
+
+async def test_a_paper_apply_runs_and_a_live_one_is_proposed_once():
+    control, _, audit, _ = service()
+    paper = SetupAuthorization(operation="apply_setup", request_id="s3", apply=ApplyFacts())
+    assert await control.authorize_setup(paper, context()) is None
+    live = SetupAuthorization(
+        operation="apply_setup",
+        request_id="s4",
+        apply=ApplyFacts(new_live_keys=("live-1",), starts_live=("live-1",)),
+    )
+    first = await control.authorize_setup(live, context())
+    assert first is not None
+    assert isinstance(first.ok, wire.ProposalView)
+    assert first.ok.subject.kind == "apply_setup"
+    second = await control.authorize_setup(live, context())
+    assert second is not None
+    assert second.error is not None
+    assert second.error.code == "proposal_limit"
+    no_app = await control.authorize_setup(live, context(app_actions=False))
+    assert no_app is not None
+    assert no_app.error is not None
+    assert no_app.error.code == "unavailable"
+    assert [(entry.operation, entry.outcome) for entry in audit.entries] == [
+        ("apply_setup", "ok"),
+        ("apply_setup", "proposed"),
+        ("apply_setup", "proposal_limit"),
+        ("apply_setup", "unavailable"),
+    ]
+
+
+async def test_an_approved_apply_waits_for_the_app_to_report():
+    control, engine, *_ = service()
+    live = SetupAuthorization(
+        operation="apply_setup", request_id="s5", apply=ApplyFacts(made_live=("live-1",))
+    )
+    answer = await control.authorize_setup(live, context())
+    assert answer is not None
+    assert isinstance(answer.ok, wire.ProposalView)
+    running = await control.approve(answer.ok.proposal_id, answer.ok.digest)
+    assert running.state == "running"
+    assert engine.actions() == []
+    done = await control.complete(answer.ok.proposal_id, "failed", "failed_checks")
+    assert (done.state, done.outcome and done.outcome.code) == ("failed", "failed_checks")
+
+
+async def test_setup_requests_share_the_rate_limit():
+    control, *_ = service(rate=RateWindow(limit=1))
+    show = SetupAuthorization(operation="get_setup", request_id="s6")
+    assert await control.authorize_setup(show, context()) is None
+    busy = await control.authorize_setup(show, context())
+    assert busy is not None
+    assert busy.error is not None
+    assert busy.error.code == "busy"
+
+
+async def test_a_line_the_app_could_not_read_is_recorded_with_its_caller():
+    control, _, audit, _ = service()
+    refused = await control.authorize_setup(
+        SetupAuthorization(operation="edit_setup_discord", request_id="s9", invalid=True), context()
+    )
+    assert refused is not None
+    assert refused.error is not None
+    assert refused.error.code == "invalid_request"
+    entry = audit.entries[-1]
+    assert (entry.operation, entry.outcome, entry.caller_pid) == (
+        "edit_setup_discord",
+        "invalid_request",
+        4242,
+    )

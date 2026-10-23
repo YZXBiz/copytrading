@@ -22,29 +22,26 @@ public struct AgentAccessStore: Sendable {
     }
 
     /// A missing file means agents were never allowed.
-    public func load() throws -> AgentAccessSetting {
+    public func load() throws -> AgentAccessChoice {
         var info = stat()
-        guard lstat(url.path, &info) == 0 else { return .off }
+        guard lstat(url.path, &info) == 0 else { return AgentAccessChoice(access: .off) }
         guard info.st_mode & S_IFMT == S_IFREG, info.st_uid == getuid() else {
             throw AgentAccessStoreError.unsafeLocation
         }
         do {
-            return try JSONDecoder().decode(Stored.self, from: Data(contentsOf: url)).access
+            return try JSONDecoder().decode(AgentAccessChoice.self, from: Data(contentsOf: url))
         } catch {
             throw AgentAccessStoreError.invalidSetting
         }
     }
 
-    public func save(_ access: AgentAccessSetting) throws {
+    public func save(_ choice: AgentAccessChoice) throws {
         var info = stat()
         if lstat(url.path, &info) == 0, info.st_mode & S_IFMT != S_IFREG {
             throw AgentAccessStoreError.unsafeLocation
         }
-        try JSONEncoder().encode(Stored(access: access)).write(to: url, options: .atomic)
+        try JSONEncoder().encode(choice).write(to: url, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: NSNumber(value: 0o600)], ofItemAtPath: url.path)
     }
 
-    private struct Stored: Codable {
-        let access: AgentAccessSetting
-    }
 }

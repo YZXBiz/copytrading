@@ -16,10 +16,17 @@ private func agentAccessIsRememberedPrivately() throws {
     let store = AgentAccessStore(stateRoot: root)
 
     let initial = try store.load()
-    try #require(initial == .off, "agents must be off until the owner chooses otherwise")
-    try store.save(.propose)
+    try #require(
+        initial == AgentAccessChoice(access: .off, setupChanges: false), "agents must be off until the owner chooses otherwise")
+    try store.save(AgentAccessChoice(access: .propose, setupChanges: true))
     let saved = try store.load()
-    try #require(saved == .propose, "the owner's choice must survive a restart")
+    try #require(
+        saved == AgentAccessChoice(access: .propose, setupChanges: true), "the owner's choice must survive a restart")
+    try Data(#"{"access":"propose"}"#.utf8).write(to: store.url)
+    let earlier = try store.load()
+    try #require(
+        earlier == AgentAccessChoice(access: .propose, setupChanges: false),
+        "a choice saved before setup changes existed must read as setup changes off")
     let mode = try FileManager.default.attributesOfItem(atPath: store.url.path)[.posixPermissions] as? NSNumber
     try #require(mode?.intValue == 0o600, "the access setting must be owner-only")
 

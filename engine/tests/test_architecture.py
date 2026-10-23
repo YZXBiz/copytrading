@@ -82,14 +82,14 @@ ALLOWED: dict[str, frozenset[str]] = {
 # and must not reach those modules or an external SDK.
 FLAT_IO_MODULES: dict[str, frozenset[str]] = {
     "assistant": frozenset({"agent", "service"}),
-    "control": frozenset({"sqlite", "client", "cli", "mcp_server", "__main__"}),
+    "control": frozenset({"sqlite", "client", "cli", "cli_setup", "mcp_server", "__main__"}),
     "parsing": frozenset({"sqlite", "providers"}),
     "sources": frozenset({"sqlite", "session", "source", "attachments"}),
 }
 
 # The CLI and MCP server run outside the engine process, so they may import only the
 # published contract and each other.
-CONTROL_CLIENT_MODULES = frozenset({"client", "cli", "mcp_server", "__main__", "wire"})
+CONTROL_CLIENT_MODULES = frozenset({"client", "cli", "cli_setup", "mcp_server", "__main__", "wire"})
 
 
 def _unit(relative: Path) -> str:
