@@ -290,6 +290,18 @@ class CopyEngine:
             return None, problem
         return quote.bid, "ready"
 
+    def _sell_replaces(self, order: OrderRecord, sell: Instruction, message_id: str) -> bool:
+        """A sell cancels an open buy it would have sold: the guru got out before the copy got in.
+        It never cancels an open sell, which it waits for instead, so both sales happen; nor a buy
+        at another price than the one it names, or one posted after it, which are separate calls."""
+        if order.message_id == message_id or order.side != "buy" or not is_cancelable(order.status):
+            return False
+        if sell.entry_price is not None and order.entry_price != sell.entry_price:
+            return False
+        posted = self.ledger.state.messages.get(message_id)
+        bought = self.ledger.state.messages.get(order.message_id)
+        return posted is None or bought is None or bought.timestamp <= posted.timestamp
+
     def market_session(self, now: dt.datetime) -> Session:
         date = trade_date(now).isoformat()
         if date not in self._calendar:
@@ -335,7 +347,7 @@ class CopyEngine:
         if active:
             if s.action != "buy" and not manual:
                 for order in active:
-                    if order.message_id != message_id and is_cancelable(order.status):
+                    if self._sell_replaces(order, s, message_id):
                         self.cancel(order, now, "replaced_by_sell")
             return TradeDecision(None, "wait_pending_order")
         session = self.market_session(now)

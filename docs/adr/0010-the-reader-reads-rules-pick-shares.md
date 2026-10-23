@@ -42,6 +42,9 @@ Waiting for You (`sell_names_no_buy`, `missing_or_ambiguous_lot`, `batch_size_un
   stay on the account.
 * The reader is held to the owner's corrections and the guru's open calls, so a mistake is not
   repeated on every later sell.
+* A sell that arrives while an order for the stock is still open cancels only an open buy it would
+  have sold: one at the buy price it names (any, when it names none), posted before it. It never
+  cancels an open sell; it waits for it, so "sell half" then "sell half of the rest" sells both.
 
 ## Compliance
 The reader's output validator rejects words not in the post and a repeat of a call that is not
