@@ -13,7 +13,7 @@ struct CopyingStoppedBanner: View {
                 Image(systemName: "pause.circle.fill")
                     .foregroundStyle(Palette.ink)
                     .accessibilityHidden(true)
-                Text(L10n.string("Copying stopped when CopyTrading quit."))
+                Text(L10n.string("Copying paused when CopyTrading quit."))
                 Spacer(minLength: 8)
                 Button(L10n.string("Start Copying")) {
                     Task { await model.startCopyingEverywhere(feature: accountFeature) }

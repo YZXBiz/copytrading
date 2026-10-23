@@ -365,7 +365,7 @@ final class AppModel {
             pendingRestoreCandidate = nil
             restoreCredentialStatus = nil
             backupRestoreNote = .done(
-                L10n.string("Restored. Each account stays off, with manual recovery, until you turn it back on."))
+                L10n.string("Restored. Each account's buys stay off until you turn them back on."))
         } catch let error as RestoreActivationError {
             if case .preflightBlocked(let blockers) = error {
                 restorePreflightBlockers = blockers
@@ -489,7 +489,7 @@ final class AppModel {
         return result
     }
     @ObservationIgnored private var tradingStarter: (any TradingStarting)?
-    @ObservationIgnored private var tradingConfigurationStore: TradingConfigurationStore?
+    @ObservationIgnored private(set) var tradingConfigurationStore: TradingConfigurationStore?
     /// The unsaved setup, edited from Connections, People, and Accounts. It lives here, not in a
     /// screen, so switching screens keeps what was typed; locking or closing the window drops it,
     /// secrets included.
@@ -556,6 +556,9 @@ final class AppModel {
     @ObservationIgnored var didStartCopyingOnLaunch = false
     /// The engine stopped under copying that was running; once it is back, copying starts again.
     @ObservationIgnored var resumesAfterEngineRestart = false
+    /// The saved setup is an earlier version's until `upgradeSavedSetup` finishes; nothing starts
+    /// copying meanwhile, at launch, after an update, or after an engine restart.
+    @ObservationIgnored var setupAwaitsUpgrade = false
     /// Whether copying was on when the app last stopped, kept across launches.
     @ObservationIgnored let copyingMemory: CopyingMemory
     /// Copying was on when CopyTrading last stopped and has not started again. Read once at launch,
@@ -711,22 +714,25 @@ final class AppModel {
                 secrets: tradingKeychain
             )
             tradingConfigurationStore = configurationStore
-            if try configurationStore.discardOlderVersion() {
-                message =
-                    L10n.string(
-                        "Your setup was saved by an older version of CopyTrading. Set it up again from Getting Started, including your keys."
-                    )
+            if try configurationStore.setAsideBeforeUpgrades() {
+                message = L10n.string(
+                    "Your setup is from a CopyTrading too old to carry over. It's kept in %@; set up again in Connections.",
+                    configurationStore.setAsideURL.lastPathComponent)
             }
-            let savedTrading = try configurationStore.load()
+            // An earlier version's setup is upgraded once the engine can read its accounts; until
+            // then nothing starts copying, so the engine never runs a setup missing a choice.
+            let awaitsUpgrade = configurationStore.olderVersion() != nil
+            setupAwaitsUpgrade = awaitsUpgrade
+            let savedTrading = awaitsUpgrade ? nil : try configurationStore.load()
             savedTradingConfiguration = savedTrading?.configuration
             hasTradingSecrets = savedTrading != nil
             syncSetupDraftWithSaved()
-            prefillEmptySetup()
+            if !awaitsUpgrade { prefillEmptySetup() }
             // A first launch walks the owner through setup on Connections, until they end the tour;
             // an engine restart later never moves the owner.
             if !hasChosenFirstScreen {
                 hasChosenFirstScreen = true
-                if savedTrading == nil {
+                if savedTrading == nil && !awaitsUpgrade {
                     if !UserDefaults.standard.bool(forKey: Self.setupTourEndedKey) {
                         startSetupTour()
                     }
@@ -829,6 +835,12 @@ final class AppModel {
                 restoreRecoveryMessage = nil
             }
             tradingStatus = try await actions.tradingStatus()
+            if awaitsUpgrade {
+                await upgradeSavedSetup(
+                    in: configurationStore,
+                    recordedRecovery: { try await Self.recordedRecoveryPreferences(using: actions) },
+                    revision: { try await actions.updateAccountLimits(configuration: $0) })
+            }
             await reconcilePendingTradingActivation(using: actions)
             runtimeState = engineStatus?.telemetryState == .degraded ? .degraded : .ready
             startAgentRelay(stateRoot: paths.ownerSupportDirectory, actions: actions)
@@ -1570,6 +1582,23 @@ final class AppModel {
     /// sheet's limit save does: no check, no pause. Returns nil once they took effect, or a code
     /// that says why nothing changed; unsaved edits and a start in flight are never overwritten.
     func applyAgentLimitChanges(accountID: String, changes: [AgentLimitChange]) async -> String? {
+        await applyAgentPolicyEdit(accountID: accountID) { try $0.applying(changes) }
+    }
+
+    /// What an account does after a restart, as an agent asked and the owner approved: a setup
+    /// change saved like a limit.
+    func applyAgentRecovery(accountID: String, preference: String) async -> String? {
+        guard let preference = RecoveryPreference(rawValue: preference) else { return "invalid_request" }
+        return await applyAgentPolicyEdit(accountID: accountID) { policy in
+            var edited = policy
+            edited.recoveryPreference = preference
+            return edited
+        }
+    }
+
+    private func applyAgentPolicyEdit(
+        accountID: String, _ edit: (TradingAccountPolicy) throws -> TradingAccountPolicy
+    ) async -> String? {
         syncSetupDraftWithSaved()
         guard isTradingUnlocked, let saved = savedTradingConfiguration, let tradingConfigurationStore,
             let control: (any TradingStarting) = tradingStarter ?? engineActions
@@ -1581,7 +1610,7 @@ final class AppModel {
         guard let index = saved.accounts.firstIndex(where: { $0.id == accountID }) else { return "not_found" }
         var edited = saved
         do {
-            edited.accounts[index].policy = try saved.accounts[index].policy.applying(changes)
+            edited.accounts[index].policy = try edit(saved.accounts[index].policy)
         } catch {
             return "invalid_request"
         }
@@ -1783,7 +1812,7 @@ final class AppModel {
     /// A launch start is due: the owner asked for one, an update or an engine restart left copying
     /// to resume, the setup is paper only, and the engine reports copying paused.
     private var wantsLaunchStart: Bool {
-        wantsCopyingOnLaunch && !didStartCopyingOnLaunch && canStartCopyingOnLaunch
+        wantsCopyingOnLaunch && !didStartCopyingOnLaunch && canStartCopyingOnLaunch && !setupAwaitsUpgrade
             && tradingStatus?.state == .paused
     }
 

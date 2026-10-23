@@ -203,8 +203,7 @@ final class AccountFeatureModel {
     }
 
     func control(
-        accountID: String, action: AccountControlAction,
-        preference: RecoveryPreference? = nil, using actions: (any AccountOperations)?
+        accountID: String, action: AccountControlAction, using actions: (any AccountOperations)?
     ) async {
         guard let generation = privateAccessGeneration, !pendingAccounts.contains(accountID) else { return }
         guard let actions else {
@@ -212,15 +211,11 @@ final class AccountFeatureModel {
             return
         }
         let command: AccountControlCommand
-        if let previous = retryCommands[accountID],
-            previous.action == action, previous.recoveryPreference == preference
-        {
+        if let previous = retryCommands[accountID], previous.action == action {
             command = previous
         } else {
             command = AccountControlCommand(
-                commandID: UUID().uuidString.lowercased(), accountID: accountID,
-                action: action, recoveryPreference: preference
-            )
+                commandID: UUID().uuidString.lowercased(), accountID: accountID, action: action)
         }
         retryCommands[accountID] = command
         pendingAccounts.insert(accountID)

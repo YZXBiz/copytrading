@@ -111,6 +111,9 @@ public struct TradingAccountPolicy: Codable, Equatable, Sendable {
     /// How far under the guru's sell price a sell may fill: every sell is a limit order at that
     /// floor, and it keeps working until the market reaches it (ADR-0010).
     public var maxBelowSignalPct = "1"
+    /// What the account does after CopyTrading restarts. A setup choice like the limits, so the
+    /// account sheet shows it; the account's record never decides it.
+    public var recoveryPreference = RecoveryPreference.manual
 
     public init() {}
 
@@ -129,6 +132,7 @@ public struct TradingAccountPolicy: Codable, Equatable, Sendable {
         case approveOrders = "approve_orders"
         case maxAboveSignalPct = "max_above_signal_pct"
         case maxBelowSignalPct = "max_below_signal_pct"
+        case recoveryPreference = "recovery_preference"
     }
 }
 
@@ -308,9 +312,9 @@ public struct TradingRouteConfiguration: Codable, Equatable, Identifiable, Senda
 
     public var id: String { "\(source):\(channelID):\(authorID ?? "*"):\(guruID)" }
 
-    /// Who this route copies: its channel's guru. Posts, holdings, and pages name gurus this way;
-    /// `guruID` is the ID the setup was saved with, which a setup saved before IDs came from the
-    /// channel may differ from, and only ties the route to its profile.
+    /// Who this route copies: its channel's guru. Posts, holdings, and pages name gurus this way.
+    /// A saved route's `guruID` is the same ID: the setup upgrade gave every guru saved before IDs
+    /// came from the channel the channel's (ADR-0013).
     public var guru: String { GuruIdentity.id(channelID: channelID, source: source) }
 
     public init(
@@ -395,8 +399,9 @@ public struct TradingNotificationConfiguration: Codable, Equatable, Sendable {
 
 /// Saved to application support. This type deliberately contains no credentials.
 public struct TradingConfiguration: Codable, Equatable, Sendable {
-    /// Matches the engine's CONFIGURATION_VERSION; older saved files are rejected, never migrated.
-    public static let currentVersion = 9
+    /// Matches the engine's CONFIGURATION_VERSION. A setup saved at an earlier version is upgraded
+    /// once by `SetupUpgrade` and never read in its old shape anywhere else.
+    public static let currentVersion = 10
     public var version = TradingConfiguration.currentVersion
     public var source: TradingSourceConfiguration
     public var provider: TradingProviderConfiguration

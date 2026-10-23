@@ -8,18 +8,16 @@ struct SidebarStatusFooter: View {
     private static let pages: [AppModel.Screen] = [.connections, .gettingStarted, .settings]
 
     @MainActor private var summary: (text: String, tone: StatusTone) {
-        if model.runtimeState == .stopped || model.runtimeState == .failed {
-            return (L10n.string("Engine stopped"), StatusTone(model.runtimeState))
-        }
-        guard model.savedTradingConfiguration != nil else { return (L10n.string("Not set up yet"), .inactive) }
-        return CopyingSummary.of(model.tradingStatus)
+        let copying = CopyingState.overall(model)
+        return (copying.title, copying.tone)
     }
 
     @MainActor private var helpText: String {
+        let copying = CopyingState.overall(model)
         let count = model.tradingStatus?.activeAccounts ?? 0
-        return model.tradingStatus?.state == .running
+        return copying == CopyingState(.copying)
             ? L10n.string("Copying new posts into %@", Humanize.count(count, "account"))
-            : summary.text
+            : copying.text
     }
 
     var body: some View {

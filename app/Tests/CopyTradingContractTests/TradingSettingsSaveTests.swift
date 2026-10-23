@@ -33,7 +33,7 @@ struct TradingSettingsSaveTests {
 
         let profile = try TradingProfileBuilder().build(
             TradingProfileDraft(
-                guruID: "stable-guru", displayName: "Stable Guru"
+                guruID: GuruIdentity.id(channelID: "123"), displayName: "Stable Guru"
             ))
         let configuration = TradingConfiguration(
             source: TradingSourceConfiguration(channelIDs: ["123"]),
@@ -98,6 +98,7 @@ struct TradingSettingsSaveTests {
         try await checkAgentLimitChangesNeverTouchUnsavedWork()
         try await checkEngineRestartStartsCopyingAgain()
         try await checkLaunchStartNeedsNoWindow()
+        try await checkLaunchStartWaitsForTheSetupUpgrade()
         try await checkEngineRestartKeepsAPausedSetupPaused()
         try await checkAcceptedActivationWithLostResponseRemainsPending()
         try await checkPendingActivationReconcilesAfterAppReopen(configuration: configuration, secrets: credentials)
@@ -146,19 +147,19 @@ struct TradingSettingsSaveTests {
     }
 
     private static func checkCopyingSummary() throws {
-        let starting = CopyingSummary.of(try status(.degraded, errorCode: nil))
+        let starting = CopyingState.overall(try status(.degraded, errorCode: nil))
         try check(
-            starting.text == "Starting…" && starting.tone == .neutral,
+            starting == CopyingState(.notStarted, "Starting…") && starting.tone == .inactive,
             "A degraded engine with no error is still starting, not a problem: \(starting.text)")
-        let problem = CopyingSummary.of(try status(.degraded, errorCode: "account_unavailable"))
+        let problem = CopyingState.overall(try status(.degraded, errorCode: "account_unavailable"))
         try check(
-            problem.text == "Copying with problems" && problem.tone == .caution,
-            "A degraded engine with an error code must read as a problem: \(problem.text)")
-        let running = CopyingSummary.of(try status(.running))
+            problem.word == .copying && problem.detail != nil && problem.tone == .caution,
+            "A degraded engine with an error code copies with a warning: \(problem.text)")
+        let running = CopyingState.overall(try status(.running))
         try check(running.text == "Copying", "Running must read as copying")
-        let failed = CopyingSummary.of(try status(.failed))
-        try check(failed.tone == .critical, "A failed engine must read as critical")
-        try check(CopyingSummary.of(nil).text == "Copying paused", "No status reads as paused")
+        let failed = CopyingState.overall(try status(.failed))
+        try check(failed.word == .stopped && failed.tone == .critical, "A failed engine must read as stopped")
+        try check(CopyingState.overall(nil).text == "Paused", "No status reads as paused")
         print("CopyTradingContractTests: footer reads a start that is still finishing as Starting, and only a coded fault as a problem")
         try check(
             StatusTone(code: "unchecked") == .neutral,
@@ -247,7 +248,7 @@ struct TradingSettingsSaveTests {
         let wire = Data(
             """
             {"version":1,"request_id":"evaluation-request","ok":{"type":"profile_evaluation",
-             "evaluation":{"message_identity":"discord:123:historical-message","guru_id":"stable-guru",
+             "evaluation":{"message_identity":"discord:123:historical-message","guru_id":"guru-be6f68ea",
               "profile_revision":"\(profile.profileRevision)","exit_basis":"original_position",
               "provider":"anthropic","model":"test-model","decision":"trade","reason":"explicit_entry",
               "simulated":true,"no_order":true,"cost_notice":"Provider charges may apply.",
@@ -291,7 +292,7 @@ struct TradingSettingsSaveTests {
         )
         let originalProfile = try TradingProfileBuilder().build(
             TradingProfileDraft(
-                guruID: "prior-guru", displayName: "Prior Guru"
+                guruID: GuruIdentity.id(channelID: "123"), displayName: "Prior Guru"
             ))
         let original = TradingConfiguration(
             source: TradingSourceConfiguration(channelIDs: ["123"], authorIDs: ["456"]),
@@ -349,7 +350,7 @@ struct TradingSettingsSaveTests {
         )
         let profile = try TradingProfileBuilder().build(
             TradingProfileDraft(
-                guruID: "launch-guru", displayName: "Launch Guru"
+                guruID: GuruIdentity.id(channelID: "123"), displayName: "Launch Guru"
             ))
         let configuration = TradingConfiguration(
             source: TradingSourceConfiguration(channelIDs: ["123"], authorIDs: ["456"]),
@@ -516,6 +517,47 @@ struct TradingSettingsSaveTests {
     /// Oct 20 2026: an install relaunched the app while nobody was at the Mac, and copying stayed
     /// paused behind Touch ID for 1h40m while Zhao posted. A launch start the owner chose runs on
     /// the engine's status alone: no unlocked window, and no window at all.
+    /// A setup the last version saved, copying set to start on launch: nothing starts until the
+    /// upgrade has saved it, and the account copies on with its recorded "automatic".
+    private static func checkLaunchStartWaitsForTheSetupUpgrade() async throws {
+        let (model, starter, directory) = try await launchStartFixture()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        guard let store = model.tradingConfigurationStore,
+            var saved = try JSONSerialization.jsonObject(with: Data(contentsOf: store.url)) as? [String: Any],
+            var raw = saved["configuration"] as? [String: Any]
+        else { return try check(false, "The launch fixture saved no setup") }
+        raw["version"] = 9
+        raw["accounts"] = (raw["accounts"] as? [[String: Any]] ?? []).map { account in
+            var account = account
+            var policy = account["policy"] as? [String: Any] ?? [:]
+            policy.removeValue(forKey: "recovery_preference")
+            account["policy"] = policy
+            return account
+        }
+        saved["configuration"] = raw
+        try JSONSerialization.data(withJSONObject: saved).write(to: store.url)
+        model.savedTradingConfiguration = nil
+        model.setupAwaitsUpgrade = true
+        await starter.setValidationActivatable(true)
+
+        model.tradingStatus = try status(.paused)
+        await model.startCopyingOnLaunchIfWanted()
+        try await Task.sleep(for: .milliseconds(100))
+        let early = await starter.startedConfiguration()
+        try check(early == nil, "Copying started on a setup the upgrade hadn't saved yet")
+
+        await model.upgradeSavedSetup(
+            in: store, recordedRecovery: { ["paper": .automatic] }, revision: { fakeEngineRevision($0) })
+        for _ in 0..<100 where model.tradingStatus?.state != .running { try await Task.sleep(for: .milliseconds(20)) }
+        let started = await starter.startedConfiguration()
+        try check(model.tradingStatus?.state == .running, "The launch start didn't follow the upgrade")
+        try check(
+            started?.version == TradingConfiguration.currentVersion
+                && started?.accounts.first?.policy.recoveryPreference == .automatic,
+            "The resumed account lost its recorded automatic recovery")
+        print("CopyTradingContractTests: a launch start waits for the setup upgrade and keeps automatic recovery")
+    }
+
     private static func checkLaunchStartNeedsNoWindow() async throws {
         let (model, starter, directory) = try await launchStartFixture()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -567,7 +609,7 @@ struct TradingSettingsSaveTests {
         )
         let profile = try TradingProfileBuilder().build(
             TradingProfileDraft(
-                guruID: "resume-guru", displayName: "Resume Guru"
+                guruID: GuruIdentity.id(channelID: "123"), displayName: "Resume Guru"
             ))
         let prior = TradingConfiguration(
             source: TradingSourceConfiguration(channelIDs: ["123"]),
@@ -1872,7 +1914,7 @@ struct TradingSettingsSaveTests {
         )
         let profile = try TradingProfileBuilder().build(
             TradingProfileDraft(
-                guruID: "prior-guru", displayName: "Prior Guru"
+                guruID: GuruIdentity.id(channelID: "123"), displayName: "Prior Guru"
             ))
         let original = TradingConfiguration(
             source: TradingSourceConfiguration(channelIDs: ["123"], authorIDs: ["456"]),

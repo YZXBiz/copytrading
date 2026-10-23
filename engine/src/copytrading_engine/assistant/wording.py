@@ -135,33 +135,21 @@ OUTCOMES = {
     "done": "Done",
 }
 
-# Where an account stands, as the Accounts screen says it.
-READINESS = {
-    "enabled": "Copying",
-    "enabled_waiting_for_session": "Copying once the market opens",
-    "disabled": "Not copying yet",
-    "paused": "Copying stopped",
-    "manual_resume_required": "Waiting for its Start Copying after a restart",
-    "recovery_pending": "Still checking the account after a restart",
-    "reconciliation_unavailable": "The account couldn't be checked against the broker",
+# The line under a copying word: what it waits for, or a warning while it still copies.
+COPYING_DETAILS = {
+    "starting": "Starting",
+    "pausing": "Pausing",
+    "account_paused": "You paused new buys; sells still go through",
+    "manual_resume_required": "Waiting for your Start Copying after a restart",
+    "enabled_waiting_for_session": "Copies once the market opens",
+    "recovery_pending": "Checking the account after a restart",
+    "reconciliation_unavailable": "The account couldn't be checked against Alpaca",
     "session_unavailable": "The market hours couldn't be read",
 }
 
-ENTRIES = {"enabled": "on", "disabled": "off", "paused": "paused"}
-
 AFTER_RESTART = {
-    "manual": "waits for its Start Copying",
+    "manual": "waits for your Start Copying",
     "automatic": "starts copying again on its own",
-}
-
-COPYING = {
-    "running": "copying",
-    "degraded": "copying, with a problem",
-    "starting": "starting",
-    "pausing": "pausing",
-    "paused": "paused",
-    "stopped": "stopped",
-    "failed": "stopped by an error",
 }
 
 # Why the engine refused a tool, in words the assistant can pass on.

@@ -172,3 +172,17 @@ async def test_nothing_to_start_while_copying_runs_or_without_the_app():
     assert (
         await error(control, line("propose_start_processing"), app_actions=False) == "unavailable"
     )
+
+
+async def test_after_a_restart_is_a_setup_change_the_app_performs():
+    control, engine, *_ = service()
+    request = line("propose_recovery_preference", account_id="paper", preference="automatic")
+    assert await error(control, request, app_actions=False) == "unavailable"
+    proposal = await ok(control, request)
+    assert isinstance(proposal, wire.ProposalView)
+    assert proposal.subject == wire.RecoverySubject(account_id="paper", preference="automatic")
+    running = await control.approve(proposal.proposal_id, proposal.digest)
+    assert running.state == "running"
+    assert engine.actions() == []
+    done = await control.complete(proposal.proposal_id, "succeeded", None)
+    assert done.state == "succeeded"

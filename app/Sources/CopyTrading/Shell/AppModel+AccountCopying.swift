@@ -30,7 +30,7 @@ extension AppModel {
         }
         let operations = operations ?? accountActions()
         guard let account = await heldAccount(accountID, feature: feature, using: operations),
-            !AccountCopyState(account).isCopying
+            !CopyingState.account(account).isCopying
         else { return }
         if environment == .live, !confirmed {
             do {
@@ -80,7 +80,7 @@ extension AppModel {
         let operations = accountActions()
         for id in accountIDs {
             guard let account = await heldAccount(id, feature: feature, using: operations),
-                !AccountCopyState(account).isCopying
+                !CopyingState.account(account).isCopying
             else { continue }
             await feature.control(accountID: id, action: .resume, using: operations)
         }
@@ -96,12 +96,12 @@ extension AppModel {
             if attempt > 0 { try? await Task.sleep(for: .seconds(1)) }
             await feature.refresh(using: operations)
             if let account = feature.accounts.first(where: { $0.accountID == accountID }),
-                account.activeConfiguration, !AccountCopyState.unheld.contains(account.readiness)
+                account.activeConfiguration, !CopyingState.unheld.contains(account.readiness)
             {
                 return account
             }
             if let account = feature.accounts.first(where: { $0.accountID == accountID }),
-                account.activeConfiguration, AccountCopyState.unheld.contains(account.readiness)
+                account.activeConfiguration, CopyingState.unheld.contains(account.readiness)
             {
                 message = L10n.string("%@ can't copy yet: %@.", accountID, Reason.text(account.readiness))
                 return nil

@@ -1063,7 +1063,6 @@
 "The half-finished restore didn't pass its checks, so it can only be rolled back." = "The half-finished restore didn't pass its checks, so it can only be rolled back.";
 "A restore is half-finished. Resume it, or roll back to your data from before." = "A restore is half-finished. Resume it, or roll back to your data from before.";
 "Restore recovery could not stop the replacement runtime. The durable gate and installation lock remain held." = "Restore recovery could not stop the replacement runtime. The durable gate and installation lock remain held.";
-"Your setup was saved by an older version of CopyTrading. Set it up again from Getting Started, including your keys." = "Your setup was saved by an older version of CopyTrading. Set it up again from Getting Started, including your keys.";
 "Each guru needs a name." = "Each guru needs a name.";
 "Starting your new setup…" = "Starting your new setup…";
 "The setup changed after it was checked. Check it again." = "The setup changed after it was checked. Check it again.";
@@ -1074,7 +1073,7 @@
 "Enter %@ first." = "Enter %@ first.";
 "the Alpaca API key and secret for “%@”" = "the Alpaca API key and secret for “%@”";
 "Backup saved and checked: %@. Copying stopped while it ran; choose Start Copying to carry on." = "Backup saved and checked: %@. Copying stopped while it ran; choose Start Copying to carry on.";
-"Restored. Each account stays off, with manual recovery, until you turn it back on." = "Restored. Each account stays off, with manual recovery, until you turn it back on.";
+"Restored. Each account's buys stay off until you turn them back on." = "Restored. Each account's buys stay off until you turn them back on.";
 "The account name “%@” may only use letters, digits, “-” and “_”." = "The account name “%@” may only use letters, digits, “-” and “_”.";
 "Command %@ has no engine workflow yet. Retry the saved self-test from System." = "Command %@ has no engine workflow yet. Retry the saved self-test from System.";
 "Command %@ has an uncertain response. Look it up or retry the same ID after the engine reconnects." = "Command %@ has an uncertain response. Look it up or retry the same ID after the engine reconnects.";
@@ -2406,3 +2405,20 @@
 "Lowest sell price (% under the guru's)" = "Lowest sell price (% under the guru's)";
 "A sell waits at this price or better until it fills." = "A sell waits at this price or better until it fills.";
 "An unfilled buy is cancelled. A sell keeps waiting." = "An unfilled buy is cancelled. A sell keeps waiting.";
+"Sells only" = "Sells only";
+"Not started" = "Not started";
+"The engine stopped" = "The engine stopped";
+"New buys are paused in every account" = "New buys are paused in every account";
+"You paused new buys; sells still go through" = "You paused new buys; sells still go through";
+"Waiting for your Start Copying after a restart" = "Waiting for your Start Copying after a restart";
+"Copies once the market opens" = "Copies once the market opens";
+"Checking the account after a restart" = "Checking the account after a restart";
+"Buys again once its checks pass." = "Buys again once its checks pass.";
+"Buys wait for your Start Copying." = "Buys wait for your Start Copying.";
+"Your setup from the last version couldn't be carried over: %@ It's kept as it was; quit and open CopyTrading to try again." = "Your setup from the last version couldn't be carried over: %@ It's kept as it was; quit and open CopyTrading to try again.";
+"Copying paused when CopyTrading quit." = "Copying paused when CopyTrading quit.";
+"Copying paused when CopyTrading quit. Open CopyTrading and press Start Copying." = "Copying paused when CopyTrading quit. Open CopyTrading and press Start Copying.";
+"The saved setup isn't in a shape CopyTrading knows." = "The saved setup isn't in a shape CopyTrading knows.";
+"The saved setup is from before CopyTrading could carry setups over." = "The saved setup is from before CopyTrading could carry setups over.";
+"The saved setup is from a newer CopyTrading." = "The saved setup is from a newer CopyTrading.";
+"Your setup is from a CopyTrading too old to carry over. It's kept in %@; set up again in Connections." = "Your setup is from a CopyTrading too old to carry over. It's kept in %@; set up again in Connections.";

@@ -326,11 +326,16 @@ def _unavailable(reason: str) -> str:
     return f"unavailable ({_words(reason)})"
 
 
-def _copying(entry_permission: str) -> str:
-    """An account's buy switch in the app's words: Copying is on, or off."""
-    return {"enabled": "copying on", "paused": "copying off", "disabled": "copying disabled"}.get(
-        entry_permission, f"copying {_words(entry_permission)}"
-    )
+def _copying(word: wire.CopyingWord, detail: str | None) -> str:
+    """One of the app's five words, with the reason under it when there is one."""
+    return wire.COPYING_WORDS[word] + (f" ({_words(detail)})" if detail else "")
+
+
+_BUYS: dict[str, wire.CopyingWord] = {
+    "enabled": "copying",
+    "paused": "sells_only",
+    "disabled": "not_started",
+}
 
 
 def _time(value: dt.datetime) -> str:
@@ -382,12 +387,11 @@ def render(result: wire.Result) -> str:
                 return "No proposals."
             return "\n".join(_render_proposal(item) for item in result.items)
         case wire.ProcessingPaused():
-            return f"Processing is {_words(result.processing.state)}."
+            processing = result.processing
+            return f"{_copying(processing.copying, processing.copying_detail)}."
         case wire.AccountControlView():
-            return (
-                f"{result.account_id}: {_copying(result.entry_permission)}, "
-                f"recovery {_words(result.recovery_preference)}."
-            )
+            word = _BUYS.get(result.entry_permission, "not_started")
+            return f"{result.account_id}: {wire.COPYING_WORDS[word]}."
         case _:
             assert_never(result)
 
@@ -400,17 +404,16 @@ def _render_status(status: wire.StatusView) -> str:
     processing = status.processing
     lines = [
         f"Engine      {_words(status.engine_state)}",
-        f"Processing  {_words(processing.state)}"
-        + (f" ({_words(processing.error_code)})" if processing.error_code else ""),
+        f"Copying     {_copying(processing.copying, processing.copying_detail)}",
         f"Source      {'connected' if processing.source_connected else 'not connected'}",
         f"Model       {'ready' if processing.model_ready else 'not ready'}",
         f"Queued      {processing.pending_source} messages, {processing.pending_signals} signals",
     ]
     for account in status.accounts:
         lines.append(
-            f"Account     {account.account_id}  {_words(account.run_state)}, "
-            f"{_copying(account.entry_permission)}, "
-            f"recovery {_words(account.recovery_preference)}"
+            f"Account     {account.account_id}  "
+            f"{_copying(account.copying, account.copying_detail)}, "
+            f"after a restart {_words(account.recovery_preference)}"
         )
     return "\n".join(lines)
 
@@ -420,8 +423,8 @@ def _render_accounts(page: wire.AccountsPage) -> str:
     for account in page.items:
         lines.append(
             f"{account.account_id} ({account.environment})  "
-            f"{_copying(account.entry_permission)}, "
-            f"recovery {_words(account.recovery_preference)}, "
+            f"{_copying(account.copying, account.copying_detail)}, "
+            f"after a restart {_words(account.recovery_preference)}, "
             f"risk {_words(account.risk_status)}, exposure {_dollars(account.total_exposure_usd)}"
         )
         for position in account.positions:

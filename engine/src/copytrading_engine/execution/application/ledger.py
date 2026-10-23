@@ -335,8 +335,8 @@ class TradingLedger:
             permission = "disabled"
             preference = "manual"
         else:
-            assert command.recovery_preference is not None
-            preference = command.recovery_preference
+            # Recovery is chosen in the setup now; a record keeps the commands it took earlier.
+            raise ValueError("Recovery preference is set in the account's setup")
         result = AccountControlResult(
             command=command,
             applied_at=now,

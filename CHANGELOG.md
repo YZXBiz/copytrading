@@ -26,6 +26,12 @@ The limits, the guru's size, and late posts now work the way you'd expect. Found
 - **Your own shares don't count toward the limits.** The per-stock and total limits count only the shares CopyTrading bought, as selling already did. Shares you bought yourself no longer shrink or block a copy.
 - **Each guru has its own full position.** The guru sheet has a Full position field; a 1/6 call buys a sixth of it. Left empty, it is saved as the account's maximum per stock, and keeps that amount if you change the maximum later; the sheet warns when it's above that maximum, which still caps every buy.
 
+Updating keeps your setup, and copying is described the same way everywhere.
+
+- **Updating never makes you set up again.** A setup saved by beta.5, beta.6 or beta.7 is carried over at launch, keys, accounts, gurus and limits included, instead of being deleted, and copying set to start on launch waits for it. Each guru saved before takes the ID its Discord channel gives it, so its posts and holdings stay on its page. A setup older than beta.5 is kept aside, never deleted, and the app says where.
+- **What an account does after a restart is on its sheet.** "After a restart" (Wait for me, or Carry on by itself) sits with the account's limits in Connections and is saved with the setup, so a fresh setup or an import shows every choice that changes how the account trades. It used to live in the account's ⋯ menu and in the account's own records, which a re-setup didn't bring back. The setting you had is kept.
+- **Copying is one of five words everywhere.** The sidebar, toolbar, Settings, menu bar, each account, notifications and the agent tools all say Copying, Sells only (you paused new buys; sells still go through), Paused (you stopped it), Stopped (a problem stopped it, and the line under it says which), or Not started. "Not copying", "Copying paused", "Copying with problems", "Off" and "Not set up yet" are gone, and an account waiting for its Start Copying after a restart reads Sells only, with why.
+
 ## 0.1.0-beta.7 — developer preview
 
 When copying doesn't start, it says which account, what happened, and what to do, and you can try again right away. Found while setting up again after beta.6.

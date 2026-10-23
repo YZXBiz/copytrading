@@ -10,11 +10,8 @@ struct SettingsSummaryCard: View {
     /// Before a first start the card is about the setup; afterwards, about copying. A stopped
     /// engine is said once, in the place it matters.
     private var state: (text: String, tone: StatusTone) {
-        guard model.savedTradingConfiguration != nil else {
-            return (L10n.string(model.setupProgress.completed == 0 ? "Not set up yet" : "Setting up"), .inactive)
-        }
-        if engineStopped { return (L10n.string("Engine stopped"), StatusTone(model.runtimeState)) }
-        return CopyingSummary.of(model.tradingStatus)
+        let copying = CopyingState.overall(model)
+        return (copying.text, copying.tone)
     }
 
     private var summary: String {

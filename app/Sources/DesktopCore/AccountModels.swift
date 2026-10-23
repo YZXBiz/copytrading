@@ -1,9 +1,10 @@
 import Foundation
 
+/// The owner's pause and resume of an account's new buys. What it does after a restart is part of
+/// the setup, saved with its limits.
 public enum AccountControlAction: String, Codable, Sendable {
     case pause
     case resume
-    case setRecovery = "set_recovery"
 }
 
 public enum RecoveryPreference: String, Codable, CaseIterable, Sendable {
@@ -15,23 +16,17 @@ public struct AccountControlCommand: Codable, Equatable, Sendable {
     public let commandID: String
     public let accountID: String
     public let action: AccountControlAction
-    public let recoveryPreference: RecoveryPreference?
 
-    public init(
-        commandID: String, accountID: String, action: AccountControlAction,
-        recoveryPreference: RecoveryPreference? = nil
-    ) {
+    public init(commandID: String, accountID: String, action: AccountControlAction) {
         self.commandID = commandID
         self.accountID = accountID
         self.action = action
-        self.recoveryPreference = recoveryPreference
     }
 
     enum CodingKeys: String, CodingKey {
         case commandID = "command_id"
         case accountID = "account_id"
         case action
-        case recoveryPreference = "recovery_preference"
     }
 }
 

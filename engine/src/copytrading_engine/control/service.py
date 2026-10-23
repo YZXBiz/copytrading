@@ -357,6 +357,9 @@ class ControlService:
                 self._require_account(account_id)
                 subject = ResumeAccount(account_id)
             case wire.ProposeRecoveryPreference(account_id=account_id, preference=preference):
+                # Recovery is part of the saved setup, which only the app changes.
+                if not app_actions:
+                    raise ProposalRefused("unavailable")
                 self._require_account(account_id)
                 subject = SetRecovery(account_id, preference)
             case wire.ProposeManualOrder(account_id=account_id, preview_id=preview_id):
@@ -400,16 +403,6 @@ class ControlService:
                     )
                 )
                 return "succeeded", None
-            case SetRecovery(account_id=account_id, preference=preference):
-                await self._manual.control_account(
-                    AccountControlCommand(
-                        command_id=proposal.command_id,
-                        account_id=account_id,
-                        action="set_recovery",
-                        recovery_preference=preference,
-                    )
-                )
-                return "succeeded", None
             case ConfirmManualOrder(account_id=account_id, preview_id=preview_id):
                 outcome = await self._manual.confirm_manual_orders(
                     (
@@ -422,7 +415,7 @@ class ControlService:
                     )
                 )
                 return _manual_outcome(outcome, account_id, proposal.command_id)
-            case SetAccountLimits() | StartProcessing():
+            case SetRecovery() | SetAccountLimits() | StartProcessing():
                 raise ValueError("The app performs this change; the engine does not")
 
     def _require_account(self, account_id: str) -> None:

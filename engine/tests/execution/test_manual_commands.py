@@ -16,7 +16,7 @@ from copytrading_engine.execution.adapters.sqlite_ledger import Store
 from copytrading_engine.execution.application.engine import CopyEngine
 from copytrading_engine.execution.application.manual_commands import ManualTradingApplication
 from copytrading_engine.execution.application.ports import BrokerError
-from copytrading_engine.execution.domain.lifecycle import AccountControlCommand
+from copytrading_engine.execution.domain.lifecycle import AccountControlCommand, RecoveryPreference
 from copytrading_engine.execution.domain.manual_commands import (
     ManualConfirmationRequest,
     ManualCorrectionRecord,
@@ -164,11 +164,13 @@ def confirmation_request(preview_id="preview-1", command_id="command-1"):
     )
 
 
-async def open_manual_owner(tmp_path: Path, broker: QuotedBroker) -> ExecutionOwner:
+async def open_manual_owner(
+    tmp_path: Path, broker: QuotedBroker, recovery: RecoveryPreference = "manual"
+) -> ExecutionOwner:
     return await ExecutionOwner.open(
         tmp_path / "accounts" / "paper-demo",
         AlpacaCredentials(key=SecretStr("test"), secret=SecretStr("test")),
-        CopyConfig(sources=("discord:demo",)),
+        CopyConfig(sources=("discord:demo",), recovery_preference=recovery),
         environment="paper",
         broker_factory=lambda _credentials, _environment: broker,
         account_lock_root=tmp_path / "locks",
@@ -378,18 +380,9 @@ async def test_manual_preference_requires_current_resume_and_keeps_exit_ready_af
 async def test_automatic_recovery_keeps_manual_preview_ready_after_clean_restart(tmp_path):
     broker = QuotedBroker()
     now = NOW
-    owner = await open_manual_owner(tmp_path, broker)
+    owner = await open_manual_owner(tmp_path, broker, "automatic")
     try:
         await owner.recover_account(now)
-        await owner.control_account(
-            AccountControlCommand(
-                command_id="automatic-preference",
-                account_id="paper-demo",
-                action="set_recovery",
-                recovery_preference="automatic",
-            ),
-            now,
-        )
         await owner.control_account(
             AccountControlCommand(
                 command_id="automatic-resume",
@@ -401,7 +394,7 @@ async def test_automatic_recovery_keeps_manual_preview_ready_after_clean_restart
     finally:
         await owner.close()
 
-    owner = await open_manual_owner(tmp_path, broker)
+    owner = await open_manual_owner(tmp_path, broker, "automatic")
     try:
         restarted_at = now + dt.timedelta(seconds=1)
         await owner.recover_account(restarted_at)

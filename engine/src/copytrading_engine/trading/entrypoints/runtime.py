@@ -349,7 +349,7 @@ class TradingRuntime:
             supervisor.poll_seconds = account.policy.poll_seconds
             if supervisor.owner is not None:
                 changes = await supervisor.owner.update_config(
-                    _copy_policy(configuration, account.id), now
+                    copy_config(configuration, account.id), now
                 )
                 if changes:
                     log.info(
@@ -553,7 +553,7 @@ class TradingRuntime:
                 account_dir.mkdir(mode=0o700, exist_ok=True)
                 os.chmod(account_dir, 0o700)
                 broker = broker_secrets[account.id]
-                policy = _copy_policy(configuration, account.id)
+                policy = copy_config(configuration, account.id)
                 opening[account.id] = asyncio.ensure_future(
                     self._open_owner(
                         account.id,
@@ -1016,7 +1016,7 @@ def _ownership_checks(pending: AccountOwnershipPending) -> tuple[CapabilityCheck
     return tuple(checks)
 
 
-def _copy_policy(configuration: TradingConfiguration, account_id: str) -> CopyConfig:
+def copy_config(configuration: TradingConfiguration, account_id: str) -> CopyConfig:
     account = next(account for account in configuration.accounts if account.id == account_id)
     pricing = {"max_above_signal_pct", "max_below_signal_pct"}
     return CopyConfig(

@@ -13,7 +13,10 @@ from copytrading_engine.control.service import ControlContext, ControlService
 
 # The audit trail names the caller of every control request; the assistant is one, in process.
 ASSISTANT_CALLER = "CopyTrading Assistant"
-CONTEXT = ControlContext(access_level="propose", unlocked=True, caller_path=ASSISTANT_CALLER)
+# The assistant only runs inside the app, which carries out an approved change to the setup.
+CONTEXT = ControlContext(
+    access_level="propose", unlocked=True, caller_path=ASSISTANT_CALLER, app_actions=True
+)
 
 # What each tool did, added once it has done it.
 STEP = {

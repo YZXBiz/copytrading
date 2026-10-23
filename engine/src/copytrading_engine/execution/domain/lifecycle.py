@@ -19,6 +19,9 @@ class AccountControlConflict(ValueError):
 
 
 class AccountControlCommand(Value):
+    """An owner's pause or resume, kept in the account's record. `set_recovery` survives only
+    because records keep the commands they took before recovery moved into the setup."""
+
     command_id: Identifier
     account_id: Identifier
     action: Literal["pause", "resume", "set_recovery", "restore_manual"]
@@ -40,5 +43,6 @@ class AccountControlResult(Value):
 
 class AccountControl(Value):
     entry_permission: EntryPermission = "disabled"
+    # What the record last ran with; the setup's choice is the one that applies.
     recovery_preference: RecoveryPreference = "manual"
     commands: dict[str, AccountControlResult] = Field(default_factory=dict)

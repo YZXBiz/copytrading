@@ -186,7 +186,8 @@ def build_server(client: ControlClient) -> MCPServer:
     async def propose_recovery_preference(
         account_id: str, preference: wire.RecoveryPreference
     ) -> wire.ProposalView:
-        """Ask the owner to change how an account recovers. Does nothing until approved."""
+        """Ask the owner to change what an account does after a restart, a setting in its setup.
+        Does nothing until approved; the app then saves the setup."""
         return await call(
             wire.ProposeRecoveryPreference(
                 request_id=new_request_id(), account_id=account_id, preference=preference

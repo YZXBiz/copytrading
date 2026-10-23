@@ -184,7 +184,13 @@ class OperatorQueryService:
                     else:
                         readiness = self._unavailable_readiness(account_id)
                     return overview.model_copy(
-                        update={"active_configuration": True, "readiness": readiness}
+                        update={
+                            "active_configuration": True,
+                            "readiness": readiness,
+                            "recovery_preference": configured[
+                                account_id
+                            ].policy.recovery_preference,
+                        }
                     ), None
             unavailable = (
                 AccountUnavailable(account_id=account_id, reason=failure) if failure else None
@@ -198,7 +204,7 @@ class OperatorQueryService:
                 active_configuration=True,
                 broker_identity="unverified",
                 entry_permission="unknown",
-                recovery_preference="manual",
+                recovery_preference=account.policy.recovery_preference,
                 readiness=self._unavailable_readiness(account_id),
                 account_risk_status="unavailable",
                 account_risk_reason="account_unavailable",

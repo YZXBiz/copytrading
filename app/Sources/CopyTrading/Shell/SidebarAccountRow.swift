@@ -11,10 +11,11 @@ struct SidebarAccountRow: View {
     private var screen: AppModel.Screen { .account(account.id) }
     private var isLive: Bool { account.environment == .live }
     private var overview: AccountOverview? { accountFeature.accounts.first { $0.accountID == account.id } }
-    private var isStopped: Bool { overview.map(AccountCopyState.isStopped) == true }
-    private var copyWord: String {
-        L10n.string(isStopped ? "Stopped" : overview.map { AccountCopyState($0).isCopying } == true ? "Copying" : "Off")
+    private var copying: CopyingState {
+        overview.map { CopyingState.account($0, processing: model.tradingStatus) } ?? CopyingState(.notStarted)
     }
+    private var isStopped: Bool { copying.word == .stopped }
+    private var copyWord: String { copying.title }
     private var equity: Decimal? {
         accountFeature.accounts.first { $0.accountID == account.id }?.balance.flatMap { Decimal(engine: $0.equity) }
     }

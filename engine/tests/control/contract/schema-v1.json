@@ -929,6 +929,28 @@
             "title": "Activity Status",
             "type": "string"
           },
+          "copying": {
+            "enum": [
+              "copying",
+              "sells_only",
+              "paused",
+              "stopped",
+              "not_started"
+            ],
+            "title": "Copying",
+            "type": "string"
+          },
+          "copying_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Copying Detail"
+          },
           "entry_permission": {
             "title": "Entry Permission",
             "type": "string"
@@ -963,6 +985,8 @@
         },
         "required": [
           "account_id",
+          "copying",
+          "copying_detail",
           "run_state",
           "entry_permission",
           "recovery_preference",
@@ -1005,6 +1029,28 @@
                 "type": "null"
               }
             ]
+          },
+          "copying": {
+            "enum": [
+              "copying",
+              "sells_only",
+              "paused",
+              "stopped",
+              "not_started"
+            ],
+            "title": "Copying",
+            "type": "string"
+          },
+          "copying_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Copying Detail"
           },
           "entry_permission": {
             "title": "Entry Permission",
@@ -1081,6 +1127,8 @@
         "required": [
           "account_id",
           "environment",
+          "copying",
+          "copying_detail",
           "entry_permission",
           "recovery_preference",
           "readiness",
@@ -2329,6 +2377,28 @@
       "ProcessingView": {
         "additionalProperties": false,
         "properties": {
+          "copying": {
+            "enum": [
+              "copying",
+              "sells_only",
+              "paused",
+              "stopped",
+              "not_started"
+            ],
+            "title": "Copying",
+            "type": "string"
+          },
+          "copying_detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Copying Detail"
+          },
           "error_code": {
             "anyOf": [
               {
@@ -2367,6 +2437,8 @@
         },
         "required": [
           "state",
+          "copying",
+          "copying_detail",
           "source_connected",
           "model_ready",
           "pending_source",
