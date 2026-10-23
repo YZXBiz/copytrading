@@ -227,10 +227,11 @@ extension AppModel {
         }
     }
 
-    /// Start Copying can run: the four steps are filled in, copying is paused or runs the saved
-    /// setup (then the button applies the changes), and no check or start is under way.
+    /// Start Copying can run: the four steps are filled in, copying is stopped (paused, or after a
+    /// start that failed) or runs the saved setup (then the button applies the changes), and no
+    /// check or start is under way.
     var canCheckAndStart: Bool {
-        isFilledInToCheck && (tradingStatus?.state == .paused || isCopyingSavedSetup)
+        isFilledInToCheck && (tradingStatus?.state.isStopped == true || isCopyingSavedSetup)
             && !isValidatingTrading && !isActivatingTrading && !isTradingCommandPending && !isApplyingChanges
     }
 

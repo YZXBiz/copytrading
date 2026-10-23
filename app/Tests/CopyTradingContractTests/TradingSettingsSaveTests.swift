@@ -102,6 +102,8 @@ struct TradingSettingsSaveTests {
         try await checkAcceptedActivationWithLostResponseRemainsPending()
         try await checkPendingActivationReconcilesAfterAppReopen(configuration: configuration, secrets: credentials)
         try await checkFailedSameRevisionActivationRetainsPreviousSecrets(configuration: configuration)
+        try await checkAFailedStartNamesTheAccountAndCanBeTriedAgain(configuration: configuration, secrets: credentials)
+        try checkEveryStartFailureSaysWhatToDo()
         try await checkInterruptedSameRevisionActivationRollsBackAfterReopen(configuration: configuration)
         try await checkReadySameRevisionActivationFinalizesAfterStoppedReopen(configuration: configuration)
         try await checkResumeThatKeepsCopyingIsApplied(configuration: configuration, secrets: credentials)
@@ -383,7 +385,7 @@ struct TradingSettingsSaveTests {
         await model.startCopyingOnLaunchIfWanted()
         try check(model.tradingStatus?.state == .paused, "A failed check must leave processing paused")
         try check(
-            model.message == "Interpreter failed its connection check. Processing remains paused.",
+            model.message == "Copying didn't start. Interpreter: Couldn't check this connection. Try again in a moment.",
             "The failed check was not named: \(model.message ?? "no message")")
         try check(
             ConnectionStatus.interpreter(model)?.text == L10n.string("Couldn't connect"),
@@ -993,6 +995,105 @@ struct TradingSettingsSaveTests {
             discardedCandidateSecret == nil,
             "Failed same-revision Start retained the uncommitted candidate credential")
         print("CopyTradingContractTests: failed same-revision Start preserved prior credentials")
+    }
+
+    /// The owner's case: Alpaca keys for one account under a name another Alpaca account's record
+    /// already has. The banner names the account, says what happened and what to do, and Start
+    /// Copying works again straight away, with no pause first.
+    private static func checkAFailedStartNamesTheAccountAndCanBeTriedAgain(
+        configuration: TradingConfiguration, secrets: TradingSecrets
+    ) async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(
+            path: "app-model-failed-start-\(UUID().uuidString)", directoryHint: .isDirectory
+        )
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = TradingConfigurationStore(
+            url: directory.appending(path: "configuration.json"), secrets: TestSecretRevisions()
+        )
+        let revision = fakeEngineRevision(configuration)
+        let activationID = UUID().uuidString.lowercased()
+        try store.stageValidatedActivation(
+            configuration: configuration, revision: revision, secrets: secrets, activationID: activationID,
+            when: .paused
+        )
+        let starter = RecordingTradingStarter()
+        try await starter.setActivationStatus(
+            TradingActivationStatus(
+                requestedActivationID: activationID, activationID: activationID, candidateRevision: revision,
+                committedRevision: nil, phase: .failed, runtimeState: .failed,
+                errorCode: "account_record_mismatch"
+            ), state: .failed, activeAccounts: 0)
+        await starter.setTradingStatus(
+            try TradingStatusBuilder(.failed).error("account_record_mismatch")
+                .account("paper", "failed", error: "account_record_mismatch").build())
+
+        let model = AppModel(tradingConfigurationStore: store, tradingStarter: starter)
+        model.isTradingUnlocked = true
+        await model.reconcilePendingTradingActivation(using: starter)
+        let message = model.message ?? ""
+        try check(
+            message
+                == "Copying didn't start. paper didn't open: its Alpaca keys are for a different Alpaca account than the one CopyTrading recorded under this name. Use the name that account had before, or a new name.",
+            "A failed start must name the account, what happened, and what to do: \(message)")
+
+        model.setupDraft.load(configuration)
+        model.setupDraft.discordToken = secrets.discordToken
+        model.setupDraft.providerAPIKey = secrets.providerAPIKey
+        model.setupDraft.accounts[0].key = secrets.brokers[0].key
+        model.setupDraft.accounts[0].secret = secrets.brokers[0].secret
+        try check(model.tradingStatus?.state == .failed, "The engine reports the failed start")
+        try check(model.canCheckAndStart, "Start Copying stayed off after a failed start, with no way to try again")
+        let card = SetupChangesStatus(model)
+        try check(
+            card.text == "Ready to start",
+            "After a failed start the card must offer a new start, not say the setup changed: \(card.text)")
+        print("CopyTradingContractTests: a failed start names the account, what happened, and what to do, and can be tried again")
+    }
+
+    /// Each reason a start can fail reads as its own sentence or two, never a bare code.
+    private static func checkEveryStartFailureSaysWhatToDo() throws {
+        let accountCases: [(String, String)] = [
+            ("account_record_mismatch", "Use the name that account had before, or a new name."),
+            ("broker_keys_rejected", "Alpaca didn't accept its API keys."),
+            ("broker_unreachable", "Alpaca couldn't be reached."),
+            ("account_in_use", "another CopyTrading on this Mac is copying into it."),
+            ("outside_open_orders", "Cancel them at Alpaca, then start again."),
+            ("broker_account_inactive", "Alpaca hasn't activated this account yet."),
+            ("account_unavailable", "Diagnostics at the bottom of the sidebar has the details."),
+        ]
+        for (code, words) in accountCases {
+            let account = try JSONDecoder().decode(
+                TradingAccountStatus.self,
+                from: Data(#"{"id":"zhap-account-2","state":"failed","error_code":"\#(code)"}"#.utf8))
+            let text = StartFailure.text(errorCode: code, accounts: [account], modelService: "DeepSeek")
+            try check(text.hasPrefix("zhap-account-2 didn't open"), "\(code) must name the account: \(text)")
+            try check(text.contains(words), "\(code) must say what happened and what to do: \(text)")
+        }
+        let two = try TradingStatusBuilder(.failed).error("accounts_unavailable")
+            .account("first", "failed", error: "broker_keys_rejected")
+            .account("second", "failed", error: "account_in_use").build()
+        let both = StartFailure.text(errorCode: two.errorCode, accounts: two.accounts, modelService: "DeepSeek")
+        try check(
+            both.hasPrefix("first didn't open: Alpaca didn't accept") && both.contains(" second didn't open: another"),
+            "Each failed account is named with its own reason: \(both)")
+
+        let serviceCases: [(String?, String)] = [
+            ("source_unauthorized", "Discord didn't accept your token."),
+            ("source_unavailable", "Discord couldn't be reached."),
+            ("provider_unavailable", "DeepSeek couldn't be reached."),
+            ("routing_change_pending", "Wait a minute, then start again."),
+            ("storage_unavailable", "CopyTrading couldn't open its data on this Mac. Quit and reopen CopyTrading."),
+            ("processing_unavailable", "CopyTrading stopped while starting."),
+            (nil, "CopyTrading stopped while starting."),
+        ]
+        for (code, words) in serviceCases {
+            let text = StartFailure.text(errorCode: code, accounts: [], modelService: "DeepSeek")
+            try check(text.contains(words), "\(code ?? "nil") must say what happened: \(text)")
+            try check(!text.contains("_"), "\(code ?? "nil") must not show a raw code: \(text)")
+        }
+        try check(TradingRunState.failed.isStopped && TradingRunState.paused.isStopped, "Failed and paused take a start")
+        try check(!TradingRunState.running.isStopped && !TradingRunState.starting.isStopped, "A running engine is not stopped")
+        print("CopyTradingContractTests: every reason a start fails names what happened and what to do")
     }
 
     private static func checkInterruptedSameRevisionActivationRollsBackAfterReopen(
@@ -3291,6 +3392,10 @@ private actor RecordingTradingStarter: TradingStarting {
             runtimeState: .paused,
             errorCode: nil
         )
+    }
+
+    func setTradingStatus(_ status: TradingStatus) {
+        latestTradingStatus = status
     }
 
     func setActivationStatus(

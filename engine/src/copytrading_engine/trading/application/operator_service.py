@@ -9,7 +9,7 @@ from pathlib import Path
 from copytrading_engine.execution.application.manual_commands import (
     manual_command_page_from_snapshot,
 )
-from copytrading_engine.execution.application.ports import ACCOUNT_OPEN_REFUSALS
+from copytrading_engine.execution.application.ports import ACCOUNT_FAILURES
 from copytrading_engine.execution.domain.ledger_state import HELD_FOR_OWNER, EarlierLedgerVersion
 from copytrading_engine.execution.domain.manual_commands import (
     ManualCommandPage,
@@ -117,7 +117,7 @@ class OperatorQueryService:
             if supervisor is not None
             else self._access.account_error(account_id)
         )
-        return code if code in ACCOUNT_OPEN_REFUSALS else "account_unavailable"
+        return code if code in ACCOUNT_FAILURES else "account_unavailable"
 
     async def account_overviews(
         self, before_account_id: str | None = None, limit: int = 50

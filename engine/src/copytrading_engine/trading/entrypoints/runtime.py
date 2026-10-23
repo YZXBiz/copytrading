@@ -51,6 +51,7 @@ from copytrading_engine.trading.application.accounts import (
     AccountOwner,
     AccountSupervisor,
     SignalFanout,
+    account_failure,
 )
 from copytrading_engine.trading.application.alerts import AlertRelay, account_stopped_alert
 from copytrading_engine.trading.application.manual_intervention import ManualInterventionService
@@ -495,7 +496,9 @@ class TradingRuntime:
                 ),
             )
             self._worker = worker
-            stage = "broker_unavailable"
+            # Each account that cannot open says why on its own; what fails here is the
+            # accounts' folders on this Mac.
+            stage = "storage_unavailable"
             account_root = self._data_dir / "accounts"
             account_root.mkdir(parents=True, exist_ok=True, mode=0o700)
             os.chmod(account_root, 0o700)
@@ -517,11 +520,11 @@ class TradingRuntime:
                     )
                 )
             done, _ = await asyncio.wait(opening.values(), timeout=self._owner_open_timeout_seconds)
-            refusals: list[str] = []
             for account in configuration.accounts:
                 task = opening[account.id]
                 owner: AccountOwner | None = None
-                open_failure = "account_unavailable"
+                # Alpaca not answering in time reads the same as Alpaca out of reach.
+                open_failure: str = "broker_unreachable"
                 if task in done:
                     try:
                         owner = task.result()
@@ -530,13 +533,14 @@ class TradingRuntime:
                             "trading_account_open_refused id=%s reason=%s", account.id, exc.reason
                         )
                         open_failure = exc.reason
-                        refusals.append(exc.reason)
                     except Exception as exc:  # noqa: BLE001 - one account's failure is reported per account
                         self._journal_failure(exc)
+                        open_failure = account_failure(exc)
                         log.error(
-                            "trading_account_open_failed id=%s type=%s",
+                            "trading_account_open_failed id=%s type=%s reason=%s",
                             account.id,
                             type(exc).__name__,
+                            open_failure,
                         )
                 else:
                     log.error("trading_account_open_timed_out id=%s", account.id)
@@ -557,9 +561,8 @@ class TradingRuntime:
                 if self._configuration is not None and self._configuration != configuration:
                     await self._apply_limits(self._configuration)
             if not any(account.owner is not None for account in self._accounts.values()):
-                if len(refusals) == len(configuration.accounts) and len(set(refusals)) == 1:
-                    # Every account waits on the same thing its owner must settle first.
-                    stage = refusals[0]
+                # Copying stops for the accounts' own reason, never a vague "broker unavailable".
+                stage = self._account_failure()
                 raise RuntimeError("No configured account could open")
             stage = "source_unavailable"
             channels = {int(channel) for channel in configuration.source.channel_ids}
@@ -882,11 +885,14 @@ class TradingRuntime:
 
     def _account_failure(self) -> str:
         """The failed accounts' shared reason, such as another app owning the account, or
-        `account_unavailable` when they fail for different reasons."""
+        `accounts_unavailable` when they fail for different reasons; each account's status still
+        carries its own."""
         reasons = {
             account.error_code for account in self._accounts.values() if account.state == "failed"
         }
-        return reason if len(reasons) == 1 and (reason := reasons.pop()) else "account_unavailable"
+        if len(reasons) > 1:
+            return "accounts_unavailable"
+        return reason if reasons and (reason := reasons.pop()) else "account_unavailable"
 
     def _journal_failure(self, error: BaseException) -> None:
         if self._telemetry is not None:

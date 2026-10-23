@@ -551,6 +551,10 @@ public enum TradingRunState: String, Codable, Equatable, Sendable {
     case degraded
     case pausing
     case failed
+
+    /// Nothing is copying: paused, or stopped by a failure such as a start that didn't go through.
+    /// Either one takes a new start.
+    public var isStopped: Bool { self == .paused || self == .failed }
 }
 
 public struct TradingAccountStatus: Codable, Equatable, Identifiable, Sendable {

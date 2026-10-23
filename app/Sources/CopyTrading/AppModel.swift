@@ -1126,7 +1126,7 @@ final class AppModel {
             message = L10n.string("CopyTrading is still starting. Check the setup again in a moment.")
             return false
         }
-        guard beforePause || tradingStatus?.state == .paused, !isTradingCommandPending else {
+        guard beforePause || tradingStatus?.state.isStopped == true, !isTradingCommandPending else {
             message = L10n.string("Pause copying before checking the setup.")
             return false
         }
@@ -1264,7 +1264,7 @@ final class AppModel {
             message = L10n.string("Check the setup before starting to copy.")
             return
         }
-        guard tradingStatus?.state == .paused, !isTradingCommandPending,
+        guard tradingStatus?.state.isStopped == true, !isTradingCommandPending,
             !isActivatingTrading
         else {
             message = L10n.string("Pause copying before starting a new setup.")
@@ -1399,12 +1399,14 @@ final class AppModel {
                 pendingTradingActivation = nil
                 tradingValidation = nil
                 syncSetupDraftWithSaved()
-                let why = status.errorCode.map(Reason.text) ?? L10n.string("The engine stopped while starting")
+                let why = StartFailure.text(
+                    errorCode: status.errorCode, accounts: tradingStatus?.accounts ?? [],
+                    modelService: setupDraft.provider.title)
                 // Starting the saved setup again is not a new setup, so there is nothing to keep.
                 message =
                     saved == nil || saved?.configuration == before
-                    ? L10n.string("Copying didn't start: %@. Try again.", why)
-                    : L10n.string("The new setup didn't start, so your previous setup is still in place: %@.", why)
+                    ? L10n.string("Copying didn't start. %@", why)
+                    : L10n.string("The new setup didn't start, so your previous setup is still in place. %@", why)
                 await saveLimitsAwaitingStart()
                 return
             }
@@ -1464,7 +1466,7 @@ final class AppModel {
             tradingValidation = validation
             recordConnectionChecks(validation.report.checks)
             guard validation.report.activatable, let token = validation.activationToken else {
-                message = Self.failedChecksMessage(validation.report)
+                message = failedChecksMessage(validation.report)
                 return
             }
             let activationID = UUID().uuidString.lowercased()
@@ -1814,20 +1816,25 @@ final class AppModel {
     }
 
     private var isHeldBackAtLaunch: Bool {
-        wantsCopyingOnLaunch && tradingStatus?.state == .paused
+        wantsCopyingOnLaunch && tradingStatus?.state.isStopped == true
             && (tradingValidation?.report.activatable == false || launchStartThrew)
     }
 
-    static func failedChecksMessage(_ report: TradingCapabilityReport) -> String {
-        let failed = report.checks.filter { $0.state == .failed }.map(CapabilityCheckTitle.text(for:))
-        guard !failed.isEmpty else { return L10n.string("A required connection check failed. Processing remains paused.") }
-        let names = L10n.list(failed)
+    /// Why the checks before a start held it back: one failed check by name, with what happened
+    /// and what to do; several by name, with each one's fix on its row in Connections.
+    func failedChecksMessage(_ report: TradingCapabilityReport) -> String {
+        let failed = report.checks.filter { $0.state == .failed }
+        guard let only = failed.first else {
+            return L10n.string("Copying didn't start because the setup check didn't pass. Connections shows what to fix.")
+        }
+        if failed.count == 1 {
+            return L10n.string(
+                "Copying didn't start. %@: %@", CapabilityCheckTitle.text(for: only),
+                ConnectionProblem.text(for: only, modelName: setupDraft.modelName))
+        }
         return L10n.string(
-            failed.count == 1
-                ? "%@ failed its connection check. Processing remains paused."
-                : "%@ failed their connection check. Processing remains paused.",
-            names
-        )
+            "Copying didn't start. %@ need attention; each one's row in Connections says what to do.",
+            L10n.list(failed.map(CapabilityCheckTitle.text(for:))))
     }
 
     func lockAccess() async {

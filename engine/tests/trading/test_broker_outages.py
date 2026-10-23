@@ -82,7 +82,7 @@ async def test_rejected_keys_stop_the_account(tmp_path, monkeypatch):
     owner = _FlakyOwner(tmp_path, [BrokerError(401)])
     supervisor = await _run(owner, seconds=0.1)
     assert supervisor.state == "failed"
-    assert supervisor.error_code == "account_unavailable"
+    assert supervisor.error_code == "broker_keys_rejected"
     assert owner.cycles == 1
 
 
