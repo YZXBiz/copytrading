@@ -135,6 +135,12 @@ private actor FakeQueue: AgentProposalOperations {
         states = states.filter { $0.value != "pending" }
         return 0
     }
+
+    func authorizeSetup(
+        _ setup: AgentSetupAuthorizationRequest, context: AgentRequestContext
+    ) async throws -> AgentSetupAuthorization {
+        .allowed
+    }
 }
 
 @MainActor

@@ -7,6 +7,10 @@ protocol AgentProposalOperations: Sendable {
     func completeProposal(id: String, succeeded: Bool, code: String?) async throws -> AgentProposal
     func rejectProposal(id: String) async throws -> AgentProposal
     func discardProposals() async throws -> Int
+    /// Whether a setup request the app answers itself may run; its keys never travel with it.
+    func authorizeSetup(
+        _ setup: AgentSetupAuthorizationRequest, context: AgentRequestContext
+    ) async throws -> AgentSetupAuthorization
 }
 
 extension EngineActions: AgentProposalOperations {}

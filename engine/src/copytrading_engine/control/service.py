@@ -24,6 +24,7 @@ from copytrading_engine.control.policy import (
 )
 from copytrading_engine.control.proposals import (
     APP_PERFORMED,
+    ApplySetup,
     Caller,
     ConfirmManualOrder,
     Finished,
@@ -110,6 +111,51 @@ class ControlContext(BaseModel):
     caller_path: str | None = Field(default=None, min_length=1, max_length=4096)
     # The app can change the saved setup after the owner approves; a server without one cannot.
     app_actions: bool = False
+    # The owner turned on "Allow setup changes from the command line" in Settings → Agent Access.
+    setup_changes: bool = False
+
+
+class ApplyFacts(BaseModel):
+    """What the app found applying its draft would do to live accounts; the engine decides
+    whether that needs the owner."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    made_live: tuple[wire.AccountName, ...] = ()
+    new_live_keys: tuple[wire.AccountName, ...] = ()
+    changed_live: tuple[wire.AccountName, ...] = ()
+    starts_live: tuple[wire.AccountName, ...] = ()
+
+    @property
+    def touches_live(self) -> bool:
+        return bool(self.made_live or self.new_live_keys or self.changed_live or self.starts_live)
+
+
+class SetupAuthorization(BaseModel):
+    """A setup request the app answers itself, without its keys: only the operation, and for an
+    apply, what it would do to live accounts."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid", strict=True)
+
+    operation: wire.SetupOperation
+    request_id: str = Field(max_length=128)
+    apply: ApplyFacts | None = None
+    # The app could not read the request; it is refused, and only recorded here.
+    invalid: bool = False
+
+
+SETUP_FORBIDDEN: Final = (
+    "Agent access allows reading and pausing only. To change the setup from the command line, "
+    "choose “Read, pause, and ask for approval” in CopyTrading → Settings → Agent Access, then "
+    "turn on “Allow setup changes from the command line” there."
+)
+SETUP_CHANGES_OFF: Final = (
+    "Setup changes from the command line are off. Turn on “Allow setup changes from the command "
+    "line” in CopyTrading → Settings → Agent Access; it asks for Touch ID."
+)
+SETUP_IN_APP_ONLY: Final = (
+    "This CopyTrading has no app to change its setup: a server is set up in copytrading.toml."
+)
 
 
 def _validated_limits(changes: tuple[wire.LimitChange, ...]) -> tuple[tuple[str, str], ...]:
@@ -193,6 +239,12 @@ class ControlService:
             return await self._refused(request_id, caller, "invalid", None, "invalid_request")
         operation = request.operation
         kind = tier(operation)
+        if operation in wire.SETUP_OPERATIONS:
+            # The app answers setup requests itself so their keys never reach the engine; one that
+            # arrives here came through a server, which has no app setup to change.
+            return await self._refused(
+                request_id, caller, operation, kind, "unavailable", SETUP_IN_APP_ONLY
+            )
         # Pausing only reduces risk, so a flood of other requests never blocks it.
         if kind != "safer" and not self._rate.admit(self._clock()):
             return await self._refused(request_id, caller, operation, kind, "busy")
@@ -223,6 +275,57 @@ class ControlService:
             return await self._refused(request_id, caller, operation, kind, "unavailable")
         await self._record("agent", caller, operation, kind, outcome, proposal_id)
         return wire.Response(request_id=request_id, ok=result)
+
+    async def authorize_setup(
+        self, authorization: SetupAuthorization, context: ControlContext
+    ) -> wire.Response | None:
+        """Decide a setup request the app answers itself: None lets the app run it now; otherwise
+        the response the caller gets, a refusal or a proposal the owner approves in the app."""
+        caller = Caller(context.caller_pid, context.caller_path)
+        operation = authorization.operation
+        request_id = authorization.request_id
+        kind = tier(operation)
+        if not self._rate.admit(self._clock()):
+            return await self._refused(request_id, caller, operation, kind, "busy")
+        facts = authorization.apply
+        # An app that could not read the line refuses it; the trail still records who sent it.
+        if authorization.invalid or (facts is None) == (operation == "apply_setup"):
+            return await self._refused(request_id, caller, operation, kind, "invalid_request")
+        decision = decide(
+            operation,
+            context.access_level,
+            unlocked=context.unlocked,
+            owner_needed=facts is not None and facts.touches_live,
+            setup_changes=context.setup_changes,
+        )
+        match decision:
+            case Refuse(code=code):
+                message = None
+                if code == "forbidden":
+                    message = (
+                        SETUP_CHANGES_OFF if context.access_level == "propose" else SETUP_FORBIDDEN
+                    )
+                return await self._refused(request_id, caller, operation, kind, code, message)
+            case Run():
+                await self._record("agent", caller, operation, kind, "ok", None)
+                return None
+            case Propose():
+                if facts is None or not context.app_actions:
+                    return await self._refused(request_id, caller, operation, kind, "unavailable")
+                subject = ApplySetup(
+                    made_live=facts.made_live,
+                    new_live_keys=facts.new_live_keys,
+                    changed_live=facts.changed_live,
+                    starts_live=facts.starts_live,
+                )
+                try:
+                    proposal = self._book.propose(subject, caller)
+                except ProposalRefused as refused:
+                    return await self._refused(request_id, caller, operation, kind, refused.code)
+                await self._record(
+                    "agent", caller, operation, kind, "proposed", proposal.proposal_id
+                )
+                return wire.Response(request_id=request_id, ok=views.proposal(proposal))
 
     async def approve(self, proposal_id: str, approved_digest: str) -> wire.ProposalView:
         """Perform an approved proposal exactly once; called only by the app after owner auth."""
@@ -348,6 +451,18 @@ class ControlService:
                 | wire.ProposeStartProcessing()
             ):
                 raise ValueError("Approval-tier requests are proposed, never run directly")
+            case (
+                wire.GetSetup()
+                | wire.EditSetupDiscord()
+                | wire.EditSetupModel()
+                | wire.EditSetupAccount()
+                | wire.EditSetupGuru()
+                | wire.EditSetupAlerts()
+                | wire.ImportSetup()
+                | wire.ApplySetup()
+                | wire.DiscardSetup()
+            ):
+                raise ValueError("The app answers setup requests itself")
 
     def _propose(self, request: wire.Request, caller: Caller, *, app_actions: bool) -> Proposal:
         subject: Subject
@@ -415,7 +530,7 @@ class ControlService:
                     )
                 )
                 return _manual_outcome(outcome, account_id, proposal.command_id)
-            case SetRecovery() | SetAccountLimits() | StartProcessing():
+            case SetRecovery() | SetAccountLimits() | StartProcessing() | ApplySetup():
                 raise ValueError("The app performs this change; the engine does not")
 
     def _require_account(self, account_id: str) -> None:
@@ -437,11 +552,12 @@ class ControlService:
         operation: str,
         kind: str | None,
         code: wire.ErrorCode,
+        message: str | None = None,
     ) -> wire.Response:
         await self._record("agent", caller, operation, kind, code, None)
         return wire.Response(
             request_id=request_id,
-            error=wire.ErrorBody(code=code, message=describe_refusal(code)),
+            error=wire.ErrorBody(code=code, message=message or describe_refusal(code)),
         )
 
     async def _record(

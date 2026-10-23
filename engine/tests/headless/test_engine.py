@@ -119,6 +119,21 @@ async def test_agent_lines_carry_the_owners_access_and_the_caller(setup):
     }
 
 
+async def test_a_setup_request_never_reaches_the_servers_engine(setup):
+    server = ScriptedServer({})
+    line = (
+        '{"schema_version":1,"request_id":"s1","operation":"edit_setup_discord",'
+        '"token":"never-forward-this"}'
+    )
+
+    answer = await engine_for(server, setup).relay_agent_line(line, 4242)
+
+    assert server.asked == []
+    assert '"code":"unavailable"' in answer
+    assert '"request_id":"s1"' in answer
+    assert "never-forward-this" not in answer
+
+
 async def test_agents_get_nothing_when_access_is_off(setup):
     loaded, secrets = setup
     closed = loaded.model_copy(update={"agent_access": "off"})

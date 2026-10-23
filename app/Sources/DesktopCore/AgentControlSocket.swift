@@ -11,6 +11,8 @@ public struct AgentPeer: Equatable, Sendable {
 public enum AgentRefusal: Equatable, Sendable {
     case busy
     case invalidRequest
+    /// The line is over `maximumLineBytes`; it is answered, never silently dropped.
+    case tooLarge
 }
 
 public enum AgentControlSocketError: Error, Equatable, LocalizedError, Sendable {
@@ -155,11 +157,16 @@ public final class AgentControlSocket: @unchecked Sendable {
                     close(client)
                     lock.withLock { active -= 1 }
                 }
-                guard let line = Self.readLine(from: client) else {
+                switch Self.readLine(from: client) {
+                case .line(let line):
+                    Self.writeLine(answer(line, from: peer), to: client)
+                case .tooLarge:
+                    Self.writeLine(refusal(.tooLarge), to: client)
+                    // Read what the client still sends, so it gets the answer rather than a reset.
+                    Self.drain(client)
+                case .invalid:
                     Self.writeLine(refusal(.invalidRequest), to: client)
-                    return
                 }
-                Self.writeLine(answer(line, from: peer), to: client)
             }
         }
     }
@@ -229,21 +236,39 @@ public final class AgentControlSocket: @unchecked Sendable {
         return AgentPeer(pid: pid, executablePath: path)
     }
 
-    /// One newline-terminated UTF-8 line within the size limit, or nil.
-    private static func readLine(from client: Int32) -> String? {
+    private enum LineRead {
+        case line(String)
+        case tooLarge
+        case invalid
+    }
+
+    /// One newline-terminated UTF-8 line within the size limit.
+    private static func readLine(from client: Int32) -> LineRead {
         var line = Data()
         var chunk = [UInt8](repeating: 0, count: 4096)
         while line.count <= maximumLineBytes {
             let count = read(client, &chunk, chunk.count)
-            guard count > 0 else { return nil }
+            guard count > 0 else { return .invalid }
             if let newline = chunk[..<count].firstIndex(of: 10) {
                 line.append(contentsOf: chunk[..<newline])
-                guard line.count <= maximumLineBytes else { return nil }
-                return String(data: line, encoding: .utf8)
+                guard line.count <= maximumLineBytes else { return .tooLarge }
+                return String(data: line, encoding: .utf8).map(LineRead.line) ?? .invalid
             }
             line.append(contentsOf: chunk[..<count])
         }
-        return nil
+        return .tooLarge
+    }
+
+    /// Reads and drops the rest of an oversized request, up to its newline, a few times the limit,
+    /// or the read timeout, whichever comes first.
+    private static func drain(_ client: Int32) {
+        var chunk = [UInt8](repeating: 0, count: 4096)
+        var total = 0
+        while total < maximumLineBytes * 16 {
+            let count = read(client, &chunk, chunk.count)
+            guard count > 0, !chunk[..<count].contains(10) else { return }
+            total += count
+        }
     }
 
     private static func writeLine(_ text: String, to client: Int32) {

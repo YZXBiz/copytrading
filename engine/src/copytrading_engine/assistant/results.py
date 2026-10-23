@@ -203,6 +203,15 @@ def _asks_to(subject: wire.ProposalSubject) -> str:
             )
         case wire.StartProcessingSubject():
             return "start copying"
+        case wire.ApplySetupSubject():
+            touched = {
+                *subject.made_live,
+                *subject.new_live_keys,
+                *subject.changed_live,
+                *subject.starts_live,
+            }
+            live = ", ".join(sorted(touched))
+            return f"apply the setup, which touches live {live or 'accounts'}"
         case wire.LimitsSubject():
             return f"change {subject.account_id}'s limits: " + ", ".join(
                 f"{change.field.replace('_', ' ')} to {change.value}" for change in subject.changes

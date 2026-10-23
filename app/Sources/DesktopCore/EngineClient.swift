@@ -338,6 +338,17 @@ public actor EngineClient {
         return answer
     }
 
+    /// Ask whether a setup request the app answers itself may run, without its keys.
+    public func authorizeSetup(
+        _ setup: AgentSetupAuthorizationRequest, context: AgentRequestContext
+    ) async throws -> AgentSetupAuthorization {
+        switch try await request(.authorizeSetup(setup, context: context)) {
+        case .setupAllowed: return .allowed
+        case .control(let line): return .answered(line: line)
+        default: throw EngineContractError.missingResult
+        }
+    }
+
     /// Close every proposal still waiting for the owner, as when the app locks.
     public func discardProposals() async throws -> Int {
         let result = try await request(.discardProposals)

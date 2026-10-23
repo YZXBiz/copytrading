@@ -2,6 +2,7 @@
 
 import asyncio
 import contextlib
+import json
 import os
 import stat
 import sys
@@ -26,8 +27,21 @@ class UnsafeSocket(Exception):
     """The socket path was not created by the owner's app, so it is never used."""
 
 
+OLDER_CLIENT: Final = (
+    "this copytrading CLI is older than the app; use the one inside CopyTrading.app"
+)
+
+
 class ProtocolMismatch(Exception):
     """The app answered with something outside the contract."""
+
+
+class NoAnswer(AppUnavailable):
+    """The request was sent, but no answer came in time; what it did is not known."""
+
+
+class RequestTooLarge(Exception):
+    """The request line is over the contract's limit, so it is never sent."""
 
 
 def app_state_root() -> Path:
@@ -57,6 +71,14 @@ def state_root(environ: Mapping[str, str] = os.environ, platform: str = sys.plat
         if os.path.lexists(root / "control" / "cli.sock"):
             return root
     return candidates[0]
+
+
+def is_server_socket(environ: Mapping[str, str] = os.environ, platform: str = sys.platform) -> bool:
+    """The socket found is a headless server's, not the Mac app's. An explicit state root is the
+    owner's choice; setup then relies on the app being the one that answers `get_setup`."""
+    if environ.get("COPYTRADING_STATE_ROOT"):
+        return False
+    return state_root(environ, platform) == server_state_root(environ, platform)
 
 
 def socket_path(environ: Mapping[str, str] = os.environ) -> Path:
@@ -92,6 +114,9 @@ class ControlClient:
 
     async def send(self, request: wire.Request) -> wire.Response:
         """Send one request on a fresh connection and return its single response."""
+        line = wire.REQUEST.dump_json(request) + b"\n"
+        if len(line) > wire.MAX_LINE_BYTES:
+            raise RequestTooLarge(len(line))
         check_socket(self._path)
         try:
             reader, writer = await asyncio.wait_for(
@@ -101,10 +126,15 @@ class ControlClient:
         except (ConnectionRefusedError, FileNotFoundError, TimeoutError) as exc:
             raise AppUnavailable from exc
         try:
-            writer.write(wire.REQUEST.dump_json(request) + b"\n")
+            writer.write(line)
             await writer.drain()
+        except (ConnectionError, TimeoutError) as exc:
+            raise AppUnavailable from exc
+        try:
             line = await asyncio.wait_for(reader.readline(), self._timeout)
-        except (ConnectionError, TimeoutError, asyncio.LimitOverrunError) as exc:
+        except TimeoutError as exc:
+            raise NoAnswer(self._timeout) from exc
+        except (ConnectionError, asyncio.LimitOverrunError) as exc:
             raise AppUnavailable from exc
         finally:
             writer.close()
@@ -115,7 +145,20 @@ class ControlClient:
         try:
             response = wire.Response.model_validate_json(line)
         except ValidationError as exc:
-            raise ProtocolMismatch("response is outside the control contract") from exc
+            raise ProtocolMismatch(_mismatch(line)) from exc
         if response.request_id not in ("", request.request_id):
             raise ProtocolMismatch("response answers a different request")
         return response
+
+
+def _mismatch(line: bytes) -> str:
+    """Why a response could not be read. The CLI and the app ship together, so a well-formed
+    answer this client cannot read comes from a newer app (see the compatibility rule)."""
+    try:
+        payload = json.loads(line)
+    except ValueError, RecursionError:
+        return "response is outside the control contract"
+    if isinstance(payload, dict) and isinstance(payload.get("schema_version"), int):
+        if payload.get("ok") is not None or payload.get("error") is not None:
+            return OLDER_CLIENT
+    return "response is outside the control contract"

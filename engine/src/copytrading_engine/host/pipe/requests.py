@@ -16,7 +16,7 @@ from pydantic import (
 )
 
 from copytrading_engine.assistant.service import AskContext
-from copytrading_engine.control.service import ControlContext
+from copytrading_engine.control.service import ControlContext, SetupAuthorization
 from copytrading_engine.control.wire import MAX_LINE_BYTES as MAX_CONTROL_LINE_BYTES
 from copytrading_engine.execution.domain.lifecycle import AccountControlCommand
 from copytrading_engine.execution.domain.lot_sales import LotSaleConfirmation, LotSalePreviewRequest
@@ -318,6 +318,14 @@ class ControlRequest(PipeRequest):
     context: ControlContext
 
 
+class AuthorizeSetupRequest(PipeRequest):
+    """A setup request the app answers itself, without its keys, for the engine to decide."""
+
+    operation: Literal["authorize_setup"]
+    setup: SetupAuthorization
+    context: ControlContext
+
+
 class ListProposalsRequest(PipeRequest):
     operation: Literal["list_proposals"]
 
@@ -415,6 +423,7 @@ RequestType = Annotated[
     | GetManualCommandRequest
     | ListManualCommandsRequest
     | ControlRequest
+    | AuthorizeSetupRequest
     | ListProposalsRequest
     | ApproveProposalRequest
     | CompleteProposalRequest

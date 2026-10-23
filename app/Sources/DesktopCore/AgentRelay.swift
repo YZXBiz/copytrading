@@ -4,17 +4,22 @@ import Foundation
 ///
 /// The relay adds only what the app knows — the owner's access level, whether the app is
 /// unlocked, and the calling process — and passes the engine's answer back unchanged. Every
-/// permission rule lives in the engine's `control` package.
+/// permission rule lives in the engine's `control` package. Setup requests go to `setup`
+/// instead: the app answers them itself, after asking the engine, so their keys reach only the
+/// Keychain.
 public final class AgentRelay: Sendable {
     public typealias Send = @Sendable (String, AgentRequestContext) async throws -> String
+    public typealias Setup = @Sendable (String, AgentRequestContext) async -> String
 
     private let socket: AgentControlSocket
 
     public init(
         socketURL: URL,
         accessLevel: AgentAccessLevel,
+        setupChanges: Bool = false,
         isUnlocked: @escaping @Sendable () async -> Bool,
-        send: @escaping Send
+        send: @escaping Send,
+        setup: Setup? = nil
     ) {
         socket = AgentControlSocket(
             url: socketURL,
@@ -24,6 +29,10 @@ public final class AgentRelay: Sendable {
                     Self.errorLine(code: "busy", message: "Too many requests; wait a few seconds.")
                 case .invalidRequest:
                     Self.errorLine(code: "invalid_request", message: "The request is not valid.")
+                case .tooLarge:
+                    Self.errorLine(
+                        code: "invalid_request",
+                        message: "The request is too large: CopyTrading takes at most 64 KB in one request.")
                 }
             },
             handler: { line, peer in
@@ -31,8 +40,16 @@ public final class AgentRelay: Sendable {
                     accessLevel: accessLevel,
                     unlocked: await isUnlocked(),
                     callerPID: peer.pid,
-                    callerPath: peer.executablePath
+                    callerPath: peer.executablePath,
+                    setupChanges: setupChanges
                 )
+                if AgentSetupOperation.of(line: line) != nil {
+                    guard let setup else {
+                        return Self.errorLine(
+                            code: "unavailable", message: "This CopyTrading cannot change its setup from here.")
+                    }
+                    return await setup(line, context)
+                }
                 do {
                     return try await send(line, context)
                 } catch {

@@ -5,6 +5,7 @@ from copytrading_engine.control.service import ControlService
 from copytrading_engine.host.pipe.requests import (
     AgentAuditRequest,
     ApproveProposalRequest,
+    AuthorizeSetupRequest,
     CompleteProposalRequest,
     ControlRequest,
     DiscardProposalsRequest,
@@ -32,6 +33,7 @@ class ControlHandlers:
     def handlers(self) -> dict[type[PipeRequest], RequestHandler]:
         return {
             ControlRequest: self._handle_control,
+            AuthorizeSetupRequest: self._handle_control,
             ListProposalsRequest: self._handle_control,
             ApproveProposalRequest: self._handle_control,
             CompleteProposalRequest: self._handle_control,
@@ -43,6 +45,7 @@ class ControlHandlers:
     async def _handle_control(
         self,
         request: ControlRequest
+        | AuthorizeSetupRequest
         | ListProposalsRequest
         | ApproveProposalRequest
         | CompleteProposalRequest
@@ -63,6 +66,15 @@ class ControlHandlers:
                 request.request_id,
                 # The exact contract line, so the app relays bytes it never reinterprets.
                 ok={"type": "control", "line": response.model_dump_json()},
+            )
+        if isinstance(request, AuthorizeSetupRequest):
+            answer = await control.authorize_setup(request.setup, request.context)
+            if answer is None:
+                return reply(request.version, request.request_id, ok={"type": "setup_allowed"})
+            return reply(
+                request.version,
+                request.request_id,
+                ok={"type": "control", "line": answer.model_dump_json()},
             )
         if isinstance(request, ListProposalsRequest):
             return reply(

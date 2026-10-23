@@ -317,6 +317,8 @@ public enum EngineResult: Equatable, Sendable {
     case restorePreflight(RestorePreflightView)
     case restoreActivated(String)
     case control(line: String)
+    /// The engine let a setup request the app answers itself run now.
+    case setupAllowed
     case proposalsDiscarded(Int)
     case agentProposals([AgentProposal])
     case agentProposal(AgentProposal)
@@ -540,6 +542,8 @@ public struct EngineSuccess: Decodable, Equatable, Sendable {
             result = .restoreActivated(try container.decode(String.self, forKey: .candidateID))
         case "control":
             result = .control(line: try container.decode(String.self, forKey: .line))
+        case "setup_allowed":
+            result = .setupAllowed
         case "proposals_discarded":
             result = .proposalsDiscarded(try container.decode(Int.self, forKey: .count))
         case "proposals":
@@ -613,6 +617,7 @@ enum EngineOperation: Sendable {
         accountID: String, sourceID: String, beforeCommandID: String?, limit: Int
     )
     case control(line: String, context: AgentRequestContext)
+    case authorizeSetup(AgentSetupAuthorizationRequest, context: AgentRequestContext)
     case discardProposals
     case listProposals
     case approveProposal(id: String, digest: String)
@@ -673,6 +678,7 @@ struct EngineRequest: Encodable, Sendable {
         case candidate
         case line
         case context
+        case setup
         case proposalID = "proposal_id"
         case digest
         case outcome
@@ -825,6 +831,10 @@ struct EngineRequest: Encodable, Sendable {
         case .control(let line, let context):
             try container.encode("control", forKey: .operation)
             try container.encode(line, forKey: .line)
+            try container.encode(context, forKey: .context)
+        case .authorizeSetup(let setup, let context):
+            try container.encode("authorize_setup", forKey: .operation)
+            try container.encode(setup, forKey: .setup)
             try container.encode(context, forKey: .context)
         case .discardProposals:
             try container.encode("discard_proposals", forKey: .operation)

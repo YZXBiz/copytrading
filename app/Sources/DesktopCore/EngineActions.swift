@@ -235,6 +235,13 @@ public struct EngineActions: Sendable {
         return try await client.control(line: line, context: context)
     }
 
+    public func authorizeSetup(
+        _ setup: AgentSetupAuthorizationRequest, context: AgentRequestContext
+    ) async throws -> AgentSetupAuthorization {
+        let client = try await supervisor.engineClient()
+        return try await client.authorizeSetup(setup, context: context)
+    }
+
     public func discardProposals() async throws -> Int {
         let client = try await supervisor.engineClient()
         return try await client.discardProposals()

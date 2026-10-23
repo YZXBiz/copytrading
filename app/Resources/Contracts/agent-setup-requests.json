@@ -1,0 +1,145 @@
+{
+  "requests": [
+    {
+      "schema_version": 1,
+      "request_id": "s1",
+      "operation": "get_setup"
+    },
+    {
+      "schema_version": 1,
+      "request_id": "s2",
+      "operation": "edit_setup_discord",
+      "channel_ids": [
+        "111",
+        "222"
+      ],
+      "author_ids": [],
+      "token": "test-discord-token"
+    },
+    {
+      "schema_version": 1,
+      "request_id": "s3",
+      "operation": "edit_setup_model",
+      "service": "deepseek",
+      "model": "deepseek-flash",
+      "base_url": null,
+      "key": "test-model-key"
+    },
+    {
+      "schema_version": 1,
+      "request_id": "s4",
+      "operation": "edit_setup_account",
+      "action": "add",
+      "account_id": "paper-2",
+      "rename": null,
+      "environment": "paper",
+      "key": "PKTESTKEY",
+      "secret": "test-secret",
+      "limits": [
+        {
+          "field": "max_order_usd",
+          "value": "250"
+        },
+        {
+          "field": "overnight",
+          "value": "true"
+        }
+      ],
+      "recovery_preference": "automatic"
+    },
+    {
+      "schema_version": 1,
+      "request_id": "s5",
+      "operation": "edit_setup_account",
+      "action": "edit",
+      "account_id": "paper-2",
+      "rename": "paper-two",
+      "environment": "live",
+      "key": null,
+      "secret": null,
+      "limits": [],
+      "recovery_preference": null
+    },
+    {
+      "schema_version": 1,
+      "request_id": "s6",
+      "operation": "edit_setup_account",
+      "action": "remove",
+      "account_id": "paper-two",
+      "rename": null,
+      "environment": null,
+      "key": null,
+      "secret": null,
+      "limits": [],
+      "recovery_preference": null
+    },
+    {
+      "schema_version": 1,
+      "request_id": "s7",
+      "operation": "edit_setup_guru",
+      "action": "add",
+      "guru": "Alex",
+      "rename": null,
+      "channel_id": "111",
+      "author_id": "",
+      "account_id": "paper-2",
+      "full_position_usd": "600",
+      "playbook": "Calls are tickers with a price.",
+      "repeat_window_minutes": 0
+    },
+    {
+      "schema_version": 1,
+      "request_id": "s8",
+      "operation": "edit_setup_guru",
+      "action": "edit",
+      "guru": "guru-1a2b3c4d",
+      "rename": "Alex Lee",
+      "channel_id": null,
+      "author_id": null,
+      "account_id": null,
+      "full_position_usd": null,
+      "playbook": null,
+      "repeat_window_minutes": null
+    },
+    {
+      "schema_version": 1,
+      "request_id": "s9",
+      "operation": "edit_setup_guru",
+      "action": "remove",
+      "guru": "Alex Lee",
+      "rename": null,
+      "channel_id": null,
+      "author_id": null,
+      "account_id": null,
+      "full_position_usd": null,
+      "playbook": null,
+      "repeat_window_minutes": null
+    },
+    {
+      "schema_version": 1,
+      "request_id": "s10",
+      "operation": "edit_setup_alerts",
+      "enabled": true,
+      "service": "telegram",
+      "chat_id": "-100123",
+      "token": "test-bot-token"
+    },
+    {
+      "schema_version": 1,
+      "request_id": "s11",
+      "operation": "import_setup",
+      "text": "Discord token:\ntest-discord-token\n"
+    },
+    {
+      "schema_version": 1,
+      "request_id": "s12",
+      "operation": "apply_setup",
+      "start": false
+    },
+    {
+      "schema_version": 1,
+      "request_id": "s13",
+      "operation": "discard_setup"
+    }
+  ]
+}

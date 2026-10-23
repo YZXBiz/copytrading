@@ -17,11 +17,14 @@ extension AppModel {
 
     /// Limits are all the draft changes, so they save when the account sheet closes and never
     /// wait on Apply Changes; once a save is refused they wait like any other change.
+    /// A live account's limits an agent changed are not such a change: they wait for an approved
+    /// `setup apply` or the owner's own Start Copying.
     var hasOnlyLimitChanges: Bool {
         guard !limitsSaveRefused, !setupDraft.hasTypedSecrets, let saved = savedTradingConfiguration,
-            let edited = try? setupDraft.submission().0
+            let edited = try? setupDraft.submission().0, let changed = edited.limitOnlyChanges(from: saved)
         else { return false }
-        return edited.limitOnlyChanges(from: saved) != nil
+        let live = Set(edited.accounts.filter { $0.environment == .live }.map(\.id))
+        return agentLimitEdits.intersection(changed).isDisjoint(with: live)
     }
 
     /// The limits an account page shows: the edited ones while they wait for a start to settle,
@@ -99,6 +102,7 @@ extension AppModel {
     private func refillSetupDraft(from saved: TradingConfiguration) {
         setupEditor = nil
         limitsSaveRefused = false
+        agentLimitEdits = []
         setupDraft.load(saved)
         setupDraft.clearSecrets()
         setupDraftSource = saved
@@ -208,23 +212,25 @@ extension AppModel {
 
     /// The one Start Copying: a setup already checked starts; otherwise every connection is
     /// checked first, then copying starts if nothing needs the owner. Typed keys stay in the
-    /// draft, so a failed check never makes the owner type them again.
-    func checkAndStartCopying() {
-        guard !isApplyingChanges else { return }
+    /// draft, so a failed check never makes the owner type them again. Returns the work it
+    /// started, which an agent's `setup apply` waits for; nil when nothing started.
+    @discardableResult
+    func checkAndStartCopying() -> Task<Void, Never>? {
+        guard !isApplyingChanges else { return nil }
         if isCopyingSavedSetup {
             applyChangesWhileCopying()
-            return
+            return applyChangesTask
         }
         if canStartCopyingFromCheck {
-            Task { await activateValidatedTradingSettings() }
-            return
+            return Task { await activateValidatedTradingSettings() }
         }
         do {
             let (configuration, secrets) = try setupDraft.submission()
             checkedSetupSignature = setupDraft.signature
-            beginTradingValidation(configuration, enteredSecrets: secrets, thenStart: true)
+            return beginTradingValidation(configuration, enteredSecrets: secrets, thenStart: true)
         } catch {
             message = Self.setupProblem(for: error)
+            return nil
         }
     }
 
@@ -238,7 +244,7 @@ extension AppModel {
 
     /// Everything a check needs is filled in. A connection whose last check failed doesn't
     /// block it: Start Copying checks every connection again, and a one-off timeout clears.
-    private var isFilledInToCheck: Bool {
+    var isFilledInToCheck: Bool {
         SetupProgress(
             draft: setupDraft, hasSavedKeys: hasTradingSecrets, hasSavedProviderKey: hasSavedProviderKey,
             savedKeyAccountIDs: savedKeyAccountIDs, isSetUp: savedTradingConfiguration != nil
@@ -340,6 +346,7 @@ extension AppModel {
         setupEditor = nil
         setupDraft = ConnectionsDraft()
         setupDraftSource = nil
+        agentLimitEdits = []
         syncSetupDraftWithSaved()
         prefillEmptySetup()
     }

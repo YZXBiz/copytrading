@@ -46,6 +46,7 @@ extension AppModel {
 
     /// A full check answers for every connection at once, so each row shows its own answer too.
     func recordConnectionChecks(_ checks: [TradingCapabilityCheck]) {
+        latestSetupChecks = checks
         for check in checks {
             let subject: ConnectionCheckSubject? =
                 switch check.name {

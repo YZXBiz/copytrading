@@ -21,7 +21,11 @@ struct ConnectionsEditorSheet: View {
                         guard let account = model.setupDraft.accounts.first(where: { $0.id == id }) else { return nil }
                         return await model.checkConnection(.account(account.name.trimmed))
                     },
-                    saveLimits: { [model] in await model.saveLimitOnlyChanges() },
+                    saveLimits: { [model] in
+                        // The sheet saves its own account's limits, never another account's.
+                        guard let account = model.setupDraft.accounts.first(where: { $0.id == id }) else { return nil }
+                        return await model.saveLimitOnlyChanges(for: [account.name.trimmed])
+                    },
                     limitsError: model.message
                 )
                 .onChange(of: model.setupDraft.accounts[index].name) { oldName, newName in

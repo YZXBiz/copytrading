@@ -9,7 +9,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
-from copytrading_engine.control.wire import ProposalView
+from copytrading_engine.control.service import SETUP_IN_APP_ONLY
+from copytrading_engine.control.wire import SETUP_OPERATIONS, ErrorBody, ProposalView, Response
 from copytrading_engine.headless.config import AgentAccess, ServerSetup
 from copytrading_engine.headless.owner import CopyingStatus, EntriesChanged, proposal_from_engine
 from copytrading_engine.host.pipe.server import PipeServer
@@ -164,6 +165,12 @@ class HeadlessEngine:
         """One agent request, with the owner's chosen access, answered as a contract line."""
         if self.agent_access == "off":
             raise EngineRefused("control", "access_off")
+        setup = _setup_request(line)
+        if setup is not None:
+            # A setup request may carry a key; a server is set up in copytrading.toml, so the
+            # line is answered here and never reaches the engine.
+            refusal = ErrorBody(code="unavailable", message=SETUP_IN_APP_ONLY)
+            return Response(request_id=setup, error=refusal).model_dump_json()
         context = {
             "access_level": self.agent_access,
             "unlocked": True,
@@ -203,3 +210,15 @@ class HeadlessEngine:
                 else secrets.notification_token.get_secret_value()
             ),
         }
+
+
+def _setup_request(line: str) -> str | None:
+    """The request ID of a setup request (possibly empty), or None for any other line."""
+    try:
+        payload = json.loads(line)
+    except ValueError, RecursionError:
+        return None
+    if not isinstance(payload, dict) or payload.get("operation") not in SETUP_OPERATIONS:
+        return None
+    request_id = payload.get("request_id")
+    return request_id if isinstance(request_id, str) and 0 < len(request_id) <= 128 else ""

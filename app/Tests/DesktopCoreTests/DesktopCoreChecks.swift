@@ -20,6 +20,7 @@ enum DesktopCoreCheck: String, CaseIterable, Sendable, CustomTestStringConvertib
     case engineClientProcessIPC = "engine client process IPC"
     case agentRelaySocket = "agent relay socket"
     case agentAccessAndApprovals = "agent access and approvals"
+    case agentSetupContracts = "agent setup contracts"
     case nativeBackupAndRestoreActions = "native backup and restore actions"
     case engineActionsAfterRestart = "engine actions after restart"
     case appStartupIntent = "app startup intent"
@@ -52,6 +53,7 @@ enum DesktopCoreCheck: String, CaseIterable, Sendable, CustomTestStringConvertib
         case .engineClientProcessIPC: try await runEngineClientProcessTests()
         case .agentRelaySocket: try await runAgentRelayTests()
         case .agentAccessAndApprovals: try await runAgentAccessTests()
+        case .agentSetupContracts: try runAgentSetupContractTests()
         case .nativeBackupAndRestoreActions: try await runEngineActionsBackupRestoreTests()
         case .engineActionsAfterRestart: try await runEngineActionsRestartTests()
         case .appStartupIntent: try runAppStartupIntentTests()

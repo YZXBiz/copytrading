@@ -118,7 +118,7 @@ A SwiftUI app supervises one local Python engine. The engine owns every decision
 
 ## Command line and agents
 
-The `copytrading` CLI and MCP server let you, a script, or a coding agent read the running app and pause it. Anything that could trade becomes a proposal you approve with Touch ID in the app. `copytrading accounts limits ACCOUNT --max-order-usd 300 …` changes an account's limits and `copytrading start` starts copying with Start Copying's own checks; both wait for your Touch ID in the app. Turn it on in **Settings → Agent Access**, then put the command that ships inside the app on your `PATH`:
+The `copytrading` CLI and MCP server let you, a script, or a coding agent read the running app and pause it, and the CLI sets it up. Anything that could trade becomes a proposal you approve with Touch ID in the app. `copytrading accounts limits ACCOUNT --max-order-usd 300 …` changes an account's limits and `copytrading start` starts copying with Start Copying's own checks; both wait for your Touch ID in the app. Turn it on in **Settings → Agent Access**, then put the command that ships inside the app on your `PATH`:
 
 ```sh
 mkdir -p ~/.local/bin && ln -sf /Applications/CopyTrading.app/Contents/Helpers/copytrading ~/.local/bin/copytrading
@@ -138,6 +138,21 @@ Waiting for approval in CopyTrading: change primary: max order usd = 300. Propos
 
 $ copytrading start
 Waiting for approval in CopyTrading: start copying. Proposal p-81f0c6a95e24, expires 2026-10-14 16:43:10.
+```
+
+`copytrading setup` sets everything up without the window: Discord, the model, Alpaca accounts with their keys and limits, gurus, and alerts. Edits go into the same unsaved setup Connections shows. `setup apply` runs Start Copying's checks and saves; copying that runs picks up the change, and copying you paused stays paused. `setup apply --start` also starts copying, so a first setup needs no window. Keys are read only from standard input or a file and are never printed; the app saves them in the Keychain. To use it, choose **Read, pause, and ask for approval** in Agent Access and turn on **Allow setup changes from the command line** there (off by default; it asks for Touch ID). A paper setup applies directly; making an account live, saving keys for one, or starting copying into one waits for your Touch ID in the app.
+
+```console
+$ copytrading setup discord --channels 1517000000000009742 --secret-stdin < discord-token.txt
+$ copytrading setup model --service deepseek --model deepseek-flash --from-file deepseek-key.txt
+$ copytrading setup account add paper-2 --from-file alpaca-paper-2.txt --max-order-usd 250  # key ID, then secret
+$ copytrading setup guru add Alex --account paper-2 --full-position 600
+$ copytrading setup apply --start
+Applied: the setup is saved, and copying uses it.
+Saved, and copying started.
+  ok      discord
+  ok      model
+  ok      paper-2
 ```
 
 See [agent control](docs/agent-control.md) for the commands, permission tiers, and threat model.

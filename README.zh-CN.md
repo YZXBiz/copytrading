@@ -118,7 +118,7 @@ make app
 
 ## 命令行与编程助手
 
-`copytrading` 命令行工具和 MCP 服务器让你、脚本或编程助手读取正在运行的应用，并可以暂停它。任何可能触发交易的操作都会变成一条提议，要在应用里用 Touch ID 批准。`copytrading accounts limits ACCOUNT --max-order-usd 300 …` 修改账户限额，`copytrading start` 按“开始跟单”同样的检查开始跟单；两者都要等你在应用里用 Touch ID 批准。先在 **设置 → 智能体访问** 中打开它，再把应用自带的命令加入 `PATH`：
+`copytrading` 命令行工具和 MCP 服务器让你、脚本或编程助手读取正在运行的应用，并可以暂停它；命令行工具还能完成设置。任何可能触发交易的操作都会变成一条提议，要在应用里用 Touch ID 批准。`copytrading accounts limits ACCOUNT --max-order-usd 300 …` 修改账户限额，`copytrading start` 按“开始跟单”同样的检查开始跟单；两者都要等你在应用里用 Touch ID 批准。先在 **设置 → 智能体访问** 中打开它，再把应用自带的命令加入 `PATH`：
 
 ```sh
 mkdir -p ~/.local/bin && ln -sf /Applications/CopyTrading.app/Contents/Helpers/copytrading ~/.local/bin/copytrading
@@ -138,6 +138,21 @@ Waiting for approval in CopyTrading: change primary: max order usd = 300. Propos
 
 $ copytrading start
 Waiting for approval in CopyTrading: start copying. Proposal p-81f0c6a95e24, expires 2026-10-14 16:43:10.
+```
+
+`copytrading setup` 不打开窗口也能完成全部设置：Discord、AI 模型、Alpaca 账户及其密钥和限额、信号源和提醒。修改会进入“连接”页显示的同一份未保存设置，`setup apply` 按“开始跟单”同样的检查验证并保存；正在跟单时会用上新设置，你暂停的跟单保持暂停。`setup apply --start` 还会开始跟单，所以首次设置也不需要打开窗口。密钥只从标准输入或文件读取，从不打印，由应用存入钥匙串。要使用它，请在智能体访问中选择 **读取、暂停并请求批准**，并在同一页打开 **允许通过命令行修改设置**（默认关闭，打开时需要 Touch ID）。模拟盘设置直接生效；把账户改为实盘、为实盘账户保存密钥，或开始向实盘账户跟单，要等你在应用里用 Touch ID 批准。
+
+```console
+$ copytrading setup discord --channels 1517000000000009742 --secret-stdin < discord-token.txt
+$ copytrading setup model --service deepseek --model deepseek-flash --from-file deepseek-key.txt
+$ copytrading setup account add paper-2 --from-file alpaca-paper-2.txt --max-order-usd 250  # 第一行 key ID，第二行 secret
+$ copytrading setup guru add Alex --account paper-2 --full-position 600
+$ copytrading setup apply --start
+Applied: the setup is saved, and copying uses it.
+Saved, and copying started.
+  ok      discord
+  ok      model
+  ok      paper-2
 ```
 
 命令、权限等级和威胁模型见 [agent control](docs/agent-control.md)（英文）。
