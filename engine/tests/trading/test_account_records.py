@@ -1,12 +1,15 @@
 """A record is found by the Alpaca account its keys open, whatever the setup names the account."""
 
 import fcntl
+import json
 import sqlite3
 from contextlib import closing
 
 from copytrading_engine.execution.adapters.sqlite_ledger import Store
 from copytrading_engine.trading.adapters.account_records import (
+    JOURNAL,
     RecordPlan,
+    Unbound,
     delete_record,
     held_records,
     plan_records,
@@ -87,15 +90,97 @@ def test_keys_that_could_not_be_checked_leave_their_folder_alone(tmp_path):
     assert (tmp_path / "main" / "marker").read_text() == "kept"
 
 
-def test_a_folder_that_never_held_a_record_gives_way(tmp_path):
-    """A start whose keys were refused leaves an empty folder under the name; it holds nothing."""
-    record(tmp_path, "main", None)
+def test_only_a_folder_with_no_record_file_gives_way(tmp_path):
+    """A start whose keys were refused can leave a folder with no record; it holds nothing."""
+    (tmp_path / "main").mkdir()
+    (tmp_path / "main" / "executor.lock").touch()
     record(tmp_path, "zhap-account-2", ZHAP, marker="lots")
 
     plan = reconcile_records(tmp_path, {"main": ZHAP})
 
     assert plan.cleared == ("main",)
     assert (tmp_path / "main" / "marker").read_text() == "lots"
+
+
+def test_a_record_that_names_no_alpaca_account_moves_aside_and_is_kept(tmp_path):
+    record(tmp_path, "main", None, marker="unnamed")
+    record(tmp_path, "zhap-account-2", ZHAP, marker="lots")
+
+    plan = reconcile_records(tmp_path, {"main": ZHAP})
+
+    assert plan.cleared == ()
+    assert (tmp_path / "main" / "marker").read_text() == "lots"
+    assert (tmp_path / "main-earlier" / "marker").read_text() == "unnamed"
+
+
+def unreadable(root, name):
+    folder = root / name
+    folder.mkdir()
+    (folder / "execution.sqlite3").write_bytes(b"not a database, and not ours to throw away")
+    return folder
+
+
+def test_a_record_that_cant_be_read_is_never_moved_and_its_account_does_not_open(tmp_path):
+    damaged = unreadable(tmp_path, "main")
+    record(tmp_path, "zhap-account-2", ZHAP, marker="lots")
+
+    plan = reconcile_records(tmp_path, {"main": ZHAP})
+
+    assert record_identity(damaged) is Unbound.UNREADABLE
+    assert plan.refusals == {"main": "record_unreadable"}
+    assert plan.moves == {}
+    assert plan.cleared == ()
+    assert (damaged / "execution.sqlite3").read_bytes().startswith(b"not a database")
+    assert (tmp_path / "zhap-account-2" / "marker").read_text() == "lots"
+
+
+def test_an_unreadable_record_of_another_account_is_left_alone(tmp_path):
+    unreadable(tmp_path, "old")
+    record(tmp_path, "zhap-account-2", ZHAP, marker="lots")
+
+    plan = reconcile_records(tmp_path, {"main": ZHAP})
+
+    assert plan.refusals == {}
+    assert (tmp_path / "main" / "marker").read_text() == "lots"
+    assert (tmp_path / "old" / "execution.sqlite3").read_bytes().startswith(b"not a database")
+
+
+def test_a_folder_another_copytrading_has_open_stops_every_move(tmp_path):
+    held = record(tmp_path, "zhap-account-2", ZHAP, marker="lots")
+    record(tmp_path, "main", PRIMARY, marker="primary")
+    with (held / "executor.lock").open("a") as lock:
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+        plan = reconcile_records(tmp_path, {"main": ZHAP})
+
+    assert plan.refusals == {"main": "account_in_use"}
+    assert plan.moves == {}
+    assert held_records(tmp_path) == {"main": PRIMARY, "zhap-account-2": ZHAP}
+    assert (tmp_path / "main" / "marker").read_text() == "primary"
+
+
+def test_a_move_a_crash_interrupted_is_finished_from_its_journal(tmp_path):
+    root = tmp_path / "accounts"
+    root.mkdir()
+    record(root, ".moving-zhap-account-2", ZHAP, marker="lots")
+    (root / JOURNAL).write_text(json.dumps({"zhap-account-2": "main"}))
+
+    assert held_records(root) == {}  # a staged folder is never an account
+    reconcile_records(root, {"main": ZHAP})
+
+    assert (root / "main" / "marker").read_text() == "lots"
+    assert not (root / JOURNAL).exists()
+    assert [child.name for child in root.iterdir()] == ["main"]
+
+
+def test_a_staged_folder_without_a_journal_goes_back_under_its_name(tmp_path):
+    root = tmp_path / "accounts"
+    root.mkdir()
+    record(root, ".moving-testing", ("paper", "alpaca-testing"), marker="kept")
+
+    reconcile_records(root, {})
+
+    assert (root / "testing" / "marker").read_text() == "kept"
 
 
 def test_records_of_accounts_no_longer_in_the_setup_stay_where_they_are(tmp_path):

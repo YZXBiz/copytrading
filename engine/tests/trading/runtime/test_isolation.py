@@ -697,3 +697,42 @@ async def test_keys_alpaca_turns_down_are_said_before_any_record_is_touched(tmp_
     assert failed.error_code == "broker_keys_rejected"
     assert (tmp_path / "accounts" / "first" / "marker").read_text() == "kept"
     await runtime.shutdown()
+
+
+async def test_a_record_that_cant_be_read_stops_its_account_and_is_kept(tmp_path):
+    damaged = tmp_path / "accounts" / "first"
+    damaged.mkdir(parents=True)
+    (damaged / "execution.sqlite3").write_bytes(b"not a database")
+
+    async def identity(credentials, environment):
+        return "alpaca-zhap"
+
+    async def owner_factory(path, credentials, policy, environment):
+        raise AssertionError("an account whose record can't be read never opens")
+
+    runtime = TradingRuntime(
+        tmp_path,
+        factories=TradingFactories(
+            owner=owner_factory,
+            decoder=lambda name, config: asyncio.sleep(0, result=Decoder()),
+            session=_never_posts,
+            identity=identity,
+        ),
+    )
+    await runtime.start(trading_configuration("first"), trading_secrets_for("first"))
+    failed = await wait_for(runtime, lambda status: status.state == "failed")
+    assert failed.error_code == "record_unreadable"
+    assert (damaged / "execution.sqlite3").read_bytes() == b"not a database"
+    await runtime.shutdown()
+
+
+async def test_a_folder_staged_mid_move_is_never_listed_as_an_account(tmp_path):
+    _record(tmp_path, ".moving-testing", "alpaca-testing", "staged")
+    _record(tmp_path, "zhap-account-2", "alpaca-zhap", "lots")
+
+    runtime = TradingRuntime(tmp_path)
+    page = await runtime.operator.account_overviews()
+
+    assert [item.account_id for item in page.items] + [
+        item.account_id for item in page.unavailable_accounts
+    ] == ["zhap-account-2"]

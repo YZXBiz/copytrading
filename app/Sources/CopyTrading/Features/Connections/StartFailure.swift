@@ -37,6 +37,10 @@ enum StartFailure {
             L10n.string(
                 "%@ didn't open: another account in this setup uses keys for the same Alpaca account. Remove one of them, or give it the keys of another Alpaca account.",
                 name)
+        case "record_unreadable":
+            L10n.string(
+                "%@ didn't open: its record on this Mac couldn't be read, so nothing was changed. Quit and reopen CopyTrading; if it happens again, Diagnostics at the bottom of the sidebar has the details.",
+                name)
         case "broker_keys_rejected":
             L10n.string("%@ didn't open: Alpaca didn't accept its API keys. Paste them again from your Alpaca dashboard.", name)
         case "broker_unreachable":

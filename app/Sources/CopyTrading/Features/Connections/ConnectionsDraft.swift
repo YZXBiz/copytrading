@@ -75,6 +75,10 @@ struct ConnectionsDraft {
 
     /// The ID a route is saved with: its channel's, or the one it was saved with while it stays on
     /// that channel, so a setup saved before IDs came from the channel doesn't read as changed.
+    // TODO: compatibility shim for setups saved before guru IDs came from the channel (the
+    // owner's 赵哥 is saved as guru-0fb5ed9b, shown as guru-3909e2aa). The setup upgrade being
+    // built in another PR rewrites saved guru IDs to the channel's; then `TradingRouteDraft.saved`
+    // and this function are deleted and every route is saved with `guru(for:)`.
     func savedGuruID(for route: TradingRouteDraft) -> String {
         guard let saved = route.saved, saved.channelID == effectiveChannel(for: route) else { return guru(for: route) }
         return saved.guruID

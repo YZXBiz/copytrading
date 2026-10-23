@@ -1055,6 +1055,7 @@ struct TradingSettingsSaveTests {
     private static func checkEveryStartFailureSaysWhatToDo() throws {
         let accountCases: [(String, String)] = [
             ("alpaca_account_shared", "another account in this setup uses keys for the same Alpaca account."),
+            ("record_unreadable", "its record on this Mac couldn't be read, so nothing was changed."),
             ("broker_keys_rejected", "Alpaca didn't accept its API keys."),
             ("broker_unreachable", "Alpaca couldn't be reached."),
             ("account_in_use", "another CopyTrading on this Mac is copying into it."),

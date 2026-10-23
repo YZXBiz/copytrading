@@ -23,6 +23,7 @@ REASONS = {
     "outside_open_orders": "Cancel the orders open at Alpaca first",
     "broker_account_inactive": "Alpaca has not activated this account",
     "account_in_use": "Another CopyTrading on this Mac is copying into this account",
+    "record_unreadable": "Its record on this Mac couldn't be read",
     "alpaca_account_shared": (
         "Another account in this setup uses keys for the same Alpaca account"
     ),

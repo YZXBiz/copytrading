@@ -2380,3 +2380,5 @@
 "Records of accounts no longer in your setup. The same keys under any name pick theirs up again." = "已不在设置中的账户的记录。用同一组密钥，无论取什么名称，都会接上原来的记录。";
 "It's in your setup again. Remove it in Connections first." = "它又在你的设置中了。请先在连接中移除它。";
 "Another CopyTrading on this Mac has it open. Quit that one first." = "这台 Mac 上另一个 CopyTrading 正在使用它。请先退出那一个。";
+"Its record on this Mac couldn't be read" = "无法读取它在这台 Mac 上的记录";
+"%@ didn't open: its record on this Mac couldn't be read, so nothing was changed. Quit and reopen CopyTrading; if it happens again, Diagnostics at the bottom of the sidebar has the details." = "%@ 无法打开：无法读取它在这台 Mac 上的记录，因此没有做任何更改。请退出并重新打开 CopyTrading；如果再次发生，边栏底部的诊断中有详细信息。";

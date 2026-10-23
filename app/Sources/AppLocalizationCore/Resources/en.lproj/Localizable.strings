@@ -2380,3 +2380,5 @@
 "Records of accounts no longer in your setup. The same keys under any name pick theirs up again." = "Records of accounts no longer in your setup. The same keys under any name pick theirs up again.";
 "It's in your setup again. Remove it in Connections first." = "It's in your setup again. Remove it in Connections first.";
 "Another CopyTrading on this Mac has it open. Quit that one first." = "Another CopyTrading on this Mac has it open. Quit that one first.";
+"Its record on this Mac couldn't be read" = "Its record on this Mac couldn't be read";
+"%@ didn't open: its record on this Mac couldn't be read, so nothing was changed. Quit and reopen CopyTrading; if it happens again, Diagnostics at the bottom of the sidebar has the details." = "%@ didn't open: its record on this Mac couldn't be read, so nothing was changed. Quit and reopen CopyTrading; if it happens again, Diagnostics at the bottom of the sidebar has the details.";

@@ -110,6 +110,8 @@ class AccountAccess:
             raise RuntimeError("Account state directory is invalid")
         paths: dict[str, Path] = {}
         for account_dir in root.iterdir():
+            if account_dir.name.startswith("."):
+                continue  # not an account: a folder staged mid-move (account_records)
             if account_dir.is_symlink() or not account_dir.is_dir():
                 raise RuntimeError("Account evidence path is invalid")
             database = account_dir / "execution.sqlite3"
@@ -127,6 +129,8 @@ class AccountAccess:
             raise RuntimeError("Account state directory is invalid")
         paths: list[tuple[str, Path]] = []
         for account_dir in root.iterdir():
+            if account_dir.name.startswith("."):
+                continue  # not an account: a folder staged mid-move (account_records)
             if account_dir.is_symlink() or not account_dir.is_dir():
                 raise RuntimeError("Account evidence path is invalid")
             database = account_dir / "execution.sqlite3"

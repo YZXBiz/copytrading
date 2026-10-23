@@ -73,7 +73,11 @@ class BrokerError(Exception):
 
 # Why a broker account cannot connect until its owner acts.
 type AccountOpenRefusal = Literal[
-    "outside_open_orders", "broker_account_inactive", "account_in_use", "alpaca_account_shared"
+    "outside_open_orders",
+    "broker_account_inactive",
+    "account_in_use",
+    "alpaca_account_shared",
+    "record_unreadable",
 ]
 ACCOUNT_OPEN_REFUSALS: frozenset[str] = frozenset(get_args(AccountOpenRefusal.__value__))
 # Why an account could not open or stopped. `accounts_unavailable` is several accounts failing for
