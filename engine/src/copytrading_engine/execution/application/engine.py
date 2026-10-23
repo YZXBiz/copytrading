@@ -166,7 +166,8 @@ class CopyEngine:
         if not account.active:
             raise AccountOpenRefused("broker_account_inactive")
         if self.ledger.account_id is not None and self.ledger.account_id != account.id:
-            raise RuntimeError("Broker account identity changed")
+            # The record under this account's name was made with another Alpaca account.
+            raise AccountOpenRefused("account_record_mismatch")
         if not self.ledger.account_id and self.broker.open_orders():
             # The first connection records what the account already holds; an order placed
             # outside CopyTrading could fill during that count, so the owner settles it first.

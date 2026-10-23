@@ -73,9 +73,23 @@ class BrokerError(Exception):
 
 # Why a broker account cannot connect until its owner acts.
 type AccountOpenRefusal = Literal[
-    "outside_open_orders", "broker_account_inactive", "account_in_use"
+    "outside_open_orders", "broker_account_inactive", "account_in_use", "account_record_mismatch"
 ]
 ACCOUNT_OPEN_REFUSALS: frozenset[str] = frozenset(get_args(AccountOpenRefusal.__value__))
+# Why an account could not open or stopped. `accounts_unavailable` is several accounts failing for
+# different reasons; `account_unavailable` is a cause CopyTrading could not tell.
+type AccountFailure = (
+    AccountOpenRefusal
+    | Literal[
+        "broker_keys_rejected", "broker_unreachable", "accounts_unavailable", "account_unavailable"
+    ]
+)
+ACCOUNT_FAILURES: frozenset[str] = ACCOUNT_OPEN_REFUSALS | {
+    "broker_keys_rejected",
+    "broker_unreachable",
+    "accounts_unavailable",
+    "account_unavailable",
+}
 
 
 class AccountOpenRefused(RuntimeError):

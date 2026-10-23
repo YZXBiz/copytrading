@@ -319,7 +319,8 @@ async def test_slow_account_open_does_not_block_healthy_account_or_capture(tmp_p
         summaries = (await runtime.operator.account_overviews()).items
         assert {item.account_id for item in summaries} == {"first", "second"}
         failed = next(item for item in summaries if item.account_id == "second")
-        assert failed.readiness == "account_unavailable"
+        # An account still opening when the wait ends reads as Alpaca out of reach.
+        assert failed.readiness == "broker_unreachable"
         assert failed.total_exposure_usd is None
         assert failed.pending_orders is None
         await wait_for(runtime, lambda status: status.pending_signals > 0)
@@ -438,7 +439,9 @@ def _never_posts(source, channels, authors, stop, report_failure):
     return Session(source, None)
 
 
-@pytest.mark.parametrize("reason", ["outside_open_orders", "account_in_use"])
+@pytest.mark.parametrize(
+    "reason", ["outside_open_orders", "account_in_use", "account_record_mismatch"]
+)
 async def test_a_refused_account_names_why_copying_could_not_start(tmp_path, reason):
     async def owner_factory(path, credentials, policy, environment):
         raise AccountOpenRefused(reason)
@@ -458,6 +461,92 @@ async def test_a_refused_account_names_why_copying_could_not_start(tmp_path, rea
     assert runtime.activation_status(activation_id).error_code == reason
     [account] = (await runtime.operator.account_overviews()).items
     assert account.readiness == reason
+    await runtime.shutdown()
+
+
+@pytest.mark.parametrize(
+    ("error", "reason"),
+    [
+        (BrokerError(401), "broker_keys_rejected"),
+        (BrokerError(403), "broker_keys_rejected"),
+        (BrokerError(503), "broker_unreachable"),
+        (BrokerError(), "broker_unreachable"),
+        (TimeoutError(), "broker_unreachable"),
+        (ValueError("unexpected"), "account_unavailable"),
+    ],
+)
+async def test_an_account_that_cannot_open_says_what_happened(tmp_path, monkeypatch, error, reason):
+    monkeypatch.setattr(runtime_module, "OPEN_RETRY_SECONDS", (0.01,))
+
+    async def owner_factory(path, credentials, policy, environment):
+        raise error
+
+    runtime = TradingRuntime(
+        tmp_path,
+        factories=TradingFactories(
+            owner=owner_factory,
+            decoder=lambda name, config: asyncio.sleep(0, result=Decoder()),
+            session=_never_posts,
+        ),
+    )
+    activation_id = str(uuid4())
+    await runtime.start(trading_configuration("first"), trading_secrets_for("first"), activation_id)
+    failed = await wait_for(runtime, lambda status: status.state == "failed")
+    assert failed.error_code == reason
+    assert runtime.activation_status(activation_id).error_code == reason
+    assert [(account.id, account.error_code) for account in failed.accounts] == [("first", reason)]
+    await runtime.shutdown()
+
+
+async def test_a_start_that_failed_can_be_tried_again_without_a_pause(tmp_path):
+    refusals = [AccountOpenRefused("account_record_mismatch")]
+    opened: dict[str, Owner] = {}
+
+    async def owner_factory(path, credentials, policy, environment):
+        if refusals:
+            raise refusals.pop()
+        opened[path.name] = Owner(path, {}, {})
+        return opened[path.name]
+
+    runtime = TradingRuntime(
+        tmp_path,
+        factories=TradingFactories(
+            owner=owner_factory,
+            decoder=lambda name, config: asyncio.sleep(0, result=Decoder()),
+            session=_never_posts,
+        ),
+    )
+    await runtime.start(trading_configuration("first"), trading_secrets_for("first"))
+    await wait_for(runtime, lambda status: status.state == "failed")
+    await runtime.start(trading_configuration("first"), trading_secrets_for("first"))
+    started = await wait_for(runtime, lambda status: status.active_accounts == 1)
+    assert started.error_code is None
+    await runtime.shutdown()
+
+
+async def test_accounts_failing_differently_each_keep_their_own_reason(tmp_path):
+    errors = {"first": AccountOpenRefused("account_record_mismatch"), "second": BrokerError(401)}
+
+    async def owner_factory(path, credentials, policy, environment):
+        raise errors[path.name]
+
+    runtime = TradingRuntime(
+        tmp_path,
+        factories=TradingFactories(
+            owner=owner_factory,
+            decoder=lambda name, config: asyncio.sleep(0, result=Decoder()),
+            session=_never_posts,
+        ),
+    )
+    await runtime.start(
+        trading_configuration("first", "second"), trading_secrets_for("first", "second")
+    )
+    failed = await wait_for(runtime, lambda status: status.state == "failed")
+    assert failed.error_code == "accounts_unavailable"
+    assert {account.id: account.error_code for account in failed.accounts} == {
+        "first": "account_record_mismatch",
+        "second": "broker_keys_rejected",
+    }
     await runtime.shutdown()
 
 

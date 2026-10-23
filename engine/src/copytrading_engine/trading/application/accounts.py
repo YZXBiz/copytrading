@@ -9,6 +9,8 @@ from contextlib import AbstractContextManager, nullcontext
 from typing import Protocol, runtime_checkable
 
 from copytrading_engine.execution.application.ports import (
+    AccountFailure,
+    AccountOpenRefused,
     AccountRuntimeView,
     BrokerError,
     ExecutionObservation,
@@ -158,6 +160,22 @@ UNREACHABLE_RETRY_SECONDS = 60.0
 # committed before it goes out, and a retried cycle only looks orders up by that ID, never
 # resubmits them.
 CYCLE_RETRY_SECONDS: tuple[float, ...] = (15.0, 60.0, 180.0)
+
+
+def account_failure(error: BaseException) -> AccountFailure:
+    """Why an account could not open or stopped, in a code its owner can act on: the refusal it
+    was opened with, Alpaca turning the keys down, or Alpaca out of reach. Anything else is
+    `account_unavailable`, and the diagnostics journal holds the error."""
+    if isinstance(error, AccountOpenRefused):
+        return error.reason
+    if isinstance(error, BrokerError):
+        if error.status in {401, 403}:
+            return "broker_keys_rejected"
+        if error.transient:
+            return "broker_unreachable"
+    if isinstance(error, TimeoutError):
+        return "broker_unreachable"
+    return "account_unavailable"
 
 
 class AccountSupervisor:
@@ -349,7 +367,7 @@ class AccountSupervisor:
         if self._order_watch is not None:
             self._order_watch.cancel()
         self.state = "failed"
-        self.error_code = "account_unavailable"
+        self.error_code = account_failure(exc)
         self._account_status = AccountStatus(self.id, self.state, self.error_code)
         if self.owner is not None:
             self.owner.request_stop()

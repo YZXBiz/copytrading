@@ -40,7 +40,7 @@ struct SetupChangesStatus: Equatable {
                 "You changed the setup",
                 "Click Apply Changes to use it. Copying restarts in a few seconds, and any post sent meanwhile is still copied.",
                 "pencil.circle.fill", .neutral)
-        } else if model.tradingStatus?.state != .paused {
+        } else if model.tradingStatus?.state.isStopped != true {
             self.init("You changed the setup", "Click Start Copying to use it.", "pencil.circle.fill", .neutral)
         } else if model.savedTradingConfiguration == nil {
             self.init("Ready to start", "Every connection is checked first.", "info.circle.fill", .neutral)
