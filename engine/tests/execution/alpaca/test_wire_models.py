@@ -6,8 +6,23 @@ import httpx
 import pytest
 
 from copytrading_engine.execution.domain.market import Asset
+from copytrading_engine.execution.domain.orders import OwnedLot
 
 from .builders import make_broker
+
+# CopyTrading's own 100 ABC shares: only a stock it bought is valued for its limits.
+ABC_LOTS = (
+    OwnedLot(
+        symbol="ABC",
+        entry_price=Decimal(25),
+        source_key="discord:1",
+        original_qty=Decimal(100),
+        remaining_qty=Decimal(100),
+        average_price=Decimal(25),
+        entry_remaining={"b1": Decimal(100)},
+        entry_prices={"b1": Decimal(25)},
+    ),
+)
 
 
 def test_domain_asset_does_not_accept_alpaca_wire_alias():
@@ -39,22 +54,24 @@ def test_position_normalization_preserves_value_and_rejects_unknown_units():
     unknown = decode_positions(actual_shaped)
     assert unknown[0].currency is None
     with pytest.raises(ValueError, match="valuation"):
-        account_exposure(unknown, (), (), account_currency="USD")
+        account_exposure(unknown, ABC_LOTS, (), account_currency="USD")
     observed = decode_positions(actual_shaped, account_currency="USD")
     assert observed[0].market_value == Decimal("2510.50")
     assert observed[0].currency == "USD"
-    assert account_exposure(observed, (), (), account_currency="USD").total == Decimal("2510.50")
+    assert account_exposure(observed, ABC_LOTS, (), account_currency="USD").total == Decimal(
+        "2510.50"
+    )
 
     missing = decode_positions([{"symbol": "ABC", "qty": "100", "asset_class": "us_equity"}])
     assert missing[0].market_value is None
     with pytest.raises(ValueError, match="valuation"):
-        account_exposure(missing, (), (), account_currency="USD")
+        account_exposure(missing, ABC_LOTS, (), account_currency="USD")
     with pytest.raises(ValueError, match="currency"):
-        account_exposure(observed, (), (), account_currency="EUR")
+        account_exposure(observed, ABC_LOTS, (), account_currency="EUR")
     contrary = decode_positions([actual_shaped[0] | {"currency": "EUR"}], account_currency="USD")
     assert contrary[0].currency == "EUR"
     with pytest.raises(ValueError, match="valuation"):
-        account_exposure(contrary, (), (), account_currency="USD")
+        account_exposure(contrary, ABC_LOTS, (), account_currency="USD")
     with pytest.raises(ValidationError):
         decode_positions(
             [{"symbol": "ABC", "qty": "100", "market_value": "NaN", "asset_class": "us_equity"}]
@@ -107,7 +124,7 @@ def test_broker_positions_use_verified_account_currency_for_missing_wire_currenc
         contrary = broker.positions()
         assert contrary[0].currency == "EUR"
         with pytest.raises(ValueError, match="valuation"):
-            account_exposure(contrary, (), (), account_currency="USD")
+            account_exposure(contrary, ABC_LOTS, (), account_currency="USD")
         # An account's currency never changes: later reads of positions don't ask again.
         assert calls == ["/v2/account", "/v2/positions", "/v2/positions"]
     finally:

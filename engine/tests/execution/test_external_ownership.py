@@ -20,7 +20,7 @@ from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
 from copytrading_engine.execution.domain.lifecycle import AccountControlCommand
 from copytrading_engine.execution.domain.market import BrokerOrder, Position
 from copytrading_engine.execution.domain.ownership import OwnershipResolutionRequest
-from copytrading_engine.execution.domain.progress import Skipped
+from copytrading_engine.execution.domain.progress import OrderLinked, Pending, Skipped
 from copytrading_engine.execution.domain.recovery import ManualSale
 from copytrading_engine.execution.domain.signals import CopyConfig
 from copytrading_engine.shared.owner_facing import OwnerFacingError
@@ -226,9 +226,8 @@ def test_manual_sale_from_mixed_holdings_opens_durable_symbol_incident():
     assert engine.ledger.message("discord:demo:blocked-buy").parts == (
         Skipped(reason="ownership_incident"),
     )
-    assert engine.ledger.message("discord:demo:blocked-exit").parts == (
-        Skipped(reason="ownership_incident"),
-    )
+    # A sell is never lost: it waits for the holdings question to be settled (ADR-0010).
+    assert engine.ledger.message("discord:demo:blocked-exit").parts == (Pending(),)
 
     other = event("other-symbol", timestamp=later)
     other["instructions"][0]["symbol"] = "XYZ"
@@ -549,63 +548,102 @@ def test_outside_open_order_holds_the_sync_until_it_is_gone():
     assert [request.reason for request in _settled(engine)] == ["owner_bought_outside"]
 
 
-@pytest.mark.parametrize("problem", ["missing_valuation", "unknown_order"])
-def test_healthy_symbol_exit_requires_accountwide_readiness(problem):
+def _copied(engine, broker, key, symbol, at):
+    signal = event(key, timestamp=at)
+    signal["instructions"][0]["symbol"] = symbol
+    signal["evidence"][0]["symbol"] = symbol
+    signal["evidence"][0]["symbol_evidence"] = symbol
+    receive(engine, StockSignal.model_validate(signal), at)
+    engine.process(at)
+    assert engine.ledger.owned(symbol) > 0
+
+
+def _exit(engine, key, symbol, at):
+    signal = event(key, action="close", price="27", entry="25", timestamp=at)
+    signal["instructions"][0]["symbol"] = symbol
+    signal["evidence"][0]["symbol"] = symbol
+    signal["evidence"][0]["symbol_evidence"] = symbol
+    receive(engine, StockSignal.model_validate(signal), at)
+    engine.process(at)
+
+
+def test_a_sell_goes_out_while_another_stock_has_no_value_and_a_buy_waits():
+    """A sell needs only its own stock's shares and price: no valuation or cap elsewhere in the
+    account holds it. Only a buy is checked against the whole account."""
+    broker = FakeBroker()
+    engine = engine_with_wide_limits(MemoryRepository(), broker)
+    engine.bind(NOW)
+    _copied(engine, broker, "xyz-entry", "XYZ", NOW)
+    _copied(engine, broker, "qqq-entry", "QQQ", NOW)
+    original_positions = broker.positions
+
+    # The copied QQQ has no value now; XYZ is fine.
+    def unvalued_qqq():
+        return tuple(
+            Position(symbol=position.symbol, qty=position.qty)
+            if position.symbol == "QQQ"
+            else position
+            for position in original_positions()
+        )
+
+    broker.positions = unvalued_qqq
+    later = NOW + dt.timedelta(minutes=11)
+    _exit(engine, "xyz-exit", "XYZ", later)
+    assert isinstance(engine.ledger.message("discord:demo:xyz-exit").parts[0], OrderLinked)
+    assert engine.ledger.owned("XYZ") == 0
+
+    buy = event("abc-buy", timestamp=later)
+    receive(engine, StockSignal.model_validate(buy), later)
+    engine.process(later)
+    assert engine.ledger.message("discord:demo:abc-buy").parts == (
+        Skipped(reason="account_risk_unavailable"),
+    )
+
+
+@pytest.mark.parametrize("outside_symbol", ["ABC", "XYZ"])
+def test_an_outside_order_holds_a_sell_only_of_its_own_stock(outside_symbol):
+    """An order placed outside CopyTrading holds every buy, which spends the account's cash, but
+    a sell only when it is on the stock being sold."""
     broker = FakeBroker()
     broker.holdings["ABC"] = Decimal("100")
     engine = engine_with_wide_limits(MemoryRepository(), broker)
     engine.bind(NOW)
-    entry = event("xyz-entry")
-    entry["instructions"][0]["symbol"] = "XYZ"
-    entry["evidence"][0]["symbol"] = "XYZ"
-    entry["evidence"][0]["symbol_evidence"] = "XYZ"
-    receive(engine, StockSignal.model_validate(entry), NOW)
-    engine.process(NOW)
-    assert engine.ledger.owned("XYZ") > 0
+    _copied(engine, broker, "xyz-entry", "XYZ", NOW)
     submitted = broker.calls
-
-    if problem == "missing_valuation":
-        original_positions = broker.positions
-
-        def unvalued_external():
-            return tuple(
-                Position(symbol=position.symbol, qty=position.qty)
-                if position.symbol == "ABC"
-                else position
-                for position in original_positions()
-            )
-
-        broker.positions = unvalued_external
-        reason = "account_risk_unavailable"
-    else:
-        broker.orders["unrelated-manual"] = BrokerOrder(
-            id="unrelated-manual",
-            client_order_id="unrelated-manual",
-            symbol="ABC",
-            side="sell",
-            qty=Decimal(1),
-            filled_qty=Decimal(0),
-            filled_avg_price=None,
-            status="new",
-        ).model_dump(mode="json")
-        inspection = RecoveryApplication(engine.ledger, broker).inspect_ownership()
-        assert inspection.account_risk_status == "ready"
-        assert inspection.account_activity_status == "unavailable"
-        reason = "unresolved_account_order"
-
+    broker.orders["unrelated-manual"] = BrokerOrder(
+        id="unrelated-manual",
+        client_order_id="unrelated-manual",
+        symbol=outside_symbol,
+        side="sell",
+        qty=Decimal(1),
+        filled_qty=Decimal(0),
+        filled_avg_price=None,
+        status="new",
+    ).model_dump(mode="json")
+    inspection = RecoveryApplication(engine.ledger, broker).inspect_ownership()
+    assert inspection.account_risk_status == "ready"
+    assert inspection.account_activity_status == "unavailable"
     later = NOW + dt.timedelta(minutes=11)
-    exit_signal = event("xyz-exit", action="close", price="27", entry="25", timestamp=later)
-    exit_signal["instructions"][0]["symbol"] = "XYZ"
-    exit_signal["evidence"][0]["symbol"] = "XYZ"
-    exit_signal["evidence"][0]["symbol_evidence"] = "XYZ"
-    receive(engine, StockSignal.model_validate(exit_signal), later)
+    _exit(engine, "xyz-exit", "XYZ", later)
+    parts = engine.ledger.message("discord:demo:xyz-exit").parts
+    if outside_symbol == "XYZ":
+        # It waits for the outside order on its stock to end, and is never lost.
+        assert parts == (Pending(),)
+        assert broker.calls == submitted
+    else:
+        assert isinstance(parts[0], OrderLinked)
+    buy = event("abc-buy", timestamp=later)
+    receive(engine, StockSignal.model_validate(buy), later)
     engine.process(later)
-    assert engine.ledger.message("discord:demo:xyz-exit").parts == (Skipped(reason=reason),)
-    assert broker.calls == submitted
+    assert engine.ledger.message("discord:demo:abc-buy").parts == (
+        Skipped(reason="unresolved_account_order"),
+    )
 
 
-def test_external_market_value_consumes_cap_and_missing_value_blocks_entry():
+def test_the_owners_own_shares_do_not_count_toward_the_caps():
     broker = FakeBroker()
+    # The owner's own $2,500 of ABC, more than this account's $2,550 total limit allows beside a
+    # $100 buy: it is theirs, so CopyTrading still buys.
     broker.holdings["ABC"] = Decimal("100")
     engine = CopyEngine(
         MemoryRepository(),
@@ -619,15 +657,29 @@ def test_external_market_value_consumes_cap_and_missing_value_blocks_entry():
     engine.bind(NOW)
     receive(engine, StockSignal.model_validate(event()), NOW)
     engine.process(NOW)
-    [skipped] = engine.ledger.message("discord:demo:1").parts
-    assert isinstance(skipped, Skipped)
-    assert (skipped.reason, [limit.scope for limit in skipped.exposure]) == (
-        "total_exposure_cap",
-        ["total"],
-    )
-    assert broker.calls == 0
+    assert isinstance(engine.ledger.message("discord:demo:1").parts[0], OrderLinked)
+    assert broker.calls == 1
+    inspection = RecoveryApplication(engine.ledger, broker).inspect_ownership()
+    assert inspection.total_exposure_usd is not None
+    assert inspection.total_exposure_usd < Decimal("2500")
 
-    broker.positions = lambda: (Position(symbol="ABC", qty=Decimal("100")),)
+
+def test_a_copied_stock_with_no_value_blocks_entry():
+    broker = FakeBroker()
+    engine = CopyEngine(
+        MemoryRepository(),
+        broker,
+        CopyConfig(sources=["discord:demo"], max_symbol_usd=Decimal("5000")),
+    )
+    engine.bind(NOW)
+    receive(engine, StockSignal.model_validate(event()), NOW)
+    engine.process(NOW)
+    assert engine.ledger.owned("ABC") > 0
+
+    copied = broker.positions
+    broker.positions = lambda: tuple(
+        Position(symbol=position.symbol, qty=position.qty) for position in copied()
+    )
     inspection = RecoveryApplication(engine.ledger, broker).inspect_ownership()
     assert inspection.account_risk_status == "unavailable"
     assert inspection.total_exposure_usd is None
@@ -650,7 +702,8 @@ def test_pending_buy_reservation_consumes_total_cap_without_double_counting_fill
         broker,
         CopyConfig(
             sources=["discord:demo"],
-            max_total_usd=Decimal("150"),
+            # The first buy's $100 reservation leaves 50 cents: under Alpaca's $1 minimum.
+            max_total_usd=Decimal("100.50"),
         ),
     )
     engine.bind(NOW)

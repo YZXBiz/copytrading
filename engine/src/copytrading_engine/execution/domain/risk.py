@@ -5,7 +5,7 @@ from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
 from typing import Literal, Protocol
 
 from copytrading_engine.execution.domain.market import Position
-from copytrading_engine.execution.domain.orders import OrderRecord, OwnedLot
+from copytrading_engine.execution.domain.orders import BuyLimit, OrderRecord, OwnedLot
 from copytrading_engine.execution.domain.sizing import RouteConnection
 
 
@@ -25,6 +25,8 @@ class EntryLimits(Protocol):
 
 
 PRODUCT_PLACES = Decimal("1e-10")
+# Alpaca's smallest order in dollars: a limit with less room than this leaves nothing to buy.
+MINIMUM_ORDER_USD = Decimal("1")
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,8 +54,10 @@ class BudgetDecision:
     budget: Decimal | None
     reason: str
     breaches: tuple[ExposureBreach, ...] = ()
-    # What the call asked for before the maximum per order trimmed it.
+    # What the call asked for before a limit cut it.
     requested: Decimal | None = None
+    # The limit that cut it, when one did.
+    limited_by: BuyLimit | None = None
 
     @property
     def trimmed(self) -> bool:
@@ -65,27 +69,32 @@ class BudgetDecision:
 def requested_entry_budget(
     connection: RouteConnection,
     source_fraction: Decimal | None,
-    source_usd: Decimal | None = None,
+    source_usd: Decimal | None,
+    *,
+    unsized_usd: Decimal | None,
 ) -> BudgetDecision:
     """What the call asks for, before account facts and limits: the dollars the post names, never
     more than the full position; else its share of the full position. A call that states no size
-    asks for the full position; the maximum per order trims it (ADR-0010)."""
+    buys the account's largest single buy (`unsized_usd`), never more than the full position;
+    without one, it is `unsized_buy` (ADR-0010)."""
     if source_usd is not None:
         if not source_usd.is_finite() or source_usd <= 0:
             raise ValueError("A dollar size must be positive")
-        requested = min(source_usd, connection.full_position_usd).quantize(
-            Decimal("0.01"), rounding=ROUND_DOWN
-        )
-        if requested <= 0:
-            return BudgetDecision(None, "below_minimum_budget")
-        return BudgetDecision(requested, "ready", requested=requested)
-    fraction = source_fraction if source_fraction is not None else Decimal(1)
-    if not fraction.is_finite() or not 0 < fraction <= 1:
+        return _asked(min(source_usd, connection.full_position_usd))
+    if source_fraction is None:
+        if unsized_usd is None:
+            return BudgetDecision(None, "unsized_buy")
+        return _asked(min(unsized_usd, connection.full_position_usd))
+    if not source_fraction.is_finite() or not 0 < source_fraction <= 1:
         raise ValueError("Source fraction must be between zero and one")
     # A third is 0.333…3 in Decimal, so first settle the product's last digits (a third of $3000
     # is $1000, not $999.99), then round down to the cent so six sixths never pass the position.
-    exact = (connection.full_position_usd * fraction).quantize(PRODUCT_PLACES, ROUND_HALF_UP)
-    requested = exact.quantize(Decimal("0.01"), rounding=ROUND_DOWN)
+    exact = (connection.full_position_usd * source_fraction).quantize(PRODUCT_PLACES, ROUND_HALF_UP)
+    return _asked(exact)
+
+
+def _asked(amount: Decimal) -> BudgetDecision:
+    requested = amount.quantize(Decimal("0.01"), rounding=ROUND_DOWN)
     if requested <= 0:
         return BudgetDecision(None, "below_minimum_budget")
     return BudgetDecision(requested, "ready", requested=requested)
@@ -107,30 +116,34 @@ def account_exposure(
     *,
     account_currency: str,
 ) -> AccountExposure:
-    """Conservative USD holdings plus unfilled buy reserves, with no fill double count."""
+    """What CopyTrading has in each stock, in USD: the shares it bought, at the higher of what they
+    cost and what they are worth now, plus unfilled buy reserves. The owner's own shares are not
+    counted; the limits bound what CopyTrading does."""
     if account_currency != "USD":
         raise ValueError("Unsupported account valuation currency")
-    by_symbol: dict[str, Decimal] = {}
     if len({position.symbol for position in positions}) != len(positions):
         raise ValueError("Duplicate broker positions prevent account risk evaluation")
-    for position in positions:
-        if position.qty == 0:
-            continue
-        if position.qty < 0 or position.asset_class != "us_equity":
-            raise ValueError("Unsupported short or non-equity broker position")
-        value = position.market_value
-        if position.currency != "USD" or value is None or not value.is_finite() or value <= 0:
-            raise ValueError("Broker position valuation is unavailable or non-USD")
-        by_symbol[position.symbol] = value
-    # What the copied shares of each stock cost, all of its lots together.
+    shares: dict[str, Decimal] = {}
     cost: dict[str, Decimal] = {}
     for lot in lots:
         if lot.remaining_qty:
+            shares[lot.symbol] = shares.get(lot.symbol, Decimal(0)) + lot.remaining_qty
             cost[lot.symbol] = (
                 cost.get(lot.symbol, Decimal(0)) + lot.remaining_qty * lot.average_price
             )
+    held = {position.symbol: position for position in positions}
+    by_symbol: dict[str, Decimal] = {}
     for symbol, basis in cost.items():
-        by_symbol[symbol] = max(by_symbol.get(symbol, Decimal(0)), basis)
+        worth = Decimal(0)
+        position = held.get(symbol)
+        if position is not None and position.qty:
+            if position.qty < 0 or position.asset_class != "us_equity":
+                raise ValueError("Unsupported short or non-equity broker position")
+            value = position.market_value
+            if position.currency != "USD" or value is None or not value.is_finite() or value <= 0:
+                raise ValueError("Broker position valuation is unavailable or non-USD")
+            worth = shares[symbol] * value / position.qty
+        by_symbol[symbol] = max(worth, basis)
     for order in pending:
         if order.pending and order.side == "buy":
             if order.limit_price is None:
@@ -149,34 +162,49 @@ def entry_budget(
     source_fraction: Decimal | None,
     source_usd: Decimal | None = None,
 ) -> BudgetDecision:
-    """Each buy gets its destination's budget once; limits apply to that result."""
+    """Each buy gets its destination's budget once. The largest single buy and the room left
+    under the per-stock and total limits cut it; it is refused only when that room is under
+    Alpaca's $1 minimum. The daily loss cap refuses outright: it is a stop, not a size."""
     if not facts.account_active:
         return BudgetDecision(None, "account_blocked")
     if facts.equity - facts.last_equity <= -config.daily_loss_cap_usd:
         return BudgetDecision(None, "daily_loss_cap")
     if facts.entries_today >= config.max_entries_per_day:
         return BudgetDecision(None, "daily_entry_cap")
-    asked = requested_entry_budget(connection, source_fraction, source_usd)
+    asked = requested_entry_budget(
+        connection, source_fraction, source_usd, unsized_usd=config.max_order_usd
+    )
     if asked.budget is None:
         return asked
     requested = asked.budget
-    # The maximum per order only trims; the trim is recorded so it can be shown.
-    budget = min(requested, config.max_order_usd)
-    breaches = []
-    if facts.symbol_exposure + budget > config.max_symbol_usd:
-        breaches.append(
-            ExposureBreach("symbol", facts.symbol_exposure, budget, config.max_symbol_usd)
+    budget, limited_by = requested, None
+    room: tuple[tuple[BuyLimit, Decimal], ...] = (
+        ("largest_single_buy", config.max_order_usd),
+        ("symbol_exposure_cap", config.max_symbol_usd - facts.symbol_exposure),
+        ("total_exposure_cap", config.max_total_usd - facts.total_exposure),
+    )
+    for limit, left in room:
+        if left < budget:
+            budget, limited_by = left, limit
+    budget = max(budget, Decimal(0)).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
+    if budget < MINIMUM_ORDER_USD:
+        breaches = tuple(
+            breach
+            for breach in (
+                ExposureBreach("symbol", facts.symbol_exposure, requested, config.max_symbol_usd),
+                ExposureBreach("total", facts.total_exposure, requested, config.max_total_usd),
+            )
+            if breach.limit - breach.current < MINIMUM_ORDER_USD
         )
-    if facts.total_exposure + budget > config.max_total_usd:
-        breaches.append(ExposureBreach("total", facts.total_exposure, budget, config.max_total_usd))
-    if breaches:
         scopes = {breach.scope for breach in breaches}
         reason = (
             "symbol_and_total_exposure_cap"
             if len(scopes) == 2
             else f"{next(iter(scopes))}_exposure_cap"
+            if scopes
+            else "below_minimum_budget"
         )
-        return BudgetDecision(None, reason, tuple(breaches), requested)
+        return BudgetDecision(None, reason, breaches, requested)
     if budget > min(facts.cash, facts.buying_power):
         return BudgetDecision(None, "insufficient_cash", requested=requested)
-    return BudgetDecision(budget, "ready", requested=requested)
+    return BudgetDecision(budget, "ready", requested=requested, limited_by=limited_by)

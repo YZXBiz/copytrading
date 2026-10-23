@@ -2,6 +2,8 @@
 
 import asyncio
 import datetime as dt
+import sqlite3
+from contextlib import closing
 
 import pytest
 from pydantic import SecretStr, ValidationError
@@ -265,6 +267,10 @@ async def test_preview_path_registers_the_provider_key_before_decoder_factory(tm
     await store.recovery_start(123, 1)
     await store.capture_recovery_page(123, [source_event], [], 999)
     await store.close()
+    # A post read back now is read like any other; only a capture saved as history before
+    # that change can still be previewed, so the test saves one as history.
+    with closing(sqlite3.connect(tmp_path / "application.db")) as db, db:
+        db.execute("UPDATE source_captures SET mode='historical'")
 
     async def decoder_factory(name, config):
         key = config.api_key.get_secret_value()

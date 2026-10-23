@@ -1221,7 +1221,7 @@ def j6_setup_editing(app: AppDriver) -> None:
         "Alpaca keys",
         "Position limits (USD)",
         "Maximum per stock",
-        "Maximum below signal price (%)",
+        "Lowest sell price (% under the guru's)",
         "Ask me before sending orders",
         "Remove Account",
     )
@@ -1603,10 +1603,10 @@ def j40_live_limits(app: AppDriver) -> None:
 
     # Edit Limits, under the balance, opens the account sheet scrolled to its limits.
     app.click("account.editLimits")
-    app.wait_for("Maximum per order", timeout=15, name="limits-sheet")
+    app.wait_for("Largest single buy", timeout=15, name="limits-sheet")
     time.sleep(0.6)
-    target = "175" if app.field_value("Maximum per order") == "150" else "150"
-    app.type(target, into="Maximum per order")
+    target = "175" if app.field_value("Largest single buy") == "150" else "150"
+    app.type(target, into="Largest single buy")
     app.click("Done")
     app.open_screen("account.primary")
     app.wait_for("Saved · applies to the next order", timeout=30, name="limits-saved")

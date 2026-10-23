@@ -126,7 +126,7 @@ private func anUnfilledBuySaysWhyItWasCancelled() throws {
     try #require(
         result.facts
             == [
-                .init(label: "Waited", value: "1 min 2 s"), .init(label: "Order", value: "$200 · your max per order"),
+                .init(label: "Waited", value: "1 min 2 s"), .init(label: "Order", value: "$200 · your largest single buy"),
                 .init(label: "The call asked for", value: "$600"),
             ],
         "facts were \(result.facts)")

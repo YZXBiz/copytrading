@@ -98,7 +98,8 @@ public struct TradingAccountPolicy: Codable, Equatable, Sendable {
     public var maxTotalUSD = "2500"
     public var dailyLossCapUSD = "250"
     public var maxEntriesPerDay = 30
-    public var maxSignalAgeSeconds = 120
+    /// How old a buy may be and still be copied; a sell is never too old (ADR-0010).
+    public var maxSignalAgeSeconds = 600
     public var orderTimeoutSeconds = 60
     public var pollSeconds = 2.0
     public var extendedHours = true
@@ -107,7 +108,8 @@ public struct TradingAccountPolicy: Codable, Equatable, Sendable {
     /// Off by default. On, no order is sent by itself: each waits for the owner's Touch ID (ADR-0008).
     public var approveOrders = false
     public var maxAboveSignalPct = "0"
-    /// How far below the guru's sell price an exit may fill: every sell is a limit order.
+    /// How far under the guru's sell price a sell may fill: every sell is a limit order at that
+    /// floor, and it keeps working until the market reaches it (ADR-0010).
     public var maxBelowSignalPct = "1"
 
     public init() {}
@@ -130,8 +132,8 @@ public struct TradingAccountPolicy: Codable, Equatable, Sendable {
     }
 }
 
-/// One guru copying into one account (ADR-0007). The guru's full position is the account's
-/// maximum per stock; a call buys its share of it.
+/// One guru copying into one account (ADR-0007). The guru's full position is its own; a call buys
+/// its share of it, and the account's maximum per stock only caps what is bought (ADR-0010).
 public struct TradingRouteConnection: Codable, Equatable, Identifiable, Sendable {
     public var accountID: String
     public var fullPositionUSD: String
@@ -147,19 +149,18 @@ public struct TradingRouteConnection: Codable, Equatable, Identifiable, Sendable
     /// engine's rule exactly (`requested_entry_budget`): the product's repeating digits settle at
     /// ten places, then it rounds down to the cent, so a third of $3000 is $1000 and six sixths
     /// never pass the full position. `sizing-examples.json` holds both sides to it. A call sized in
-    /// dollars asks for that amount, never more than the full position.
-    public func copiedBudgetUSD(sourceFraction: Decimal?, sourceUSD: Decimal? = nil) -> Decimal? {
-        if let sourceUSD {
-            guard let full = Decimal(string: fullPositionUSD), full > 0, sourceUSD > 0 else { return nil }
-            var usd = min(sourceUSD, full)
+    /// dollars asks for that amount, and a call with no size asks for the account's largest single
+    /// buy (`unsizedUSD`), never more than the full position; with no `unsizedUSD`, nothing.
+    public func copiedBudgetUSD(sourceFraction: Decimal?, sourceUSD: Decimal? = nil, unsizedUSD: Decimal?) -> Decimal? {
+        guard let full = Decimal(string: fullPositionUSD), full > 0 else { return nil }
+        if let dollars = sourceUSD ?? (sourceFraction == nil ? unsizedUSD : nil) {
+            guard dollars > 0 else { return nil }
+            var usd = min(dollars, full)
             var cents = Decimal()
             NSDecimalRound(&cents, &usd, 2, .down)
             return cents > 0 ? cents : nil
         }
-        // A call that names no size asks for the full position (ADR-0010).
-        let fraction = sourceFraction ?? 1
-        guard let full = Decimal(string: fullPositionUSD), full > 0, fraction > 0, fraction <= 1
-        else { return nil }
+        guard let fraction = sourceFraction, fraction > 0, fraction <= 1 else { return nil }
         var product = full * fraction
         var settled = Decimal()
         NSDecimalRound(&settled, &product, 10, .plain)
@@ -168,11 +169,15 @@ public struct TradingRouteConnection: Codable, Equatable, Identifiable, Sendable
         return cents > 0 ? cents : nil
     }
 
-    /// What a call spends in an account: what it asks for, cut to the account's max per order,
-    /// as the engine's `entry_budget` cuts it before its exposure and cash checks. The copy sheet
-    /// shows this, so the owner confirms the dollars the engine's plan spends.
+    /// The most a call spends in an account: what it asks for, cut to the account's largest single
+    /// buy, as the engine's `entry_budget` cuts it before the room under its other limits and its
+    /// cash. Only the engine knows that room, so the copy sheet shows this as "up to" until the
+    /// engine's check says what it plans.
     public func spentUSD(sourceFraction: Decimal?, sourceUSD: Decimal? = nil, maxOrderUSD: Decimal?) -> Decimal? {
-        guard let asked = copiedBudgetUSD(sourceFraction: sourceFraction, sourceUSD: sourceUSD) else { return nil }
+        guard
+            let asked = copiedBudgetUSD(
+                sourceFraction: sourceFraction, sourceUSD: sourceUSD, unsizedUSD: maxOrderUSD)
+        else { return nil }
         guard let maxOrderUSD else { return asked }
         return min(asked, maxOrderUSD)
     }

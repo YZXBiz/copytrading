@@ -7,7 +7,7 @@ import pytest
 
 from copytrading_engine.execution.application.engine import CopyEngine
 from copytrading_engine.execution.application.ports import BrokerError
-from copytrading_engine.execution.domain.progress import Skipped
+from copytrading_engine.execution.domain.progress import Pending
 from copytrading_engine.execution.domain.signals import CopyConfig
 
 from .builders import NOW, deliver, event
@@ -113,9 +113,8 @@ def test_missing_lot_cannot_be_sold_or_recreated(copier):
     deliver(engine, event())
     broker.holdings.clear()
     deliver(engine, event("exit", action="close", price="27", entry="25"))
-    assert engine.ledger.message("discord:demo:exit").parts == (
-        Skipped(reason="position_mismatch"),
-    )
+    # The sell waits for the holdings question instead of selling shares Alpaca doesn't hold.
+    assert engine.ledger.message("discord:demo:exit").parts == (Pending(),)
     assert engine.ledger.owned("ABC") == 4
     assert broker.calls == 1
 

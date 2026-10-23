@@ -1,18 +1,19 @@
 import DesktopCore
 import Foundation
 
-/// What the drafted trades would place, worked out in the app before the engine checks them: the
-/// one-line preview under the choices and the words on the sheet's button. A buy is the guru's
-/// share of the full position cut to the account's max per order, the dollars the engine's plan
-/// spends, in shares at the order's limit: the price plus the account's allowance above it, as
-/// the engine's `limit_price` sets it.
+/// What the drafted trades would place: the one-line preview under the choices and the words on the
+/// sheet's button. Before the engine checks a buy, it is "up to" the guru's share of the full
+/// position cut to the account's largest single buy, since the per-stock and total limits, which only
+/// the engine checks, may cut it further; once the engine's check answers, it is the dollars that
+/// check plans. Shares are counted at the order's limit: the price plus the account's allowance
+/// above it, as the engine's `limit_price` sets it.
 struct ManualOrderEstimate {
     let drafts: [ManualInstructionDraft]
     /// The chosen accounts, in the order the sheet lists them.
     let accounts: [AccountOverview]
     /// This guru's full position in each account, by account.
     let connections: [String: TradingRouteConnection]
-    /// Each account's max per order, by account: no one buy spends more.
+    /// Each account's largest single buy, by account: no one buy spends more.
     let maxOrderUSD: [String: Decimal]
     /// How far above the price each account's buy limit sits, in percent, by account.
     var maxAbovePct: [String: Decimal] = [:]
@@ -20,20 +21,23 @@ struct ManualOrderEstimate {
     /// The broker's latest quote for each stock, by symbol: a sell is valued at the bid, and a buy
     /// at the market is counted in shares at the ask.
     var quotes: [String: LiveQuote] = [:]
+    /// The dollars the engine's check plans for each buy, by "account:index", once it has answered.
+    var planned: [String: Decimal] = [:]
 
-    /// The order as one line, "Sell 0.442 WMT ≈ $48.70" or "Buy $1,000 of AAPL ≈ 4.414 shares at
+    /// The order as one line, "Sell 0.442 WMT ≈ $48.70" or "Buy up to $1,000 of AAPL ≈ 4.414 shares at
     /// $226.56", and the accounts it goes to, "primary ·
     /// Paper"; nil until a whole trade and an account are chosen.
     @MainActor var summary: (order: String, place: String)? {
         let valid = drafts.filter(\.isValid)
-        guard let draft = valid.first, let account = accounts.first else { return nil }
-        var order = phrase(draft, in: account)
+        guard let index = drafts.firstIndex(where: \.isValid), let account = accounts.first else { return nil }
+        var order = phrase(drafts[index], at: index, in: account)
         if valid.count > 1 { order = L10n.string("%@ and %lld more", order, Int64(valid.count - 1)) }
         let place = accounts.map { L10n.string("%@ · %@", $0.accountID, L10n.string($0.environment == .live ? "Live" : "Paper")) }
         return (order, place.joined(separator: "   "))
     }
 
-    /// The button: "Sell 0.442 WMT", "Buy $100 of WMT", "Approve", or "Copy".
+    /// The button: "Sell 0.442 WMT", "Buy up to $100 of WMT" ("Buy $100 of WMT" once the engine has
+    /// checked it), "Approve", or "Copy".
     @MainActor var action: String {
         if mode == .approve { return L10n.string("Approve") }
         guard drafts.count == 1, let draft = drafts.first else { return L10n.string("Copy Calls") }
@@ -44,14 +48,17 @@ struct ManualOrderEstimate {
             if draft.isSell, let shares = shares(draft, in: account), shares > 0 {
                 return L10n.string("Sell %@ %@", Self.count(shares), symbol)
             }
+            if !draft.isSell, let planned = planned["\(account.accountID):0"] {
+                return L10n.string("Buy %@ of %@", Humanize.dollars("\(planned)"), symbol)
+            }
             if !draft.isSell, let budget = budget(draft, in: account) {
-                return L10n.string("Buy %@ of %@", Humanize.dollars("\(budget)"), symbol)
+                return L10n.string("Buy up to %@ of %@", Humanize.dollars("\(budget)"), symbol)
             }
         }
         return L10n.string(draft.isSell ? "Sell %@" : "Buy %@", symbol)
     }
 
-    @MainActor private func phrase(_ draft: ManualInstructionDraft, in account: AccountOverview) -> String {
+    @MainActor private func phrase(_ draft: ManualInstructionDraft, at index: Int, in account: AccountOverview) -> String {
         let symbol = draft.symbol.trimmed.uppercased()
         let price = Decimal(string: draft.price.trimmed)
         if draft.isSell {
@@ -66,13 +73,20 @@ struct ManualOrderEstimate {
         }
         let ask = price ?? quotes[symbol]?.ask
         let at = ask.map(Humanize.usd) ?? "—"
-        guard let budget = budget(draft, in: account) else { return L10n.string("Buy %@ at %@", symbol, at) }
-        guard let ask else { return L10n.string("Buy %@ of %@ at %@", Humanize.dollars("\(budget)"), symbol, at) }
+        let checked = planned["\(account.accountID):\(index)"]
+        guard let budget = checked ?? budget(draft, in: account) else { return L10n.string("Buy %@ at %@", symbol, at) }
+        let dollars = Humanize.dollars("\(budget)")
+        guard let ask else {
+            return checked != nil
+                ? L10n.string("Buy %@ of %@ at %@", dollars, symbol, at)
+                : L10n.string("Buy up to %@ of %@ at %@", dollars, symbol, at)
+        }
         let limit = Self.limit(ask, abovePct: maxAbovePct[account.accountID] ?? 0)
         // The sentence says the count is an estimate; the count never adds a second "≈".
-        return L10n.string(
-            "Buy %@ of %@ ≈ %@ at %@", Humanize.dollars("\(budget)"), symbol,
-            Humanize.shares(budget / limit, marksRounding: false), Humanize.usd(limit))
+        let shares = Humanize.shares(budget / limit, marksRounding: false)
+        return checked != nil
+            ? L10n.string("Buy %@ of %@ ≈ %@ at %@", dollars, symbol, shares, Humanize.usd(limit))
+            : L10n.string("Buy up to %@ of %@ ≈ %@ at %@", dollars, symbol, shares, Humanize.usd(limit))
     }
 
     /// A buy's limit as the engine sets it: the price plus the allowance, down to a cent (a
@@ -104,7 +118,7 @@ struct ManualOrderEstimate {
     }
 
     /// What a buy spends in the account, as the engine's `entry_budget` cuts it: its share of the
-    /// full position, then no more than the max per order.
+    /// full position, then no more than the largest single buy.
     func budget(_ draft: ManualInstructionDraft, in account: AccountOverview) -> Decimal? {
         connections[account.accountID]?.spentUSD(
             sourceFraction: Decimal(string: draft.fraction.trimmed),

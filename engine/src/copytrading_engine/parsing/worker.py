@@ -27,7 +27,6 @@ class ParseWorker:
         decoder: Decoder,
         routes: Mapping[str, Route],
         model: str,
-        max_age: int = 120,
         daily_limit: int = 2000,
         *,
         observe: Callable[[str], AbstractContextManager] = lambda _: nullcontext(),
@@ -37,7 +36,7 @@ class ParseWorker:
         on_decision: Callable[[str], None] = lambda _: None,
     ) -> None:
         self.store, self.decoder, self.routes = store, decoder, freeze_routes(routes)
-        self.model, self.max_age, self.daily_limit = model, max_age, daily_limit
+        self.model, self.daily_limit = model, daily_limit
         self.model_health = ModelReadiness()
         self.observe = observe
         self.observe_workflow = observe_workflow
@@ -63,8 +62,6 @@ class ParseWorker:
             reason = route_error or "source_profile_not_configured"
         elif age < -5:
             reason = "future_signal"
-        elif age > self.max_age:
-            reason = "stale_signal"
         elif (result := without_model(raw, route, self.model)) is not None:
             pass
         elif attempts >= 3:
@@ -85,16 +82,15 @@ class ParseWorker:
             else:
                 reason = "daily_model_request_budget_exhausted"
         if reason:
-            if reason in {"stale_signal", "future_signal"}:
+            if reason == "future_signal":
                 log.warning(
                     "signal_timing_rejected id=%s reason=%s source_at=%s processed_at=%s "
-                    "age_seconds=%s max_age_seconds=%s",
+                    "age_seconds=%s",
                     key,
                     reason,
                     raw.timestamp.isoformat(),
                     now.isoformat(),
                     age,
-                    self.max_age,
                 )
             result = self._review(raw, route, reason)
         if result is not None:

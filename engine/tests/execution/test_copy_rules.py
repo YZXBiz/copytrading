@@ -135,9 +135,9 @@ def test_half_with_no_price_sells_half_at_a_limit_just_under_the_live_bid():
         ),
     ],
 )
-def test_a_sell_at_the_market_with_no_live_bid_waits_until_the_post_is_too_old(broker):
+def test_a_sell_at_the_market_with_no_live_bid_waits_for_one_however_long(broker):
     """A thin market's quotes can be minutes apart: the sell sends nothing and waits for a live
-    bid, until the account's maximum signal age says the post is too old."""
+    bid. A sell is never too old (ADR-0010), so it is still waiting an hour later."""
     engine = _engine(broker)
     deliver(engine, _whole(event("1", price="25")))
     calls = broker.calls
@@ -146,8 +146,8 @@ def test_a_sell_at_the_market_with_no_live_bid_waits_until_the_post_is_too_old(b
     assert isinstance(_outcome(engine, "2"), Pending)
     assert broker.calls == calls
 
-    engine.process(NOW + dt.timedelta(minutes=11))
-    assert _outcome(engine, "2") == Skipped(reason="stale")
+    engine.process(NOW + dt.timedelta(hours=1))
+    assert isinstance(_outcome(engine, "2"), Pending)
     assert broker.calls == calls
 
 
@@ -164,8 +164,8 @@ def test_a_sell_at_the_market_waits_out_a_quote_the_broker_cannot_give():
     deliver(engine, _at_market(event("2", "close", timestamp=NOW + dt.timedelta(seconds=1))))
     assert isinstance(_outcome(engine, "2"), Pending)
 
-    engine.process(NOW + dt.timedelta(minutes=11))
-    assert _outcome(engine, "2") == Skipped(reason="stale")
+    engine.process(NOW + dt.timedelta(hours=1))
+    assert isinstance(_outcome(engine, "2"), Pending)
 
 
 def test_a_sell_at_the_market_goes_out_once_a_fresh_bid_arrives():
@@ -314,7 +314,7 @@ def test_a_held_buy_alerts_that_it_waits_for_the_owner():
     assert "approve or skip" in held.payload.annotations["evidence"]
 
 
-def test_activity_shows_what_a_trimmed_buy_asked_for_and_which_limit_a_skip_hit():
+def test_activity_shows_what_a_trimmed_buy_asked_for_which_limit_cut_it_and_which_a_skip_hit():
     from copytrading_engine.execution.presentation.operator_views import destination_views
 
     engine = _engine(FakeBroker())
@@ -322,15 +322,31 @@ def test_activity_shows_what_a_trimmed_buy_asked_for_and_which_limit_a_skip_hit(
     for item in (*trimmed["instructions"], *trimmed["evidence"]):
         item["fraction"] = "0.5"
     deliver(engine, trimmed)
+    # $100 of ABC held: a $150 per-stock limit leaves $50 of room for the next buy.
     engine.config = CopyConfig.model_validate(
         engine.config.model_dump() | {"max_symbol_usd": "150", "max_order_usd": "150"}
     )
     later = NOW + dt.timedelta(minutes=11)
     deliver(engine, event("2", timestamp=later), later)
+    # Then $150 held under a $150.50 limit: 50 cents of room is under Alpaca's $1 minimum.
+    engine.config = CopyConfig.model_validate(
+        engine.config.model_dump() | {"max_symbol_usd": "150.50"}
+    )
+    latest = NOW + dt.timedelta(minutes=22)
+    deliver(engine, event("3", timestamp=latest), latest)
 
-    views = destination_views(engine.ledger.snapshot(), {"discord:demo:1", "discord:demo:2"})
+    views = destination_views(
+        engine.ledger.snapshot(), {"discord:demo:1", "discord:demo:2", "discord:demo:3"}
+    )
 
     [order] = views["discord:demo:1"].orders
-    assert (order.instruction_index, order.requested_usd, order.budget_usd) == (0, 300, 100)
-    [limit] = views["discord:demo:2"].limits_hit
-    assert (limit.part, limit.scope, limit.limit) == (0, "symbol", 150)
+    assert (order.instruction_index, order.requested_usd, order.budget_usd, order.limited_by) == (
+        0,
+        300,
+        100,
+        "largest_single_buy",
+    )
+    [room] = views["discord:demo:2"].orders
+    assert (room.budget_usd, room.limited_by) == (50, "symbol_exposure_cap")
+    [limit] = views["discord:demo:3"].limits_hit
+    assert (limit.part, limit.scope, limit.limit) == (0, "symbol", Decimal("150.50"))

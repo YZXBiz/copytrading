@@ -1945,17 +1945,18 @@ final class AppModel {
             guard route.source == "discord", route.guruID == profiles[route.profileRevision]?.guruID else {
                 throw fail(L10n.string("“%@” doesn't match its saved details. Open the guru in Connections and check its fields.", name))
             }
-            // One guru copies into one account, sized from that account's maximum per stock.
+            // One guru copies into one account, sized from its own full position (ADR-0010).
             guard let connection = route.connections.first else {
                 throw fail(L10n.string("“%@” needs an account to copy into.", name))
             }
             guard let account = configuration.accounts.first(where: { $0.id == connection.accountID }) else {
                 throw fail(L10n.string("“%@” copies into “%@”, which isn't one of your broker accounts.", name, connection.accountID))
             }
-            guard let full = Decimal(string: account.policy.maxSymbolUSD), full > 0,
-                connection.fullPositionUSD == account.policy.maxSymbolUSD
-            else {
-                throw fail(L10n.string("Set a max per stock for “%@”. It's %@'s full position.", account.id, name))
+            guard let full = Decimal(string: connection.fullPositionUSD), full > 0 else {
+                throw fail(
+                    L10n.string(
+                        "Set %@'s full position, or a max per stock for “%@”: a 1/6 call buys a sixth of it.", name,
+                        account.id))
             }
             if let other = copiedInto[connection.accountID] {
                 throw fail(L10n.string("“%@” already copies “%@”. Each account copies one guru.", connection.accountID, other))

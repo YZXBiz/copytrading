@@ -19,6 +19,8 @@ public struct SourceActivityBuilder {
     public func text(_ text: String) -> Self { setting("text", text) }
     public func guru(_ guruID: String) -> Self { setting("guru_id", guruID) }
     public func posted(at iso: String) -> Self { setting("source_at", iso).setting("captured_at", iso) }
+    /// When CopyTrading read the post, for one read long after it was posted.
+    public func captured(at iso: String) -> Self { setting("captured_at", iso) }
     public func sequence(_ sequence: Int, sourceID: String) -> Self {
         setting("sequence", sequence).setting("source_id", sourceID)
     }
@@ -42,13 +44,15 @@ public struct SourceActivityBuilder {
     }
     public func destination(
         _ account: String, status: String, outcomes: [String] = [], environment: String = "paper",
-        limits: [[String: Any]] = [], orders: [[String: Any]] = [], timeline: [[String: Any]] = []
+        limits: [[String: Any]] = [], orders: [[String: Any]] = [], timeline: [[String: Any]] = [],
+        laterBuys: [[String: Any]] = []
     ) -> Self {
         var copy = self
         var destinations = copy.payload["destinations"] as? [Any] ?? []
         destinations.append([
             "account_id": account, "environment": environment, "status": status,
-            "instruction_outcomes": outcomes, "limits_hit": limits, "orders": orders, "timeline": timeline,
+            "instruction_outcomes": outcomes, "limits_hit": limits, "later_buys": laterBuys, "orders": orders,
+            "timeline": timeline,
         ])
         copy.payload["destinations"] = destinations
         return copy

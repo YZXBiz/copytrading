@@ -1,5 +1,5 @@
 {
-  "about": "What a call asks for: its share of the guru's full position (ADR-0007), and, where an example names the account's max per order, what it spends after that cut. The engine (requested_entry_budget, entry_budget) and the app (copiedBudgetUSD, spentUSD) must both give these.",
+  "about": "What a call asks for: its share of the guru's full position (ADR-0010), and, where an example names the account's largest single buy (max_order_usd), what it spends after that cut. A call with no size asks for the largest single buy, never more than the full position. The engine (requested_entry_budget, entry_budget) and the app (copiedBudgetUSD, spentUSD) must both give these.",
   "examples": [
     {
       "case": "a sixth of 3000",
@@ -83,10 +83,20 @@
       "budget_usd": "308.64"
     },
     {
-      "case": "no size buys the full position",
+      "case": "no size buys the largest single buy",
       "full_position_usd": "3000",
       "fraction": null,
-      "budget_usd": "3000.00"
+      "budget_usd": "200.00",
+      "max_order_usd": "200",
+      "spent_usd": "200.00"
+    },
+    {
+      "case": "no size never buys more than the full position",
+      "full_position_usd": "100",
+      "fraction": null,
+      "budget_usd": "100.00",
+      "max_order_usd": "250",
+      "spent_usd": "100.00"
     },
     {
       "case": "under a cent buys nothing",
@@ -98,15 +108,18 @@
       "budget_usd": null
     },
     {
-      "case": "the full 1000 stops at a 250 max per order",
+      "case": "half of 1000 stops at a 250 largest single buy",
       "full_position_usd": "1000",
-      "fraction": null,
-      "budget_usd": "1000.00",
+      "fraction": {
+        "numerator": 1,
+        "denominator": 2
+      },
+      "budget_usd": "500.00",
       "max_order_usd": "250",
       "spent_usd": "250"
     },
     {
-      "case": "a quarter of 1000 is exactly a 250 max per order",
+      "case": "a quarter of 1000 is exactly a 250 largest single buy",
       "full_position_usd": "1000",
       "fraction": {
         "numerator": 1,
@@ -117,7 +130,7 @@
       "spent_usd": "250.00"
     },
     {
-      "case": "a sixth of 1000 fits under a 250 max per order",
+      "case": "a sixth of 1000 fits under a 250 largest single buy",
       "full_position_usd": "1000",
       "fraction": {
         "numerator": 1,

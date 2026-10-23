@@ -13,7 +13,7 @@ QUOTE_MAX_AGE_SECONDS = 30
 # A sell at the market only takes its floor from the bid: an older bid can leave the order resting
 # but never fill it worse, since a limit sell fills at the market's better price. Outside regular
 # hours the free feed stops updating at the close, so the day's last bid is the bid there is; at
-# worst the sell rests until its timeout and the shares stay.
+# worst the sell rests at that floor until the market reaches it.
 SELL_FLOOR_QUOTE_MAX_AGE_SECONDS = 6 * 3600
 
 

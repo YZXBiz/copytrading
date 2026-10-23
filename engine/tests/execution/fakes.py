@@ -42,6 +42,8 @@ class FakeBroker:
         self.calls = 0
         self.timeout_after_accept = False
         self.auto_fill = True
+        # What Alpaca says an order is when it is sent; it can hold one as pending_new first.
+        self.submitted_status = "new"
         self.market_fill_price = "24.50"
         # Symbols Alpaca does not list: asking for one answers 404.
         self.unknown_symbols: set[str] = set()
@@ -119,7 +121,7 @@ class FakeBroker:
             **request,
             "id": f"broker-{self.calls}",
             "filled_qty": "0",
-            "status": "new",
+            "status": self.submitted_status,
             "filled_avg_price": None,
         }
         if self.auto_fill:

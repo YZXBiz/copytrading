@@ -407,7 +407,8 @@ async def test_a_buy_that_ages_out_waiting_for_resume_says_it_waited_for_the_own
         buy = StockSignal.model_validate(event("too-late", price="25.10", timestamp=now))
         await owner.receive(destination_signal(buy, account_id="paper"), now)
         await owner.cycle(now, halted=False)
-        clock["at"] = now + dt.timedelta(minutes=5)
+        # Past the ten minutes a buy may be.
+        clock["at"] = now + dt.timedelta(minutes=11)
         await owner.cycle(clock["at"], halted=False)
         assert broker.calls == 0
         part = (await owner.observation()).ledger.messages["discord:demo:too-late"].parts[0]

@@ -13,6 +13,7 @@ from copytrading_engine.execution.domain.events import (
     MessageDone,
     OrderIntentReleased,
     OrderUpdate,
+    ReadBackSummary,
     SubmissionAborted,
     SubmissionUncertain,
     SubmitError,
@@ -57,6 +58,8 @@ def execution_notification(
     snapshot: LedgerSnapshot, event: JournalEvent
 ) -> NotificationIntent | None:
     payload = event.payload
+    if isinstance(payload, ReadBackSummary):
+        return _read_back_notification(payload, event)
     signal_id = getattr(payload, "message_id", None)
     if signal_id is None or signal_id not in snapshot.messages:
         return None
@@ -67,8 +70,8 @@ def execution_notification(
     key = f"{signal_id}:{payload.kind}"
     detail = ""
     if isinstance(payload, Message) and payload.status in {"stale", "out_of_order"}:
-        title = "Trade skipped"
-        detail = REASONS[payload.status]
+        # Read back after CopyTrading was off: told once, in the read-back summary.
+        return None
     elif isinstance(payload, Message) and payload.status == "review_required":
         title = "Waiting for you"
         detail = (
@@ -76,6 +79,8 @@ def execution_notification(
             "Open Activity to copy or skip it; it expires when its trading day ends"
         )
         category = "warning"
+    elif isinstance(payload, SkippedEvent) and payload.reason in {"stale", "out_of_order"}:
+        return None
     elif isinstance(payload, SkippedEvent):
         part = payload.part
         instruction = message.instructions[part]
@@ -214,6 +219,43 @@ def execution_notification(
                 "signal_id": signal_id,
                 "source_time": message.timestamp.isoformat(),
                 "trace_id": hashlib.sha256(signal_id.encode()).hexdigest()[:32],
+            },
+            starts_at=event.at,
+        ),
+    )
+
+
+def _plural(count: int, word: str) -> str:
+    return f"{count} {word}" if count == 1 else f"{count} {word}s"
+
+
+def _read_back_notification(payload: ReadBackSummary, event: JournalEvent) -> NotificationIntent:
+    """One message for every post read back after CopyTrading was off, not one per post."""
+    key = f"read-back:{event.at.isoformat()}"
+    title = f"Read {_plural(payload.posts, 'post')} posted while CopyTrading was off"
+    detail = (
+        f"{_plural(payload.sells_copied, 'sell')} copied, "
+        f"{_plural(payload.buys_too_old, 'buy')} too old to copy"
+    )
+    return NotificationIntent(
+        key=key,
+        stream_id="read-back",
+        payload=NotificationPayload(
+            labels={
+                "alertname": "TradeActivity",
+                "system": "copytrade",
+                "job": "execution",
+                "severity": "info",
+                "signal_id": "read-back",
+                "notification_id": key,
+            },
+            annotations={
+                "summary": title,
+                "evidence": detail,
+                "source_excerpt": "",
+                "signal_id": "read-back",
+                "source_time": event.at.isoformat(),
+                "trace_id": hashlib.sha256(key.encode()).hexdigest()[:32],
             },
             starts_at=event.at,
         ),

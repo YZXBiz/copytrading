@@ -27,12 +27,13 @@ struct OrderFactsView: View {
         }
     }
 
-    /// "$200 of PM", or "$200 of PM · your max per order (the call asked for $600)" when the max
-    /// per order capped it.
+    /// "$200 of PM", or "$200 · your largest single buy (the call asked for $600)" when a limit cut
+    /// it, naming the limit.
     private var size: String? {
         guard let planned = OrderAmount.planned(order) else { return nil }
         return ActivityCardOutcome.wasTrimmed(order)
-            ? L10n.string("%@ · your max per order (the call asked for %@)", planned, Humanize.dollars(order.requestedUSD))
+            ? L10n.string(
+                "%@ (the call asked for %@)", ActivityCardOutcome.cut(order), Humanize.dollars(order.requestedUSD))
             : planned
     }
 

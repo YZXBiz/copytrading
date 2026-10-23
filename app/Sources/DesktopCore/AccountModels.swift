@@ -321,9 +321,11 @@ public struct OrderActivity: Codable, Equatable, Identifiable, Sendable {
     public let createdAt: String
     /// Which of the post's calls this order places.
     public let instructionIndex: Int
-    /// For a buy: what the call asked for, and what the maximum per order allowed of it.
+    /// For a buy: what the call asked for, what the account's limits allowed of it, and the limit
+    /// that cut it, when one did: largest_single_buy, symbol_exposure_cap, or total_exposure_cap.
     public let requestedUSD: String?
     public let budgetUSD: String?
+    public let limitedBy: String?
     /// How it went out: "limit" or "market", in which session, from which guru price, and how far
     /// above it a buy could pay.
     public let orderType: String?
@@ -351,6 +353,7 @@ public struct OrderActivity: Codable, Equatable, Identifiable, Sendable {
         case instructionIndex = "instruction_index"
         case requestedUSD = "requested_usd"
         case budgetUSD = "budget_usd"
+        case limitedBy = "limited_by"
         case orderType = "order_type"
         case session
         case sourcePrice = "source_price"
@@ -390,12 +393,27 @@ public struct LimitHit: Codable, Equatable, Sendable {
     public let limit: String
 }
 
+/// A sell skipped because the buys it would sell were posted after it (ADR-0010).
+public struct LaterBuy: Codable, Equatable, Sendable {
+    /// The call it skipped.
+    public let part: Int
+    /// When the first buy it would have sold was posted.
+    public let boughtAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case part
+        case boughtAt = "bought_at"
+    }
+}
+
 public struct DestinationActivity: Codable, Equatable, Identifiable, Sendable {
     public let accountID: String
     public let environment: String
     public let status: String
     public let instructionOutcomes: [String]
     public let limitsHit: [LimitHit]
+    /// Sells skipped because every buy they would sell was posted after them, with when.
+    public let laterBuys: [LaterBuy]
     public let orders: [OrderActivity]
     /// Every step the post took in this account, in order.
     public let timeline: [TimelineStep]
@@ -406,6 +424,7 @@ public struct DestinationActivity: Codable, Equatable, Identifiable, Sendable {
         case environment, status
         case instructionOutcomes = "instruction_outcomes"
         case limitsHit = "limits_hit"
+        case laterBuys = "later_buys"
         case orders, timeline
     }
 
@@ -416,6 +435,7 @@ public struct DestinationActivity: Codable, Equatable, Identifiable, Sendable {
         status = try values.decode(String.self, forKey: .status)
         instructionOutcomes = try values.decode([String].self, forKey: .instructionOutcomes)
         limitsHit = try values.decode([LimitHit].self, forKey: .limitsHit)
+        laterBuys = try values.decodeIfPresent([LaterBuy].self, forKey: .laterBuys) ?? []
         orders = try values.decode([OrderActivity].self, forKey: .orders)
         timeline = try values.decodeIfPresent([TimelineStep].self, forKey: .timeline) ?? []
     }

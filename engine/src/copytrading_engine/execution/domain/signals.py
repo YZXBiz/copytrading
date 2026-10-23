@@ -22,7 +22,8 @@ class AccountLimits(BaseModel):
     max_total_usd: Decimal = Field(default=Decimal("2500"), gt=0)
     daily_loss_cap_usd: Decimal = Field(default=Decimal("250"), gt=0)
     max_entries_per_day: StrictInt = Field(default=30, gt=0)
-    max_signal_age_seconds: StrictInt = Field(default=120, gt=0, le=600)
+    # How old a buy may be and still be copied; a sell never is too old (ADR-0010).
+    max_signal_age_seconds: StrictInt = Field(default=600, gt=0, le=600)
     order_timeout_seconds: StrictInt = Field(default=60, gt=0, le=600)
     poll_seconds: float = Field(default=2, ge=1, le=30)
     extended_hours: StrictBool = True

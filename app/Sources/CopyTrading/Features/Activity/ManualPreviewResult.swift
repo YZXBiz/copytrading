@@ -37,7 +37,7 @@ struct ManualPreviewResult: View {
     }
 
     /// The order the engine planned, in the words the owner confirms: a buy by the dollars it
-    /// spends after the max per order, a sell by its shares. A trade that can't go has no plan, so
+    /// spends after the largest single buy, a sell by its shares. A trade that can't go has no plan, so
     /// it is named by the side and stock it asked for.
     @MainActor private var headline: String {
         guard let plan = preview?.plan else {

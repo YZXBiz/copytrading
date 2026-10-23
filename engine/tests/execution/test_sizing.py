@@ -76,9 +76,24 @@ def test_compound_alert_sizes_each_entry_on_its_own(system):
     ]
 
 
-def test_compound_entries_obey_shared_total_cap(system):
+def test_compound_entries_share_the_total_cap_and_the_second_gets_the_room_left(system):
     engine, broker, _ = system
     engine.config = CopyConfig.model_validate(engine.config.model_dump() | {"max_total_usd": "150"})
+    message = event()
+    message["instructions"].append({**message["instructions"][0], "symbol": "DEF", "price": "20"})
+    message["evidence"].append(evidence(message["instructions"][1]))
+    deliver(engine, message)
+    assert broker.calls == 2
+    first, second = engine.ledger.orders()
+    assert first.budget_usd == Decimal(100)
+    assert (second.budget_usd, second.limited_by) == (Decimal(50), "total_exposure_cap")
+
+
+def test_compound_entries_skip_once_the_total_cap_leaves_under_a_dollar(system):
+    engine, broker, _ = system
+    engine.config = CopyConfig.model_validate(
+        engine.config.model_dump() | {"max_total_usd": "100.50"}
+    )
     message = event()
     message["instructions"].append({**message["instructions"][0], "symbol": "DEF", "price": "20"})
     message["evidence"].append(evidence(message["instructions"][1]))
@@ -226,7 +241,8 @@ def test_entry_tolerance_keeps_budget_and_source_lot_reference(system):
     # An exit is a limit order too: the guru's price less the 1% allowance, rounded up to a cent.
     assert sell["type"] == "limit"
     assert Decimal(sell["limit_price"]) == Decimal("23.76")
-    assert sell["extended_hours"] is True
+    # A regular-session order goes out unmarked for extended hours.
+    assert sell["extended_hours"] is False
     assert sell["filled_avg_price"] == "23.76"
     recorded = {order.side: order for order in store.load().orders.values()}
     assert recorded["buy"].filled_avg_price == Decimal("25.25")
@@ -294,12 +310,14 @@ def test_configured_500_budget_keeps_limit_price_sizing(system, whole_shares):
     deliver(
         engine, event(id="second", price="33.12", timestamp=later), later, full_position_usd="3000"
     )
-    assert broker.calls == 1  # the configured $600 per-symbol cap still applies
-    [skipped] = engine.ledger.message("discord:demo:second").parts
-    assert isinstance(skipped, Skipped)
-    # The skip keeps the limit it would have passed, with its numbers, for Activity to show.
-    [limit] = skipped.exposure
-    assert (skipped.reason, limit.scope, limit.limit) == ("symbol_exposure_cap", "symbol", 600)
+    # The configured $600 per-symbol cap leaves room for one more $100 or so, not $500.
+    assert broker.calls == 2
+    second = engine.ledger.orders()[1]
+    assert second.limited_by == "symbol_exposure_cap"
+    assert second.budget_usd is not None
+    assert second.budget_usd < Decimal("150")
+    # What the first buy holds, at what it cost, plus the second never passes the cap.
+    assert order.qty * order.limit_price + second.budget_usd <= Decimal(600)
 
 
 @pytest.mark.parametrize("field", ["full_position_usd", "max_order_usd"])

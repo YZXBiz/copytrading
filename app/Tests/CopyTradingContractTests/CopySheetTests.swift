@@ -8,6 +8,7 @@ import Testing
 @MainActor
 func runCopySheetTests() throws {
     try theFooterSpendsWhatTheCappedPlanSpends()
+    try theAmountIsTheEnginesOnceItHasCheckedTheOrder()
     try theFooterCountsSharesAtTheLimitTheEngineSends()
     try sizesTheMaxPerOrderMakesTheSameReadAsOne()
     try thePostsPriceIsTheDefault()
@@ -24,19 +25,40 @@ private func theFooterSpendsWhatTheCappedPlanSpends() throws {
         drafts: [draft], accounts: [account], connections: [account.accountID: full],
         maxOrderUSD: [account.accountID: 250], mode: .copy)
 
-    try #require(estimate.action == "Buy $250 of CCL", "the button: \(estimate.action)")
+    // Up to: the per-stock and total limits, which only the engine checks, may cut it further.
+    try #require(estimate.action == "Buy up to $250 of CCL", "the button: \(estimate.action)")
     let order = estimate.summary?.order
-    try #require(order == "Buy $250 of CCL ≈ 10.688 shares at $23.39", "the footer: \(order ?? "nil")")
+    try #require(order == "Buy up to $250 of CCL ≈ 10.688 shares at $23.39", "the footer: \(order ?? "nil")")
     // The same dollars the engine's plan spends, by the rule `sizing-examples.json` holds both to.
     try #require(estimate.budget(draft, in: account) == full.spentUSD(sourceFraction: nil, maxOrderUSD: 250))
 
-    // Under the max per order nothing is cut.
+    // Under the largest single buy nothing is cut.
     var sixth = draft
     sixth.fraction = "\(Decimal(1) / Decimal(6))"
     let small = ManualOrderEstimate(
         drafts: [sixth], accounts: [account], connections: [account.accountID: full],
         maxOrderUSD: [account.accountID: 250], mode: .copy)
-    try #require(small.action == "Buy $166.66 of CCL", "a sixth: \(small.action)")
+    try #require(small.action == "Buy up to $166.66 of CCL", "a sixth: \(small.action)")
+}
+
+/// The same $250 call into an account with $100 of room left under its maximum per stock: the
+/// engine cuts the buy to $100. Before it checks, the sheet says "up to $250", never a definite
+/// $250; once its check answers, the sheet says the $100 it plans.
+@MainActor
+private func theAmountIsTheEnginesOnceItHasCheckedTheOrder() throws {
+    let account = try fixtureAccount()
+    let full = TradingRouteConnection(accountID: account.accountID, fullPositionUSD: "1000")
+    let draft = ManualInstructionDraft(call: try call(#"{"action": "buy", "symbol": "CCL", "price": "23.39"}"#))
+    var estimate = ManualOrderEstimate(
+        drafts: [draft], accounts: [account], connections: [account.accountID: full],
+        maxOrderUSD: [account.accountID: 250], mode: .copy)
+    try #require(!estimate.action.contains("Buy $250"), "a definite amount the engine may cut: \(estimate.action)")
+
+    estimate.planned = ["\(account.accountID):0": 100]
+
+    try #require(estimate.action == "Buy $100 of CCL", "the button: \(estimate.action)")
+    let order = estimate.summary?.order
+    try #require(order == "Buy $100 of CCL ≈ 4.275 shares at $23.39", "the footer: \(order ?? "nil")")
 }
 
 /// A conditional buy of CCL at $25.14 into an account with a $250 max per order that buys up to
@@ -52,7 +74,7 @@ private func theFooterCountsSharesAtTheLimitTheEngineSends() throws {
         maxOrderUSD: [account.accountID: 250], maxAbovePct: [account.accountID: 1], mode: .copy)
 
     let order = estimate.summary?.order
-    try #require(order == "Buy $250 of CCL ≈ 9.846 shares at $25.39", "the footer: \(order ?? "nil")")
+    try #require(order == "Buy up to $250 of CCL ≈ 9.846 shares at $25.39", "the footer: \(order ?? "nil")")
     // The engine's `limit_price`: down to a cent, to a hundredth of a cent under $1.
     try #require(ManualOrderEstimate.limit(Decimal(string: "25.14")!, abovePct: 1) == Decimal(string: "25.39")!)
     try #require(ManualOrderEstimate.limit(Decimal(string: "0.5123")!, abovePct: 1) == Decimal(string: "0.5174")!)
@@ -63,15 +85,16 @@ private func sizesTheMaxPerOrderMakesTheSameReadAsOne() throws {
     let full = TradingRouteConnection(accountID: "paper", fullPositionUSD: "1000")
     let sixth = "\(Decimal(1) / Decimal(6))"
     let capped = BuySize.choices(fullPosition: full, maxOrderUSD: 250)
-    try #require(capped.count == 2, "⅙ and ¼ or more: \(capped)")
+    try #require(capped.count == 3, "⅙, ¼ or more, and no size: \(capped)")
     try #require(capped[0] == BuySize(shares: [sixth], usd: Decimal(string: "166.66"), isCapped: false))
-    try #require(capped[1].shares == ["0.25", "\(Decimal(1) / Decimal(3))", "0.5", ""] && capped[1].usd == 250)
-    // The full position, which the post asked for by naming no size, is one of them.
-    try #require(capped[1].contains("") && !capped[0].contains(""))
+    try #require(capped[1].shares == ["0.25", "\(Decimal(1) / Decimal(3))", "0.5"] && capped[1].usd == 250)
+    // A post that names no size buys the largest single buy itself, so nothing cut it (ADR-0010).
+    try #require(capped[2] == BuySize(shares: [""], usd: 250, isCapped: false))
+    try #require(capped[2].contains("") && !capped[1].contains(""))
 
     let roomy = BuySize.choices(fullPosition: full, maxOrderUSD: 5000)
     try #require(roomy.map(\.usd) == [Decimal(string: "166.66"), 250, Decimal(string: "333.33"), 500, 1000])
-    try #require(BuySize.choices(fullPosition: full, maxOrderUSD: 100).map(\.shares.count) == [5])
+    try #require(BuySize.choices(fullPosition: full, maxOrderUSD: 100).map(\.shares.count) == [4, 1])
     // Several accounts: no dollars, every size.
     try #require(BuySize.choices(fullPosition: nil, maxOrderUSD: nil).count == 5)
 }

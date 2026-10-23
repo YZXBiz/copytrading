@@ -2,24 +2,25 @@ import DesktopCore
 import Foundation
 
 /// One choice in a buy's How much row: the usual sizes that spend the same dollars in the chosen
-/// account, because the max per order cuts them all to it, read as one ("¼ or more $250").
+/// account, because the largest single buy cuts them all to it, read as one ("¼ or more $250").
 struct BuySize: Equatable {
-    /// The shares of the full position it stands for, smallest first; "" is the full position.
+    /// The shares of the full position it stands for, smallest first; "" is no size, which buys
+    /// the largest single buy (ADR-0010).
     let shares: [String]
-    /// What it spends in the one chosen account after the max per order; nil when several are
-    /// chosen.
+    /// What it spends in the one chosen account after the largest single buy; nil when several
+    /// are chosen.
     let usd: Decimal?
-    /// The max per order cut it.
+    /// The largest single buy cut it.
     let isCapped: Bool
 
-    /// The usual sizes, smallest first, with those the max per order makes identical merged.
+    /// The usual sizes, smallest first, with those the largest single buy makes identical merged.
     static func choices(
         _ shares: [String] = ManualInstructionDraft.buySizes, fullPosition: TradingRouteConnection?, maxOrderUSD: Decimal?
     ) -> [BuySize] {
         var sizes: [BuySize] = []
         for share in shares {
             let fraction = share.isEmpty ? nil : Decimal(string: share)
-            let asked = fullPosition?.copiedBudgetUSD(sourceFraction: fraction)
+            let asked = fullPosition?.copiedBudgetUSD(sourceFraction: fraction, unsizedUSD: maxOrderUSD)
             let usd = fullPosition?.spentUSD(sourceFraction: fraction, maxOrderUSD: maxOrderUSD)
             let isCapped = asked.flatMap { asked in usd.map { asked > $0 } } ?? false
             // ¼ of $1,000 is exactly a $250 max, so the cut ⅓ and up join it.

@@ -57,12 +57,12 @@ extension AgentProposal {
     @MainActor
     static func limitTitle(_ field: String) -> String {
         let titles: [String: String] = [
-            "max_order_usd": "Maximum per order",
+            "max_order_usd": "Largest single buy",
             "max_symbol_usd": "Maximum per stock",
             "max_total_usd": "Maximum total exposure",
             "daily_loss_cap_usd": "Daily loss cap",
             "max_above_signal_pct": "Maximum above signal price (%)",
-            "max_below_signal_pct": "Maximum below signal price (%)",
+            "max_below_signal_pct": "Lowest sell price (% under the guru's)",
             "max_entries_per_day": "Entries per day",
             "max_signal_age_seconds": "Maximum signal age (seconds)",
             "order_timeout_seconds": "Order timeout (seconds)",

@@ -8,7 +8,8 @@ import pytest
 from copytrading_engine.execution.adapters.alpaca.models import (
     decode_calendar,
 )
-from copytrading_engine.execution.domain.progress import Skipped
+from copytrading_engine.execution.domain.progress import Pending, Skipped
+from copytrading_engine.execution.domain.sessions import Session
 from copytrading_engine.execution.domain.signals import CopyConfig
 from copytrading_engine.shared.signals import StockSignal
 
@@ -20,7 +21,8 @@ def test_fail_closed_guards(system, kind):
     engine, broker, _ = system
     message = event()
     if kind == "old":
-        message = event(timestamp=NOW - dt.timedelta(minutes=3))
+        # Past the default ten minutes a buy may be.
+        message = event(timestamp=NOW - dt.timedelta(minutes=11))
     elif kind == "future":
         message = event(timestamp=NOW + dt.timedelta(minutes=3))
     elif kind == "unknown_lot":
@@ -78,7 +80,10 @@ def test_all_supported_sessions_respect_calendar(system, instant, expected_calls
     if expected_calls:
         order = next(iter(store.load().orders.values()))
         assert order.session == expected_session
-        assert broker.orders[order.client_id]["extended_hours"] is True
+        # Only an order outside the regular session is marked for extended hours.
+        assert broker.orders[order.client_id]["extended_hours"] is (
+            expected_session != Session.REGULAR
+        )
         assert order.qty * order.limit_price <= 100
         if instant.startswith("2026-01-04"):
             assert order.day == dt.date(2026, 1, 5)
@@ -175,7 +180,7 @@ def test_exits_outside_regular_hours_sell_with_a_limit_under_the_signal(system, 
     assert not engine.ledger.queued()
 
 
-def test_exits_outside_every_enabled_session_are_skipped(system):
+def test_an_exit_outside_every_enabled_session_waits_for_the_market_to_open(system):
     engine, broker, _ = system
     deliver(engine, event())
     engine.config = CopyConfig.model_validate(
@@ -185,4 +190,9 @@ def test_exits_outside_every_enabled_session_are_skipped(system):
     now = dt.datetime.fromisoformat("2026-01-06T18:00:00-05:00")
     deliver(engine, event("exit", "close", "27", "25", timestamp=now), now)
     assert broker.calls == 1
-    assert engine.ledger.message("discord:demo:exit").parts == (Skipped(reason="outside_session"),)
+    assert engine.ledger.message("discord:demo:exit").parts == (Pending(),)
+
+    # A sell is never too old (ADR-0010): it goes out when the market opens the next morning.
+    engine.process(dt.datetime.fromisoformat("2026-01-07T10:00:00-05:00"))
+    assert broker.calls == 2
+    assert broker.holdings["ABC"] == 0

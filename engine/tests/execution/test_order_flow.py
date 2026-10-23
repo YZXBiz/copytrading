@@ -99,7 +99,9 @@ def test_unknown_submission_is_never_retried(system):
     assert next(iter(store.load().orders.values())).status == "uncertain"
 
 
-def test_unfilled_exit_is_canceled_after_the_timeout_and_keeps_the_shares(system):
+def test_an_unfilled_sell_is_never_cancelled_for_waiting(system):
+    """A sell keeps working at its floor until it fills: the guru is out, so giving up would leave
+    the shares held (ADR-0010)."""
     engine, broker, _ = system
     deliver(engine, event())
     broker.auto_fill = False
@@ -107,10 +109,67 @@ def test_unfilled_exit_is_canceled_after_the_timeout_and_keeps_the_shares(system
     sell = engine.ledger.orders()[-1]
     assert sell.side == "sell"
     engine.reconcile(NOW + dt.timedelta(seconds=61))
-    engine.reconcile(NOW + dt.timedelta(seconds=62))
-    assert broker.orders[sell.client_id]["status"] == "canceled"
-    assert engine.ledger.order(sell.client_id).status is OrderStatus.CANCELED
-    assert engine.ledger.owned("ABC") == 4, "a sell that never filled leaves the shares owned"
+    engine.reconcile(NOW + dt.timedelta(hours=3))
+    assert broker.orders[sell.client_id]["status"] == "new"
+    assert engine.ledger.order(sell.client_id).pending
+    broker.fill(sell.client_id, "4")
+    engine.reconcile(NOW + dt.timedelta(hours=3, seconds=1))
+    assert engine.ledger.owned("ABC") == 0
+
+
+def _cancelled_for(store, order):
+    return [
+        event.payload.reason
+        for event in store.events
+        if event.payload.kind == "cancel_requested" and event.payload.client_id == order.client_id
+    ]
+
+
+def test_a_buys_timeout_runs_from_when_alpaca_put_it_on_the_market(system):
+    """Alpaca can hold an order before it goes out; the wait counts from when it is live."""
+    engine, broker, store = system
+    broker.auto_fill = False
+    broker.submitted_status = "pending_new"
+    deliver(engine, event())
+    buy = engine.ledger.orders()[-1]
+    engine.reconcile(NOW + dt.timedelta(seconds=30))
+    broker.orders[buy.client_id]["status"] = "new"
+    engine.reconcile(NOW + dt.timedelta(seconds=40))
+    assert engine.ledger.order(buy.client_id).accepted_at == NOW + dt.timedelta(seconds=40)
+    engine.reconcile(NOW + dt.timedelta(seconds=90))
+    assert broker.orders[buy.client_id]["status"] == "new", "live for 50 s only"
+    engine.reconcile(NOW + dt.timedelta(seconds=100))
+    assert broker.orders[buy.client_id]["status"] == "canceled"
+    assert _cancelled_for(store, buy) == ["timeout"]
+
+
+def test_a_buy_alpaca_holds_for_a_whole_timeout_is_cancelled_unsent(system):
+    """A buy still held as pending_new a whole timeout after it was sent never went out; it is
+    cancelled rather than reaching the market with a stale call."""
+    engine, broker, store = system
+    broker.auto_fill = False
+    broker.submitted_status = "pending_new"
+    deliver(engine, event())
+    buy = engine.ledger.orders()[-1]
+    engine.reconcile(NOW + dt.timedelta(seconds=59))
+    assert broker.orders[buy.client_id]["status"] == "pending_new"
+    engine.reconcile(NOW + dt.timedelta(seconds=61))
+    assert broker.orders[buy.client_id]["status"] == "canceled"
+    assert engine.ledger.order(buy.client_id).accepted_at is None
+    assert _cancelled_for(store, buy) == ["timeout"]
+
+
+def test_a_sell_alpaca_holds_is_never_cancelled_for_waiting(system):
+    """A sell held as pending_new keeps waiting like any other sell (ADR-0010)."""
+    engine, broker, _ = system
+    deliver(engine, event())
+    broker.auto_fill = False
+    broker.submitted_status = "pending_new"
+    deliver(engine, event("exit", "close", "27", "25"))
+    sell = engine.ledger.orders()[-1]
+    engine.reconcile(NOW + dt.timedelta(minutes=10))
+    assert broker.orders[sell.client_id]["status"] == "pending_new"
+    assert engine.ledger.order(sell.client_id).pending
 
 
 def test_exit_cancels_a_preceding_cancelable_entry_then_sells_filled_shares(system):
@@ -357,7 +416,7 @@ def test_released_client_id_is_rechecked_after_clearance(system):
     assert engine.ledger.snapshot().late_order_incidents[order.client_id].cleared
 
 
-def test_late_incident_blocks_new_buys_and_unrelated_matched_lot_exit(system):
+def test_late_incident_blocks_new_buys_but_not_an_exit_of_another_stock(system):
     engine, broker, _ = system
     deliver(engine, event())
 
@@ -405,11 +464,9 @@ def test_late_incident_blocks_new_buys_and_unrelated_matched_lot_exit(system):
     )
     receive(engine, StockSignal.model_validate(exit_signal), NOW + dt.timedelta(minutes=13))
     engine.process(NOW + dt.timedelta(minutes=13))
-    assert broker.calls == 2
-    assert broker.holdings["ABC"] == 4
-    assert engine.ledger.message("discord:demo:matched-exit").parts == (
-        Skipped(reason="unresolved_order_incident"),
-    )
+    # The incident is on DEF: an ABC sell answers only to ABC's orders (ADR-0010).
+    assert broker.calls == 3
+    assert broker.holdings["ABC"] == 0
 
 
 def test_existing_account_positions_are_inventoried_without_app_lots(tmp_path):
@@ -484,7 +541,7 @@ def test_pending_limit_survives_restart_and_policy_change(system):
 @pytest.mark.parametrize("stage", ["asset", "order_prepared", "submit_started"])
 def test_late_submission_is_aborted_at_every_durable_boundary(system, stage):
     engine, broker, store = system
-    current = [NOW + dt.timedelta(seconds=119)]
+    current = [NOW + dt.timedelta(seconds=599)]
     receive(engine, StockSignal.model_validate(event()), current[0])
 
     def advance():
@@ -573,7 +630,7 @@ def test_session_change_blocks_submission_after_durable_transition(system, stage
 
 def test_default_process_clock_advances_with_monotonic_time(system):
     engine, broker, _ = system
-    received_at = NOW + dt.timedelta(seconds=119)
+    received_at = NOW + dt.timedelta(seconds=599)
     receive(engine, StockSignal.model_validate(event()), received_at)
     monotonic = [100.0]
     original = broker.asset

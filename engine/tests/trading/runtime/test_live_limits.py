@@ -56,8 +56,7 @@ async def test_changed_limits_reach_the_running_account_without_a_pause(tmp_path
     assert not owners["first"].stopped
     assert not owners["second"].stopped
     assert runtime.status().state == "running"
-    assert runtime._worker is not None
-    assert runtime._worker.max_age == 300
+    assert owners["first"].configs[-1].max_signal_age_seconds == 300
     assert runtime.activation_status(activation_id).candidate_revision == revision
     await runtime.shutdown()
 
