@@ -1,13 +1,17 @@
 """Compare broker holdings with filled lots, allowing only known in-flight fills."""
 
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from decimal import Decimal
 
 from copytrading_engine.execution.domain.market import Position
 from copytrading_engine.execution.domain.orders import OrderRecord, OwnedLot
 from copytrading_engine.execution.domain.ownership import ExternalPosition
+
+# The most of a coin's buy CopyTrading takes as Alpaca's fee when it counts the fee from the
+# holding: Alpaca's highest rate is 0.25% (crypto fee tier 1, taker), so 1% is room to spare.
+CRYPTO_FEE_CEILING = Decimal("0.01")
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,15 +66,30 @@ def expected_holdings(
     return {symbol: qty for symbol, qty in expected.items() if qty}
 
 
+def fee_allowance(orders: Iterable[OrderRecord]) -> dict[str, Decimal]:
+    """How far under its lots a coin's holding may be while Alpaca's fee on its latest buys is
+    still to be counted: the most that fee can be (ADR-0014)."""
+    allowance: dict[str, Decimal] = defaultdict(Decimal)
+    for order in orders:
+        if order.unsettled_fee_qty:
+            allowance[order.symbol] += order.unsettled_fee_qty * CRYPTO_FEE_CEILING
+    return dict(allowance)
+
+
 def compare_positions(
     lots: tuple[OwnedLot, ...],
     pending: tuple[OrderRecord, ...],
     positions: tuple[Position, ...],
     external: tuple[ExternalPosition, ...] = (),
+    *,
+    unsettled_fees: Mapping[str, Decimal] | None = None,
 ) -> PositionAudit:
+    """The broker's holdings against the ledger's. A holding may differ by what open orders can
+    still fill, and a coin's by the fee on its latest buys (`fee_allowance`), still to be
+    counted."""
     expected: dict[str, Decimal] = defaultdict(Decimal, expected_holdings(lots, external))
     buys: dict[str, Decimal] = defaultdict(Decimal)
-    sells: dict[str, Decimal] = defaultdict(Decimal)
+    sells: dict[str, Decimal] = defaultdict(Decimal, unsettled_fees or {})
     for order in pending:
         # Prepared orders have not reached Alpaca and cannot explain a difference.
         if order.pending and order.submit_started_at is not None:

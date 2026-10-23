@@ -88,7 +88,7 @@ struct ManualInstructionEditor: View {
     }
 
     @MainActor private func detail(of held: ManualHolding) -> String {
-        let shares = Humanize.shares(held.shares)
+        let shares = Humanize.shares(held.shares, of: held.symbol)
         guard let value = held.value else { return shares }
         return L10n.string("%@ · %@", shares, Humanize.usd(value))
     }

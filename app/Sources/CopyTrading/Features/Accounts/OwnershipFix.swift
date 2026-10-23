@@ -33,12 +33,12 @@ struct OwnershipFix: Equatable {
                 headline = L10n.string("CopyTrading's count of %@ is out of date", symbol)
                 detail = L10n.string(
                     "It counted %@; the broker holds %@. %@ calls wait until you update it.",
-                    Humanize.shares(Decimal(string: incident.expectedQty) ?? 0), Humanize.shares(broker), symbol)
+                    Humanize.shares(Decimal(string: incident.expectedQty) ?? 0, of: symbol), Humanize.shares(broker, of: symbol), symbol)
                 action = L10n.string("Update the Count")
                 confirmation = L10n.string("CopyTrading will use the broker's count. Nothing is bought or sold.")
                 confirm = L10n.string("Update the Count")
             } else {
-                headline = L10n.string("%@ of %@ that CopyTrading didn't buy", Humanize.shares(external), symbol)
+                headline = L10n.string("%@ of %@ that CopyTrading didn't buy", Humanize.sharesOf(external, symbol: symbol), symbol)
                 detail = L10n.string("%@ calls wait until you say whose they are.", symbol)
                 action = L10n.string("They're Mine")
                 confirmation = L10n.string(
@@ -54,10 +54,13 @@ struct OwnershipFix: Equatable {
                 missing -= taken
                 remaining[lot.lotID] = Self.text(held - taken)
             }
-            headline = L10n.string("Fewer %@ shares at the broker than CopyTrading copied", symbol)
+            headline =
+                Humanize.isCoin(symbol)
+                ? L10n.string("Less %@ at the broker than CopyTrading copied", Humanize.coin(symbol))
+                : L10n.string("Fewer %@ shares at the broker than CopyTrading copied", symbol)
             detail = L10n.string(
                 "%@ are missing, likely sold outside CopyTrading. %@ calls wait until you confirm.",
-                Humanize.shares(copied - broker), symbol)
+                Humanize.shares(copied - broker, of: symbol), symbol)
             action = L10n.string("They Were Sold")
             confirmation = L10n.string(
                 "CopyTrading will count its oldest copied shares as sold first and copy %@ calls again. Nothing is bought or sold.",

@@ -189,6 +189,7 @@ def test_typed_order_request_is_serialized_once_when_response_is_malformed():
         type="limit",
         limit_price=Decimal("25.25"),
         client_order_id="copy-fixture",
+        time_in_force="day",
         extended_hours=True,
     )
     try:
@@ -268,6 +269,7 @@ def test_market_sell_payload_has_no_limit_price_and_is_never_retried():
                     qty=Decimal("1.170905"),
                     type="market",
                     client_order_id="copy-market",
+                    time_in_force="day",
                     extended_hours=False,
                 )
             )

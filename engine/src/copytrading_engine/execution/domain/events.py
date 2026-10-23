@@ -119,6 +119,18 @@ class SellWaiting(EventPayloadValue):
     reason: SellWait
 
 
+class CryptoFeeCounted(EventPayloadValue):
+    """Alpaca's fee on a coin's buys, counted from the coin it holds: the coin the account never
+    received comes out of the buys' lot (ADR-0014)."""
+
+    kind: Literal["crypto_fee_counted"] = "crypto_fee_counted"
+    symbol: Identifier
+    # Each buy's fee, by its order, for the fill counted now.
+    fees: dict[Identifier, Quantity]
+    # The coin those buys filled since their fee was last counted.
+    filled_qty: Positive
+
+
 class ReadBackSummary(EventPayloadValue):
     """What came of the posts read back after CopyTrading was off, told to the owner once."""
 
@@ -337,6 +349,7 @@ type EventPayload = Annotated[
     | CashAnchorRecorded
     | Skipped
     | SellWaiting
+    | CryptoFeeCounted
     | ReadBackSummary
     | MessageDone
     | OrderPrepared

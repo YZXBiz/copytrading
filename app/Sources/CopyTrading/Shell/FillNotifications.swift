@@ -48,7 +48,7 @@ enum FillNotifications {
     }
 
     private static func sentTitle(_ fill: FillWatch.Fill) -> String {
-        let shares = Humanize.shares(fill.shares)
+        let shares = Humanize.sharesOf(fill.shares, symbol: fill.symbol)
         let stock = fill.symbol
         guard let price = fill.price else {
             return fill.side == "sell"
@@ -61,7 +61,7 @@ enum FillNotifications {
     }
 
     private static func title(_ fill: FillWatch.Fill) -> String {
-        let shares = Humanize.shares(fill.shares)
+        let shares = Humanize.sharesOf(fill.shares, symbol: fill.symbol)
         let stock = fill.symbol
         guard let price = fill.price else {
             return fill.side == "sell"

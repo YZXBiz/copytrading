@@ -34,8 +34,10 @@ REQUEST = {
     "symbol": "F",
     "qty": Decimal(1),
     "client_order_id": "client-1",
+    "time_in_force": "day",
     "extended_hours": False,
 }
+COIN_REQUEST = REQUEST | {"symbol": "BTC/USD", "time_in_force": "gtc", "extended_hours": None}
 MARKET_EXIT = REQUEST | {
     "side": "sell",
     "position_intent": "sell_to_close",
@@ -66,6 +68,12 @@ RECORD = BUY | {
     "broker_id": "broker-1",
     "created_at": NOW,
     "day": NOW.date(),
+}
+COIN_RECORD = RECORD | {
+    "symbol": "BTC/USD",
+    "session": Session.AROUND_THE_CLOCK,
+    "filled_qty": Decimal(2),
+    "status": OrderStatus.FILLED,
 }
 LOT = {
     "symbol": "F",
@@ -109,6 +117,48 @@ LOT = {
             {"extended_hours": True},
             "Market orders cannot execute in extended hours",
             id="market order after hours",
+        ),
+        pytest.param(
+            OrderRequest,
+            COIN_REQUEST,
+            {"time_in_force": "day"},
+            "good-till-canceled",
+            id="coin order for the day",
+        ),
+        pytest.param(
+            OrderRequest,
+            REQUEST,
+            {"time_in_force": "gtc"},
+            "good-till-canceled",
+            id="stock order good till canceled",
+        ),
+        pytest.param(
+            OrderRequest,
+            COIN_REQUEST,
+            {"extended_hours": False},
+            "extended hours",
+            id="coin order with hours",
+        ),
+        pytest.param(
+            OrderPlan,
+            BUY,
+            {"symbol": "BTC/USD"},
+            "A coin trades around the clock",
+            id="coin planned in a stock session",
+        ),
+        pytest.param(
+            OrderRecord,
+            RECORD | {"filled_qty": Decimal(2), "status": OrderStatus.FILLED},
+            {"fee_qty": Decimal("0.01"), "fee_settled_qty": Decimal(2)},
+            "Only a coin's buy pays its fee in the coin",
+            id="fee on a stock",
+        ),
+        pytest.param(
+            OrderRecord,
+            COIN_RECORD,
+            {"fee_qty": Decimal("0.01"), "fee_settled_qty": Decimal(0)},
+            "A fee is counted only on what has filled",
+            id="fee before its fill is counted",
         ),
         pytest.param(
             OrderPlan,

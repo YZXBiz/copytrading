@@ -5,9 +5,10 @@ import Foundation
 /// while it stays open, and as the owner types a ticker: a buy pays the ask, a sell gets the bid.
 /// The price always says when it was quoted, and a quote too old to be the market now says so.
 struct LiveQuote: Equatable {
-    /// Tickers the engine can quote: a letter, then letters, digits, or a dot.
+    /// Symbols the engine can quote: a stock's ticker (a letter, then letters, digits, or a dot), or
+    /// a coin's dollar pair, such as BTC/USD.
     static func canQuote(_ symbol: String) -> Bool {
-        symbol.wholeMatch(of: /[A-Z][A-Z0-9.]{0,9}/) != nil
+        symbol.wholeMatch(of: /[A-Z][A-Z0-9.]{0,9}/) != nil || symbol.wholeMatch(of: /[A-Z]{2,10}\/USD/) != nil
     }
 
     /// How long a quote stands for the market. The sheet asks again well within it; the engine's

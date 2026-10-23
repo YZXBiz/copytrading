@@ -95,17 +95,21 @@ struct PositionRow: View {
     /// own, only when some are held outside it.
     @MainActor private var sharesCell: some View {
         VStack(alignment: .trailing, spacing: 1) {
-            Text(Self.aligned(shares, decimals: shareDecimals))
+            Text(Self.aligned(shares, decimals: shareDecimals, symbol: position.symbol))
                 .font(DesignTokens.bodyText)
                 .monospacedDigit()
                 .foregroundStyle(Palette.ink)
             // Only a mix needs saying; the limits strip already says what is held outside.
             if outside > 0, owned > 0 {
-                Text(L10n.string("%@ copied · %@ outside", Self.shortQuantity(owned), Self.shortQuantity(outside)))
-                    .font(DesignTokens.caption)
-                    .foregroundStyle(Palette.tertiaryInk)
-                    .lineLimit(1)
-                    .fixedSize()
+                Text(
+                    L10n.string(
+                        "%@ copied · %@ outside", Self.shortQuantity(owned, of: position.symbol),
+                        Self.shortQuantity(outside, of: position.symbol))
+                )
+                .font(DesignTokens.caption)
+                .foregroundStyle(Palette.tertiaryInk)
+                .lineLimit(1)
+                .fixedSize()
             }
         }
         .frame(maxWidth: .infinity, alignment: .trailing)
@@ -142,10 +146,15 @@ struct PositionRow: View {
     }
 
     @MainActor private var accessibilityText: String {
-        var parts = [L10n.string("%@, %@ shares", position.symbol, Self.quantity(shares))]
-        if owned > 0 { parts.append(L10n.string("%@ copied", Self.quantity(owned))) }
+        let symbol = position.symbol
+        var parts = [
+            Humanize.isCoin(symbol)
+                ? L10n.string("%@, %@", symbol, Humanize.shares(shares, of: symbol))
+                : L10n.string("%@, %@ shares", symbol, Self.quantity(shares, of: symbol))
+        ]
+        if owned > 0 { parts.append(L10n.string("%@ copied", Self.quantity(owned, of: symbol))) }
         if posts > 0 { parts.append(L10n.string("from %@", Humanize.count(posts, "post"))) }
-        if outside > 0 { parts.append(L10n.string("%@ held outside CopyTrading", Self.quantity(outside))) }
+        if outside > 0 { parts.append(L10n.string("%@ held outside CopyTrading", Self.quantity(outside, of: symbol))) }
         if let price = position.currentPrice.flatMap({ Decimal(engine: $0) }) {
             parts.append(L10n.string("price %@", price.formatted(.currency(code: "USD"))))
         }
@@ -172,32 +181,34 @@ struct PositionRow: View {
             ?? (Decimal(engine: position.ownedQty) ?? 0) + (Decimal(engine: position.externalQty) ?? 0)
     }
 
-    /// How many decimals a share count shows, at most four.
-    static func decimals(_ value: Decimal) -> Int {
-        let text = quantity(value)
+    /// How many decimals a share count shows, at most four; a coin's, at most nine.
+    static func decimals(_ value: Decimal, of symbol: String) -> Int {
+        let text = quantity(value, of: symbol)
         guard let dot = text.firstIndex(where: { $0 == "." || $0 == "," }) else { return 0 }
         return text.distance(from: dot, to: text.endIndex) - 1
     }
 
     /// A share count padded to `decimals` places with figure spaces, so a column of counts lines
     /// up on the decimal point without trailing zeros: "33.1345", "    1     ", "0.885 ".
-    static func aligned(_ value: Decimal, decimals: Int) -> String {
-        let text = quantity(value)
-        let shown = Self.decimals(value)
+    static func aligned(_ value: Decimal, decimals: Int, symbol: String) -> String {
+        let text = quantity(value, of: symbol)
+        let shown = Self.decimals(value, of: symbol)
         guard decimals > shown else { return text }
         // A punctuation space stands in for a missing point, figure spaces for missing digits.
         let point = shown == 0 ? "\u{2008}" : ""
         return text + point + String(repeating: "\u{2007}", count: decimals - shown)
     }
 
-    /// Shares to at most four decimals: 2.8782, not 2.878194.
-    static func quantity(_ value: Decimal) -> String {
-        value.formatted(.number.precision(.fractionLength(0...4)))
+    /// Shares to at most four decimals: 2.8782, not 2.878194. A coin to the billionth Alpaca keeps
+    /// it in, 0.001231481, since four places would round most of a coin away.
+    static func quantity(_ value: Decimal, of symbol: String) -> String {
+        value.formatted(.number.precision(.fractionLength(0...(Humanize.isCoin(symbol) ? 9 : 4))))
     }
 
-    /// Shares in a note, to at most two decimals: 12.72.
-    static func shortQuantity(_ value: Decimal) -> String {
-        value.formatted(.number.precision(.fractionLength(0...2)))
+    /// Shares in a note, to at most two decimals: 12.72; a coin, as `quantity` shows it.
+    static func shortQuantity(_ value: Decimal, of symbol: String) -> String {
+        if Humanize.isCoin(symbol) { return quantity(value, of: symbol) }
+        return value.formatted(.number.precision(.fractionLength(0...2)))
     }
 
     /// Nothing copied, nothing outside, nothing at the broker: a symbol left over from an

@@ -2429,3 +2429,12 @@
 "Allow setup changes from the command line" = "Allow setup changes from the command line";
 "Turn off setup changes from the command line" = "Turn off setup changes from the command line";
 "copytrading setup may change keys, the model, accounts, and gurus. Live accounts still wait for you." = "copytrading setup may change keys, the model, accounts, and gurus. Live accounts still wait for you.";
+"Crypto is copied on paper accounts only, and this account is live" = "Crypto is copied on paper accounts only, and this account is live";
+"Crypto trades on paper accounts only. Change to a paper account." = "Crypto trades on paper accounts only. Change to a paper account.";
+"%@ units of %@" = "%@ %@";
+"%@ of %@ units of %@" = "%@ of %@ %@";
+"All %@" = "All %@";
+"Sold %@%@" = "Sold %@%@";
+"Less %@ at the broker than CopyTrading copied" = "Less %@ at the broker than CopyTrading copied";
+"%@ · until filled or cancelled" = "%@ · until filled or cancelled";
+"Around the clock" = "Around the clock";

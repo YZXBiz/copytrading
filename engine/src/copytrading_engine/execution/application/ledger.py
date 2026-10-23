@@ -3,7 +3,7 @@
 import datetime as dt
 import hashlib
 import logging
-from decimal import Decimal
+from decimal import ROUND_DOWN, Decimal
 from typing import Literal, TypedDict, Unpack
 
 from copytrading_engine.execution.application.ports import ExecutionObserver, LedgerRepository
@@ -12,6 +12,7 @@ from copytrading_engine.execution.domain.events import (
     AccountInventoried,
     CancelRequested,
     CashAnchorRecorded,
+    CryptoFeeCounted,
     Exposure,
     JournalEvent,
     LateOrderIncidentCleared,
@@ -82,7 +83,7 @@ from copytrading_engine.execution.domain.ownership import (
     allocate,
     sync_reason,
 )
-from copytrading_engine.execution.domain.positions import PositionAudit
+from copytrading_engine.execution.domain.positions import CRYPTO_FEE_CEILING, PositionAudit
 from copytrading_engine.execution.domain.progress import (
     InstructionProgress,
     OrderLinked,
@@ -102,6 +103,8 @@ from copytrading_engine.execution.domain.sizing import DestinationSignal
 from copytrading_engine.shared.signals import Instruction, StockSignal
 
 ZERO = Decimal(0)
+# Alpaca counts a coin to the billionth.
+COIN_STEP = Decimal("0.000000001")
 log = logging.getLogger(__name__)
 
 
@@ -1384,7 +1387,13 @@ class TradingLedger:
                 entries = (*lot.entries(lot_key), key) if lot is not None else (key,)
                 entries = tuple(dict.fromkeys(entries))
                 filled = {entry: self.order(entry) for entry in entries if entry != key}
-                total = sum((o.filled_qty for o in filled.values()), ZERO) + update.filled_qty
+                # What the buys brought in; a coin's fee on this fill is counted later, from the
+                # broker's holding (count_crypto_fee).
+                total = (
+                    sum((o.received_qty for o in filled.values()), ZERO)
+                    + update.filled_qty
+                    - order.fee_qty
+                )
                 entry_remaining = dict(lot.entry_remaining) if lot is not None else {}
                 entry_prices = dict(lot.entry_prices) if lot is not None else {}
                 entry_remaining[key] = entry_remaining.get(key, ZERO) + delta
@@ -1624,3 +1633,69 @@ class TradingLedger:
                 state,
                 JournalEvent(at=now, payload=payload),
             )
+
+    def count_crypto_fee(self, symbol: str, shortfall: Decimal, now: dt.datetime) -> bool:
+        """Count Alpaca's fee on a coin's latest buys from its holding: `shortfall` is how far the
+        holding, read while nothing of the coin was filling, is under its lots. Alpaca takes the
+        fee in the coin bought and reports it only at the day's end (ADR-0014).
+
+        Only a shortfall a fee can be, from none to `CRYPTO_FEE_CEILING` of what the buys filled,
+        is counted; any other difference is the owner's, or a fill not yet in the holding, which
+        the holdings check (ADR-0011) and the next sync settle. Returns whether it counted."""
+        buys = sorted(
+            (
+                order
+                for order in self._snapshot.orders.values()
+                if order.symbol == symbol and order.unsettled_fee_qty
+            ),
+            key=lambda order: (order.created_at, order.client_id),
+        )
+        filled = sum((order.unsettled_fee_qty for order in buys), ZERO)
+        if not buys or shortfall < 0 or shortfall > filled * CRYPTO_FEE_CEILING:
+            return False
+        # Each buy pays in proportion to what it filled; the rounding remainder is the oldest's.
+        fees = {
+            order.client_id: (shortfall * order.unsettled_fee_qty / filled).quantize(
+                COIN_STEP, rounding=ROUND_DOWN
+            )
+            for order in buys
+        }
+        fees[buys[0].client_id] += shortfall - sum(fees.values(), ZERO)
+        orders = dict(self._snapshot.orders)
+        lots = dict(self._snapshot.lots)
+        for order in buys:
+            fee = fees[order.client_id]
+            orders[order.client_id] = OrderRecord.model_validate(
+                order.model_dump()
+                | {"fee_qty": order.fee_qty + fee, "fee_settled_qty": order.filled_qty}
+            )
+            if not fee:
+                continue
+            lot_key = next(key for key, lot in lots.items() if order.client_id in lot.entries(key))
+            lot = lots[lot_key]
+            # The coin never arrived: it leaves the buy that paid it, or, when that buy has been
+            # sold down since, the lot's other buys, oldest first.
+            remaining = dict(lot.entry_remaining)
+            owed = fee
+            for entry in (order.client_id, *(e for e in remaining if e != order.client_id)):
+                taken = min(owed, remaining[entry])
+                remaining[entry] -= taken
+                owed -= taken
+            if owed:
+                raise RuntimeError("A coin's fee exceeds what its lot holds")
+            lots[lot_key] = OwnedLot.model_validate(
+                lot.model_dump()
+                | {
+                    "original_qty": lot.original_qty - fee,
+                    "remaining_qty": lot.remaining_qty - fee,
+                    "entry_remaining": remaining,
+                }
+            )
+        self._commit(
+            self._replace(orders=orders, lots=lots),
+            JournalEvent(
+                at=now,
+                payload=CryptoFeeCounted(symbol=symbol, fees=fees, filled_qty=filled),
+            ),
+        )
+        return True

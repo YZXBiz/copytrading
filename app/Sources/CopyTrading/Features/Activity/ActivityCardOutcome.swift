@@ -200,7 +200,8 @@ struct ActivityCardOutcome {
             } else {
                 facts.append(Fact(label: L10n.string("Price"), value: money(order.averageFillPrice) ?? "—"))
             }
-            facts.append(Fact(label: L10n.string("Shares"), value: Humanize.shares(Decimal(engine: order.filledQuantity) ?? 0)))
+            facts.append(
+                Fact(label: L10n.string("Shares"), value: Humanize.shares(Decimal(engine: order.filledQuantity) ?? 0, of: order.symbol)))
         case .partlyFilled:
             headline = L10n.string(
                 order.status == "partially_filled" ? "Partly filled: %@ so far" : "Partly filled: %@, the rest cancelled",
@@ -209,7 +210,7 @@ struct ActivityCardOutcome {
                 Fact(
                     label: L10n.string("Filled"),
                     value: Humanize.shares(
-                        Decimal(engine: order.filledQuantity) ?? 0, of: Decimal(engine: order.quantity) ?? 0)))
+                        Decimal(engine: order.filledQuantity) ?? 0, of: Decimal(engine: order.quantity) ?? 0, symbol: order.symbol)))
             facts.append(Fact(label: L10n.string("Price"), value: money(order.averageFillPrice) ?? "—"))
         case .working:
             headline = L10n.string(buying ? "Buying %@" : "Selling %@", planned)

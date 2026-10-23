@@ -37,13 +37,20 @@ from copytrading_engine.execution.domain.orders import (
     OwnedLot,
 )
 from copytrading_engine.execution.domain.ownership import account_activity_reason, still_open
-from copytrading_engine.execution.domain.positions import PositionAudit, compare_positions
+from copytrading_engine.execution.domain.positions import (
+    PositionAudit,
+    compare_positions,
+    fee_allowance,
+)
 from copytrading_engine.execution.domain.pricing import (
     SELL_FLOOR_QUOTE_MAX_AGE_SECONDS,
+    price_tick,
     quote_problem,
 )
 from copytrading_engine.execution.domain.progress import OrderLinked, Pending, Skipped
 from copytrading_engine.execution.domain.risk import (
+    MINIMUM_CRYPTO_BUY_USD,
+    MINIMUM_ORDER_USD,
     EntryFacts,
     ExposureBreach,
     account_exposure,
@@ -53,6 +60,7 @@ from copytrading_engine.execution.domain.sessions import Session, SessionSchedul
 from copytrading_engine.execution.domain.signals import CopyConfig, SignalSourceNotAllowed
 from copytrading_engine.execution.domain.sizing import DestinationSignal
 from copytrading_engine.shared.signals import Instruction
+from copytrading_engine.shared.symbols import is_crypto
 
 ZERO = Decimal(0)
 STEP = Decimal("0.000001")
@@ -87,7 +95,7 @@ class _SubmissionGuard:
     started_monotonic: float
     max_age_seconds: int
     controls: _ProcessControls
-    market_session: Callable[[dt.datetime], Session]
+    market_session: Callable[[dt.datetime, str], Session]
 
     @classmethod
     def begin(
@@ -97,7 +105,7 @@ class _SubmissionGuard:
         buy: bool,
         max_age_seconds: int,
         controls: _ProcessControls,
-        market_session: Callable[[dt.datetime], Session],
+        market_session: Callable[[dt.datetime, str], Session],
     ) -> _SubmissionGuard:
         started_at = controls.now()
         started_monotonic = controls.monotonic()
@@ -130,7 +138,7 @@ class _SubmissionGuard:
             return "halted", current
         if plan is not None and (
             trade_date(current) != trade_date(self.started_at)
-            or self.market_session(current) != plan.session
+            or self.market_session(current, plan.symbol) != plan.session
         ):
             return "session_changed", current
         return None, current
@@ -245,6 +253,7 @@ class CopyEngine:
             self.pending(),
             self.broker.positions() if positions is None else positions,
             tuple(self.ledger.state.external_positions.values()),
+            unsettled_fees=fee_allowance(self.ledger.orders()),
         )
 
     def reconcile(
@@ -290,6 +299,7 @@ class CopyEngine:
             if update is not None:
                 self.ledger.apply_order(client_id, update, now)
         positions = self.broker.positions()
+        self._count_crypto_fees(positions, now)
         self.ledger.open_ownership_incidents(
             self.audit_positions(positions),
             now,
@@ -297,6 +307,25 @@ class CopyEngine:
             settle_before=settle_before,
         )
         return positions
+
+    def _count_crypto_fees(self, positions: tuple[Position, ...], now: dt.datetime) -> None:
+        """Count Alpaca's fee on each coin's latest buys from the holding just read. Alpaca keeps
+        the fee out of the coin bought and reports it only at the day's end, so the holding is the
+        one place it shows (ADR-0014). The holding counts only when no order of the coin filled
+        while it was read: each open order is looked up again, and one that moved waits for the
+        next sync."""
+        for symbol in sorted(
+            {order.symbol for order in self.ledger.orders() if order.unsettled_fee_qty}
+        ):
+            still = all(
+                (update := self.broker.lookup(order.client_id)) is not None
+                and update.filled_qty == order.filled_qty
+                for order in self.pending(symbol)
+            )
+            if not still:
+                continue
+            held = sum((p.qty for p in positions if p.symbol == symbol), ZERO)
+            self.ledger.count_crypto_fee(symbol, self.ledger.expected_position(symbol) - held, now)
 
     def _outside_orders(self) -> frozenset[str]:
         """Stocks with an open broker order the app didn't place. Read only while a holdings
@@ -439,7 +468,11 @@ class CopyEngine:
             symbol=instruction.symbol,
         )
 
-    def market_session(self, now: dt.datetime) -> Session:
+    def market_session(self, now: dt.datetime, symbol: str | None = None) -> Session:
+        """The session an order of `symbol` would trade in now: a coin's is always open, a
+        stock's comes from the broker's calendar and the account's hours."""
+        if symbol is not None and is_crypto(symbol):
+            return Session.AROUND_THE_CLOCK
         date = trade_date(now).isoformat()
         if date not in self._calendar:
             self._calendar = {date: self.broker.calendar(date)}
@@ -474,6 +507,11 @@ class CopyEngine:
         """Plan one instruction. An exit with `chosen_lot` sells that lot, up to `chosen_qty`
         shares, as the owner chose it, even when exits are not copied."""
         s, c = instruction, self.config
+        crypto = is_crypto(s.symbol)
+        if crypto and self._environment != "paper":
+            # Crypto is copied on paper accounts only: a live account never sends a coin's order,
+            # whoever asks for it (ADR-0014).
+            return TradeDecision(None, "crypto_paper_only")
         if self.ledger.unresolved_ownership(s.symbol):
             return TradeDecision(None, "ownership_incident")
         if s.action == "buy" and (halted or self.ledger.state.buy_halted):
@@ -497,7 +535,7 @@ class CopyEngine:
                     self.cancel(order, now, "replaced_by_sell")
             if replaced:
                 return TradeDecision(None, "wait_pending_order")
-        session = self.market_session(now)
+        session = self.market_session(now, s.symbol)
         if session == Session.CLOSED:
             return TradeDecision(None, "outside_session")
         asset_read = _BROKER_READS.submit(self.broker.asset, s.symbol)
@@ -513,8 +551,15 @@ class CopyEngine:
             return TradeDecision(None, "unsupported_asset")
         if asset.symbol != s.symbol:
             raise RuntimeError("Broker asset identity mismatch")
-        if not asset.tradable or asset.asset_class != "us_equity" or asset.status != "active":
+        if (
+            not asset.tradable
+            or asset.asset_class != ("crypto" if crypto else "us_equity")
+            or asset.status != "active"
+        ):
             return TradeDecision(None, "unsupported_asset")
+        # A coin trades in its own steps (Alpaca's asset); a stock's are cents and millionths.
+        price_increment = asset.price_increment if crypto else None
+        qty_step = asset.min_trade_increment if crypto and asset.min_trade_increment else STEP
         if session == Session.OVERNIGHT:
             if not (asset.overnight_tradable or "overnight_tradable" in asset.attributes):
                 return TradeDecision(None, "overnight_not_supported")
@@ -527,7 +572,7 @@ class CopyEngine:
             source_price, problem = self._market_bid(s.symbol, now)
             if source_price is None:
                 return TradeDecision(None, problem)
-        tick = Decimal("0.01") if source_price >= 1 else Decimal("0.0001")
+        tick = price_tick(source_price, price_increment)
         if s.action == "buy" and source_price != source_price.quantize(tick):
             return TradeDecision(None, "invalid_price_tick")
         lot_id = None
@@ -559,7 +604,7 @@ class CopyEngine:
                 )
             except ValueError:
                 return TradeDecision(None, "account_risk_unavailable")
-            limit_price = c.entry_pricing.limit_price(source_price)
+            limit_price = c.entry_pricing.limit_price(source_price, price_increment)
             if self._crosses(s.symbol, "buy", limit_price):
                 # Alpaca refuses a buy at or above an open sell of the stock as a possible wash
                 # trade: it waits for the sell, and the buy's age limit still ends the wait.
@@ -614,13 +659,22 @@ class CopyEngine:
                 account_active=account.active,
             )
             connection = self.ledger.message(message_id).destination.connection
-            decision = entry_budget(c, facts, connection, s.fraction, s.usd_amount)
+            minimum_usd = MINIMUM_CRYPTO_BUY_USD if crypto else MINIMUM_ORDER_USD
+            decision = entry_budget(
+                c, facts, connection, s.fraction, s.usd_amount, minimum_usd=minimum_usd
+            )
             if decision.budget is None:
                 return TradeDecision(None, decision.reason, decision.breaches)
             requested_usd = decision.requested
             budget_usd = decision.budget
             limited_by = decision.limited_by
-            qty = (decision.budget / limit_price).quantize(STEP, rounding=ROUND_DOWN)
+            qty = (decision.budget / limit_price).quantize(qty_step, rounding=ROUND_DOWN)
+            if crypto and (
+                qty * limit_price < minimum_usd
+                or (asset.min_order_size is not None and qty < asset.min_order_size)
+            ):
+                # Rounded down to the coin's step, the buy no longer costs Alpaca's $10 minimum.
+                return TradeDecision(None, "below_minimum_budget")
             entry_price = source_price
         else:
             if chosen_lot is not None:
@@ -670,14 +724,14 @@ class CopyEngine:
                 # "Sell half" is half of what is left, unless the post or playbook says the
                 # original buy.
                 if s.exit_basis == "original_position":
-                    bought = sum((self.ledger.order(entry).filled_qty for entry in basis), ZERO)
+                    bought = sum((self.ledger.order(entry).received_qty for entry in basis), ZERO)
                     qty = min(qty, bought * s.fraction)
                 else:
                     qty = min(qty, held * s.fraction)
-            qty = qty.quantize(STEP, rounding=ROUND_DOWN)
+            qty = qty.quantize(qty_step, rounding=ROUND_DOWN)
             # An exit is a limit order too: its floor is the guru's sell price less the allowance,
             # so it sells whenever the market is at or above that floor (ADR-0010).
-            limit_price = c.entry_pricing.exit_limit_price(source_price)
+            limit_price = c.entry_pricing.exit_limit_price(source_price, price_increment)
             if self._crosses(s.symbol, "sell", limit_price):
                 # A sell at or under an open buy of the stock would trade with it: it waits.
                 return TradeDecision(None, "wait_pending_order")
@@ -899,16 +953,12 @@ class CopyEngine:
         order: OrderRecord,
         guard: _SubmissionGuard,
     ) -> None:
-        request = OrderRequest(
-            symbol=order.symbol,
-            side=order.side,
-            position_intent=order.position_intent,
-            qty=order.qty,
-            type=order.type,
-            limit_price=order.limit_price,
-            client_order_id=order.client_id,
+        request = OrderRequest.for_plan(
+            order,
+            order.client_id,
             # Marked for extended hours only outside the regular session: Alpaca routes such an
-            # order differently even at 9:30, and a regular-session order needs no flag.
+            # order differently even at 9:30, and a regular-session order needs no flag. A coin's
+            # order carries no hours at all.
             extended_hours=order.type == "limit" and order.session != Session.REGULAR,
         )
         try:

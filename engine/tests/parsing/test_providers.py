@@ -128,7 +128,7 @@ def test_prompt_bytes_match_the_pre_adapter_prompt():
 
     assert (
         hashlib.sha256(INSTRUCTIONS.encode()).hexdigest()
-        == "387b6510f64873ff8814e377ef1ec3502873afd9bf62ddc2d7f21dc74078b733"
+        == "79f0c5ab681fc094cd483ad6769d7c1c86feb39d2a33a1897ff83a2701069d77"
     )
 
 

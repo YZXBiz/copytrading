@@ -5,6 +5,8 @@ import SwiftUI
 /// as its own line with its post, price, and gain, and one black Sell pill for the whole lot.
 struct PositionLotRow: View {
     let lot: AccountLotView
+    /// The stock, or the coin's pair, the lot holds.
+    let symbol: String
     let guruName: String?
     /// Today's price of the symbol, from the position's valuation.
     let currentPrice: Decimal?
@@ -23,8 +25,8 @@ struct PositionLotRow: View {
     /// "12 shares", or "5 of 12 shares" once some of the lot is sold, for VoiceOver.
     @MainActor private var shares: String {
         let original = Decimal(engine: lot.originalQty) ?? remaining
-        guard original != remaining else { return Humanize.shares(remaining) }
-        return Humanize.shares(remaining, of: original)
+        guard original != remaining else { return Humanize.shares(remaining, of: symbol) }
+        return Humanize.shares(remaining, of: original, symbol: symbol)
     }
 
     var body: some View {
@@ -33,6 +35,7 @@ struct PositionLotRow: View {
                 ForEach(lot.buys) { buy in
                     PositionLotBuyLine(
                         buy: buy,
+                        symbol: symbol,
                         who: who,
                         currentPrice: currentPrice,
                         post: post(buy),

@@ -42,6 +42,7 @@ REASONS = {
     "sell_share_not_given": "The sell doesn't say how much",
     "batch_size_not_given": "The playbook doesn't say how big a batch is",
     "unsupported_asset": "The broker does not support trading this asset",
+    "crypto_paper_only": "Crypto is copied on paper accounts only",
     "outside_session": "The broker session is not eligible for this order",
     "below_minimum_quantity": "The allowed size is below the asset's minimum quantity",
     "position_mismatch": "Broker holdings do not match the copier ledger",
@@ -88,6 +89,9 @@ def execution_notification(
         waits = reason in HELD_FOR_OWNER
         title = f"{instruction.symbol} — {'waiting for you' if waits else 'trade skipped'}"
         detail = REASONS.get(reason, reason.replace("_", " "))
+        if reason == "crypto_paper_only":
+            account = message.destination.connection.account_id
+            detail = f"{account} is a live account, and crypto is copied on paper accounts only"
         for breach in payload.exposure or ():
             detail += (
                 f". {breach.scope.capitalize()} cost exposure "

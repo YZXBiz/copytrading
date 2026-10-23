@@ -182,7 +182,9 @@ struct LotSaleSheet: View {
         let quantity = Decimal(engine: plan.quantity) ?? 0
         let bid = preview.freshPrice.flatMap { Decimal(engine: $0) }
         let noun = L10n.string(quantity == 1 ? "share" : "shares")
-        let shares = L10n.string("%@ %@ of %@", quantity.formatted(), noun, plan.symbol)
+        let shares =
+            Humanize.isCoin(plan.symbol)
+            ? Humanize.shares(quantity, of: plan.symbol) : L10n.string("%@ %@ of %@", quantity.formatted(), noun, plan.symbol)
         guard let limit = plan.limitPrice.flatMap({ Decimal(engine: $0) }) else { return shares }
         let sentence = L10n.string(
             "Sells %@ with a limit order at %@. It fills at that price or better, or not at all.",
@@ -227,8 +229,10 @@ struct LotSaleSheet: View {
             let price =
                 result.filledAvgPrice.flatMap { Decimal(engine: $0) }.map { L10n.string(" at %@", $0.formatted(.currency(code: "USD"))) }
                 ?? ""
-            return L10n.string("Sold %@ %@%@", filled.formatted(), target.symbol, price)
-        case "partially_filled": return L10n.string("Sold %@ so far", filled.formatted())
+            return Humanize.isCoin(target.symbol)
+                ? L10n.string("Sold %@%@", Humanize.shares(filled, of: target.symbol), price)
+                : L10n.string("Sold %@ %@%@", filled.formatted(), target.symbol, price)
+        case "partially_filled": return L10n.string("Sold %@ so far", Humanize.shareCount(filled, of: target.symbol))
         case "accepted", "prepared": return L10n.string("Your sale is in")
         case "uncertain": return L10n.string("Waiting to hear from the broker")
         case "rejected": return L10n.string("Nothing was sent")
@@ -296,7 +300,7 @@ struct LotSaleSheet: View {
             Button(
                 flow.phase == .checking
                     ? L10n.string("Checking…")
-                    : L10n.string("Sell %@ %@…", PositionRow.quantity(flow.shares), target.symbol)
+                    : L10n.string("Sell %@ %@…", PositionRow.quantity(flow.shares, of: target.symbol), target.symbol)
             ) {
                 Task { await flow.review(using: operations) }
             }
@@ -334,7 +338,7 @@ struct LotSaleSheet: View {
         let quantity = preview.plan.flatMap { Decimal(engine: $0.quantity) } ?? flow.shares
         return L10n.string(
             target.asksForOwner ? "Sell %@ %@ with Touch ID" : "Sell %@ %@",
-            quantity.formatted(), target.symbol
+            Humanize.shareCount(quantity, of: target.symbol), target.symbol
         )
     }
 }

@@ -2429,3 +2429,12 @@
 "Allow setup changes from the command line" = "允许通过命令行修改设置";
 "Turn off setup changes from the command line" = "关闭通过命令行修改设置";
 "copytrading setup may change keys, the model, accounts, and gurus. Live accounts still wait for you." = "copytrading setup 可以修改密钥、AI 模型、账户和信号源。实盘账户仍要等你批准。";
+"Crypto is copied on paper accounts only, and this account is live" = "加密货币只在模拟盘账户上跟单，而此账户是实盘账户";
+"Crypto trades on paper accounts only. Change to a paper account." = "加密货币只在模拟盘账户上交易。请改用模拟盘账户。";
+"%@ units of %@" = "%@ %@";
+"%@ of %@ units of %@" = "%@ / %@ %@";
+"All %@" = "全部 %@";
+"Sold %@%@" = "已卖出 %@%@";
+"Less %@ at the broker than CopyTrading copied" = "券商持有的 %@ 少于 CopyTrading 跟单的数量";
+"%@ · until filled or cancelled" = "%@ · 成交或撤单前有效";
+"Around the clock" = "全天候";

@@ -70,6 +70,7 @@ struct PositionsTable: View {
                                 let guruName = gurus.gurus.first { $0.id == lot.guruID }?.name ?? lot.guruID.map(Humanize.code)
                                 PositionLotRow(
                                     lot: lot,
+                                    symbol: position.symbol,
                                     guruName: guruName,
                                     currentPrice: position.currentPrice.flatMap { Decimal(engine: $0) },
                                     post: { buy in buy.sourceID.flatMap { id in activity.first { $0.sourceID == id } } },
@@ -136,7 +137,7 @@ struct PositionsTable: View {
 
     /// The most decimals any position's share count shows, so the column lines up.
     private var shareDecimals: Int {
-        positions.map { PositionRow.decimals(PositionRow.shares(of: $0)) }.max() ?? 0
+        positions.map { PositionRow.decimals(PositionRow.shares(of: $0), of: $0.symbol) }.max() ?? 0
     }
 
     /// The gurus a position's copied shares came from, by name, in the order first bought.

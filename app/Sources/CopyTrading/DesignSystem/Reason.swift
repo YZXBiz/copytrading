@@ -89,6 +89,7 @@ enum Reason {
         "below_minimum_quantity": "The order was below one share",
         "exits_disabled": "Copying exits is off",
         "unsupported_asset": "The broker does not support this symbol",
+        "crypto_paper_only": "Crypto is copied on paper accounts only, and this account is live",
         "invalid_price_tick": "The price was not a valid tick",
         "missing_or_ambiguous_lot": "You don't hold a copied buy at that price",
         "wait_pending_order": "Waiting for an earlier order",

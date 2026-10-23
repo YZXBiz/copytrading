@@ -78,6 +78,8 @@ extension AccountFeedItem {
 
     @MainActor private var shareCount: String {
         guard let value = Decimal(engine: shares) else { return L10n.string("some shares") }
+        // A coin's count stands alone before its pair: "Bought 0.001231481 of BTC/USD".
+        if let symbol, Humanize.isCoin(symbol) { return Humanize.sharesOf(value, symbol: symbol) }
         let number = value.formatted()
         return value == 1 ? L10n.string("%@ share", number) : L10n.string("%@ shares", number)
     }

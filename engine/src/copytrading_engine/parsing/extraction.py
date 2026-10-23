@@ -34,8 +34,9 @@ from copytrading_engine.shared.reading import (
     TradeMade,
 )
 from copytrading_engine.shared.signals import same_fraction
+from copytrading_engine.shared.symbols import crypto_pair, is_crypto
 
-PROMPT_VERSION = "stock-reading-v7"
+PROMPT_VERSION = "stock-reading-v8"
 
 # Chinese characters and ASCII letters both count as Unicode word characters.
 # Match complete numeric tokens and bound English words by ASCII letters so
@@ -376,7 +377,13 @@ def _check_call(call: Call, text: str, route: Route, path: str) -> None:
 
 def _check_stock(stock: Stock, text: str, route: Route, path: str) -> None:
     _words(stock.words, text, path)
-    named = stock.words.lstrip("$").upper() != stock.ticker
+    # A coin is its pair however the post writes it: its ticker, its pair, or its name
+    # (BTC, BTC/USD, bitcoin, 比特币 are all BTC/USD).
+    named = (
+        crypto_pair(stock.words) != stock.ticker
+        if is_crypto(stock.ticker)
+        else stock.words.lstrip("$").upper() != stock.ticker
+    )
     if named and not playbook_maps(route.playbook, stock.words, stock.ticker):
         raise GroundingError(
             "symbol_not_in_playbook",

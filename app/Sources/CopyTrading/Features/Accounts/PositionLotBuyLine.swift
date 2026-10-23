@@ -6,6 +6,8 @@ import SwiftUI
 /// "Open post ↗" back to the post.
 struct PositionLotBuyLine: View {
     let buy: AccountLotBuyView
+    /// The stock, or the coin's pair, the buy bought.
+    let symbol: String
     let who: String
     /// Today's price of the symbol, from the position's valuation.
     let currentPrice: Decimal?
@@ -18,14 +20,22 @@ struct PositionLotBuyLine: View {
     private var price: Decimal? { buy.price.flatMap { Decimal(engine: $0) } }
 
     /// "0.885 shares bought at $110.75", or "0.5 of 2 shares bought at $40" once some are sold.
-    /// Shares show to three decimals, as a broker statement does, never with an "≈".
+    /// Shares show to three decimals, as a broker statement does, never with an "≈"; a coin shows
+    /// to the billionth with its code, "0.001231481 BTC bought at $81,000.00".
     @MainActor private var holding: String {
         let bought = Decimal(engine: buy.boughtQty) ?? remaining
-        let count = Self.count(remaining)
-        let shares =
-            bought == remaining
-            ? L10n.string(remaining == 1 ? "%@ share" : "%@ shares", count)
-            : L10n.string(bought == 1 ? "%@ of %@ share" : "%@ of %@ shares", count, Self.count(bought))
+        let shares: String
+        if Humanize.isCoin(symbol) {
+            shares =
+                bought == remaining
+                ? Humanize.shares(remaining, of: symbol) : Humanize.shares(remaining, of: bought, symbol: symbol)
+        } else {
+            let count = Self.count(remaining)
+            shares =
+                bought == remaining
+                ? L10n.string(remaining == 1 ? "%@ share" : "%@ shares", count)
+                : L10n.string(bought == 1 ? "%@ of %@ share" : "%@ of %@ shares", count, Self.count(bought))
+        }
         guard let price else { return shares }
         return L10n.string("%@ bought at %@", shares, price.formatted(.currency(code: "USD")))
     }

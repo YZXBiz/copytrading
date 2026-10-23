@@ -14,6 +14,7 @@ from copytrading_engine.execution.adapters.alpaca.models import (
     decode_asset,
     decode_broker_order,
     decode_calendar,
+    decode_crypto_quote,
     decode_orders,
     decode_portfolio_history,
     decode_positions,
@@ -40,6 +41,7 @@ from copytrading_engine.execution.domain.market import (
 )
 from copytrading_engine.execution.domain.orders import OrderRequest
 from copytrading_engine.execution.domain.sessions import ET
+from copytrading_engine.shared.symbols import is_crypto, path_symbol
 
 _ORDERS_PAGE_SIZE = 500
 # Alpaca serves intraday points for at most 30 days, so longer ranges use daily points.
@@ -266,9 +268,10 @@ class AlpacaBroker:
         )
 
     def asset(self, symbol: str) -> Asset:
+        # A coin's pair is asked for without its slash (BTCUSD); Alpaca answers with the pair.
         return self.decode_normalized(
             decode_asset,
-            self.request("GET", f"/v2/assets/{symbol}"),
+            self.request("GET", f"/v2/assets/{path_symbol(symbol)}"),
         )
 
     def calendar(self, date: str) -> tuple[CalendarDay, ...]:
@@ -419,8 +422,16 @@ class AlpacaBroker:
         return self.decode_normalized(decode_broker_order, result)
 
     def quote(self, symbol: str) -> Quote:
-        """The freshest quote among the feeds worth asking now (`quote_feeds`). The venue trading
-        must answer; a later feed that fails only leaves its quote out."""
+        """A coin's quote from the crypto feed, which quotes at every hour. A stock's is the
+        freshest among the feeds worth asking now (`quote_feeds`): the venue trading must answer;
+        a later feed that fails only leaves its quote out."""
+        if is_crypto(symbol):
+            result = self.request(
+                "GET",
+                "https://data.alpaca.markets/v1beta3/crypto/us/latest/quotes",
+                params={"symbols": symbol},
+            )
+            return self.decode_normalized(lambda value: decode_crypto_quote(value, symbol), result)
         primary, *others = quote_feeds(self.now())
         quotes = [self._quote(symbol, primary)]
         for feed in others:

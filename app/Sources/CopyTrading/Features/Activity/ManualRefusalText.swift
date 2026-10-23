@@ -83,6 +83,7 @@ enum ManualRefusalText {
         "overnight_halted": "Overnight trading in this stock is halted. Review in the day session.",
         "unsupported_asset": "Alpaca doesn't trade this symbol. Change the stock and review again.",
         "account_blocked": "Alpaca has blocked this account. Check it with Alpaca.",
+        "crypto_paper_only": "Crypto trades on paper accounts only. Change to a paper account.",
 
         // Your limits and holdings.
         "daily_loss_cap": "Your daily loss limit was reached. Raise it in Connections or wait.",

@@ -27,6 +27,12 @@ class EntryLimits(Protocol):
 PRODUCT_PLACES = Decimal("1e-10")
 # Alpaca's smallest order in dollars: a limit with less room than this leaves nothing to buy.
 MINIMUM_ORDER_USD = Decimal("1")
+# Alpaca refuses a coin's buy that costs less than $10 at its limit ("cost basis must be >= minimal
+# amount of order 10", seen on paper on 23 October 2026), well above the asset's own minimum size.
+# A coin's sale has no such floor (ADR-0014).
+MINIMUM_CRYPTO_BUY_USD = Decimal("10")
+# What a broker position may be: a stock, or a coin held against the dollar.
+_HELD_CLASSES = frozenset({"us_equity", "crypto"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -137,8 +143,8 @@ def account_exposure(
         worth = Decimal(0)
         position = held.get(symbol)
         if position is not None and position.qty:
-            if position.qty < 0 or position.asset_class != "us_equity":
-                raise ValueError("Unsupported short or non-equity broker position")
+            if position.qty < 0 or position.asset_class not in _HELD_CLASSES:
+                raise ValueError("Unsupported short, option, or other broker position")
             value = position.market_value
             if position.currency != "USD" or value is None or not value.is_finite() or value <= 0:
                 raise ValueError("Broker position valuation is unavailable or non-USD")
@@ -161,10 +167,13 @@ def entry_budget(
     connection: RouteConnection,
     source_fraction: Decimal | None,
     source_usd: Decimal | None = None,
+    *,
+    minimum_usd: Decimal = MINIMUM_ORDER_USD,
 ) -> BudgetDecision:
     """Each buy gets its destination's budget once. The largest single buy and the room left
     under the per-stock and total limits cut it; it is refused only when that room is under
-    Alpaca's $1 minimum. The daily loss cap refuses outright: it is a stop, not a size."""
+    Alpaca's minimum: $1 for a stock, `MINIMUM_CRYPTO_BUY_USD` for a coin. The daily loss cap
+    refuses outright: it is a stop, not a size."""
     if not facts.account_active:
         return BudgetDecision(None, "account_blocked")
     if facts.equity - facts.last_equity <= -config.daily_loss_cap_usd:
@@ -187,14 +196,14 @@ def entry_budget(
         if left < budget:
             budget, limited_by = left, limit
     budget = max(budget, Decimal(0)).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
-    if budget < MINIMUM_ORDER_USD:
+    if budget < minimum_usd:
         breaches = tuple(
             breach
             for breach in (
                 ExposureBreach("symbol", facts.symbol_exposure, requested, config.max_symbol_usd),
                 ExposureBreach("total", facts.total_exposure, requested, config.max_total_usd),
             )
-            if breach.limit - breach.current < MINIMUM_ORDER_USD
+            if breach.limit - breach.current < minimum_usd
         )
         scopes = {breach.scope for breach in breaches}
         reason = (

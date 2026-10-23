@@ -16,6 +16,7 @@ from copytrading_engine.execution.domain.order_lifecycle import (
 )
 from copytrading_engine.execution.domain.sessions import Session
 from copytrading_engine.execution.domain.values import Identifier, Positive, Quantity, Side, Value
+from copytrading_engine.shared.symbols import is_crypto
 
 
 class OrderTerms(Value):
@@ -39,14 +40,41 @@ class OrderRequest(OrderTerms):
     symbol: Identifier
     qty: Positive
     client_order_id: str = Field(min_length=1, max_length=48)
-    time_in_force: Literal["day"] = "day"
-    extended_hours: bool
+    # A stock order lasts the day; Alpaca takes a coin's only as good-till-canceled, so a sell of
+    # one rests at its floor until it fills (ADR-0014).
+    time_in_force: Literal["day", "gtc"]
+    # Never sent for a coin, which has no extended hours.
+    extended_hours: bool | None
 
     @model_validator(mode="after")
     def valid_session(self) -> Self:
+        crypto = is_crypto(self.symbol)
+        if crypto != (self.time_in_force == "gtc"):
+            raise ValueError("A coin's order is good-till-canceled, and only a coin's")
+        if crypto != (self.extended_hours is None):
+            raise ValueError("Only a stock's order says whether it trades in extended hours")
         if self.type == "market" and self.extended_hours:
             raise ValueError("Market orders cannot execute in extended hours")
         return self
+
+    @classmethod
+    def for_plan(
+        cls, plan: OrderPlan, client_order_id: str, *, extended_hours: bool
+    ) -> OrderRequest:
+        """The order Alpaca is sent for a plan: a stock's for the day, marked for extended hours
+        as asked; a coin's good-till-canceled, with no hours at all."""
+        crypto = is_crypto(plan.symbol)
+        return cls(
+            symbol=plan.symbol,
+            side=plan.side,
+            position_intent=plan.position_intent,
+            qty=plan.qty,
+            type=plan.type,
+            limit_price=plan.limit_price,
+            client_order_id=client_order_id,
+            time_in_force="gtc" if crypto else "day",
+            extended_hours=None if crypto else extended_hours,
+        )
 
 
 _SIZE_TOLERANCE = Decimal("1.02")
@@ -131,8 +159,13 @@ class OrderPlan(OrderTerms):
             raise ValueError("Only sells take from buys")
         if self.session == Session.CLOSED:
             raise ValueError("Cannot prepare an order in a closed session")
-        if self.type == "market" and self.session != Session.REGULAR:
+        if self.type == "market" and self.session not in {
+            Session.REGULAR,
+            Session.AROUND_THE_CLOCK,
+        }:
             raise ValueError("Market exits require a regular session")
+        if is_crypto(self.symbol) != (self.session == Session.AROUND_THE_CLOCK):
+            raise ValueError("A coin trades around the clock, and only a coin does")
         if (self.side == "sell") != (self.lot_id is not None):
             raise ValueError("Only sells must reference an owned lot")
         return self
@@ -153,11 +186,34 @@ class OrderRecord(OrderPlan):
     filled_avg_price: Positive | None = None
     # When Alpaca first reported the order live on the market; its timeout runs from here.
     accepted_at: AwareDatetime | None = None
+    # A coin bought arrives less Alpaca's fee, taken in the coin itself and reported only at the
+    # day's end: `fee_qty` is the coin the account never received, counted from the broker's
+    # holding once `fee_settled_qty` of the fill had been booked (ADR-0014). Zero for a stock.
+    fee_qty: Quantity = Decimal(0)
+    fee_settled_qty: Quantity = Decimal(0)
+
+    @property
+    def received_qty(self) -> Decimal:
+        """What the account holds from this order's fills: a coin's less its fee."""
+        return self.filled_qty - self.fee_qty
+
+    @property
+    def unsettled_fee_qty(self) -> Decimal:
+        """The coin a buy filled since its fee was last counted; a stock's fill, and a sale, pay
+        no fee in what they receive."""
+        if self.side != "buy" or not is_crypto(self.symbol):
+            return Decimal(0)
+        return self.filled_qty - self.fee_settled_qty
 
     @model_validator(mode="after")
     def valid_fill(self) -> Self:
         if self.filled_qty > self.qty or (self.status == "filled" and self.filled_qty != self.qty):
             raise ValueError("Inconsistent recorded fill quantity")
+        if self.fee_qty or self.fee_settled_qty:
+            if self.side != "buy" or not is_crypto(self.symbol):
+                raise ValueError("Only a coin's buy pays its fee in the coin")
+            if not self.fee_qty <= self.fee_settled_qty <= self.filled_qty:
+                raise ValueError("A fee is counted only on what has filled")
         if self.status == "aborted_before_submit" and (self.filled_qty or self.broker_id):
             raise ValueError("An order aborted before submission cannot have broker activity")
         if self.status == OrderStatus.UNRECOGNIZED:

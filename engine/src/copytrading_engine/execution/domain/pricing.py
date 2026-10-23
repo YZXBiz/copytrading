@@ -43,21 +43,29 @@ class EntryPricingPolicy(BaseModel):
     max_above_signal_pct: AboveSignalPct = DEFAULT_ABOVE_SIGNAL_PCT
     max_below_signal_pct: BelowSignalPct = DEFAULT_BELOW_SIGNAL_PCT
 
-    def limit_price(self, signal_price: Decimal) -> Decimal:
-        """Return a valid stock tick that never exceeds the configured ceiling."""
+    def limit_price(self, signal_price: Decimal, increment: Decimal | None = None) -> Decimal:
+        """Return a valid tick that never exceeds the configured ceiling: a stock's, or the
+        coin's own `increment`."""
         if not signal_price.is_finite() or signal_price <= 0:
             raise ValueError("Signal price must be finite and positive")
         ceiling = signal_price * (Decimal(1) + self.max_above_signal_pct / Decimal(100))
-        tick = Decimal("0.01") if ceiling >= 1 else Decimal("0.0001")
-        return ceiling.quantize(tick, rounding=ROUND_DOWN)
+        return ceiling.quantize(price_tick(ceiling, increment), rounding=ROUND_DOWN)
 
-    def exit_limit_price(self, signal_price: Decimal) -> Decimal:
-        """Return a valid stock tick no lower than the allowed distance under the guru's price.
+    def exit_limit_price(self, signal_price: Decimal, increment: Decimal | None = None) -> Decimal:
+        """Return a valid tick no lower than the allowed distance under the guru's price: a
+        stock's, or the coin's own `increment`.
 
         Every exit is a limit order, so a copied sell never fills far below what the guru got.
         """
         if not signal_price.is_finite() or signal_price <= 0:
             raise ValueError("Signal price must be finite and positive")
         floor = signal_price * (Decimal(1) - self.max_below_signal_pct / Decimal(100))
-        tick = Decimal("0.01") if floor >= 1 else Decimal("0.0001")
-        return floor.quantize(tick, rounding=ROUND_UP)
+        return floor.quantize(price_tick(floor, increment), rounding=ROUND_UP)
+
+
+def price_tick(price: Decimal, increment: Decimal | None = None) -> Decimal:
+    """The step a price moves in: a coin's own increment from Alpaca, else a stock's cent, or a
+    hundredth of a cent under $1."""
+    if increment is not None:
+        return increment
+    return Decimal("0.01") if price >= 1 else Decimal("0.0001")

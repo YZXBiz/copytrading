@@ -15,11 +15,14 @@ struct OrderFactsView: View {
     private var kind: String {
         let side = L10n.string(order.side == "sell" ? "sell" : "buy")
         let type = L10n.string(order.orderType == "market" ? "Market %@" : "Limit %@", side)
-        return L10n.string("%@ · day", type)
+        // A coin's order is good till cancelled: Alpaca takes no day order for crypto.
+        return Humanize.isCoin(order.symbol)
+            ? L10n.string("%@ · until filled or cancelled", type) : L10n.string("%@ · day", type)
     }
 
     private var session: String? {
         switch order.session {
+        case "around_the_clock": L10n.string("Around the clock")
         case "regular": L10n.string("Regular hours")
         case "extended": L10n.string("Before or after regular hours")
         case "overnight": L10n.string("Overnight")
@@ -41,7 +44,7 @@ struct OrderFactsView: View {
     private var filled: String {
         let done = Decimal(engine: order.filledQuantity) ?? 0
         let asked = Decimal(engine: order.quantity) ?? 0
-        return done < asked ? Humanize.shares(done, of: asked) : Humanize.shares(done)
+        return done < asked ? Humanize.shares(done, of: asked, symbol: order.symbol) : Humanize.shares(done, of: order.symbol)
     }
 
     var body: some View {

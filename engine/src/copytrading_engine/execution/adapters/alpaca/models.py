@@ -24,6 +24,7 @@ from copytrading_engine.execution.domain.market import (
     QuoteFeed,
 )
 from copytrading_engine.execution.domain.values import Identifier, Money, Positive, Quantity, Side
+from copytrading_engine.shared.symbols import held_symbol
 
 
 class AlpacaValue(BaseModel):
@@ -52,6 +53,10 @@ class AlpacaAsset(AlpacaValue):
     attributes: tuple[str, ...] = ()
     overnight_tradable: StrictBool = False
     overnight_halted: StrictBool = False
+    # Given only for a coin; a stock's are null.
+    min_order_size: Positive | None = None
+    min_trade_increment: Positive | None = None
+    price_increment: Positive | None = None
 
 
 class AlpacaPosition(AlpacaValue):
@@ -141,6 +146,13 @@ def decode_quote(value: object, feed: QuoteFeed) -> Quote:
     return Quote(feed=feed, bid=wire.bp, ask=wire.ap, timestamp=wire.t)
 
 
+def decode_crypto_quote(value: object, symbol: str) -> Quote:
+    """A coin's latest quote, from Alpaca's crypto feed, which answers for a list of pairs."""
+    quotes = value.get("quotes") if isinstance(value, dict) else None
+    wire = AlpacaQuote.model_validate(quotes.get(symbol) if isinstance(quotes, dict) else None)
+    return Quote(feed="crypto", bid=wire.bp, ask=wire.ap, timestamp=wire.t)
+
+
 def decode_portfolio_history(value: object, window: HistoryWindow) -> EquityHistory:
     wire = AlpacaPortfolioHistory.model_validate(value)
     return EquityHistory(
@@ -174,7 +186,13 @@ def decode_positions(value: object, *, account_currency: str | None = None) -> t
     return tuple(
         Position.model_validate(
             position.model_dump()
-            | {"currency": position.currency if position.currency is not None else account_currency}
+            | {
+                "currency": position.currency
+                if position.currency is not None
+                else account_currency,
+                # Alpaca lists a coin held as BTCUSD; everywhere else it is the pair, BTC/USD.
+                "symbol": held_symbol(position.symbol, position.asset_class),
+            }
         )
         for position in wire_positions
     )

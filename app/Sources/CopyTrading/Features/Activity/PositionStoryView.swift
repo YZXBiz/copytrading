@@ -101,8 +101,10 @@ struct PositionStoryView: View {
         return L10n.string("%@ · %@", who, time)
     }
 
-    /// Shares to the thousandth, as the story reads them: "6.973 shares".
+    /// Shares to the thousandth, as the story reads them: "6.973 shares"; a coin to the
+    /// billionth, "0.001231481 BTC".
     private func shareCount(_ value: Decimal) -> String {
+        if Humanize.isCoin(story.symbol) { return Humanize.shares(value, of: story.symbol) }
         let number = value.formatted(.number.precision(.fractionLength(0...3)))
         return value == 1 ? L10n.string("%@ share", number) : L10n.string("%@ shares", number)
     }

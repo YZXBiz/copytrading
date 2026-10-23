@@ -573,7 +573,9 @@ class LedgerSnapshot(Value):
                 or lot.entry_prices.get(entry.client_id) != entry.entry_price
                 for entry in entries
             ) or lot.original_qty != sum(
-                (entry.filled_qty for entry in entries if entry is not None), Decimal(0)
+                # What each buy brought in: a coin's fill less the fee Alpaca kept of it.
+                (entry.received_qty for entry in entries if entry is not None),
+                Decimal(0),
             ):
                 raise ValueError("Snapshot lot does not match its entry fills")
             sold = sum(

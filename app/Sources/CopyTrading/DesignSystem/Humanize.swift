@@ -113,18 +113,41 @@ enum Humanize {
         return decimal.formatted(.currency(code: "USD").precision(.fractionLength(whole ? 0 : 2)))
     }
 
-    /// A share count as a person reads it: whole shares when within a hundredth of one ("1 share",
-    /// "≈1 share"), otherwise to three decimals at most ("2.985 shares"). "≈" marks a rounded count.
-    /// `marksRounding: false` leaves the "≈" to a sentence that already says the count is an
-    /// estimate.
-    @MainActor
-    static func shares(_ value: Decimal, marksRounding: Bool = true) -> String {
-        L10n.string(isOne(value) ? "%@ share" : "%@ shares", shareCount(value, marksRounding: marksRounding))
+    /// Whether a symbol is a coin's dollar pair ("BTC/USD") rather than a stock: the engine writes
+    /// every coin that way, and no stock has a slash.
+    static func isCoin(_ symbol: String) -> Bool {
+        symbol.contains("/")
     }
 
-    /// The count alone, rounded as `shares` rounds it: "≈1", "2.985", "0".
+    /// The coin a pair trades: "BTC" of "BTC/USD".
+    static func coin(_ symbol: String) -> String {
+        String(symbol.split(separator: "/").first ?? Substring(symbol))
+    }
+
+    /// How much of a stock or coin, as a person reads it. A stock's shares are whole when within a
+    /// hundredth of one ("1 share", "≈1 share"), otherwise to three decimals at most ("2.985
+    /// shares"); "≈" marks a rounded count. A coin is counted to the billionth Alpaca keeps it in,
+    /// with its code ("0.001231481 BTC"). `marksRounding: false` leaves the "≈" to a sentence that
+    /// already says the count is an estimate.
     @MainActor
-    static func shareCount(_ value: Decimal, marksRounding: Bool = true) -> String {
+    static func shares(_ value: Decimal, of symbol: String, marksRounding: Bool = true) -> String {
+        if isCoin(symbol) { return L10n.string("%@ units of %@", coinCount(value), coin(symbol)) }
+        return L10n.string(isOne(value) ? "%@ share" : "%@ shares", shareCount(value, of: symbol, marksRounding: marksRounding))
+    }
+
+    /// What comes before "of" and the symbol in a sentence ("Bought %@ of %@"): a stock's shares
+    /// ("2.985 shares" of PM), or a coin's count alone ("0.001231481" of BTC/USD), which the pair
+    /// already names.
+    @MainActor
+    static func sharesOf(_ value: Decimal, symbol: String) -> String {
+        isCoin(symbol) ? coinCount(value) : shares(value, of: symbol)
+    }
+
+    /// The count alone, rounded as `shares` rounds it: "≈1", "2.985", "0", or a coin's
+    /// "0.001231481".
+    @MainActor
+    static func shareCount(_ value: Decimal, of symbol: String, marksRounding: Bool = true) -> String {
+        if isCoin(symbol) { return coinCount(value) }
         var source = value
         var whole = Decimal()
         NSDecimalRound(&whole, &source, 0, .plain)
@@ -136,10 +159,21 @@ enum Humanize {
         return shown == value || !marksRounding ? text : L10n.string("≈%@", text)
     }
 
-    /// "0 of ≈1 share", "5 of 12 shares": part of an amount of shares, as filled of an order.
+    /// "0 of ≈1 share", "5 of 12 shares", "0.0005 of 0.001231481 BTC": part of an amount, as filled
+    /// of an order.
     @MainActor
-    static func shares(_ part: Decimal, of quantity: Decimal) -> String {
-        L10n.string(isOne(quantity) ? "%@ of %@ share" : "%@ of %@ shares", shareCount(part), shareCount(quantity))
+    static func shares(_ part: Decimal, of quantity: Decimal, symbol: String) -> String {
+        if isCoin(symbol) {
+            return L10n.string("%@ of %@ units of %@", coinCount(part), coinCount(quantity), coin(symbol))
+        }
+        return L10n.string(
+            isOne(quantity) ? "%@ of %@ share" : "%@ of %@ shares", shareCount(part, of: symbol), shareCount(quantity, of: symbol))
+    }
+
+    /// A coin's count to the billionth, as Alpaca keeps it, with no trailing zeros: "0.001231481".
+    @MainActor
+    private static func coinCount(_ value: Decimal) -> String {
+        value.formatted(.number.precision(.fractionLength(0...9)).locale(AppTime.locale))
     }
 
     /// An amount of a stock, dollar first: "$200 of PM".
