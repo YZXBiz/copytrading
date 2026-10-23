@@ -1,9 +1,16 @@
 """Which configured route a source message follows; parsing and delivery must pick the same one."""
 
+import hashlib
 from collections.abc import Mapping
 from dataclasses import dataclass
 
 AMBIGUOUS_SOURCE_PROFILE = "ambiguous_source_profile"
+
+
+def guru_for_channel(source: str, channel_id: str) -> str:
+    """A guru's ID. Each channel has one guru, so the channel names them: setting up again, or
+    importing the same setup, gives the guru the same ID and their history stays theirs."""
+    return "guru-" + hashlib.sha256(f"{source}:{channel_id}".encode()).hexdigest()[:8]
 
 
 def route_key(source: str, channel_id: str, author_id: str | None) -> str:

@@ -66,7 +66,7 @@ private func savedConfigurationRoundTripsThroughDraft() throws {
     ]
     seed.routes = [
         TradingRouteDraft(
-            channelID: "111", authorID: "333", guruID: "guru", displayName: "Guru",
+            channelID: "111", authorID: "333", displayName: "Guru",
             playbook: "  apple means AAPL\n英伟达 means NVDA\n",
             connection: TradingConnectionDraft(accountID: "primary")
         )
@@ -88,6 +88,27 @@ private func savedConfigurationRoundTripsThroughDraft() throws {
     let (roundTripped, _) = try reloaded.submission()
     try #require(roundTripped == configuration, "loading a saved configuration and resubmitting changed it")
     try #require(reloaded.hasLiveAccounts, "live account was not detected")
+    try #require(
+        configuration.routes.map(\.guruID) == [GuruIdentity.id(channelID: "111")],
+        "a new guru is not named by their channel")
+
+    // A setup saved before IDs came from the channel reads as unchanged, and its guru is still
+    // the channel's, so their posts show on their page.
+    let earlierProfile = try TradingProfileBuilder().build(
+        TradingProfileDraft(guruID: "guru-0fb5ed9b", displayName: "Guru", playbook: "apple means AAPL"))
+    var earlier = configuration
+    earlier.profiles = [earlierProfile]
+    earlier.routes[0].guruID = earlierProfile.guruID
+    earlier.routes[0].profileRevision = earlierProfile.profileRevision
+    var reopened = ConnectionsDraft()
+    reopened.load(earlier)
+    try #require(try reopened.submission().0 == earlier, "a setup saved with an earlier guru ID read as changed")
+    try #require(earlier.routes[0].guru == GuruIdentity.id(channelID: "111"), "the saved guru is not their channel's")
+    // Moved to another channel, the guru is that channel's.
+    reopened.routes[0].channelID = "222"
+    try #require(
+        try reopened.submission().0.routes[0].guruID == GuruIdentity.id(channelID: "222"),
+        "a guru moved to another channel kept the old ID")
 }
 
 @MainActor

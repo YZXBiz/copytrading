@@ -55,7 +55,7 @@ enum Reason {
         "outside_open_orders": "Cancel the orders open at Alpaca first",
         "broker_account_inactive": "Alpaca has not activated this account",
         "account_in_use": "Another CopyTrading on this Mac is copying into this account",
-        "account_record_mismatch": "Its keys are for a different Alpaca account than the one recorded under this name",
+        "alpaca_account_shared": "Another account in this setup uses keys for the same Alpaca account",
         "broker_keys_rejected": "Alpaca didn't accept the API keys",
         "broker_unreachable": "Alpaca couldn't be reached",
         "accounts_unavailable": "More than one account couldn't open",

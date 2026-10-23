@@ -3,6 +3,7 @@
 from copytrading_engine.host.pipe.requests import (
     AttachAccountReadersRequest,
     ControlAccountRequest,
+    DeleteAccountRecordRequest,
     DetachAccountReadersRequest,
     GetAccountFeedRequest,
     GetAccountsRequest,
@@ -37,6 +38,7 @@ class AccountHandlers:
             GetQuoteRequest: self._on_get_quote,
             AttachAccountReadersRequest: self._on_attach_account_readers,
             DetachAccountReadersRequest: self._on_detach_account_readers,
+            DeleteAccountRecordRequest: self._on_delete_account_record,
         }
 
     async def _on_get_quote(self, request: GetQuoteRequest) -> bytes:
@@ -76,6 +78,22 @@ class AccountHandlers:
             return reply(request.version, request.request_id, error="unavailable")
         self._trading.operator.detach_readers()
         return reply(request.version, request.request_id, ok={"type": "account_readers"})
+
+    async def _on_delete_account_record(self, request: DeleteAccountRecordRequest) -> bytes:
+        if self._trading is None:
+            return reply(request.version, request.request_id, error="unavailable")
+        refusal = await self._trading.manual.delete_account_record(request.account_id)
+        if refusal == "not_found":
+            return reply(request.version, request.request_id, error="not_found")
+        if refusal is not None:
+            return reply(
+                request.version, request.request_id, error="invalid_request", reason=refusal
+            )
+        return reply(
+            request.version,
+            request.request_id,
+            ok={"type": "account_record_deleted", "account_id": request.account_id},
+        )
 
     async def _on_control_account(self, request: ControlAccountRequest) -> bytes:
         if self._trading is None:

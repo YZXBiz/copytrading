@@ -18,11 +18,11 @@ struct GuruDirectory {
         }
         var byID: [String: Guru] = [:]
         for route in configuration.routes {
-            let profile = configuration.profiles.first { $0.guruID == route.guruID }
+            let profile = configuration.profiles.first { $0.profileRevision == route.profileRevision }
             let name = profile?.displayName ?? route.guruID
-            let existing = byID[route.guruID]
-            byID[route.guruID] = Guru(
-                id: route.guruID,
+            let existing = byID[route.guru]
+            byID[route.guru] = Guru(
+                id: route.guru,
                 name: name,
                 channels: Array(Set((existing?.channels ?? []) + [route.channelID])).sorted(),
                 destinations: (existing?.destinations ?? []) + route.connections

@@ -1962,13 +1962,17 @@ final class AppModel {
             }
             copiedInto[connection.accountID] = name
         }
-        let identityRules = configuration.routes.map { "\($0.source):\($0.channelID):\($0.authorID ?? "*")" }
-        guard Set(identityRules).count == identityRules.count else {
-            throw fail(L10n.string("Two gurus read the same channel and author. Give each guru a different author ID in Connections."))
-        }
-        let sharedChannels = Dictionary(grouping: configuration.routes, by: { "\($0.source):\($0.channelID)" })
-        guard sharedChannels.values.allSatisfy({ routes in routes.count == 1 || routes.allSatisfy { $0.authorID != nil } }) else {
-            throw fail(L10n.string("Routes that share a channel each need an author ID."))
+        // The channel names its guru (GuruIdentity), so a channel has one.
+        var reading: [String: String] = [:]
+        for route in configuration.routes {
+            let name = profiles[route.profileRevision]?.displayName ?? route.guruID
+            if let other = reading[route.channelID] {
+                throw fail(
+                    L10n.string(
+                        "“%@” and “%@” both read channel %@. Each channel copies one guru: remove one of them, or give it its own channel.",
+                        other, name, route.channelID))
+            }
+            reading[route.channelID] = name
         }
     }
 

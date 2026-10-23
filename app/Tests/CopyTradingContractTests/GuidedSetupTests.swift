@@ -118,12 +118,17 @@ private func newAccountsAndGurusStartUsable() throws {
     draft.accounts = [TradingAccountDraft(name: "primary")]
     try verifyGuide(draft.nextAccountName == "account-2", "The second account name is not account-2")
 
-    let first = TradingRouteDraft()
-    let second = TradingRouteDraft()
-    try verifyGuide(first.guruID != second.guruID, "Two new gurus share an ID")
+    // The channel names the guru: the same channel is the same guru in every setup, as the engine
+    // names their posts (route_keys.guru_for_channel).
+    draft.channels = "1517754775674949742, 123"
+    let first = draft.guru(for: TradingRouteDraft())
+    try verifyGuide(first == "guru-3909e2aa", "A guru on the first channel is not that channel's guru: \(first)")
     try verifyGuide(
-        first.guruID.range(of: "^guru-[a-f0-9]{8}$", options: .regularExpression) != nil,
-        "A generated guru ID does not satisfy the profile rules")
+        draft.guru(for: TradingRouteDraft(channelID: "123")) == "guru-be6f68ea", "Another channel's guru shares an ID")
+    try verifyGuide(
+        draft.guru(for: TradingRouteDraft(channelID: "1517754775674949742")) == first,
+        "The same channel named two gurus")
+    draft.channels = ""
 
     let model = AppModel()
     model.addGuru()
@@ -263,21 +268,24 @@ private func aGuruEditSaysItIsNotSavedYet() throws {
     model.savedTradingConfiguration = saved
     model.hasTradingSecrets = true
     model.syncSetupDraftWithSaved()
-    try verifyGuide(model.guruPendingNote("alex") == nil, "A saved guru read as not saved")
+    // The page names Alex by their channel, though the setup was saved with an earlier ID.
+    let alex = GuruIdentity.id(channelID: "123")
+    try verifyGuide(model.guruPendingNote(alex) == nil, "A saved guru read as not saved")
+    try verifyGuide(model.isGuruSaved(alex), "A guru saved with an earlier ID read as not saved")
 
     model.setupDraft.accounts[0].policy.maxOrderUSD = "50"
-    try verifyGuide(model.guruPendingNote("alex") == nil, "A limit change marked the guru as not saved")
+    try verifyGuide(model.guruPendingNote(alex) == nil, "A limit change marked the guru as not saved")
     model.setupDraft.accounts[0].policy = saved.accounts[0].policy
 
     model.setupDraft.routes[0].connection = TradingConnectionDraft(accountID: "spare")
     try verifyGuide(
-        model.guruPendingNote("alex") == L10n.string("Changed — not saved yet"),
-        "A guru moved to another account read \(model.guruPendingNote("alex") ?? "nothing")")
+        model.guruPendingNote(alex) == L10n.string("Changed — not saved yet"),
+        "A guru moved to another account read \(model.guruPendingNote(alex) ?? "nothing")")
 
-    model.removeGuru("alex")
+    model.removeGuru(alex)
     try verifyGuide(
-        model.guruPendingNote("alex") == L10n.string("Removed — not saved yet"),
-        "A removed guru read \(model.guruPendingNote("alex") ?? "nothing")")
+        model.guruPendingNote(alex) == L10n.string("Removed — not saved yet"),
+        "A removed guru read \(model.guruPendingNote(alex) ?? "nothing")")
 }
 
 /// One service's key is never shown in, or sent to, another service's sheet.

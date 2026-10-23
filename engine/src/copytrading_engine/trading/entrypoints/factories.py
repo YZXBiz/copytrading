@@ -1,4 +1,5 @@
-"""What the runtime builds collaborators with: the Discord session, notifier, decoder, and owner."""
+"""What the runtime builds collaborators with: the Discord session, notifier, decoder, owner, and
+the check of which Alpaca account an account's keys open."""
 
 import asyncio
 import datetime as dt
@@ -9,7 +10,11 @@ from typing import Protocol
 
 import discord
 
-from copytrading_engine.execution.adapters.alpaca.broker import AlpacaCredentials
+from copytrading_engine.execution.adapters.alpaca.broker import (
+    AlpacaBroker,
+    AlpacaCredentials,
+    Environment,
+)
 from copytrading_engine.execution.adapters.owner import ExecutionOwner
 from copytrading_engine.execution.adapters.resources import default_account_lock_root
 from copytrading_engine.execution.domain.signals import CopyConfig
@@ -48,6 +53,10 @@ class NotificationSender(Protocol):
 
 
 type OwnerFactory = Callable[[Path, AlpacaCredentials, CopyConfig, str], Awaitable[AccountOwner]]
+
+
+# The Alpaca account ID a pair of keys opens, for an environment.
+type IdentityFactory = Callable[[AlpacaCredentials, Environment], Awaitable[str]]
 
 
 type SessionFactory = Callable[
@@ -91,6 +100,19 @@ async def open_owner(
         raise
 
 
+async def broker_identity(credentials: AlpacaCredentials, environment: Environment) -> str:
+    """Which Alpaca account the keys open, so its record is found whatever the setup names it."""
+
+    def read() -> str:
+        broker = AlpacaBroker(credentials, environment)
+        try:
+            return broker.account().id
+        finally:
+            broker.close()
+
+    return await asyncio.to_thread(read)
+
+
 async def create_decoder(
     name: str,
     config: ProviderConfig,
@@ -119,3 +141,5 @@ class TradingFactories:
     decoder: NamedDecoderFactory = create_decoder
     session: SessionFactory = _create_session
     notifier: NotifierFactory = alert_sender
+    # None leaves every record where it is: for fakes whose owners have no Alpaca account.
+    identity: IdentityFactory | None = None

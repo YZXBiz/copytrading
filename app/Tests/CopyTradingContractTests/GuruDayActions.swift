@@ -43,6 +43,10 @@ actor GuruDayActions: AccountOperations {
         throw EngineContractError.missingResult
     }
 
+    func deleteAccountRecord(_ accountID: String) throws {
+        throw EngineContractError.missingResult
+    }
+
     private func response(_ name: String) throws -> EngineResult {
         let contracts = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent()

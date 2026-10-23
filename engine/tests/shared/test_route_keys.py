@@ -1,6 +1,40 @@
 """One rule picks a message's route, so parsing and delivery never disagree about it."""
 
-from copytrading_engine.shared.route_keys import AMBIGUOUS_SOURCE_PROFILE, choose_route, route_key
+from copytrading_engine.shared.route_keys import (
+    AMBIGUOUS_SOURCE_PROFILE,
+    choose_route,
+    guru_for_channel,
+    route_key,
+)
+from copytrading_engine.shared.signals import StockSignal
+
+
+def test_the_channel_names_its_guru_in_every_setup() -> None:
+    """The same ID in Swift (GuruIdentity); a setup made again gives the guru the same one."""
+    assert guru_for_channel("discord", "1517754775674949742") == "guru-3909e2aa"
+    assert guru_for_channel("discord", "123") == "guru-be6f68ea"
+
+
+def test_a_post_belongs_to_its_channels_guru_whatever_id_it_was_read_with() -> None:
+    """Posts read under a setup whose guru had a made-up ID still show under that guru."""
+    read = StockSignal(
+        source="discord",
+        channel_id="1517754775674949742",
+        id="1562741036357263371",
+        timestamp="2026-10-22T08:14:57+00:00",
+        text="92.3加了6分之一常规仓soxl",
+        parser_profile="stock-extraction-v2",
+        model="test",
+        guru_id="guru-445d352c",
+        profile_revision="0" * 64,
+        decision="ignore",
+        reason="test",
+        instructions=(),
+        evidence=(),
+    )
+
+    assert read.guru == "guru-3909e2aa"
+    assert read.model_copy(update={"guru_id": None, "profile_revision": None}).guru is None
 
 
 def test_a_route_is_bound_to_an_author_or_to_the_whole_channel() -> None:

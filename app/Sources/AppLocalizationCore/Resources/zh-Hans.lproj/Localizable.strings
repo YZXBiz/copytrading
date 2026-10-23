@@ -1028,7 +1028,6 @@
 "Enter at least one Discord channel ID in Connections." = "请在“连接”中至少填写一个 Discord 频道 ID。";
 "Enter a model name under Interpreter in Connections." = "请在“连接”的“AI 解读器”中填写模型名称。";
 "Each broker account needs a different name." = "每个券商账户都需要不同的名称。";
-"Routes that share a channel each need an author ID." = "共用同一个频道的信号源，各自都需要填写作者 ID。";
 "The engine stopped and is restarting." = "引擎已停止，正在重新启动。";
 "The engine stopped and is restarting. Copying starts again when it's back." = "引擎停止了，正在重启。重启后会自动继续跟单。";
 "The engine stopped unexpectedly." = "引擎意外停止。";
@@ -1177,7 +1176,6 @@
 "Add a guru to copy in Connections." = "请在“连接”中添加要跟单的信号源。";
 "A guru's details don't line up. Open the guru in Connections and check its fields." = "信号源的详细信息不一致。请在“连接”中打开该信号源并检查各项内容。";
 "“%@” doesn't match its saved details. Open the guru in Connections and check its fields." = "“%@”与已保存的详细信息不一致。请在“连接”中打开该信号源并检查各项内容。";
-"Two gurus read the same channel and author. Give each guru a different author ID in Connections." = "两个信号源读取了相同的频道和作者。请在“连接”中为每个信号源设置不同的作者 ID。";
 "Check each guru's sizing, then start copying again." = "请检查每个信号源的仓位设置，然后重新开始跟单。";
 "The engine is stopped. Start it, then start copying." = "引擎已停止。请先启动引擎，再开始跟单。";
 "Start Copying tests every connection first. The results appear here." = "“开始跟单”会先测试每个连接。结果会显示在这里。";
@@ -2335,7 +2333,6 @@
 "Trade %lld" = "交易 %lld";
 "Copying didn't start. %@" = "跟单没有开始。%@";
 "The new setup didn't start, so your previous setup is still in place. %@" = "新设置没有启动，仍在使用之前的设置。%@";
-"%@ didn't open: its Alpaca keys are for a different Alpaca account than the one CopyTrading recorded under this name. Use the name that account had before, or a new name." = "%@ 无法打开：它的 Alpaca 密钥属于另一个 Alpaca 账户，不是 CopyTrading 在这个名称下记录的账户。请改用该账户之前的名称，或换一个新名称。";
 "%@ didn't open: Alpaca didn't accept its API keys. Paste them again from your Alpaca dashboard." = "%@ 无法打开：Alpaca 不接受它的 API 密钥。请从 Alpaca 后台重新复制粘贴。";
 "%@ didn't open: Alpaca couldn't be reached. Check your internet connection, then start again." = "%@ 无法打开：无法连接 Alpaca。请检查网络连接，然后重新开始。";
 "%@ didn't open: another CopyTrading on this Mac is copying into it. Quit the other one, then start again." = "%@ 无法打开：这台 Mac 上的另一个 CopyTrading 正在跟单到这个账户。请退出另一个，然后重新开始。";
@@ -2352,7 +2349,6 @@
 "If it happens again, Diagnostics at the bottom of the sidebar has the details." = "如果再次发生，详情见侧边栏底部的“诊断”。";
 "CopyTrading stopped while starting. Start again." = "CopyTrading 在启动时停止了。请重新开始。";
 "%@. Start again." = "%@。请重新开始。";
-"Its keys are for a different Alpaca account than the one recorded under this name" = "它的密钥属于另一个 Alpaca 账户，不是这个名称下记录的账户";
 "Alpaca didn't accept the API keys" = "Alpaca 不接受这些 API 密钥";
 "Alpaca couldn't be reached" = "无法连接 Alpaca";
 "More than one account couldn't open" = "多个账户无法打开";
@@ -2364,3 +2360,23 @@
 "Copying didn't start because the setup check didn't pass. Connections shows what to fix." = "跟单没有开始，因为设置检查没有通过。“连接”页会显示要修复什么。";
 "Copying didn't start. %@: %@" = "跟单没有开始。%@：%@";
 "Copying didn't start. %@ need attention; each one's row in Connections says what to do." = "跟单没有开始。%@ 需要处理；“连接”页里每一行都写明了怎么做。";
+"%@ didn't open: another account in this setup uses keys for the same Alpaca account. Remove one of them, or give it the keys of another Alpaca account." = "%@ 无法打开：设置中的另一个账户使用同一个 Alpaca 账户的密钥。请删除其中一个，或为它换成另一个 Alpaca 账户的密钥。";
+"%@ use keys for the same Alpaca account. Each account needs its own Alpaca account: remove one, or give it the keys of another." = "%@ 使用的是同一个 Alpaca 账户的密钥。每个账户都需要各自的 Alpaca 账户：请删除其中一个，或为它换成另一个账户的密钥。";
+"Another account in this setup uses keys for the same Alpaca account" = "设置中的另一个账户使用同一个 Alpaca 账户的密钥";
+"%@ and %@" = "%@ 和 %@";
+"“%@” and “%@” both read channel %@. Each channel copies one guru: remove one of them, or give it its own channel." = "“%@”和“%@”都在读取频道 %@。每个频道只复制一个信号源：请删除其中一个，或为它换一个频道。";
+"Delete…" = "删除…";
+"Delete the record of %@" = "删除 %@ 的记录";
+"Delete the record of %@?" = "删除 %@ 的记录？";
+"Delete Record" = "删除记录";
+"CopyTrading forgets which shares it bought there, so no guru's sell reaches them. The shares stay at Alpaca." = "CopyTrading 会忘记它在那里买入了哪些股票，之后信号源的卖出不会再卖它们。股票仍留在 Alpaca。";
+"Alpaca live account ending %@" = "尾号 %@ 的 Alpaca 实盘账户";
+"Alpaca paper account ending %@" = "尾号 %@ 的 Alpaca 模拟账户";
+"No copied shares" = "没有复制买入的股票";
+"copied buy" = "笔复制买入";
+"copied buys" = "笔复制买入";
+"Last active %@" = "最后活动于 %@";
+"Earlier Accounts" = "以前的账户";
+"Records of accounts no longer in your setup. The same keys under any name pick theirs up again." = "已不在设置中的账户的记录。用同一组密钥，无论取什么名称，都会接上原来的记录。";
+"It's in your setup again. Remove it in Connections first." = "它又在你的设置中了。请先在连接中移除它。";
+"Another CopyTrading on this Mac has it open. Quit that one first." = "这台 Mac 上另一个 CopyTrading 正在使用它。请先退出那一个。";

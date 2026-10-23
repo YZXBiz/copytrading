@@ -141,8 +141,8 @@ extension AppModel {
         setupEditor = .account(account.id)
     }
 
-    func editGuru(_ guruID: String) {
-        guard let route = setupDraft.routes.first(where: { $0.guruID.trimmed == guruID }) else { return }
+    func editGuru(_ guru: String) {
+        guard let route = setupDraft.routes.first(where: { setupDraft.guru(for: $0) == guru }) else { return }
         setupEditor = .route(route.id)
     }
 
@@ -182,27 +182,28 @@ extension AppModel {
 
     /// This guru reads and copies as saved: their route and profile match the saved ones, so an
     /// edit elsewhere in the setup leaves them alone.
-    func isGuruSaved(_ guruID: String) -> Bool {
-        guard let saved = savedTradingConfiguration, saved.profiles.contains(where: { $0.guruID == guruID }),
+    func isGuruSaved(_ guru: String) -> Bool {
+        guard let saved = savedTradingConfiguration, saved.routes.contains(where: { $0.guru == guru }),
             let draft = try? setupDraft.submission().0
         else { return false }
-        return draft.routes.filter { $0.guruID == guruID } == saved.routes.filter { $0.guruID == guruID }
-            && draft.profiles.filter { $0.guruID == guruID } == saved.profiles.filter { $0.guruID == guruID }
+        // A route names its profile by revision, which is the profile's whole content.
+        return draft.routes.filter { $0.guru == guru } == saved.routes.filter { $0.guru == guru }
     }
 
     /// A saved guru the unsaved setup removes or changes says so on their page, as an account
     /// does: the page shows the saved setup, and Done on the guru sheet saves nothing by itself.
-    func guruPendingNote(_ guruID: String) -> String? {
-        guard hasUnsavedSetupChanges, savedTradingConfiguration?.profiles.contains(where: { $0.guruID == guruID }) == true
+    func guruPendingNote(_ guru: String) -> String? {
+        guard hasUnsavedSetupChanges, savedTradingConfiguration?.routes.contains(where: { $0.guru == guru }) == true
         else { return nil }
-        guard setupDraft.routes.contains(where: { $0.guruID.trimmed == guruID }) else {
+        guard setupDraft.routes.contains(where: { setupDraft.guru(for: $0) == guru }) else {
             return L10n.string("Removed — not saved yet")
         }
-        return isGuruSaved(guruID) ? nil : L10n.string("Changed — not saved yet")
+        return isGuruSaved(guru) ? nil : L10n.string("Changed — not saved yet")
     }
 
-    func removeGuru(_ guruID: String) {
-        setupDraft.routes.removeAll { $0.guruID.trimmed == guruID }
+    func removeGuru(_ guru: String) {
+        let draft = setupDraft
+        setupDraft.routes.removeAll { draft.guru(for: $0) == guru }
     }
 
     /// The one Start Copying: a setup already checked starts; otherwise every connection is

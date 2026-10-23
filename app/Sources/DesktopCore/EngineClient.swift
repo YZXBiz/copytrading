@@ -109,6 +109,12 @@ public actor EngineClient {
         guard case .accountReaders = result else { throw EngineContractError.missingResult }
     }
 
+    /// Deletes the record of an account no longer in the setup; its shares stay at Alpaca.
+    public func deleteAccountRecord(_ accountID: String) async throws {
+        let result = try await request(.deleteAccountRecord(accountID: accountID))
+        guard case .accountRecordDeleted = result else { throw EngineContractError.missingResult }
+    }
+
     public func createBackup(destination: URL) async throws -> BackupManifestView {
         let result = try await request(.createBackup(destination.path))
         guard case .backup(let manifest) = result else { throw EngineContractError.missingResult }

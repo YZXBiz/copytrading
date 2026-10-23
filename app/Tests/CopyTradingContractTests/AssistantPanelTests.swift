@@ -79,24 +79,26 @@ private func theContextNamesWhatIsSelected() throws {
 private func theContextNamesTheGurusAndTheOneThatIsOpen() throws {
     let model = AppModel()
     model.setupDraft.routes = [
-        TradingRouteDraft(guruID: "guru-1a2b3c4d", displayName: "Zhao"),
-        TradingRouteDraft(guruID: "guru-5e6f7a8b", displayName: "Ana"),
-        TradingRouteDraft(guruID: "guru-1a2b3c4d", displayName: "Zhao"),
-        TradingRouteDraft(guruID: "guru-00000000", displayName: "  "),
+        TradingRouteDraft(channelID: "111", displayName: "Zhao"),
+        TradingRouteDraft(channelID: "222", displayName: "Ana"),
+        TradingRouteDraft(channelID: "111", displayName: "Zhao"),
+        TradingRouteDraft(channelID: "333", displayName: "  "),
     ]
+    let zhao = GuruIdentity.id(channelID: "111")
+    let ana = GuruIdentity.id(channelID: "222")
     model.selectedScreen = .connections
     let nothingOpen = model.assistantContext(selectedPost: nil)
     try verifyPanel(
         nothingOpen.gurus == [
-            AssistantGuru(id: "guru-1a2b3c4d", name: "Zhao"), AssistantGuru(id: "guru-5e6f7a8b", name: "Ana"),
+            AssistantGuru(id: zhao, name: "Zhao"), AssistantGuru(id: ana, name: "Ana"),
         ],
         "The setup's gurus were not named once each: \(nothingOpen.gurus)")
     try verifyPanel(nothingOpen.selectedGuruID == nil, "A page with no guru open still named one: \(nothingOpen)")
 
-    model.selectedScreen = .guru("guru-5e6f7a8b")
+    model.selectedScreen = .guru(ana)
     let onGuru = model.assistantContext(selectedPost: nil)
     try verifyPanel(
-        onGuru.selectedGuruID == "guru-5e6f7a8b" && onGuru.screen == "people", "The guru's page did not send its guru")
+        onGuru.selectedGuruID == ana && onGuru.screen == "people", "The guru's page did not send its guru")
     model.selectedScreen = .account("paper-main")
     try verifyPanel(
         model.assistantContext(selectedPost: nil).selectedGuruID == nil, "An account's page sent a guru that is not on screen")

@@ -161,7 +161,7 @@ def _order_item(
         shares=shares,
         price=price,
         amount=amount,
-        guru_id=None if owner or message is None else message.guru_id,
+        guru_id=None if owner or message is None else message.guru,
         message_id=order.message_id,
         order_id=update.client_id,
         lot_id=_lot_of(order, snapshot),

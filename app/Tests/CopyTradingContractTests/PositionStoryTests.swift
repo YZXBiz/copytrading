@@ -114,5 +114,6 @@ private actor PagedFeed: AccountOperations {
     func resolveOwnership(accountID: String, resolution: OwnershipResolutionRequest) throws -> OwnershipResolution {
         throw Unused()
     }
+    func deleteAccountRecord(_ accountID: String) throws { throw Unused() }
     private struct Unused: Error {}
 }

@@ -1028,7 +1028,6 @@
 "Enter at least one Discord channel ID in Connections." = "Enter at least one Discord channel ID in Connections.";
 "Enter a model name under Interpreter in Connections." = "Enter a model name under Interpreter in Connections.";
 "Each broker account needs a different name." = "Each broker account needs a different name.";
-"Routes that share a channel each need an author ID." = "Routes that share a channel each need an author ID.";
 "The engine stopped and is restarting." = "The engine stopped and is restarting.";
 "The engine stopped and is restarting. Copying starts again when it's back." = "The engine stopped and is restarting. Copying starts again when it's back.";
 "The engine stopped unexpectedly." = "The engine stopped unexpectedly.";
@@ -1177,7 +1176,6 @@
 "Add a guru to copy in Connections." = "Add a guru to copy in Connections.";
 "A guru's details don't line up. Open the guru in Connections and check its fields." = "A guru's details don't line up. Open the guru in Connections and check its fields.";
 "“%@” doesn't match its saved details. Open the guru in Connections and check its fields." = "“%@” doesn't match its saved details. Open the guru in Connections and check its fields.";
-"Two gurus read the same channel and author. Give each guru a different author ID in Connections." = "Two gurus read the same channel and author. Give each guru a different author ID in Connections.";
 "Check each guru's sizing, then start copying again." = "Check each guru's sizing, then start copying again.";
 "The engine is stopped. Start it, then start copying." = "The engine is stopped. Start it, then start copying.";
 "Start Copying tests every connection first. The results appear here." = "Start Copying tests every connection first. The results appear here.";
@@ -2335,7 +2333,6 @@
 "Trade %lld" = "Trade %lld";
 "Copying didn't start. %@" = "Copying didn't start. %@";
 "The new setup didn't start, so your previous setup is still in place. %@" = "The new setup didn't start, so your previous setup is still in place. %@";
-"%@ didn't open: its Alpaca keys are for a different Alpaca account than the one CopyTrading recorded under this name. Use the name that account had before, or a new name." = "%@ didn't open: its Alpaca keys are for a different Alpaca account than the one CopyTrading recorded under this name. Use the name that account had before, or a new name.";
 "%@ didn't open: Alpaca didn't accept its API keys. Paste them again from your Alpaca dashboard." = "%@ didn't open: Alpaca didn't accept its API keys. Paste them again from your Alpaca dashboard.";
 "%@ didn't open: Alpaca couldn't be reached. Check your internet connection, then start again." = "%@ didn't open: Alpaca couldn't be reached. Check your internet connection, then start again.";
 "%@ didn't open: another CopyTrading on this Mac is copying into it. Quit the other one, then start again." = "%@ didn't open: another CopyTrading on this Mac is copying into it. Quit the other one, then start again.";
@@ -2352,7 +2349,6 @@
 "If it happens again, Diagnostics at the bottom of the sidebar has the details." = "If it happens again, Diagnostics at the bottom of the sidebar has the details.";
 "CopyTrading stopped while starting. Start again." = "CopyTrading stopped while starting. Start again.";
 "%@. Start again." = "%@. Start again.";
-"Its keys are for a different Alpaca account than the one recorded under this name" = "Its keys are for a different Alpaca account than the one recorded under this name";
 "Alpaca didn't accept the API keys" = "Alpaca didn't accept the API keys";
 "Alpaca couldn't be reached" = "Alpaca couldn't be reached";
 "More than one account couldn't open" = "More than one account couldn't open";
@@ -2364,3 +2360,23 @@
 "Copying didn't start because the setup check didn't pass. Connections shows what to fix." = "Copying didn't start because the setup check didn't pass. Connections shows what to fix.";
 "Copying didn't start. %@: %@" = "Copying didn't start. %@: %@";
 "Copying didn't start. %@ need attention; each one's row in Connections says what to do." = "Copying didn't start. %@ need attention; each one's row in Connections says what to do.";
+"%@ didn't open: another account in this setup uses keys for the same Alpaca account. Remove one of them, or give it the keys of another Alpaca account." = "%@ didn't open: another account in this setup uses keys for the same Alpaca account. Remove one of them, or give it the keys of another Alpaca account.";
+"%@ use keys for the same Alpaca account. Each account needs its own Alpaca account: remove one, or give it the keys of another." = "%@ use keys for the same Alpaca account. Each account needs its own Alpaca account: remove one, or give it the keys of another.";
+"Another account in this setup uses keys for the same Alpaca account" = "Another account in this setup uses keys for the same Alpaca account";
+"%@ and %@" = "%@ and %@";
+"“%@” and “%@” both read channel %@. Each channel copies one guru: remove one of them, or give it its own channel." = "“%@” and “%@” both read channel %@. Each channel copies one guru: remove one of them, or give it its own channel.";
+"Delete…" = "Delete…";
+"Delete the record of %@" = "Delete the record of %@";
+"Delete the record of %@?" = "Delete the record of %@?";
+"Delete Record" = "Delete Record";
+"CopyTrading forgets which shares it bought there, so no guru's sell reaches them. The shares stay at Alpaca." = "CopyTrading forgets which shares it bought there, so no guru's sell reaches them. The shares stay at Alpaca.";
+"Alpaca live account ending %@" = "Alpaca live account ending %@";
+"Alpaca paper account ending %@" = "Alpaca paper account ending %@";
+"No copied shares" = "No copied shares";
+"copied buy" = "copied buy";
+"copied buys" = "copied buys";
+"Last active %@" = "Last active %@";
+"Earlier Accounts" = "Earlier Accounts";
+"Records of accounts no longer in your setup. The same keys under any name pick theirs up again." = "Records of accounts no longer in your setup. The same keys under any name pick theirs up again.";
+"It's in your setup again. Remove it in Connections first." = "It's in your setup again. Remove it in Connections first.";
+"Another CopyTrading on this Mac has it open. Quit that one first." = "Another CopyTrading on this Mac has it open. Quit that one first.";

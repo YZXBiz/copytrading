@@ -251,6 +251,8 @@ public struct AccountOverview: Codable, Equatable, Identifiable, Sendable {
     public let ownershipIncidents: [OwnershipIncidentView]
     public let pendingOrders: Int?
     public let balance: AccountBalance?
+    /// When the record last changed; read for an account no longer in the setup.
+    public let lastActivityAt: String?
 
     public var id: String { accountID }
 
@@ -273,6 +275,7 @@ public struct AccountOverview: Codable, Equatable, Identifiable, Sendable {
         case ownershipIncidents = "ownership_incidents"
         case pendingOrders = "pending_orders"
         case balance
+        case lastActivityAt = "last_activity_at"
     }
 }
 

@@ -7,6 +7,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validato
 from pydantic_core import PydanticCustomError
 
 from copytrading_engine.shared.reading import PostReading
+from copytrading_engine.shared.route_keys import guru_for_channel
 
 # Models write 1/6 as 0.16666666666666666; Decimal division gives 28 digits. Same fraction.
 FRACTION_TOLERANCE = Decimal("1e-9")
@@ -113,6 +114,13 @@ class StockSignal(BaseModel):
     suggested: tuple[Instruction, ...] = Field(default=(), max_length=20)
     evidence: tuple[Evidence, ...] = Field(max_length=20)
     instructions: tuple[Instruction, ...] = Field(max_length=20)
+
+    @property
+    def guru(self) -> str | None:
+        """Whose post this is: its channel's guru. `guru_id` is the ID the setup gave the guru
+        when the post was read, which a setup made before IDs came from the channel may differ
+        from; a post nobody was copied from has none."""
+        return None if self.guru_id is None else guru_for_channel(self.source, self.channel_id)
 
     @model_validator(mode="after")
     def validate_decision(self) -> Self:

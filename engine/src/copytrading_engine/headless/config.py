@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError
 
 from copytrading_engine.execution.domain.sizing import RouteConnection
 from copytrading_engine.shared.model_providers import ModelProvider
+from copytrading_engine.shared.route_keys import guru_for_channel
 from copytrading_engine.trading.domain.config import (
     AccountConfiguration,
     AccountPolicy,
@@ -70,7 +71,7 @@ class _Account(_Strict):
 
 
 class _Guru(_Strict):
-    id: str
+    # The channel names the guru (one guru per channel), so a guru has no ID of its own here.
     name: str
     channel: str
     author: str | None = None
@@ -128,26 +129,27 @@ def load_setup(path: Path) -> ServerSetup:
     profiles = []
     problems: list[str] = []
     for index, guru in enumerate(parsed.gurus):
+        label = f"gurus[{index}] ({guru.name.strip() or guru.channel})"
         playbook = guru.playbook
         if guru.playbook_file is not None:
             playbook_path = (path.parent / guru.playbook_file).expanduser()
             try:
                 playbook = playbook_path.read_text(encoding="utf-8")
             except OSError:
-                problems.append(f"gurus[{index}] ({guru.id}): cannot read {playbook_path}")
+                problems.append(f"{label}: cannot read {playbook_path}")
                 continue
         try:
             profiles.append(
                 ProfileBuilder().build(
                     ProfileDraft(
-                        guru_id=guru.id,
+                        guru_id=guru_for_channel("discord", guru.channel),
                         display_name=guru.name,
                         playbook=playbook,
                     )
                 )
             )
         except ValidationError as exc:
-            problems.extend(f"gurus[{index}] ({guru.id}): {line}" for line in _problems(exc))
+            problems.extend(f"{label}: {line}" for line in _problems(exc))
     if parsed.telegram is not None and parsed.discord_alerts is not None:
         problems.append("Choose one place for alerts: [telegram] or [discord_alerts], not both.")
     if problems:
@@ -172,7 +174,7 @@ def load_setup(path: Path) -> ServerSetup:
                 RouteConfiguration(
                     channel_id=guru.channel,
                     author_id=guru.author,
-                    guru_id=guru.id,
+                    guru_id=guru_for_channel("discord", guru.channel),
                     profile_revision=profile.profile_revision,
                     connections=(
                         RouteConnection(

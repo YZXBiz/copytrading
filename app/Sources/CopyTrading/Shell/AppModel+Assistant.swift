@@ -91,10 +91,10 @@ extension AppModel {
     /// Every guru by the name the owner gave them: the saved setup's, else the one being set up.
     var assistantGurus: [AssistantGuru] {
         let named: [(String, String)] =
-            if let profiles = savedTradingConfiguration?.profiles, !profiles.isEmpty {
-                profiles.map { ($0.guruID, $0.displayName) }
+            if let saved = savedTradingConfiguration, !saved.routes.isEmpty {
+                GuruDirectory(saved).gurus.map { ($0.id, $0.name) }
             } else {
-                setupDraft.routes.map { ($0.guruID.trimmed, $0.displayName.trimmed) }
+                setupDraft.routes.map { (setupDraft.guru(for: $0), $0.displayName.trimmed) }
             }
         var seen = Set<String>()
         return named.compactMap { id, name in

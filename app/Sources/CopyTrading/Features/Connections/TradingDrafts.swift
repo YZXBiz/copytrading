@@ -53,7 +53,10 @@ struct TradingRouteDraft: Identifiable {
     let id = UUID()
     var channelID: String
     var authorID: String
-    var guruID: String
+    /// The ID and channel a saved guru was saved with; nil for a guru not saved yet. The guru is
+    /// their channel's (`ConnectionsDraft.guru(for:)`); the saved ID is kept only so a setup saved
+    /// before IDs came from the channel reads as unchanged until the guru moves channel.
+    var saved: (guruID: String, channelID: String)?
     var displayName: String
     /// The owner's guidance for reading this guru, usually edited from a learned draft.
     var playbook: String
@@ -62,22 +65,16 @@ struct TradingRouteDraft: Identifiable {
     /// The one account this guru copies into, once the owner has chosen it.
     var connection: TradingConnectionDraft?
 
-    /// A new guru gets a stable ID of its own, so the owner only ever names them; renaming later
-    /// keeps the ID and therefore the guru's history.
-    static func newGuruID() -> String {
-        "guru-\(UUID().uuidString.prefix(8).lowercased())"
-    }
-
     init(
         channelID: String = "", authorID: String = "",
-        guruID: String = TradingRouteDraft.newGuruID(), displayName: String = "",
+        saved: (guruID: String, channelID: String)? = nil, displayName: String = "",
         playbook: String = "",
         repeatWindowMinutes: Int? = TradingRouteConfiguration.defaultRepeatWindowMinutes,
         connection: TradingConnectionDraft? = nil
     ) {
         self.channelID = channelID
         self.authorID = authorID
-        self.guruID = guruID
+        self.saved = saved
         self.displayName = displayName
         self.playbook = playbook
         self.repeatWindowMinutes = repeatWindowMinutes

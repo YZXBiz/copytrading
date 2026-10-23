@@ -127,6 +127,7 @@ struct TradingSettingsSaveTests {
         try checkOperatorWireFixtures()
         try await checkAccountPageClientRequest()
         try await checkAccountFeatureActions()
+        try await checkAnEarlierAccountsRecordIsDeletedOnlyWhenAsked()
         try await checkOwnershipResolution(configuration: configuration)
         try await checkAccountFeatureLockInterleavings()
         try await checkManualReviewActionPath()
@@ -1021,11 +1022,11 @@ struct TradingSettingsSaveTests {
             TradingActivationStatus(
                 requestedActivationID: activationID, activationID: activationID, candidateRevision: revision,
                 committedRevision: nil, phase: .failed, runtimeState: .failed,
-                errorCode: "account_record_mismatch"
+                errorCode: "broker_keys_rejected"
             ), state: .failed, activeAccounts: 0)
         await starter.setTradingStatus(
-            try TradingStatusBuilder(.failed).error("account_record_mismatch")
-                .account("paper", "failed", error: "account_record_mismatch").build())
+            try TradingStatusBuilder(.failed).error("broker_keys_rejected")
+                .account("paper", "failed", error: "broker_keys_rejected").build())
 
         let model = AppModel(tradingConfigurationStore: store, tradingStarter: starter)
         model.isTradingUnlocked = true
@@ -1033,7 +1034,7 @@ struct TradingSettingsSaveTests {
         let message = model.message ?? ""
         try check(
             message
-                == "Copying didn't start. paper didn't open: its Alpaca keys are for a different Alpaca account than the one CopyTrading recorded under this name. Use the name that account had before, or a new name.",
+                == "Copying didn't start. paper didn't open: Alpaca didn't accept its API keys. Paste them again from your Alpaca dashboard.",
             "A failed start must name the account, what happened, and what to do: \(message)")
 
         model.setupDraft.load(configuration)
@@ -1053,7 +1054,7 @@ struct TradingSettingsSaveTests {
     /// Each reason a start can fail reads as its own sentence or two, never a bare code.
     private static func checkEveryStartFailureSaysWhatToDo() throws {
         let accountCases: [(String, String)] = [
-            ("account_record_mismatch", "Use the name that account had before, or a new name."),
+            ("alpaca_account_shared", "another account in this setup uses keys for the same Alpaca account."),
             ("broker_keys_rejected", "Alpaca didn't accept its API keys."),
             ("broker_unreachable", "Alpaca couldn't be reached."),
             ("account_in_use", "another CopyTrading on this Mac is copying into it."),
@@ -1069,6 +1070,16 @@ struct TradingSettingsSaveTests {
             try check(text.hasPrefix("zhap-account-2 didn't open"), "\(code) must name the account: \(text)")
             try check(text.contains(words), "\(code) must say what happened and what to do: \(text)")
         }
+        // Two names for one Alpaca account are said together, so the owner sees which two.
+        let sharing = try TradingStatusBuilder(.failed).error("alpaca_account_shared")
+            .account("main", "failed", error: "alpaca_account_shared")
+            .account("spare", "failed", error: "alpaca_account_shared").build()
+        let shared = StartFailure.text(
+            errorCode: sharing.errorCode, accounts: sharing.accounts, modelService: "DeepSeek")
+        try check(
+            shared
+                == "main and spare use keys for the same Alpaca account. Each account needs its own Alpaca account: remove one, or give it the keys of another.",
+            "Two accounts with one Alpaca account's keys must be named together: \(shared)")
         let two = try TradingStatusBuilder(.failed).error("accounts_unavailable")
             .account("first", "failed", error: "broker_keys_rejected")
             .account("second", "failed", error: "account_in_use").build()
@@ -2145,6 +2156,31 @@ struct TradingSettingsSaveTests {
         print("CopyTradingContractTests: holdings questions settle with one confirmed answer")
     }
 
+    /// Settings deletes the record of an account no longer in the setup; a refusal says why on
+    /// its row, and the record stays.
+    private static func checkAnEarlierAccountsRecordIsDeletedOnlyWhenAsked() async throws {
+        let actions = RecordingAccountActions()
+        let feature = AccountFeatureModel()
+        feature.authorizePrivateEvidence()
+        await feature.refresh(using: actions)
+        try check(feature.accounts.contains { $0.accountID == "paper" }, "The record to delete was not read")
+
+        await actions.refuseRecordDeletion("account_in_setup")
+        await feature.deleteRecord("paper", using: actions)
+        try check(feature.accounts.contains { $0.accountID == "paper" }, "A refused delete dropped the record")
+        try check(
+            feature.errors["paper"] == "It's in your setup again. Remove it in Connections first.",
+            "A refused delete did not say why: \(feature.errors["paper"] ?? "nothing")")
+
+        await actions.refuseRecordDeletion(nil)
+        await feature.deleteRecord("paper", using: actions)
+        try check(!feature.accounts.contains { $0.accountID == "paper" }, "A deleted record still showed")
+        try check(feature.errors["paper"] == nil, "A deleted record kept its error")
+        let deleted = await actions.deletedRecords
+        try check(deleted == ["paper", "paper"], "The engine was not asked to delete the record: \(deleted)")
+        print("CopyTradingContractTests: an earlier account's record is deleted only when the owner asks")
+    }
+
     private static func checkAccountFeatureActions() async throws {
         let actions = RecordingAccountActions()
         let feature = AccountFeatureModel()
@@ -2739,8 +2775,19 @@ private func checkLogSettingsPersistBeforeRuntime(_ stateRoot: URL) throws {
 private actor RecordingAccountActions: AccountOperations {
     private var commands: [AccountControlCommand] = []
     private var resolutions: [OwnershipResolutionRequest] = []
+    private(set) var deletedRecords: [String] = []
+    private var recordRefusal: String?
 
     func recordedResolutions() -> [OwnershipResolutionRequest] { resolutions }
+
+    func refuseRecordDeletion(_ reason: String?) { recordRefusal = reason }
+
+    func deleteAccountRecord(_ accountID: String) throws {
+        deletedRecords.append(accountID)
+        if let refusal = recordRefusal {
+            throw EngineContractError.remote(code: .invalidRequest, message: nil, reason: refusal)
+        }
+    }
 
     func resolveOwnership(accountID: String, resolution: OwnershipResolutionRequest) throws -> OwnershipResolution {
         resolutions.append(resolution)
@@ -2866,6 +2913,10 @@ private actor SuspendedAccountActions: AccountOperations {
 
     func resolveOwnership(accountID: String, resolution: OwnershipResolutionRequest) throws -> OwnershipResolution {
         throw ContractFailure("Ownership resolution is not part of the suspension checks")
+    }
+
+    func deleteAccountRecord(_ accountID: String) throws {
+        throw ContractFailure("Deleting a record is not part of the suspension checks")
     }
 
     func suspendNext(_ operation: String) {

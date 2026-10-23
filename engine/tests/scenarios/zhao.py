@@ -13,11 +13,13 @@ from copytrading_engine.shared.reading import (
     Sell,
     Stock,
 )
+from copytrading_engine.shared.route_keys import guru_for_channel
 
 from .. import readings
 
-# The app gives every guru an id of its own; the owner only ever sees the name.
-GURU_ID = "guru-2a3b4c5d"
+# Zhao's channel names him (route_keys.guru_for_channel); the owner only ever sees the name.
+CHANNEL = "900000000000000777"
+GURU_ID = guru_for_channel("discord", CHANNEL)
 NAME = "Zhao"
 
 

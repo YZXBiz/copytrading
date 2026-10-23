@@ -11,6 +11,7 @@ from copytrading_engine.headless.config import (
     load_secrets,
     load_setup,
 )
+from copytrading_engine.shared.route_keys import guru_for_channel
 
 TEMPLATE = resources.files("copytrading_engine.headless").joinpath("template.toml")
 
@@ -40,7 +41,11 @@ def test_the_template_init_writes_is_a_valid_setup(tmp_path):
     configuration = setup.configuration
     assert [account.id for account in configuration.accounts] == ["paper-main"]
     [profile] = configuration.profiles
-    assert (profile.guru_id, profile.display_name) == ("zhao", "Zhao")
+    # The channel names the guru, so the same channel is the same guru in every setup.
+    assert (profile.guru_id, profile.display_name) == (
+        guru_for_channel("discord", "123456789012345678"),
+        "Zhao",
+    )
     [route] = configuration.routes
     assert route.profile_revision == profile.profile_revision
     [connection] = route.connections
@@ -84,7 +89,7 @@ def test_a_missing_playbook_file_is_named(tmp_path):
 
     with pytest.raises(ConfigError) as problem:
         load_setup(path)
-    assert "gurus[0] (zhao): cannot read" in problem.value.problems[0]
+    assert "gurus[0] (Zhao): cannot read" in problem.value.problems[0]
 
 
 @pytest.mark.parametrize(
@@ -93,7 +98,7 @@ def test_a_missing_playbook_file_is_named(tmp_path):
         ('provider = "deepseek"', 'provider = "skynet"', "model.provider"),
         ('account = "paper-main"', 'account = "nowhere"', "unknown account"),
         ('environment = "paper" ', 'environment = "demo" ', "accounts[0].environment"),
-        ('name = "Zhao"', 'name = " "', "gurus[0] (zhao)"),
+        ('name = "Zhao"', 'name = " "', "gurus[0] (123456789012345678)"),
         ("[agents]", "[agents]\ncolour = 1", "agents.colour"),
     ],
 )

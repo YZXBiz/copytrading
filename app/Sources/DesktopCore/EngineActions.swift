@@ -70,6 +70,11 @@ public struct EngineActions: Sendable {
         try await client.detachAccountReaders()
     }
 
+    public func deleteAccountRecord(_ accountID: String) async throws {
+        let client = try await supervisor.engineClient()
+        try await client.deleteAccountRecord(accountID)
+    }
+
     public func createBackup(destination: URL) async throws -> BackupManifestView {
         let client = try await supervisor.engineClient()
         return try await client.createBackup(destination: destination)

@@ -290,6 +290,7 @@ public enum EngineResult: Equatable, Sendable {
     /// The engine's revision of a setup whose changed account limits copying now uses.
     case accountLimits(revision: String)
     case accountReaders
+    case accountRecordDeleted
     case accountControl(AccountControlResult)
     case ownershipResolution(OwnershipResolution)
     case accounts(AccountOverviewPage)
@@ -459,6 +460,8 @@ public struct EngineSuccess: Decodable, Equatable, Sendable {
             result = .accountLimits(revision: try container.decode(String.self, forKey: .revision))
         case "account_readers":
             result = .accountReaders
+        case "account_record_deleted":
+            result = .accountRecordDeleted
         case "account_control":
             result = .accountControl(try container.decode(AccountControlResult.self, forKey: .control))
         case "ownership_resolution":
@@ -598,6 +601,8 @@ enum EngineOperation: Sendable {
     case quote(accountID: String, symbol: String)
     case attachAccountReaders([AccountReadKeys])
     case detachAccountReaders
+    /// The owner deletes the record of an account no longer in the setup.
+    case deleteAccountRecord(accountID: String)
     case saveManualCorrection(ManualCorrectionRequest)
     case previewManualOrder(ManualPreviewRequest)
     case confirmManualOrders([ManualConfirmationRequest])
@@ -789,6 +794,9 @@ struct EngineRequest: Encodable, Sendable {
             try container.encode(accounts, forKey: .accounts)
         case .detachAccountReaders:
             try container.encode("detach_account_readers", forKey: .operation)
+        case .deleteAccountRecord(let accountID):
+            try container.encode("delete_account_record", forKey: .operation)
+            try container.encode(accountID, forKey: .accountID)
         case .saveManualCorrection(let correction):
             try container.encode("save_manual_correction", forKey: .operation)
             try container.encode(correction, forKey: .correction)

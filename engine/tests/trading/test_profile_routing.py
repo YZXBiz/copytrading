@@ -17,9 +17,9 @@ def _profile(guru_id: str, prefix: str):
     )
 
 
-def _route(profile, account_id: str, author_id: str | None):
+def _route(profile, account_id: str, author_id: str | None, channel_id: str = "123"):
     return {
-        "channel_id": "123",
+        "channel_id": channel_id,
         "author_id": author_id,
         "guru_id": profile.guru_id,
         "profile_revision": profile.profile_revision,
@@ -31,7 +31,7 @@ def _configuration(routes):
     profile_list = (_profile("guru-a", "ALERT:"), _profile("guru-b", "SIGNAL:"))
     return {
         "version": 9,
-        "source": {"channel_ids": ["123"]},
+        "source": {"channel_ids": ["123", "124"]},
         "provider": {"name": "anthropic", "model": "test-model"},
         "accounts": [
             {"id": "paper-a", "environment": "paper"},
@@ -42,30 +42,9 @@ def _configuration(routes):
     }
 
 
-def test_same_channel_can_bind_distinct_authors_to_distinct_gurus():
-    from copytrading_engine.trading.domain.config import TradingConfiguration
-
-    raw = _configuration(
-        lambda profiles: [
-            _route(profile, account_id, author_id)
-            for profile, account_id, author_id in zip(
-                profiles,
-                ("paper-a", "paper-b"),
-                ("100", "200"),
-                strict=True,
-            )
-        ]
-    )
-    configuration = TradingConfiguration.model_validate(raw)
-
-    assert {(route.author_id, route.guru_id) for route in configuration.routes} == {
-        ("100", "guru-a"),
-        ("200", "guru-b"),
-    }
-
-
-@pytest.mark.parametrize("author_ids", [(None, "100"), ("100", "100")])
-def test_channel_collision_never_silently_selects_a_profile(author_ids):
+@pytest.mark.parametrize("author_ids", [(None, "100"), ("100", "100"), ("100", "200")])
+def test_a_channel_copies_one_guru_whoever_posts(author_ids):
+    """The channel names its guru, so two gurus never share one, even by author."""
     from copytrading_engine.trading.domain.config import TradingConfiguration
 
     raw = _configuration(
@@ -80,7 +59,7 @@ def test_channel_collision_never_silently_selects_a_profile(author_ids):
         ]
     )
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValidationError, match=r"a channel copies one guru|rules must be unique"):
         TradingConfiguration.model_validate(raw)
 
 
@@ -106,11 +85,11 @@ def _two_gurus(accounts=("paper-a", "paper-b"), full_position="600"):
     return _configuration(
         lambda profiles: [
             {
-                **_route(profile, account_id, author_id),
+                **_route(profile, account_id, None, channel_id),
                 "connections": [{"account_id": account_id, "full_position_usd": full_position}],
             }
-            for profile, account_id, author_id in zip(
-                profiles, accounts, ("100", "200"), strict=True
+            for profile, account_id, channel_id in zip(
+                profiles, accounts, ("123", "124"), strict=True
             )
         ]
     )

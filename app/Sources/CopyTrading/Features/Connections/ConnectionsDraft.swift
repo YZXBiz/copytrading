@@ -68,6 +68,18 @@ struct ConnectionsDraft {
         return own.isEmpty ? sourceChannelIDs.first ?? "" : own
     }
 
+    /// Who a route copies: its channel's guru, the same ID the engine names their posts with.
+    func guru(for route: TradingRouteDraft) -> String {
+        GuruIdentity.id(channelID: effectiveChannel(for: route))
+    }
+
+    /// The ID a route is saved with: its channel's, or the one it was saved with while it stays on
+    /// that channel, so a setup saved before IDs came from the channel doesn't read as changed.
+    func savedGuruID(for route: TradingRouteDraft) -> String {
+        guard let saved = route.saved, saved.channelID == effectiveChannel(for: route) else { return guru(for: route) }
+        return saved.guruID
+    }
+
     var accountIDs: [String] {
         accounts.map { $0.name.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
     }
@@ -89,7 +101,7 @@ struct ConnectionsDraft {
             return TradingRouteDraft(
                 channelID: route.channelID,
                 authorID: route.authorID ?? "",
-                guruID: route.guruID,
+                saved: (route.guruID, route.channelID),
                 displayName: profile?.displayName ?? route.guruID,
                 playbook: profile?.playbook ?? "",
                 repeatWindowMinutes: route.repeatWindowMinutes,
@@ -126,7 +138,7 @@ struct ConnectionsDraft {
         for route in routes {
             let profile = try TradingProfileBuilder().build(
                 TradingProfileDraft(
-                    guruID: route.guruID.trimmed,
+                    guruID: savedGuruID(for: route),
                     displayName: route.displayName.trimmed,
                     playbook: route.playbook.trimmedLines
                 ))
