@@ -9,7 +9,10 @@ from pathlib import Path
 from copytrading_engine.backup.archive import open_archive, read_limited
 from copytrading_engine.backup.files import require_regular_file
 from copytrading_engine.backup.manifest import BackupManifest, BackupManifestError, json_object
-from copytrading_engine.shared.configuration_version import CONFIGURATION_VERSION
+from copytrading_engine.shared.configuration_version import (
+    CONFIGURATION_VERSION,
+    EARLIEST_UPGRADABLE_VERSION,
+)
 
 
 def read_installation_id(data_dir: Path) -> str:
@@ -45,7 +48,13 @@ def read_configuration_identities(content: bytes) -> tuple[str, ...]:
     if raw.get("pendingActivation") is not None:
         raise BackupManifestError("saved configuration activation is incomplete")
     configuration = raw.get("configuration")
-    if not isinstance(configuration, dict) or configuration.get("version") != CONFIGURATION_VERSION:
+    # An earlier setup is restored as it was; the app upgrades it when it next loads it.
+    version = configuration.get("version") if isinstance(configuration, dict) else None
+    if (
+        not isinstance(configuration, dict)
+        or type(version) is not int
+        or not EARLIEST_UPGRADABLE_VERSION <= version <= CONFIGURATION_VERSION
+    ):
         raise BackupManifestError("saved trading configuration is unsupported")
     accounts = configuration.get("accounts")
     if not isinstance(accounts, list):

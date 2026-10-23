@@ -8,7 +8,6 @@ struct MenuBarView: View {
     @Bindable var model: AppModel
     let accountFeature: AccountFeatureModel
 
-    private var state: TradingRunState? { model.tradingStatus?.state }
     private var isEngineStopped: Bool { model.runtimeState == .stopped || model.runtimeState == .failed }
     private var isCopying: Bool { model.isCopying }
 
@@ -41,7 +40,7 @@ struct MenuBarView: View {
                     .foregroundStyle(Palette.tertiaryInk)
                     .padding(.top, 10)
             }
-            let stopped = model.isTradingUnlocked ? accountFeature.accounts.count(where: AccountCopyState.isStopped) : 0
+            let stopped = model.isTradingUnlocked ? accountFeature.accounts.count(where: CopyingState.isStopped) : 0
             if stopped > 0 {
                 Label(L10n.string("%@ stopped", Humanize.count(stopped, "account")), systemImage: "exclamationmark.triangle.fill")
                     .font(.system(size: 13))
@@ -155,7 +154,7 @@ struct MenuBarView: View {
     /// below is the way in, so no second button repeats it.
     private var copyingStopped: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label(L10n.string("Copying stopped when CopyTrading quit."), systemImage: "pause.circle.fill")
+            Label(L10n.string("Copying paused when CopyTrading quit."), systemImage: "pause.circle.fill")
                 .font(.system(size: 13))
                 .foregroundStyle(Palette.ink)
                 .fixedSize(horizontal: false, vertical: true)
@@ -195,22 +194,9 @@ struct MenuBarView: View {
         }
     }
 
-    @MainActor private var statusText: String {
-        if isEngineStopped { return L10n.string("Engine stopped") }
-        guard model.savedTradingConfiguration != nil else { return L10n.string("Not set up") }
-        switch state {
-        case .running: return L10n.string("Copying")
-        case .degraded: return L10n.string("Needs attention")
-        case .starting: return L10n.string("Starting")
-        case .pausing: return L10n.string("Stopping")
-        case .failed: return L10n.string("Stopped")
-        case .paused, nil: return L10n.string("Not copying")
-        }
-    }
+    @MainActor private var statusText: String { CopyingState.overall(model).text }
 
-    private var statusTone: StatusTone {
-        isEngineStopped ? StatusTone(model.runtimeState) : StatusTone(state)
-    }
+    @MainActor private var statusTone: StatusTone { CopyingState.overall(model).tone }
 
     private func openMainWindow() {
         openWindow(id: "main")

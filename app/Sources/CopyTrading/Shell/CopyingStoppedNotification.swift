@@ -9,7 +9,7 @@ enum CopyingStoppedNotification {
     static func post() {
         let content = UNMutableNotificationContent()
         content.title = L10n.string("Copying is paused")
-        content.body = L10n.string("Copying stopped when CopyTrading quit. Open CopyTrading and press Start Copying.")
+        content.body = L10n.string("Copying paused when CopyTrading quit. Open CopyTrading and press Start Copying.")
         content.sound = .default
         content.threadIdentifier = "copying-stopped"
         let request = UNNotificationRequest(identifier: "copying-stopped", content: content, trigger: nil)

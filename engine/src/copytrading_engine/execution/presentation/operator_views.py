@@ -357,7 +357,10 @@ def account_overview(
     readiness: str,
     balance: AccountBalanceView | None,
     last_activity_at: dt.datetime | None = None,
+    recovery_preference: str | None = None,
 ) -> AccountOverview:
+    """One account from its record. An account in the setup passes the setup's recovery
+    preference; a record no setup names shows the one it last ran with."""
     if snapshot.account_id is None or snapshot.environment is None:
         raise RuntimeError("Account evidence has no verified identity")
     held = {item.symbol: item for item in inspection.broker_positions} if inspection else {}
@@ -402,7 +405,7 @@ def account_overview(
         active_configuration=active_configuration,
         broker_identity=snapshot.account_id,
         entry_permission=snapshot.control.entry_permission,
-        recovery_preference=snapshot.control.recovery_preference,
+        recovery_preference=recovery_preference or snapshot.control.recovery_preference,
         readiness=readiness,
         account_risk_status=inspection.account_risk_status if inspection else "unavailable",
         account_risk_reason=inspection.account_risk_reason if inspection else "not_checked",

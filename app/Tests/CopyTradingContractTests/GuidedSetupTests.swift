@@ -165,7 +165,7 @@ private func unsavedChangesFollowTheSavedSetup() throws {
     try verifyGuide(model.hasUnsavedSetupChanges && model.hasSetupToStart, "A first edit did not show the start card")
 
     let profile = try TradingProfileBuilder().build(
-        TradingProfileDraft(guruID: "alex", displayName: "Alex"))
+        TradingProfileDraft(guruID: GuruIdentity.id(channelID: "123"), displayName: "Alex"))
     let account = TradingAccountConfiguration(id: "paper", environment: .paper)
     let saved = TradingConfiguration(
         source: TradingSourceConfiguration(channelIDs: ["123"]),
@@ -174,7 +174,7 @@ private func unsavedChangesFollowTheSavedSetup() throws {
         profiles: [profile],
         routes: [
             TradingRouteConfiguration(
-                channelID: "123", authorID: nil, guruID: "alex", profileRevision: profile.profileRevision,
+                channelID: "123", authorID: nil, guruID: profile.guruID, profileRevision: profile.profileRevision,
                 connections: [
                     TradingRouteConnection(
                         accountID: "paper", fullPositionUSD: account.policy.maxSymbolUSD)
@@ -203,7 +203,7 @@ private func unsavedChangesFollowTheSavedSetup() throws {
 private func aSavedDraftIsNotAChange() throws {
     let profile = try TradingProfileBuilder().build(
         TradingProfileDraft(
-            guruID: "alex", displayName: "Alex", playbook: "Reads calls as buys."))
+            guruID: GuruIdentity.id(channelID: "123"), displayName: "Alex", playbook: "Reads calls as buys."))
     var policy = TradingAccountPolicy()
     policy.maxSymbolUSD = "1200"
     policy.maxOrderUSD = "400"
@@ -216,7 +216,7 @@ private func aSavedDraftIsNotAChange() throws {
         profiles: [profile],
         routes: [
             TradingRouteConfiguration(
-                channelID: "123", authorID: "9", guruID: "alex", profileRevision: profile.profileRevision,
+                channelID: "123", authorID: "9", guruID: profile.guruID, profileRevision: profile.profileRevision,
                 connections: [TradingRouteConnection(accountID: "main", fullPositionUSD: "1200")],
                 repeatWindowMinutes: nil)
         ],
@@ -249,7 +249,7 @@ private func aSavedDraftIsNotAChange() throws {
 private func aGuruEditSaysItIsNotSavedYet() throws {
     let profile = try TradingProfileBuilder().build(
         TradingProfileDraft(
-            guruID: "alex", displayName: "Alex", playbook: "Reads calls as buys."))
+            guruID: GuruIdentity.id(channelID: "123"), displayName: "Alex", playbook: "Reads calls as buys."))
     let saved = TradingConfiguration(
         source: TradingSourceConfiguration(channelIDs: ["123"], authorIDs: []),
         provider: TradingProviderConfiguration(name: .ollama, model: "llama", baseURL: "http://localhost:11434"),
@@ -260,7 +260,7 @@ private func aGuruEditSaysItIsNotSavedYet() throws {
         profiles: [profile],
         routes: [
             TradingRouteConfiguration(
-                channelID: "123", guruID: "alex", profileRevision: profile.profileRevision,
+                channelID: "123", guruID: profile.guruID, profileRevision: profile.profileRevision,
                 connections: [TradingRouteConnection(accountID: "main", fullPositionUSD: "600")])
         ]
     )

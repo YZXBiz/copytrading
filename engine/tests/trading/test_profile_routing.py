@@ -30,7 +30,7 @@ def _route(profile, account_id: str, author_id: str | None, channel_id: str = "1
 def _configuration(routes):
     profile_list = (_profile("guru-a", "ALERT:"), _profile("guru-b", "SIGNAL:"))
     return {
-        "version": 9,
+        "version": 10,
         "source": {"channel_ids": ["123", "124"]},
         "provider": {"name": "anthropic", "model": "test-model"},
         "accounts": [

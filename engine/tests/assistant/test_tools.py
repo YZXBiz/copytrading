@@ -42,7 +42,11 @@ async def test_pausing_runs_now():
     turn = Turn("t-1")
     assistant, engine, _ = tools(turn)
     result = await assistant.pause_account("paper")
-    assert (result["account"], result["entries"]) == ("paper", "paused")
+    assert (result["account"], result["copying"], result["why"]) == (
+        "paper",
+        "Sells only",
+        "You paused new buys; sells still go through",
+    )
     # The fake engine's actions() leaves pausing out, so read the raw call record.
     paused = [
         value.action

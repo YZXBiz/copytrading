@@ -1,1 +1,0 @@
-../../Sources/CopyTrading/Features/Accounts/AccountCopyState.swift

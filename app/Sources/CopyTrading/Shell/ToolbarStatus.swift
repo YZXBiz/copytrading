@@ -38,7 +38,7 @@ struct ToolbarStatus: View {
     private func freshness(compact: Bool) -> some View {
         FreshnessLabel(
             updatedAt: model.savedTradingConfiguration == nil ? nil : accountFeature.lastUpdatedAt,
-            isCopying: isCopying, compact: compact
+            isCopying: isCopying, idleText: CopyingState.overall(model).title, compact: compact
         )
     }
 

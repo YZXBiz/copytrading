@@ -1132,15 +1132,13 @@ def j3_first_run_guidance(app: AppDriver) -> None:
     """With nothing saved, Getting Started offers the setup tour, which points at the Discord row
     on Connections, and the sidebar lists only the setup pages."""
     guide = app.open_screen("gettingStarted")
-    app.expect(
-        guide, "Status: Not set up yet", "guide.tour", "0 of 5", "How a post becomes a trade"
-    )
+    app.expect(guide, "Status: Not started", "guide.tour", "0 of 5", "How a post becomes a trade")
     app.click("guide.tour")
     tour = app.wait_for("tour.card", timeout=15, name="tour-from-guide")
     app.expect(tour, "Connect Discord", "connections.discord", "tour.strip")
     app.click("tour.end")
     app.wait_gone("tour.card", timeout=10)
-    app.expect(app.see("no-setup-sidebar"), "Status: Not set up yet", "navigation.gettingStarted")
+    app.expect(app.see("no-setup-sidebar"), "Status: Not started", "navigation.gettingStarted")
 
 
 def j4_every_screen(app: AppDriver) -> None:
@@ -1157,11 +1155,11 @@ def j4_every_screen(app: AppDriver) -> None:
 
 
 def j20_toolbar(app: AppDriver) -> None:
-    """With nothing set up, the toolbar offers no Stop and the freshness label says so."""
+    """With nothing set up, the toolbar offers no Stop and the freshness label says Not started."""
     snapshot = app.open_screen("gettingStarted")
     if snapshot.find("toolbar.copying") is not None:
         raise JourneyFailure("the toolbar offered Stop Copying before setup")
-    app.expect(snapshot, "Not copying")
+    app.expect(snapshot, "Not started")
     app.click("toolbar.refresh")
     app.open_screen("connections")
     app.click("connections.gurus.add")
@@ -1741,7 +1739,7 @@ def j39_setup_tour(app: AppDriver) -> None:
     # is saved.
     app.wait_gone("tour.card", timeout=20)
     app.wait_gone("tour.strip", timeout=180)
-    app.expect_absent(app.see("tour-done"), "Not copying")
+    app.expect_absent(app.see("tour-done"), "Not started")
 
 
 def _expect_exit(app: AppDriver, expected: int, *arguments: str) -> None:
@@ -1815,7 +1813,7 @@ def j33_backup_and_restore(app: AppDriver) -> None:
     """A connected account's records back up, preview, and restore through Settings → Backups.
 
     Runs after J31, whose saved paper setup it backs up; the restored account comes back with
-    entries off and manual recovery, which is what a restore promises.
+    its buys off, which is what a restore promises, and the restored setup's after-restart choice.
     """
     if app.state_root is None:
         raise JourneySkipped("needs the run's state root")
@@ -1841,10 +1839,7 @@ def j33_backup_and_restore(app: AppDriver) -> None:
         # A restore leaves copying paused, so read the account rather than wait for processing.
         accounts = _agent_result(app, 0, "accounts")["items"]
         restored = next((a for a in accounts if a["account_id"] == "primary"), None)
-        if restored is None or (restored["entry_permission"], restored["recovery_preference"]) != (
-            "disabled",
-            "manual",
-        ):
+        if restored is None or restored["entry_permission"] != "disabled":
             raise JourneyFailure(f"the restored account came back as {restored}")
     except JourneyFailure:
         app.press("escape")  # a file panel left open would keep the app from quitting
@@ -1942,7 +1937,7 @@ def _copying_with_entries(app: AppDriver) -> None:
     _start_copying_primary(app)
     _wait_for_account(app, "primary", timeout=180)
 
-    # A restored account waits for the owner to choose automatic recovery again.
+    # Automatic recovery is the setup's choice; ask for it when the restored setup didn't have it.
     if _wait_for_account(app, "primary", timeout=10)["recovery_preference"] != "automatic":
         asked = _agent_result(app, 10, "accounts", "recovery", "primary", "automatic")
         app.wait_for("In primary, after a restart", timeout=30, name="recovery-sheet")

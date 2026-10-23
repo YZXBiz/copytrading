@@ -29,7 +29,7 @@ private func status(_ state: TradingRunState) throws -> TradingStatus {
 }
 
 private func savedPaperSetup() throws -> TradingConfiguration {
-    let profile = try TradingProfileBuilder().build(TradingProfileDraft(guruID: "alex", displayName: "Alex"))
+    let profile = try TradingProfileBuilder().build(TradingProfileDraft(guruID: GuruIdentity.id(channelID: "123"), displayName: "Alex"))
     return TradingConfiguration(
         source: TradingSourceConfiguration(channelIDs: ["123"]),
         provider: TradingProviderConfiguration(name: .deepseek, model: "deepseek-flash"),
@@ -37,7 +37,7 @@ private func savedPaperSetup() throws -> TradingConfiguration {
         profiles: [profile],
         routes: [
             TradingRouteConfiguration(
-                channelID: "123", authorID: nil, guruID: "alex", profileRevision: profile.profileRevision,
+                channelID: "123", authorID: nil, guruID: profile.guruID, profileRevision: profile.profileRevision,
                 connections: [TradingRouteConnection(accountID: "primary", fullPositionUSD: "600")])
         ])
 }

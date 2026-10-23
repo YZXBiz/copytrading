@@ -234,6 +234,24 @@ struct AccountEditorSheet: View {
                 behavior(
                     "Ask me before sending orders", hint: "Each order waits for your Touch ID.",
                     isOn: $account.policy.approveOrders)
+                SheetRow(
+                    title: L10n.string("After a restart"),
+                    hint: L10n.string(
+                        account.policy.recoveryPreference == .automatic
+                            ? "Buys again once its checks pass."
+                            : "Buys wait for your Start Copying."),
+                    labelsControl: true
+                ) {
+                    Picker(L10n.string("After a restart"), selection: $account.policy.recoveryPreference) {
+                        ForEach(RecoveryPreference.allCases, id: \.self) { preference in
+                            Text(preference.title).tag(preference)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
+                    .accessibilityIdentifier("account.recovery")
+                }
             }
         } footer: {
             Text(L10n.string("Only shares CopyTrading bought are ever sold. Your own shares are never touched."))

@@ -90,10 +90,10 @@ private func account(readiness: String, active: Bool = true) throws -> AccountOv
 /// and never when the owner stopped it or it is simply off.
 @Test @MainActor func onlyAnAccountTheEngineCouldNotKeepIsStopped() throws {
     for readiness in ["account_unavailable", "outside_open_orders", "broker_account_inactive", "account_in_use"] {
-        #expect(AccountCopyState.isStopped(try account(readiness: readiness)), "\(readiness) was not called stopped")
+        #expect(CopyingState.isStopped(try account(readiness: readiness)), "\(readiness) was not called stopped")
     }
     for readiness in ["enabled", "enabled_waiting_for_session", "manual_resume_required", "processing_stopped", "disabled"] {
-        #expect(!AccountCopyState.isStopped(try account(readiness: readiness)), "\(readiness) was called stopped")
+        #expect(!CopyingState.isStopped(try account(readiness: readiness)), "\(readiness) was called stopped")
     }
-    #expect(!AccountCopyState.isStopped(try account(readiness: "account_unavailable", active: false)))
+    #expect(!CopyingState.isStopped(try account(readiness: "account_unavailable", active: false)))
 }

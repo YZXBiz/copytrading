@@ -117,6 +117,11 @@ extension AppModel {
                 let done = try await operations.completeProposal(
                     id: result.id, succeeded: failure == nil, code: failure)
                 agentAccessMessage = done.resultMessage
+            } else if result.state == .running, case .setRecovery(let accountID, let preference) = result.subject {
+                let failure = await applyAgentRecovery(accountID: accountID, preference: preference)
+                let done = try await operations.completeProposal(
+                    id: result.id, succeeded: failure == nil, code: failure)
+                agentAccessMessage = done.resultMessage
             } else if result.state == .running, case .startProcessing = result.subject {
                 let failure = await startCopyingForAgent()
                 let done = try await operations.completeProposal(

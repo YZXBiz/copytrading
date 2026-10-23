@@ -6,7 +6,7 @@ configuration fingerprints and raw payload evidence stay inside the engine.
 
 from decimal import Decimal
 
-from copytrading_engine.control import wire
+from copytrading_engine.control import copying, wire
 from copytrading_engine.control.proposals import (
     Closed,
     ConfirmManualOrder,
@@ -33,15 +33,18 @@ from copytrading_engine.execution.presentation.operator_views import (
     DestinationView,
     PositionView,
 )
-from copytrading_engine.trading.domain.status import TradingStatus
+from copytrading_engine.trading.domain.status import AccountStatus, TradingStatus
 from copytrading_engine.trading.presentation.operator_models import SourceActivityPage
 
 CENT = Decimal("0.01")
 
 
 def processing(status: TradingStatus) -> wire.ProcessingView:
+    words = copying.overall(status.state, status.error_code)
     return wire.ProcessingView(
         state=status.state,
+        copying=words.word,
+        copying_detail=words.detail,
         source_connected=status.source_connected,
         model_ready=status.model_ready,
         pending_source=status.pending_source,
@@ -51,23 +54,34 @@ def processing(status: TradingStatus) -> wire.ProcessingView:
     )
 
 
+def _account_state(trading: TradingStatus, account: AccountStatus) -> wire.AccountStateView:
+    words = copying.account(
+        processing_state=trading.state,
+        active_configuration=True,
+        entry_permission=account.entry_permission,
+        readiness=account.readiness,
+        error_code=account.error_code,
+        run_state=account.state,
+    )
+    return wire.AccountStateView(
+        account_id=account.id,
+        copying=words.word,
+        copying_detail=words.detail,
+        run_state=account.state,
+        entry_permission=account.entry_permission,
+        recovery_preference=account.recovery_preference,
+        readiness=account.readiness,
+        risk_status=account.account_risk_status,
+        activity_status=account.account_activity_status,
+        error_code=account.error_code,
+    )
+
+
 def status(engine_state: str, trading: TradingStatus) -> wire.StatusView:
     return wire.StatusView(
         engine_state=engine_state,
         processing=processing(trading),
-        accounts=tuple(
-            wire.AccountStateView(
-                account_id=account.id,
-                run_state=account.state,
-                entry_permission=account.entry_permission,
-                recovery_preference=account.recovery_preference,
-                readiness=account.readiness,
-                risk_status=account.account_risk_status,
-                activity_status=account.account_activity_status,
-                error_code=account.error_code,
-            )
-            for account in trading.accounts
-        ),
+        accounts=tuple(_account_state(trading, account) for account in trading.accounts),
     )
 
 
@@ -89,9 +103,17 @@ def _sold_out(position: PositionView) -> bool:
 
 
 def _account(item: AccountOverview) -> wire.AccountView:
+    words = copying.account(
+        processing_state=None,
+        active_configuration=item.active_configuration,
+        entry_permission=item.entry_permission,
+        readiness=item.readiness,
+    )
     return wire.AccountView(
         account_id=item.account_id,
         environment=item.environment,
+        copying=words.word,
+        copying_detail=words.detail,
         entry_permission=item.entry_permission,
         recovery_preference=item.recovery_preference,
         readiness=item.readiness,

@@ -13,7 +13,7 @@ struct CopyingControl: View {
     private var accountCount: Int { model.savedTradingConfiguration?.accounts.count ?? 0 }
 
     private var copyingCount: Int {
-        accountFeature.accounts.filter { AccountCopyState($0).isCopying }.count
+        accountFeature.accounts.filter { CopyingState.account($0).isCopying }.count
     }
 
     var body: some View {

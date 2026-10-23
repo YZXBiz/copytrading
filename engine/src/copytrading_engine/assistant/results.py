@@ -12,9 +12,7 @@ from fractions import Fraction
 from copytrading_engine.assistant import insights
 from copytrading_engine.assistant.wording import (
     AFTER_RESTART,
-    COPYING,
-    ENTRIES,
-    READINESS,
+    COPYING_DETAILS,
     money,
     plain,
     shares,
@@ -58,21 +56,23 @@ def _order(order: wire.OrderView) -> str:
     return f"{order.side} order for {shares(order.quantity)} {order.symbol}: {plain(order.status)}"
 
 
+def _copying(word: wire.CopyingWord, detail: str | None) -> dict:
+    """The word the app shows, and the line under it, never the engine's states."""
+    return {"copying": wire.COPYING_WORDS[word], "why": plain(detail, COPYING_DETAILS)}
+
+
 def status(view: wire.StatusView) -> dict:
     processing = view.processing
     return {
-        "copying": plain(processing.state, COPYING),
+        **_copying(processing.copying, processing.copying_detail),
         "discord_connected": processing.source_connected,
         "model_ready": processing.model_ready,
         "posts_waiting_to_be_read": processing.pending_source,
-        "problem": plain(processing.error_code),
         "accounts": [
             {
                 "account": account.account_id,
-                "entries": plain(account.entry_permission, ENTRIES),
-                "standing": plain(account.readiness, READINESS),
+                **_copying(account.copying, account.copying_detail),
                 "after_a_restart": plain(account.recovery_preference, AFTER_RESTART),
-                "problem": plain(account.error_code),
             }
             for account in view.accounts
         ],
@@ -92,8 +92,7 @@ def _account(account: wire.AccountView) -> dict:
     shaped: dict = {
         "account": account.account_id,
         "kind": account.environment,
-        "entries": plain(account.entry_permission, ENTRIES),
-        "standing": plain(account.readiness, READINESS),
+        **_copying(account.copying, account.copying_detail),
         "after_a_restart": plain(account.recovery_preference, AFTER_RESTART),
         "in_stocks": money(account.total_exposure_usd),
         "positions": [
@@ -236,14 +235,22 @@ def proposals(page: wire.ProposalsPage) -> dict:
 
 
 def paused(view: wire.ProcessingPaused) -> dict:
-    return {"copying": plain(view.processing.state, COPYING)}
+    return _copying(view.processing.copying, view.processing.copying_detail)
+
+
+# An account's new buys after the owner paused or resumed them.
+_BUYS: dict[str, wire.CopyingWord] = {
+    "enabled": "copying",
+    "paused": "sells_only",
+    "disabled": "not_started",
+}
 
 
 def account_control(view: wire.AccountControlView) -> dict:
+    word = _BUYS.get(view.entry_permission, "not_started")
     return {
         "account": view.account_id,
-        "entries": plain(view.entry_permission, ENTRIES),
-        "after_a_restart": plain(view.recovery_preference, AFTER_RESTART),
+        **_copying(word, "account_paused" if word == "sells_only" else None),
         "done": when(view.applied_at),
     }
 

@@ -228,21 +228,69 @@ public struct TradingConfigurationStore: Sendable {
         try? secrets.delete(revision: saved.secretRevision)
     }
 
-    /// A setup saved by an older CopyTrading is never migrated. Its file and Keychain item are
-    /// removed so the app starts clean and the owner sets up again. Returns whether one was removed.
-    public func discardOlderVersion() throws -> Bool {
-        guard FileManager.default.fileExists(atPath: url.path),
-            let data = try? Data(contentsOf: url),
-            let raw = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let configuration = raw["configuration"] as? [String: Any],
-            let version = configuration["version"] as? Int,
+    /// The saved setup's version when an earlier CopyTrading saved it; nil when there is none or
+    /// it is current.
+    public func olderVersion() -> Int? {
+        guard let version = (try? rawEnvelope())?.configuration["version"] as? Int,
             version < TradingConfiguration.currentVersion
-        else { return false }
-        if let secretRevision = (raw["secretRevision"] as? String).flatMap(UUID.init(uuidString:)) {
-            try? secrets.delete(revision: secretRevision)
+        else { return nil }
+        return version
+    }
+
+    /// Where a setup too old to carry over is kept, with its Keychain item, instead of deleted.
+    public var setAsideURL: URL {
+        url.deletingLastPathComponent().appending(path: "trading-configuration-before-upgrades.json")
+    }
+
+    /// A setup saved before upgrades existed can't be carried over, but it is the owner's: it moves
+    /// to `setAsideURL`, keys kept, so a new setup can be saved. Returns whether one was moved.
+    public func setAsideBeforeUpgrades() throws -> Bool {
+        guard let version = olderVersion(), version < SetupUpgrade.earliestVersion else { return false }
+        do {
+            try? FileManager.default.removeItem(at: setAsideURL)
+            try FileManager.default.moveItem(at: url, to: setAsideURL)
+        } catch {
+            throw TradingConfigurationStoreError.unavailable
         }
-        try writer.remove(url)
         return true
+    }
+
+    /// Rewrite an earlier saved setup at the current version, once, keeping its keys. `revision`
+    /// asks the engine for the upgraded setup's revision, which the file stores beside it.
+    public func upgradeOlderVersion(
+        facts: SetupUpgrade.Facts, revision: @Sendable (TradingConfiguration) async throws -> String
+    ) async throws -> TradingConfiguration {
+        guard let saved = try rawEnvelope(), saved.version == 1 else {
+            throw TradingConfigurationStoreError.invalidFile
+        }
+        // A start left half-finished across the update settles first; the next launch upgrades.
+        guard !saved.hasPendingActivation else { throw TradingConfigurationStoreError.activationPending }
+        let upgraded = try SetupUpgrade.upgrade(saved.configuration, facts: facts)
+        let engineRevision = try await revision(upgraded)
+        guard Self.isRevision(engineRevision) else { throw TradingConfigurationStoreError.invalidConfiguration }
+        try writer.write(
+            try encode(
+                SavedTradingConfiguration(
+                    version: 1, configuration: upgraded, revision: engineRevision,
+                    secretRevision: saved.secretRevision
+                )), to: url)
+        return upgraded
+    }
+
+    /// The saved file as JSON, for a setup this version can't decode as it is.
+    private func rawEnvelope() throws -> RawSavedTradingConfiguration? {
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        guard let data = try? Data(contentsOf: url), data.count <= 1_048_576,
+            let raw = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let version = raw["version"] as? Int,
+            let configuration = raw["configuration"] as? [String: Any],
+            let secretRevision = (raw["secretRevision"] as? String).flatMap(UUID.init(uuidString:))
+        else { throw TradingConfigurationStoreError.invalidFile }
+        let pending = raw["pendingActivation"]
+        return RawSavedTradingConfiguration(
+            version: version, configuration: configuration, secretRevision: secretRevision,
+            hasPendingActivation: pending != nil && !(pending is NSNull)
+        )
     }
 
     public func pendingActivation() throws -> SavedTradingActivationInfo? {
@@ -311,6 +359,14 @@ public struct TradingConfigurationStore: Sendable {
             throw TradingConfigurationStoreError.invalidFile
         }
     }
+}
+
+/// The saved file read as JSON, before it is known to be this version's shape.
+private struct RawSavedTradingConfiguration {
+    let version: Int
+    let configuration: [String: Any]
+    let secretRevision: UUID
+    let hasPendingActivation: Bool
 }
 
 /// The saved JSON contains policy and a Keychain reference, never credential values.

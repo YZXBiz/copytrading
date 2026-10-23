@@ -152,9 +152,7 @@ async def test_manual_order_needs_a_preview_made_through_control():
 
 async def test_an_unconfirmed_broker_effect_is_reported_as_unknown():
     control, engine, *_ = service()
-    proposal = await ok(
-        control, line("propose_recovery_preference", account_id="paper", preference="automatic")
-    )
+    proposal = await ok(control, line("propose_resume_account", account_id="paper"))
     assert isinstance(proposal, wire.ProposalView)
     engine.failure = TimeoutError("broker did not answer")
     done = await control.approve(proposal.proposal_id, proposal.digest)
@@ -225,7 +223,6 @@ REQUESTS = st.sampled_from(
         line("get_status"),
         line("pause_account", account_id="paper"),
         line("propose_resume_account", account_id="paper"),
-        line("propose_recovery_preference", account_id="paper", preference="automatic"),
     ]
 )
 

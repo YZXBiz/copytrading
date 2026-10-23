@@ -308,7 +308,7 @@ async def test_runtime_registered_credentials_never_reach_the_journal(
     )
     configuration = TradingConfiguration.model_validate(
         {
-            "version": 9,
+            "version": 10,
             "source": {"channel_ids": ["123"]},
             "provider": {"name": "deepseek", "model": "deepseek-flash"},
             "accounts": [{"id": "account-a", "environment": "paper"}],

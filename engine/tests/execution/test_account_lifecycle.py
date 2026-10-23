@@ -33,11 +33,11 @@ from .fakes import FakeBroker
 NOW = dt.datetime.now(dt.UTC)
 
 
-async def _open(tmp_path, broker, account_id="paper"):
+async def _open(tmp_path, broker, account_id="paper", recovery="manual"):
     return await ExecutionOwner.open(
         tmp_path / "accounts" / account_id,
         AlpacaCredentials(key=SecretStr("test"), secret=SecretStr("test")),
-        CopyConfig(sources=("discord:demo",)),
+        CopyConfig(sources=("discord:demo",), recovery_preference=recovery),
         environment="paper",
         broker_factory=lambda _credentials, _environment: broker,
         account_lock_root=tmp_path / "locks",
@@ -111,43 +111,47 @@ async def test_disabled_and_paused_buys_are_durable_skips_but_owned_exit_continu
         await owner.close()
 
 
-async def test_control_replay_conflict_and_recovery_preferences_survive_restart(tmp_path):
+async def test_control_replay_conflict_and_recovery_follows_the_setup_at_each_open(tmp_path):
     broker = FakeBroker()
-    owner = await _open(tmp_path, broker)
+    owner = await _open(tmp_path, broker, recovery="automatic")
     try:
         await owner.recover_account(NOW)
-        automatic = _command("preference-1", "set_recovery", "automatic")
-        assert (await owner.control_account(automatic, NOW)).recovery_preference == "automatic"
+        resume = _command("enable-1", "resume")
+        assert (await owner.control_account(resume, NOW)).entry_permission == "enabled"
         assert await owner.control_account(
-            automatic, NOW + dt.timedelta(seconds=1)
-        ) == await owner.control_account(automatic, NOW)
+            resume, NOW + dt.timedelta(seconds=1)
+        ) == await owner.control_account(resume, NOW)
         with pytest.raises(AccountControlConflict):
-            await owner.control_account(_command("preference-1", "pause"), NOW)
-        await owner.control_account(_command("enable-1", "resume"), NOW)
+            await owner.control_account(_command("enable-1", "pause"), NOW)
+        # Recovery is a setup choice: the record refuses to take one.
+        with pytest.raises(ValueError, match="setup"):
+            await owner.control_account(_command("preference-1", "set_recovery", "manual"), NOW)
     finally:
         await owner.close()
 
-    owner = await _open(tmp_path, broker)
+    owner = await _open(tmp_path, broker, recovery="automatic")
     try:
         await owner.recover_account(NOW + dt.timedelta(minutes=1))
         assert (await owner.account_status()).readiness in {
             "enabled",
             "enabled_waiting_for_session",
         }
+        assert (await owner.account_status()).recovery_preference == "automatic"
+        assert (await owner.operator_overview()).recovery_preference == "automatic"
         await owner.control_account(_command("pause-1", "pause"), NOW)
     finally:
         await owner.close()
 
-    owner = await _open(tmp_path, broker)
+    owner = await _open(tmp_path, broker, recovery="automatic")
     try:
         await owner.recover_account(NOW + dt.timedelta(minutes=2))
         assert (await owner.account_status()).readiness == "paused"
-        await owner.control_account(_command("preference-2", "set_recovery", "manual"), NOW)
         await owner.control_account(_command("enable-2", "resume"), NOW)
     finally:
         await owner.close()
 
-    owner = await _open(tmp_path, broker)
+    # The owner set the account to wait for them after a restart.
+    owner = await _open(tmp_path, broker, recovery="manual")
     try:
         await owner.recover_account(NOW + dt.timedelta(minutes=3))
         assert (await owner.account_status()).readiness == "manual_resume_required"
@@ -360,14 +364,13 @@ async def _restarted_with_entries_on(tmp_path, broker, preference, monkeypatch):
 
     monkeypatch.setattr(dt, "datetime", MovableDateTime)
     now = clock["at"]
-    owner = await _open(tmp_path, broker)
+    owner = await _open(tmp_path, broker, recovery=preference)
     try:
         await owner.recover_account(now)
-        await owner.control_account(_command("pref", "set_recovery", preference), now)
         await owner.control_account(_command("enable", "resume"), now)
     finally:
         await owner.close()
-    return await _open(tmp_path, broker), now, clock
+    return await _open(tmp_path, broker, recovery=preference), now, clock
 
 
 async def test_a_buy_during_manual_recovery_waits_for_resume_instead_of_being_dropped(
@@ -515,7 +518,13 @@ async def test_a_copying_account_too_busy_to_answer_still_reads_as_copying(tmp_p
             tmp_path,
             lambda: {"paper": supervisor},
             configuration=lambda: SimpleNamespace(
-                accounts=(SimpleNamespace(id="paper", environment="paper"),)
+                accounts=(
+                    SimpleNamespace(
+                        id="paper",
+                        environment="paper",
+                        policy=SimpleNamespace(recovery_preference="manual"),
+                    ),
+                )
             ),
             runtime_state=lambda: "running",
             evidence=SQLiteOperatorEvidence(),
@@ -545,7 +554,13 @@ async def test_an_account_whose_worker_stopped_still_reads_as_unavailable(tmp_pa
             tmp_path,
             lambda: {"paper": supervisor},
             configuration=lambda: SimpleNamespace(
-                accounts=(SimpleNamespace(id="paper", environment="paper"),)
+                accounts=(
+                    SimpleNamespace(
+                        id="paper",
+                        environment="paper",
+                        policy=SimpleNamespace(recovery_preference="manual"),
+                    ),
+                )
             ),
             runtime_state=lambda: "running",
             evidence=SQLiteOperatorEvidence(),

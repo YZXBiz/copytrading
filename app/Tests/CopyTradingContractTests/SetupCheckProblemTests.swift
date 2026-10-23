@@ -76,7 +76,7 @@ private func aRemovedAccountIsNamedWithWhatItHolds() throws {
 }
 
 private func savedSetup() throws -> TradingConfiguration {
-    let profile = try TradingProfileBuilder().build(TradingProfileDraft(guruID: "alex", displayName: "Alex"))
+    let profile = try TradingProfileBuilder().build(TradingProfileDraft(guruID: GuruIdentity.id(channelID: "123"), displayName: "Alex"))
     let accounts = ["primary", "second"].map { TradingAccountConfiguration(id: $0, environment: .paper) }
     return TradingConfiguration(
         source: TradingSourceConfiguration(channelIDs: ["123"]),
@@ -85,7 +85,7 @@ private func savedSetup() throws -> TradingConfiguration {
         profiles: [profile],
         routes: [
             TradingRouteConfiguration(
-                channelID: "123", authorID: nil, guruID: "alex", profileRevision: profile.profileRevision,
+                channelID: "123", authorID: nil, guruID: profile.guruID, profileRevision: profile.profileRevision,
                 connections: [TradingRouteConnection(accountID: "primary", fullPositionUSD: accounts[0].policy.maxSymbolUSD)])
         ]
     )

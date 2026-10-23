@@ -74,7 +74,9 @@ type Kind = Literal[
 
 # Kinds only the app can perform, because the setup file and its keys are the app's. Approving
 # one leaves it running until the app reports how it went.
-APP_PERFORMED: Final[frozenset[Kind]] = frozenset({"set_account_limits", "start_processing"})
+APP_PERFORMED: Final[frozenset[Kind]] = frozenset(
+    {"set_recovery", "set_account_limits", "start_processing"}
+)
 # How long the app has to report before the outcome is called unknown.
 APP_REPORT_WINDOW: Final = dt.timedelta(minutes=2)
 type Outcome = Literal["succeeded", "failed", "outcome_unknown"]

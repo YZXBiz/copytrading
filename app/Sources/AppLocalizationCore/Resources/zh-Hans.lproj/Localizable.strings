@@ -1063,7 +1063,6 @@
 "The half-finished restore didn't pass its checks, so it can only be rolled back." = "未完成的恢复没有通过检查，只能回滚。";
 "A restore is half-finished. Resume it, or roll back to your data from before." = "有一次恢复尚未完成。请继续恢复，或回滚到之前的数据。";
 "Restore recovery could not stop the replacement runtime. The durable gate and installation lock remain held." = "恢复无法停止替换的运行环境。持久闸门和安装锁仍然保持。";
-"Your setup was saved by an older version of CopyTrading. Set it up again from Getting Started, including your keys." = "你的设置由旧版 CopyTrading 保存。请从“快速开始”重新设置，包括你的密钥。";
 "Each guru needs a name." = "每个信号源都需要一个名称。";
 "Starting your new setup…" = "正在启动你的新设置…";
 "The setup changed after it was checked. Check it again." = "检查之后设置又改动了。请重新检查。";
@@ -1074,7 +1073,7 @@
 "Enter %@ first." = "请先输入%@。";
 "the Alpaca API key and secret for “%@”" = "“%@”的 Alpaca API 密钥和密钥口令";
 "Backup saved and checked: %@. Copying stopped while it ran; choose Start Copying to carry on." = "备份已保存并检查完毕：%@。备份期间已停止跟单，选择“开始跟单”即可继续。";
-"Restored. Each account stays off, with manual recovery, until you turn it back on." = "已恢复。在你重新开启之前，每个账户都保持关闭，并使用手动恢复。";
+"Restored. Each account's buys stay off until you turn them back on." = "已恢复。在你重新开启之前，每个账户的买入都保持关闭。";
 "The account name “%@” may only use letters, digits, “-” and “_”." = "账户名称“%@”只能使用字母、数字、“-”和“_”。";
 "Command %@ has no engine workflow yet. Retry the saved self-test from System." = "命令 %@ 还没有对应的引擎流程。请在“系统”中重试已保存的自检。";
 "Command %@ has an uncertain response. Look it up or retry the same ID after the engine reconnects." = "命令 %@ 的响应不确定。请在引擎重新连接后查询它，或用同一个 ID 重试。";
@@ -2406,3 +2405,20 @@
 "Lowest sell price (% under the guru's)" = "最低卖价（低于信号源卖价 %）";
 "A sell waits at this price or better until it fills." = "卖单按这个价或更好的价格挂着，直到成交。";
 "An unfilled buy is cancelled. A sell keeps waiting." = "没成交的买单会撤销，卖单会一直挂着。";
+"Sells only" = "只卖出";
+"Not started" = "未开始";
+"The engine stopped" = "引擎已停止";
+"New buys are paused in every account" = "所有账户都暂停了新的买入";
+"You paused new buys; sells still go through" = "你暂停了新的买入；卖出照常进行";
+"Waiting for your Start Copying after a restart" = "重启后等你点“开始跟单”";
+"Copies once the market opens" = "开盘后开始跟单";
+"Checking the account after a restart" = "重启后正在核对账户";
+"Buys again once its checks pass." = "检查通过后自动恢复买入。";
+"Buys wait for your Start Copying." = "买入等你点“开始跟单”。";
+"Your setup from the last version couldn't be carried over: %@ It's kept as it was; quit and open CopyTrading to try again." = "上一版本的设置未能沿用：%@ 设置已原样保留；退出并重新打开 CopyTrading 再试。";
+"Copying paused when CopyTrading quit." = "CopyTrading 退出时，跟单已暂停。";
+"Copying paused when CopyTrading quit. Open CopyTrading and press Start Copying." = "CopyTrading 退出时，跟单已暂停。请打开 CopyTrading，点“开始跟单”。";
+"The saved setup isn't in a shape CopyTrading knows." = "保存的设置格式无法识别。";
+"The saved setup is from before CopyTrading could carry setups over." = "保存的设置来自更早的版本，无法沿用。";
+"The saved setup is from a newer CopyTrading." = "保存的设置来自更新版本的 CopyTrading。";
+"Your setup is from a CopyTrading too old to carry over. It's kept in %@; set up again in Connections." = "你的设置来自过旧的 CopyTrading，无法沿用。已保留在 %@；请在“连接”中重新设置。";

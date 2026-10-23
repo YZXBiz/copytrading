@@ -5,6 +5,7 @@ from typing import Annotated, Self
 
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, model_validator
 
+from copytrading_engine.execution.domain.lifecycle import RecoveryPreference
 from copytrading_engine.execution.domain.pricing import EntryPricingPolicy
 
 
@@ -32,6 +33,10 @@ class AccountLimits(BaseModel):
     # Off by default. On, no order is sent by itself: a call that would have traded waits for
     # the owner, who approves it in the app (ADR-0008).
     approve_orders: StrictBool = False
+    # What the account does after CopyTrading restarts: "automatic" copies again once its checks
+    # pass; "manual" waits for the owner's Start Copying. The setup holds it, never the account's
+    # record, so the account sheet shows every choice that changes how it trades.
+    recovery_preference: RecoveryPreference = "manual"
 
     @model_validator(mode="after")
     def validate_sessions(self) -> Self:

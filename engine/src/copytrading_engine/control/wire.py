@@ -26,6 +26,15 @@ Digest = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
 Limit = Annotated[int, Field(ge=1, le=100)]
 Sequence = Annotated[int, Field(ge=1)]
 RecoveryPreference = Literal["manual", "automatic"]
+CopyingWord = Literal["copying", "sells_only", "paused", "stopped", "not_started"]
+# The five words the owner sees for copying, as the app says them (`control.copying` picks one).
+COPYING_WORDS: Final[dict[CopyingWord, str]] = {
+    "copying": "Copying",
+    "sells_only": "Sells only",
+    "paused": "Paused",
+    "stopped": "Stopped",
+    "not_started": "Not started",
+}
 
 type Operation = Literal[
     "get_status",
@@ -229,6 +238,9 @@ REQUEST: Final = TypeAdapter[Request](Request)
 
 class ProcessingView(Wire):
     state: str
+    # One of the five words the owner sees, and the code for the line under it.
+    copying: CopyingWord
+    copying_detail: str | None
     source_connected: bool
     model_ready: bool
     pending_source: int
@@ -239,6 +251,8 @@ class ProcessingView(Wire):
 
 class AccountStateView(Wire):
     account_id: str
+    copying: CopyingWord
+    copying_detail: str | None
     run_state: str
     entry_permission: str
     recovery_preference: str
@@ -292,6 +306,8 @@ class BalanceView(Wire):
 class AccountView(Wire):
     account_id: str
     environment: Literal["paper", "live"]
+    copying: CopyingWord
+    copying_detail: str | None
     entry_permission: str
     recovery_preference: str
     readiness: str

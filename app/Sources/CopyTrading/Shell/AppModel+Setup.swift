@@ -273,7 +273,7 @@ extension AppModel {
             guard ready, !Task.isCancelled else { return }
             self.isPausedToApplyChanges = true
             self.accountsCopyingBeforeApply = Set(
-                (self.accountFeature?.accounts ?? []).filter { AccountCopyState($0).isCopying }.map(\.accountID))
+                (self.accountFeature?.accounts ?? []).filter { CopyingState.account($0).isCopying }.map(\.accountID))
             await self.pauseTrading()
             guard await self.waitUntilPaused() else {
                 guard !Task.isCancelled else { return }

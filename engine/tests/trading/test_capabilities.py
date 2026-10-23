@@ -36,7 +36,7 @@ def _configuration(*, notification: bool = False) -> TradingConfiguration:
     )
     return TradingConfiguration.model_validate(
         {
-            "version": 9,
+            "version": 10,
             "source": {"channel_ids": ["123"]},
             "provider": {"name": "deepseek", "model": "test-model"},
             "accounts": [

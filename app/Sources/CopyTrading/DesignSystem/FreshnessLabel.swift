@@ -4,6 +4,8 @@ import SwiftUI
 struct FreshnessLabel: View {
     let updatedAt: Date?
     let isCopying: Bool
+    /// The copying word to show before any numbers arrive while nothing copies.
+    var idleText = L10n.string("Not started")
     var compact = false
 
     /// Numbers older than this while copying are called out rather than trusted silently.
@@ -31,8 +33,8 @@ struct FreshnessLabel: View {
     private func state(at now: Date) -> (text: String, shortText: String, color: Color) {
         guard let updatedAt else {
             return (
-                isCopying ? L10n.string("Waiting for the first update") : L10n.string("Not copying"),
-                isCopying ? L10n.string("Waiting for update") : L10n.string("Not copying"), .secondary
+                isCopying ? L10n.string("Waiting for the first update") : idleText,
+                isCopying ? L10n.string("Waiting for update") : idleText, .secondary
             )
         }
         let age = max(0, now.timeIntervalSince(updatedAt))

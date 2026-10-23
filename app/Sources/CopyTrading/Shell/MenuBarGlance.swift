@@ -25,7 +25,7 @@ struct MenuBarGlance: View {
 
     private var stopped: Int {
         guard model.isTradingUnlocked else { return 0 }
-        return accountFeature.accounts.count(where: AccountCopyState.isStopped)
+        return accountFeature.accounts.count(where: CopyingState.isStopped)
     }
 
     var body: some View {

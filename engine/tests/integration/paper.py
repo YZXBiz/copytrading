@@ -127,7 +127,7 @@ def configuration(policy: Mapping[str, object]) -> TradingConfiguration:
     )
     return TradingConfiguration.model_validate(
         {
-            "version": 9,
+            "version": 10,
             "source": {"channel_ids": [CHANNEL]},
             "provider": {"name": "deepseek", "model": DEEPSEEK_MODEL},
             "accounts": [{"id": ACCOUNT, "environment": "paper", "policy": dict(policy)}],

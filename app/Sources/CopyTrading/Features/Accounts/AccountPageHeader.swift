@@ -9,17 +9,12 @@ struct AccountPageHeader: View {
     let feature: AccountFeatureModel
 
     private var isPending: Bool { feature.pendingAccounts.contains(account.accountID) }
-    private var copyState: AccountCopyState { AccountCopyState(account) }
+    private var copyState: CopyingState { CopyingState.account(account, processing: model.tradingStatus) }
     private var isInSetup: Bool {
         model.setupDraft.accounts.contains { $0.name.trimmed == account.accountID }
     }
     private var isSaved: Bool {
         model.savedTradingConfiguration?.accounts.contains { $0.id == account.accountID } == true
-    }
-
-    /// Settings like recovery only reach an account the engine holds.
-    private var canControl: Bool {
-        account.activeConfiguration && !AccountCopyState.unheld.contains(account.readiness) && !isPending
     }
 
     var body: some View {
@@ -86,8 +81,8 @@ struct AccountPageHeader: View {
                 Text(verbatim: "·")
                     .foregroundStyle(Palette.tertiaryInk)
                     .accessibilityHidden(true)
-                Text(L10n.string(copyState.text))
-                    .foregroundStyle(copyState.tone == .caution ? Palette.amber : Palette.tertiaryInk)
+                Text(copyState.text)
+                    .foregroundStyle(copyState.tone == .caution || copyState.tone == .critical ? Palette.amber : Palette.tertiaryInk)
             }
             .font(DesignTokens.lede)
             .tracking(DesignTokens.ledeTracking)
@@ -127,7 +122,7 @@ struct AccountPageHeader: View {
                 .labelStyle(.titleOnly)
                 .accessibilityIdentifier("account.copying")
             }
-            AccountPageMenu(account: account, canControl: canControl, isInSetup: isInSetup, model: model, feature: feature)
+            AccountPageMenu(account: account, isInSetup: isInSetup, model: model)
         }
     }
 

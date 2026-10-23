@@ -160,7 +160,7 @@ class ExecutionResources:
         elif not self.runtime_entries_ready:
             readiness = (
                 "manual_resume_required"
-                if control.recovery_preference == "manual"
+                if self.engine.config.recovery_preference == "manual"
                 else "recovery_pending"
             )
         elif inspection is None or not self._inspection_ready(inspection):
@@ -176,7 +176,7 @@ class ExecutionResources:
                 readiness = "session_unavailable"
         return AccountRuntimeView(
             entry_permission=control.entry_permission,
-            recovery_preference=control.recovery_preference,
+            recovery_preference=self.engine.config.recovery_preference,
             readiness=readiness,
             account_risk_status=inspection.account_risk_status if inspection else "unavailable",
             account_risk_reason=inspection.account_risk_reason if inspection else "not_checked",
@@ -196,6 +196,7 @@ class ExecutionResources:
             active_configuration=True,
             readiness=self.account_status().readiness,
             balance=account_balance(self.account, self.account_observed_at),
+            recovery_preference=self.engine.config.recovery_preference,
         )
 
     def destination_views(self, source_ids: set[str]) -> dict[str, DestinationView]:
@@ -235,7 +236,7 @@ class ExecutionResources:
             # Manual recovery waits for the owner's Resume; automatic waits for the checks.
             return (
                 "manual_resume_required"
-                if control.recovery_preference == "manual"
+                if self.engine.config.recovery_preference == "manual"
                 else "recovery_pending"
             )
         return None
@@ -249,7 +250,7 @@ class ExecutionResources:
         control = self.engine.ledger.state.control
         self._recovery_ready = (
             control.entry_permission in {"enabled", "paused"}
-            and control.recovery_preference == "automatic"
+            and self.engine.config.recovery_preference == "automatic"
             and self._inspection_ready(inspection)
         )
         # A deliberate pause or entries left off skip queued buys; recovery only holds them, and
