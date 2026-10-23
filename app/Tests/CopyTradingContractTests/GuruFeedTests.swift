@@ -12,6 +12,30 @@ func runGuruFeedTests() async throws {
     try theWaitingTabListsEveryCallTheCountSays()
     try await anAccountTheBrokerHasNoCurveForStopsReading()
     try await holdingsCountOnlyAccountsInTheSetup()
+    try aGuruIsTheirChannelsWhateverIDTheSetupSavedThemWith()
+}
+
+/// A setup saved before IDs came from the channel still names its guru by their channel, so the
+/// posts and holdings the engine names that way show under them (the owner's 赵哥 after beta.6).
+@MainActor
+private func aGuruIsTheirChannelsWhateverIDTheSetupSavedThemWith() throws {
+    let profile = try TradingProfileBuilder().build(TradingProfileDraft(guruID: "guru-0fb5ed9b", displayName: "赵哥"))
+    let configuration = TradingConfiguration(
+        source: TradingSourceConfiguration(channelIDs: ["1517754775674949742"], authorIDs: []),
+        provider: TradingProviderConfiguration(name: .deepseek, model: "deepseek-flash"),
+        accounts: [TradingAccountConfiguration(id: "zhap-account-2", environment: .paper)],
+        profiles: [profile],
+        routes: [
+            TradingRouteConfiguration(
+                channelID: "1517754775674949742", guruID: profile.guruID, profileRevision: profile.profileRevision,
+                connections: [TradingRouteConnection(accountID: "zhap-account-2", fullPositionUSD: "1000")])
+        ])
+    // The same ID the engine names the channel's posts with (route_keys.guru_for_channel).
+    #expect(GuruIdentity.id(channelID: "1517754775674949742") == "guru-3909e2aa")
+    let directory = GuruDirectory(configuration)
+    #expect(directory.gurus.map(\.id) == ["guru-3909e2aa"])
+    #expect(directory.name(for: "guru-3909e2aa") == "赵哥")
+    print("CopyTradingContractTests: a guru is their channel's, whatever ID the setup saved them with")
 }
 
 /// A guru's holdings count only the accounts the setup copies into: an account removed from the

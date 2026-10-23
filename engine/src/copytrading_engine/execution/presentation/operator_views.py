@@ -135,6 +135,8 @@ class AccountOverview(Value):
     ownership_incidents: tuple[OwnershipIncidentView, ...]
     pending_orders: int | None
     balance: AccountBalanceView | None
+    # When its record last changed; read for a record of an account no longer in the setup.
+    last_activity_at: dt.datetime | None = None
 
 
 type UnavailableReason = Literal["timeout", "read_failed", "earlier_version"]
@@ -291,7 +293,7 @@ def _lot_view(
     return LotView(
         lot_id=key,
         source_id=message.key if message is not None else None,
-        guru_id=message.guru_id if message is not None else None,
+        guru_id=message.guru if message is not None else None,
         posted_at=message.timestamp if message is not None else None,
         excerpt=_excerpt(message.text) if message is not None else None,
         bought_at=order.created_at if order is not None else None,
@@ -334,6 +336,7 @@ def account_overview(
     active_configuration: bool,
     readiness: str,
     balance: AccountBalanceView | None,
+    last_activity_at: dt.datetime | None = None,
 ) -> AccountOverview:
     if snapshot.account_id is None or snapshot.environment is None:
         raise RuntimeError("Account evidence has no verified identity")
@@ -403,6 +406,7 @@ def account_overview(
         ),
         pending_orders=sum(order.pending for order in snapshot.orders.values()),
         balance=balance,
+        last_activity_at=last_activity_at,
     )
 
 

@@ -51,6 +51,20 @@ class ManualInterventionService:
         self._access = access
         self._correction_lock = asyncio.Lock()
 
+    async def delete_account_record(self, account_id: str) -> str | None:
+        """Delete the record of an account no longer in the setup, when its owner asks: what
+        CopyTrading bought there is forgotten, and the shares stay at Alpaca. Returns why it
+        can't: the account is still in the setup, or another CopyTrading has it open."""
+        configuration = self._access.configuration()
+        in_setup = configuration is not None and any(
+            account.id == account_id for account in configuration.accounts
+        )
+        if in_setup or account_id in self._access.supervisors():
+            return "account_in_setup"
+        return await asyncio.to_thread(
+            self._access.evidence.delete_record, self._access.data_dir / "accounts", account_id
+        )
+
     async def save_manual_correction(
         self, request: ManualCorrectionRequest
     ) -> ManualCorrectionOutcome:

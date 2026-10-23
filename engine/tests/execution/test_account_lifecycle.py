@@ -212,6 +212,8 @@ async def test_retained_account_and_source_page_show_real_evidence_without_broke
     assert accounts[0].active_configuration is False
     assert accounts[0].readiness == "inactive_evidence"
     assert accounts[0].total_exposure_usd is None
+    # Settings shows when a record of an account no longer in the setup last changed.
+    assert accounts[0].last_activity_at is not None
     page = await runtime.operator.source_activity(None, 1)
     assert page.items[0].text == "original source text"
     assert page.items[0].source_revision == 1

@@ -3,11 +3,13 @@
 import asyncio
 import datetime as dt
 import sqlite3
+from contextlib import closing
 from uuid import uuid4
 
 import discord
 import pytest
 
+from copytrading_engine.execution.adapters.sqlite_ledger import Store
 from copytrading_engine.execution.application.ports import AccountOpenRefused, BrokerError
 from copytrading_engine.parsing.extraction import Answer
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore
@@ -440,7 +442,7 @@ def _never_posts(source, channels, authors, stop, report_failure):
 
 
 @pytest.mark.parametrize(
-    "reason", ["outside_open_orders", "account_in_use", "account_record_mismatch"]
+    "reason", ["outside_open_orders", "account_in_use", "broker_account_inactive"]
 )
 async def test_a_refused_account_names_why_copying_could_not_start(tmp_path, reason):
     async def owner_factory(path, credentials, policy, environment):
@@ -499,7 +501,7 @@ async def test_an_account_that_cannot_open_says_what_happened(tmp_path, monkeypa
 
 
 async def test_a_start_that_failed_can_be_tried_again_without_a_pause(tmp_path):
-    refusals = [AccountOpenRefused("account_record_mismatch")]
+    refusals = [AccountOpenRefused("outside_open_orders")]
     opened: dict[str, Owner] = {}
 
     async def owner_factory(path, credentials, policy, environment):
@@ -525,7 +527,7 @@ async def test_a_start_that_failed_can_be_tried_again_without_a_pause(tmp_path):
 
 
 async def test_accounts_failing_differently_each_keep_their_own_reason(tmp_path):
-    errors = {"first": AccountOpenRefused("account_record_mismatch"), "second": BrokerError(401)}
+    errors = {"first": AccountOpenRefused("outside_open_orders"), "second": BrokerError(401)}
 
     async def owner_factory(path, credentials, policy, environment):
         raise errors[path.name]
@@ -544,7 +546,7 @@ async def test_accounts_failing_differently_each_keep_their_own_reason(tmp_path)
     failed = await wait_for(runtime, lambda status: status.state == "failed")
     assert failed.error_code == "accounts_unavailable"
     assert {account.id: account.error_code for account in failed.accounts} == {
-        "first": "account_record_mismatch",
+        "first": "outside_open_orders",
         "second": "broker_keys_rejected",
     }
     await runtime.shutdown()
@@ -573,3 +575,164 @@ async def test_a_brief_alpaca_outage_while_an_account_opens_is_tried_again(tmp_p
     await wait_for(runtime, lambda _: "first" in opened and opened["first"].cycles >= 1)
     assert runtime.status().active_accounts == 1
     await runtime.shutdown()
+
+
+def _record(root, name, account_id, marker):
+    folder = root / "accounts" / name
+    store = Store(folder / "execution.sqlite3")
+    store.close()
+    with closing(sqlite3.connect(folder / "execution.sqlite3")) as db:
+        db.execute(
+            "INSERT INTO identity(singleton, environment, account_id) VALUES (1, 'paper', ?)",
+            (account_id,),
+        )
+        db.commit()
+    (folder / "marker").write_text(marker)
+
+
+async def test_an_account_opens_the_record_of_the_alpaca_account_its_keys_open(tmp_path):
+    """The same keys under a new name keep their lots; the name's old record steps aside."""
+    _record(tmp_path, "zhap-account-2", "alpaca-zhap", "SOXL, SOXS")
+    _record(tmp_path, "first", "alpaca-primary", "GFS, WMT")
+    seen: dict[str, str] = {}
+
+    async def identity(credentials, environment):
+        return "alpaca-zhap"
+
+    async def owner_factory(path, credentials, policy, environment):
+        seen[path.name] = (path / "marker").read_text()
+        return Owner(path, {}, {})
+
+    runtime = TradingRuntime(
+        tmp_path,
+        factories=TradingFactories(
+            owner=owner_factory,
+            decoder=lambda name, config: asyncio.sleep(0, result=Decoder()),
+            session=_never_posts,
+            identity=identity,
+        ),
+    )
+    await runtime.start(trading_configuration("first"), trading_secrets_for("first"))
+    await wait_for(runtime, lambda status: status.active_accounts == 1)
+    assert seen == {"first": "SOXL, SOXS"}
+    assert (tmp_path / "accounts" / "first-earlier" / "marker").read_text() == "GFS, WMT"
+    await runtime.shutdown()
+
+
+async def test_two_accounts_with_keys_for_one_alpaca_account_both_say_so(tmp_path):
+    opened: list[str] = []
+
+    async def identity(credentials, environment):
+        return "alpaca-zhap"
+
+    async def owner_factory(path, credentials, policy, environment):
+        opened.append(path.name)
+        return Owner(path, {}, {})
+
+    runtime = TradingRuntime(
+        tmp_path,
+        factories=TradingFactories(
+            owner=owner_factory,
+            decoder=lambda name, config: asyncio.sleep(0, result=Decoder()),
+            session=_never_posts,
+            identity=identity,
+        ),
+    )
+    await runtime.start(
+        trading_configuration("first", "second"), trading_secrets_for("first", "second")
+    )
+    failed = await wait_for(runtime, lambda status: status.state == "failed")
+    assert failed.error_code == "alpaca_account_shared"
+    assert {account.id: account.error_code for account in failed.accounts} == {
+        "first": "alpaca_account_shared",
+        "second": "alpaca_account_shared",
+    }
+    assert opened == []
+    await runtime.shutdown()
+
+
+async def test_only_a_record_the_setup_no_longer_has_can_be_deleted(tmp_path):
+    _record(tmp_path, "testing", "alpaca-testing", "old")
+
+    runtime = TradingRuntime(
+        tmp_path,
+        factories=TradingFactories(
+            owner=lambda path, credentials, policy, environment: asyncio.sleep(
+                0, result=Owner(path, {}, {})
+            ),
+            decoder=lambda name, config: asyncio.sleep(0, result=Decoder()),
+            session=_never_posts,
+        ),
+    )
+    await runtime.start(trading_configuration("first"), trading_secrets_for("first"))
+    await wait_for(runtime, lambda status: status.active_accounts == 1)
+
+    assert await runtime.manual.delete_account_record("first") == "account_in_setup"
+    assert (tmp_path / "accounts" / "first").is_dir()
+    assert await runtime.manual.delete_account_record("testing") is None
+    assert not (tmp_path / "accounts" / "testing").exists()
+    await runtime.shutdown()
+
+
+async def test_keys_alpaca_turns_down_are_said_before_any_record_is_touched(tmp_path):
+    _record(tmp_path, "first", "alpaca-primary", "kept")
+
+    async def identity(credentials, environment):
+        raise BrokerError(401)
+
+    async def owner_factory(path, credentials, policy, environment):
+        raise AssertionError("an account whose keys were turned down never opens")
+
+    runtime = TradingRuntime(
+        tmp_path,
+        factories=TradingFactories(
+            owner=owner_factory,
+            decoder=lambda name, config: asyncio.sleep(0, result=Decoder()),
+            session=_never_posts,
+            identity=identity,
+        ),
+    )
+    await runtime.start(trading_configuration("first"), trading_secrets_for("first"))
+    failed = await wait_for(runtime, lambda status: status.state == "failed")
+    assert failed.error_code == "broker_keys_rejected"
+    assert (tmp_path / "accounts" / "first" / "marker").read_text() == "kept"
+    await runtime.shutdown()
+
+
+async def test_a_record_that_cant_be_read_stops_its_account_and_is_kept(tmp_path):
+    damaged = tmp_path / "accounts" / "first"
+    damaged.mkdir(parents=True)
+    (damaged / "execution.sqlite3").write_bytes(b"not a database")
+
+    async def identity(credentials, environment):
+        return "alpaca-zhap"
+
+    async def owner_factory(path, credentials, policy, environment):
+        raise AssertionError("an account whose record can't be read never opens")
+
+    runtime = TradingRuntime(
+        tmp_path,
+        factories=TradingFactories(
+            owner=owner_factory,
+            decoder=lambda name, config: asyncio.sleep(0, result=Decoder()),
+            session=_never_posts,
+            identity=identity,
+        ),
+    )
+    await runtime.start(trading_configuration("first"), trading_secrets_for("first"))
+    failed = await wait_for(runtime, lambda status: status.state == "failed")
+    assert failed.error_code == "record_unreadable"
+    assert (damaged / "execution.sqlite3").read_bytes() == b"not a database"
+    await runtime.shutdown()
+
+
+async def test_a_folder_staged_mid_move_is_never_listed_as_an_account(tmp_path):
+    _record(tmp_path, ".moving-testing", "alpaca-testing", "staged")
+    _record(tmp_path, "zhap-account-2", "alpaca-zhap", "lots")
+
+    runtime = TradingRuntime(tmp_path)
+    page = await runtime.operator.account_overviews()
+
+    assert [item.account_id for item in page.items] + [
+        item.account_id for item in page.unavailable_accounts
+    ] == ["zhap-account-2"]

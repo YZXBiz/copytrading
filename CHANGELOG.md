@@ -2,6 +2,14 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
+## Unreleased
+
+Setting up again finds what you had: an account by the Alpaca account its keys open, a guru by their channel.
+
+- **The same keys under any name open the same account.** An account's record, which says which shares CopyTrading bought there, was found by the name in the setup. Setting up again with zhap-account-2's keys under the name "primary" opened primary's old record, which belongs to another Alpaca account, and copying didn't start. CopyTrading now asks Alpaca which account the keys open and uses that account's record whatever you call it; a record the name held for another Alpaca account moves aside as "primary-earlier". Two accounts in one setup with keys for the same Alpaca account now say so, by name: "main and spare use keys for the same Alpaca account."
+- **A guru is their channel's.** Each guru had a made-up ID, so setting up again gave 赵哥 a new one and his page lost the day's posts and holdings, though his buys were still there to sell. A guru's ID now comes from their channel, so the same channel is the same guru in every setup, and posts and holdings read before are shown under them again. Each channel copies one guru; two gurus on one channel are named and refused.
+- **Settings → Backups lists records of accounts no longer in your setup:** each with its Alpaca account, the buys CopyTrading still holds there, and when it last changed. Delete… asks first; the shares stay at Alpaca.
+
 ## 0.1.0-beta.7 — developer preview
 
 When copying doesn't start, it says which account, what happened, and what to do, and you can try again right away. Found while setting up again after beta.6.

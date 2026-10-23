@@ -30,6 +30,7 @@ from copytrading_engine.execution.presentation.operator_views import (
 from copytrading_engine.parsing.sqlite import record_owner_correction
 from copytrading_engine.shared.raw_message import RawMessage
 from copytrading_engine.shared.signals import Instruction, StockSignal
+from copytrading_engine.trading.adapters.account_records import delete_record
 from copytrading_engine.trading.presentation.operator_models import (
     GuruPost,
     RejectedSourceActivity,
@@ -220,7 +221,7 @@ def source_page(
                 instructions=decision.instructions if decision else (),
                 suggested=decision.suggested if decision else (),
                 reading=decision.reading if decision else None,
-                guru_id=decision.guru_id if decision else None,
+                guru_id=decision.guru if decision else None,
                 profile_revision=decision.profile_revision if decision else None,
                 source_event=source_event,
                 destinations=destinations.get(source_id, ()),
@@ -272,7 +273,7 @@ def guru_posts(database: Path, *, since: dt.datetime) -> tuple[GuruPost, ...]:
     posts = []
     for source_id, source_at, parsed, read_started_at, read_at in rows:
         posted = _moment(source_at)
-        guru_id = StockSignal.model_validate_json(parsed).guru_id
+        guru_id = StockSignal.model_validate_json(parsed).guru
         if posted is None or posted < since or guru_id is None:
             continue
         posts.append(
@@ -463,6 +464,7 @@ def retained_account(
             "SELECT id,event FROM journal WHERE (? IS NULL OR id < ?) ORDER BY id DESC LIMIT ?",
             (before_seq, before_seq, limit),
         ).fetchall()
+        newest = db.execute("SELECT event FROM journal ORDER BY id DESC LIMIT 1").fetchone()
     overview = account_overview(
         snapshot,
         None,
@@ -470,6 +472,7 @@ def retained_account(
         active_configuration=False,
         readiness="inactive_evidence",
         balance=None,
+        last_activity_at=JournalEvent.model_validate_json(newest[0]).at if newest else None,
     )
     events = event_page(
         path.parent.name,
@@ -530,3 +533,6 @@ class SQLiteOperatorEvidence:
 
     def historical_source_message(self, database: Path, source_id: str) -> RawMessage:
         return historical_source_message(database, source_id)
+
+    def delete_record(self, root: Path, account_id: str) -> str | None:
+        return delete_record(root, account_id)

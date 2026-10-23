@@ -16,15 +16,15 @@ from copytrading_engine.execution.domain.lot_sales import (
     LotSalePreviewRequest,
 )
 from copytrading_engine.shared.raw_message import RawMessage
+from copytrading_engine.shared.route_keys import guru_for_channel
 from copytrading_engine.trading.domain.config import TradingConfiguration, TradingSecrets
 from copytrading_engine.trading.domain.profiles import ProfileBuilder, ProfileDraft
 from copytrading_engine.trading.entrypoints.factories import TradingFactories
 from copytrading_engine.trading.entrypoints.runtime import TradingRuntime
 
 from .broker import SimulatedBroker
-from .zhao import GURU_ID, NAME, ZhaoChannel, ZhaoReader
+from .zhao import CHANNEL, NAME, ZhaoChannel, ZhaoReader
 
-CHANNEL = "900000000000000777"
 # A Wednesday, 11:00 in New York: regular hours, so market orders and full-session rules apply.
 MARKET_MORNING = dt.datetime(2026, 9, 30, 15, 0, tzinfo=dt.UTC)
 SETTLED = {"done", "stale", "out_of_order", "ignored", "review_required"}
@@ -114,7 +114,7 @@ class Rig:
         return self.reader
 
     def guru_id(self, account: str) -> str:
-        return GURU_ID if len(self.accounts) == 1 else f"{GURU_ID}-{account}"
+        return guru_for_channel("discord", self.channels[account])
 
     def configuration(self) -> TradingConfiguration:
         profiles = {

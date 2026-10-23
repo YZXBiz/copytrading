@@ -200,9 +200,9 @@ class TradingConfiguration(BaseModel):
         gurus = [route.guru_id for route in self.routes]
         if len(set(gurus)) != len(gurus):
             raise ValueError("a guru copies into one account")
-        for rules in by_channel.values():
-            if len(rules) > 1 and any(route.author_id is None for route in rules):
-                raise ValueError("shared channels require disambiguating author identities")
+        # The channel names its guru (route_keys.guru_for_channel), so a channel has one.
+        if any(len(rules) > 1 for rules in by_channel.values()):
+            raise ValueError("a channel copies one guru")
         return self
 
 

@@ -11,6 +11,7 @@ from copytrading_engine.execution.presentation.operator_views import Destination
 from copytrading_engine.parsing.application import outcome
 from copytrading_engine.parsing.sqlite import SQLiteExtractionStore
 from copytrading_engine.shared.raw_message import RawMessage
+from copytrading_engine.shared.route_keys import guru_for_channel
 from copytrading_engine.sources.sqlite import SQLiteSourceStore
 from copytrading_engine.trading.adapters.operator_queries import SQLiteOperatorEvidence
 from copytrading_engine.trading.application.account_access import AccountAccess
@@ -64,6 +65,12 @@ class _Owner:
         return {key: view for key, view in self.views.items() if key in source_ids}
 
 
+# Each guru posts in their own channel, which names them (route_keys.guru_for_channel).
+CHANNELS = {"lee": "1", "zhao": "2"}
+LEE = guru_for_channel("discord", "1")
+ZHAO = guru_for_channel("discord", "2")
+
+
 async def _post(
     source: SQLiteSourceStore,
     parser: SQLiteExtractionStore,
@@ -75,7 +82,7 @@ async def _post(
         schema_version=1,
         event_type="raw_message",
         source="discord",
-        channel_id="1",
+        channel_id=CHANNELS.get(guru or "", "1"),
         id=message_id,
         timestamp=at,
         text=f"post {message_id}",
@@ -176,21 +183,21 @@ async def test_a_busy_day_counts_every_post_of_each_guru_within_the_owners_day(t
     page = await service.guru_day_stats(DAY_START, DAY_END, NOW)
 
     by_guru = {stats.guru_id: stats for stats in page.gurus}
-    assert set(by_guru) == {"lee", "zhao"}
+    assert set(by_guru) == {LEE, ZHAO}
     # 50 posts between them, twice the newest page the app reads.
-    assert by_guru["lee"].posts == 30
-    assert by_guru["zhao"].posts == 20
-    assert by_guru["lee"].traded == 3
-    assert by_guru["zhao"].traded == 1
-    assert by_guru["lee"].read_seconds == 3.0
-    assert by_guru["zhao"].read_seconds is not None
+    assert by_guru[LEE].posts == 30
+    assert by_guru[ZHAO].posts == 20
+    assert by_guru[LEE].traded == 3
+    assert by_guru[ZHAO].traded == 1
+    assert by_guru[LEE].read_seconds == 3.0
+    assert by_guru[ZHAO].read_seconds is not None
     # Whole posts, newest first, though neither is among the newest page the app reads: the app
     # lists them from here, so its count and its Waiting tab are one set.
-    assert [item.source_id for item in by_guru["lee"].waiting] == [late_evening, lee[3]]
-    assert [item.source_id for item in by_guru["zhao"].waiting] == [zhao[0]]
-    assert by_guru["lee"].waiting[1].text == "post lee-3"
-    assert by_guru["lee"].waiting[1].guru_id == "lee"
-    assert [view.instruction_outcomes for view in by_guru["lee"].waiting[1].destinations] == [
+    assert [item.source_id for item in by_guru[LEE].waiting] == [late_evening, lee[3]]
+    assert [item.source_id for item in by_guru[ZHAO].waiting] == [zhao[0]]
+    assert by_guru[LEE].waiting[1].text == "post lee-3"
+    assert by_guru[LEE].waiting[1].guru_id == LEE
+    assert [view.instruction_outcomes for view in by_guru[LEE].waiting[1].destinations] == [
         ("approval_required",)
     ]
     assert page.unavailable_accounts == ()

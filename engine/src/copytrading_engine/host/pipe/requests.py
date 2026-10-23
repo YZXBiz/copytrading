@@ -250,6 +250,13 @@ class DetachAccountReadersRequest(PipeRequest):
     operation: Literal["detach_account_readers"]
 
 
+class DeleteAccountRecordRequest(PipeRequest):
+    """The owner deletes the record of an account no longer in the setup, from Settings."""
+
+    operation: Literal["delete_account_record"]
+    account_id: str = Field(pattern=r"^[a-zA-Z0-9_-]{1,64}$")
+
+
 class GetEquityHistoryRequest(PipeRequest):
     operation: Literal["get_equity_history"]
     account_id: str = Field(min_length=1, max_length=64)
@@ -399,6 +406,7 @@ RequestType = Annotated[
     | GetQuoteRequest
     | AttachAccountReadersRequest
     | DetachAccountReadersRequest
+    | DeleteAccountRecordRequest
     | SaveManualCorrectionRequest
     | PreviewManualOrderRequest
     | ConfirmManualOrdersRequest

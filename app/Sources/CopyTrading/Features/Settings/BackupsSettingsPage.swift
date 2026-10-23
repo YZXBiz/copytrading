@@ -13,6 +13,8 @@ struct BackupsSettingsPage: View {
                 DataFolderRow(path: model.operationalStoragePath)
             }
 
+            EarlierAccountsSection(model: model)
+
             SettingsSection(
                 title: "Backup & Restore",
                 subtitle: "Holds your records, setup, posts, and attachments. Keys and logs are left out."

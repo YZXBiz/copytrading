@@ -10,6 +10,7 @@ protocol AccountOperations: Sendable {
     func controlAccount(_ command: AccountControlCommand) async throws -> AccountControlResult
     func equityHistory(accountID: String, window: EquityHistoryWindow) async throws -> EquityHistory?
     func resolveOwnership(accountID: String, resolution: OwnershipResolutionRequest) async throws -> OwnershipResolution
+    func deleteAccountRecord(_ accountID: String) async throws
 }
 
 extension EngineActions: AccountOperations {}
@@ -279,6 +280,30 @@ final class AccountFeatureModel {
 
     /// Settles a holdings question the owner answered, then rereads the accounts so the warning
     /// and the held-back entries clear together.
+    /// Deletes the record of an account no longer in the setup, when the owner asks: CopyTrading
+    /// forgets what it bought there, and the shares stay at Alpaca. A refusal says why on its row.
+    func deleteRecord(_ accountID: String, using actions: (any AccountOperations)?) async {
+        guard let actions else { return }
+        pendingAccounts.insert(accountID)
+        defer { pendingAccounts.remove(accountID) }
+        do {
+            try await actions.deleteAccountRecord(accountID)
+        } catch EngineContractError.remote(.notFound, _, _) {
+            // Already gone.
+        } catch EngineContractError.remote(_, _, "account_in_setup") {
+            errors[accountID] = L10n.string("It's in your setup again. Remove it in Connections first.")
+            return
+        } catch EngineContractError.remote(_, _, "account_in_use") {
+            errors[accountID] = L10n.string("Another CopyTrading on this Mac has it open. Quit that one first.")
+            return
+        } catch {
+            errors[accountID] = Reason.refusal(error)
+            return
+        }
+        accounts.removeAll { $0.accountID == accountID }
+        errors.removeValue(forKey: accountID)
+    }
+
     func resolveOwnership(_ fix: OwnershipFix, using actions: (any AccountOperations)?) async {
         let accountID = fix.request.accountID
         guard privateAccessGeneration != nil, !pendingAccounts.contains(accountID) else { return }

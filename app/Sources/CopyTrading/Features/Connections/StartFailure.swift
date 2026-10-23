@@ -10,18 +10,36 @@ enum StartFailure {
     static func text(errorCode: String?, accounts: [TradingAccountStatus], modelService: String) -> String {
         let failed = accounts.filter { $0.state == "failed" }
         if !failed.isEmpty {
-            return failed.map { account($0.id, $0.errorCode) }.joined(separator: " ")
+            // Accounts whose keys open one Alpaca account are said together, by name.
+            let shared = failed.filter { $0.errorCode == sharedCode }.map(\.id)
+            let rest = failed.filter { $0.errorCode != sharedCode }.map { account($0.id, $0.errorCode) }
+            return ((shared.count > 1 ? [sharing(shared)] : shared.map { account($0, sharedCode) }) + rest)
+                .joined(separator: " ")
         }
         return service(errorCode, modelService: modelService)
+    }
+
+    private static let sharedCode = "alpaca_account_shared"
+
+    private static func sharing(_ names: [String]) -> String {
+        let listed = L10n.string(
+            "%@ and %@", names.dropLast().joined(separator: L10n.string(", ")), names[names.count - 1])
+        return L10n.string(
+            "%@ use keys for the same Alpaca account. Each account needs its own Alpaca account: remove one, or give it the keys of another.",
+            listed)
     }
 
     private static let diagnostics = "If it happens again, Diagnostics at the bottom of the sidebar has the details."
 
     private static func account(_ name: String, _ code: String?) -> String {
         switch code {
-        case "account_record_mismatch":
+        case "alpaca_account_shared":
             L10n.string(
-                "%@ didn't open: its Alpaca keys are for a different Alpaca account than the one CopyTrading recorded under this name. Use the name that account had before, or a new name.",
+                "%@ didn't open: another account in this setup uses keys for the same Alpaca account. Remove one of them, or give it the keys of another Alpaca account.",
+                name)
+        case "record_unreadable":
+            L10n.string(
+                "%@ didn't open: its record on this Mac couldn't be read, so nothing was changed. Quit and reopen CopyTrading; if it happens again, Diagnostics at the bottom of the sidebar has the details.",
                 name)
         case "broker_keys_rejected":
             L10n.string("%@ didn't open: Alpaca didn't accept its API keys. Paste them again from your Alpaca dashboard.", name)

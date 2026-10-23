@@ -13,7 +13,7 @@ struct AccountCopyState: Equatable {
     /// until the reason is settled.
     static let unheld: Set<String> = [
         "account_unavailable", "processing_stopped", "outside_open_orders", "broker_account_inactive",
-        "account_in_use", "account_record_mismatch", "broker_keys_rejected", "broker_unreachable",
+        "account_in_use", "alpaca_account_shared", "record_unreadable", "broker_keys_rejected", "broker_unreachable",
     ]
 
     /// An account in the setup that is off because the engine could not keep it running or open it,

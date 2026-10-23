@@ -42,10 +42,9 @@ environment = "paper"   # "paper" trades pretend money at real prices; "live" is
   approve_orders = false       # true: no order is sent until you approve it in the app
 
 [[gurus]]
-id = "zhao"
 name = "Zhao"
-channel = "123456789012345678"
-# author = "987654321098765432"   # needed when several traders share one channel
+channel = "123456789012345678"   # one guru per channel
+# author = "987654321098765432"   # copy only this person's posts in the channel
 playbook = """
 Buys look like "ALERT: Bought NVDA 1/6 at 121.38": the fraction is the share of a full position.
 Sell fractions count from what is left. 减仓 means 1/2

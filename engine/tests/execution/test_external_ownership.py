@@ -78,17 +78,16 @@ def test_initial_manual_open_order_prevents_inventory_commit():
     assert not store.events
 
 
-def test_keys_for_another_alpaca_account_are_refused_without_touching_the_record():
+def test_keys_for_another_alpaca_account_never_open_its_record():
     store = MemoryRepository()
     engine_with_wide_limits(store, FakeBroker()).bind(NOW)
     recorded = store.snapshot_json
     other = FakeBroker()
     other.account_data["id"] = "another-paper-account"
 
-    with pytest.raises(AccountOpenRefused) as refused:
+    with pytest.raises(RuntimeError, match="identity changed"):
         engine_with_wide_limits(store, other).bind(NOW)
 
-    assert refused.value.reason == "account_record_mismatch"
     assert store.snapshot_json == recorded
 
 

@@ -6,7 +6,7 @@ import datetime as dt
 import logging
 import os
 from collections import deque
-from collections.abc import AsyncGenerator, Callable, Collection
+from collections.abc import AsyncGenerator, Callable, Collection, Mapping
 from contextlib import asynccontextmanager, nullcontext
 from dataclasses import replace
 from functools import partial
@@ -29,6 +29,10 @@ from copytrading_engine.shared.route_keys import route_key
 from copytrading_engine.sources.application import Delivery, ForwardBatch
 from copytrading_engine.sources.session import token_rejected
 from copytrading_engine.sources.sqlite import SQLiteSourceStore
+from copytrading_engine.trading.adapters.account_records import (
+    BrokerIdentity,
+    reconcile_records,
+)
 from copytrading_engine.trading.adapters.activation import (
     TradingActivationJournal,
     TradingActivationStatus,
@@ -59,6 +63,7 @@ from copytrading_engine.trading.application.operator_service import OperatorQuer
 from copytrading_engine.trading.application.paused_reader import PausedAccountReader, ReadKeys
 from copytrading_engine.trading.application.profile_review import ProfileReviewService
 from copytrading_engine.trading.domain.config import (
+    BrokerCredentials,
     ConnectionCheck,
     TradingConfiguration,
     TradingSecrets,
@@ -67,6 +72,7 @@ from copytrading_engine.trading.domain.status import AccountStatus, TradingStatu
 from copytrading_engine.trading.entrypoints.factories import (
     SourceSession,
     TradingFactories,
+    broker_identity,
     create_decoder,
     open_owner,
 )
@@ -138,6 +144,7 @@ class TradingRuntime:
         self._capability_service = capability_service or TradingCapabilityService()
         self._factories = factories or TradingFactories(
             owner=partial(open_owner, telemetry=telemetry),
+            identity=broker_identity,
             decoder=partial(
                 create_decoder,
                 diagnostics=telemetry.diagnostic_sink if telemetry is not None else None,
@@ -202,6 +209,46 @@ class TradingRuntime:
                 log.warning("trading_account_open_retry id=%s status=%s", account_id, exc.status)
                 await asyncio.sleep(delay)
         return await self._factories.owner(account_dir, credentials, policy, environment)
+
+    async def _place_records(
+        self,
+        account_root: Path,
+        configuration: TradingConfiguration,
+        broker_secrets: Mapping[str, BrokerCredentials],
+    ) -> dict[str, str]:
+        """Put each account's record under its setup name, found by the Alpaca account its keys
+        open, and return why any account cannot open: its keys could not be checked, or another
+        account in the setup uses the same Alpaca account."""
+        identify = self._factories.identity
+        if identify is None:
+            return {}
+        accounts = configuration.accounts
+        checks = await asyncio.gather(
+            *(
+                identify(
+                    AlpacaCredentials(
+                        broker_secrets[account.id].key, broker_secrets[account.id].secret
+                    ),
+                    account.environment,
+                )
+                for account in accounts
+            ),
+            return_exceptions=True,
+        )
+        wanted: dict[str, BrokerIdentity | None] = {}
+        refusals: dict[str, str] = {}
+        for account, checked in zip(accounts, checks, strict=True):
+            if isinstance(checked, BaseException):
+                if not isinstance(checked, Exception):
+                    raise checked
+                refusals[account.id] = account_failure(checked)
+                wanted[account.id] = None
+            else:
+                wanted[account.id] = (account.environment, checked)
+        plan = await asyncio.to_thread(reconcile_records, account_root, wanted)
+        for folder, target in plan.moves.items():
+            log.warning("trading_account_record_moved from=%s to=%s", folder, target)
+        return refusals | plan.refusals
 
     def _register_secrets(self, values: Collection[str]) -> None:
         if self._telemetry is not None:
@@ -503,8 +550,11 @@ class TradingRuntime:
             account_root.mkdir(parents=True, exist_ok=True, mode=0o700)
             os.chmod(account_root, 0o700)
             broker_secrets = {broker.account_id: broker for broker in secrets.brokers}
+            refusals = await self._place_records(account_root, configuration, broker_secrets)
             opening: dict[str, asyncio.Future[AccountOwner]] = {}
             for account in configuration.accounts:
+                if account.id in refusals:
+                    continue
                 account_dir = account_root / account.id
                 account_dir.mkdir(mode=0o700, exist_ok=True)
                 os.chmod(account_dir, 0o700)
@@ -519,13 +569,22 @@ class TradingRuntime:
                         account.environment,
                     )
                 )
-            done, _ = await asyncio.wait(opening.values(), timeout=self._owner_open_timeout_seconds)
+            done = (
+                (await asyncio.wait(opening.values(), timeout=self._owner_open_timeout_seconds))[0]
+                if opening
+                else set()
+            )
             for account in configuration.accounts:
-                task = opening[account.id]
+                task = opening.get(account.id)
                 owner: AccountOwner | None = None
                 # Alpaca not answering in time reads the same as Alpaca out of reach.
                 open_failure: str = "broker_unreachable"
-                if task in done:
+                if task is None:
+                    open_failure = refusals[account.id]
+                    log.warning(
+                        "trading_account_open_refused id=%s reason=%s", account.id, open_failure
+                    )
+                elif task in done:
                     try:
                         owner = task.result()
                     except AccountOpenRefused as exc:

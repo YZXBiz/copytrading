@@ -61,7 +61,7 @@ struct ConnectionStatus: Equatable {
         if route.connection.map({ accounts.contains($0.accountID.trimmed) }) != true {
             return .init(text: "Needs an account to copy into", tone: .caution)
         }
-        guard model.isGuruSaved(route.guruID.trimmed) else { return .init(text: "Not saved yet", tone: .inactive) }
+        guard model.isGuruSaved(draft.guru(for: route)) else { return .init(text: "Not saved yet", tone: .inactive) }
         return running(model) { _ in .init(text: "Copying", tone: .positive) } ?? .init(text: "Saved", tone: .inactive)
     }
 

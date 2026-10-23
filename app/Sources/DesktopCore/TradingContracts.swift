@@ -303,6 +303,11 @@ public struct TradingRouteConfiguration: Codable, Equatable, Identifiable, Senda
 
     public var id: String { "\(source):\(channelID):\(authorID ?? "*"):\(guruID)" }
 
+    /// Who this route copies: its channel's guru. Posts, holdings, and pages name gurus this way;
+    /// `guruID` is the ID the setup was saved with, which a setup saved before IDs came from the
+    /// channel may differ from, and only ties the route to its profile.
+    public var guru: String { GuruIdentity.id(channelID: channelID, source: source) }
+
     public init(
         source: String = "discord", channelID: String, authorID: String? = nil,
         guruID: String, profileRevision: String, connections: [TradingRouteConnection],

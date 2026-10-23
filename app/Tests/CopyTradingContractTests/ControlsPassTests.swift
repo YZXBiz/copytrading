@@ -27,18 +27,20 @@ func runControlsPassTests() async throws {
 private func backAndForwardRetraceOnlyTheOwnersMoves() throws {
     let model = AppModel()
     model.savedTradingConfiguration = try controlsConfiguration(guru: "zhao")
+    // A guru's page is their channel's, the channel controlsConfiguration routes.
+    let zhao = GuruIdentity.id(channelID: "123")
     model.selectedScreen = .connections
     model.screenHistory = ScreenHistory()  // what a launch does after choosing its first screen
     try #require(model.screenHistory.back.isEmpty, "Back had somewhere to go on a fresh window")
 
-    model.selectedScreen = .guru("zhao")
+    model.selectedScreen = .guru(zhao)
     model.selectedScreen = .account("primary")
     model.goBack()
-    try #require(model.selectedScreen == .guru("zhao"), "Back did not return to the guru")
+    try #require(model.selectedScreen == .guru(zhao), "Back did not return to the guru")
     try #require(model.screenHistory.forward == [.account("primary")], "Back did not keep the account for Forward")
     model.goForward()
     try #require(model.selectedScreen == .account("primary"), "Forward did not return to the account")
-    try #require(model.screenHistory.back == [.connections, .guru("zhao")], "Forward recorded itself as a new visit")
+    try #require(model.screenHistory.back == [.connections, .guru(zhao)], "Forward recorded itself as a new visit")
 
     // A guru removed since is passed over.
     model.savedTradingConfiguration = try controlsConfiguration(guru: nil)
