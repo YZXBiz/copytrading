@@ -2,8 +2,10 @@ import DesktopCore
 import Foundation
 import Testing
 
-/// A stand-in app bundle whose executable and Sparkle helper are copies of `sleep`, so the guard
+/// A stand-in app folder whose executable and Sparkle helper are copies of `sleep`, so the guard
 /// sees them by path the way it sees the real ones, and an opener that writes down what it opened.
+/// The folder isn't named `.app` and each copy is signed ad hoc: a copied `sleep` inside a real
+/// `.app` fails its code signature, so macOS kills it and says the app is damaged.
 private struct FakeApp {
     let root: URL
     let bundle: URL
@@ -14,7 +16,7 @@ private struct FakeApp {
 
     init() throws {
         root = FileManager.default.temporaryDirectory.appendingPathComponent("relaunch-guard-\(UUID().uuidString)")
-        bundle = root.appendingPathComponent("Fake App.app")
+        bundle = root.appendingPathComponent("Fake App")
         executable = bundle.appendingPathComponent("Contents/MacOS/Fake App")
         installer = bundle.appendingPathComponent("Contents/Frameworks/Sparkle.framework/Versions/B/Autoupdate")
         opener = root.appendingPathComponent("opener")
@@ -22,6 +24,9 @@ private struct FakeApp {
         for copy in [executable, installer] {
             try FileManager.default.createDirectory(at: copy.deletingLastPathComponent(), withIntermediateDirectories: true)
             try FileManager.default.copyItem(at: URL(fileURLWithPath: "/bin/sleep"), to: copy)
+            let sign = try Process.run(
+                URL(fileURLWithPath: "/usr/bin/codesign"), arguments: ["--force", "--sign", "-", copy.path])
+            sign.waitUntilExit()
         }
         try "#!/bin/sh\nprintf '%s' \"$1\" > '\(opened.path)'\n".write(to: opener, atomically: true, encoding: .utf8)
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: opener.path)
