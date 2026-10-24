@@ -41,6 +41,13 @@ one.
   rules; orders placed outside the app; a restart that keeps the lot; and a burst
   of posts. Each scenario starts with no open orders and no shares of its stocks,
   and sells back what it bought (`engine/tests/integration/test_paper_scenarios.py`).
+- **Crypto:** the engine copies BTC, ETH, SOL, and LTC on Alpaca paper at any hour:
+  a buy goes out good-till-canceled with no extended-hours flag and its lot is the
+  coin Alpaca delivered after the fee; half and full sales sell from the lot at the
+  guru's price less the allowance; a sale resting at its floor outlives the timeout
+  while a resting buy is cancelled for time; a buy under $10 and a sale of a coin
+  never bought place nothing. It sells back every coin it bought and never touches
+  a stock (`engine/tests/execution/test_paper_crypto_live.py`).
 - **The real window:** journey J31 in `make ui-journeys` sets up and starts copying
   against live Discord, DeepSeek, and Alpaca paper, then shows that an agent's
   request runs only after the owner approves it, once, and that a rejected one
