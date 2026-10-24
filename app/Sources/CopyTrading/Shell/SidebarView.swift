@@ -35,7 +35,7 @@ struct SidebarView<Header: View>: View {
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
                 header()
-                SidebarBrandCard(model: model)
+                SidebarBrandCard()
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {

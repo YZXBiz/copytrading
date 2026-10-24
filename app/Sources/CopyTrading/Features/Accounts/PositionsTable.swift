@@ -48,7 +48,7 @@ struct PositionsTable: View {
                     .font(.title2)
                     .foregroundStyle(.tertiary)
                     .accessibilityHidden(true)
-                Text(L10n.string("No open positions. Copied buys appear here, next to anything you hold outside CopyTrading."))
+                Text(L10n.string("No open positions"))
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
@@ -59,7 +59,6 @@ struct PositionsTable: View {
                 ForEach(positions) { position in
                     PositionRow(
                         position: position,
-                        gurus: guruNames(position),
                         shareDecimals: shareDecimals,
                         isExpanded: expanded.contains(position.id),
                         toggle: { toggle(position) }
@@ -127,17 +126,6 @@ struct PositionsTable: View {
     /// The most decimals any position's share count shows, so the column lines up.
     private var shareDecimals: Int {
         positions.map { PositionRow.decimals(PositionRow.shares(of: $0), of: $0.symbol) }.max() ?? 0
-    }
-
-    /// The gurus a position's copied shares came from, by name, in the order first bought.
-    private func guruNames(_ position: AccountPositionView) -> [String] {
-        var names: [String] = []
-        for lot in position.lots {
-            guard let id = lot.guruID else { continue }
-            let name = gurus.name(for: id) ?? Humanize.code(id)
-            if !names.contains(name) { names.append(name) }
-        }
-        return names
     }
 
     private func toggle(_ position: AccountPositionView) {

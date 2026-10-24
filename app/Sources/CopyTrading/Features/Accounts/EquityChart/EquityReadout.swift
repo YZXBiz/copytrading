@@ -2,9 +2,9 @@ import DesktopCore
 import SwiftUI
 
 /// The chart's one-line readout, read in place so nothing floats over the curve: the window's
-/// change at rest, the point under the pointer while scrubbing, or the move across a dragged span.
+/// change at rest (nothing for a day, whose move sits under the balance), the point under the
+/// pointer while scrubbing, or the move across a dragged span.
 struct EquityReadout: View {
-    let title: String
     let range: EquityHistoryRange
     let curve: EquityCurve
     let stats: EquityCurveStats
@@ -43,8 +43,6 @@ struct EquityReadout: View {
         } else if range != .day {
             // A day's move already sits under the balance; longer windows say theirs here.
             change(stats.last.value - stats.reference, fraction: fraction(of: stats.last.value - stats.reference))
-            Text(referenceName)
-                .foregroundStyle(Palette.tertiaryInk)
         }
     }
 
@@ -61,11 +59,8 @@ struct EquityReadout: View {
         }
         if let focused { return EquityChartTime.point(focused.at, in: range) }
         if let at = selection.point { return EquityChartTime.point(at, in: range) }
-        return title
-    }
-
-    private var referenceName: String {
-        curve.baseline == nil ? L10n.string("since the start") : L10n.string("vs previous close")
+        // At rest the range control already names the window; the line says only its change.
+        return ""
     }
 
     private func fraction(of change: Double) -> Double? {

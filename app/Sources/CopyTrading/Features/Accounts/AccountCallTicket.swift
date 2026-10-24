@@ -31,25 +31,23 @@ struct AccountCallTicket: View {
         return first.phrase + rest
     }
 
-    /// "+25.0% on the buy at $64,603.77": a sell that names the buy it sells, at its price.
+    /// "+25.0% from $64,603.77": a sell against the price of the buy it sells.
     @MainActor private var gain: (change: Decimal, line: String)? {
         guard let first = call.calls.first, first.action != "buy",
             let price = Decimal(engine: first.price), let entry = Decimal(engine: first.entryPrice), entry > 0
         else { return nil }
         let change = (price - entry) / entry
         let percent = change.formatted(.percent.precision(.fractionLength(1)).sign(strategy: .always()))
-        return (change, L10n.string("%@ on the buy at %@", percent, entry.formatted(.currency(code: "USD"))))
+        return (change, L10n.string("%@ from %@", percent, entry.formatted(.currency(code: "USD"))))
     }
 
-    /// "Waiting 15h 20m", from when the guru posted.
-    @MainActor private var waited: String {
-        guard let posted = Humanize.date(call.source.sourceAt) else { return L10n.string("Waiting") }
+    /// "15h 20m" since the guru posted; the amber dot beside it already says it waits.
+    @MainActor private var waited: String? {
+        guard let posted = Humanize.date(call.source.sourceAt) else { return nil }
         let minutes = max(0, Int(now.timeIntervalSince(posted) / 60))
-        let span =
-            minutes < 60
+        return minutes < 60
             ? L10n.string("%lldm", Int64(minutes))
             : L10n.string("%lldh %lldm", Int64(minutes / 60), Int64(minutes % 60))
-        return L10n.string("Waiting %@", span)
     }
 
     /// When the guru posted: the time today, else the day and time.
@@ -132,7 +130,9 @@ struct AccountCallTicket: View {
     @ViewBuilder private func eyebrowParts(inLine: Bool) -> some View {
         HStack(spacing: 7) {
             Circle().fill(Palette.amber).frame(width: 7, height: 7).accessibilityHidden(true)
-            Text(waited).foregroundStyle(Palette.amber).monospacedDigit()
+            if let waited {
+                Text(waited).foregroundStyle(Palette.amber).monospacedDigit()
+            }
         }
         .fixedSize()
         if let deadline = call.deadline {

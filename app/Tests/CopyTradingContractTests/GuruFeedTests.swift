@@ -161,25 +161,24 @@ private func theStripAndSidebarCountTheEnginesWholeDay() async throws {
     let now = try date("2026-10-14T16:00:00Z")
     let lee = GuruStats(day: feature.guruDays["lee"], skipped: { _ in false }, isRead: true, now: now)
     try #require(lee.postsToday == 104 && lee.tradedToday == 12 && lee.averageRead == 3.5, "Lee's strip read \(lee)")
-    try #require(lee.waiting == 1 && lee.sidebarDetail == "1 need you", "Lee's sidebar read \(lee.sidebarDetail)")
+    try #require(lee.waiting == 1, "Lee had \(lee.waiting) calls waiting")
 
     let skipped = GuruStats(day: feature.guruDays["lee"], skipped: { $0 == "discord:1:1427" }, isRead: true, now: now)
     try #require(skipped.waiting == 0, "a skipped call still waited")
-    try #require(skipped.sidebarDetail == "104 posts today", "the sidebar read \(skipped.sidebarDetail)")
 
     let zhao = GuruStats(day: feature.guruDays["zhao"], skipped: { _ in false }, isRead: true, now: now)
     try #require(zhao.postsToday == 111 && zhao.averageRead == nil, "Zhao's strip read \(zhao)")
 
     let quiet = GuruStats(day: feature.guruDays["nobody"], skipped: { _ in false }, isRead: true, now: now)
     try #require(
-        quiet.postsToday == 0 && quiet.waiting == 0 && quiet.averageRead == nil && quiet.sidebarDetail == "Quiet today",
-        "a guru with no posts read \(quiet.sidebarDetail)")
+        quiet.postsToday == 0 && quiet.waiting == 0 && quiet.averageRead == nil,
+        "a guru with no posts read \(quiet)")
 
-    // Before the engine's day has been read, nothing is counted: no zeros, and no "Quiet today".
+    // Before the engine's day has been read, nothing is counted: no zeros.
     let unread = GuruStats(day: nil, skipped: { _ in false }, isRead: false, now: now)
     try #require(
-        unread.postsToday == nil && unread.tradedToday == nil && unread.sidebarDetail == "Not read yet",
-        "a guru not read yet read \(unread.sidebarDetail)")
+        unread.postsToday == nil && unread.tradedToday == nil && !unread.isRead,
+        "a guru not read yet read \(unread)")
 }
 
 /// The engine counted eight calls waiting from last evening's burst; the newest page the app

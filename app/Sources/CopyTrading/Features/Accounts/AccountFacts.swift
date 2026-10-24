@@ -2,10 +2,9 @@ import DesktopCore
 import SwiftUI
 
 /// The account's rules: every limit in one bordered group under a "Limits" title, with Edit Limits
-/// beside it. Today's loss and what is invested each show their cap, a meter, and the room left;
-/// the most an order and a symbol may take say when they apply, so all four read the same way. In
-/// the side rail the four stack as a list. Cash and buying power sit with the balance. Nothing else
-/// on the page edits limits.
+/// beside it. Each is a label and an amount; today's loss and what is invested add their cap and a
+/// meter, which shows the room left without saying it. In the side rail the four stack as a list.
+/// Nothing else on the page edits limits.
 struct AccountFacts: View {
     let account: AccountOverview
     let policy: TradingAccountPolicy?
@@ -16,10 +15,11 @@ struct AccountFacts: View {
     private struct Cell {
         let title: String
         let amount: Decimal?
-        /// "of $250" after a used amount, or "at most" after a cap.
+        /// "of $250" after a used amount.
         let suffix: String
         /// How full the meter is, for a limit that fills up.
         let fraction: Double?
+        /// Only what the amount can't say: how much of it the owner holds outside CopyTrading.
         let footnote: String?
     }
 
@@ -75,31 +75,23 @@ struct AccountFacts: View {
     private func cells(_ policy: TradingAccountPolicy) -> [Cell] {
         let exposure = account.balance == nil ? nil : Decimal(engine: account.totalExposureUSD) ?? 0
         let money = Decimal.FormatStyle.Currency(code: "USD").precision(.fractionLength(0))
-        func filling(_ title: String, used: Decimal?, cap: Decimal?, left: (String) -> String, note: String?) -> Cell {
+        func filling(_ title: String, used: Decimal?, cap: Decimal?, note: String?) -> Cell {
             guard let cap else { return Cell(title: title, amount: nil, suffix: "", fraction: nil, footnote: nil) }
-            let room = used.map { max(0, cap - $0) }
             return Cell(
                 title: title, amount: used, suffix: L10n.string("of %@", cap.formatted(money)),
                 fraction: used.map { cap > 0 ? min(1, max(0, ($0 / cap).doubleValue)) : 0 } ?? 0,
-                footnote: note ?? room.map { left($0.formatted(money)) })
+                footnote: note)
         }
         return [
+            filling("Loss today", used: lossToday, cap: Decimal(engine: policy.dailyLossCapUSD), note: nil),
             filling(
-                "Loss today", used: lossToday, cap: Decimal(engine: policy.dailyLossCapUSD),
-                left: { L10n.string("%@ left today", $0) }, note: nil),
-            filling(
-                "Invested", used: exposure, cap: Decimal(engine: policy.maxTotalUSD),
-                left: { L10n.string("%@ left", $0) }, note: ExposureSplit.note(account)),
-            Cell(
-                title: "Each order", amount: Decimal(engine: policy.maxOrderUSD), suffix: L10n.string("at most"),
-                fraction: nil, footnote: L10n.string("Checked on every copy")),
-            Cell(
-                title: "Each symbol", amount: Decimal(engine: policy.maxSymbolUSD), suffix: L10n.string("at most"),
-                fraction: nil, footnote: L10n.string("Per coin or stock")),
+                "Invested", used: exposure, cap: Decimal(engine: policy.maxTotalUSD), note: ExposureSplit.note(account)),
+            Cell(title: "Each order", amount: Decimal(engine: policy.maxOrderUSD), suffix: "", fraction: nil, footnote: nil),
+            Cell(title: "Each symbol", amount: Decimal(engine: policy.maxSymbolUSD), suffix: "", fraction: nil, footnote: nil),
         ]
     }
 
-    /// A column of the four-across row: label, amount, meter (or its room), then the footnote.
+    /// A column of the four-across row: label, amount, then the meter (or its room).
     private func column(_ cell: Cell) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(L10n.string(cell.title))
@@ -141,9 +133,11 @@ struct AccountFacts: View {
             if let value = cell.amount {
                 MoneyText(value: value, font: DesignTokens.bodyEmphasis.weight(.semibold), fractionDigits: 0)
                     .foregroundStyle(Palette.ink)
-                Text(cell.suffix)
-                    .font(DesignTokens.caption)
-                    .foregroundStyle(Palette.tertiaryInk)
+                if !cell.suffix.isEmpty {
+                    Text(cell.suffix)
+                        .font(DesignTokens.caption)
+                        .foregroundStyle(Palette.tertiaryInk)
+                }
             } else {
                 // Not read yet: a dash, never a $0 that reads as an empty account.
                 Text(verbatim: "—")

@@ -10,6 +10,7 @@ struct AccountPageHeader: View {
 
     private var isPending: Bool { feature.pendingAccounts.contains(account.accountID) }
     private var copyState: CopyingState { CopyingState.account(account, processing: model.tradingStatus) }
+    private var isWarning: Bool { copyState.tone == .caution || copyState.tone == .critical }
     private var isInSetup: Bool {
         model.setupDraft.accounts.contains { $0.name.trimmed == account.accountID }
     }
@@ -64,7 +65,7 @@ struct AccountPageHeader: View {
     }
 
     /// The name, large and plain, with its mode and whether it copies in one grey line under it. Only a
-    /// live account's mode carries colour, since it trades real money.
+    /// live account's mode carries colour, since it trades real money; only a warning says more than a word.
     private var identity: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(account.accountID)
@@ -89,10 +90,11 @@ struct AccountPageHeader: View {
                         .fill(copyState.isCopying ? Palette.gain : Palette.tertiaryInk.opacity(0.5))
                         .frame(width: 7, height: 7)
                         .accessibilityHidden(true)
-                    Text(copyState.text)
-                        .foregroundStyle(
-                            copyState.tone == .caution || copyState.tone == .critical ? Palette.amber : Palette.tertiaryInk)
+                    // The detail shows only when something is wrong; otherwise the word is enough.
+                    Text(isWarning ? copyState.text : copyState.title)
+                        .foregroundStyle(isWarning ? Palette.amber : Palette.tertiaryInk)
                 }
+                .help(copyState.text)
             }
             .font(DesignTokens.caption.weight(.medium))
             .accessibilityElement(children: .combine)

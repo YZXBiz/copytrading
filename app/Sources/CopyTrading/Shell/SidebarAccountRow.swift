@@ -1,8 +1,8 @@
 import DesktopCore
 import SwiftUI
 
-/// A saved account in the sidebar: its mark, name, Paper or Live with whether it copies, and its
-/// balance, so two accounts read at a glance.
+/// A saved account in the sidebar: its mark (orange when live), its name, and its balance; an
+/// amber dot only when it has stopped copying.
 struct SidebarAccountRow: View {
     let account: TradingAccountConfiguration
     let model: AppModel
@@ -15,7 +15,6 @@ struct SidebarAccountRow: View {
         overview.map { CopyingState.account($0, processing: model.tradingStatus) } ?? CopyingState(.notStarted)
     }
     private var isStopped: Bool { copying.word == .stopped }
-    private var copyWord: String { copying.title }
     private var equity: Decimal? {
         accountFeature.accounts.first { $0.accountID == account.id }?.balance.flatMap { Decimal(engine: $0.equity) }
     }
@@ -23,10 +22,10 @@ struct SidebarAccountRow: View {
     var body: some View {
         SidebarEntityRow(
             title: account.id,
-            detail: L10n.string("%@ · %@", L10n.string(isLive ? "Live" : "Paper"), copyWord),
-            detailTint: isStopped ? Palette.amber : isLive ? Palette.live : Palette.tertiaryInk,
+            spoken: L10n.string("%@ · %@", L10n.string(isLive ? "Live" : "Paper"), copying.title),
             // Whole dollars, so the name keeps its room; the page itself shows the cents.
             value: equity?.formatted(.currency(code: "USD").precision(.fractionLength(0))),
+            isAlerting: isStopped,
             identifier: screen.identifier,
             isSelected: model.selectedScreen == screen,
             select: select

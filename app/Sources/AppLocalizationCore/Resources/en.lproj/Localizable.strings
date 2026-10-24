@@ -451,7 +451,6 @@
 "No equity to show" = "No equity to show";
 "No history loaded." = "No history loaded.";
 "No message text was captured." = "No message text was captured.";
-"No open positions. Copied buys appear here, next to anything you hold outside CopyTrading." = "No open positions. Copied buys appear here, next to anything you hold outside CopyTrading.";
 "No posts loaded yet" = "No posts loaded yet";
 "No price quote was available" = "No price quote was available";
 "No prior account delivery details are recorded." = "No prior account delivery details are recorded.";
@@ -476,7 +475,6 @@
 "Not run yet" = "Not run yet";
 "Not saved yet" = "Not saved yet";
 "Not set up" = "Not set up";
-"Not set up yet" = "Not set up yet";
 "Nothing" = "Nothing";
 "Nothing has been posted in your gurus’ channels since copying started. New posts show up here within seconds." = "Nothing has been posted in your gurus’ channels since copying started. New posts show up here within seconds.";
 "Nothing is being copied. Orders the broker already accepted may stay open until they fill or expire." = "Nothing is being copied. Orders the broker already accepted may stay open until they fill or expire.";
@@ -708,7 +706,6 @@
 "Signal" = "Signal";
 "Simulated result · no orders" = "Simulated result · no orders";
 "Simulated with the configured model. No order is placed." = "Simulated with the configured model. No order is placed.";
-"since the start" = "since the start";
 "skipped" = "skipped";
 "Skipped" = "Skipped";
 "Sold" = "Sold";
@@ -849,7 +846,6 @@
 "Use the left and right arrow keys to read recorded points." = "Use the left and right arrow keys to read recorded points.";
 "Values redacted" = "Values redacted";
 "Version on this Mac" = "Version on this Mac";
-"vs previous close" = "vs previous close";
 "Waiting" = "Waiting";
 "Waiting at the broker (%@)" = "Waiting at the broker (%@)";
 "Waiting for an earlier order" = "Waiting for an earlier order";
@@ -1673,14 +1669,12 @@
 "Type" = "Type";
 "Market %@" = "Market %@";
 "Limit %@" = "Limit %@";
-"%lld need you" = "%lld need you";
 "Copy by %@" = "Copy by %@";
 "Edit Limits" = "Edit Limits";
 "Edit Limits…" = "Edit Limits…";
 "Enter the trade yourself" = "Enter the trade yourself";
 "More for this account" = "More for this account";
 "Posts your gurus send to this account appear here, with what came of each." = "Posts your gurus send to this account appear here, with what came of each.";
-"Quiet today" = "Quiet today";
 "The engine is stopped. The balance appears once it runs and the broker has been read." = "The engine is stopped. The balance appears once it runs and the broker has been read.";
 "This guru is not in your setup" = "This guru is not in your setup";
 "Per stock" = "Per stock";
@@ -1898,8 +1892,6 @@
 "CopyTrading couldn't read this account's holdings just now. Try again in a moment." = "CopyTrading couldn't read this account's holdings just now. Try again in a moment.";
 "Reading the account's curve from Alpaca…" = "Reading the account's curve from Alpaca…";
 "Alpaca can't be asked for this account's curve right now." = "Alpaca can't be asked for this account's curve right now.";
-"copied" = "copied";
-"yours + %@" = "yours + %@";
 "yours" = "yours";
 "Find…" = "Find…";
 "Go to a page, run an action, or find a post" = "Go to a page, run an action, or find a post";
@@ -1910,7 +1902,6 @@
 "Not updating since %@: the engine is stopped" = "Not updating since %@: the engine is stopped";
 "Not updating since %@" = "Not updating since %@";
 "Each order" = "Each order";
-"at most" = "at most";
 "%@ copied · %@ yours" = "%@ copied · %@ yours";
 "%@ bought at %@" = "%@ bought at %@";
 "Click Apply Changes to use it. Copying restarts in a few seconds, and any post sent meanwhile is still copied." = "Click Apply Changes to use it. Copying restarts in a few seconds, and any post sent meanwhile is still copied.";
@@ -2436,15 +2427,11 @@
 "Less %@ at the broker than CopyTrading copied" = "Less %@ at the broker than CopyTrading copied";
 "%@ · until filled or cancelled" = "%@ · until filled or cancelled";
 "Around the clock" = "Around the clock";
-"%@ on the buy at %@" = "%@ on the buy at %@";
-"Waiting %@" = "Waiting %@";
 "%lldm" = "%lldm";
 "%lldh %lldm" = "%lldh %lldm";
 "Call · %@" = "Call · %@";
 "Invested" = "Invested";
 "Each symbol" = "Each symbol";
-"%@ left today" = "%@ left today";
-"%@ left" = "%@ left";
-"Checked on every copy" = "Checked on every copy";
-"Per coin or stock" = "Per coin or stock";
 "Call waiting for you" = "Call waiting for you";
+"%@ from %@" = "%@ from %@";
+"No open positions" = "No open positions";

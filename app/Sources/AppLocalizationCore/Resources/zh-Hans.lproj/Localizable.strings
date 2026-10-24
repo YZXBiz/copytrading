@@ -451,7 +451,6 @@
 "No equity to show" = "暂无账户净值数据";
 "No history loaded." = "尚未加载历史记录。";
 "No message text was captured." = "未捕获到消息文本。";
-"No open positions. Copied buys appear here, next to anything you hold outside CopyTrading." = "当前没有未平仓持仓。跟随买入的股票会显示在此处，并与 CopyTrading 之外持有的股票并列。";
 "No posts loaded yet" = "尚未加载帖子";
 "No price quote was available" = "暂无可用报价";
 "No prior account delivery details are recorded." = "未记录此前向账户发送订单的详情。";
@@ -476,7 +475,6 @@
 "Not run yet" = "尚未运行";
 "Not saved yet" = "尚未保存";
 "Not set up" = "尚未设置";
-"Not set up yet" = "尚未完成设置";
 "Nothing" = "不允许";
 "Nothing has been posted in your gurus’ channels since copying started. New posts show up here within seconds." = "开始跟单后，你的信号源还没有在频道中发布新内容。新帖子通常会在几秒内显示在此处。";
 "Nothing is being copied. Orders the broker already accepted may stay open until they fill or expire." = "目前没有跟单。券商已接受的订单仍可能保持有效，直到成交或过期。";
@@ -708,7 +706,6 @@
 "Signal" = "信号";
 "Simulated result · no orders" = "模拟结果 · 未下单";
 "Simulated with the configured model. No order is placed." = "使用已配置模型进行模拟，不会提交订单。";
-"since the start" = "自开始以来";
 "skipped" = "已跳过";
 "Skipped" = "已跳过";
 "Sold" = "已卖出";
@@ -849,7 +846,6 @@
 "Use the left and right arrow keys to read recorded points." = "使用左右方向键浏览已记录的数据点。";
 "Values redacted" = "值已脱敏";
 "Version on this Mac" = "此 Mac 上的版本";
-"vs previous close" = "与前一收盘价相比";
 "Waiting" = "等待中";
 "Waiting at the broker (%@)" = "等待券商处理（%@）";
 "Waiting for an earlier order" = "正在等待较早的订单完成";
@@ -1673,14 +1669,12 @@
 "Type" = "类型";
 "Market %@" = "市价%@";
 "Limit %@" = "限价%@";
-"%lld need you" = "%lld 条等你处理";
 "Copy by %@" = "请在%@前复制";
 "Edit Limits" = "修改限额";
 "Edit Limits…" = "修改限额…";
 "Enter the trade yourself" = "自己填写交易";
 "More for this account" = "此账户的更多操作";
 "Posts your gurus send to this account appear here, with what came of each." = "信号源发往此账户的帖子会显示在这里，并附上每条的结果。";
-"Quiet today" = "今天没有动静";
 "The engine is stopped. The balance appears once it runs and the broker has been read." = "引擎已停止。引擎运行并读取券商后，余额会显示在这里。";
 "This guru is not in your setup" = "此信号源不在你的设置中";
 "Per stock" = "每只股票";
@@ -1898,8 +1892,6 @@
 "CopyTrading couldn't read this account's holdings just now. Try again in a moment." = "CopyTrading 暂时无法读取该账户的持仓。请稍后再试。";
 "Reading the account's curve from Alpaca…" = "正在从 Alpaca 读取账户曲线…";
 "Alpaca can't be asked for this account's curve right now." = "暂时无法向 Alpaca 读取这个账户的净值曲线。";
-"copied" = "复制";
-"yours + %@" = "你的 + %@";
 "yours" = "你的";
 "Find…" = "查找…";
 "Go to a page, run an action, or find a post" = "前往页面、执行操作或查找消息";
@@ -1910,7 +1902,6 @@
 "Not updating since %@: the engine is stopped" = "自 %@ 起未更新：引擎已停止";
 "Not updating since %@" = "自 %@ 起未更新";
 "Each order" = "每笔订单";
-"at most" = "上限";
 "%@ copied · %@ yours" = "跟单 %@ · 自有 %@";
 "%@ bought at %@" = "%@，买入价 %@";
 "Click Apply Changes to use it. Copying restarts in a few seconds, and any post sent meanwhile is still copied." = "点“应用更改”即可生效。跟单会在几秒内重新开始，这期间发来的消息照样会跟。";
@@ -2436,15 +2427,11 @@
 "Less %@ at the broker than CopyTrading copied" = "券商持有的 %@ 少于 CopyTrading 跟单的数量";
 "%@ · until filled or cancelled" = "%@ · 成交或撤单前有效";
 "Around the clock" = "全天候";
-"%@ on the buy at %@" = "%@（相对买入价 %@）";
-"Waiting %@" = "已等待 %@";
 "%lldm" = "%lld 分钟";
 "%lldh %lldm" = "%lld 小时 %lld 分钟";
 "Call · %@" = "喊单 · %@";
 "Invested" = "已投入";
 "Each symbol" = "每个标的";
-"%@ left today" = "今天还剩 %@";
-"%@ left" = "还剩 %@";
-"Checked on every copy" = "每次跟单都会检查";
-"Per coin or stock" = "按每个币或股票计";
 "Call waiting for you" = "等你处理的喊单";
+"%@ from %@" = "%@（较买入价 %@）";
+"No open positions" = "没有持仓";

@@ -29,13 +29,4 @@ struct GuruStats: Equatable {
     }
 
     var isRead: Bool { postsToday != nil }
-
-    /// The line under the guru's name in the sidebar: how many calls need the owner, else how
-    /// busy today has been.
-    @MainActor var sidebarDetail: String {
-        if waiting > 0 { return L10n.string("%lld need you", Int64(waiting)) }
-        guard let postsToday else { return L10n.string("Not read yet") }
-        if postsToday > 0 { return L10n.string("%@ today", Humanize.count(postsToday, "post")) }
-        return L10n.string("Quiet today")
-    }
 }
