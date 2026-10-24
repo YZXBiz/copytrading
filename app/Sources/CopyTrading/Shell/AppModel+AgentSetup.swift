@@ -518,10 +518,14 @@ extension AppModel {
     /// paused unless `start` asks for Start Copying itself, a first setup included.
     func applySetupForAgent(start: Bool = false) async -> AgentSetupApplied {
         guard isTradingUnlocked else { return AgentSetupApplied(status: .failed, message: AgentSetupProblem.locked.message) }
-        guard !isValidatingTrading, !isActivatingTrading, !isTradingCommandPending, !isApplyingChanges else {
+        guard !isBusyForAgentApply else {
             return AgentSetupApplied(status: .failed, message: AgentSetupProblem.busy.message)
         }
         await settlePendingStart()
+        // The owner may have started something in the window while the start settled.
+        guard !isBusyForAgentApply else {
+            return AgentSetupApplied(status: .failed, message: AgentSetupProblem.busy.message)
+        }
         guard !hasPendingActivation else { return Self.startSettling }
         let plan = agentApplyPlan(start: start)
         switch plan {
@@ -574,6 +578,10 @@ extension AppModel {
         }
         return AgentSetupApplied(
             status: .failed, message: message ?? "Copying didn't start. Open CopyTrading to see why.", checks: checks)
+    }
+
+    private var isBusyForAgentApply: Bool {
+        isValidatingTrading || isActivatingTrading || isTradingCommandPending || isApplyingChanges
     }
 
     /// A start the engine took but has not committed yet settles within seconds. Apply waits for it,
