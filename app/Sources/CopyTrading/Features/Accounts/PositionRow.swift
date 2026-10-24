@@ -3,9 +3,9 @@ import SwiftUI
 
 /// One symbol the way a trader reads it: its name in the display face, shares, what they are worth,
 /// a small ruler from average cost to today's price, and the gain or loss, from the broker's
-/// valuation. The line under the symbol always says whose shares they are: "from Zhao", "yours",
-/// or both, so every row reads the same and stands the same height. When CopyTrading bought some,
-/// a chevron opens the lots that make them up. Share counts line up on the decimal point.
+/// valuation. Copied shares need no word; only shares held wholly outside CopyTrading say "yours"
+/// under the symbol, and a mix says so under the count. When CopyTrading bought some, a chevron
+/// opens the lots that make them up. Share counts line up on the decimal point.
 struct PositionRow: View {
     /// How far lots and the symbol column sit in from the chevron's edge.
     static let lotInset: CGFloat = 22
@@ -13,8 +13,6 @@ struct PositionRow: View {
     static let costColumnWidth: CGFloat = PositionCostMark.width + 36
 
     let position: AccountPositionView
-    /// Who the copied shares came from, by guru name; empty when none were copied.
-    var gurus: [String] = []
     /// The most decimals any row's share count shows, so the column lines up on its point.
     var shareDecimals = 4
     let isExpanded: Bool
@@ -60,10 +58,12 @@ struct PositionRow: View {
                         .foregroundStyle(Palette.ink)
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
-                    Text(ownership)
-                        .font(DesignTokens.caption)
-                        .foregroundStyle(Palette.tertiaryInk)
-                        .lineLimit(1)
+                    if owned == 0, outside > 0 {
+                        Text(L10n.string("yours"))
+                            .font(DesignTokens.caption)
+                            .foregroundStyle(Palette.tertiaryInk)
+                            .lineLimit(1)
+                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -165,17 +165,6 @@ struct PositionRow: View {
             parts.append(ChangeDirection(gain).spoken(gain))
         }
         return Humanize.joined(parts)
-    }
-
-    /// Whose shares these are, in a few words.
-    @MainActor private var ownership: String {
-        let from = gurus.isEmpty ? (owned > 0 ? L10n.string("copied") : nil) : L10n.string("from %@", Humanize.joined(gurus))
-        switch (outside > 0, from) {
-        case (true, let from?): return L10n.string("yours + %@", from)
-        case (true, nil): return L10n.string("yours")
-        case (false, let from?): return from
-        case (false, nil): return L10n.string("copied")
-        }
     }
 
     /// The broker's count, which the valuation is for; the ledger's when the broker was not read.

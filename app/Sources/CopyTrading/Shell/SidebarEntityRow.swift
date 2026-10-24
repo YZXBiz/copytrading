@@ -1,12 +1,18 @@
 import SwiftUI
 
-/// An account or a guru in the sidebar: its mark, its name over one quiet line, and, for an
-/// account, its balance at the trailing edge. Selection is a light grey pill, never the accent.
+/// An account or a guru in the sidebar: one line with its mark, its name, and at the trailing
+/// edge an account's balance or the calls a guru has waiting. Nothing under the name: a stopped
+/// account shows an amber dot and a waiting count is amber, the only colour in the list; the rest
+/// is said to VoiceOver. Selection is a light grey pill, never the accent.
 struct SidebarEntityRow<Leading: View>: View {
     let title: String
-    let detail: String
-    var detailTint: Color = Palette.tertiaryInk
+    /// What VoiceOver reads after the name, the words the row leaves out.
+    let spoken: String
     var value: String?
+    /// Calls waiting on the owner, shown as an amber count.
+    var count = 0
+    /// Something is wrong (the account stopped copying), shown as an amber dot.
+    var isAlerting = false
     let identifier: String
     let isSelected: Bool
     let select: () -> Void
@@ -16,32 +22,35 @@ struct SidebarEntityRow<Leading: View>: View {
 
     var body: some View {
         Button(action: select) {
-            HStack(spacing: 10) {
+            HStack(spacing: 9) {
                 leading
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(title)
-                        .font(DesignTokens.sidebarTitle.weight(isSelected ? .semibold : .medium))
-                        .foregroundStyle(Palette.ink)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    Text(detail)
-                        .font(DesignTokens.sidebarDetail)
-                        .foregroundStyle(detailTint)
-                        .lineLimit(1)
-                }
+                Text(title)
+                    .font(DesignTokens.sidebarTitle.weight(isSelected ? .semibold : .regular))
+                    .foregroundStyle(Palette.ink)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
                 Spacer(minLength: 4)
+                if isAlerting {
+                    Circle().fill(Palette.amber).frame(width: 6, height: 6)
+                }
+                if count > 0 {
+                    Text(count.formatted())
+                        .font(.system(size: 11, weight: .semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(Palette.amber)
+                }
                 if let value {
                     // Money is never cut short; the name gives way instead.
                     Text(value)
                         .font(DesignTokens.sidebarDetail.weight(.medium))
                         .monospacedDigit()
-                        .foregroundStyle(Palette.secondaryInk)
+                        .foregroundStyle(Palette.tertiaryInk)
                         .lineLimit(1)
                         .fixedSize()
                 }
             }
             .padding(.horizontal, 10)
-            .padding(.vertical, 7)
+            .frame(height: 32)
             .background(
                 isSelected ? Palette.sidebarSelection : isHovering ? Palette.hover : .clear,
                 in: .rect(cornerRadius: 8)
@@ -53,7 +62,7 @@ struct SidebarEntityRow<Leading: View>: View {
         .buttonStyle(QuietPressButtonStyle())
         .onHover { isHovering = $0 }
         .accessibilityLabel(title)
-        .accessibilityValue([detail, value].compactMap(\.self).joined(separator: ", "))
+        .accessibilityValue([spoken, value].compactMap(\.self).filter { !$0.isEmpty }.joined(separator: ", "))
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
         .accessibilityIdentifier(identifier)
     }

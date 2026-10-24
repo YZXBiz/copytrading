@@ -1,8 +1,8 @@
 import DesktopCore
 import SwiftUI
 
-/// A guru in the sidebar: their initials and name, over how many calls wait on the owner or how
-/// busy today has been.
+/// A guru in the sidebar: their initials and name, and an amber count of the calls waiting on the
+/// owner.
 struct SidebarGuruRow: View {
     let guru: GuruDirectory.Guru
     let model: AppModel
@@ -16,8 +16,8 @@ struct SidebarGuruRow: View {
             isRead: accountFeature.lastUpdatedAt != nil)
         SidebarEntityRow(
             title: guru.name,
-            detail: stats.sidebarDetail,
-            detailTint: stats.waiting > 0 ? Palette.amber : Palette.tertiaryInk,
+            spoken: stats.waiting > 0 ? L10n.string("%lld waiting", Int64(stats.waiting)) : "",
+            count: stats.waiting,
             identifier: screen.identifier,
             isSelected: model.selectedScreen == screen,
             select: select

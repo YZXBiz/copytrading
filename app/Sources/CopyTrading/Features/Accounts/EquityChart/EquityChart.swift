@@ -57,7 +57,7 @@ struct EquityChart: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center, spacing: 12) {
                 if let stats {
-                    EquityReadout(title: window.heading, range: window.range, curve: curve, stats: stats, pointer: pointer)
+                    EquityReadout(range: window.range, curve: curve, stats: stats, pointer: pointer)
                 } else {
                     Text(window.heading)
                         .font(DesignTokens.caption)

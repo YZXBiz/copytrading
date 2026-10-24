@@ -1,32 +1,16 @@
-import DesktopCore
 import SwiftUI
 
-/// The app's name at the top of the sidebar as a wordmark, like a studio site's.
+/// The app's name at the top of the sidebar as a wordmark, like a studio site's, and nothing under
+/// it: the rows below already say which accounts there are and which are live.
 struct SidebarBrandCard: View {
-    let model: AppModel
-
-    @MainActor private var detail: String {
-        guard let configuration = model.savedTradingConfiguration else { return L10n.string("Not set up yet") }
-        let live = configuration.accounts.contains { $0.environment == .live }
-        return L10n.string("%@ · %@", L10n.string(live ? "Live" : "Paper"), Humanize.count(configuration.accounts.count, "account"))
-    }
-
     var body: some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(L10n.string("CopyTrading"))
-                    .font(DisplayFont.font(size: 21, weight: .medium, relativeTo: .headline))
-                    .foregroundStyle(Palette.ink)
-                Text(detail)
-                    .font(.system(size: 11))
-                    .foregroundStyle(Palette.tertiaryInk)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 19)
-        .padding(.top, 4)
-        .padding(.bottom, 10)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(L10n.string("CopyTrading, %@", detail))
+        Text(L10n.string("CopyTrading"))
+            .font(DisplayFont.font(size: 21, weight: .medium, relativeTo: .headline))
+            .foregroundStyle(Palette.ink)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 19)
+            .padding(.top, 4)
+            .padding(.bottom, 12)
+            .accessibilityAddTraits(.isHeader)
     }
 }
