@@ -673,7 +673,7 @@
 "Sell %@ %@" = "卖出%@股 %@";
 "Sell %@ %@ with Touch ID" = "使用 Touch ID 卖出%@股 %@";
 "Sell %@ from %@" = "卖出 %@（来自 %@）";
-"Sell %@ of %@ at %@" = "卖出 %2$@ 的%1$@，价格 %3$@";
+"Sell %@ of %@ at %@" = "卖出%@ %@，价格 %@";
 "Sell all %@ at %@" = "按全部仓位卖出 %@，价格 %@";
 "Selling" = "卖出中";
 "Sell…" = "卖出…";
@@ -2436,7 +2436,7 @@
 "Less %@ at the broker than CopyTrading copied" = "券商持有的 %@ 少于 CopyTrading 跟单的数量";
 "%@ · until filled or cancelled" = "%@ · 成交或撤单前有效";
 "Around the clock" = "全天候";
-"%@ on the buy at %@" = "相对 %2$@ 的买入价 %1$@";
+"%@ on the buy at %@" = "%@（相对买入价 %@）";
 "Waiting %@" = "已等待 %@";
 "%lldm" = "%lld 分钟";
 "%lldh %lldm" = "%lld 小时 %lld 分钟";
