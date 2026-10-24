@@ -12,6 +12,7 @@ from copytrading_engine.parsing.extraction import (
     Decoder,
     GroundingError,
     check_reading,
+    exit_basis,
     normalize,
     same_side,
 )
@@ -96,7 +97,7 @@ async def transform(
             (),
         )
     else:
-        decision, reason, calls = _act_on(acted)
+        decision, reason, calls = _act_on(acted, route.playbook)
     return outcome(
         event,
         decision,
@@ -107,7 +108,7 @@ async def transform(
         guru_id=route.guru_id,
         profile_revision=route.profile_revision,
         reading=reading,
-        suggested=suggested(reading) if decision == "review" else (),
+        suggested=suggested(reading, route.playbook) if decision == "review" else (),
     )
 
 
@@ -193,7 +194,7 @@ class _Wait(Exception):
 
 
 def _act_on(
-    reading: r.PostReading,
+    reading: r.PostReading, playbook: str
 ) -> tuple[Literal["trade", "ignore", "review"], str, tuple[tuple[Instruction, Evidence], ...]]:
     """Act or ask (ADR-0007): a trade made or an instruction with every call placeable trades;
     conditionals, suggestions, a range, a buy with no exact price, and a vague trim wait for the
@@ -209,16 +210,16 @@ def _act_on(
             return "review", reading.kind, ()
         case r.TradeMade() | r.Instruction():
             try:
-                calls = tuple(_placeable(call) for call in reading.calls)
+                calls = tuple(_placeable(call, playbook) for call in reading.calls)
             except _Wait as wait:
                 return "review", wait.reason, ()
             return "trade", reading.summary, calls
 
 
-def _placeable(call: r.Call) -> tuple[Instruction, Evidence]:
+def _placeable(call: r.Call, playbook: str) -> tuple[Instruction, Evidence]:
     """The engine's call for a stated one, with the post's words behind each field. Raises
     _Wait when it cannot be placed without the owner."""
-    instruction = _instruction(call, owner=False)
+    instruction = _instruction(call, playbook, owner=False)
     if isinstance(call, r.Buy):
         fraction_words = call.size.words if isinstance(call.size, r.Fraction) else None
         usd_words = call.size.words if isinstance(call.size, r.Dollars) else None
@@ -245,7 +246,7 @@ def _placeable(call: r.Call) -> tuple[Instruction, Evidence]:
     return instruction, evidence
 
 
-def suggested(reading: r.PostReading | None) -> tuple[Instruction, ...]:
+def suggested(reading: r.PostReading | None, playbook: str) -> tuple[Instruction, ...]:
     """What Copy places for a post that waits for the owner (ADR-0007, ADR-0010): each call the
     owner can copy as read, a range at its top and a batch at the full position, trimmed by the
     account's limits. A buy with no price, or a sell that states no share, has nothing to copy;
@@ -255,13 +256,13 @@ def suggested(reading: r.PostReading | None) -> tuple[Instruction, ...]:
     calls = []
     for call in reading.calls:
         try:
-            calls.append(_instruction(call, owner=True))
+            calls.append(_instruction(call, playbook, owner=True))
         except _Wait:
             continue
     return tuple(calls)
 
 
-def _instruction(call: r.Call, *, owner: bool) -> Instruction:
+def _instruction(call: r.Call, playbook: str, *, owner: bool) -> Instruction:
     """One call as the engine places it (ADR-0007, ADR-0010). On its own (`owner=False`) the
     engine waits for the owner on a range and on a sell that states no share; when the owner
     copies, a range buys at its top. A sell with no price, or one at the market, sells at the
@@ -269,8 +270,8 @@ def _instruction(call: r.Call, *, owner: bool) -> Instruction:
     live bid bounds it. A buy needs the guru's price, which bounds what the copy pays. A buy with
     no size asks for the full position, and one whose size is a batch the playbook gives no share
     waits; a sell that names a buy price sells from the buys at that price, and one that names
-    none from every buy; a share counts from what is left unless the post says the original
-    buy."""
+    none from every buy; a share counts from what is left unless the post or the playbook says
+    the original buy, which code decides (`exit_basis`)."""
     price: Decimal | None
     match call.price:
         case r.Exact(value=price):
@@ -308,5 +309,9 @@ def _instruction(call: r.Call, *, owner: bool) -> Instruction:
         price=price,
         entry_price=call.sell_from.buy_price if isinstance(call.sell_from, r.Lot) else None,
         fraction=share,
-        exit_basis="original_position" if call.counts_from == "original" else "remaining_position",
+        exit_basis=(
+            "original_position"
+            if exit_basis(call, playbook) == "original"
+            else "remaining_position"
+        ),
     )

@@ -4,7 +4,7 @@ import re
 import unicodedata
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Protocol
+from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict
 
@@ -36,7 +36,7 @@ from copytrading_engine.shared.reading import (
 from copytrading_engine.shared.signals import same_fraction
 from copytrading_engine.shared.symbols import crypto_pair, is_crypto
 
-PROMPT_VERSION = "stock-reading-v8"
+PROMPT_VERSION = "stock-reading-v9"
 
 # Chinese characters and ASCII letters both count as Unicode word characters.
 # Match complete numeric tokens and bound English words by ASCII letters so
@@ -149,6 +149,68 @@ def playbook_size(playbook: str, words: str) -> Decimal | None:
             return numerator / denominator if denominator else None
         return Decimal(size)
     return None
+
+
+# What a sell's share counts from: the original buy, or what is left of it (ADR-0010).
+type Basis = Literal["original", "remaining"]
+
+# The words that name a basis, in a post or a playbook line. Code decides the basis from them;
+# the model only points at them.
+_BASIS_TERMS: dict[Basis, tuple[str, ...]] = {
+    "original": (
+        "原仓",
+        "原始",
+        "原来",
+        "原有",
+        "初始",
+        "最初",
+        "总仓",
+        "original",
+        "initial",
+        "whole position",
+        "full position",
+        "total position",
+    ),
+    "remaining": ("剩", "余下", "其余", "rest", "remain", "left"),
+}
+
+# A playbook habit line: "Sell fractions count from the original buy", "卖出比例按原仓计算".
+_PLAYBOOK_BASIS = re.compile(
+    r"counts?\s+from\s+(?P<english>[^.;。；\n]+)"  # noqa: RUF001 - Chinese stops end a clause
+    r"|按(?P<chinese>[^,.;，。；\n]+?)(?:计算|计|算)",  # noqa: RUF001
+    re.IGNORECASE,
+)
+
+
+def names_basis(words: str) -> Basis | None:
+    """The basis these words name: one basis's words and not the other's."""
+    folded = words.casefold()
+    named = [basis for basis, terms in _BASIS_TERMS.items() if any(t in folded for t in terms)]
+    return named[0] if len(named) == 1 else None
+
+
+def playbook_basis(playbook: str) -> Basis:
+    """What this guru's sell shares count from, as the owner's playbook says it ("Sell fractions
+    count from the original buy"); what is left when no line says (ADR-0010). A worked line
+    quotes a post, so it never sets the habit."""
+    for line in playbook.splitlines():
+        if "->" in line:
+            continue
+        for match in _PLAYBOOK_BASIS.finditer(line):
+            basis = names_basis(match.group("english") or match.group("chinese"))
+            if basis is not None:
+                return basis
+    return "remaining"
+
+
+def exit_basis(sell: Sell, playbook: str) -> Basis:
+    """What a sell's share counts from, decided by code: the basis the post's own words name,
+    when the reader cites them, else the playbook's. A post with no words for a basis
+    ("102.55出一半SOL/USD") always counts from the playbook's, however the model reads it."""
+    named = None if sell.counts_from_words is None else names_basis(sell.counts_from_words)
+    if named is not None and named == sell.counts_from:
+        return named
+    return playbook_basis(playbook)
 
 
 MASS_MENTIONS = ("@everyone", "@here")
@@ -352,17 +414,7 @@ def _check_call(call: Call, text: str, route: Route, path: str) -> None:
         _check_size(call, text, route.playbook, f"{path}.size")
         return
     _check_share(call, text, route.playbook, f"{path}.share")
-    # "Half" is half of what is left (ADR-0010). A sell may count from the original buy only
-    # when the post's own words, or the playbook's, say so: the model reads, and never assumes.
-    if call.counts_from == "original":
-        if call.counts_from_words is None:
-            raise GroundingError(
-                "counts_from_not_grounded",
-                f"{path}.counts_from",
-                "counts_from original needs counts_from_words, the words of the post that say "
-                "the share is of the original buy; leave counts_from out when the post does not",
-            )
-        _words(call.counts_from_words, text, f"{path}.counts_from_words")
+    _check_basis(call, text, route.playbook, path)
     if isinstance(call.sell_from, Lot):
         _number(call.sell_from.buy_price, call.sell_from.words, text, f"{path}.sell_from")
         if isinstance(call.price, Exact) and call.price.value == call.sell_from.buy_price:
@@ -449,6 +501,28 @@ def _check_share(sell: Sell, text: str, playbook: str, path: str) -> None:
         share.value, share.words, text, playbook
     ):
         raise GroundingError("fraction_not_grounded", path, "The share is not in the post")
+
+
+def _check_basis(sell: Sell, text: str, playbook: str, path: str) -> None:
+    """A plain half is half of what is left unless the playbook says the original buy (ADR-0010). A
+    sell departs from the playbook's basis only on the post's own words for the other one: the
+    model reads, and never assumes. A full exit sells everything whatever it counts from."""
+    if (
+        isinstance(sell.share, All)
+        or sell.counts_from is None
+        or sell.counts_from == playbook_basis(playbook)
+    ):
+        return
+    words = sell.counts_from_words
+    if words is None or names_basis(words) != sell.counts_from:
+        of = "the original buy" if sell.counts_from == "original" else "what is left"
+        raise GroundingError(
+            "counts_from_not_grounded",
+            f"{path}.counts_from",
+            f"counts_from {sell.counts_from} needs counts_from_words, the words of the post that "
+            f"say the share is of {of}; leave counts_from out when the post does not",
+        )
+    _words(words, text, f"{path}.counts_from_words")
 
 
 def _playbook_sized(value: Decimal, words: str, text: str, playbook: str) -> bool:

@@ -3,6 +3,7 @@
 import datetime as dt
 import hashlib
 import logging
+import unicodedata
 from decimal import ROUND_DOWN, Decimal
 from typing import Literal, TypedDict, Unpack
 
@@ -108,9 +109,14 @@ COIN_STEP = Decimal("0.000000001")
 log = logging.getLogger(__name__)
 
 
+def _post_words(text: str) -> str:
+    """A post's text as the guru wrote it, whatever its width, case, or spacing."""
+    return " ".join(unicodedata.normalize("NFKC", text).casefold().split())
+
+
 def _repeats(
     instruction: Instruction,
-    at: dt.datetime,
+    signal: StockSignal,
     earlier: MessageRecord,
     window_minutes: int | None,
     previous: tuple[MessageRecord, ...] = (),
@@ -119,17 +125,26 @@ def _repeats(
     read the same way (stock, price, size) within the guru's window is the same buy; later it can
     be a real second buy at that price. A sell repeated the same trading day, naming the same lot,
     price, and size, is always the same sell: done twice it would sell the rest of the lot, as
-    when a guru re-posts the day's calls in a recap. With the check off, every post is copied."""
+    when a guru re-posts the day's calls in a recap. A post with the same words as the earlier one
+    repeats its buy or sell of the stock however the model read it the second time. With the check
+    off, every post is copied."""
+    buying = instruction.action == "buy"
     if window_minutes is None or not any(
-        instruction.same_call(other) for other in earlier.instructions
+        instruction.same_call(other)
+        or (
+            other.symbol == instruction.symbol
+            and (other.action == "buy") == buying
+            and _post_words(signal.text) == _post_words(earlier.text)
+        )
+        for other in earlier.instructions
     ):
         return False
+    at = signal.timestamp
     since = (at - earlier.timestamp).total_seconds()
     if since < 0:
         return False
     # A buy or sell of this stock the other way since then makes this a new call: the same sell
     # after a new buy sells that buy.
-    buying = instruction.action == "buy"
     if any(
         earlier.timestamp < other.timestamp <= at
         and any(
@@ -936,9 +951,7 @@ class TradingLedger:
             else Skipped(reason="duplicate")
             if status == "queued"
             and any(
-                _repeats(
-                    instruction, signal.timestamp, m, destination.repeat_window_minutes, previous
-                )
+                _repeats(instruction, signal, m, destination.repeat_window_minutes, previous)
                 for m in previous
             )
             else Pending()

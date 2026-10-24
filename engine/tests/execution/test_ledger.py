@@ -120,6 +120,60 @@ def test_numerically_equivalent_repost_does_not_create_another_order():
     assert engine.ledger.message("discord:demo:repost").parts == (Skipped(reason="duplicate"),)
 
 
+def _sold_half(id, at, *, basis="remaining_position", action="reduce", text="26出一半abc"):
+    signal = event(id=id, action=action, price="26", timestamp=at)
+    signal["text"] = text
+    for part in (*signal["instructions"], *signal["evidence"]):
+        part["exit_basis"] = basis
+    return StockSignal.model_validate(signal)
+
+
+def test_a_reposted_sell_read_from_the_other_basis_is_a_duplicate():
+    """Oct 23 2026, live on Alpaca paper: 赵哥 posted "102.55出一半SOL/USD" twice, two seconds
+    apart; DeepSeek read the first from what is left and the second from the original buy, so the
+    re-post check saw two calls and the second sold the rest of the lot."""
+    engine, broker, _ = system_with_queued_buy()
+    engine.process(NOW)
+    first, again = NOW + dt.timedelta(seconds=1), NOW + dt.timedelta(seconds=3)
+    receive(engine, _sold_half("first", first), first)
+    engine.process(first)
+    receive(engine, _sold_half("again", again, basis="original_position", text="other"), again)
+    engine.process(again)
+
+    assert broker.calls == 2
+    assert engine.ledger.message("discord:demo:again").parts == (Skipped(reason="duplicate"),)
+
+
+def test_the_same_words_are_one_call_however_the_model_reads_them_again():
+    engine, broker, _ = system_with_queued_buy()
+    engine.process(NOW)
+    first, again = NOW + dt.timedelta(seconds=1), NOW + dt.timedelta(seconds=3)
+    receive(engine, _sold_half("first", first, text="26出一半ABC"), first)
+    engine.process(first)
+    # Read the second time as a full exit: the same words are still the same sell.
+    reread = _sold_half("again", again, action="close", text=" 26出一半abc ")
+    receive(engine, reread, again)
+    engine.process(again)
+
+    assert broker.calls == 2
+    assert engine.ledger.message("discord:demo:again").parts == (Skipped(reason="duplicate"),)
+
+
+def test_the_same_words_after_a_new_buy_are_a_new_sell():
+    engine, broker, _ = system_with_queued_buy()
+    engine.process(NOW)
+    first, bought, again = (NOW + dt.timedelta(seconds=s) for s in (1, 2, 3))
+    receive(engine, _sold_half("first", first), first)
+    engine.process(first)
+    receive(engine, StockSignal.model_validate(event(id="bought", timestamp=bought)), bought)
+    engine.process(bought)
+    receive(engine, _sold_half("again", again, action="close"), again)
+    engine.process(again)
+
+    assert broker.calls == 4
+    assert engine.ledger.message("discord:demo:again").parts != (Skipped(reason="duplicate"),)
+
+
 def test_with_the_repeat_check_off_an_identical_post_buys_again():
     engine, broker, _ = system_with_queued_buy()
     engine.process(NOW)

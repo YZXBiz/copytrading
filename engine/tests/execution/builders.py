@@ -90,7 +90,7 @@ def event(id="1", action="buy", price="25", entry=None, timestamp=NOW, channel="
         "channel_id": channel,
         "id": id,
         "timestamp": timestamp.isoformat(),
-        "text": "synthetic fixture",
+        "text": f"synthetic fixture {id}",
         "parser_profile": "fixture",
         "model": "fixture",
         "decision": "trade",

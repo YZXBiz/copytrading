@@ -35,7 +35,7 @@ def test_each_position_lists_its_lots_with_the_post_that_bought_them():
     assert lot.posted_at == NOW
     assert lot.bought_at is not None
     assert NOW <= lot.bought_at < NOW + dt.timedelta(seconds=1)
-    assert lot.excerpt == "synthetic fixture"
+    assert lot.excerpt == "synthetic fixture 1"
     assert lot.average_price == Decimal(broker.orders[client_id]["filled_avg_price"])
 
 

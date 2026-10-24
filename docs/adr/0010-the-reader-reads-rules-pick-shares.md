@@ -24,7 +24,11 @@ Waiting for You (`sell_names_no_buy`, `missing_or_ambiguous_lot`, `batch_size_un
    * A sell that names a buy price sells from every buy at exactly that price. A price that
      matches no open buy waits for the owner.
    * A sell that names no buy sells the same share from every buy.
-   * "Half" means half of what is left unless the post or playbook says otherwise.
+   * "Half" means half of what is left unless the post or playbook says otherwise. Code decides
+     which (revised 23 October 2026, after DeepSeek read one "出一半" post both ways): the
+     playbook's habit line ("Sell fractions count from the original buy"), unless the reader
+     cites post words that name the other basis (原仓, 剩下, "of the original"). A post with no
+     such words always counts from the playbook's basis, whatever the model says.
    * A fill is split across the targeted buys in proportion to what each has left; for a stock
      that trades only in whole shares, the remainder goes to the oldest buy.
    One sell is still one order against one lot.
@@ -35,8 +39,10 @@ Waiting for You (`sell_names_no_buy`, `missing_or_ambiguous_lot`, `batch_size_un
    batch the playbook gives no size ("第二批 means 1/3") waits for the owner, like a vague trim.
 6. **Reposts.** With the guru's re-post check on, the same call within its window counts once, and
    so does a call the reader says repeats one within the window. A call the reader says repeats one
-   outside the window waits for the owner. A repeated sell counts once all day. With the check off,
-   every post is copied.
+   outside the window waits for the owner. A repeated sell counts once all day. What a sell counts
+   from is not part of the call, and a post with the same words as an earlier one repeats its buy
+   or sell of the stock however it was read; a trade of the stock the other way in between still
+   makes it a new call. With the check off, every post is copied.
 7. **Removed.** The four guru switches and the account connection's default share. The saved
    configuration moves to version 8 and the ledger to version 10; earlier ones are not migrated.
 8. **Every limit cuts a buy to what it allows.** The largest single buy, the maximum per stock,
