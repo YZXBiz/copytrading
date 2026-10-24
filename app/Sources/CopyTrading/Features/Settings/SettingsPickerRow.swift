@@ -1,12 +1,12 @@
 import SwiftUI
 
 /// A setting with a few values, a label over the value with an up-down chevron:
-/// the whole row opens the menu.
+/// the whole row opens the menu. What it changes is a tooltip, not a line under it.
 struct SettingsPickerRow<Value: Hashable>: View {
     let label: String
     @Binding var selection: Value
     let options: [Value]
-    var detail: String?
+    var hint: String?
     var identifier: String?
     let title: (Value) -> String
 
@@ -20,7 +20,7 @@ struct SettingsPickerRow<Value: Hashable>: View {
             .pickerStyle(.inline)
             .labelsHidden()
         } label: {
-            SettingsRow(label: label, title: title(selection), detail: detail) {
+            SettingsRow(label: label, title: title(selection)) {
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Palette.tertiaryInk)
@@ -34,6 +34,8 @@ struct SettingsPickerRow<Value: Hashable>: View {
         .menuIndicator(.hidden)
         .accessibilityLabel(L10n.string(label))
         .accessibilityValue(L10n.string(title(selection)))
+        .accessibilityHint(hint.map { L10n.string($0) } ?? "")
+        .help(hint.map { L10n.string($0) } ?? "")
         .accessibilityIdentifier(identifier ?? label)
     }
 }

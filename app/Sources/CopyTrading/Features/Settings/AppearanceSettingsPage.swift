@@ -18,11 +18,11 @@ struct AppearanceSettingsPage: View {
 
             SettingsSection(
                 title: "Motion and Transparency",
-                subtitle: "Follows Reduce Motion, Reduce Transparency, and Increase Contrast on your Mac."
+                hint: "Follows Reduce Motion, Reduce Transparency, and Increase Contrast on your Mac."
             ) {
                 SettingsActionRow(
                     title: "Open Accessibility Settings",
-                    detail: "Animations hold still, glass turns solid, and edges get stronger."
+                    hint: "Animations hold still, glass turns solid, and edges get stronger."
                 ) {
                     openURL(URL(literal: "x-apple.systempreferences:com.apple.Accessibility-Settings.extension?Display"))
                 }

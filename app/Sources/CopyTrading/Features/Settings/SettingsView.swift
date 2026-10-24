@@ -34,7 +34,7 @@ struct SettingsView: View {
             HStack(spacing: 8) {
                 buttons
             }
-            PageHeadline(L10n.string(model.settingsPage.title), lede: L10n.string(model.settingsPage.lede))
+            PageHeadline(L10n.string(model.settingsPage.title))
                 .contentTransition(.opacity)
         }
         .animation(reduceMotion ? nil : .smooth(duration: 0.22), value: model.settingsTrail.isEmpty)

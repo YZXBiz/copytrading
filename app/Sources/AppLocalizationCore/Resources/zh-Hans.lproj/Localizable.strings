@@ -490,7 +490,6 @@
 "One week" = "1周";
 "One year" = "1年";
 "Only needed when several people post in the same channel." = "仅当同一频道有多人发帖时才需要。";
-"Only when every account is paper. Lock still locks." = "仅当所有账户都是模拟账户时生效。锁定功能仍然有效。";
 "Open %@ API keys" = "打开%@ API 密钥";
 "Open **discord.com/app** in Chrome or Safari and sign in. In Safari, first turn on **Settings › Advanced › Show features for web developers**." = "在 Chrome 或 Safari 中打开 **discord.com/app** 并登录。使用 Safari 时，先开启 **设置 › 高级 › 显示网页开发者功能**。";
 "Open Accessibility Settings" = "打开辅助功能设置";
@@ -546,7 +545,6 @@
 "Post forwarded" = "帖子已转发";
 "Post pipeline" = "帖子处理流程";
 "posts" = "条帖子";
-"Posts, model calls, and trading steps appear here as the engine handles them, with keys removed. The log stays on this Mac." = "引擎处理帖子时，帖子、模型调用和交易步骤会显示在这里；写入日志前会移除密钥。日志保存在这台 Mac 上。";
 "Posts, model calls, and trading steps appear here as the engine handles them." = "引擎处理帖子时，帖子、模型调用和交易步骤会显示在这里。";
 "Prepared an order" = "已准备订单";
 "Preview is being checked or has not been requested." = "预览仍在检查中，或尚未发起预览。";
@@ -1129,8 +1127,6 @@
 "Discord: intro to webhooks" = "Discord：Webhook 简介";
 "Channel webhook" = "频道 Webhook";
 "Needs a webhook URL" = "需要 Webhook URL";
-"Through a channel webhook" = "通过频道 Webhook";
-"Through a bot you make" = "通过你创建的机器人";
 "the Discord webhook URL" = "Discord Webhook URL";
 "Connect to %@" = "连接 %@";
 "Step by step" = "分步说明";
@@ -1157,7 +1153,6 @@
 "Pretend money at real prices. Start here." = "用虚拟资金按真实价格交易，建议从这里开始。";
 "Ready to start. Every connection is checked first." = "可以开始了。开始前会先检查每个连接。";
 "Real money. Each order still stays inside your limits." = "真实资金。每笔订单仍受你的限额约束。";
-"Set up CopyTrading here, top to bottom. Nothing is saved or traded until you start copying." = "在这里从上到下完成设置。开始跟单前，不会保存任何设置，也不会交易。";
 "Some checks need attention. Review them, fix the setup, then start again." = "部分检查需要处理。请查看结果、修正设置后再开始。";
 "Start copying" = "开始跟单";
 "Step %@" = "第 %@ 步";
@@ -1707,8 +1702,6 @@
 "Newest first" = "最新在前";
 "Yesterday" = "昨天";
 "No account acted on it" = "没有账户处理";
-"No posts from %@ yet. They show here as soon as CopyTrading reads one." = "%@ 还没有帖子。CopyTrading 读到第一条后会显示在这里。";
-"%@'s posts show here once CopyTrading has read them." = "CopyTrading 读取后，%@ 的帖子会显示在这里。";
 "Edit %@" = "编辑 %@";
 "Saved · applies to the next order" = "已保存 · 下一笔订单生效";
 "These limits weren't saved." = "这些限额没有保存。";
@@ -1753,14 +1746,6 @@
 "This page stays here as your guide." = "本页会一直保留，供你参考。";
 "No records match “%@”." = "没有与“%@”匹配的记录。";
 "Show Steps" = "查看步骤";
-"The log starts here" = "日志从这里开始";
-"How CopyTrading opens, and how it tells the time." = "CopyTrading 如何打开，以及如何显示时间。";
-"Light, dark, or as your Mac is set." = "浅色、深色，或跟随 Mac 的设置。";
-"New versions, and when to look for them." = "新版本，以及何时检查更新。";
-"The local engine that reads posts and places orders." = "读取帖子并下单的本地引擎。";
-"What other apps on this Mac may ask CopyTrading to do." = "这台 Mac 上的其他 App 可以请求 CopyTrading 做什么。";
-"Copies of your setup, kept on this Mac." = "你的设置副本，保存在这台 Mac 上。";
-"What the engine wrote down, with keys removed." = "引擎记录的内容，已去除密钥。";
 "One call is waiting for you" = "有一条喊单在等你";
 "%lld calls are waiting for you" = "有 %lld 条喊单在等你";
 "Not traded" = "没交易";
@@ -2206,7 +2191,6 @@
 "Switch tabs on an account or guru page" = "切换账户页或信号源页上的标签";
 "Tips will show again once copying is set up, each beside what it points at." = "设置好跟单后，提示会再次出现在相应位置旁。";
 "Tips will show again, each beside what it points at." = "提示会再次出现在相应位置旁。";
-"Once a setup is saved and every account is paper. Lock still locks." = "保存设置且所有账户都是模拟账户后可用。锁定功能仍然有效。";
 "CopyTrading couldn't run this check because its engine isn't answering. Start it in Settings → Engine, then try again." = "引擎没有响应，CopyTrading 无法完成这项检查。请在“设置 → 引擎”中启动引擎，然后重试。";
 "Enter a channel ID and your Discord token to connect." = "请输入频道 ID 和你的 Discord 令牌后再连接。";
 "Enter the model's name to connect." = "请输入模型名称后再连接。";
@@ -2435,3 +2419,6 @@
 "Call waiting for you" = "等你处理的喊单";
 "%@ from %@" = "%@（较买入价 %@）";
 "No open positions" = "没有持仓";
+"No posts yet" = "还没有帖子";
+"Once a setup is saved and every account is paper." = "保存设置且所有账户都是模拟盘后可用。";
+"Only when every account is paper." = "仅当所有账户都是模拟盘时可用。";

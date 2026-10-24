@@ -1,13 +1,14 @@
 import SwiftUI
 
 /// One step of the setup on Connections: a step number that turns into an ink check once the
-/// step is done, the step's name in the display face and what it is for, and its rows under it.
+/// step is done, the step's name in the display face (what it is for is its tooltip), and its rows
+/// under it.
 struct SetupStepSection<Content: View>: View {
     let number: Int
     let isDone: Bool
     var isOptional = false
     let title: String
-    let subtitle: String
+    let hint: String
     @ViewBuilder let content: Content
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -15,23 +16,19 @@ struct SetupStepSection<Content: View>: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 badge
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(alignment: .firstTextBaseline, spacing: 12) {
-                        Text(title)
-                            .font(DesignTokens.settingsHeading)
-                            .tracking(DesignTokens.listHeadingTracking)
-                            .foregroundStyle(Palette.ink)
-                            .accessibilityAddTraits(.isHeader)
-                        if isOptional {
-                            Text(L10n.string("Optional"))
-                                .font(DesignTokens.caption)
-                                .foregroundStyle(Palette.tertiaryInk)
-                        }
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    Text(title)
+                        .font(DesignTokens.settingsHeading)
+                        .tracking(DesignTokens.listHeadingTracking)
+                        .foregroundStyle(Palette.ink)
+                        .accessibilityAddTraits(.isHeader)
+                        .help(hint)
+                        .accessibilityHint(hint)
+                    if isOptional {
+                        Text(L10n.string("Optional"))
+                            .font(DesignTokens.caption)
+                            .foregroundStyle(Palette.tertiaryInk)
                     }
-                    Text(subtitle)
-                        .font(.body)
-                        .foregroundStyle(Palette.tertiaryInk)
-                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             VStack(alignment: .leading, spacing: 10) {
