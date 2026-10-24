@@ -8,6 +8,8 @@ from copytrading_engine.execution.adapters.alpaca.broker import (
 )
 
 
-def make_broker(key, secret, *, environment="paper", transport=None):
+def make_broker(key, secret, *, environment="paper", transport=None, clock=None):
     credentials = AlpacaCredentials(SecretStr(key), SecretStr(secret))
-    return AlpacaBroker(credentials, environment, transport=transport)
+    if clock is None:
+        return AlpacaBroker(credentials, environment, transport=transport)
+    return AlpacaBroker(credentials, environment, transport=transport, clock=clock)

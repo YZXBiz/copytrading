@@ -8,7 +8,7 @@ func runEquityCurveTests() throws {
     try statsFindExtremesAndTheWorstFall()
     try measureOrdersThePickedPoints()
     try accountChangeIsAFractionOfItsOwnReference()
-    try sessionsFollowExchangeTime()
+    try aDayIsTheWholeNewYorkDay()
     try daysBeforeTheAccountExistedAreNotLosses()
     try theCurveEndsAtTheLiveBalance()
 }
@@ -112,18 +112,17 @@ private func accountChangeIsAFractionOfItsOwnReference() throws {
     try #require(EquityCurve(changeOf: month).baseline == 0, "change curves share a zero baseline")
 }
 
-private func sessionsFollowExchangeTime() throws {
-    try #require(MarketSession.of(at("2026-09-28T13:29:00Z")) == .preMarket, "9:29 in New York is pre-market")
-    try #require(MarketSession.of(at("2026-09-28T13:30:00Z")) == .regular, "9:30 in New York opens the regular session")
-    try #require(MarketSession.of(at("2026-09-28T20:00:00Z")) == .afterHours, "16:00 in New York starts after hours")
-    try #require(MarketSession.of(at("2026-09-29T00:00:00Z")) == nil, "20:00 in New York is closed")
-    let day = MarketSession.tradingDay(containing: at("2026-09-28T15:00:00Z"))
+private func aDayIsTheWholeNewYorkDay() throws {
+    let day = NewYorkDay.containing(at("2026-09-28T15:00:00Z"))
     try #require(
-        day.lowerBound == at("2026-09-28T08:00:00Z") && day.upperBound == at("2026-09-29T00:00:00Z"),
-        "the trading day runs 4:00 to 20:00 New York time")
+        day.lowerBound == at("2026-09-28T04:00:00Z") && day.upperBound == at("2026-09-29T04:00:00Z"),
+        "a day runs midnight to midnight New York time")
     try #require(
-        MarketSession.regular.interval(on: at("2026-12-01T15:00:00Z")).lowerBound == at("2026-12-01T14:30:00Z"),
-        "sessions follow daylight saving time")
+        NewYorkDay.containing(at("2026-09-28T03:30:00Z")).lowerBound == at("2026-09-27T04:00:00Z"),
+        "11:30 PM in New York belongs to that New York day, not the UTC one")
+    try #require(
+        NewYorkDay.containing(at("2026-12-01T15:00:00Z")).lowerBound == at("2026-12-01T05:00:00Z"),
+        "the day follows daylight saving time")
 }
 
 private func unwrap<T>(_ value: T?) throws -> T {
@@ -214,10 +213,15 @@ private func theCurveEndsAtTheLiveBalance() throws {
     try #require(
         liveValues(LiveEquity.extend([("a", friday)], balances: ["a": saturday])) == liveValues([("a", friday)]),
         "a balance from another day must not land on the day the market last traded")
-    let afterClose = try balance("102.00", observedAt: "2026-10-01T00:30:00Z")
+    // 8:30 PM in New York: stocks are closed but coins still trade, so the day chart takes it.
+    let evening = try balance("102.00", observedAt: "2026-10-01T00:30:00Z")
     try #require(
-        liveValues(LiveEquity.extend([("a", today)], balances: ["a": afterClose])) == liveValues([("a", today)]),
-        "a balance after the extended session closes has no place on the day chart")
+        liveValues(LiveEquity.extend([("a", today)], balances: ["a": evening])).first?.last == "102.00",
+        "an evening balance belongs on the day chart")
+    let nextDay = try balance("102.00", observedAt: "2026-10-01T04:30:00Z")
+    try #require(
+        liveValues(LiveEquity.extend([("a", today)], balances: ["a": nextDay])) == liveValues([("a", today)]),
+        "a balance after New York midnight has no place on the day before")
 
     let week = try history(.week, base: nil, [("2026-09-28T13:30:00Z", "100.00"), ("2026-09-29T20:00:00Z", "103.00")])
     try #require(
