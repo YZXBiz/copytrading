@@ -59,6 +59,7 @@ REASONS = {
     "insufficient_owned_shares": "No shares left to sell",
     "below_minimum_budget": "The order was below the minimum size",
     "below_minimum_quantity": "The order was below one share",
+    "below_minimum_order_size": "Less is left than the coin's smallest order",
     "exits_disabled": "Copying exits is off",
     "unsupported_asset": "The broker does not support this symbol",
     "crypto_paper_only": "Crypto is copied on paper accounts only, and this account is live",

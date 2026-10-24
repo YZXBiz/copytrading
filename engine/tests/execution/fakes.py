@@ -50,6 +50,8 @@ class FakeBroker:
         self.crypto_fee_rate = Decimal("0.0025")
         # Symbols Alpaca does not list: asking for one answers 404.
         self.unknown_symbols: set[str] = set()
+        # Held positions Alpaca lists at $0: a holding worth under a cent.
+        self.zero_valued: set[str] = set()
         self.account_data = {
             "id": "paper-demo",
             "status": "ACTIVE",
@@ -103,7 +105,7 @@ class FakeBroker:
                 {
                     "symbol": symbol.replace("/", ""),
                     "qty": str(qty),
-                    "market_value": str(qty * Decimal("25")),
+                    "market_value": "0" if symbol in self.zero_valued else str(qty * Decimal("25")),
                     "currency": "USD",
                     "asset_class": "crypto" if "/" in symbol else "us_equity",
                 }
