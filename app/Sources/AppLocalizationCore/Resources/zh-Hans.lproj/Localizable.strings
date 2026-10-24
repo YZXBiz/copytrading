@@ -786,6 +786,7 @@
 "The market was closed" = "市场已收盘";
 "The OpenAI API it must speak" = "它需要兼容的 OpenAI API 文档";
 "The order was below one share" = "订单数量不足一股";
+"Less is left than the coin's smallest order" = "剩余数量低于该币种的最小下单量";
 "The order was below the minimum size" = "订单金额低于最低要求";
 "The order would be different now" = "当前订单内容会有所不同";
 "The original message is never changed. Your correction is recorded separately." = "原始消息不会被修改。你的更正会单独记录。";
@@ -2118,6 +2119,7 @@
 "Not enough cash for this order. Lower the size, then review again." = "现金不足以下这笔订单。请减小数量，再重新审核。";
 "The order is below the minimum size. Raise it, then review again." = "订单低于最小金额。请加大数量，再重新审核。";
 "That's less than one share. Raise the size, then review again." = "不足一股。请加大数量，再重新审核。";
+"Less of this coin is left than its smallest order, so it can't be sold." = "该币种剩余数量低于最小下单量，无法卖出。";
 "That price isn't a valid tick. Change the price, then review again." = "这个价格不是有效的最小报价单位。请修改价格，再重新审核。";
 "Copy exits is off for this account. Turn it on in Connections." = "此账户已关闭跟随卖出。请在“连接”页开启“跟随卖出”。";
 "This stock's holdings need your review first. Settle it in Accounts." = "这只股票的持仓需要你先确认。请在“账户”页处理。";

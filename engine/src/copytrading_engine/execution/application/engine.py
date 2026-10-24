@@ -729,6 +729,14 @@ class CopyEngine:
                 else:
                     qty = min(qty, held * s.fraction)
             qty = qty.quantize(qty_step, rounding=ROUND_DOWN)
+            if crypto and asset.min_order_size is not None:
+                # Alpaca takes no coin order under the coin's smallest size. A sell that would leave
+                # less than that behind sells it too, or it could never be sold; what is already
+                # under it cannot be sold at all.
+                if held - qty < asset.min_order_size:
+                    qty = held
+                if qty < asset.min_order_size:
+                    return TradeDecision(None, "below_minimum_order_size")
             # An exit is a limit order too: its floor is the guru's sell price less the allowance,
             # so it sells whenever the market is at or above that floor (ADR-0010).
             limit_price = c.pricing.sell_floor(source_price, price_increment)

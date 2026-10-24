@@ -130,7 +130,7 @@ def test_every_line_is_translated_and_fits_one_line():
 
 
 def test_a_line_says_what_to_do_unless_nothing_can_be_done():
-    final = {"waiting_expired", "post_ignored", "quote_above_limit"}
+    final = {"waiting_expired", "post_ignored", "quote_above_limit", "below_minimum_order_size"}
     advice = (
         *("Try", "Review", "Close", "Check", "Start", "Wait", "Settle", "Raise", "Turn"),
         *("Lower", "Change", "Name", "Let", "Resume", "See"),

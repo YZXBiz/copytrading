@@ -45,6 +45,7 @@ REASONS = {
     "crypto_paper_only": "Crypto is copied on paper accounts only",
     "outside_session": "The broker session is not eligible for this order",
     "below_minimum_quantity": "The allowed size is below the asset's minimum quantity",
+    "below_minimum_order_size": "Less of the coin is left than its smallest order; it cannot sell",
     "position_mismatch": "Broker holdings do not match the copier ledger",
     "portfolio_mismatch": "New entry blocked: account holdings do not match the copier ledger",
     "external_open_order": "An external order already exists for this asset",

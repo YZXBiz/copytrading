@@ -94,6 +94,7 @@ enum ManualRefusalText {
         "insufficient_cash": "Not enough cash for this order. Lower the size, then review again.",
         "below_minimum_budget": "The order is below the minimum size. Raise it, then review again.",
         "below_minimum_quantity": "That's less than one share. Raise the size, then review again.",
+        "below_minimum_order_size": "Less of this coin is left than its smallest order, so it can't be sold.",
         "invalid_price_tick": "That price isn't a valid tick. Change the price, then review again.",
         "exits_disabled": "Copy exits is off for this account. Turn it on in Connections.",
         "ownership_incident": "This stock's holdings need your review first. Settle it in Accounts.",

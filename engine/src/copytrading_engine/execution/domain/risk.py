@@ -146,7 +146,8 @@ def account_exposure(
             if position.qty < 0 or position.asset_class not in _HELD_CLASSES:
                 raise ValueError("Unsupported short, option, or other broker position")
             value = position.market_value
-            if position.currency != "USD" or value is None or not value.is_finite() or value <= 0:
+            # A holding worth under a cent, such as a coin's last billionths, is listed at $0.
+            if position.currency != "USD" or value is None or not value.is_finite() or value < 0:
                 raise ValueError("Broker position valuation is unavailable or non-USD")
             worth = shares[symbol] * value / position.qty
         by_symbol[symbol] = max(worth, basis)

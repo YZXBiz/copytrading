@@ -331,3 +331,63 @@ def test_a_stock_buy_counts_the_coin_held_beside_it():
     stock = next(o for o in account.engine.ledger.orders() if o.symbol == "ABC")
     # $100 bought $99.75 of coin after the fee, which leaves $50.25 of the $150 for the stock.
     assert (stock.budget_usd, stock.limited_by) == (Decimal("50.25"), "total_exposure_cap")
+
+
+def original_half(id: str, price: str, minutes: int) -> dict:
+    post = coin_event(id, "reduce", price, at=later(minutes))
+    for said in (post["instructions"][0], post["evidence"][0]):
+        said["exit_basis"] = "original_position"
+    return post
+
+
+def leave_a_billionth(account: Account) -> None:
+    """A sell that filled all but one billionth before Alpaca canceled it: the coin left is worth
+    $0 and is under the coin's smallest order, as sells used to leave behind."""
+    received = account.broker.holdings[PAIR]
+    account.broker.auto_fill = False
+    account.copy(coin_event("9", "close", "82000", at=later(1)), sync=False)
+    [sell] = [o for o in account.engine.ledger.orders() if o.side == "sell"]
+    account.broker.fill(sell.client_id, received - COIN)
+    account.broker.orders[sell.client_id]["status"] = "canceled"
+    account.broker.auto_fill = True
+    account.engine.reconcile(later(1))
+    assert account.lot().remaining_qty == account.broker.holdings[PAIR] == COIN
+
+
+def test_a_sell_that_would_leave_less_than_the_coins_smallest_order_sells_it_too():
+    account = coin_account()
+    account.copy(coin_event())
+    received = account.broker.holdings[PAIR]
+    # Half of the original buy, twice: the second half alone would leave one billionth behind,
+    # which Alpaca could never sell.
+    account.copy(original_half("2", "82000", 1))
+    account.copy(original_half("3", "82500", 2))
+
+    first, second = (o for o in account.engine.ledger.orders() if o.side == "sell")
+    assert first.qty == (received / 2).quantize(COIN, rounding=ROUND_DOWN)
+    assert second.qty == received - first.qty
+    assert account.broker.holdings[PAIR] == account.lot().remaining_qty == 0
+    assert account.engine.audit_positions().matched
+
+
+def test_a_holding_under_the_coins_smallest_order_is_never_sent():
+    account = coin_account()
+    account.copy(coin_event())
+    leave_a_billionth(account)
+    sent = len(account.broker.orders)
+
+    account.copy(coin_event("2", "close", "83000", at=later(2)))
+
+    assert account.parts("2") == (SkippedPart(reason="below_minimum_order_size"),)
+    assert len(account.broker.orders) == sent
+
+
+def test_a_coin_held_at_zero_dollars_does_not_stop_buys():
+    account = coin_account()
+    account.copy(coin_event())
+    leave_a_billionth(account)
+    account.broker.zero_valued.add(PAIR)
+
+    account.copy(event("2", timestamp=dt.datetime(2026, 10, 26, 15, tzinfo=dt.UTC)))
+
+    assert any(o.symbol == "ABC" and o.side == "buy" for o in account.engine.ledger.orders())
