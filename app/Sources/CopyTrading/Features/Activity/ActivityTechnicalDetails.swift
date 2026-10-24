@@ -1,7 +1,7 @@
 import DesktopCore
 import SwiftUI
 
-/// The pipeline internals for one post, folded away under a tracked-capital label unless someone
+/// The pipeline internals for one post, folded away under a small label unless someone
 /// is debugging.
 struct ActivityTechnicalDetails: View {
     let item: SourceActivity

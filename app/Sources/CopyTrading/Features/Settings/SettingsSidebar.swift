@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The sidebar that replaces the main one while Settings is open: the app's name, a
-/// line on how it is, and the Settings pages under their tracked-capital groups.
+/// line on how it is, and the Settings pages under their group names.
 struct SettingsSidebar<Header: View>: View {
     @Bindable var model: AppModel
     @ViewBuilder let header: () -> Header

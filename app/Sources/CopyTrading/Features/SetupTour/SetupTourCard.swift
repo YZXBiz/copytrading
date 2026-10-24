@@ -19,10 +19,7 @@ struct SetupTourCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(stopNumber)
-                .accessibilityLabel(stopNumber)
-                .textCase(.uppercase)
-                .font(DesignTokens.eyebrow)
-                .tracking(DesignTokens.eyebrowTracking)
+                .font(DesignTokens.label)
                 .foregroundStyle(Palette.tertiaryInk)
                 .monospacedDigit()
                 .padding(.bottom, 8)

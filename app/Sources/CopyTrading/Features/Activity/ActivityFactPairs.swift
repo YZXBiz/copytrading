@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The numbers behind an account's result as plain pairs, a tracked-capital label over its value:
-/// "YOUR LIMIT" "$201.00". One row when they fit, otherwise two columns. No chips, no fill.
+/// The numbers behind an account's result as plain pairs, a small label over its value:
+/// "Your limit" "$201.00". One row when they fit, otherwise two columns. No chips, no fill.
 struct ActivityFactPairs: View {
     let facts: [ActivityCardOutcome.Fact]
 

@@ -188,6 +188,8 @@ struct ActivityCardOutcome {
         let headline: String
         var suggestion: Suggestion?
         var prices: PricePoints?
+        // A working order's ruler; its own facts already say where its limit came from.
+        var working: PricePoints?
         let limitPrice = Decimal(engine: order.limitPrice)
         switch DestinationOutcome.order(order, count: 1) {
         case .filled:
@@ -196,7 +198,9 @@ struct ActivityCardOutcome {
                     ? "You sold %@" : order.isOwnerEntry ? "You bought %@" : buying ? "Bought %@" : "Sold %@",
                 OrderAmount.filled(order) ?? planned)
             if let limitPrice, let fill = Decimal(engine: order.averageFillPrice) {
-                prices = PricePoints(limit: limitPrice, market: fill, marketLabel: L10n.string("Filled at"), buying: buying)
+                prices = PricePoints(
+                    limit: limitPrice, market: fill, marketLabel: L10n.string("Filled at"), buying: buying,
+                    guru: guruMark(order))
             } else {
                 facts.append(Fact(label: L10n.string("Price"), value: money(order.averageFillPrice) ?? "—"))
             }
@@ -214,12 +218,20 @@ struct ActivityCardOutcome {
             facts.append(Fact(label: L10n.string("Price"), value: money(order.averageFillPrice) ?? "—"))
         case .working:
             headline = L10n.string(buying ? "Buying %@" : "Selling %@", planned)
+            // Where it waits: the guru's price, your limit, and the market it met, on one ruler.
+            if let limitPrice, let met = Decimal(engine: buying ? order.quoteAsk : order.quoteBid) {
+                working = PricePoints(
+                    limit: limitPrice, market: met, marketLabel: L10n.string("Market"), buying: buying,
+                    guru: guruMark(order))
+            }
             if buying {
                 if let limit { facts.append(Fact(label: L10n.string("Your limit"), value: limit)) }
             } else {
                 // A sell keeps working at its floor until the market reaches it (ADR-0010).
                 if let floor = sellFloor(order) { facts.append(Fact(label: L10n.string("Lowest sell price"), value: floor)) }
-                if let market = sellMarket(order) { facts.append(Fact(label: L10n.string("Market"), value: market)) }
+                if working == nil, let market = sellMarket(order) {
+                    facts.append(Fact(label: L10n.string("Market"), value: market))
+                }
             }
         case .failed:
             headline = L10n.string(buying ? "Not bought: Alpaca rejected it" : "Not sold: Alpaca rejected it")
@@ -233,7 +245,9 @@ struct ActivityCardOutcome {
                 headline = L10n.string(buying ? "Not bought: %@" : "Not sold: %@", cancelReason(order))
             }
             if let limitPrice, let met = Decimal(engine: buying ? order.quoteAsk : order.quoteBid) {
-                prices = PricePoints(limit: limitPrice, market: met, marketLabel: L10n.string("Market"), buying: buying)
+                prices = PricePoints(
+                    limit: limitPrice, market: met, marketLabel: L10n.string("Market"), buying: buying,
+                    guru: guruMark(order))
             } else {
                 if let limit {
                     facts.append(Fact(label: L10n.string(buying ? "Your limit" : "Lowest sell price"), value: limit))
@@ -251,6 +265,7 @@ struct ActivityCardOutcome {
             // The ruler shows the limit; this says where it came from, so a changed allowance shows.
             facts.insert(Fact(label: L10n.string("Guru's price"), value: basis), at: 0)
         }
+        if let working { prices = working }
         if let budget = Decimal(engine: order.budgetUSD) {
             if wasTrimmed(order) {
                 // Cut by one of the account's limits: say which, and what the call asked for.
@@ -304,6 +319,12 @@ struct ActivityCardOutcome {
         guard let bid = Decimal(engine: order.quoteBid), let market = money(order.quoteBid) else { return nil }
         guard let floor = Decimal(engine: order.limitPrice) else { return market }
         return L10n.string(bid >= floor ? "%@, above it" : "%@, under it", market)
+    }
+
+    /// The guru's price as its own mark on the ruler; nil when the limit is that price.
+    private static func guruMark(_ order: OrderActivity) -> Decimal? {
+        guard let guru = Decimal(engine: order.sourcePrice), guru != Decimal(engine: order.limitPrice) else { return nil }
+        return guru
     }
 
     /// The price the limit came from and the allowance added to it: "$69.80 + 1% allowed" for a buy,

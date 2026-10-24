@@ -33,11 +33,11 @@ struct UpdateAvailableBanner: View {
                     Button(L10n.string("Show in Finder")) {
                         NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL])
                     }
-                    .buttonStyle(PageButtonStyle(isProminent: true))
+                    .buttonStyle(PageButtonStyle(emphasis: .prominent))
                     .accessibilityIdentifier("update.reveal")
                 } else {
                     Button(L10n.string("Install Update…"), action: updater.installOfferedUpdate)
-                        .buttonStyle(PageButtonStyle(isProminent: true))
+                        .buttonStyle(PageButtonStyle(emphasis: .prominent))
                         .accessibilityIdentifier("update.install")
                 }
             }

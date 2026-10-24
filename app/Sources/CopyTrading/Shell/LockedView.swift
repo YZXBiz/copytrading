@@ -47,7 +47,7 @@ struct LockedView: View {
                     .frame(minHeight: 28)
                 } else {
                     Button(L10n.string("Unlock"), systemImage: "touchid", action: unlock)
-                        .buttonStyle(PageButtonStyle(isProminent: true, horizontalPadding: 18))
+                        .buttonStyle(PageButtonStyle(emphasis: .prominent, horizontalPadding: 18))
                         .keyboardShortcut(.defaultAction)
                         .accessibilityIdentifier("app.unlock")
                 }

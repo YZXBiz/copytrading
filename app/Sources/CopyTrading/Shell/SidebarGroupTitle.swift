@@ -1,15 +1,12 @@
 import SwiftUI
 
-/// The small capitals over a sidebar group: ACCOUNTS, PEOPLE.
+/// The small grey name over a sidebar group, in sentence case: Accounts, People.
 struct SidebarGroupTitle: View {
     let title: String
 
     var body: some View {
         Text(L10n.string(title))
-            .accessibilityLabel(L10n.string(title))
-            .textCase(.uppercase)
-            .font(DesignTokens.eyebrow)
-            .tracking(DesignTokens.eyebrowTracking)
+            .font(DesignTokens.label.weight(.semibold))
             .foregroundStyle(Palette.tertiaryInk)
             .padding(.horizontal, 10)
             .padding(.bottom, 4)

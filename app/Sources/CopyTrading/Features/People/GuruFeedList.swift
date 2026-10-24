@@ -16,7 +16,7 @@ struct GuruFeedList: View {
         VStack(alignment: .leading, spacing: 0) {
             ListHeading("Posts")
             if !days.isEmpty {
-                TrackedSwitcher(
+                SectionSwitcher(
                     choices: GuruPostFilter.allCases, selection: $filter, title: \.title,
                     count: { choice in entries.count { choice.includes($0) } }, identifier: "guru.filter"
                 )

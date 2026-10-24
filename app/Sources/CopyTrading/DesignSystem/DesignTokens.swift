@@ -24,12 +24,14 @@ enum DesignTokens {
     /// The balance is the page's one big figure: light enough to read as type, not a badge.
     static let balanceDisplay = DisplayFont.font(size: 68, weight: .regular, relativeTo: .largeTitle)
     static let balanceTracking: CGFloat = -0.5
+    /// The balance's cents, stepped down beside it in grey.
+    static let balanceCents = DisplayFont.font(size: 34, weight: .regular, relativeTo: .title)
     static let statValue = Font.system(size: 14, weight: .semibold)
     static let listHeading = DisplayFont.font(size: 26, weight: .medium, relativeTo: .title2)
     static let listHeadingTracking: CGFloat = 0.2
-    /// Small bold capitals spaced wide, like a studio site's navigation: labels, never sentences.
-    static let eyebrow = Font.system(size: 11, weight: .bold)
-    static let eyebrowTracking: CGFloat = 1.4
+    /// A small grey label in sentence case over or beside what it names: a column, a figure, a
+    /// group. Never capitals spaced wide.
+    static let label = Font.system(size: 12, weight: .medium)
     /// A quiet line under a big name, spaced a little wide so it reads as a caption to the title.
     static let lede = Font.system(size: 14)
     static let ledeTracking: CGFloat = 0.8

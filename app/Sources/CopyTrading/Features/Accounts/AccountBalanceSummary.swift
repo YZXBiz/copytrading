@@ -12,9 +12,12 @@ struct AccountBalanceSummary: View {
         if let balance = account.balance {
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 6) {
-                    MoneyText(value: Decimal(engine: balance.equity) ?? 0, font: DesignTokens.balanceDisplay)
-                        .tracking(DesignTokens.balanceTracking)
-                        .foregroundStyle(Palette.ink)
+                    MoneyText(
+                        value: Decimal(engine: balance.equity) ?? 0, font: DesignTokens.balanceDisplay,
+                        centsFont: DesignTokens.balanceCents
+                    )
+                    .tracking(DesignTokens.balanceTracking)
+                    .foregroundStyle(Palette.ink)
                     // One line when it fits; on a narrow page cash and buying power take their own line.
                     ViewThatFits(in: .horizontal) {
                         HStack(alignment: .firstTextBaseline, spacing: 6) {

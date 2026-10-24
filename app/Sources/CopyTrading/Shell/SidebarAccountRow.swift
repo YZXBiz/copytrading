@@ -25,7 +25,8 @@ struct SidebarAccountRow: View {
             title: account.id,
             detail: L10n.string("%@ · %@", L10n.string(isLive ? "Live" : "Paper"), copyWord),
             detailTint: isStopped ? Palette.amber : isLive ? Palette.live : Palette.tertiaryInk,
-            value: equity?.formatted(.currency(code: "USD")),
+            // Whole dollars, so the name keeps its room; the page itself shows the cents.
+            value: equity?.formatted(.currency(code: "USD").precision(.fractionLength(0))),
             identifier: screen.identifier,
             isSelected: model.selectedScreen == screen,
             select: select

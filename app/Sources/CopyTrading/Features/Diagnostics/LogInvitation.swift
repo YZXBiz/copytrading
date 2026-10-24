@@ -27,7 +27,7 @@ struct LogInvitation: View {
             } else {
                 HStack(spacing: 14) {
                     Button(L10n.string("Run Self-Test"), action: runSelfTest)
-                        .buttonStyle(PageButtonStyle(isProminent: true))
+                        .buttonStyle(PageButtonStyle(emphasis: .prominent))
                         .disabled(!model.isEngineRunning || model.isRunningSelfTest)
                         .accessibilityIdentifier("diagnostics.runSelfTest")
                     Text(

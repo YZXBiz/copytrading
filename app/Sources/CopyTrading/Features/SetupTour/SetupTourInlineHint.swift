@@ -14,10 +14,7 @@ struct SetupTourInlineHint: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(stopNumber)
-                .accessibilityLabel(stopNumber)
-                .font(DesignTokens.eyebrow)
-                .tracking(DesignTokens.eyebrowTracking)
-                .textCase(.uppercase)
+                .font(DesignTokens.label)
                 .foregroundStyle(Palette.tertiaryInk)
                 .monospacedDigit()
             Text(L10n.string(stop.title))

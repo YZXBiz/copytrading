@@ -29,8 +29,18 @@ struct AgentProposalSheet: View {
                         }
                     }
                     ForEach(Array(model.limitRows(of: proposal).enumerated()), id: \.offset) { _, row in
+                        // Now in grey, after in ink, so the change reads before the figures do.
                         SheetRow(title: row.title, isReading: true) {
-                            value(L10n.string("%@ → %@", row.now, row.after))
+                            HStack(spacing: 6) {
+                                value(row.now)
+                                Text(verbatim: "→").foregroundStyle(Palette.tertiaryInk)
+                                Text(row.after)
+                                    .font(DesignTokens.bodyEmphasis)
+                                    .monospacedDigit()
+                                    .foregroundStyle(Palette.ink)
+                            }
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel(L10n.string("%@ → %@", row.now, row.after))
                         }
                     }
                     ForEach(Array(model.setupRows(of: proposal).enumerated()), id: \.offset) { _, row in
@@ -62,6 +72,7 @@ struct AgentProposalSheet: View {
     private func value(_ text: String) -> some View {
         Text(text)
             .font(DesignTokens.bodyText)
+            .monospacedDigit()
             .foregroundStyle(Palette.secondaryInk)
             .multilineTextAlignment(.trailing)
     }

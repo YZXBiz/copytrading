@@ -84,7 +84,7 @@ extension AgentProposal {
         case "false": return L10n.string("Off")
         default:
             return ["max_order_usd", "max_symbol_usd", "max_total_usd", "daily_loss_cap_usd"].contains(field)
-                ? Humanize.usd(value) : value
+                ? Humanize.dollars(value) : value
         }
     }
 

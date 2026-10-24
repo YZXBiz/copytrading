@@ -6,6 +6,8 @@ struct AccountNeedsYouRow: View {
     let call: WaitingCall
     let guruName: String?
     let canCopy: Bool
+    /// Copy… is the page's one ink capsule; otherwise it is outlined.
+    var isPrimary = true
     /// The post is open beside the page.
     let isSelected: Bool
     let open: () -> Void
@@ -59,7 +61,7 @@ struct AccountNeedsYouRow: View {
                 L10n.string(call.calls.isEmpty ? "Enter Trade…" : call.awaitsApproval ? "Approve…" : "Copy…"),
                 action: copy
             )
-            .buttonStyle(PageButtonStyle(isProminent: true))
+            .buttonStyle(PageButtonStyle(emphasis: isPrimary ? .prominent : .outlined))
             .disabled(!canCopy)
             .accessibilityIdentifier("needsYou.copy")
             .accessibilityHint(L10n.string("Opens the call to check, then previews the order in each waiting account."))

@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The name of one group in Technical details in tracked capitals: "TIMELINE", "ORDER IN PRIMARY",
-/// "DISCORD IDS".
+/// The name of one group in Technical details as a small label: "Timeline", "Order in primary",
+/// "Discord IDs".
 struct TechnicalSectionTitle: View {
     let text: String
 

@@ -142,10 +142,7 @@ struct EquityPlot: View {
 
     private func sessionName(_ name: String) -> some View {
         Text(name)
-            .accessibilityLabel(name)
-            .textCase(.uppercase)
-            .font(.system(size: 9, weight: .semibold))
-            .tracking(0.6)
+            .font(.system(size: 10, weight: .medium))
             .foregroundStyle(Palette.tertiaryInk)
     }
 

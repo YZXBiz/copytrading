@@ -9,6 +9,9 @@ struct AccountNeedsYou: View {
     let directory: GuruDirectory
     let skippedCalls: SkippedCalls
     let canCopy: Bool
+    /// The page has no other ink capsule, so the newest call's Copy… takes it; every other Copy…
+    /// is outlined.
+    let ownsPrimaryAction: Bool
     let selectedPostID: SourceActivity.ID?
     let copy: (WaitingCall) -> Void
     /// Opens the post beside the page.
@@ -64,6 +67,7 @@ struct AccountNeedsYou: View {
                             call: call,
                             guruName: directory.name(for: call.source.guruID),
                             canCopy: canCopy,
+                            isPrimary: ownsPrimaryAction && index == 0,
                             isSelected: call.source.id == selectedPostID,
                             open: { open(call) },
                             copy: { copy(call) },
