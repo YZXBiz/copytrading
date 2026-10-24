@@ -264,10 +264,15 @@ class AlpacaBroker:
             # A day is the whole New York day from midnight; today's ends now.
             day = window.day or self.now().astimezone(ET).date()
             params["start"] = dt.datetime.combine(day, dt.time(), ET).isoformat()
-        return self.decode_normalized(
+        history = self.decode_normalized(
             lambda value: decode_portfolio_history(value, window),
             self.request("GET", "/v2/account/portfolio/history", params=params),
         )
+        if window.range == "day" and window.day is None:
+            # Over a weekend Alpaca's history still counts from Thursday's close while the
+            # account's day change counts from Friday's; today is measured as the account does.
+            history = history.model_copy(update={"base_value": self.account().last_equity})
+        return history
 
     def asset(self, symbol: str) -> Asset:
         # A coin's pair is asked for without its slash (BTCUSD); Alpaca answers with the pair.
