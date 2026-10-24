@@ -118,7 +118,13 @@ struct CommandPalette: View {
         .frame(width: 560)
         .background(Palette.page, in: .rect(cornerRadius: 18, style: .continuous))
         .shadow(color: .black.opacity(0.18), radius: 30, y: 12)
-        .onAppear { isFocused = true }
+        .task {
+            // The palette fades in; focus asked for before it has landed can miss the field, and
+            // with keyboard navigation on it then lands on the toolbar's first button instead.
+            isFocused = true
+            guard (try? await Task.sleep(for: .milliseconds(200))) != nil else { return }
+            isFocused = true
+        }
         .onChange(of: query) { highlighted = 0 }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.string("Command palette"))
