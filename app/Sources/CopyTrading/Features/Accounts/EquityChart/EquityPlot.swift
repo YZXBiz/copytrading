@@ -4,10 +4,16 @@ import SwiftUI
 
 /// The combined curve, drawn on the app's chart paper: one smooth line in the day's color over a
 /// soft wash, with the marks for a point or span the pointer reads drawn over it. The line never
-/// reads the pointer, so a hover redraws only those marks. A day always spans its whole session,
-/// as Stocks and most brokers draw it: the line stops at the latest balance and the rest of the
-/// day stays blank, so regular hours keep most of the width and the time marks stay put.
+/// reads the pointer, so a hover redraws only those marks. A day always spans its whole New York
+/// day, midnight to midnight: the line stops at the latest balance and the rest of the day stays
+/// blank, so the time marks stay put.
 struct EquityPlot: View {
+    /// A point where the plot draws it: its position across the plot and its value.
+    struct Plotted {
+        let x: Double
+        let value: Double
+    }
+
     let curve: EquityCurve
     let stats: EquityCurveStats
     let range: EquityHistoryRange
@@ -18,14 +24,10 @@ struct EquityPlot: View {
     var highlightedCall: Binding<String?> = .constant(nil)
     @Environment(\.colorSchemeContrast) private var contrast
     @ScaledMetric(relativeTo: .caption) private var valueAxisWidth = 84
-    /// The plot's size, so time marks are as fine as the room allows and session names get a
-    /// strip of their own.
+    /// The plot's width, so time marks are as fine as the room allows.
     @State private var plotWidth: Double = 800
-    @State private var plotHeight: Double = 176
     /// The lit call came from the pointer on its marker, not from its ticket.
     @State private var litByMarker = false
-    /// The strip at the top of a day kept clear of the line for the session names.
-    private static let sessionNameStrip: Double = 28
     /// The gap between the plot and the value axis's labels.
     private static let axisSpacing: CGFloat = 6
 
@@ -38,12 +40,17 @@ struct EquityPlot: View {
         return (low - margin, high + margin)
     }
 
-    /// The values the plot spans: a day adds a strip on top that the line never climbs into, for
-    /// the session names; the value axis marks only `valueRange`, so no mark sits in the strip.
-    private var plotRange: ClosedRange<Double> {
+    /// The calls inside the shown range; one from before the range's first point is left off
+    /// rather than pinned to the edge.
+    private var shownCalls: [EquityCallMark] {
+        callMarks.filter { $0.at >= stats.open.at && $0.at <= stats.last.at }
+    }
+
+    /// The top of the plot: above the line's values by a strip for the calls' diamonds and times,
+    /// so they never sit on the line or get cut off. The value axis marks only `valueRange`.
+    private var plotTop: Double {
         let (lower, upper) = valueRange
-        guard scale.isDay, plotHeight > Self.sessionNameStrip * 2 else { return lower...upper }
-        return lower...(upper + (upper - lower) * Self.sessionNameStrip / (plotHeight - Self.sessionNameStrip))
+        return shownCalls.isEmpty ? upper : upper + (upper - lower) * 0.14
     }
 
     var body: some View {
@@ -51,18 +58,16 @@ struct EquityPlot: View {
         let axis = EquityValueAxis(lower: bounds.lower, upper: bounds.upper, count: 3)
         let scale = self.scale
         let times = scale.ticks(in: AppTime.zone, locale: AppTime.locale, width: plotWidth)
-        let runs = EquityLineRun.runs(curve.points, on: scale)
         Chart {
-            sessionBands(scale.extendedSessions)
             referenceLine
             callRules(scale)
-            // One vectorized plot for the whole line, a series per run, so the chart lays it out
-            // once instead of a mark per point.
+            // One vectorized plot for the whole line, so the chart lays it out once instead of a
+            // mark per point.
             LinePlot(
-                runs.flatMap(\.plotted), x: .value("Time", \.x), y: .value("Equity", \.value),
-                series: .value("Run", \.run)
+                curve.points.map { Plotted(x: scale.x($0.at), value: $0.value) }, x: .value("Time", \.x),
+                y: .value("Equity", \.value)
             )
-            .foregroundStyle(by: .value("Session", \.session))
+            .foregroundStyle(Palette.ink)
             .interpolationMethod(.monotone)
             .lineStyle(StrokeStyle(lineWidth: contrast == .increased ? 2.25 : 1.75, lineCap: .round, lineJoin: .round))
             // Its x is a share of the day, which VoiceOver would read as "0.1 to 0.2". The chart's
@@ -74,12 +79,7 @@ struct EquityPlot: View {
                 .accessibilityHidden(true)
         }
         .chartXScale(domain: 0...1, range: .plotDimension(startPadding: 4, endPadding: 14))
-        .chartYScale(domain: plotRange)
-        .chartForegroundStyleScale(
-            domain: [EquityLineRun.regularSession, EquityLineRun.extendedSession],
-            range: [Palette.ink, Palette.ink.opacity(0.35)]
-        )
-        .chartLegend(.hidden)
+        .chartYScale(domain: bounds.lower...plotTop)
         .chartXAxis {
             AxisMarks(values: times.map(\.x)) { value in
                 AxisTick(centered: true, length: 4, stroke: StrokeStyle(lineWidth: 1))
@@ -111,16 +111,14 @@ struct EquityPlot: View {
             ZStack {
                 EquitySelectionMarks(
                     proxy: proxy, scale: scale, curve: curve, reference: reference, pointer: pointer,
-                    namesStrip: scale.isDay ? Self.sessionNameStrip : 0,
                     axisTicks: axis.ticks, axisWidth: valueAxisWidth, axisSpacing: Self.axisSpacing)
                 EquityPointerLayer(proxy: proxy, scale: scale, pointer: pointer, measures: true)
             }
         }
-        .onGeometryChange(for: CGSize.self) {
-            $0.size
+        .onGeometryChange(for: CGFloat.self) {
+            $0.size.width
         } action: {
-            plotWidth = $0.width - valueAxisWidth
-            plotHeight = $0.height - 24
+            plotWidth = $0 - valueAxisWidth
         }
         .onChange(of: pointer.selection) { _, selection in
             // Reading the curve at a call's marker lights its ticket, and moving off lets go.
@@ -138,12 +136,12 @@ struct EquityPlot: View {
     }
 
     /// Each waiting call that falls inside the shown range: an amber rule at the time it was posted,
-    /// with a small diamond and its time at the top of the plot. A call from before the range's
-    /// first point is left off rather than pinned to the edge.
+    /// with a small diamond and its time in the strip at the top of the plot.
     @ChartContentBuilder
     private func callRules(_ scale: EquityChartScale) -> some ChartContent {
-        let top = valueRange.upper
-        ForEach(callMarks.filter { $0.at >= stats.open.at && $0.at <= stats.last.at }) { mark in
+        // The middle of the strip, so the diamond and its time sit wholly inside the plot.
+        let top = (valueRange.upper + plotTop) / 2
+        ForEach(shownCalls) { mark in
             let isLit = highlightedCall.wrappedValue == mark.id
             RuleMark(x: .value("Call", scale.x(mark.at)))
                 .foregroundStyle(Palette.amber.opacity(isLit ? 1 : 0.7))
@@ -161,35 +159,6 @@ struct EquityPlot: View {
                 }
                 .accessibilityHidden(true)
         }
-    }
-
-    /// Pre-market and after hours as faint bands behind the line, each named in a strip at its top
-    /// that the line stays below, so the names never share the time axis's row or cross the line.
-    /// A band too narrow for its name stays unnamed rather than spilling past its edges.
-    @ChartContentBuilder
-    private func sessionBands(_ sessions: [EquityChartScale.Session]) -> some ChartContent {
-        ForEach(sessions, id: \.self) { session in
-            RectangleMark(xStart: .value("From", session.start), xEnd: .value("To", session.end))
-                .foregroundStyle(Palette.ink.opacity(0.035))
-                .annotation(position: .overlay, alignment: .top, spacing: 5) {
-                    // One line, else a word to a line, else no name.
-                    ViewThatFits(in: .horizontal) {
-                        sessionName(session.name).fixedSize()
-                        sessionName(session.name.replacingOccurrences(of: " ", with: "\n").replacingOccurrences(of: "-", with: "-\n"))
-                            .fixedSize()
-                            .multilineTextAlignment(.center)
-                        Color.clear.frame(width: 0, height: 0)
-                    }
-                    .frame(width: max(plotWidth * (session.end - session.start) - 4, 0))
-                }
-                .accessibilityLabel(session.name)
-        }
-    }
-
-    private func sessionName(_ name: String) -> some View {
-        Text(name)
-            .font(.system(size: 10, weight: .medium))
-            .foregroundStyle(Palette.tertiaryInk)
     }
 
     @ChartContentBuilder

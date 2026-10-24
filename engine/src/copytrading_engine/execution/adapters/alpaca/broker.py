@@ -44,10 +44,11 @@ from copytrading_engine.execution.domain.sessions import ET
 from copytrading_engine.shared.symbols import is_crypto, path_symbol
 
 _ORDERS_PAGE_SIZE = 500
-# Alpaca serves intraday points for at most 30 days, so longer ranges use daily points.
+# Alpaca serves intraday points for at most 30 days, so longer ranges use daily points. Coins
+# trade around the clock, so intraday ranges ask for every hour, not only the stock sessions.
 _HISTORY_PARAMS: dict[HistoryRange, dict[str, str]] = {
-    "day": {"period": "1D", "timeframe": "1Min", "intraday_reporting": "extended_hours"},
-    "week": {"period": "1W", "timeframe": "15Min", "intraday_reporting": "market_hours"},
+    "day": {"period": "1D", "timeframe": "1Min", "intraday_reporting": "continuous"},
+    "week": {"period": "1W", "timeframe": "15Min", "intraday_reporting": "continuous"},
     "month": {"period": "1M", "timeframe": "1D"},
     "three_months": {"period": "3M", "timeframe": "1D"},
     "year": {"period": "1A", "timeframe": "1D"},
@@ -259,9 +260,10 @@ class AlpacaBroker:
 
     def equity_history(self, window: HistoryWindow) -> EquityHistory:
         params: dict[str, str | int] = dict(_HISTORY_PARAMS[window.range])
-        if window.day is not None:
-            # With a period, Alpaca starts the chosen day's session at its first timestamp.
-            params["start"] = dt.datetime.combine(window.day, dt.time(), ET).isoformat()
+        if window.range == "day":
+            # A day is the whole New York day from midnight; today's ends now.
+            day = window.day or self.now().astimezone(ET).date()
+            params["start"] = dt.datetime.combine(day, dt.time(), ET).isoformat()
         return self.decode_normalized(
             lambda value: decode_portfolio_history(value, window),
             self.request("GET", "/v2/account/portfolio/history", params=params),

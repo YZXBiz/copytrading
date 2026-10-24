@@ -199,42 +199,16 @@ public struct EquityCurve: Equatable, Sendable {
     }
 }
 
-/// The US equity market's trading sessions, in exchange (New York) time.
-public enum MarketSession: String, CaseIterable, Sendable {
-    case preMarket
-    case regular
-    case afterHours
-
+/// The day a 1D chart shows: the whole New York calendar day, midnight to midnight, since coins
+/// trade around the clock and stocks trade from 4:00 to 20:00 within it.
+public enum NewYorkDay {
     /// Exchange time, so the day reads the same wherever the trader's Mac is.
     public static let timeZone = TimeZone(identifier: "America/New_York")!
 
-    /// Minutes after midnight in exchange time; standard hours, not half-day closes.
-    var minutes: Range<Int> {
-        switch self {
-        case .preMarket: 4 * 60..<9 * 60 + 30
-        case .regular: 9 * 60 + 30..<16 * 60
-        case .afterHours: 16 * 60..<20 * 60
-        }
-    }
-
-    /// The session `date` falls in, or nil when the market is closed.
-    public static func of(_ date: Date) -> MarketSession? {
-        let parts = calendar.dateComponents([.hour, .minute], from: date)
-        let minute = (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
-        return allCases.first { $0.minutes.contains(minute) }
-    }
-
-    /// The whole extended trading day (4:00 to 20:00 exchange time) that contains `date`.
-    public static func tradingDay(containing date: Date) -> ClosedRange<Date> {
-        let day = calendar.startOfDay(for: date)
-        return calendar.date(byAdding: .minute, value: 4 * 60, to: day)!...calendar.date(byAdding: .minute, value: 20 * 60, to: day)!
-    }
-
-    /// When this session runs on the exchange day that contains `date`.
-    public func interval(on date: Date) -> ClosedRange<Date> {
-        let day = Self.calendar.startOfDay(for: date)
-        return Self.calendar.date(byAdding: .minute, value: minutes.lowerBound, to: day)!...Self.calendar.date(
-            byAdding: .minute, value: minutes.upperBound, to: day)!
+    /// The New York day that contains `date`, from its midnight to the next.
+    public static func containing(_ date: Date) -> ClosedRange<Date> {
+        let start = calendar.startOfDay(for: date)
+        return start...calendar.date(byAdding: .day, value: 1, to: start)!
     }
 
     static var calendar: Calendar {

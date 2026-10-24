@@ -11,8 +11,6 @@ struct EquitySelectionMarks: View {
     let curve: EquityCurve
     let reference: Double
     let pointer: EquityPointer
-    /// The strip at the top of the plot kept for session names; rules and spans start below it.
-    let namesStrip: CGFloat
     /// The value axis's marks, label width, and gap from the plot, so the tag sits where the labels
     /// do and hides any it would touch.
     let axisTicks: [Double]
@@ -23,7 +21,7 @@ struct EquitySelectionMarks: View {
         GeometryReader { geometry in
             if let anchor = proxy.plotFrame {
                 let plot = geometry[anchor]
-                let marks = plot.divided(atDistance: namesStrip, from: .minYEdge).remainder
+                let marks = plot
                 let selection = pointer.selection
                 if let span = selection.span, let measure = curve.measure(from: span.start, to: span.end) {
                     let tone = EquityTone.of(change: measure.change)

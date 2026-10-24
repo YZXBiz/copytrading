@@ -28,14 +28,21 @@ def test_equity_history_keeps_the_exact_amounts_alpaca_sent_and_skips_gaps():
             },
         )
 
-    broker = make_broker("key", "secret", transport=httpx.MockTransport(handler))
+    broker = make_broker(
+        "key",
+        "secret",
+        transport=httpx.MockTransport(handler),
+        clock=lambda: dt.datetime(2026, 10, 24, 5, 30, tzinfo=dt.UTC),
+    )
     try:
         history = broker.equity_history(HistoryWindow(range="day"))
     finally:
         broker.close()
     assert requests[0].url.path == "/v2/account/portfolio/history"
     assert requests[0].url.params["period"] == "1D"
-    assert "start" not in requests[0].url.params
+    assert requests[0].url.params["intraday_reporting"] == "continuous"
+    # 5:30 UTC is 1:30 AM in New York: today starts at that midnight, not the UTC one.
+    assert requests[0].url.params["start"] == "2026-10-24T00:00:00-04:00"
     assert history.base_value == Decimal("25000.1")
     assert [point.equity for point in history.points] == [Decimal("25000.1"), Decimal("25412.8")]
     assert history.points[0].at.timestamp() == 1790429400
@@ -59,7 +66,10 @@ def test_equity_history_series_of_different_lengths_cannot_cross_the_adapter():
 @pytest.mark.parametrize(
     ("window", "expected"),
     [
-        (HistoryWindow(range="week"), {"period": "1W", "timeframe": "15Min"}),
+        (
+            HistoryWindow(range="week"),
+            {"period": "1W", "timeframe": "15Min", "intraday_reporting": "continuous"},
+        ),
         (HistoryWindow(range="three_months"), {"period": "3M", "timeframe": "1D"}),
         (HistoryWindow(range="year"), {"period": "1A", "timeframe": "1D"}),
         (

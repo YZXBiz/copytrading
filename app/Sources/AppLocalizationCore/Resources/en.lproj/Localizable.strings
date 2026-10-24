@@ -1934,8 +1934,6 @@
 "Waited for the account's Start Copying after the restart, and got too old" = "Waited for the account's Start Copying after the restart, and got too old";
 "start copying into %@" = "start copying into %@";
 "You sold %@" = "You sold %@";
-"Pre-market" = "Pre-market";
-"After hours" = "After hours";
 "The call asked for" = "The call asked for";
 "Selling %@ of %@" = "Selling %@ of %@";
 "Buying %@ of %@" = "Buying %@ of %@";

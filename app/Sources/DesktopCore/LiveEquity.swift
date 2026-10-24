@@ -27,14 +27,14 @@ public enum LiveEquity {
 extension EquityHistory {
     /// This history with `balance` appended as its last point, when that point belongs on it:
     /// the window ends now (not a chosen past day), the balance is newer than the last bar, is
-    /// funded, and for a day falls inside the same extended trading day as the bar before it.
+    /// funded, and for a day falls inside the same New York day as the bar before it.
     fileprivate func reaching(_ balance: AccountBalance, at time: Date, stamp: String) -> EquityHistory {
         guard window.day == nil,
             let equity = EquityCurve.amount(balance.equity), equity > 0,
             let lastText = points.last?.at, let last = EquityCurve.date(lastText),
             time > last
         else { return self }
-        if window.range == .day, !MarketSession.tradingDay(containing: last).contains(time) { return self }
+        if window.range == .day, !NewYorkDay.containing(last).contains(time) { return self }
         return EquityHistory(
             window: window, baseValue: baseValue,
             points: points + [EquityPoint(at: stamp, equity: balance.equity)]

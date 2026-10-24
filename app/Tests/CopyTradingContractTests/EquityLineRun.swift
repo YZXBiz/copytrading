@@ -1,1 +1,0 @@
-../../Sources/CopyTrading/Features/Accounts/EquityChart/EquityLineRun.swift
