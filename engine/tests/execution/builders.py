@@ -281,5 +281,5 @@ def engine_with_wide_limits(store, broker):
 
 def set_tolerance(engine, percent="1"):
     engine.config = CopyConfig.model_validate(
-        engine.config.model_dump() | {"entry_pricing": {"max_above_signal_pct": percent}}
+        engine.config.model_dump() | {"pricing": {"max_above_signal_pct": percent}}
     )

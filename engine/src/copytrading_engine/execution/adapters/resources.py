@@ -592,10 +592,8 @@ def _not_before(at: dt.datetime) -> dt.datetime:
 
 
 def _flat_limits(config: CopyConfig) -> dict[str, object]:
-    """Every limit by its account policy name, the entry pricing ones included."""
-    return (
-        config.model_dump(exclude={"sources", "entry_pricing"}) | config.entry_pricing.model_dump()
-    )
+    """Every limit by its account policy name, the pricing ones included."""
+    return config.model_dump(exclude={"sources", "pricing"}) | config.pricing.model_dump()
 
 
 def _text(value: object) -> str:

@@ -292,7 +292,7 @@ def test_configured_500_budget_keeps_limit_price_sizing(system, whole_shares):
         engine.config.model_dump()
         | {
             "max_order_usd": "500",
-            "entry_pricing": {"max_above_signal_pct": "1"},
+            "pricing": {"max_above_signal_pct": "1"},
         }
     )
     original_asset = broker.asset
