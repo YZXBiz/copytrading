@@ -33,7 +33,7 @@ struct GuideHeader: View {
             .accessibilityElement(children: .combine)
             if !progress.isComplete {
                 Button(L10n.string(progress.completed == 0 ? "Show Me Around" : "Pick Up Where I Left Off"), action: startTour)
-                    .buttonStyle(PageButtonStyle(isProminent: true, horizontalPadding: 18))
+                    .buttonStyle(PageButtonStyle(emphasis: .prominent, horizontalPadding: 18))
                     .padding(.top, 26)
                     .accessibilityIdentifier("guide.tour")
             }

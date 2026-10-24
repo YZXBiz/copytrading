@@ -430,7 +430,14 @@ private func aSellReadLateWaitsAtItsFloorUnderTheGurusPrice() throws {
     try #require(
         result.facts.contains(.init(label: "Lowest sell price", value: "$91.38 (1% under the guru's $92.30)")),
         "facts were \(result.facts)")
-    try #require(result.facts.contains(.init(label: "Market", value: "$86.10, under it")), "facts were \(result.facts)")
+    // Where it waits is drawn, not listed: the bid under the floor under the guru's price.
+    try #require(
+        result.prices
+            == PricePoints(
+                limit: Decimal(string: "91.38")!, market: Decimal(string: "86.10")!, marketLabel: "Market", buying: false,
+                guru: Decimal(string: "92.30")!),
+        "prices were \(String(describing: result.prices))")
+    try #require(!result.facts.contains { $0.label == "Market" }, "facts were \(result.facts)")
 }
 
 /// The SOXS sell of Oct 23: a floor of $53.66 under the guru's $54.20 and a bid of $53.85. The market

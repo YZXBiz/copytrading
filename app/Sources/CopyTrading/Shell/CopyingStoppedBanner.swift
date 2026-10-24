@@ -18,7 +18,7 @@ struct CopyingStoppedBanner: View {
                 Button(L10n.string("Start Copying")) {
                     Task { await model.startCopyingEverywhere(feature: accountFeature) }
                 }
-                .buttonStyle(PageButtonStyle(isProminent: true))
+                .buttonStyle(PageButtonStyle(emphasis: .prominent))
                 .accessibilityIdentifier("copyingStopped.start")
                 Button(L10n.string("Dismiss"), systemImage: "xmark", action: model.dismissCopyingStopped)
                     .labelStyle(.iconOnly)

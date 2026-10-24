@@ -48,12 +48,14 @@ struct AccountPageContent: View {
             directory: directory,
             skippedCalls: model.skippedCalls,
             canCopy: !feature.accounts.isEmpty,
+            // While the account isn't copying, the header's Start Copying is the page's ink capsule.
+            ownsPrimaryAction: CopyingState.account(account, processing: model.tradingStatus).isCopying,
             selectedPostID: selectedPostID,
             copy: copy,
             open: { openPost($0.source.id) }
         )
         VStack(alignment: .leading, spacing: 20) {
-            TrackedSwitcher(
+            SectionSwitcher(
                 choices: AccountSection.allCases, selection: $section, title: \.title,
                 count: { $0 == .positions ? account.positions.count { !PositionRow.isEmpty($0) } : 0 }, identifier: "account.section")
             switch section {

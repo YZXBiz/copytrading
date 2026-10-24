@@ -111,7 +111,7 @@ struct AccountPageHeader: View {
                     L10n.string(account.environment == .live ? "Start Copying…" : "Start Copying"), systemImage: "play.fill",
                     action: start
                 )
-                .buttonStyle(PageButtonStyle(isProminent: true))
+                .buttonStyle(PageButtonStyle(emphasis: .prominent))
                 .disabled(!isSaved || isPending || model.isTradingCommandPending || !model.isTradingUnlocked)
                 .help(
                     L10n.string(

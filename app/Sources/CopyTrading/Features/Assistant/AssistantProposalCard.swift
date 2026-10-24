@@ -35,7 +35,7 @@ struct AssistantProposalCard: View {
                         Text(L10n.string("Review the approval…"))
                             .font(DesignTokens.caption.weight(.semibold))
                     }
-                    .buttonStyle(PageButtonStyle(isProminent: true))
+                    .buttonStyle(PageButtonStyle(emphasis: .prominent))
                     .disabled(isReviewing)
                     .accessibilityHint(L10n.string("Opens the approval sheet"))
                     .accessibilityIdentifier("assistant.review")

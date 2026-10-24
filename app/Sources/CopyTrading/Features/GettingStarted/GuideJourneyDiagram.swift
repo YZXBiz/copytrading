@@ -19,10 +19,7 @@ struct GuideJourneyDiagram: View {
             ZStack(alignment: .topLeading) {
                 path(curve)
                 Text(L10n.string("later"))
-                    .accessibilityLabel(L10n.string("later"))
-                    .textCase(.uppercase)
-                    .font(DesignTokens.eyebrow)
-                    .tracking(DesignTokens.eyebrowTracking)
+                    .font(DesignTokens.label)
                     .foregroundStyle(Palette.tertiaryInk)
                     .position(curve.point(onLeg: stops.count - 2, at: 0.45).applying(.init(translationX: 4, y: -18)))
                     .accessibilityHidden(true)
@@ -130,8 +127,7 @@ struct GuideJourneyDiagram: View {
         VStack(spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(String(format: "%02d", number))
-                    .font(DesignTokens.eyebrow)
-                    .tracking(DesignTokens.eyebrowTracking)
+                    .font(DesignTokens.label)
                     .foregroundStyle(Palette.tertiaryInk)
                 Text(L10n.string(stop.title))
                     .font(.system(size: 14, weight: isSelected ? .semibold : .medium))

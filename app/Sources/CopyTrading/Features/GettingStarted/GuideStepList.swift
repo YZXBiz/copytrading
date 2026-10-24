@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The five setup steps as a plain numbered list: a tracked number, the step and what it is for,
+/// The five setup steps as a plain numbered list: a step number, the step and what it is for,
 /// and at the trailing edge either that it is done or, for the next one, the way there. The column
 /// of numbers lines the steps up, so space parts them, not rules.
 struct GuideStepList: View {
@@ -20,8 +20,7 @@ struct GuideStepList: View {
         let isNext = step == progress.next
         return HStack(alignment: .firstTextBaseline, spacing: 22) {
             Text(String(format: "%02d", step.rawValue + 1))
-                .font(DesignTokens.eyebrow)
-                .tracking(DesignTokens.eyebrowTracking)
+                .font(DesignTokens.label)
                 .monospacedDigit()
                 .foregroundStyle(isNext ? Palette.ink : Palette.tertiaryInk)
                 .frame(width: 26, alignment: .leading)
@@ -42,9 +41,7 @@ struct GuideStepList: View {
             .accessibilityValue(isDone ? L10n.string("Done") : "")
             if isDone {
                 Label(L10n.string("Done"), systemImage: "checkmark")
-                    .font(DesignTokens.eyebrow)
-                    .tracking(DesignTokens.eyebrowTracking)
-                    .textCase(.uppercase)
+                    .font(DesignTokens.label)
                     .foregroundStyle(Palette.tertiaryInk)
                     .accessibilityHidden(true)
             } else if isNext {

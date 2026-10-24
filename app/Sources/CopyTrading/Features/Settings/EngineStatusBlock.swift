@@ -108,7 +108,7 @@ struct EngineStatusBlock: View {
     private var control: some View {
         if isStopped {
             Button(L10n.string("Start Engine"), action: model.requestStart)
-                .buttonStyle(PageButtonStyle(isProminent: true))
+                .buttonStyle(PageButtonStyle(emphasis: .prominent))
                 .accessibilityIdentifier("settings.startEngine")
         } else {
             Button(L10n.string("Stop Engine"), role: .destructive, action: stopEngine)

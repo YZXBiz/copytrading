@@ -2,7 +2,7 @@ import DesktopCore
 import SwiftUI
 
 /// One block of shares under its position: every buy of the stock from one guru (ADR-0010), each
-/// as its own line with its post, price, and gain, and one black Sell pill for the whole lot.
+/// as its own line with its post, price, and gain, and one outlined Sell pill for the whole lot.
 struct PositionLotRow: View {
     let lot: AccountLotView
     /// The stock, or the coin's pair, the lot holds.
@@ -44,7 +44,7 @@ struct PositionLotRow: View {
                 }
             }
             Button(L10n.string("Sell"), action: sell)
-                .buttonStyle(PageButtonStyle(isProminent: true, horizontalPadding: 18))
+                .buttonStyle(PageButtonStyle(emphasis: .outlined, horizontalPadding: 18))
                 .accessibilityLabel(L10n.string("Sell %@ from %@", shares, who))
                 .accessibilityIdentifier("accounts.lot.sell.\(lot.lotID)")
         }

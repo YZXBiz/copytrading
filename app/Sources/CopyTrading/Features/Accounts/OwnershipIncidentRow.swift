@@ -40,7 +40,7 @@ struct OwnershipIncidentRow: View {
                         .fixedSize(horizontal: false, vertical: true)
                     HStack(spacing: 16) {
                         Button(fix.confirm, action: settle)
-                            .buttonStyle(PageButtonStyle(isProminent: true))
+                            .buttonStyle(PageButtonStyle(emphasis: .prominent))
                             .disabled(isSending)
                             .accessibilityIdentifier("accounts.ownership.confirm.\(incident.symbol)")
                         Button(L10n.string("Not Now")) { isConfirming = false }

@@ -123,8 +123,8 @@ struct ActivityDetailView: View {
             .fixedSize(horizontal: false, vertical: true)
     }
 
-    /// "Zhao · Oct 8 at 12:38 PM", quiet above the quote, with the post's state in tracked
-    /// capitals: amber only while it waits on the owner.
+    /// "Zhao · Oct 8 at 12:38 PM", quiet above the quote, with the post's state as a small
+    /// label: amber only while it waits on the owner.
     private func header(_ outcome: ActivityCardOutcome) -> some View {
         let waits = outcome.accounts.contains { $0.waits || $0.awaitsResume }
         return ViewThatFits(in: .horizontal) {
@@ -155,7 +155,7 @@ struct ActivityDetailView: View {
         }
     }
 
-    /// How the reader read the post under a tracked-capital label: one plain line per call, what
+    /// How the reader read the post under a small label: one plain line per call, what
     /// the call leaves out, then what kind of post it was and who read it.
     private var readAs: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -234,7 +234,7 @@ struct ActivityDetailView: View {
     }
 
     /// What each account did with the post, takeaway first, with Copy and Skip where one waits.
-    /// Each account is its own block under its name and Paper/Live in tracked capitals, parted from
+    /// Each account is its own block under its name and Paper/Live as a small label, parted from
     /// the next by whitespace alone, so the page keeps its few lines for what they draw.
     @ViewBuilder
     private func accounts(_ outcome: ActivityCardOutcome) -> some View {
@@ -252,15 +252,18 @@ struct ActivityDetailView: View {
                 .font(DesignTokens.activityBody)
                 .foregroundStyle(Palette.secondaryInk)
             }
+            // One answer on the card is filled with ink: Review and Correct… when the post needs
+            // it, otherwise the first account's that waits; the rest are outlined.
+            let primary = item.needsManualReview ? nil : shown.first { $0.waits || $0.awaitsResume }?.id
             ForEach(shown) { account in
-                accountRow(account)
+                accountRow(account, ownsPrimary: account.id == primary)
             }
         }
     }
 
     /// One account's result: whose it is, then for each order the outcome as one big sentence with
     /// its mark, the price ruler, the numbers behind it, and at most one thing to do.
-    private func accountRow(_ account: ActivityCardOutcome.Account) -> some View {
+    private func accountRow(_ account: ActivityCardOutcome.Account, ownsPrimary: Bool) -> some View {
         let environment = TradingEnvironment(rawValue: account.environment) ?? .paper
         return VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 0) {
@@ -282,11 +285,11 @@ struct ActivityDetailView: View {
                 }
             }
             if account.waits, let waiting = WaitingCall(item) {
-                waitingActions(waiting)
+                waitingActions(waiting, ownsPrimary: ownsPrimary)
             }
             if account.awaitsResume {
                 Button(L10n.string("Start Copying")) { startCopying(account.id) }
-                    .buttonStyle(PageButtonStyle(isProminent: true))
+                    .buttonStyle(PageButtonStyle(emphasis: ownsPrimary && !account.waits ? .prominent : .outlined))
                     .accessibilityIdentifier("activity.startCopying")
                     .accessibilityHint(L10n.string("Copies into this account again, so the held buy can be copied."))
             }
@@ -369,7 +372,7 @@ struct ActivityDetailView: View {
     private var actionButtons: some View {
         if item.needsManualReview {
             Button(L10n.string("Review and Correct…"), action: review)
-                .buttonStyle(PageButtonStyle(isProminent: true))
+                .buttonStyle(PageButtonStyle(emphasis: .prominent))
                 .disabled(!canReview)
                 .accessibilityHint(L10n.string("Opens the reviewed correction, preview, and confirmation workflow."))
         }
@@ -377,13 +380,13 @@ struct ActivityDetailView: View {
     }
 
     /// A call that waits for the owner (ADR-0007): copy it, or skip it, until its trading day ends.
-    private func waitingActions(_ waiting: WaitingCall) -> some View {
+    private func waitingActions(_ waiting: WaitingCall, ownsPrimary: Bool) -> some View {
         HStack(spacing: 8) {
             Button(
                 L10n.string(waiting.calls.isEmpty ? "Enter Trade…" : waiting.awaitsApproval ? "Approve…" : "Copy…"),
                 action: { copy(waiting) }
             )
-            .buttonStyle(PageButtonStyle(isProminent: true))
+            .buttonStyle(PageButtonStyle(emphasis: ownsPrimary ? .prominent : .outlined))
             .disabled(!canReview)
             .accessibilityIdentifier("activity.copy")
             .accessibilityHint(L10n.string("Opens the call to check, then previews the order in each waiting account."))

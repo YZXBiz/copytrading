@@ -93,7 +93,7 @@ struct DiagnosticsView: View {
     private var controls: some View {
         // The same words-and-underline choices as every other page, and a field on a writing line.
         HStack(alignment: .firstTextBaseline, spacing: 16) {
-            TrackedSwitcher(
+            SectionSwitcher(
                 choices: DiagnosticsFilter.allCases, selection: $filter, title: \.rawValue,
                 count: { choice in model.diagnosticsEntries.count { choice.includes($0) } },
                 identifier: "diagnostics.filter"

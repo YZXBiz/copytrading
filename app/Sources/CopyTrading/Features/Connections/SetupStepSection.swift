@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// One step of the setup on Connections: a tracked number that turns into an ink check once the
+/// One step of the setup on Connections: a step number that turns into an ink check once the
 /// step is done, the step's name in the display face and what it is for, and its rows under it.
 struct SetupStepSection<Content: View>: View {
     let number: Int
@@ -51,8 +51,7 @@ struct SetupStepSection<Content: View>: View {
                     .transition(.scale.combined(with: .opacity))
             } else {
                 Text(String(format: "%02d", number))
-                    .font(DesignTokens.eyebrow)
-                    .tracking(DesignTokens.eyebrowTracking)
+                    .font(DesignTokens.label)
                     .monospacedDigit()
                     .foregroundStyle(Palette.tertiaryInk)
             }

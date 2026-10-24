@@ -27,6 +27,8 @@ struct MenuBarView: View {
                 hero
                 MenuBarSparkline(accounts: accountFeature.accounts, histories: accountFeature.histories)
                     .padding(.top, 10)
+                accountLines
+                    .padding(.top, 12)
                 latestCall
                     .padding(.top, 14)
             } else {
@@ -65,11 +67,11 @@ struct MenuBarView: View {
 
     private var header: some View {
         HStack(spacing: 9) {
-            Image(systemName: "arrow.triangle.branch")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(Palette.page)
-                .frame(width: 24, height: 24)
-                .background(Palette.ink, in: .rect(cornerRadius: 6))
+            // The app's own icon, not a symbol on a tile.
+            Image(nsImage: NSApplication.shared.applicationIconImage)
+                .resizable()
+                .interpolation(.high)
+                .frame(width: 22, height: 22)
                 .accessibilityHidden(true)
             Text(L10n.string("CopyTrading"))
                 .font(.system(size: 14, weight: .semibold))
@@ -100,10 +102,10 @@ struct MenuBarView: View {
                     .foregroundStyle(Palette.tertiaryInk)
                 if balances.isEmpty {
                     Text("—")
-                        .font(.system(size: 26, weight: .semibold))
+                        .font(Self.heroFont)
                         .foregroundStyle(Palette.tertiaryInk)
                 } else {
-                    MoneyText(value: change, style: .change, font: .system(size: 26, weight: .semibold))
+                    MoneyText(value: change, style: .change, font: Self.heroFont)
                 }
                 Text(
                     balances.isEmpty
@@ -115,6 +117,37 @@ struct MenuBarView: View {
                 .monospacedDigit()
             }
             .accessibilityElement(children: .combine)
+        }
+    }
+
+    /// Today's change, the panel's one big figure, in the display face like the account page's.
+    private static let heroFont = DisplayFont.font(size: 30, weight: .regular, relativeTo: .title)
+
+    /// With more than one account copying, each one's own change on its own line, so the total
+    /// above can be checked: name, mode, and the figure at the trailing edge.
+    @ViewBuilder
+    private var accountLines: some View {
+        let accounts = accountFeature.accounts.filter { $0.activeConfiguration && $0.balance != nil }
+        if accounts.count > 1 {
+            VStack(spacing: 5) {
+                ForEach(accounts) { account in
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(account.accountID)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Palette.ink)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Text(L10n.string(account.environment == .live ? "Live" : "Paper"))
+                            .font(.system(size: 12))
+                            .foregroundStyle(account.environment == .live ? Palette.live : Palette.tertiaryInk)
+                        Spacer(minLength: 8)
+                        MoneyText(
+                            value: account.balance.flatMap { Decimal(engine: $0.dayChangeUSD) } ?? 0, style: .change,
+                            font: .system(size: 13, weight: .medium))
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+            }
         }
     }
 
@@ -160,7 +193,7 @@ struct MenuBarView: View {
                 .fixedSize(horizontal: false, vertical: true)
             if startsHere {
                 Button(L10n.string("Start Copying"), action: start)
-                    .buttonStyle(PageButtonStyle(isProminent: true))
+                    .buttonStyle(PageButtonStyle(emphasis: .prominent))
                     .disabled(model.isTradingCommandPending)
                     .accessibilityIdentifier("menu.copyingStopped.start")
             }

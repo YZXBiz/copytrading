@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The buttons in a sheet's bottom bar: the one answer, a capsule filled with ink, and beside it
-/// the way out as plain words.
+/// the way out as plain words, red when it refuses or removes something.
 struct SheetButtonStyle: ButtonStyle {
     var isPrimary = false
     @Environment(\.isEnabled) private var isEnabled
@@ -11,7 +11,7 @@ struct SheetButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(DesignTokens.bodyEmphasis)
-            .foregroundStyle(isPrimary ? Palette.page : Palette.ink)
+            .foregroundStyle(isPrimary ? Palette.page : configuration.role == .destructive ? Palette.loss : Palette.ink)
             .padding(.horizontal, isPrimary ? 20 : 6)
             .frame(minHeight: 34)
             .background {

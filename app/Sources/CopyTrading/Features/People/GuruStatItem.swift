@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// One number in a guru's stats strip: the figure large in the display face, a small spaced label
-/// in capitals under it.
+/// One number in a guru's stats strip: the figure large in the display face, a small grey label
+/// under it.
 struct GuruStatItem: View {
     struct Item {
         let label: String
@@ -31,10 +31,7 @@ struct GuruStatItem: View {
             }
             .lineLimit(1)
             Text(item.label)
-                .accessibilityLabel(item.label)
-                .textCase(.uppercase)
-                .font(DesignTokens.eyebrow)
-                .tracking(DesignTokens.eyebrowTracking)
+                .font(DesignTokens.label)
                 .foregroundStyle(item.isCaution ? Palette.amber : Palette.tertiaryInk)
                 .lineLimit(1)
         }
