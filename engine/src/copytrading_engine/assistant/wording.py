@@ -144,6 +144,7 @@ COPYING_DETAILS = {
     "account_paused": "You paused new buys; sells still go through",
     "manual_resume_required": "Waiting for your Start Copying after a restart",
     "enabled_waiting_for_session": "Copies once the market opens",
+    "enabled_coins_only": "Copying coins now; stocks once the market opens",
     "recovery_pending": "Checking the account after a restart",
     "reconciliation_unavailable": "The account couldn't be checked against Alpaca",
     "session_unavailable": "The market hours couldn't be read",

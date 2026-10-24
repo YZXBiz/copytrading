@@ -81,8 +81,8 @@ def account(
     match readiness:
         case "enabled":
             return Copying("copying")
-        case "enabled_waiting_for_session":
-            return Copying("copying", "enabled_waiting_for_session")
+        case "enabled_waiting_for_session" | "enabled_coins_only":
+            return Copying("copying", readiness)
         case "recovery_pending" | "reconciliation_unavailable" | "session_unavailable":
             return Copying("copying", readiness)
         case _:

@@ -5,7 +5,7 @@ import Foundation
 import Testing
 
 private let readinessCodes = [
-    "enabled", "enabled_waiting_for_session", "paused", "disabled", "manual_resume_required",
+    "enabled", "enabled_waiting_for_session", "enabled_coins_only", "paused", "disabled", "manual_resume_required",
     "recovery_pending", "reconciliation_unavailable", "session_unavailable", "processing_stopped",
     "inactive_evidence", "unavailable", "account_unavailable", "outside_open_orders", "broker_account_inactive",
     "account_in_use", "alpaca_account_shared", "record_unreadable", "broker_keys_rejected", "broker_unreachable",

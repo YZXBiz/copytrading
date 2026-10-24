@@ -167,11 +167,13 @@ class ExecutionResources:
             readiness = "reconciliation_unavailable"
         else:
             try:
-                readiness = (
-                    "enabled_waiting_for_session"
-                    if self.engine.market_session(dt.datetime.now(dt.UTC)).value == "closed"
-                    else "enabled"
-                )
+                if self.engine.market_session(dt.datetime.now(dt.UTC)).value != "closed":
+                    readiness = "enabled"
+                elif self.engine.ledger.state.environment == "paper":
+                    # A paper account copies coins at every hour (ADR-0014); only its stocks wait.
+                    readiness = "enabled_coins_only"
+                else:
+                    readiness = "enabled_waiting_for_session"
             except Exception:  # noqa: BLE001 - readiness degrades instead of failing status
                 readiness = "session_unavailable"
         return AccountRuntimeView(
