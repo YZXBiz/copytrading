@@ -6,7 +6,7 @@ from typing import Annotated, Self
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, model_validator
 
 from copytrading_engine.execution.domain.lifecycle import RecoveryPreference
-from copytrading_engine.execution.domain.pricing import EntryPricingPolicy
+from copytrading_engine.execution.domain.pricing import PricePolicy
 
 
 class SignalSourceNotAllowed(ValueError):
@@ -51,4 +51,4 @@ class CopyConfig(AccountLimits):
     sources: tuple[Annotated[str, Field(pattern=r"^[a-z][a-z0-9_-]*:[a-zA-Z0-9_-]+$")], ...] = (
         Field(min_length=1)
     )
-    entry_pricing: EntryPricingPolicy = Field(default_factory=EntryPricingPolicy)
+    pricing: PricePolicy = Field(default_factory=PricePolicy)

@@ -156,7 +156,7 @@ def paper() -> Iterator[Paper]:
             order_timeout_seconds=15,
             max_symbol_usd=Decimal(1000),
             max_total_usd=Decimal(100000),
-            entry_pricing={"max_above_signal_pct": "1", "max_below_signal_pct": "1"},
+            pricing={"max_above_signal_pct": "1", "max_below_signal_pct": "1"},
         ),
     )
     engine.bind(now(), environment="paper")

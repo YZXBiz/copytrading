@@ -165,7 +165,7 @@ def test_exits_outside_regular_hours_sell_with_a_limit_under_the_signal(system, 
     engine, broker, _ = system
     deliver(engine, event())
     engine.config = CopyConfig.model_validate(
-        engine.config.model_dump() | {"entry_pricing": {"max_above_signal_pct": "1"}}
+        engine.config.model_dump() | {"pricing": {"max_above_signal_pct": "1"}}
     )
     broker.calendar = lambda date: decode_calendar(
         [{"date": date, "open": "09:30", "close": "16:00", "session_close": "2000"}]

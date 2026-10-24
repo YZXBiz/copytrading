@@ -16,7 +16,7 @@ from uuid import uuid4
 from copytrading_engine.backup.restore.gate import restore_manual_disabled
 from copytrading_engine.execution.adapters.alpaca.broker import AlpacaBroker, AlpacaCredentials
 from copytrading_engine.execution.application.ports import AccountOpenRefused, BrokerError
-from copytrading_engine.execution.domain.pricing import EntryPricingPolicy
+from copytrading_engine.execution.domain.pricing import PricePolicy
 from copytrading_engine.execution.domain.signals import CopyConfig
 from copytrading_engine.execution.domain.sizing import DestinationTerms
 from copytrading_engine.parsing.providers.registry import ManagedDecoder
@@ -1021,6 +1021,6 @@ def copy_config(configuration: TradingConfiguration, account_id: str) -> CopyCon
     pricing = {"max_above_signal_pct", "max_below_signal_pct"}
     return CopyConfig(
         sources=tuple(f"discord:{channel}" for channel in configuration.source.channel_ids),
-        entry_pricing=EntryPricingPolicy(**account.policy.model_dump(include=pricing)),
+        pricing=PricePolicy(**account.policy.model_dump(include=pricing)),
         **account.policy.model_dump(exclude=pricing),
     )

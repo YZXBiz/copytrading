@@ -38,29 +38,31 @@ DEFAULT_ABOVE_SIGNAL_PCT = Decimal("0")
 DEFAULT_BELOW_SIGNAL_PCT = Decimal("1")
 
 
-class EntryPricingPolicy(BaseModel):
+class PricePolicy(BaseModel):
+    """How far a copy may stray from the guru's price, one rule per side: a buy pays at most
+    its ceiling above it, a sell takes at least its floor below it. Both land on a valid tick:
+    a stock's, or the coin's own `increment`."""
+
     model_config = ConfigDict(extra="forbid", frozen=True)
     max_above_signal_pct: AboveSignalPct = DEFAULT_ABOVE_SIGNAL_PCT
     max_below_signal_pct: BelowSignalPct = DEFAULT_BELOW_SIGNAL_PCT
 
-    def limit_price(self, signal_price: Decimal, increment: Decimal | None = None) -> Decimal:
-        """Return a valid tick that never exceeds the configured ceiling: a stock's, or the
-        coin's own `increment`."""
-        if not signal_price.is_finite() or signal_price <= 0:
-            raise ValueError("Signal price must be finite and positive")
-        ceiling = signal_price * (Decimal(1) + self.max_above_signal_pct / Decimal(100))
+    def buy_ceiling(self, guru_price: Decimal, increment: Decimal | None = None) -> Decimal:
+        """The highest a copied buy pays, rounded down so it never passes the allowance."""
+        ceiling = _checked(guru_price) * (Decimal(1) + self.max_above_signal_pct / Decimal(100))
         return ceiling.quantize(price_tick(ceiling, increment), rounding=ROUND_DOWN)
 
-    def exit_limit_price(self, signal_price: Decimal, increment: Decimal | None = None) -> Decimal:
-        """Return a valid tick no lower than the allowed distance under the guru's price: a
-        stock's, or the coin's own `increment`.
-
-        Every exit is a limit order, so a copied sell never fills far below what the guru got.
-        """
-        if not signal_price.is_finite() or signal_price <= 0:
-            raise ValueError("Signal price must be finite and positive")
-        floor = signal_price * (Decimal(1) - self.max_below_signal_pct / Decimal(100))
+    def sell_floor(self, guru_price: Decimal, increment: Decimal | None = None) -> Decimal:
+        """The lowest a copied sell takes, rounded up so it never passes the allowance. Every
+        sell is a limit order, so a copy never fills far below what the guru got."""
+        floor = _checked(guru_price) * (Decimal(1) - self.max_below_signal_pct / Decimal(100))
         return floor.quantize(price_tick(floor, increment), rounding=ROUND_UP)
+
+
+def _checked(guru_price: Decimal) -> Decimal:
+    if not guru_price.is_finite() or guru_price <= 0:
+        raise ValueError("Signal price must be finite and positive")
+    return guru_price
 
 
 def price_tick(price: Decimal, increment: Decimal | None = None) -> Decimal:

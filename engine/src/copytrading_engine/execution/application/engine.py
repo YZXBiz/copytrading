@@ -604,7 +604,7 @@ class CopyEngine:
                 )
             except ValueError:
                 return TradeDecision(None, "account_risk_unavailable")
-            limit_price = c.entry_pricing.limit_price(source_price, price_increment)
+            limit_price = c.pricing.buy_ceiling(source_price, price_increment)
             if self._crosses(s.symbol, "buy", limit_price):
                 # Alpaca refuses a buy at or above an open sell of the stock as a possible wash
                 # trade: it waits for the sell, and the buy's age limit still ends the wait.
@@ -731,7 +731,7 @@ class CopyEngine:
             qty = qty.quantize(qty_step, rounding=ROUND_DOWN)
             # An exit is a limit order too: its floor is the guru's sell price less the allowance,
             # so it sells whenever the market is at or above that floor (ADR-0010).
-            limit_price = c.entry_pricing.exit_limit_price(source_price, price_increment)
+            limit_price = c.pricing.sell_floor(source_price, price_increment)
             if self._crosses(s.symbol, "sell", limit_price):
                 # A sell at or under an open buy of the stock would trade with it: it waits.
                 return TradeDecision(None, "wait_pending_order")
@@ -777,9 +777,9 @@ class CopyEngine:
                 type="limit",
                 limit_price=limit_price,
                 source_price=source_price,
-                entry_tolerance_pct=c.entry_pricing.max_above_signal_pct
+                entry_tolerance_pct=c.pricing.max_above_signal_pct
                 if s.action == "buy"
-                else c.entry_pricing.max_below_signal_pct,
+                else c.pricing.max_below_signal_pct,
                 lot_id=lot_id,
                 entry_price=entry_price,
                 session=session,
