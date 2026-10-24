@@ -11,11 +11,26 @@ from copytrading_engine.execution.domain.market import HistoryWindow
 
 from .builders import make_broker
 
+ACCOUNT = {
+    "id": "paper-demo",
+    "status": "ACTIVE",
+    "cash": "5000",
+    "equity": "25400",
+    "last_equity": "24990.5",
+    "buying_power": "5000",
+    "currency": "USD",
+    "trading_blocked": False,
+    "account_blocked": False,
+    "trade_suspended_by_user": False,
+}
+
 
 def test_equity_history_keeps_the_exact_amounts_alpaca_sent_and_skips_gaps():
     requests = []
 
     def handler(request):
+        if request.url.path == "/v2/account":
+            return httpx.Response(200, json=ACCOUNT)
         requests.append(request)
         return httpx.Response(
             200,
@@ -43,7 +58,9 @@ def test_equity_history_keeps_the_exact_amounts_alpaca_sent_and_skips_gaps():
     assert requests[0].url.params["intraday_reporting"] == "continuous"
     # 5:30 UTC is 1:30 AM in New York: today starts at that midnight, not the UTC one.
     assert requests[0].url.params["start"] == "2026-10-24T00:00:00-04:00"
-    assert history.base_value == Decimal("25000.1")
+    # Today counts from the close the account's day change counts from, not Alpaca's history
+    # base, which over a weekend is Thursday's close.
+    assert history.base_value == Decimal("24990.5")
     assert [point.equity for point in history.points] == [Decimal("25000.1"), Decimal("25412.8")]
     assert history.points[0].at.timestamp() == 1790429400
 
@@ -92,3 +109,16 @@ def test_equity_history_asks_alpaca_for_the_chosen_window(window, expected):
         broker.close()
     assert history.window == window
     assert {key: requests[0].url.params.get(key) for key in expected} == expected
+
+
+def test_a_chosen_past_day_keeps_the_base_alpaca_sent():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v2/account/portfolio/history"
+        return httpx.Response(200, json={"timestamp": [], "equity": [], "base_value": 2900.64})
+
+    broker = make_broker("key", "secret", transport=httpx.MockTransport(handler))
+    try:
+        history = broker.equity_history(HistoryWindow(range="day", day=dt.date(2026, 10, 23)))
+    finally:
+        broker.close()
+    assert history.base_value == Decimal("2900.64")
