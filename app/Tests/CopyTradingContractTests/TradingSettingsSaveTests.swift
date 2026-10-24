@@ -3331,6 +3331,7 @@ actor RecordingTradingStarter: TradingStarting {
     private var operationEvents: [String] = []
     private var failStart = false
     private var acceptStartAndLoseResponse = false
+    private var commitStartLater = false
     private var validationActivatable = true
     private var validationSuspended = false
     private var validationTimeouts = 0
@@ -3442,6 +3443,19 @@ actor RecordingTradingStarter: TradingStarting {
             )
             throw ContractFailure("Start was accepted but its response was lost")
         }
+        if commitStartLater {
+            activation = TradingActivationStatus(
+                requestedActivationID: activationID,
+                activationID: activationID,
+                candidateRevision: revision,
+                committedRevision: nil,
+                phase: .starting,
+                runtimeState: .starting,
+                errorCode: nil
+            )
+            latestTradingStatus = try TradingStatusBuilder(.starting).build()
+            return try TradingStatusBuilder(.starting).build()
+        }
         activation = TradingActivationStatus(
             requestedActivationID: activationID,
             activationID: activationID,
@@ -3552,6 +3566,9 @@ actor RecordingTradingStarter: TradingStarting {
 
     func setStartFailure(_ value: Bool) { failStart = value }
     func setAcceptStartAndLoseResponse(_ value: Bool) { acceptStartAndLoseResponse = value }
+    /// Like a real engine seconds into a start: it answers "starting", and commits only when the
+    /// test says so through `setActivationStatus`.
+    func setCommitStartLater(_ value: Bool) { commitStartLater = value }
     func setValidationActivatable(_ value: Bool) { validationActivatable = value }
     /// The next `count` checks throw as an engine that does not answer in time.
     func setValidationTimesOut(_ count: Int) { validationTimeouts = count }

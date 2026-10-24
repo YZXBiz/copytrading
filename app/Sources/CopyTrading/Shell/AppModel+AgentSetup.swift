@@ -518,7 +518,12 @@ extension AppModel {
     /// paused unless `start` asks for Start Copying itself, a first setup included.
     func applySetupForAgent(start: Bool = false) async -> AgentSetupApplied {
         guard isTradingUnlocked else { return AgentSetupApplied(status: .failed, message: AgentSetupProblem.locked.message) }
-        guard !isValidatingTrading, !isActivatingTrading, !isTradingCommandPending, !isApplyingChanges else {
+        guard !isBusyForAgentApply else {
+            return AgentSetupApplied(status: .failed, message: AgentSetupProblem.busy.message)
+        }
+        await settlePendingStart()
+        // The owner may have started something in the window while the start settled.
+        guard !isBusyForAgentApply else {
             return AgentSetupApplied(status: .failed, message: AgentSetupProblem.busy.message)
         }
         guard !hasPendingActivation else { return Self.startSettling }
@@ -554,6 +559,7 @@ extension AppModel {
             return AgentSetupApplied(status: .failed, message: message ?? "The setup couldn't be checked.")
         }
         await work.value
+        await settlePendingStart()
         let checks = latestSetupChecks.map(agentCheck)
         if checks.contains(where: { $0.state == .failed }) {
             return AgentSetupApplied(
@@ -572,6 +578,24 @@ extension AppModel {
         }
         return AgentSetupApplied(
             status: .failed, message: message ?? "Copying didn't start. Open CopyTrading to see why.", checks: checks)
+    }
+
+    private var isBusyForAgentApply: Bool {
+        isValidatingTrading || isActivatingTrading || isTradingCommandPending || isApplyingChanges
+    }
+
+    /// A start the engine took but has not committed yet settles within seconds. Apply waits for it,
+    /// asking the engine the way the status refresh does, so a setup that is being started is never
+    /// reported as not applied, and an apply right after another one is not refused.
+    private func settlePendingStart() async {
+        guard let starter = tradingControl else { return }
+        let clock = ContinuousClock()
+        let deadline = clock.now + startSettleLimit
+        while hasPendingActivation, clock.now < deadline {
+            await reconcilePendingTradingActivation(using: starter)
+            guard hasPendingActivation else { return }
+            try? await Task.sleep(for: .milliseconds(500))
+        }
     }
 
     private static let startSettling = AgentSetupApplied(
