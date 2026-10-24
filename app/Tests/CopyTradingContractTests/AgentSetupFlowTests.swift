@@ -16,6 +16,7 @@ func runAgentSetupFlowTests() async throws {
     try await aSheetNeverSavesAnAgentsLiveLimits()
     try await aSavedModelKeyNeverGoesToANewAddress()
     try await anApplyDuringAStartSaysSo()
+    try await anApplyWaitsForTheEngineToConfirmTheStart()
     try await aSetupNotReadyNamesWhatToFix()
     try await engineFailuresSayWhatHappened()
     try await liveFactsMatchTheSharedCases()
@@ -545,6 +546,7 @@ private func anApplyDuringAStartSaysSo() async throws {
     let setup = try await fixture()
     defer { try? FileManager.default.removeItem(at: setup.directory) }
     let model = setup.model
+    model.startSettleLimit = .milliseconds(300)
     await model.startTrading()
     _ = try ok(
         try await send(
@@ -555,13 +557,58 @@ private func anApplyDuringAStartSaysSo() async throws {
             ]
         ))
     guard let saved = model.savedTradingConfiguration else { throw SetupFlowFailure(description: "nothing saved") }
+    let activationID = UUID().uuidString.lowercased()
     try setup.store.stageValidatedActivation(
         configuration: saved, revision: fakeEngineRevision(saved), secrets: savedSecrets,
-        activationID: UUID().uuidString.lowercased(), when: .paused)
+        activationID: activationID, when: .paused)
+    // The engine is still committing that start, and stays so past the wait.
+    try await setup.starter.setActivationStatus(
+        TradingActivationStatus(
+            requestedActivationID: activationID, activationID: activationID,
+            candidateRevision: fakeEngineRevision(saved), committedRevision: nil,
+            phase: .starting, runtimeState: .starting, errorCode: nil),
+        state: .starting, activeAccounts: 0)
     let settling = try ok(try await send(model, ["operation": "apply_setup"]))
     try verify(
         settling["status"] as? String == "failed" && (settling["message"] as? String)?.contains("still settling") == true,
         "an apply during a start read as \(settling)")
+}
+
+/// The engine takes seconds to commit a new setup. Apply waits for it, so a setup that is being
+/// started reads as applied, never as "Not applied", and the next apply is not refused.
+@MainActor
+private func anApplyWaitsForTheEngineToConfirmTheStart() async throws {
+    let setup = try await fixture()
+    defer { try? FileManager.default.removeItem(at: setup.directory) }
+    let model = setup.model
+    await model.startTrading()
+    try verify(model.tradingStatus?.state == .running, "the fixture did not start copying: \(model.message ?? "")")
+    await setup.starter.setCommitStartLater(true)
+    _ = try ok(try await send(model, ["operation": "edit_setup_discord", "channel_ids": ["123", "789"]]))
+    let starter = setup.starter
+    let store = setup.store
+    let commit = Task {
+        try await Task.sleep(for: .seconds(1))
+        guard let pending = try store.pendingActivation() else { throw SetupFlowFailure(description: "no start to commit") }
+        try await starter.setActivationStatus(
+            TradingActivationStatus(
+                requestedActivationID: pending.activationID, activationID: pending.activationID,
+                candidateRevision: pending.candidateRevision, committedRevision: pending.candidateRevision,
+                phase: .ready, runtimeState: .running, errorCode: nil, committedActivationID: pending.activationID),
+            state: .running, activeAccounts: 1)
+    }
+    let applied = try ok(try await send(model, ["operation": "apply_setup"]))
+    try await commit.value
+    try verify(
+        applied["status"] as? String == "applied" && model.tradingStatus?.state == .running
+            && model.savedTradingConfiguration?.source.channelIDs == ["123", "789"],
+        "an apply the engine confirmed a second later read as \(applied) \(model.message ?? "")")
+    _ = try ok(try await send(model, ["operation": "edit_setup_discord", "channel_ids": ["123"]]))
+    await setup.starter.setCommitStartLater(false)
+    let again = try ok(try await send(model, ["operation": "apply_setup"]))
+    try verify(
+        again["status"] as? String == "applied" && model.savedTradingConfiguration?.source.channelIDs == ["123"],
+        "an apply right after a confirmed one read as \(again)")
 }
 
 @MainActor

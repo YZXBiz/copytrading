@@ -521,6 +521,7 @@ extension AppModel {
         guard !isValidatingTrading, !isActivatingTrading, !isTradingCommandPending, !isApplyingChanges else {
             return AgentSetupApplied(status: .failed, message: AgentSetupProblem.busy.message)
         }
+        await settlePendingStart()
         guard !hasPendingActivation else { return Self.startSettling }
         let plan = agentApplyPlan(start: start)
         switch plan {
@@ -554,6 +555,7 @@ extension AppModel {
             return AgentSetupApplied(status: .failed, message: message ?? "The setup couldn't be checked.")
         }
         await work.value
+        await settlePendingStart()
         let checks = latestSetupChecks.map(agentCheck)
         if checks.contains(where: { $0.state == .failed }) {
             return AgentSetupApplied(
@@ -572,6 +574,20 @@ extension AppModel {
         }
         return AgentSetupApplied(
             status: .failed, message: message ?? "Copying didn't start. Open CopyTrading to see why.", checks: checks)
+    }
+
+    /// A start the engine took but has not committed yet settles within seconds. Apply waits for it,
+    /// asking the engine the way the status refresh does, so a setup that is being started is never
+    /// reported as not applied, and an apply right after another one is not refused.
+    private func settlePendingStart() async {
+        guard let starter = tradingControl else { return }
+        let clock = ContinuousClock()
+        let deadline = clock.now + startSettleLimit
+        while hasPendingActivation, clock.now < deadline {
+            await reconcilePendingTradingActivation(using: starter)
+            guard hasPendingActivation else { return }
+            try? await Task.sleep(for: .milliseconds(500))
+        }
     }
 
     private static let startSettling = AgentSetupApplied(

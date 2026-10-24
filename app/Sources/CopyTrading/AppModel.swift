@@ -492,6 +492,8 @@ final class AppModel {
         return result
     }
     @ObservationIgnored private var tradingStarter: (any TradingStarting)?
+    /// How long an agent's apply waits for a start the engine has not confirmed yet.
+    @ObservationIgnored var startSettleLimit: Duration = .seconds(30)
     @ObservationIgnored private(set) var tradingConfigurationStore: TradingConfigurationStore?
     /// The unsaved setup, edited from Connections, People, and Accounts. It lives here, not in a
     /// screen, so switching screens keeps what was typed; locking or closing the window drops it,
@@ -1973,6 +1975,9 @@ final class AppModel {
     /// saved for, so switching providers never sends one service's key to another.
     /// What checks a single connection: the test double, or the running engine.
     var connectionChecker: (any TradingStarting)? { tradingStarter ?? engineActions }
+
+    /// What starts copying and confirms a start: the test double, or the running engine.
+    var tradingControl: (any TradingStarting)? { tradingStarter ?? engineActions }
 
     /// The saved setup and its Keychain keys, which fill any key the owner left blank.
     func savedSetup() -> (configuration: TradingConfiguration, secrets: TradingSecrets)? {
