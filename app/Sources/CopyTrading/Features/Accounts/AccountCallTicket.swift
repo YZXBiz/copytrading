@@ -52,6 +52,14 @@ struct AccountCallTicket: View {
         return L10n.string("Waiting %@", span)
     }
 
+    /// When the guru posted: the time today, else the day and time.
+    @MainActor private var posted: String {
+        guard let date = Humanize.date(call.source.sourceAt) else { return "" }
+        return AppTime.calendar.isDate(date, inSameDayAs: now)
+            ? date.formatted(AppTime.style(.dateTime.hour().minute()))
+            : date.formatted(AppTime.style(.dateTime.month(.abbreviated).day().hour().minute()))
+    }
+
     var body: some View {
         Group {
             if isCompact {
@@ -114,20 +122,23 @@ struct AccountCallTicket: View {
     /// A dot, how long it has waited, and until when it can still be copied.
     private var eyebrow: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(spacing: 6) { eyebrowParts }
-            VStack(alignment: .leading, spacing: 2) { eyebrowParts }
+            HStack(spacing: 6) { eyebrowParts(inLine: true) }
+            VStack(alignment: .leading, spacing: 2) { eyebrowParts(inLine: false) }
         }
         .font(DesignTokens.caption.weight(.semibold))
         .accessibilityElement(children: .combine)
     }
 
-    @ViewBuilder private var eyebrowParts: some View {
+    @ViewBuilder private func eyebrowParts(inLine: Bool) -> some View {
         HStack(spacing: 7) {
             Circle().fill(Palette.amber).frame(width: 7, height: 7).accessibilityHidden(true)
             Text(waited).foregroundStyle(Palette.amber).monospacedDigit()
         }
         .fixedSize()
         if let deadline = call.deadline {
+            if inLine {
+                Text(verbatim: "·").foregroundStyle(Palette.tertiaryInk).accessibilityHidden(true)
+            }
             Text(L10n.string("Copy by %@", TradingDeadlineText.text(deadline, now: now)))
                 .foregroundStyle(Palette.tertiaryInk)
                 .fontWeight(.medium)
@@ -145,7 +156,7 @@ struct AccountCallTicket: View {
                         Text(guruName).font(DesignTokens.caption.weight(.semibold)).foregroundStyle(Palette.ink)
                     }
                     Spacer(minLength: 8)
-                    Text(Humanize.feedTime(call.source.sourceAt, now: now))
+                    Text(posted)
                         .font(DesignTokens.caption)
                         .monospacedDigit()
                         .foregroundStyle(Palette.tertiaryInk)

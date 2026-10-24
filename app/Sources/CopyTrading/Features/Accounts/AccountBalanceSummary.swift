@@ -14,11 +14,11 @@ struct AccountBalanceSummary: View {
                 HStack(alignment: .bottom, spacing: 24) {
                     worth(balance)
                     Spacer(minLength: 0)
-                    facts(balance)
+                    facts(balance, alignment: .trailing)
                 }
                 VStack(alignment: .leading, spacing: 14) {
                     worth(balance)
-                    facts(balance)
+                    facts(balance, alignment: .leading)
                 }
             }
         }
@@ -41,17 +41,17 @@ struct AccountBalanceSummary: View {
     }
 
     /// Cash and buying power, a label over each amount.
-    private func facts(_ balance: AccountBalance) -> some View {
+    private func facts(_ balance: AccountBalance, alignment: HorizontalAlignment) -> some View {
         HStack(alignment: .bottom, spacing: 28) {
-            fact("Cash", balance.cash)
-            fact("Buying power", balance.buyingPower)
+            fact("Cash", balance.cash, alignment: alignment)
+            fact("Buying power", balance.buyingPower, alignment: alignment)
         }
         .fixedSize()
         .padding(.bottom, 4)
     }
 
-    private func fact(_ title: String, _ value: String?) -> some View {
-        VStack(alignment: .trailing, spacing: 2) {
+    private func fact(_ title: String, _ value: String?, alignment: HorizontalAlignment) -> some View {
+        VStack(alignment: alignment, spacing: 2) {
             Text(L10n.string(title))
                 .font(DesignTokens.caption)
                 .foregroundStyle(Palette.tertiaryInk)

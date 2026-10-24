@@ -137,23 +137,29 @@ struct EquityPlot: View {
         }
     }
 
-    /// Each waiting call that falls inside the shown range, as an amber rule with its time on top.
+    /// Each waiting call that falls inside the shown range: an amber rule at the time it was posted,
+    /// with a small diamond and its time at the top of the plot. A call from before the range's
+    /// first point is left off rather than pinned to the edge.
     @ChartContentBuilder
     private func callRules(_ scale: EquityChartScale) -> some ChartContent {
-        ForEach(callMarks.filter { (0...1).contains(scale.x($0.at)) }) { mark in
+        let top = valueRange.upper
+        ForEach(callMarks.filter { $0.at >= stats.open.at && $0.at <= stats.last.at }) { mark in
             let isLit = highlightedCall.wrappedValue == mark.id
             RuleMark(x: .value("Call", scale.x(mark.at)))
                 .foregroundStyle(Palette.amber.opacity(isLit ? 1 : 0.7))
                 .lineStyle(StrokeStyle(lineWidth: isLit ? 1.5 : 1.2, dash: isLit ? [] : [1, 3]))
-                .annotation(position: .top, alignment: .leading, spacing: 2) {
-                    Label(mark.label, systemImage: "diamond.fill")
-                        .labelStyle(.titleAndIcon)
+                .accessibilityLabel(mark.label)
+            PointMark(x: .value("Call", scale.x(mark.at)), y: .value("Equity", top))
+                .symbol(.diamond)
+                .symbolSize(isLit ? 56 : 40)
+                .foregroundStyle(Palette.amber)
+                .annotation(position: .trailing, alignment: .center, spacing: 4) {
+                    Text(mark.label)
                         .font(.system(size: 10, weight: .semibold))
-                        .imageScale(.small)
                         .foregroundStyle(Palette.amber)
                         .fixedSize()
                 }
-                .accessibilityLabel(mark.label)
+                .accessibilityHidden(true)
         }
     }
 
