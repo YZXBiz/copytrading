@@ -15,6 +15,7 @@ from copytrading_engine.parsing.extraction import (
     GroundingError,
     ReadingOutput,
     check_reading,
+    exit_basis,
 )
 from copytrading_engine.parsing.providers.anthropic import build_decoder as build_anthropic_decoder
 from copytrading_engine.parsing.routes import Route
@@ -791,6 +792,78 @@ def test_a_sell_counts_from_the_original_buy_when_the_post_says_so():
         counts_from="remaining",
     )
     check_reading(trade(left), "sold half KO at 90.12", Route())
+
+
+ZHAO_HALF = "102.55出一半SOL/USD"
+FROM_THE_ORIGINAL = "Sell fractions count from the original buy"
+
+
+def _zhao_half(**basis) -> Sell:
+    return sell(
+        "SOL/USD",
+        "102.55",
+        bought_at=None,
+        said="出",
+        ticker_said="SOL/USD",
+        fraction="0.5",
+        fraction_said="一半",
+        **basis,
+    )
+
+
+@pytest.mark.parametrize(
+    ("playbook", "basis"),
+    [
+        ("", "remaining_position"),
+        ("Sell fractions count from what is left. 减仓 means 1/2", "remaining_position"),
+        (FROM_THE_ORIGINAL, "original_position"),
+        ("卖出比例按原仓计算", "original_position"),
+        # A worked line quotes a post; it is not the guru's habit.
+        ("原仓的一半 -> reduce F at 12, fraction 0.5", "remaining_position"),
+    ],
+)
+async def test_the_same_post_counts_from_the_same_buy_however_the_model_reads_it(playbook, basis):
+    """Oct 23 2026, live on Alpaca paper: DeepSeek read 赵哥's "102.55出一半SOL/USD" once from
+    what is left and, two seconds later, from the original buy. Code decides what a share counts
+    from: the post's own words for it, else the playbook's habit, so the same post and playbook
+    always size the same sell, or go back to the model, never the other way (ADR-0010)."""
+    route = Route(playbook=playbook)
+    readings = (
+        _zhao_half(),
+        _zhao_half(counts_from="remaining"),
+        _zhao_half(counts_from="original"),
+        _zhao_half(counts_from="original", counts_from_said="出一半"),
+        _zhao_half(counts_from="remaining", counts_from_said="一半"),
+    )
+    outcomes = set()
+    for call in readings:
+        assert exit_basis(call, playbook) == basis.removesuffix("_position")
+        try:
+            result = await read(ZHAO_HALF, trade(call), route)
+        except DecodeError as error:
+            outcomes.add(tuple(issue.code for issue in error.issues))
+        else:
+            outcomes.add(tuple(instruction.exit_basis for instruction in result.instructions))
+    assert (basis,) in outcomes
+    assert outcomes <= {(basis,), ("counts_from_not_grounded",)}
+
+
+@pytest.mark.parametrize(
+    ("post", "counts_from", "said", "basis"),
+    [
+        ("102.55原仓出一半SOL/USD", "original", "原仓", "original_position"),
+        ("102.55剩下的出一半SOL/USD", "remaining", "剩下的", "remaining_position"),
+    ],
+)
+@pytest.mark.parametrize("playbook", ["", FROM_THE_ORIGINAL])
+async def test_the_posts_own_words_for_a_basis_beat_the_playbooks(
+    post, counts_from, said, basis, playbook
+):
+    reading = trade(_zhao_half(counts_from=counts_from, counts_from_said=said))
+
+    result = await read(post, reading, Route(playbook=playbook))
+
+    assert [instruction.exit_basis for instruction in result.instructions] == [basis]
 
 
 async def test_an_ungrounded_reading_goes_back_once_with_its_reason():

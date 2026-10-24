@@ -31,9 +31,12 @@ class Instruction(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     def same_call(self, other: Instruction) -> bool:
-        """The same instruction, its fraction equal within rounding however it was written."""
+        """The same instruction, its fraction equal within rounding however it was written. What
+        a sell's share counts from is how the post was read, not what the guru called: the same
+        sell read once from what is left and once from the original buy is still one sell."""
         return same_fraction(self.fraction, other.fraction) and (
-            self.model_copy(update={"fraction": other.fraction}) == other
+            self.model_copy(update={"fraction": other.fraction, "exit_basis": other.exit_basis})
+            == other
         )
 
     action: Literal["buy", "reduce", "close"]
