@@ -66,7 +66,7 @@ struct AccountPageHeader: View {
     /// The name, large and plain, with its mode and whether it copies in one grey line under it. Only a
     /// live account's mode carries colour, since it trades real money.
     private var identity: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             Text(account.accountID)
                 .font(DesignTokens.entityTitle)
                 .tracking(DesignTokens.entityTitleTracking)
@@ -75,17 +75,26 @@ struct AccountPageHeader: View {
                 .truncationMode(.middle)
                 .accessibilityAddTraits(.isHeader)
                 .help(L10n.string("Broker account %@", account.brokerIdentity))
-            HStack(spacing: 6) {
+            HStack(spacing: 10) {
+                // The mode as a small tag; only a live account's carries colour, since it trades real money.
                 Text(L10n.string(account.environment == .live ? "Live" : "Paper"))
-                    .foregroundStyle(account.environment == .live ? Palette.live : Palette.tertiaryInk)
-                Text(verbatim: "·")
-                    .foregroundStyle(Palette.tertiaryInk)
-                    .accessibilityHidden(true)
-                Text(copyState.text)
-                    .foregroundStyle(copyState.tone == .caution || copyState.tone == .critical ? Palette.amber : Palette.tertiaryInk)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(account.environment == .live ? Palette.live : Palette.secondaryInk)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(
+                        account.environment == .live ? Palette.live.opacity(0.12) : Palette.group, in: .rect(cornerRadius: 5))
+                HStack(spacing: 7) {
+                    Circle()
+                        .fill(copyState.isCopying ? Palette.gain : Palette.tertiaryInk.opacity(0.5))
+                        .frame(width: 7, height: 7)
+                        .accessibilityHidden(true)
+                    Text(copyState.text)
+                        .foregroundStyle(
+                            copyState.tone == .caution || copyState.tone == .critical ? Palette.amber : Palette.tertiaryInk)
+                }
             }
-            .font(DesignTokens.lede)
-            .tracking(DesignTokens.ledeTracking)
+            .font(DesignTokens.caption.weight(.medium))
             .accessibilityElement(children: .combine)
         }
         .fixedSize(horizontal: true, vertical: false)

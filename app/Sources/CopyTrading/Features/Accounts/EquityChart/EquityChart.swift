@@ -13,6 +13,9 @@ struct EquityChart: View {
     let chooseWindow: (EquityHistoryWindow) -> Void
     /// Tall on its own, short while a detail pane shares the page.
     var plotHeight: CGFloat = 176
+    /// Waiting calls pinned at the time they were posted.
+    var callMarks: [EquityCallMark] = []
+    var highlightedCall: Binding<String?> = .constant(nil)
     @State private var day = Date.now
     @State private var pointer = EquityPointer()
     /// Bumped by Draw It Again to draw the line in once more.
@@ -103,48 +106,51 @@ struct EquityChart: View {
 
     @ViewBuilder
     private func plot(curve: EquityCurve, stats: EquityCurveStats) -> some View {
-        EquityPlot(curve: curve, stats: stats, range: window.range, pointer: pointer)
-            .drawsIn(token: drawing)
-            .task {
-                await MeasureChartTip.chartViewed.donate()
+        EquityPlot(
+            curve: curve, stats: stats, range: window.range, pointer: pointer, callMarks: callMarks,
+            highlightedCall: highlightedCall
+        )
+        .drawsIn(token: drawing)
+        .task {
+            await MeasureChartTip.chartViewed.donate()
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(window.title)
+        .accessibilityValue(summary(stats))
+        .accessibilityHint(L10n.string("Use the left and right arrow keys to read recorded points."))
+        .focusable()
+        .focused($isChartFocused)
+        .focusEffectDisabled()
+        .simultaneousGesture(DragGesture(minimumDistance: 0).onChanged { _ in focusCameFromPointer = true })
+        .onChange(of: isChartFocused) { _, focused in
+            if !focused { focusCameFromPointer = false }
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 6)
+                .strokeBorder(Palette.ink, lineWidth: contrast == .increased ? 2 : 1.5)
+                .opacity(isChartFocused && !focusCameFromPointer ? 1 : 0)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
+        .onMoveCommand { direction in
+            focusCameFromPointer = false
+            switch direction {
+            case .left: step(through: curve.points, forward: false)
+            case .right: step(through: curve.points, forward: true)
+            default: break
             }
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel(window.title)
-            .accessibilityValue(summary(stats))
-            .accessibilityHint(L10n.string("Use the left and right arrow keys to read recorded points."))
-            .focusable()
-            .focused($isChartFocused)
-            .focusEffectDisabled()
-            .simultaneousGesture(DragGesture(minimumDistance: 0).onChanged { _ in focusCameFromPointer = true })
-            .onChange(of: isChartFocused) { _, focused in
-                if !focused { focusCameFromPointer = false }
+        }
+        .onExitCommand {
+            focusCameFromPointer = false
+            pointer.selection = .none
+        }
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: step(through: curve.points, forward: true)
+            case .decrement: step(through: curve.points, forward: false)
+            @unknown default: break
             }
-            .overlay {
-                RoundedRectangle(cornerRadius: 6)
-                    .strokeBorder(Palette.ink, lineWidth: contrast == .increased ? 2 : 1.5)
-                    .opacity(isChartFocused && !focusCameFromPointer ? 1 : 0)
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
-            }
-            .onMoveCommand { direction in
-                focusCameFromPointer = false
-                switch direction {
-                case .left: step(through: curve.points, forward: false)
-                case .right: step(through: curve.points, forward: true)
-                default: break
-                }
-            }
-            .onExitCommand {
-                focusCameFromPointer = false
-                pointer.selection = .none
-            }
-            .accessibilityAdjustableAction { direction in
-                switch direction {
-                case .increment: step(through: curve.points, forward: true)
-                case .decrement: step(through: curve.points, forward: false)
-                @unknown default: break
-                }
-            }
+        }
     }
 
     /// A short line while there is no curve, on the plot's own floor, so the page keeps its shape

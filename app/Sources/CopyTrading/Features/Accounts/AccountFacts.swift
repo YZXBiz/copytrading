@@ -1,17 +1,27 @@
 import DesktopCore
 import SwiftUI
 
-/// The account's rules under its curve: every limit in one place under a "Limits" title, with Edit
-/// Limits beside it: today's loss and what is in stocks, each against its cap with a meter, and the
-/// most an order and a stock may take. Each figure has the same shape, a label over a number, so the
-/// row reads straight across. Cash and buying power sit with the balance above. Nothing else on the
-/// page edits limits.
+/// The account's rules: every limit in one bordered group under a "Limits" title, with Edit Limits
+/// beside it. Today's loss and what is invested each show their cap, a meter, and the room left;
+/// the most an order and a symbol may take say when they apply, so all four read the same way. In
+/// the side rail the four stack as a list. Cash and buying power sit with the balance. Nothing else
+/// on the page edits limits.
 struct AccountFacts: View {
     let account: AccountOverview
     let policy: TradingAccountPolicy?
+    /// The limits sit in the narrow side rail, one under another.
+    let isCompact: Bool
     let editLimits: () -> Void
 
-    private static let column: CGFloat = 176
+    private struct Cell {
+        let title: String
+        let amount: Decimal?
+        /// "of $250" after a used amount, or "at most" after a cap.
+        let suffix: String
+        /// How full the meter is, for a limit that fills up.
+        let fraction: Double?
+        let footnote: String?
+    }
 
     /// Nil until the account's balance has been read, so an unread account never shows as empty.
     private var lossToday: Decimal? {
@@ -21,91 +31,152 @@ struct AccountFacts: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 34) {
-            if let policy {
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack(alignment: .firstTextBaseline, spacing: 14) {
-                        Text(L10n.string("Limits"))
-                            .font(DesignTokens.cardTitle)
-                            .tracking(DesignTokens.listHeadingTracking)
-                            .foregroundStyle(Palette.ink)
-                            .accessibilityAddTraits(.isHeader)
-                        Button(L10n.string("Edit Limits"), action: editLimits)
-                            .buttonStyle(QuietTextButtonStyle())
-                            .accessibilityIdentifier("account.editLimits")
-                    }
-                    ViewThatFits(in: .horizontal) {
-                        HStack(alignment: .top, spacing: 0) { limits(policy) }
-                        Grid(alignment: .topLeading, horizontalSpacing: 0, verticalSpacing: 22) {
-                            let cells = limitCells(policy)
-                            GridRow {
-                                cells.0; cells.1
-                            }
-                            GridRow {
-                                cells.2; cells.3
-                            }
-                        }
-                    }
+        if let policy {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    Text(L10n.string("Limits"))
+                        .font(DesignTokens.bodyEmphasis.weight(.semibold))
+                        .foregroundStyle(Palette.ink)
+                        .accessibilityAddTraits(.isHeader)
+                    Button(L10n.string("Edit Limits"), action: editLimits)
+                        .buttonStyle(QuietTextButtonStyle())
+                        .accessibilityIdentifier("account.editLimits")
                 }
+                group(cells(policy))
             }
+            .accessibilityElement(children: .contain)
         }
-        .accessibilityElement(children: .contain)
     }
 
     @ViewBuilder
-    private func limits(_ policy: TradingAccountPolicy) -> some View {
-        let cells = limitCells(policy)
-        cells.0
-        cells.1
-        cells.2
-        cells.3
-    }
-
-    private func limitCells(_ policy: TradingAccountPolicy) -> (AnyView, AnyView, AnyView, AnyView) {
-        let exposure = account.balance == nil ? nil : Decimal(engine: account.totalExposureUSD) ?? 0
-        return (
-            meter("Loss today", used: lossToday, cap: Decimal(engine: policy.dailyLossCapUSD), note: nil),
-            meter("In stocks", used: exposure, cap: Decimal(engine: policy.maxTotalUSD), note: ExposureSplit.note(account)),
-            AnyView(figure("Each order", Decimal(engine: policy.maxOrderUSD), suffix: L10n.string("at most"))),
-            AnyView(figure("Each stock", Decimal(engine: policy.maxSymbolUSD), suffix: L10n.string("at most")))
-        )
-    }
-
-    private func meter(_ title: String, used: Decimal?, cap: Decimal?, note: String?) -> AnyView {
-        guard let cap else { return AnyView(figure(title, nil)) }
-        return AnyView(
-            LimitMeter(title: title, used: used, limit: cap, note: note)
-                .frame(width: Self.column - 32, alignment: .leading)
-                .frame(width: Self.column, alignment: .leading))
-    }
-
-    /// A label over a number, with an optional quiet word after it: "$500 at most".
-    private func figure(_ title: String, _ amount: Decimal?, suffix: String? = nil) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(L10n.string(title))
-                .font(DesignTokens.caption)
-                .foregroundStyle(Palette.tertiaryInk)
-            HStack(alignment: .firstTextBaseline, spacing: 5) {
-                if let amount {
-                    MoneyText(
-                        value: amount, font: DesignTokens.statValue,
-                        fractionDigits: 0
-                    )
-                    .foregroundStyle(Palette.ink)
-                    if let suffix {
-                        Text(suffix)
-                            .font(DesignTokens.caption)
-                            .foregroundStyle(Palette.tertiaryInk)
+    private func group(_ cells: [Cell]) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 12)
+        Group {
+            if isCompact {
+                VStack(spacing: 0) {
+                    ForEach(Array(cells.enumerated()), id: \.offset) { index, cell in
+                        if index > 0 { Divider().overlay(Palette.hairline) }
+                        listRow(cell)
                     }
-                } else {
-                    // Not read yet: a dash, never a $0 that reads as an empty account.
-                    Text("—")
-                        .font(DesignTokens.statValue)
-                        .foregroundStyle(Palette.tertiaryInk)
                 }
+            } else {
+                HStack(alignment: .top, spacing: 0) {
+                    ForEach(Array(cells.enumerated()), id: \.offset) { index, cell in
+                        if index > 0 { Divider().overlay(Palette.hairline) }
+                        column(cell)
+                    }
+                }
+                .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .frame(width: Self.column, alignment: .leading)
+        .overlay { shape.strokeBorder(Palette.hairline, lineWidth: 1) }
+    }
+
+    private func cells(_ policy: TradingAccountPolicy) -> [Cell] {
+        let exposure = account.balance == nil ? nil : Decimal(engine: account.totalExposureUSD) ?? 0
+        let money = Decimal.FormatStyle.Currency(code: "USD").precision(.fractionLength(0))
+        func filling(_ title: String, used: Decimal?, cap: Decimal?, left: (String) -> String, note: String?) -> Cell {
+            guard let cap else { return Cell(title: title, amount: nil, suffix: "", fraction: nil, footnote: nil) }
+            let room = used.map { max(0, cap - $0) }
+            return Cell(
+                title: title, amount: used, suffix: L10n.string("of %@", cap.formatted(money)),
+                fraction: used.map { cap > 0 ? min(1, max(0, ($0 / cap).doubleValue)) : 0 } ?? 0,
+                footnote: note ?? room.map { left($0.formatted(money)) })
+        }
+        return [
+            filling(
+                "Loss today", used: lossToday, cap: Decimal(engine: policy.dailyLossCapUSD),
+                left: { L10n.string("%@ left today", $0) }, note: nil),
+            filling(
+                "Invested", used: exposure, cap: Decimal(engine: policy.maxTotalUSD),
+                left: { L10n.string("%@ left", $0) }, note: ExposureSplit.note(account)),
+            Cell(
+                title: "Each order", amount: Decimal(engine: policy.maxOrderUSD), suffix: L10n.string("at most"),
+                fraction: nil, footnote: L10n.string("Checked on every copy")),
+            Cell(
+                title: "Each symbol", amount: Decimal(engine: policy.maxSymbolUSD), suffix: L10n.string("at most"),
+                fraction: nil, footnote: L10n.string("Per coin or stock")),
+        ]
+    }
+
+    /// A column of the four-across row: label, amount, meter (or its room), then the footnote.
+    private func column(_ cell: Cell) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(L10n.string(cell.title))
+                .font(DesignTokens.caption)
+                .foregroundStyle(Palette.tertiaryInk)
+            amount(cell)
+            meter(cell.fraction)
+                .opacity(cell.fraction == nil ? 0 : 1)
+            footnote(cell)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 13)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
+    }
+
+    /// A row of the rail's list: label and amount on one line, the meter, then the footnote.
+    private func listRow(_ cell: Cell) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(L10n.string(cell.title))
+                    .font(DesignTokens.caption)
+                    .foregroundStyle(Palette.tertiaryInk)
+                Spacer(minLength: 8)
+                amount(cell)
+            }
+            if let fraction = cell.fraction {
+                meter(fraction).padding(.top, 2)
+            }
+            footnote(cell)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func amount(_ cell: Cell) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 5) {
+            if let value = cell.amount {
+                MoneyText(value: value, font: DesignTokens.bodyEmphasis.weight(.semibold), fractionDigits: 0)
+                    .foregroundStyle(Palette.ink)
+                Text(cell.suffix)
+                    .font(DesignTokens.caption)
+                    .foregroundStyle(Palette.tertiaryInk)
+            } else {
+                // Not read yet: a dash, never a $0 that reads as an empty account.
+                Text(verbatim: "—")
+                    .font(DesignTokens.bodyEmphasis)
+                    .foregroundStyle(Palette.tertiaryInk)
+            }
+        }
+        .monospacedDigit()
+    }
+
+    @ViewBuilder
+    private func footnote(_ cell: Cell) -> some View {
+        if let footnote = cell.footnote {
+            Text(footnote)
+                .font(DesignTokens.caption)
+                .monospacedDigit()
+                .foregroundStyle(Palette.tertiaryInk)
+                .lineLimit(1)
+        }
+    }
+
+    /// Sky while there is room, butter once it is close enough to look at, blush at the cap.
+    private func meter(_ fraction: Double?) -> some View {
+        let fraction = fraction ?? 0
+        let tint = fraction >= 1 ? Palette.blush : fraction >= 0.8 ? Palette.butter : Palette.sky
+        return Capsule()
+            .fill(Palette.hairline)
+            .frame(height: 4)
+            .overlay(alignment: .leading) {
+                GeometryReader { proxy in
+                    Capsule().fill(tint).frame(width: max(fraction > 0 ? 4 : 0, proxy.size.width * fraction))
+                }
+            }
+            .accessibilityHidden(true)
     }
 }

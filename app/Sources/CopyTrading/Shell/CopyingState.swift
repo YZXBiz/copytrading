@@ -120,6 +120,8 @@ struct CopyingState: Equatable {
         case "enabled": return CopyingState(.copying)
         case "enabled_waiting_for_session":
             return CopyingState(.copying, L10n.string("Copies once the market opens"), warns: false)
+        case "enabled_coins_only":
+            return CopyingState(.copying, L10n.string("Coins now, stocks once the market opens"), warns: false)
         case "recovery_pending": return CopyingState(.copying, L10n.string("Checking the account after a restart"))
         case "unavailable": return CopyingState(.copying)
         default: return CopyingState(.copying, Reason.text(account.readiness))

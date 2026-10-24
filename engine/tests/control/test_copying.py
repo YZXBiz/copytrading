@@ -13,6 +13,7 @@ ENTRIES = ("enabled", "paused", "disabled", "unknown")
 READINESS = (
     "enabled",
     "enabled_waiting_for_session",
+    "enabled_coins_only",
     "paused",
     "disabled",
     "manual_resume_required",

@@ -12,12 +12,18 @@ struct EquityPlot: View {
     let stats: EquityCurveStats
     let range: EquityHistoryRange
     let pointer: EquityPointer
+    /// Waiting calls, each a thin amber rule at the time it was posted.
+    var callMarks: [EquityCallMark] = []
+    /// The call whose ticket or marker is under the pointer: its rule turns solid.
+    var highlightedCall: Binding<String?> = .constant(nil)
     @Environment(\.colorSchemeContrast) private var contrast
     @ScaledMetric(relativeTo: .caption) private var valueAxisWidth = 84
     /// The plot's size, so time marks are as fine as the room allows and session names get a
     /// strip of their own.
     @State private var plotWidth: Double = 800
     @State private var plotHeight: Double = 176
+    /// The lit call came from the pointer on its marker, not from its ticket.
+    @State private var litByMarker = false
     /// The strip at the top of a day kept clear of the line for the session names.
     private static let sessionNameStrip: Double = 28
     /// The gap between the plot and the value axis's labels.
@@ -49,6 +55,7 @@ struct EquityPlot: View {
         Chart {
             sessionBands(scale.extendedSessions)
             referenceLine
+            callRules(scale)
             // One vectorized plot for the whole line, a series per run, so the chart lays it out
             // once instead of a mark per point.
             LinePlot(
@@ -114,6 +121,45 @@ struct EquityPlot: View {
         } action: {
             plotWidth = $0.width - valueAxisWidth
             plotHeight = $0.height - 24
+        }
+        .onChange(of: pointer.selection) { _, selection in
+            // Reading the curve at a call's marker lights its ticket, and moving off lets go.
+            let near = selection.point.flatMap { point in
+                callMarks.first { abs(scale.x($0.at) - scale.x(point)) < 0.012 }
+            }
+            if let near {
+                highlightedCall.wrappedValue = near.id
+                litByMarker = true
+            } else if litByMarker {
+                highlightedCall.wrappedValue = nil
+                litByMarker = false
+            }
+        }
+    }
+
+    /// Each waiting call that falls inside the shown range: an amber rule at the time it was posted,
+    /// with a small diamond and its time at the top of the plot. A call from before the range's
+    /// first point is left off rather than pinned to the edge.
+    @ChartContentBuilder
+    private func callRules(_ scale: EquityChartScale) -> some ChartContent {
+        let top = valueRange.upper
+        ForEach(callMarks.filter { $0.at >= stats.open.at && $0.at <= stats.last.at }) { mark in
+            let isLit = highlightedCall.wrappedValue == mark.id
+            RuleMark(x: .value("Call", scale.x(mark.at)))
+                .foregroundStyle(Palette.amber.opacity(isLit ? 1 : 0.7))
+                .lineStyle(StrokeStyle(lineWidth: isLit ? 1.5 : 1.2, dash: isLit ? [] : [1, 3]))
+                .accessibilityLabel(mark.label)
+            PointMark(x: .value("Call", scale.x(mark.at)), y: .value("Equity", top))
+                .symbol(.diamond)
+                .symbolSize(isLit ? 56 : 40)
+                .foregroundStyle(Palette.amber)
+                .annotation(position: .trailing, alignment: .center, spacing: 4) {
+                    Text(mark.label)
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Palette.amber)
+                        .fixedSize()
+                }
+                .accessibilityHidden(true)
         }
     }
 

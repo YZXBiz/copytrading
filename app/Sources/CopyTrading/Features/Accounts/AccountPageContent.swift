@@ -1,9 +1,11 @@
 import DesktopCore
 import SwiftUI
 
-/// A read account's page: a hero (name, balance, the curve, what the balance is made of, and the
-/// limits it trades under, always in view), any warnings, the calls waiting on the owner, then
-/// positions or activity, one at a time.
+/// A read account's page: its name, then, when the page is wide enough, two columns: the money,
+/// its curve and positions or activity on the left, and a side rail holding the calls waiting on the
+/// owner and the limits the account trades under, so both stay in view beside the chart. On a
+/// narrower page, or while a post shares the window, the same parts stack: the waiting calls first,
+/// then the money and curve, the limits, and positions or activity.
 struct AccountPageContent: View {
     let account: AccountOverview
     let policy: TradingAccountPolicy?
@@ -16,6 +18,15 @@ struct AccountPageContent: View {
     let openPost: (SourceActivity.ID) -> Void
     // The tab the owner last chose, kept across launches.
     @AppStorage("account.section") private var section = AccountSection.positions
+    @State private var width: CGFloat = 0
+    /// The call whose ticket or chart marker is under the pointer.
+    @State private var highlightedCall: String?
+
+    /// The rail needs room for a readable chart beside it.
+    private static let railWidth: CGFloat = 300
+    private static let wideEnough: CGFloat = 880
+
+    private var isWide: Bool { !isSharingWidth && width >= Self.wideEnough }
 
     private var hasWarnings: Bool {
         !account.ownershipIncidents.isEmpty || AccountWarnings.shown(account.accountRiskReason) != nil
@@ -23,9 +34,45 @@ struct AccountPageContent: View {
     }
 
     var body: some View {
-        let directory = GuruDirectory(model.savedTradingConfiguration)
         VStack(alignment: .leading, spacing: 28) {
             AccountPageHeader(account: account, model: model, feature: feature)
+            if hasWarnings {
+                VStack(alignment: .leading, spacing: 8) {
+                    AccountWarnings(account: account, model: model, feature: feature)
+                }
+            }
+            if isWide {
+                HStack(alignment: .top, spacing: 36) {
+                    VStack(alignment: .leading, spacing: 28) {
+                        money(plotHeight: 240)
+                        sections
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    VStack(alignment: .leading, spacing: 28) {
+                        needsYou(isCompact: true)
+                        AccountFacts(account: account, policy: policy, isCompact: true, editLimits: editLimits)
+                    }
+                    .frame(width: Self.railWidth)
+                }
+            } else {
+                needsYou(isCompact: isSharingWidth || width < 760)
+                money(plotHeight: isSharingWidth ? 120 : 200)
+                AccountFacts(account: account, policy: policy, isCompact: false, editLimits: editLimits)
+                sections
+            }
+        }
+        .onGeometryChange(for: CGFloat.self) {
+            $0.size.width
+        } action: {
+            width = $0
+        }
+        .onAppear {
+            if account.positions.isEmpty { section = .activity }
+        }
+    }
+
+    private func money(plotHeight: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 20) {
             AccountBalanceSummary(account: account, model: model, feature: feature)
             EquityChart(
                 account: account,
@@ -33,27 +80,43 @@ struct AccountPageContent: View {
                 isRead: feature.historiesRead.contains(account.accountID),
                 window: feature.historyWindow,
                 chooseWindow: chooseWindow,
-                plotHeight: isSharingWidth ? 120 : 200
+                plotHeight: plotHeight,
+                callMarks: callMarks,
+                highlightedCall: $highlightedCall
             )
-            AccountFacts(account: account, policy: policy, editLimits: editLimits)
         }
-        if hasWarnings {
-            VStack(alignment: .leading, spacing: 8) {
-                AccountWarnings(account: account, model: model, feature: feature)
-            }
-        }
+    }
+
+    private func needsYou(isCompact: Bool) -> some View {
         AccountNeedsYou(
             accountID: account.accountID,
             activity: feature.knownActivity,
-            directory: directory,
+            directory: GuruDirectory(model.savedTradingConfiguration),
             skippedCalls: model.skippedCalls,
             canCopy: !feature.accounts.isEmpty,
             // While the account isn't copying, the header's Start Copying is the page's ink capsule.
             ownsPrimaryAction: CopyingState.account(account, processing: model.tradingStatus).isCopying,
             selectedPostID: selectedPostID,
+            isCompact: isCompact,
+            highlightedSourceID: $highlightedCall,
             copy: copy,
             open: { openPost($0.source.id) }
         )
+    }
+
+    /// Each waiting call pinned on the curve at the time it was posted.
+    private var callMarks: [EquityCallMark] {
+        AccountNeedsYou.waiting(
+            accountID: account.accountID, activity: feature.knownActivity, skippedCalls: model.skippedCalls, now: .now
+        ).compactMap { call in
+            guard let at = Humanize.date(call.source.sourceAt) else { return nil }
+            return EquityCallMark(
+                id: call.source.sourceID, at: at,
+                label: L10n.string("Call · %@", at.formatted(AppTime.style(.dateTime.hour().minute()))))
+        }
+    }
+
+    private var sections: some View {
         VStack(alignment: .leading, spacing: 20) {
             SectionSwitcher(
                 choices: AccountSection.allCases, selection: $section, title: \.title,
@@ -66,9 +129,6 @@ struct AccountPageContent: View {
                     accountID: account.accountID, model: model, feature: feature, selectedPostID: selectedPostID,
                     openPost: openPost)
             }
-        }
-        .onAppear {
-            if account.positions.isEmpty { section = .activity }
         }
     }
 

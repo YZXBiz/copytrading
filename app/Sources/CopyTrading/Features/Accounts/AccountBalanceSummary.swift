@@ -1,8 +1,8 @@
 import DesktopCore
 import SwiftUI
 
-/// What the account is worth, in the display face, and under it how today went, its cash and buying
-/// power, and when it was read.
+/// What the account is worth, in the display face, with how today went and when it was read under
+/// it, and its cash and buying power at the trailing edge. On a narrow page they move under it.
 struct AccountBalanceSummary: View {
     let account: AccountOverview
     let model: AppModel
@@ -10,41 +10,57 @@ struct AccountBalanceSummary: View {
 
     var body: some View {
         if let balance = account.balance {
-            VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 6) {
-                    MoneyText(
-                        value: Decimal(engine: balance.equity) ?? 0, font: DesignTokens.balanceDisplay,
-                        centsFont: DesignTokens.balanceCents
-                    )
-                    .tracking(DesignTokens.balanceTracking)
-                    .foregroundStyle(Palette.ink)
-                    // One line when it fits; on a narrow page cash and buying power take their own line.
-                    ViewThatFits(in: .horizontal) {
-                        HStack(alignment: .firstTextBaseline, spacing: 6) {
-                            change(balance)
-                            Text(L10n.string("·  %@ cash  ·  %@ buying power", money(balance.cash), money(balance.buyingPower)))
-                                .font(DesignTokens.bodyText)
-                                .monospacedDigit()
-                                .foregroundStyle(Palette.tertiaryInk)
-                                .accessibilityLabel(
-                                    L10n.string("%@ cash  ·  %@ buying power", money(balance.cash), money(balance.buyingPower)))
-                            freshness(balance)
-                        }
-                        .fixedSize()
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                                change(balance)
-                                freshness(balance)
-                            }
-                            Text(L10n.string("%@ cash  ·  %@ buying power", money(balance.cash), money(balance.buyingPower)))
-                                .font(DesignTokens.bodyText)
-                                .monospacedDigit()
-                                .foregroundStyle(Palette.tertiaryInk)
-                        }
-                    }
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .bottom, spacing: 24) {
+                    worth(balance)
+                    Spacer(minLength: 0)
+                    facts(balance, alignment: .trailing)
+                }
+                VStack(alignment: .leading, spacing: 14) {
+                    worth(balance)
+                    facts(balance, alignment: .leading)
                 }
             }
         }
+    }
+
+    private func worth(_ balance: AccountBalance) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            MoneyText(
+                value: Decimal(engine: balance.equity) ?? 0, font: DesignTokens.balanceDisplay,
+                centsFont: DesignTokens.balanceCents
+            )
+            .tracking(DesignTokens.balanceTracking)
+            .foregroundStyle(Palette.ink)
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                change(balance)
+                freshness(balance)
+            }
+            .fixedSize()
+        }
+    }
+
+    /// Cash and buying power, a label over each amount.
+    private func facts(_ balance: AccountBalance, alignment: HorizontalAlignment) -> some View {
+        HStack(alignment: .bottom, spacing: 28) {
+            fact("Cash", balance.cash, alignment: alignment)
+            fact("Buying power", balance.buyingPower, alignment: alignment)
+        }
+        .fixedSize()
+        .padding(.bottom, 4)
+    }
+
+    private func fact(_ title: String, _ value: String?, alignment: HorizontalAlignment) -> some View {
+        VStack(alignment: alignment, spacing: 2) {
+            Text(L10n.string(title))
+                .font(DesignTokens.caption)
+                .foregroundStyle(Palette.tertiaryInk)
+            Text(money(value))
+                .font(.system(size: 16, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(Palette.ink)
+        }
+        .accessibilityElement(children: .combine)
     }
 
     /// Today's change, its percent, and "today": one phrase for VoiceOver.

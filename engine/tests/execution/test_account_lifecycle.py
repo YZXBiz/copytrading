@@ -33,12 +33,12 @@ from .fakes import FakeBroker
 NOW = dt.datetime.now(dt.UTC)
 
 
-async def _open(tmp_path, broker, account_id="paper", recovery="manual"):
+async def _open(tmp_path, broker, account_id="paper", recovery="manual", environment="paper"):
     return await ExecutionOwner.open(
         tmp_path / "accounts" / account_id,
         AlpacaCredentials(key=SecretStr("test"), secret=SecretStr("test")),
         CopyConfig(sources=("discord:demo",), recovery_preference=recovery),
-        environment="paper",
+        environment=environment,
         broker_factory=lambda _credentials, _environment: broker,
         account_lock_root=tmp_path / "locks",
     )
@@ -111,6 +111,29 @@ async def test_disabled_and_paused_buys_are_durable_skips_but_owned_exit_continu
         await owner.close()
 
 
+@pytest.mark.parametrize(
+    ("environment", "readiness"),
+    [("paper", "enabled_coins_only"), ("live", "enabled_waiting_for_session")],
+)
+async def test_a_closed_market_holds_only_stocks_on_a_paper_account(
+    tmp_path, environment, readiness
+):
+    """Paper accounts copy coins at every hour (ADR-0014), so a closed stock market holds only
+    their stocks; a live account copies no coins and waits for the open."""
+
+    class ClosedBroker(FakeBroker):
+        def calendar(self, date):
+            return []
+
+    owner = await _open(tmp_path, ClosedBroker(), recovery="automatic", environment=environment)
+    try:
+        await owner.recover_account(NOW)
+        await owner.control_account(_command("enable-1", "resume"), NOW)
+        assert (await owner.account_status()).readiness == readiness
+    finally:
+        await owner.close()
+
+
 async def test_control_replay_conflict_and_recovery_follows_the_setup_at_each_open(tmp_path):
     broker = FakeBroker()
     owner = await _open(tmp_path, broker, recovery="automatic")
@@ -134,6 +157,7 @@ async def test_control_replay_conflict_and_recovery_follows_the_setup_at_each_op
         await owner.recover_account(NOW + dt.timedelta(minutes=1))
         assert (await owner.account_status()).readiness in {
             "enabled",
+            "enabled_coins_only",
             "enabled_waiting_for_session",
         }
         assert (await owner.account_status()).recovery_preference == "automatic"

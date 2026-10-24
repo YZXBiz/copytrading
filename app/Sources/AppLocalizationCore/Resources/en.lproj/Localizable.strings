@@ -1887,7 +1887,6 @@
 "They're at the top of each account's page." = "They're at the top of each account's page.";
 "Skipped “%@”" = "Skipped “%@”";
 "Undo" = "Undo";
-"Nothing else is waiting" = "Nothing else is waiting";
 "Sending in %lld s" = "Sending in %lld s";
 "%@, sending soon" = "%@, sending soon";
 "Hold my orders before sending" = "Hold my orders before sending";
@@ -1911,7 +1910,6 @@
 "Not updating since %@: the engine is stopped" = "Not updating since %@: the engine is stopped";
 "Not updating since %@" = "Not updating since %@";
 "Each order" = "Each order";
-"Each stock" = "Each stock";
 "at most" = "at most";
 "%@ copied · %@ yours" = "%@ copied · %@ yours";
 "%@ bought at %@" = "%@ bought at %@";
@@ -1962,7 +1960,6 @@
 "You sold %@" = "You sold %@";
 "Pre-market" = "Pre-market";
 "After hours" = "After hours";
-"·  %@ cash  ·  %@ buying power" = "·  %@ cash  ·  %@ buying power";
 "The call asked for" = "The call asked for";
 "Selling %@ of %@" = "Selling %@ of %@";
 "Buying %@ of %@" = "Buying %@ of %@";
@@ -1994,7 +1991,6 @@
 "Buy %@ of %@ %@." = "Buy %@ of %@ %@.";
 "Buy %@ of %@ %@" = "Buy %@ of %@ %@";
 ", %@ worth" = ", %@ worth";
-"%@ cash  ·  %@ buying power" = "%@ cash  ·  %@ buying power";
 "You bought %@" = "You bought %@";
 "You entered the trade" = "You entered the trade";
 "You entered the trade yourself." = "You entered the trade yourself.";
@@ -2413,6 +2409,7 @@
 "You paused new buys; sells still go through" = "You paused new buys; sells still go through";
 "Waiting for your Start Copying after a restart" = "Waiting for your Start Copying after a restart";
 "Copies once the market opens" = "Copies once the market opens";
+"Coins now, stocks once the market opens" = "Coins now, stocks once the market opens";
 "Checking the account after a restart" = "Checking the account after a restart";
 "Buys again once its checks pass." = "Buys again once its checks pass.";
 "Buys wait for your Start Copying." = "Buys wait for your Start Copying.";
@@ -2439,3 +2436,15 @@
 "Less %@ at the broker than CopyTrading copied" = "Less %@ at the broker than CopyTrading copied";
 "%@ · until filled or cancelled" = "%@ · until filled or cancelled";
 "Around the clock" = "Around the clock";
+"%@ on the buy at %@" = "%@ on the buy at %@";
+"Waiting %@" = "Waiting %@";
+"%lldm" = "%lldm";
+"%lldh %lldm" = "%lldh %lldm";
+"Call · %@" = "Call · %@";
+"Invested" = "Invested";
+"Each symbol" = "Each symbol";
+"%@ left today" = "%@ left today";
+"%@ left" = "%@ left";
+"Checked on every copy" = "Checked on every copy";
+"Per coin or stock" = "Per coin or stock";
+"Call waiting for you" = "Call waiting for you";

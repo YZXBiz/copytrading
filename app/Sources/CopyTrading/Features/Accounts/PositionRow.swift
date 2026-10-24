@@ -54,9 +54,12 @@ struct PositionRow: View {
                     .opacity(position.lots.isEmpty ? 0 : 1)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
+                    // A pair such as BTC/USD stays on one line; a narrow column shrinks it a little first.
                     Text(position.symbol)
                         .font(DesignTokens.cardTitle)
                         .foregroundStyle(Palette.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
                     Text(ownership)
                         .font(DesignTokens.caption)
                         .foregroundStyle(Palette.tertiaryInk)

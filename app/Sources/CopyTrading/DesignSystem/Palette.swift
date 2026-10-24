@@ -48,6 +48,9 @@ enum Palette {
     /// the system green, red, and orange measure 2.1, 3.6, and 2.2 to 1 on white.
     /// A call waiting for the owner.
     static let amber = dynamic(light: rgb(0x8B6508), dark: rgb(0xF5C04A))
+    /// The ticket a waiting call sits on: a pale amber paper with a slightly deeper edge.
+    static let ticket = dynamic(light: rgb(0xFCF7EA), dark: rgb(0x2C2820))
+    static let ticketEdge = dynamic(light: rgb(0xEFE1BC), dark: rgb(0x4A3F27))
     /// Money up, and a status that went through.
     static let gain = dynamic(light: rgb(0x187C27), dark: rgb(0x32D74B))
     /// Money down, and a status that failed or stops something.
