@@ -42,6 +42,9 @@ BUNDLE_ID = "dev.copytrading.app.uitest"
 APP_LOG = ROOT / "dist/ui-test/app-stderr.log"
 APPEARANCE_KEY = "appearance"  # AppAppearance.storageKey in the app
 SIGN_UPDATE = ROOT / "app/.build/artifacts/sparkle/Sparkle/bin/sign_update"
+AX_PRESS = ROOT / "app/scripts/ax_press.swift"
+# AppKit's identifier for an open or save panel's default button (Open, Save), in any language.
+FILE_PANEL_DEFAULT_BUTTON = "OKButton"
 # A throwaway EdDSA key pair that exists only to sign the journeys' local update. While a journey
 # runs, the debug bundle trusts its public half; release builds trust the release key in
 # Info.plist, so a signature made with this one installs nothing there.
@@ -952,6 +955,23 @@ return "none"
     return pressed.stdout.strip() == "pressed"
 
 
+def press_identified(identifier: str) -> bool:
+    """Press the debug app's control with this accessibility identifier, in any window or sheet,
+    through Accessibility alone: no focus change, so it works while the window is not key. False
+    while it is missing or disabled."""
+    pids = _debug_app_pids()
+    if len(pids) != 1:
+        return False
+    pressed = subprocess.run(
+        ["swift", str(AX_PRESS), pids[0], identifier],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    return pressed.returncode == 0
+
+
 def wait_and_press_dialog_button(title: str, *, timeout: float = 30) -> None:
     deadline = time.monotonic() + timeout
     while not press_dialog_button(title):
@@ -1076,10 +1096,10 @@ def j37_everyday_buttons(app: AppDriver) -> None:
     diagnostics = app.open_screen("diagnostics")
     app.expect(diagnostics, "diagnostics.runSelfTest")
     app.click("diagnostics.runSelfTest")
-    app.wait_for("Self-test completed", timeout=60, name="self-test-logged")
+    app.wait_for("Self-test finished", timeout=60, name="self-test-logged")
     app.type("completed", into="Search")
     narrowed = app.see("diagnostics-search")
-    app.expect(narrowed, "Self-test completed")
+    app.expect(narrowed, "Self-test finished")
     app.expect_absent(narrowed, "Self-test captured")
     app.type("", into="Search")
     app.click("diagnostics.refresh")
@@ -1101,7 +1121,7 @@ def j37_everyday_buttons(app: AppDriver) -> None:
         if not records:
             raise JourneyFailure("Save log… wrote an empty log")
     except JourneyFailure:
-        app.press("escape")  # a save panel left open would keep the app from quitting
+        press_identified("CancelButton")  # a save panel left open would keep the app from quitting
         raise
     finally:
         shutil.rmtree(folder, ignore_errors=True)
@@ -1353,13 +1373,13 @@ def j8_credential_gate(app: AppDriver) -> None:
 def j12_diagnostics(app: AppDriver) -> None:
     """The log is read from disk: the self-test's stages appear and the filters narrow them."""
     app.open_screen("diagnostics")
-    records = app.wait_for("Self-test completed", timeout=30, name="diagnostics-records")
+    records = app.wait_for("Self-test finished", timeout=30, name="diagnostics-records")
     app.expect(records, "Self-test captured", "diagnostics.refresh", "on this Mac")
     app.click("Problems")
     filtered = app.wait_for("No problems recorded", timeout=15, name="diagnostics-problems")
-    app.expect_absent(filtered, "Self-test completed")
+    app.expect_absent(filtered, "Self-test finished")
     app.click("All")
-    app.wait_for("Self-test completed", timeout=15, name="diagnostics-all")
+    app.wait_for("Self-test finished", timeout=15, name="diagnostics-all")
 
 
 def j14_retention(app: AppDriver) -> None:
@@ -1796,7 +1816,10 @@ def _check_locked_app_still_pauses(app: AppDriver) -> None:
 
 
 def _choose_in_file_panel(app: AppDriver, folder: Path, name: str | None = None) -> None:
-    """Answer the open or save panel the way a person does: Go to Folder, then confirm."""
+    """Answer the open or save panel the way a person does: Go to Folder, then Open or Save.
+
+    The default button is pressed by its identifier rather than with Return: after Go to Folder
+    the window can stop being key, and a Return then goes nowhere while the panel stays open."""
     time.sleep(1.5)
     app.press("cmd+shift+g")
     time.sleep(0.8)
@@ -1806,7 +1829,13 @@ def _choose_in_file_panel(app: AppDriver, folder: Path, name: str | None = None)
     if name is not None:
         peekaboo("type", name, "--foreground", "--clear", "--accept-dispatched")
         time.sleep(0.3)
-    app.press("Return")
+    deadline = time.monotonic() + 20
+    while not press_identified(FILE_PANEL_DEFAULT_BUTTON):
+        if time.monotonic() > deadline:
+            app.see("file-panel-not-confirmed")
+            raise JourneyFailure("the file panel's Open or Save button never became pressable")
+        time.sleep(0.5)
+    app.wait_gone(FILE_PANEL_DEFAULT_BUTTON, timeout=20)
 
 
 def j33_backup_and_restore(app: AppDriver) -> None:
@@ -1842,7 +1871,7 @@ def j33_backup_and_restore(app: AppDriver) -> None:
         if restored is None or restored["entry_permission"] != "disabled":
             raise JourneyFailure(f"the restored account came back as {restored}")
     except JourneyFailure:
-        app.press("escape")  # a file panel left open would keep the app from quitting
+        press_identified("CancelButton")  # a file panel left open would keep the app from quitting
         raise
     finally:
         shutil.rmtree(folder, ignore_errors=True)
@@ -2434,6 +2463,9 @@ def j41_import_setup(app: AppDriver) -> None:
         if app.field_value("Channel IDs") != IMPORT_CHANNEL:
             raise JourneyFailure("Import Setup… did not fill the Discord channel")
         app.click("connections.close")
+    except JourneyFailure:
+        press_identified("CancelButton")  # a file panel left open would keep the app from quitting
+        raise
     finally:
         shutil.rmtree(folder, ignore_errors=True)
 

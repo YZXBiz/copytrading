@@ -2236,7 +2236,6 @@
 "What is a paper account?" = "什么是模拟盘账户？";
 "Orders the broker already accepted may stay open until they fill or expire." = "券商已接受的订单仍可能保持有效，直到成交或过期。";
 "The chart can't change while the engine is stopped. Start it in Settings → Engine." = "引擎已停止，图表暂时无法切换。请在“设置 → 引擎”中启动它。";
-"Self-test completed" = "自检：已完成";
 "Find" = "查找";
 "Desktop" = "桌面";
 "Documents" = "文稿";
