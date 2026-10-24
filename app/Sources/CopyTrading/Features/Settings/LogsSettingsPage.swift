@@ -24,7 +24,7 @@ struct LogsSettingsPage: View {
         VStack(alignment: .leading, spacing: 30) {
             SettingsSection(
                 title: "Log Health",
-                subtitle: "Each stage, post, model reply, and trade outcome, in a private file on this Mac. Keys are removed first."
+                hint: "Each stage, post, model reply, and trade outcome, in a private file on this Mac. Keys are removed first."
             ) {
                 if let engine = model.engineStatus {
                     SettingsValueRow(label: "Logging", value: engine.telemetryState.title, tone: engine.telemetryState.tone)
@@ -45,7 +45,7 @@ struct LogsSettingsPage: View {
 
             SettingsSection(
                 title: "Log Retention",
-                subtitle: "Oldest days go first. Trading data and backups are never touched."
+                hint: "Oldest days go first. Trading data and backups are never touched."
             ) {
                 SettingsRow(label: "Keep logs for", title: Humanize.count(ageDays, "day"), labelsControl: true) {
                     Stepper(
@@ -74,7 +74,7 @@ struct LogsSettingsPage: View {
                 }
             }
 
-            SettingsSection(title: "Support Export", subtitle: "Saves the log as a file you choose. Nothing is sent anywhere.") {
+            SettingsSection(title: "Support Export", hint: "Saves the log as a file you choose. Nothing is sent anywhere.") {
                 SettingsActionRow(
                     title: "Save Log…",
                     detail: exportMessage ?? L10n.string("Local log, %@", Humanize.bytes(model.diagnosticsJournalBytes)),

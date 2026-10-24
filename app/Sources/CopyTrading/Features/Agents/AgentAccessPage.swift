@@ -18,7 +18,7 @@ struct AgentAccessPage: View {
         VStack(alignment: .leading, spacing: 30) {
             SettingsSection(
                 title: "Allow Agents To",
-                subtitle: "Agents such as Claude Code connect through the copytrading command or MCP server while the app runs."
+                hint: "Agents such as Claude Code connect through the copytrading command or MCP server while the app runs."
             ) {
                 choice("Nothing", detail: nil, .off)
                 choice("Read and pause", detail: "Reading needs the app unlocked. Pausing always works.", .readAndPause)

@@ -42,13 +42,13 @@ struct TimeZoneSettingsSection: View {
                 label: L10n.string("Show times in"),
                 selection: selection,
                 options: options,
-                detail: L10n.string("Post times, deadlines, and market hours use this zone."),
+                hint: L10n.string("Post times, deadlines, and market hours use this zone."),
                 identifier: "settings.timeZone",
                 title: title
             )
             SettingsActionRow(
                 title: "Choose Another Time Zone…",
-                detail: "Search every zone by city or name."
+                hint: "Search every zone by city or name."
             ) { isPicking = true }
         }
         .sheet(isPresented: $isPicking) {

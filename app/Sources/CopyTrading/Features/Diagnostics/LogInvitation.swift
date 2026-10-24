@@ -1,21 +1,13 @@
 import SwiftUI
 
-/// Diagnostics before anything is logged: what the log keeps, where it lives, and a way to see it
-/// fill in, standing on the ink dot's ground.
+/// Diagnostics before anything is logged: one line on the ink dot's ground, and a way to see the
+/// log fill in.
 struct LogInvitation: View {
     let model: AppModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text(L10n.string("The log starts here"))
-                .font(DesignTokens.listHeading)
-                .tracking(DesignTokens.listHeadingTracking)
-                .foregroundStyle(Palette.ink)
-                .accessibilityAddTraits(.isHeader)
-            InkEmptyState(
-                message: L10n.string(
-                    "Posts, model calls, and trading steps appear here as the engine handles them, with keys removed. The log stays on this Mac."
-                ))
+            InkEmptyState(message: L10n.string("Nothing logged yet"))
             if model.isLoadingDiagnostics {
                 HStack(spacing: 8) {
                     ProgressView()

@@ -49,7 +49,7 @@ struct GuruPage: View {
                         )
                         .padding(.top, 20)
                         GuruFeedList(
-                            days: feed.days, guruName: guru?.name ?? guruID, isRead: feature.lastUpdatedAt != nil,
+                            days: feed.days, isRead: feature.lastUpdatedAt != nil,
                             selection: $selectedID
                         )
                         .padding(.top, 56)

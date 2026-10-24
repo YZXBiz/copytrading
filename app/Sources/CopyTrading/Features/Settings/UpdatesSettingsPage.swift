@@ -13,18 +13,18 @@ struct UpdatesSettingsPage: View {
         VStack(alignment: .leading, spacing: 30) {
             SettingsSection(
                 title: "CopyTrading",
-                subtitle: "Reads the public list of releases. Nothing about your trading is sent."
+                hint: "Reads the public list of releases. Nothing about your trading is sent."
             ) {
                 SettingsValueRow(label: "Version on this Mac", value: version)
                 SettingsActionRow(
-                    title: "Check for Updates…", detail: "Shows what's new and asks before installing.",
+                    title: "Check for Updates…", hint: "Shows what's new and asks before installing.",
                     action: updater.checkForUpdates
                 )
                 .disabled(!updater.canCheckForUpdates)
                 .accessibilityIdentifier("settings.updates.check")
                 SettingsToggleRow(
                     title: "Check for updates automatically",
-                    detail: "Once a day. You still choose when to install.",
+                    hint: "Once a day. You still choose when to install.",
                     isOn: Binding(get: { updater.checksAutomatically }, set: { updater.checksAutomatically = $0 }),
                     identifier: "settings.updates.automatic")
             }

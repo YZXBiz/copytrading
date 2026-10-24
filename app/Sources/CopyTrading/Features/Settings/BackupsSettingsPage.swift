@@ -9,7 +9,7 @@ struct BackupsSettingsPage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 30) {
-            SettingsSection(title: "Data Folder", subtitle: "Everything CopyTrading records stays here, on this Mac.") {
+            SettingsSection(title: "Data Folder", hint: "Everything CopyTrading records stays here, on this Mac.") {
                 DataFolderRow(path: model.operationalStoragePath)
             }
 
@@ -17,14 +17,14 @@ struct BackupsSettingsPage: View {
 
             SettingsSection(
                 title: "Backup & Restore",
-                subtitle: "Holds your records, setup, posts, and attachments. Keys and logs are left out."
+                hint: "Holds your records, setup, posts, and attachments. Keys and logs are left out."
             ) {
                 SettingsActionRow(
-                    title: "Create Backup…", detail: "Copying waits a moment while it runs.", action: chooseBackupDestination
+                    title: "Create Backup…", hint: "Copying waits a moment while it runs.", action: chooseBackupDestination
                 )
                 .disabled(model.isRunningBackupRestore)
                 SettingsActionRow(
-                    title: "Restore from Backup…", detail: "Shows what a backup holds first. Nothing changes until you restore it.",
+                    title: "Restore from Backup…", hint: "Shows what a backup holds first. Nothing changes until you restore it.",
                     action: chooseRestoreArchive
                 )
                 .disabled(model.isRunningBackupRestore || model.pendingRestoreCandidate != nil)

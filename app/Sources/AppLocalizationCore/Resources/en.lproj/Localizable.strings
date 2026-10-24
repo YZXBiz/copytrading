@@ -490,7 +490,6 @@
 "One week" = "One week";
 "One year" = "One year";
 "Only needed when several people post in the same channel." = "Only needed when several people post in the same channel.";
-"Only when every account is paper. Lock still locks." = "Only when every account is paper. Lock still locks.";
 "Open %@ API keys" = "Open %@ API keys";
 "Open **discord.com/app** in Chrome or Safari and sign in. In Safari, first turn on **Settings › Advanced › Show features for web developers**." = "Open **discord.com/app** in Chrome or Safari and sign in. In Safari, first turn on **Settings › Advanced › Show features for web developers**.";
 "Open Accessibility Settings" = "Open Accessibility Settings";
@@ -546,7 +545,6 @@
 "Post forwarded" = "Post forwarded";
 "Post pipeline" = "Post pipeline";
 "posts" = "posts";
-"Posts, model calls, and trading steps appear here as the engine handles them, with keys removed. The log stays on this Mac." = "Posts, model calls, and trading steps appear here as the engine handles them, with keys removed. The log stays on this Mac.";
 "Posts, model calls, and trading steps appear here as the engine handles them." = "Posts, model calls, and trading steps appear here as the engine handles them.";
 "Prepared an order" = "Prepared an order";
 "Preview is being checked or has not been requested." = "Preview is being checked or has not been requested.";
@@ -1129,8 +1127,6 @@
 "Discord: intro to webhooks" = "Discord: intro to webhooks";
 "Channel webhook" = "Channel webhook";
 "Needs a webhook URL" = "Needs a webhook URL";
-"Through a channel webhook" = "Through a channel webhook";
-"Through a bot you make" = "Through a bot you make";
 "the Discord webhook URL" = "the Discord webhook URL";
 "Connect to %@" = "Connect to %@";
 "Step by step" = "Step by step";
@@ -1157,7 +1153,6 @@
 "Pretend money at real prices. Start here." = "Pretend money at real prices. Start here.";
 "Ready to start. Every connection is checked first." = "Ready to start. Every connection is checked first.";
 "Real money. Each order still stays inside your limits." = "Real money. Each order still stays inside your limits.";
-"Set up CopyTrading here, top to bottom. Nothing is saved or traded until you start copying." = "Set up CopyTrading here, top to bottom. Nothing is saved or traded until you start copying.";
 "Some checks need attention. Review them, fix the setup, then start again." = "Some checks need attention. Review them, fix the setup, then start again.";
 "Start copying" = "Start copying";
 "Step %@" = "Step %@";
@@ -1707,8 +1702,6 @@
 "Newest first" = "Newest first";
 "Yesterday" = "Yesterday";
 "No account acted on it" = "No account acted on it";
-"No posts from %@ yet. They show here as soon as CopyTrading reads one." = "No posts from %@ yet. They show here as soon as CopyTrading reads one.";
-"%@'s posts show here once CopyTrading has read them." = "%@'s posts show here once CopyTrading has read them.";
 "Edit %@" = "Edit %@";
 "Saved · applies to the next order" = "Saved · applies to the next order";
 "These limits weren't saved." = "These limits weren't saved.";
@@ -1753,14 +1746,6 @@
 "This page stays here as your guide." = "This page stays here as your guide.";
 "No records match “%@”." = "No records match “%@”.";
 "Show Steps" = "Show Steps";
-"The log starts here" = "The log starts here";
-"How CopyTrading opens, and how it tells the time." = "How CopyTrading opens, and how it tells the time.";
-"Light, dark, or as your Mac is set." = "Light, dark, or as your Mac is set.";
-"New versions, and when to look for them." = "New versions, and when to look for them.";
-"The local engine that reads posts and places orders." = "The local engine that reads posts and places orders.";
-"What other apps on this Mac may ask CopyTrading to do." = "What other apps on this Mac may ask CopyTrading to do.";
-"Copies of your setup, kept on this Mac." = "Copies of your setup, kept on this Mac.";
-"What the engine wrote down, with keys removed." = "What the engine wrote down, with keys removed.";
 "One call is waiting for you" = "One call is waiting for you";
 "%lld calls are waiting for you" = "%lld calls are waiting for you";
 "Not traded" = "Not traded";
@@ -2206,7 +2191,6 @@
 "Switch tabs on an account or guru page" = "Switch tabs on an account or guru page";
 "Tips will show again once copying is set up, each beside what it points at." = "Tips will show again once copying is set up, each beside what it points at.";
 "Tips will show again, each beside what it points at." = "Tips will show again, each beside what it points at.";
-"Once a setup is saved and every account is paper. Lock still locks." = "Once a setup is saved and every account is paper. Lock still locks.";
 "CopyTrading couldn't run this check because its engine isn't answering. Start it in Settings → Engine, then try again." = "CopyTrading couldn't run this check because its engine isn't answering. Start it in Settings → Engine, then try again.";
 "Enter a channel ID and your Discord token to connect." = "Enter a channel ID and your Discord token to connect.";
 "Enter the model's name to connect." = "Enter the model's name to connect.";
@@ -2435,3 +2419,6 @@
 "Call waiting for you" = "Call waiting for you";
 "%@ from %@" = "%@ from %@";
 "No open positions" = "No open positions";
+"No posts yet" = "No posts yet";
+"Once a setup is saved and every account is paper." = "Once a setup is saved and every account is paper.";
+"Only when every account is paper." = "Only when every account is paper.";

@@ -34,19 +34,19 @@ struct ConnectionsView: View {
                         .id(SetupTourTarget.interpreterServices)
                     SetupStepSection(
                         number: 3, isDone: progress.isDone(.account), title: L10n.string("Broker accounts"),
-                        subtitle: L10n.string("Where orders go. Start with paper: pretend money at real prices.")
+                        hint: L10n.string("Where orders go. Start with paper: pretend money at real prices.")
                     ) { BrokerAccountsRows(model: model).setupTourTarget(.accounts) }
                     .padding(.bottom, 36)
                     .id(SetupTourTarget.accounts)
                     SetupStepSection(
                         number: 4, isDone: progress.isDone(.guru), title: L10n.string("Gurus"),
-                        subtitle: L10n.string("Who you copy, and the account each one copies into.")
+                        hint: L10n.string("Who you copy, and the account each one copies into.")
                     ) { GuruRows(model: model).setupTourTarget(.gurus) }
                     .padding(.bottom, 36)
                     .id(SetupTourTarget.gurus)
                     SetupStepSection(
                         number: 5, isDone: model.alertsReady, isOptional: true,
-                        title: ConnectionKind.alerts.title, subtitle: ConnectionKind.alerts.explanation
+                        title: ConnectionKind.alerts.title, hint: ConnectionKind.alerts.explanation
                     ) { section(.alerts) }
                     .padding(.bottom, 36)
                     if model.hasSetupToStart {
@@ -142,10 +142,7 @@ struct ConnectionsView: View {
     }
 
     private var header: some View {
-        PageHeadline(
-            L10n.string("Connections"),
-            lede: L10n.string("Set up CopyTrading here, top to bottom. Nothing is saved or traded until you start copying.")
-        ) {
+        PageHeadline(L10n.string("Connections")) {
             HStack(spacing: 8) {
                 headerControls
             }
@@ -191,7 +188,7 @@ struct ConnectionsView: View {
     private func step(_ number: Int, _ kind: ConnectionKind, @ViewBuilder rows: () -> some View) -> some View {
         SetupStepSection(
             number: number, isDone: progress.isDone(kind == .discord ? .discord : .interpreter), title: kind.title,
-            subtitle: kind.explanation, content: rows
+            hint: kind.explanation, content: rows
         )
         .padding(.bottom, 36)
     }
@@ -287,7 +284,7 @@ struct ConnectionsView: View {
         ConnectionServiceRow(
             brand: service.brandIcon,
             title: L10n.string(service == .discord ? "Discord channel" : "Telegram bot"),
-            detail: switching ? nil : L10n.string(service == .discord ? "Through a channel webhook" : "Through a bot you make"),
+            detail: nil,
             action: L10n.string(switching ? "Switch" : "Connect"),
             origin: .alert(service),
             identifier: !switching && service == .telegram ? "connections.alerts" : "connections.alerts.\(service.rawValue)"

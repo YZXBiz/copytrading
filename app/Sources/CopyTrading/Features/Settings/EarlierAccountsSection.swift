@@ -12,7 +12,7 @@ struct EarlierAccountsSection: View {
             if !earlier.isEmpty {
                 SettingsSection(
                     title: "Earlier Accounts",
-                    subtitle: "Records of accounts no longer in your setup. The same keys under any name pick theirs up again."
+                    hint: "Records of accounts no longer in your setup. The same keys under any name pick theirs up again."
                 ) {
                     ForEach(earlier) { account in
                         EarlierAccountRow(
