@@ -49,8 +49,10 @@ struct GuruPage: View {
                         )
                         .padding(.top, 20)
                         GuruFeedList(
-                            days: feed.days, isRead: feature.lastUpdatedAt != nil,
-                            selection: $selectedID
+                            days: feed.days, isRead: feature.guruPosts[guruID] != nil,
+                            error: feature.errors["guru:\(guruID)"],
+                            selection: $selectedID,
+                            loadMore: olderPosts
                         )
                         .padding(.top, 56)
                     }
@@ -78,15 +80,33 @@ struct GuruPage: View {
             selectedID = nil
             reload()
         }
+        .task(id: guruID) {
+            if feature.guruPosts[guruID] == nil {
+                await feature.loadGuruPosts(guruID: guruID, using: model.accountActions())
+            }
+        }
         .onChange(of: feature.activity) { reload() }
+        .onChange(of: feature.guruPosts[guruID]) { reload() }
         .onChange(of: feature.guruDays[guruID]) { reload() }
         .onChange(of: model.skippedCalls.skipped) { reload() }
     }
 
+    /// The guru's own pages, each post in its freshest version: the newest posts of every guru
+    /// are re-read every second while one is in flight, a guru's pages only every 15 s.
     private func reload() {
+        let fresh = Set(feature.activity.map(\.id))
+        let posts = feature.activity + (feature.guruPosts[guruID] ?? []).filter { !fresh.contains($0.id) }
         feed = GuruFeed(
-            guruID: guruID, activity: feature.activity, day: feature.guruDays[guruID],
+            guruID: guruID, activity: posts, day: feature.guruDays[guruID],
             skipped: model.skippedCalls.contains)
+    }
+
+    /// Reads the next older page, while the guru has older posts.
+    private var olderPosts: (() -> Void)? {
+        guard feature.guruPostCursors[guruID] != nil else { return nil }
+        return { [feature, model, guruID] in
+            Task { await feature.loadGuruPosts(guruID: guruID, more: true, using: model.accountActions()) }
+        }
     }
 
     private func edit() {

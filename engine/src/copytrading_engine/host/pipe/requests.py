@@ -185,6 +185,15 @@ class GetSourceActivityRequest(PipeRequest):
     limit: StrictInt = Field(default=50, ge=1, le=100)
 
 
+class GetGuruActivityRequest(PipeRequest):
+    """A page of one guru's posts, newest first, for their page."""
+
+    operation: Literal["get_guru_activity"]
+    guru_id: str = Field(min_length=1, max_length=64)
+    before_seq: StrictInt | None = Field(default=None, ge=1)
+    limit: StrictInt = Field(default=50, ge=1, le=100)
+
+
 class GetGuruDayStatsRequest(PipeRequest):
     """Each guru's numbers for the owner's day, from its start up to its end in their zone."""
 
@@ -407,6 +416,7 @@ RequestType = Annotated[
     | ResolveOwnershipRequest
     | GetAccountsRequest
     | GetSourceActivityRequest
+    | GetGuruActivityRequest
     | GetGuruDayStatsRequest
     | EvaluateHistoricalProfileRequest
     | LearnGuruPlaybookRequest

@@ -1679,6 +1679,7 @@
 "Account activity error: %@" = "Account activity error: %@";
 "Nothing has been bought or sold in this account yet." = "Nothing has been bought or sold in this account yet.";
 "Show Older Activity" = "Show Older Activity";
+"Show Older Posts" = "Show Older Posts";
 "You bought %@ of %@ at %@" = "You bought %@ of %@ at %@";
 "Bought %@ of %@ at %@" = "Bought %@ of %@ at %@";
 "You sold %@ of %@ at %@" = "You sold %@ of %@ at %@";

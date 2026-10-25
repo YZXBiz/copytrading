@@ -217,3 +217,43 @@ async def test_a_day_with_no_posts_has_no_gurus(tmp_path):
     page = await service.guru_day_stats(DAY_START, DAY_END, NOW)
 
     assert page.gurus == ()
+
+
+async def test_a_gurus_page_lists_their_posts_however_many_others_posted_since(tmp_path):
+    database = tmp_path / "application.db"
+    source = await SQLiteSourceStore.open(database)
+    parser = await SQLiteExtractionStore.open(database)
+    morning = dt.datetime(2026, 10, 14, 13, tzinfo=dt.UTC)
+    # Read under the setup's earlier random ID ("zhao"), before IDs came from the channel.
+    zhao = [
+        await _post(source, parser, f"zhao-{n}", morning + dt.timedelta(minutes=n), "zhao")
+        for n in range(3)
+    ]
+    unattributed = await _post(source, parser, "zhao-chatter", morning, None)
+    # Thirty newer posts in another channel: more than the newest page the app reads.
+    for n in range(30):
+        await _post(source, parser, f"lee-{n}", morning + dt.timedelta(hours=1, minutes=n), "lee")
+    await parser.close()
+    await source.close()
+    route = SimpleNamespace(source="discord", channel_id="2", author_id=None, connections=())
+    service = OperatorQueryService(
+        AccountAccess(
+            tmp_path,
+            lambda: {},
+            configuration=lambda: SimpleNamespace(routes=(route,), accounts=()),
+            runtime_state=lambda: "running",
+            evidence=SQLiteOperatorEvidence(),
+        )
+    )
+
+    first = await service.guru_activity(ZHAO, None, 2)
+    older = await service.guru_activity(ZHAO, first.next_before_seq, 2)
+
+    assert [item.source_id for item in first.items] == [zhao[2], zhao[1]]
+    assert {item.guru_id for item in first.items} == {ZHAO}
+    assert first.rejected_items == ()
+    assert [item.source_id for item in older.items] == [zhao[0]]
+    assert unattributed not in {item.source_id for item in first.items + older.items}
+    assert older.next_before_seq is None
+    # A guru the setup no longer has has no page.
+    assert (await service.guru_activity(LEE, None, 25)).items == ()

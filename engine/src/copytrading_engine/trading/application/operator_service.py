@@ -29,7 +29,7 @@ from copytrading_engine.execution.presentation.operator_views import (
     destination_views,
     with_live_facts,
 )
-from copytrading_engine.shared.route_keys import choose_route, route_key
+from copytrading_engine.shared.route_keys import choose_route, guru_for_channel, route_key
 from copytrading_engine.trading.application.account_access import (
     AccountAccess,
     OwnerUnavailable,
@@ -296,6 +296,36 @@ class OperatorQueryService:
                 before_seq=before_seq,
                 limit=limit,
                 destinations={},
+            ),
+            timeout=2,
+        )
+        by_source, unavailable = await self._destinations({item.source_id for item in page.items})
+        return self._with_destinations(page, by_source, unavailable)
+
+    async def guru_activity(
+        self, guru_id: str, before_seq: int | None, limit: int
+    ) -> SourceActivityPage:
+        """A page of one guru's posts, newest first, read from their channel in the setup; a guru
+        the setup no longer has has none."""
+        configuration = self._access.configuration()
+        channel = next(
+            (
+                (route.source, route.channel_id)
+                for route in (configuration.routes if configuration is not None else ())
+                if guru_for_channel(route.source, route.channel_id) == guru_id
+            ),
+            None,
+        )
+        if channel is None:
+            return SourceActivityPage(items=(), rejected_items=())
+        page = await asyncio.wait_for(
+            asyncio.to_thread(
+                self._access.evidence.source_page,
+                self._access.application_database,
+                before_seq=before_seq,
+                limit=limit,
+                destinations={},
+                channel=channel,
             ),
             timeout=2,
         )

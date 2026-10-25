@@ -1679,6 +1679,7 @@
 "Account activity error: %@" = "账户动态读取出错：%@";
 "Nothing has been bought or sold in this account yet." = "这个账户还没有买入或卖出。";
 "Show Older Activity" = "显示更早的动态";
+"Show Older Posts" = "显示更早的帖子";
 "You bought %@ of %@ at %@" = "你买入了 %@ %@，价格 %@";
 "Bought %@ of %@ at %@" = "买入 %@ %@，价格 %@";
 "You sold %@ of %@ at %@" = "你卖出了 %@ %@，价格 %@";

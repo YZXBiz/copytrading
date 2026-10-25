@@ -2134,6 +2134,26 @@ struct TradingSettingsSaveTests {
                 && day.unavailableAccounts.map(\.accountID) == ["archive"],
             "EngineClient did not decode the guru day"
         )
+
+        let guruRequest =
+            try JSONSerialization.jsonObject(
+                with: Data(contentsOf: contracts.appending(path: "guru-activity-request.json"))
+            ) as? [String: Any]
+        let guruTransport = AccountPageTransport(
+            responseFixture: try Data(contentsOf: contracts.appending(path: "source-activity-response.json")))
+        let guruPage = try await EngineClient(transport: guruTransport).guruActivity(
+            guruID: "guru-3909e2aa", beforeSeq: 1720, limit: 25)
+        guard let guruLine = await guruTransport.sentRequest(),
+            var sentGuru = try JSONSerialization.jsonObject(with: guruLine) as? [String: Any]
+        else {
+            throw ContractFailure("Guru activity client sent no JSON request")
+        }
+        sentGuru["request_id"] = "req-guru-activity"
+        try check(
+            NSDictionary(dictionary: sentGuru).isEqual(to: guruRequest ?? [:]),
+            "Swift guru activity request differs from its shared fixture: \(sentGuru)"
+        )
+        try check(guruPage.items.first?.sequence == 7, "EngineClient did not decode a guru's posts")
     }
 
     /// A holdings question becomes one answer the owner confirms: copied shares the broker still
@@ -2880,6 +2900,10 @@ private actor RecordingAccountActions: AccountOperations {
         return value
     }
 
+    func guruActivity(guruID: String, beforeSeq: Int?, limit: Int) throws -> SourceActivityPage {
+        try sourceActivity(beforeSeq: beforeSeq, limit: limit)
+    }
+
     func guruDayStats(dayStart: Date, dayEnd: Date) throws -> GuruDayStatsPage {
         let response = try JSONDecoder().decode(EngineResponse.self, from: fixture("guru-day-stats-response.json"))
         guard case .guruDayStats(let value) = try response.successValue() else {
@@ -2993,6 +3017,10 @@ private actor SuspendedAccountActions: AccountOperations {
             }
             return value
         }
+    }
+
+    func guruActivity(guruID: String, beforeSeq: Int?, limit: Int) async throws -> SourceActivityPage {
+        try await sourceActivity(beforeSeq: beforeSeq, limit: limit)
     }
 
     func guruDayStats(dayStart: Date, dayEnd: Date) async throws -> GuruDayStatsPage {

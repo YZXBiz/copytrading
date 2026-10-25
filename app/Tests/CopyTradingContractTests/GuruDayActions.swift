@@ -6,6 +6,8 @@ import Foundation
 /// the shared wire fixtures. Records the day the app asked about.
 actor GuruDayActions: AccountOperations {
     private(set) var window: (start: Date, end: Date)?
+    /// Each guru whose posts were asked for, and from where.
+    private(set) var guruPagesAsked: [(guruID: String, beforeSeq: Int?)] = []
 
     func accounts(beforeAccountID: String?, limit: Int) throws -> AccountOverviewPage {
         guard case .accounts(let page) = try response("account-overviews-response.json") else {
@@ -19,6 +21,11 @@ actor GuruDayActions: AccountOperations {
             throw EngineContractError.missingResult
         }
         return page
+    }
+
+    func guruActivity(guruID: String, beforeSeq: Int?, limit: Int) throws -> SourceActivityPage {
+        guruPagesAsked.append((guruID, beforeSeq))
+        return try sourceActivity(beforeSeq: beforeSeq, limit: limit)
     }
 
     func guruDayStats(dayStart: Date, dayEnd: Date) throws -> GuruDayStatsPage {

@@ -91,6 +91,10 @@ class OperatorReads(Protocol):
 
     async def source_activity(self, before_seq: int | None, limit: int) -> SourceActivityPage: ...
 
+    async def guru_activity(
+        self, guru_id: str, before_seq: int | None, limit: int
+    ) -> SourceActivityPage: ...
+
     async def guru_day_stats(
         self, day_start: dt.datetime, day_end: dt.datetime
     ) -> GuruDayStatsPage: ...

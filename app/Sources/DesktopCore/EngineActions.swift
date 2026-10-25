@@ -141,6 +141,11 @@ public struct EngineActions: Sendable {
         return try await client.sourceActivity(beforeSeq: beforeSeq, limit: limit)
     }
 
+    public func guruActivity(guruID: String, beforeSeq: Int? = nil, limit: Int = 50) async throws -> SourceActivityPage {
+        let client = try await supervisor.engineClient()
+        return try await client.guruActivity(guruID: guruID, beforeSeq: beforeSeq, limit: limit)
+    }
+
     public func guruDayStats(dayStart: Date, dayEnd: Date) async throws -> GuruDayStatsPage {
         let client = try await supervisor.engineClient()
         return try await client.guruDayStats(dayStart: dayStart, dayEnd: dayEnd)
