@@ -8,6 +8,7 @@ from copytrading_engine.host.pipe.requests import (
     GetAccountFeedRequest,
     GetAccountsRequest,
     GetEquityHistoryRequest,
+    GetGuruActivityRequest,
     GetGuruDayStatsRequest,
     GetQuoteRequest,
     GetSourceActivityRequest,
@@ -32,6 +33,7 @@ class AccountHandlers:
             ResolveOwnershipRequest: self._on_resolve_ownership,
             GetAccountsRequest: self._on_get_accounts,
             GetSourceActivityRequest: self._on_get_source_activity,
+            GetGuruActivityRequest: self._on_get_guru_activity,
             GetGuruDayStatsRequest: self._on_get_guru_day_stats,
             GetAccountFeedRequest: self._on_get_account_feed,
             GetEquityHistoryRequest: self._on_get_equity_history,
@@ -139,6 +141,18 @@ class AccountHandlers:
         if self._trading is None:
             return reply(request.version, request.request_id, error="unavailable")
         page = await self._trading.operator.source_activity(request.before_seq, request.limit)
+        return reply(
+            request.version,
+            request.request_id,
+            ok={"type": "source_activity", "activity": page.model_dump(mode="json")},
+        )
+
+    async def _on_get_guru_activity(self, request: GetGuruActivityRequest) -> bytes:
+        if self._trading is None:
+            return reply(request.version, request.request_id, error="unavailable")
+        page = await self._trading.operator.guru_activity(
+            request.guru_id, request.before_seq, request.limit
+        )
         return reply(
             request.version,
             request.request_id,

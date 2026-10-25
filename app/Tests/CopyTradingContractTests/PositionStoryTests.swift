@@ -108,6 +108,7 @@ private actor PagedFeed: AccountOperations {
     }
     func accounts(beforeAccountID: String?, limit: Int) throws -> AccountOverviewPage { throw Unused() }
     func sourceActivity(beforeSeq: Int?, limit: Int) throws -> SourceActivityPage { throw Unused() }
+    func guruActivity(guruID: String, beforeSeq: Int?, limit: Int) throws -> SourceActivityPage { throw Unused() }
     func guruDayStats(dayStart: Date, dayEnd: Date) throws -> GuruDayStatsPage { throw Unused() }
     func controlAccount(_ command: AccountControlCommand) throws -> AccountControlResult { throw Unused() }
     func equityHistory(accountID: String, window: EquityHistoryWindow) throws -> EquityHistory? { throw Unused() }

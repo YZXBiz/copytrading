@@ -13,6 +13,30 @@ func runGuruFeedTests() async throws {
     try await anAccountTheBrokerHasNoCurveForStopsReading()
     try await holdingsCountOnlyAccountsInTheSetup()
     try aGuruIsTheirChannelsWhateverIDTheSetupSavedThemWith()
+    try await aGurusPostsAreReadForThemNotPickedFromEveryonesNewest()
+}
+
+/// A guru's page asks the engine for that guru's posts: other gurus' newer posts filling the
+/// newest page must never leave it saying "No posts yet" (the owner's 赵哥 on 25 October).
+@MainActor
+private func aGurusPostsAreReadForThemNotPickedFromEveryonesNewest() async throws {
+    let actions = GuruDayActions()
+    let feature = AccountFeatureModel()
+    feature.authorizePrivateEvidence()
+    try #require(feature.guruPosts["stable-guru"] == nil, "posts were read before the page asked")
+
+    await feature.loadGuruPosts(guruID: "stable-guru", using: actions)
+    #expect(feature.guruPosts["stable-guru"]?.map(\.sequence) == [7])
+    #expect(feature.guruPostCursors["stable-guru"] == 7)
+    await feature.refreshGuruPosts(using: actions)
+    await feature.loadGuruPosts(guruID: "stable-guru", more: true, using: actions)
+    let asked = await actions.guruPagesAsked
+    #expect(asked.map(\.guruID) == ["stable-guru", "stable-guru", "stable-guru"])
+    #expect(asked.map(\.beforeSeq) == [nil, nil, 7])
+
+    feature.clearPrivateEvidence()
+    #expect(feature.guruPosts.isEmpty && feature.guruPostCursors.isEmpty)
+    print("CopyTradingContractTests: a guru's posts are read for them, not picked from everyone's newest")
 }
 
 /// A setup saved before IDs came from the channel still names its guru by their channel, so the

@@ -596,6 +596,8 @@ enum EngineOperation: Sendable {
     case resolveOwnership(accountID: String, resolution: OwnershipResolutionRequest)
     case accounts(beforeAccountID: String?, limit: Int)
     case sourceActivity(beforeSeq: Int?, limit: Int)
+    /// A page of one guru's posts, newest first.
+    case guruActivity(guruID: String, beforeSeq: Int?, limit: Int)
     /// Each guru's numbers for the owner's day, from its start up to its end.
     case guruDayStats(dayStart: Date, dayEnd: Date)
     case evaluateHistoricalProfile(HistoricalProfileEvaluationRequest)
@@ -651,6 +653,7 @@ struct EngineRequest: Encodable, Sendable {
         case validationToken = "validation_token"
         case activationID = "activation_id"
         case beforeSeq = "before_seq"
+        case guruID = "guru_id"
         case dayStart = "day_start"
         case dayEnd = "day_end"
         case beforeAccountID = "before_account_id"
@@ -762,6 +765,11 @@ struct EngineRequest: Encodable, Sendable {
             try container.encode(limit, forKey: .limit)
         case .sourceActivity(let beforeSeq, let limit):
             try container.encode("get_source_activity", forKey: .operation)
+            try container.encodeIfPresent(beforeSeq, forKey: .beforeSeq)
+            try container.encode(limit, forKey: .limit)
+        case .guruActivity(let guruID, let beforeSeq, let limit):
+            try container.encode("get_guru_activity", forKey: .operation)
+            try container.encode(guruID, forKey: .guruID)
             try container.encodeIfPresent(beforeSeq, forKey: .beforeSeq)
             try container.encode(limit, forKey: .limit)
         case .guruDayStats(let dayStart, let dayEnd):

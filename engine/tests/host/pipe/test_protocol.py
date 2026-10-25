@@ -89,6 +89,13 @@ class _OperatorControl:
         fixture = contract("source-activity-response.json")
         return SourceActivityPage.model_validate_json(json.dumps(fixture["ok"]["activity"]))
 
+    async def guru_activity(
+        self, guru_id: str, before_seq: int | None, limit: int
+    ) -> SourceActivityPage:
+        assert (guru_id, before_seq, limit) == ("guru-3909e2aa", 1720, 25)
+        fixture = contract("source-activity-response.json")
+        return SourceActivityPage.model_validate_json(json.dumps(fixture["ok"]["activity"]))
+
     async def guru_day_stats(
         self, day_start: dt.datetime, day_end: dt.datetime
     ) -> GuruDayStatsPage:
@@ -174,6 +181,11 @@ async def test_account_operator_contract_fixtures_and_exact_request_schema(store
     assert accounts == contract("account-overviews-response.json")
     activity = decode(await server.handle_line(request_line("get_source_activity", "req-activity")))
     assert activity == contract("source-activity-response.json")
+    guru = decode(await server.handle_line((CONTRACTS / "guru-activity-request.json").read_bytes()))
+    assert guru == {
+        **contract("source-activity-response.json"),
+        "request_id": "req-guru-activity",
+    }
     day = decode(await server.handle_line((CONTRACTS / "guru-day-stats-request.json").read_bytes()))
     assert day == contract("guru-day-stats-response.json")
     feed = decode(

@@ -257,6 +257,7 @@ struct MainSplitView: View {
                 await accountFeature.refresh(using: model.accountActions())
                 await accountFeature.refreshHistories(using: model.accountActions())
                 await accountFeature.refreshFeeds(using: model.accountActions())
+                await accountFeature.refreshGuruPosts(using: model.accountActions())
                 lastFull = .now
             } else {
                 await accountFeature.refreshActivity(using: model.accountActions())

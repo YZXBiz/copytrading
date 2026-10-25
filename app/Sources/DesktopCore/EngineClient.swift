@@ -205,6 +205,12 @@ public actor EngineClient {
         return page
     }
 
+    public func guruActivity(guruID: String, beforeSeq: Int? = nil, limit: Int = 50) async throws -> SourceActivityPage {
+        let result = try await request(.guruActivity(guruID: guruID, beforeSeq: beforeSeq, limit: limit))
+        guard case .sourceActivity(let page) = result else { throw EngineContractError.missingResult }
+        return page
+    }
+
     public func guruDayStats(dayStart: Date, dayEnd: Date) async throws -> GuruDayStatsPage {
         let result = try await request(.guruDayStats(dayStart: dayStart, dayEnd: dayEnd))
         guard case .guruDayStats(let page) = result else { throw EngineContractError.missingResult }

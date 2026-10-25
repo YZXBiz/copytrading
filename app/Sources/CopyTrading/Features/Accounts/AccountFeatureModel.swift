@@ -5,6 +5,7 @@ import Observation
 protocol AccountOperations: Sendable {
     func accounts(beforeAccountID: String?, limit: Int) async throws -> AccountOverviewPage
     func sourceActivity(beforeSeq: Int?, limit: Int) async throws -> SourceActivityPage
+    func guruActivity(guruID: String, beforeSeq: Int?, limit: Int) async throws -> SourceActivityPage
     func guruDayStats(dayStart: Date, dayEnd: Date) async throws -> GuruDayStatsPage
     func accountFeed(accountID: String, beforeSeq: Int?, limit: Int) async throws -> AccountFeedPage
     func controlAccount(_ command: AccountControlCommand) async throws -> AccountControlResult
@@ -44,6 +45,10 @@ final class AccountFeatureModel {
     private(set) var guruDays: [String: GuruDayStats] = [:]
     private(set) var unavailableAccounts: [AccountUnavailable] = []
     private(set) var nextActivityCursor: Int?
+    /// Each guru's posts for their page, newest first, read by guru so that other gurus' newer
+    /// posts never push theirs out of `activity`; and where each guru's next older page starts.
+    private(set) var guruPosts: [String: [SourceActivity]] = [:]
+    private(set) var guruPostCursors: [String: Int] = [:]
     /// Each account's feed, newest first, and where its next older page starts.
     private(set) var feeds: [String: [AccountFeedItem]] = [:]
     private(set) var feedCursors: [String: Int] = [:]
@@ -344,6 +349,33 @@ final class AccountFeatureModel {
         }
     }
 
+    /// A guru's newest posts in place of what they cover, older pages already loaded kept; or,
+    /// with `more`, their next older page.
+    func loadGuruPosts(guruID: String, more: Bool = false, using actions: (any AccountOperations)?) async {
+        guard let actions, let generation = privateAccessGeneration else { return }
+        let cursor = more ? guruPostCursors[guruID] : nil
+        if more && cursor == nil { return }
+        do {
+            let page = try await actions.guruActivity(guruID: guruID, beforeSeq: cursor, limit: 25)
+            guard isCurrent(generation) else { return }
+            let loaded = guruPosts[guruID] ?? []
+            let posts = more ? loaded + page.items : Self.merged(page.items, into: loaded)
+            guruPosts[guruID] = posts
+            if more || posts.count == page.items.count { guruPostCursors[guruID] = page.nextBeforeSeq }
+            errors.removeValue(forKey: "guru:\(guruID)")
+        } catch {
+            guard isCurrent(generation) else { return }
+            errors["guru:\(guruID)"] = Reason.refusal(error)
+        }
+    }
+
+    /// The newest page of every guru whose page was opened.
+    func refreshGuruPosts(using actions: (any AccountOperations)?) async {
+        for guruID in guruPosts.keys.sorted() {
+            await loadGuruPosts(guruID: guruID, using: actions)
+        }
+    }
+
     /// Older pages of an account's activity until `complete` holds, the oldest row is read, or
     /// `limit` pages are; a holding's story needs every trade back to the buy that opened it.
     func loadFeed(
@@ -393,6 +425,8 @@ final class AccountFeatureModel {
         unavailableAccounts = []
         feeds = [:]
         feedCursors = [:]
+        guruPosts = [:]
+        guruPostCursors = [:]
         pendingAccounts = []
         isRefreshing = false
         isLoadingMoreAccounts = false

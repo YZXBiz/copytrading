@@ -67,13 +67,23 @@ def source_page(
     limit: int,
     destinations: dict[str, tuple[DestinationView, ...]],
     source_ids: tuple[str, ...] | None = None,
+    channel: tuple[str, str] | None = None,
 ) -> SourceActivityPage:
-    """A page of posts, newest first; or, given `source_ids`, exactly those posts however old,
-    with no page and no rejected posts."""
+    """A page of posts, newest first; given `channel` (source, channel ID), only the posts read
+    for that channel's guru, with no rejected posts; or, given `source_ids`, exactly those posts
+    however old, with no page and no rejected posts."""
     if source_ids is None:
         if not 1 <= limit <= 100 or (before_seq is not None and before_seq < 1):
             raise ValueError("Invalid source activity page")
         where, bound = "(? IS NULL OR capture.seq < ?)", (before_seq, before_seq)
+        if channel is not None:
+            # A post is its channel's guru's once it was read for a guru (StockSignal.guru).
+            where += (
+                " AND substr(capture.id,1,?)=?"
+                " AND json_extract(parser.result,'$.guru_id') IS NOT NULL"
+            )
+            prefix = f"{channel[0]}:{channel[1]}:"
+            bound = (*bound, len(prefix), prefix)
     else:
         limit = max(1, len(source_ids))
         where = f"capture.id IN ({','.join('?' for _ in source_ids)})"
@@ -97,7 +107,7 @@ def source_page(
         ).fetchall()
         rejected_rows = (
             []
-            if source_ids is not None
+            if source_ids is not None or channel is not None
             else db.execute(
                 "SELECT rejected.id,rejected.payload,rejected.reason,rejected.rejected_at,"
                 "event.event_payload,event.capture_status,event.payload_bytes "
@@ -493,6 +503,7 @@ class SQLiteOperatorEvidence:
         limit: int,
         destinations: dict[str, tuple[DestinationView, ...]],
         source_ids: tuple[str, ...] | None = None,
+        channel: tuple[str, str] | None = None,
     ) -> SourceActivityPage:
         return source_page(
             database,
@@ -500,6 +511,7 @@ class SQLiteOperatorEvidence:
             limit=limit,
             destinations=destinations,
             source_ids=source_ids,
+            channel=channel,
         )
 
     def guru_posts(self, database: Path, *, since: dt.datetime) -> tuple[GuruPost, ...]:
