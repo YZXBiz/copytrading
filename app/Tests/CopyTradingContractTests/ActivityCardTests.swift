@@ -23,6 +23,7 @@ func runActivityCardTests() throws {
     try aSkipNamesTheLimitWithItsNumbers()
     try aCallHeldForApprovalAsksToBeApproved()
     try aCallWaitingWithNoReasonHasNoNote()
+    try aSellHeldForItsBuyPriceSaysWhatCameOfThatBuy()
     try aBuyHeldForAResumeAsksToResumeByItsDeadline()
     try aDeadlineReadsOnTheOwnersClock()
     try theTimeZoneSettingMovesADeadline()
@@ -612,6 +613,42 @@ private func aCallWaitingWithNoReasonHasNoNote() throws {
     let waiting = try #require(outcome.accounts.first?.results.first)
     try #require(waiting.headline == "Waiting for you", "headline was \(waiting.headline)")
     try #require(waiting.note == nil, "note was \(waiting.note ?? "nil")")
+}
+
+/// 赵哥 sold "86.2出掉83.35的soxl", but his 83.35 buy was refused by the daily entry limit: the held
+/// sell says so instead of only "no buy at the guru's price", and each other ending reads its own.
+@MainActor
+private func aSellHeldForItsBuyPriceSaysWhatCameOfThatBuy() throws {
+    func held(_ named: [String: Any]) throws -> String? {
+        let source = try SourceActivityBuilder()
+            .decision("trade", reason: "Sold")
+            .posted(at: "2026-10-05T14:30:00Z")
+            .calls([
+                [
+                    "action": "close", "symbol": "SOXL", "price": "86.2", "entry_price": "83.35", "fraction": "1",
+                    "exit_basis": "original_position",
+                ]
+            ])
+            .destination("zhap-account-2", status: "done", outcomes: ["named_buy_not_held"], namedBuys: [named])
+            .build()
+        let sameDay = try Date("2026-10-05T15:00:00Z", strategy: .iso8601)
+        let outcome = ActivityCardOutcome(source, skipped: false, now: sameDay, zone: losAngeles, locale: english)
+        let waiting = try #require(outcome.accounts.first?.results.first)
+        try #require(
+            waiting.headline == "Waiting for you: no buy at the guru's price", "headline was \(waiting.headline)")
+        return waiting.note
+    }
+    let posted = "2026-10-02T19:40:56Z"
+
+    let refused = try held(["part": 0, "posted_at": posted, "outcome": "daily_entry_cap"])
+    let sold = try held(["part": 0, "posted_at": posted, "outcome": "sold"])
+    let neverHere = try held(["part": 0, "posted_at": NSNull(), "outcome": NSNull()])
+
+    try #require(
+        refused == "The $83.35 buy on Oct 2 wasn't made. Your daily entry limit was reached.",
+        "note was \(refused ?? "nil")")
+    try #require(sold == "The $83.35 buy on Oct 2 is already sold.", "note was \(sold ?? "nil")")
+    try #require(neverHere == "The guru's $83.35 buy never reached this account.", "note was \(neverHere ?? "nil")")
 }
 
 @MainActor

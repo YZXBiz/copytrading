@@ -377,13 +377,17 @@ struct ActivityCardOutcome {
                     approving ? "Too late to approve: its trading day is over." : "Too late to copy: its trading day is over."))
         }
         let short = approving ? nil : code.flatMap { waitingReasons[$0] }.map { L10n.string($0) }
+        // A sell held for its buy price says what came of the guru's buy at that price.
+        let named =
+            code == "named_buy_not_held"
+            ? destination.namedBuys.first.flatMap { NamedBuyText.sentence($0, in: source) } : nil
         return Result(
             headline: approving
                 ? L10n.string("Waiting for your approval")
                 : short.map { L10n.string("Waiting for you: %@", $0) } ?? L10n.string("Waiting for you"),
             facts: [Fact(label: L10n.string(approving ? "Approve by" : "Copy by"), value: deadline)],
             // With no reason given, the headline and deadline say it all; a note would be a lone dash.
-            note: short == nil ? code.map { L10n.sentence(Reason.text($0)) } : nil)
+            note: named ?? (short == nil ? code.map { L10n.sentence(Reason.text($0)) } : nil))
     }
 
     /// Why a call waits, in a few words after "Waiting for you:".
