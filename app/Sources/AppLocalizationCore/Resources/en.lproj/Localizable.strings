@@ -1757,8 +1757,8 @@
 "Post to order in %@" = "Post to order in %@";
 "%@ after %@" = "%@ after %@";
 "At your limit" = "At your limit";
-"over your limit" = "over your limit";
-"under your limit" = "under your limit";
+"%@ over your limit" = "%@ over your limit";
+"%@ under your limit" = "%@ under your limit";
 "Sized" = "Sized";
 "Sent to Alpaca" = "Sent to Alpaca";
 "%@ is waiting for a fill" = "%@ is waiting for a fill";
@@ -2365,8 +2365,8 @@
 "Not sold: %@'s %@ was bought after this sell was posted (%@ vs %@)." = "Not sold: %@'s %@ was bought after this sell was posted (%@ vs %@).";
 "Lowest sell price" = "Lowest sell price";
 "At your lowest price" = "At your lowest price";
-"above your lowest price" = "above your lowest price";
-"under your lowest price" = "under your lowest price";
+"%@ above your lowest price" = "%@ above your lowest price";
+"%@ under your lowest price" = "%@ under your lowest price";
 "%@ %@, %@ %@" = "%@ %@, %@ %@";
 "Read %@ after the guru posted it. A sell is always copied, at no less than your lowest price." = "Read %@ after the guru posted it. A sell is always copied, at no less than your lowest price.";
 "Not sold by the close: the market stayed under your lowest price %@" = "Not sold by the close: the market stayed under your lowest price %@";
