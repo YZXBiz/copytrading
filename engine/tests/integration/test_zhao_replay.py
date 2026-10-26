@@ -34,6 +34,20 @@ pytestmark = [
 ]
 
 SOXL = "SOXL"
+# The parts of the playbook CopyTrading learned from his posts that these posts use: 剩下一半 is
+# the remaining half of the original buy, which the reader's general rule alone reads as half of
+# what is left.
+PLAYBOOK = """\
+Guru writes buys as "<price>加了6分之一常规仓<TICKER>"; 6分之一常规仓 means 1/6 of a full position.
+A trim names the buy: "<price>出一半<entryprice>的<TICKER>" -> reduce, half of that lot.
+The rest of a lot: "<price>出剩下一半<entryprice>的<TICKER>" -> reduce, the remaining half.
+103.2出剩下一半99.5的soxl -> reduce SOXL at 103.2, entry 99.5, fraction 0.5
+Full exit of one lot: "<price>出掉<entryprice>的<TICKER>" -> close that lot, all.
+Ignore commentary: market models, 轮廓图, QQQ/Korea/A股 talk, recaps, and empty posts.
+soxl means SOXL
+Sell fractions count from the original buy.
+剩下一半 means 1/2 of the original lot (the remaining half).
+"""
 SHARE = Decimal("0.000001")
 
 
@@ -63,7 +77,7 @@ async def test_zhaos_sells_take_from_the_buy_each_names(tmp_path):
         # minutes is him re-posting one call.
         _zhao(f"{sale - Decimal('0.02')}出剩下一半{first}的soxl"),
     )
-    async with Rig(tmp_path, posts) as rig:
+    async with Rig(tmp_path, posts, playbook=PLAYBOOK) as rig:
         # Each buy is a sixth of his full position ($40 here), so about $6.66.
         [bought_first] = (await rig.post(0, until=filled))[1]
         [bought_second] = (await rig.post(1, until=filled))[1]

@@ -116,13 +116,14 @@ class _ReplaySession:
             await asyncio.gather(self.capture_task, return_exceptions=True)
 
 
-def configuration(policy: Mapping[str, object]) -> TradingConfiguration:
-    """One account copying one guru; the guru's full position is its maximum per stock."""
+def configuration(policy: Mapping[str, object], playbook: str = "") -> TradingConfiguration:
+    """One account copying one guru, read with `playbook`; the guru's full position is its
+    maximum per stock."""
     profile = ProfileBuilder().build(
         ProfileDraft(
             guru_id="replay-guru",
             display_name="Replay Guru",
-            playbook="",
+            playbook=playbook,
         )
     )
     return TradingConfiguration.model_validate(
@@ -197,11 +198,13 @@ class Rig:
         *,
         policy: Mapping[str, object] | None = None,
         resume: bool = True,
+        playbook: str = "",
     ) -> None:
         self.state = state
         self.posts = posts
         self.policy = {**ROOMY, **(policy or {})}
         self.resume = resume
+        self.playbook = playbook
         self.gates = tuple(asyncio.Event() for _ in posts)
         self.placed: set[str] = set()
         self.secrets = TradingSecrets.model_validate(
@@ -225,7 +228,7 @@ class Rig:
         )
 
     async def __aenter__(self) -> Rig:
-        await self.runtime.start(configuration(self.policy), self.secrets)
+        await self.runtime.start(configuration(self.policy, self.playbook), self.secrets)
         try:
             for _ in range(60):
                 if self.runtime.status().accounts:
@@ -266,7 +269,7 @@ class Rig:
     async def limits(self, **changes: object) -> None:
         """As the owner changing a limit in the account sheet while copying runs."""
         self.policy = {**self.policy, **changes}
-        await self.runtime.update_account_limits(configuration(self.policy))
+        await self.runtime.update_account_limits(configuration(self.policy, self.playbook))
 
     async def activity(self, index: int):
         page = await self.runtime.operator.source_activity(None, 50)

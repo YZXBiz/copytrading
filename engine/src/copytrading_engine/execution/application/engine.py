@@ -728,7 +728,12 @@ class CopyEngine:
                     qty = min(qty, bought * s.fraction)
                 else:
                     qty = min(qty, held * s.fraction)
-            qty = qty.quantize(qty_step, rounding=ROUND_DOWN)
+            # Rounding down must not strand a step behind: "出一半" then "出剩下一半" of a buy of
+            # 0.071093 shares sold 0.035546 twice and left 0.000001 for good. A sell whose exact
+            # share leaves less than one step sells all that is held.
+            exact, qty = qty, qty.quantize(qty_step, rounding=ROUND_DOWN)
+            if held - exact < qty_step:
+                qty = held
             if crypto and asset.min_order_size is not None:
                 # Alpaca takes no coin order under the coin's smallest size. A sell that would leave
                 # less than that behind sells it too, or it could never be sold; what is already

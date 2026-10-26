@@ -99,6 +99,33 @@ def test_half_naming_no_buy_sells_half_of_everything_bought():
     assert broker.holdings["ABC"] == Decimal("4.5")
 
 
+def _of_the_original(message: dict) -> dict:
+    """A half the guru counts from the original buy, as 赵哥's playbook reads 出剩下一半."""
+    for said in (*message["instructions"], *message["evidence"]):
+        said["exit_basis"] = "original_position"
+    return message
+
+
+def test_two_halves_of_an_odd_buy_leave_no_share_behind():
+    """ "出一半" then "出剩下一半" of a buy of 3.703703 shares: each half rounds down to 1.851851,
+    which would leave a millionth of a share in the account for good."""
+    broker = FakeBroker()
+    engine = _engine(broker)
+    deliver(engine, event("1", price="27"))
+    bought = broker.holdings["ABC"]
+    assert bought * 1_000_000 % 2 == 1, bought
+
+    later = NOW + dt.timedelta(seconds=1)
+    deliver(engine, _of_the_original(event("2", "reduce", "30", "27", timestamp=later)), later)
+    half = (bought / 2).quantize(Decimal("0.000001"), "ROUND_DOWN")
+    assert broker.holdings["ABC"] == bought - half
+    latest = NOW + dt.timedelta(seconds=2)
+    deliver(engine, _of_the_original(event("3", "reduce", "31", "27", timestamp=latest)), latest)
+
+    assert broker.holdings.get("ABC", Decimal(0)) == 0
+    assert all(lot.remaining_qty == 0 for lot in engine.ledger.lots())
+
+
 # --- A sell with no price sells at the market (ADR-0007) ----------------------------------------
 
 
