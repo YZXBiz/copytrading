@@ -404,11 +404,6 @@ async def open_orders(symbol: str | None = None) -> list[dict]:
     return (await broker("GET", "/orders", params=params)).json()
 
 
-async def total_exposure() -> Decimal:
-    positions = (await broker("GET", "/positions")).json()
-    return sum((Decimal(p["market_value"]) for p in positions), Decimal(0))
-
-
 async def unwind(client_ids: set[str]) -> None:
     """Cancel what is still open, then sell back what the rig still holds."""
     held: dict[str, Decimal] = {}

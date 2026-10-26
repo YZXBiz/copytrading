@@ -34,7 +34,6 @@ from .paper import (
     placed,
     quote,
     settled,
-    total_exposure,
 )
 
 pytestmark = [
@@ -137,9 +136,10 @@ async def test_partial_buys_join_one_lot_and_partial_sells_trim_it(tmp_path):
 
 async def test_the_maximum_per_order_trims_a_large_call(tmp_path):
     price = await guru_price(SYMBOL)
-    async with Rig(
-        tmp_path, (Post(f"Bought {SYMBOL} at {price}"),), policy={"max_order_usd": "15"}
-    ) as rig:
+    # A full position is $40; the largest single buy is $15. A call with no size would ask for
+    # the largest single buy itself, so this one names its size.
+    posts = (Post(f"Bought a full position of {SYMBOL} at {price}"),)
+    async with Rig(tmp_path, posts, policy={"max_order_usd": "15"}) as rig:
         order = _one(await rig.post(0, until=placed))
         assert (order.requested_usd, order.budget_usd) == (Decimal("40"), Decimal("15")), order
         assert _notional(order) <= Decimal("15")
@@ -180,11 +180,21 @@ async def test_the_maximum_per_stock_stops_a_second_full_buy(tmp_path):
         assert await rig.owned(SYMBOL) == bought.filled_quantity
 
 
-async def test_the_account_total_stops_a_buy(tmp_path):
-    ceiling = (await total_exposure() + 5).quantize(CENT)
+async def test_the_account_total_cuts_a_buy_to_the_room_left(tmp_path):
+    # Limits count only what this copier bought (none yet), so a $5 total leaves $5 of room.
     price = await guru_price(SYMBOL)
     async with Rig(
-        tmp_path, (Post(f"Bought {SYMBOL} at {price}"),), policy={"max_total_usd": str(ceiling)}
+        tmp_path, (Post(f"Bought {SYMBOL} at {price}"),), policy={"max_total_usd": "5"}
+    ) as rig:
+        order = _one(await rig.post(0, until=placed))
+        assert (order.budget_usd, order.limited_by) == (Decimal("5"), "total_exposure_cap"), order
+        assert _notional(order) <= Decimal("5")
+
+
+async def test_the_account_total_stops_a_buy_with_under_a_dollar_of_room(tmp_path):
+    price = await guru_price(SYMBOL)
+    async with Rig(
+        tmp_path, (Post(f"Bought {SYMBOL} at {price}"),), policy={"max_total_usd": "0.50"}
     ) as rig:
         activity, orders = await rig.post(0)
         assert _outcomes(activity) == ("total_exposure_cap",), activity
@@ -341,8 +351,8 @@ async def test_a_post_read_too_late_is_not_traded(tmp_path):
     async with Rig(tmp_path, posts) as rig:
         activity, orders = await rig.post(0)
         assert orders == [], f"a ten-minute-old call was traded: {orders}"
-        # Read too late to trust, so it waits for the owner instead of trading.
-        assert destination_of(activity).status == "review_required", activity
+        # A buy older than the account's signal age is skipped as stale (ADR-0010).
+        assert destination_of(activity).status == "stale", activity
         await _no_open_orders(SYMBOL)
 
 
@@ -459,14 +469,13 @@ async def test_a_raised_maximum_per_order_reaches_the_next_buy(tmp_path):
 
 
 async def test_a_raised_account_total_lets_the_next_buy_through(tmp_path):
-    ceiling = (await total_exposure() + 5).quantize(CENT)
     first, second = await guru_price(SYMBOL), await guru_price(OTHER)
     posts = (Post(f"Bought {SYMBOL} at {first}"), Post(f"Bought {OTHER} at {second}"))
-    async with Rig(tmp_path, posts, policy={"max_total_usd": str(ceiling)}) as rig:
+    async with Rig(tmp_path, posts, policy={"max_total_usd": "0.50"}) as rig:
         activity, orders = await rig.post(0)
         assert _outcomes(activity) == ("total_exposure_cap",), activity
         assert orders == []
-        await rig.limits(max_total_usd=str(ceiling + 5000))
+        await rig.limits(max_total_usd="5000")
         order = _one(await rig.post(1, until=placed))
         assert order.symbol == OTHER
 

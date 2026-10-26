@@ -29,6 +29,7 @@ from copytrading_engine.parsing.extraction import (
     check_reading,
     check_references,
     check_summary_language,
+    without_cross_side_repeats,
 )
 from copytrading_engine.parsing.history import RecentCall
 from copytrading_engine.parsing.learning import PlaybookProposal
@@ -192,13 +193,16 @@ def _checked(
         if context.retry > 0:
             raise UnexpectedModelBehavior("A post read as something was answered as chat on retry")
         return output
+    output = output.model_copy(
+        update={"reading": without_cross_side_repeats(output.reading, context.deps.recent)}
+    )
     try:
         check_reading(output.reading, context.deps.text, context.deps.route)
     except GroundingError as exc:
         raise ModelRetry(f"{exc.issue.path}: {exc}") from None
-    problem = check_references(
-        output.reading, context.deps.recent, retried=context.retry > 0
-    ) or check_summary_language(output.reading, context.deps.text, retried=context.retry > 0)
+    problem = check_references(output.reading, context.deps.recent) or check_summary_language(
+        output.reading, context.deps.text, retried=context.retry > 0
+    )
     if problem is not None:
         raise ModelRetry(problem)
     return output

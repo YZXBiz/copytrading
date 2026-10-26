@@ -190,8 +190,9 @@ async def test_a_repeat_must_name_a_listed_call_or_the_reader_is_asked_again():
     assert "c9 is not one of the listed calls" in told[0]
 
 
-async def test_a_sell_marked_as_repeating_a_buy_is_asked_about_again():
-    # A live paper run read "Sold all F at 12.00" as a repeat of "Bought F at 12.00".
+async def test_a_sell_marked_as_repeating_a_buy_stands_as_a_new_sell_without_asking():
+    # Live paper runs read "Sold all F at 12.00" as a repeat of "Bought F at 12.00", and on
+    # Oct 26 did it on both tries, so the sell waited for the owner. The post says it sold.
     recent = recent_calls(_past("p1", 1, _buy("F", "12")))
     right = trade(
         sell("F", "12", bought_at=None, said="Sold all", ticker_said="F", price_said="12.00")
@@ -214,13 +215,16 @@ async def test_a_sell_marked_as_repeating_a_buy_is_asked_about_again():
             assert (await decoder.answer("Sold all F at 12.00", Route(), recent)).reading == right
     finally:
         await decoder.close()
-    assert len(told) == 1
-    assert "c1 is a buy and this call is a sell" in told[0]
+    assert told == []
 
 
-async def test_a_sell_naming_a_buy_the_guru_does_not_hold_is_asked_about_once_then_believed():
+async def test_a_sell_naming_a_buy_the_guru_does_not_hold_keeps_that_price_without_asking():
+    """Asked whether it meant an open buy, DeepSeek dropped "84.99" from "92.05出掉84.99的soxl" on
+    7 of 12 live tries, and a sell naming no buy sells every share. The post's own buy price
+    stands unasked; the engine then holds the sell for the owner (ADR-0010)."""
     recent = recent_calls(_past("p1", 5, _buy("IREN", "39.5")))
     named = trade(sell("IREN", "45", bought_at="40", said="出掉"))
+    dropped = trade(named.calls[0].model_copy(update={"sell_from": NotSaid()}))
     asked: list[str] = []
 
     def reader(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
@@ -230,8 +234,8 @@ async def test_a_sell_naming_a_buy_the_guru_does_not_hold_is_asked_about_once_th
             for part in message.parts
             if isinstance(part, RetryPromptPart)
         )
-        # The post really says 40: the reader keeps its answer, which then stands.
-        return ModelResponse(parts=[TextPart(_answer(named))])
+        # Asked again, the reader would let go of the post's own buy price.
+        return ModelResponse(parts=[TextPart(_answer(dropped if asked else named))])
 
     decoder, model = _decoder(FunctionModel(reader, profile=JSON_OUTPUT))
     try:
@@ -239,8 +243,7 @@ async def test_a_sell_naming_a_buy_the_guru_does_not_hold_is_asked_about_once_th
             assert (await decoder.answer("iren 40的 45出掉", Route(), recent)).reading == named
     finally:
         await decoder.close()
-    assert len(asked) == 1
-    assert "open IREN buys are at 39.5" in asked[0]
+    assert asked == []
 
 
 async def test_sell_half_of_a_held_stock_with_no_price_trades_through_the_reader():

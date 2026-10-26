@@ -572,52 +572,44 @@ def same_side(earlier: RecentCall, call: Buy | Sell) -> bool:
     return _side(earlier.action) == call.action
 
 
-def check_references(
-    reading: PostReading, recent: tuple[RecentCall, ...], *, retried: bool
-) -> str | None:
-    """What is wrong with how a reading names the guru's recent calls, if anything. A repeat
-    must name a listed call of the same stock and kind, buy or sell. A sell naming a buy price
-    none of the guru's open buys of that stock has is asked about once: the guru may hold buys
-    from before CopyTrading started, so a second answer stands."""
+def without_cross_side_repeats(reading: PostReading, recent: tuple[RecentCall, ...]) -> PostReading:
+    """A sell is never a re-post of a buy, nor a buy of a sell, whatever the reader says: the
+    post's own words say which side it is, so such a repeat is dropped and the call stands as a
+    new call, without spending the reader's one retry on it. A live paper run read "Sold all F at
+    11.65" as a repeat of "Bought F at 11.75" on both tries."""
+    if not isinstance(reading, TradeMade | Instruction | Conditional | Suggestion):
+        return reading
+    by_ref = {call.ref: call for call in recent}
+    calls = tuple(
+        call.model_copy(update={"repeats": None})
+        if call.repeats in by_ref and not same_side(by_ref[call.repeats], call)
+        else call
+        for call in reading.calls
+    )
+    return reading if calls == reading.calls else reading.model_copy(update={"calls": calls})
+
+
+def check_references(reading: PostReading, recent: tuple[RecentCall, ...]) -> str | None:
+    """What is wrong with how a reading names the guru's recent calls, if anything: a repeat
+    must name a listed call of the same stock. A sell naming a buy price none of the guru's open
+    buys has is never asked about again: asked once, DeepSeek dropped the post's own buy price
+    on 7 of 12 tries, and a sell naming no buy sells every share. The price stands, and the
+    engine holds the sell for the owner (ADR-0010)."""
     if not isinstance(reading, TradeMade | Instruction | Conditional | Suggestion):
         return None
     by_ref = {call.ref: call for call in recent}
     for index, call in enumerate(reading.calls):
-        if call.repeats is not None:
-            earlier = by_ref.get(call.repeats)
-            if earlier is None:
-                return (
-                    f"calls.{index}.repeats: {call.repeats} is not one of the listed calls; "
-                    "name a listed reference or leave repeats empty."
-                )
-            if earlier.symbol != call.stock.ticker:
-                return (
-                    f"calls.{index}.repeats: {call.repeats} is {earlier.symbol}, not "
-                    f"{call.stock.ticker}; a repeat restates a call of the same stock."
-                )
-            if not same_side(earlier, call):
-                return (
-                    f"calls.{index}.repeats: {call.repeats} is a {_side(earlier.action)} and "
-                    f"this call is a {call.action}; a repeat restates a call of the same kind, "
-                    "so leave repeats empty."
-                )
-        if retried or not isinstance(call, Sell) or not isinstance(call.sell_from, Lot):
+        if call.repeats is None:
             continue
-        held = sorted(
-            {
-                listed.price
-                for listed in recent
-                if listed.open
-                and listed.action == "buy"
-                and listed.symbol == call.stock.ticker
-                and listed.price is not None
-            }
-        )
-        if held and call.sell_from.buy_price not in held:
-            prices = ", ".join(str(price) for price in held)
+        earlier = by_ref.get(call.repeats)
+        if earlier is None:
             return (
-                f"calls.{index}.sell_from: the guru's open {call.stock.ticker} buys are at "
-                f"{prices}, not {call.sell_from.buy_price}. Read the post again: name one of "
-                "those if the post means it, or keep the post's own price."
+                f"calls.{index}.repeats: {call.repeats} is not one of the listed calls; "
+                "name a listed reference or leave repeats empty."
+            )
+        if earlier.symbol != call.stock.ticker:
+            return (
+                f"calls.{index}.repeats: {call.repeats} is {earlier.symbol}, not "
+                f"{call.stock.ticker}; a repeat restates a call of the same stock."
             )
     return None
