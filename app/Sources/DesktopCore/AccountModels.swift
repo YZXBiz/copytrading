@@ -401,6 +401,24 @@ public struct LaterBuy: Codable, Equatable, Sendable {
     }
 }
 
+/// A sell held because none of the account's buys is at the price it names (ADR-0010): the guru's
+/// buy at that price, and why the account holds none of it.
+public struct NamedBuy: Codable, Equatable, Sendable {
+    /// The call it held.
+    public let part: Int
+    /// When the guru posted the buy; nil when no buy at that price ever reached the account.
+    public let postedAt: String?
+    /// "sold", "not_filled", or the reason the buy was refused ("daily_entry_cap", ...); nil when
+    /// it never reached the account.
+    public let outcome: String?
+
+    enum CodingKeys: String, CodingKey {
+        case part
+        case postedAt = "posted_at"
+        case outcome
+    }
+}
+
 public struct DestinationActivity: Codable, Equatable, Identifiable, Sendable {
     public let accountID: String
     public let environment: String
@@ -409,6 +427,8 @@ public struct DestinationActivity: Codable, Equatable, Identifiable, Sendable {
     public let limitsHit: [LimitHit]
     /// Sells skipped because every buy they would sell was posted after them, with when.
     public let laterBuys: [LaterBuy]
+    /// Sells held because no buy is at the price they name, with what came of the guru's buy.
+    public let namedBuys: [NamedBuy]
     public let orders: [OrderActivity]
     /// Every step the post took in this account, in order.
     public let timeline: [TimelineStep]
@@ -420,6 +440,7 @@ public struct DestinationActivity: Codable, Equatable, Identifiable, Sendable {
         case instructionOutcomes = "instruction_outcomes"
         case limitsHit = "limits_hit"
         case laterBuys = "later_buys"
+        case namedBuys = "named_buys"
         case orders, timeline
     }
 
@@ -431,6 +452,7 @@ public struct DestinationActivity: Codable, Equatable, Identifiable, Sendable {
         instructionOutcomes = try values.decode([String].self, forKey: .instructionOutcomes)
         limitsHit = try values.decode([LimitHit].self, forKey: .limitsHit)
         laterBuys = try values.decodeIfPresent([LaterBuy].self, forKey: .laterBuys) ?? []
+        namedBuys = try values.decodeIfPresent([NamedBuy].self, forKey: .namedBuys) ?? []
         orders = try values.decode([OrderActivity].self, forKey: .orders)
         timeline = try values.decodeIfPresent([TimelineStep].self, forKey: .timeline) ?? []
     }

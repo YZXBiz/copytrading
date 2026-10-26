@@ -45,13 +45,14 @@ public struct SourceActivityBuilder {
     public func destination(
         _ account: String, status: String, outcomes: [String] = [], environment: String = "paper",
         limits: [[String: Any]] = [], orders: [[String: Any]] = [], timeline: [[String: Any]] = [],
-        laterBuys: [[String: Any]] = []
+        laterBuys: [[String: Any]] = [], namedBuys: [[String: Any]] = []
     ) -> Self {
         var copy = self
         var destinations = copy.payload["destinations"] as? [Any] ?? []
         destinations.append([
             "account_id": account, "environment": environment, "status": status,
-            "instruction_outcomes": outcomes, "limits_hit": limits, "later_buys": laterBuys, "orders": orders,
+            "instruction_outcomes": outcomes, "limits_hit": limits, "later_buys": laterBuys, "named_buys": namedBuys,
+            "orders": orders,
             "timeline": timeline,
         ])
         copy.payload["destinations"] = destinations

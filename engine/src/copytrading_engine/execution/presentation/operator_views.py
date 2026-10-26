@@ -245,6 +245,18 @@ class LaterBuy(Value):
     bought_at: AwareDatetime
 
 
+class NamedBuy(Value):
+    """A sell held because none of the account's buys is at the price it names (ADR-0010): the
+    guru's buy at that price, and why the account holds none of it."""
+
+    part: int
+    #: When the guru posted the buy; None when no buy at that price ever reached this account.
+    posted_at: AwareDatetime | None
+    #: "sold" when its shares were already sold, "not_filled" when its order never filled, else
+    #: the reason the buy was refused ("daily_entry_cap", ...). None when it never reached here.
+    outcome: str | None
+
+
 class DestinationView(Value):
     account_id: str
     environment: str
@@ -252,6 +264,7 @@ class DestinationView(Value):
     instruction_outcomes: tuple[str, ...]
     limits_hit: tuple[LimitHit, ...]
     later_buys: tuple[LaterBuy, ...] = ()
+    named_buys: tuple[NamedBuy, ...] = ()
     orders: tuple[OrderView, ...]
     timeline: tuple[TimelineStep, ...] = ()
 
@@ -658,10 +671,45 @@ def destination_views(
                 for index, part in enumerate(message.parts)
                 if isinstance(part, Skipped) and part.bought_at is not None
             ),
+            named_buys=tuple(
+                _named_buy(snapshot, message, index)
+                for index, part in enumerate(message.parts)
+                if isinstance(part, Skipped) and part.reason == "named_buy_not_held"
+            ),
             orders=orders,
             timeline=_timeline(tuple(by_message.get(message.key, ())), tuple(resumes)),
         )
     return views
+
+
+def _named_buy(snapshot: LedgerSnapshot, sell: MessageRecord, part: int) -> NamedBuy:
+    """The guru's latest buy, posted before the sell, of the stock at the buy price the sell names,
+    and what came of it in this account."""
+    named = sell.instructions[part]
+    found: tuple[MessageRecord, int] | None = None
+    for message in snapshot.messages.values():
+        if message.source_key != sell.source_key or message.timestamp >= sell.timestamp:
+            continue
+        for index, call in enumerate(message.instructions):
+            if (
+                call.action == "buy"
+                and call.symbol == named.symbol
+                and call.price == named.entry_price
+            ):
+                if found is None or message.timestamp > found[0].timestamp:
+                    found = (message, index)
+    if found is None:
+        return NamedBuy(part=part, posted_at=None, outcome=None)
+    message, index = found
+    progress = message.parts[index]
+    if isinstance(progress, Skipped):
+        outcome: str | None = progress.reason
+    elif isinstance(progress, OrderLinked):
+        order = snapshot.orders.get(progress.client_id)
+        outcome = "sold" if order is not None and order.filled_qty > 0 else "not_filled"
+    else:
+        outcome = None
+    return NamedBuy(part=part, posted_at=message.timestamp, outcome=outcome)
 
 
 def _sent_again(order: OrderRecord, message: MessageRecord) -> bool:

@@ -2421,3 +2421,7 @@
 "No posts yet" = "No posts yet";
 "Once a setup is saved and every account is paper." = "Once a setup is saved and every account is paper.";
 "Only when every account is paper." = "Only when every account is paper.";
+"The guru's %@ buy never reached this account" = "The guru's %@ buy never reached this account";
+"The %1$@ buy on %2$@ is already sold" = "The %1$@ buy on %2$@ is already sold";
+"The %1$@ buy on %2$@ never filled" = "The %1$@ buy on %2$@ never filled";
+"The %1$@ buy on %2$@ wasn't made" = "The %1$@ buy on %2$@ wasn't made";

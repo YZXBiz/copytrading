@@ -62,7 +62,7 @@
                   "environment": "paper",
                   "status": "review_required",
                   "instruction_outcomes": [],
-                  "limits_hit": [], "later_buys": [],
+                  "limits_hit": [], "later_buys": [], "named_buys": [],
                   "orders": [],
                   "timeline": []
                 }

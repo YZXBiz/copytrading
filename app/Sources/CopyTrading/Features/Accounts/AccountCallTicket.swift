@@ -108,7 +108,13 @@ struct AccountCallTicket: View {
             .accessibilityAddTraits(isSelected ? .isSelected : [])
             .accessibilityHint(L10n.string("Open the original post, interpretation, and account results."))
             .accessibilityIdentifier("needsYou.open")
-            if let gain {
+            // A sell held for its buy price has no buy to gain on: it says what came of that buy.
+            if let held = NamedBuyText.sentence(in: call.source) {
+                Text(held)
+                    .font(DesignTokens.bodyText)
+                    .foregroundStyle(Palette.secondaryInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if let gain {
                 Text(gain.line)
                     .font(DesignTokens.bodyText)
                     .monospacedDigit()

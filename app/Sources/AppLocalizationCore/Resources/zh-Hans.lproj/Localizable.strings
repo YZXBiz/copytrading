@@ -2421,3 +2421,7 @@
 "No posts yet" = "还没有帖子";
 "Once a setup is saved and every account is paper." = "保存设置且所有账户都是模拟盘后可用。";
 "Only when every account is paper." = "仅当所有账户都是模拟盘时可用。";
+"The guru's %@ buy never reached this account" = "这个账户没有收到信号源 %@ 的买入";
+"The %1$@ buy on %2$@ is already sold" = "%2$@ 那笔 %1$@ 的买入已经卖出";
+"The %1$@ buy on %2$@ never filled" = "%2$@ 那笔 %1$@ 的买入没有成交";
+"The %1$@ buy on %2$@ wasn't made" = "%2$@ 那笔 %1$@ 的买入没有下单";
