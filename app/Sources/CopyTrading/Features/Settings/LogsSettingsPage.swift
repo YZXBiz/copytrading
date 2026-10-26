@@ -35,8 +35,9 @@ struct LogsSettingsPage: View {
                     SettingsValueRow(
                         label: "Left out (posts / requests / replies)",
                         value:
-                            "\(engine.diagnosticCapture.sourceEventGaps) / \(engine.diagnosticCapture.modelRequestGaps) / \(engine.diagnosticCapture.modelResponseGaps)",
-                        detail: "A record too large to keep, or one that could not be cleaned of keys safely.")
+                            "\(engine.diagnosticCapture.sourceEventGaps) / \(engine.diagnosticCapture.modelRequestGaps) / \(engine.diagnosticCapture.modelResponseGaps)"
+                    )
+                    .help(L10n.string("A record too large to keep, or one that could not be cleaned of keys safely."))
                 } else {
                     SettingsValueRow(label: "Logging", value: L10n.string("Engine stopped"), tone: .inactive)
                 }

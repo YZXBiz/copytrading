@@ -28,15 +28,18 @@ struct PriceRuler: View {
     private var gapText: String? {
         let gap = points.market - points.limit
         guard gap != 0 else { return L10n.string(points.buying ? "At your limit" : "At your lowest price") }
-        let side =
-            points.buying
-            ? L10n.string(gap > 0 ? "over your limit" : "under your limit")
-            : L10n.string(gap > 0 ? "above your lowest price" : "under your lowest price")
+        let amount: String
         if abs(gapFraction) < 0.001 {
             let cents = (abs(gap) * 100).doubleValue.rounded()
-            return L10n.string("%@ %@", cents < 100 ? "\(Int(cents))¢" : abs(gap).formatted(.currency(code: "USD")), side)
+            amount = cents < 100 ? "\(Int(cents))¢" : abs(gap).formatted(.currency(code: "USD"))
+        } else {
+            amount = abs(gapFraction).formatted(.percent.precision(.fractionLength(1)))
         }
-        return L10n.string("%@ %@", abs(gapFraction).formatted(.percent.precision(.fractionLength(1))), side)
+        // Each side is one phrase around the amount, so Chinese can put the amount after the verb.
+        if points.buying {
+            return L10n.string(gap > 0 ? "%@ over your limit" : "%@ under your limit", amount)
+        }
+        return L10n.string(gap > 0 ? "%@ above your lowest price" : "%@ under your lowest price", amount)
     }
 
     /// The marks in the order they are drawn: the guru's price when it differs, your limit, then
