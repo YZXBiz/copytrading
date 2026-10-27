@@ -79,6 +79,21 @@ func checkActivitySourceReadingRepresentation() throws {
         blank.readableText().isEmpty,
         "A blank guru feed post invented source text"
     )
+    let relayLabelOnly = try activityWithSourceText(
+        "@everyone\n赵哥-股票：",
+        eventContent: "@everyone",
+        embeds: [["title": NSNull(), "description": "赵哥-股票：", "fields": []]]
+    )
+    try requireActivityReading(
+        relayLabelOnly.readableText().isEmpty,
+        "A relayed picture post quoted the relay's name label as if the guru wrote it"
+    )
+    let target = try activityWithSourceText("Target: 140")
+    let chart = try activityWithSourceText("Today's chart:")
+    try requireActivityReading(
+        target.readableText() == "Target: 140" && chart.readableText() == "Today's chart:",
+        "Words ending in a colon were dropped as a name label"
+    )
 
     let legacy = try activityWithSourceText(
         "Legacy source @here",

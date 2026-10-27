@@ -14,7 +14,7 @@ struct ActivitySourceContentView: View {
             if said.isEmpty {
                 // An embed-only post has no body text, but its words follow right below; saying
                 // nothing was captured above them would contradict what the reader can see.
-                if item.readableSourceEmbeds.isEmpty {
+                if item.readableSourceEmbeds.isEmpty && item.sourceEvent.attachments.isEmpty {
                     Text(L10n.string("No message text was captured."))
                         .font(.body)
                         .foregroundStyle(Palette.secondaryInk)

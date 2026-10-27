@@ -152,6 +152,8 @@ final class AppModel {
     var restoreRecoveryMessage: String?
 
     @ObservationIgnored private var runtimePaths: RuntimePaths?
+    /// Where the engine keeps the pictures it captured with posts; nil until its data folder opens.
+    private(set) var sourcePicturesDirectory: URL?
     @ObservationIgnored private var supervisor: ProcessSupervisor?
     @ObservationIgnored private var startupOwnership: StartupOwnership?
     @ObservationIgnored private var commandJournal: CommandJournal?
@@ -829,6 +831,8 @@ final class AppModel {
             let actions = EngineActions(supervisor: newSupervisor)
             engineActions = actions
             runtimePaths = paths
+            sourcePicturesDirectory = paths.applicationSupportDirectory.appending(
+                path: "attachments", directoryHint: .isDirectory)
             observe(newSupervisor)
             try await newSupervisor.start()
             guard runtimeGeneration.accepts(startingGeneration), !Task.isCancelled else {

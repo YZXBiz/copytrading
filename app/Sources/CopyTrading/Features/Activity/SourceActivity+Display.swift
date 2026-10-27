@@ -66,7 +66,8 @@ extension SourceActivity {
                 .filter { ActivitySourceText.hasReadableText($0) }
                 .joined(separator: " ")
         }
-        return source.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        let words = source.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        return ActivitySourceText.isLabelOnly(words) ? "" : words
     }
 
     /// The source post with only mass mentions and outer whitespace removed.
@@ -78,7 +79,7 @@ extension SourceActivity {
 
     var readableSourceEmbeds: [SourceEmbedEvidence] {
         guard sourceEvent.captureStatus == "complete" else { return [] }
-        return sourceEvent.embeds.filter(\.hasReadableContent)
+        return sourceEvent.embeds.filter { $0.hasReadableContent && !$0.isLabelOnly }
     }
 
     private func withoutMassMentions(in source: String) -> String {
@@ -99,6 +100,14 @@ extension SourceActivity {
 }
 
 enum ActivitySourceText {
+    /// A relay's name label with nothing after it, such as "赵哥-股票：": one short word ending in a
+    /// colon. The post's real content, if any, is its picture.
+    static func isLabelOnly(_ text: String) -> Bool {
+        guard let last = text.last, last == ":" || last == "：" else { return false }
+        let label = text.dropLast()
+        return !label.isEmpty && label.count <= 24 && !label.contains(where: \.isWhitespace)
+    }
+
     static func hasReadableText(_ text: String?) -> Bool {
         guard let text else { return false }
         return !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -119,6 +128,13 @@ enum ActivitySourceText {
 }
 
 extension SourceEmbedEvidence {
+    /// The embed carries only a relay's name label, such as "赵哥-股票：", above a picture.
+    var isLabelOnly: Bool {
+        fields.isEmpty && !ActivitySourceText.hasReadableText(title)
+            && ActivitySourceText.isLabelOnly(
+                (description ?? "").trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
     var hasReadableContent: Bool {
         ActivitySourceText.hasReadableText(title)
             || ActivitySourceText.hasReadableText(description)

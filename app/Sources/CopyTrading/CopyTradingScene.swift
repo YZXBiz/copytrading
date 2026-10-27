@@ -25,6 +25,7 @@ public struct CopyTradingScene: Scene {
                 .environment(languagePreference)
                 .environment(\.locale, Locale(identifier: languagePreference.language.rawValue))
                 .environment(\.tipGeneration, model.tipGeneration)
+                .environment(\.sourcePictures, SourcePictures(directory: model.sourcePicturesDirectory))
                 .frame(minWidth: 980, minHeight: 640)
                 .containerBackground(Palette.canvas, for: .window)
                 .task {

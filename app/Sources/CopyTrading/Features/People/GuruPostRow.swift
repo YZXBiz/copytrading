@@ -11,6 +11,7 @@ struct GuruPostRow: View {
     @Binding var selection: SourceActivity.ID?
     @State private var isHovered = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.sourcePictures) private var pictures
 
     private var isSelected: Bool { selection == entry.id }
     private static let quote = DisplayFont.font(size: 24, weight: .regular, relativeTo: .title2)
@@ -26,16 +27,25 @@ struct GuruPostRow: View {
             } content: {
                 VStack(alignment: .leading, spacing: 8) {
                     // Under the pointer the quote is marked in butter and the ↗ says it opens.
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        Text(ActivitySourceText.formattedPreview(quoted))
-                            .font(Self.quote)
-                            .foregroundStyle(Palette.ink)
-                            .lineLimit(4)
-                            .multilineTextAlignment(.leading)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .markerHighlight(isHovered || isSelected)
-                        OpenArrow(isShown: isHovered || isSelected)
-                            .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 3 }
+                    if let picture {
+                        // The time and dot sit level with the picture's top, where a quote's first line would be.
+                        HStack(alignment: .bottom, spacing: 10) {
+                            SourcePictureView(image: picture, maxWidth: 420, maxHeight: 200)
+                            OpenArrow(isShown: isHovered || isSelected)
+                        }
+                        .alignmentGuide(.firstTextBaseline) { $0[.top] + 14 }
+                    } else {
+                        HStack(alignment: .firstTextBaseline, spacing: 10) {
+                            Text(ActivitySourceText.formattedPreview(quoted))
+                                .font(Self.quote)
+                                .foregroundStyle(Palette.ink)
+                                .lineLimit(4)
+                                .multilineTextAlignment(.leading)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .markerHighlight(isHovered || isSelected)
+                            OpenArrow(isShown: isHovered || isSelected)
+                                .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 3 }
+                        }
                     }
                     Text(entry.readAs)
                         .font(DesignTokens.caption)
@@ -53,6 +63,11 @@ struct GuruPostRow: View {
         .animation(reduceMotion ? nil : .smooth(duration: 0.2), value: isSelected)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityHint(L10n.string("Open the original post, interpretation, and account results."))
+    }
+
+    /// The post's picture when it has no words of its own.
+    private var picture: NSImage? {
+        entry.item.readableText().isEmpty ? pictures.firstImage(of: entry.item.sourceEvent) : nil
     }
 
     private var quoted: String {
