@@ -1,10 +1,13 @@
 """Translate Discord objects without involving persistence or publication."""
 
+from urllib.parse import urlsplit
+
 import discord
 from pydantic import JsonValue, ValidationError
 
 from copytrading_engine.shared.raw_message import RawMessage
 from copytrading_engine.sources.application import AttachmentReference
+from copytrading_engine.sources.attachments import ALLOWED_ATTACHMENT_HOSTS
 from copytrading_engine.sources.evidence import MAX_ATTACHMENTS_PER_MESSAGE
 
 
@@ -57,7 +60,42 @@ def attachment_references(message: discord.Message) -> tuple[AttachmentReference
                 url=str(getattr(attachment, "url", "")),
             )
         )
+    result.extend(_embed_pictures(message))
     return tuple(result)
+
+
+def _embed_pictures(message: discord.Message) -> list[AttachmentReference]:
+    """A relay can post a picture inside an embed instead of attaching it; keep it as evidence too.
+    A link preview's thumbnail is the linked site's, so only an image embed's thumbnail counts."""
+    result = []
+    for index, embed in enumerate(message.embeds, start=1):
+        kinds = ("image", "thumbnail") if getattr(embed, "type", None) == "image" else ("image",)
+        for kind in kinds:
+            url = _picture_url(getattr(embed, kind, None))
+            if url is None:
+                continue
+            name = urlsplit(url).path.rsplit("/", 1)[-1]
+            result.append(
+                AttachmentReference(
+                    attachment_id=f"embed-{index}-{kind}",
+                    filename=name or "picture",
+                    content_type=None,
+                    # Discord states no size for an embed picture; the download cap still holds.
+                    declared_size=0,
+                    url=url,
+                )
+            )
+    return result
+
+
+def _picture_url(picture: object) -> str | None:
+    """The picture's Discord-hosted address: its own, else Discord's proxy copy. Any other address
+    is kept so the capture records it as rejected rather than silently dropping the picture."""
+    url, proxy = getattr(picture, "url", None), getattr(picture, "proxy_url", None)
+    for candidate in (url, proxy):
+        if isinstance(candidate, str) and urlsplit(candidate).hostname in ALLOWED_ATTACHMENT_HOSTS:
+            return candidate
+    return url if isinstance(url, str) and url else None
 
 
 def adapter_event(message: discord.Message) -> dict[str, JsonValue]:
@@ -73,11 +111,22 @@ def adapter_event(message: discord.Message) -> dict[str, JsonValue]:
             }
             for field in embed.fields
         ]
+        pictures: list[JsonValue] = [
+            {
+                "kind": kind,
+                "width": getattr(picture, "width", None),
+                "height": getattr(picture, "height", None),
+            }
+            for kind in ("image", "thumbnail", "video")
+            if getattr(picture := getattr(embed, kind, None), "url", None)
+        ]
         embeds.append(
             {
+                "type": str(getattr(embed, "type", None) or "rich"),
                 "title": str(embed.title) if embed.title is not None else None,
                 "description": str(embed.description) if embed.description is not None else None,
                 "fields": fields,
+                "pictures": pictures,
             }
         )
     attachments: list[JsonValue] = [

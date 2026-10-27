@@ -970,6 +970,7 @@
 "CopyTrading could not reach the engine. Your sale may not have been sent; check Accounts before trying again." = "CopyTrading could not reach the engine. Your sale may not have been sent; check Accounts before trying again.";
 "Trade identified" = "Trade identified";
 "No message text" = "No message text";
+"Picture from the post" = "Picture from the post";
 "Copied into primary" = "Copied into primary";
 "Nothing needs review" = "Nothing needs review";
 "No trades yet" = "No trades yet";

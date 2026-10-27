@@ -970,6 +970,7 @@
 "CopyTrading could not reach the engine. Your sale may not have been sent; check Accounts before trying again." = "CopyTrading 无法连接引擎。你的卖出可能没有发送，请先查看“账户”再重试。";
 "Trade identified" = "已识别出交易";
 "No message text" = "没有消息文字";
+"Picture from the post" = "帖子里的图片";
 "Copied into primary" = "已跟单到 primary";
 "Nothing needs review" = "没有需要审核的内容";
 "No trades yet" = "还没有交易";
