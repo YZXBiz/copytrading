@@ -3,9 +3,10 @@
 import asyncio
 import heapq
 import logging
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Hashable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
 from copytrading_engine.execution.domain.lifecycle import AccountOwnerClosed
@@ -23,6 +24,8 @@ log = logging.getLogger(__name__)
 
 
 _OWNER_READ_TIMEOUT_SECONDS = 2
+# Each page of posts asks for its own set; only the newest few answers are kept.
+_REMEMBERED_READS = 64
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +52,52 @@ async def bounded_owner_read[T](operation: Awaitable[T]) -> T | OwnerUnavailable
     except Exception as exc:  # noqa: BLE001 - one owner's failure is reported, not raised
         log.warning("operator_account_read_failed type=%s error=%s", type(exc).__name__, exc)
         return OwnerUnavailable("read_failed")
+
+
+class OwnerReads:
+    """Reads of a running account's worker, the same thread that places its orders. A busy worker
+    is not a stopped one: while an earlier read still waits on it, that read's last answer stands
+    in at once, and no second read queues behind the first to make the worker busier."""
+
+    def __init__(self) -> None:
+        self._owners: dict[str, object] = {}
+        self._waiting: dict[str, asyncio.Future[object]] = {}
+        self._last: dict[tuple[str, Hashable], object] = {}
+
+    async def read[T](
+        self, account_id: str, owner: object, key: Hashable, operation: Callable[[], Awaitable[T]]
+    ) -> T | OwnerUnavailable:
+        """`operation` reads `owner`, the account's worker now; `key` names what it reads, so an
+        answer stands in only for the same read of the same worker."""
+        if self._owners.get(account_id) is not owner:
+            self._forget(account_id)
+            self._owners[account_id] = owner
+        remembered = (account_id, key)
+        waiting = self._waiting.get(account_id)
+        if waiting is not None and not waiting.done():
+            return cast(T, self._last.get(remembered, OwnerUnavailable("timeout")))
+        task = asyncio.ensure_future(operation())
+        self._waiting[account_id] = cast(asyncio.Future[object], task)
+
+        def keep(done: asyncio.Future[T]) -> None:
+            # A read that outlived its wait still brings the newest answer once it lands.
+            if self._owners.get(account_id) is owner and not done.cancelled():
+                if done.exception() is None:
+                    self._last.pop(remembered, None)
+                    self._last[remembered] = done.result()
+                    while len(self._last) > _REMEMBERED_READS:
+                        del self._last[next(iter(self._last))]
+
+        task.add_done_callback(keep)
+        result = await bounded_owner_read(task)
+        if result == OwnerUnavailable("timeout") and remembered in self._last:
+            return cast(T, self._last[remembered])
+        return result
+
+    def _forget(self, account_id: str) -> None:
+        self._waiting.pop(account_id, None)
+        for remembered in [item for item in self._last if item[0] == account_id]:
+            del self._last[remembered]
 
 
 class AccountAccess:
