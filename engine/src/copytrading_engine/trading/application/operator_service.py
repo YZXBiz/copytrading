@@ -32,8 +32,8 @@ from copytrading_engine.execution.presentation.operator_views import (
 from copytrading_engine.shared.route_keys import choose_route, guru_for_channel, route_key
 from copytrading_engine.trading.application.account_access import (
     AccountAccess,
+    OwnerReads,
     OwnerUnavailable,
-    bounded_owner_read,
 )
 from copytrading_engine.trading.application.paused_reader import (
     PausedAccountReader,
@@ -92,6 +92,7 @@ class OperatorQueryService:
         # What each running account last said of itself: a worker busy placing orders may not
         # answer within a read's time, and is still copying.
         self._readiness: dict[str, str] = {}
+        self._owner_reads = OwnerReads()
         # With no reader given, paused accounts are read from their ledgers alone.
         self._reader = reader if reader is not None else PausedAccountReader(_no_broker)
 
@@ -151,7 +152,10 @@ class OperatorQueryService:
                 and supervisor.owner is not None
                 and supervisor.state != "failed"
             ):
-                live = await bounded_owner_read(supervisor.owner.operator_overview())
+                owner = supervisor.owner
+                live = await self._owner_reads.read(
+                    account_id, owner, "overview", owner.operator_overview
+                )
                 if not isinstance(live, OwnerUnavailable):
                     self._readiness[account_id] = live.readiness
                     return live, None
@@ -205,7 +209,11 @@ class OperatorQueryService:
                 broker_identity="unverified",
                 entry_permission="unknown",
                 recovery_preference=account.policy.recovery_preference,
-                readiness=self._unavailable_readiness(account_id),
+                readiness=(
+                    self._readiness[account_id]
+                    if failure == "timeout" and account_id in self._readiness
+                    else self._unavailable_readiness(account_id)
+                ),
                 account_risk_status="unavailable",
                 account_risk_reason="account_unavailable",
                 account_activity_status="unavailable",
@@ -235,7 +243,13 @@ class OperatorQueryService:
             raise ValueError("Invalid account event page")
         supervisor = self._access.supervisors().get(account_id)
         if supervisor is not None and supervisor.owner is not None and supervisor.state != "failed":
-            live = await bounded_owner_read(supervisor.owner.event_page(before_seq, limit))
+            owner = supervisor.owner
+            live = await self._owner_reads.read(
+                account_id,
+                owner,
+                ("events", before_seq, limit),
+                lambda: owner.event_page(before_seq, limit),
+            )
             if not isinstance(live, OwnerUnavailable):
                 return live
         database = self._access.retained_paths().get(account_id)
@@ -254,7 +268,13 @@ class OperatorQueryService:
             raise ValueError("Invalid account feed page")
         supervisor = self._access.supervisors().get(account_id)
         if supervisor is not None and supervisor.owner is not None and supervisor.state != "failed":
-            live = await bounded_owner_read(supervisor.owner.feed_page(before_seq, limit))
+            owner = supervisor.owner
+            live = await self._owner_reads.read(
+                account_id,
+                owner,
+                ("feed", before_seq, limit),
+                lambda: owner.feed_page(before_seq, limit),
+            )
             if not isinstance(live, OwnerUnavailable):
                 return live
         database = self._access.retained_paths().get(account_id)
@@ -275,8 +295,12 @@ class OperatorQueryService:
             raise KeyError(account_id)
         supervisor = self._access.supervisors().get(account_id)
         if supervisor is not None and supervisor.owner is not None and supervisor.state != "failed":
-            history = await bounded_owner_read(
-                supervisor.owner.equity_history(window, dt.datetime.now(dt.UTC))
+            owner = supervisor.owner
+            history = await self._owner_reads.read(
+                account_id,
+                owner,
+                ("history", window),
+                lambda: owner.equity_history(window, dt.datetime.now(dt.UTC)),
             )
             if not isinstance(history, OwnerUnavailable):
                 return history
@@ -407,7 +431,13 @@ class OperatorQueryService:
                 and supervisor.owner is not None
                 and supervisor.state != "failed"
             ):
-                live = await bounded_owner_read(supervisor.owner.destination_views(ids))
+                owner = supervisor.owner
+                live = await self._owner_reads.read(
+                    account_id,
+                    owner,
+                    ("destinations", frozenset(ids)),
+                    lambda: owner.destination_views(ids),
+                )
                 if not isinstance(live, OwnerUnavailable):
                     return live
             try:
