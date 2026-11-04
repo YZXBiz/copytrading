@@ -37,18 +37,19 @@ function ActivityEvent({
   const [open, setOpen] = useState(defaultOpen)
   const outcome = cardOutcome(post, now)
   const Icon = toneIcon(outcome.tone)
+  const symbol = post.instructions[0]?.symbol
   return (
     <TimelineItem step={step} className={cn("ms-10", isLast ? "pb-0" : "pb-6")}>
       <TimelineHeader className="flex min-w-0 items-center justify-between gap-2.5">
         <TimelineSeparator className="bg-border! group-data-[orientation=vertical]/timeline:-left-7 group-data-[orientation=vertical]/timeline:h-[calc(100%-1.5rem-0.5rem)] group-data-[orientation=vertical]/timeline:translate-y-7" />
         <div className="flex flex-wrap items-center gap-2">
-          {post.instructions[0] && <SymbolLogo symbol={post.instructions[0].symbol} size="sm" />}
           <TimelineTitle className="text-sm font-semibold">{headline(post)}</TimelineTitle>
           <OutcomeBadge title={outcome.title} tone={outcome.tone} />
           <span className="text-muted-foreground text-xs tabular-nums">{clockTime(post.source_at)}</span>
         </div>
-        <TimelineIndicator className="border-border bg-background text-muted-foreground flex size-6 items-center justify-center border shadow-xs group-data-[orientation=vertical]/timeline:-left-7 [&_svg]:size-3.5">
-          <Icon aria-hidden="true" />
+        <TimelineIndicator className="border-border bg-background text-muted-foreground flex size-6 items-center justify-center overflow-hidden rounded-full border shadow-xs group-data-[orientation=vertical]/timeline:-left-7 [&_svg]:size-3.5">
+          {/* A post that names a stock shows its logo here, in place of the tone icon (the badge already says how it ended). */}
+          {symbol ? <SymbolLogo symbol={symbol} size="sm" /> : <Icon aria-hidden="true" />}
         </TimelineIndicator>
       </TimelineHeader>
 
