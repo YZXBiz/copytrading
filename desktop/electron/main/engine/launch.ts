@@ -28,7 +28,7 @@ export function launchEngine(): RunningEngine {
   const python = process.env.COPYTRADING_PYTHON ?? (runtime && join(runtime, PYTHON))
   if (!python) throw new Error("No Python runtime with the engine's dependencies found.")
   const dirs = makeThrowawayRoot()
-  
+
   const child: ChildProcess = spawn(
     python,
     ["-u", "-m", "copytrading_engine", "--data-dir", dirs.data, "--instance-id", randomUUID()],
