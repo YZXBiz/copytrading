@@ -1,11 +1,10 @@
-import { Fragment } from "react"
 import { MessageSquareIcon } from "lucide-react"
 import type { SourceActivityPage } from "../../../shared/contract"
 import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"
 import { RegionError } from "@/components/region-error"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
-import { ItemGroup, ItemSeparator } from "@/components/ui/item"
+import { ItemGroup } from "@/components/ui/item"
 import { Skeleton } from "@/components/ui/skeleton"
 import { type Loaded } from "@/lib/use-result"
 import { PostRow } from "./PostRow"
@@ -24,9 +23,9 @@ export function RecentPosts({
       <FrameHeader>
         <FrameTitle>Guru posts</FrameTitle>
       </FrameHeader>
-      <FramePanel className="p-0">
+      <FramePanel>
         {posts.status === "loading" && (
-          <div role="status" aria-label="Loading posts" className="flex flex-col gap-4 p-3">
+          <div role="status" aria-label="Loading posts" className="flex flex-col gap-3">
             {Array.from({ length: 4 }, (_, i) => (
               <div key={i} className="flex flex-col gap-1.5">
                 <Skeleton className="h-4 w-3/4" />
@@ -36,9 +35,7 @@ export function RecentPosts({
           </div>
         )}
         {posts.status === "error" && (
-          <div className="p-3">
-            <RegionError title="Guru posts did not load" message={posts.error} onRetry={posts.retry} />
-          </div>
+          <RegionError title="Guru posts did not load" message={posts.error} onRetry={posts.retry} />
         )}
         {posts.status === "ready" && posts.data.items.length === 0 && (
           <Empty>
@@ -57,12 +54,9 @@ export function RecentPosts({
           </Empty>
         )}
         {posts.status === "ready" && posts.data.items.length > 0 && (
-          <ItemGroup>
-            {posts.data.items.map((post, index) => (
-              <Fragment key={post.sequence}>
-                {index > 0 && <ItemSeparator />}
-                <PostRow post={post} accountId={accountId} now={now} />
-              </Fragment>
+          <ItemGroup className="gap-0.5">
+            {posts.data.items.map((post) => (
+              <PostRow key={post.sequence} post={post} accountId={accountId} now={now} />
             ))}
           </ItemGroup>
         )}

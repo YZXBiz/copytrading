@@ -1,4 +1,5 @@
 import type { AccountOverview, SourceActivity } from "../../../shared/contract"
+import { monthDay } from "@/lib/format"
 import { BADGE, cardOutcome } from "@/features/activity/outcome"
 
 /** The badge tones the page uses for what became of a post: Activity's, so a post reads the same on both screens. */
@@ -25,6 +26,12 @@ export function postOutcome(post: SourceActivity, accountId: string, now: Date):
 /** Positions worth a row: the broker keeps fractions of a cent after a sale. */
 export const heldPositions = (account: AccountOverview) =>
   account.positions.filter((p) => Number(p.market_value ?? 0) >= 0.01)
+
+/** "Bought Oct 22": when the post that opened the holding was made. */
+export function holdingNote(position: AccountOverview["positions"][number]): string | null {
+  const postedAt = position.lots[0]?.posted_at
+  return postedAt ? `Bought ${monthDay(postedAt)}` : null
+}
 
 /** Day change as a fraction of yesterday's close. */
 export function dayChange(account: AccountOverview): { amount: number; fraction: number } | null {

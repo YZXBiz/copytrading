@@ -1,7 +1,7 @@
 import { Frame, FrameHeader, FramePanel } from "@/components/reui/frame"
 import { Skeleton } from "@/components/ui/skeleton"
 
-/** The account page's layout with every number still to come: header, balance and chart, positions, limits. */
+/** The account page's layout with every number still to come: header, balance and chart, positions, posts and limits. */
 export function AccountPageSkeleton() {
   return (
     <div role="status" aria-label="Loading account" className="flex flex-col gap-6">
@@ -11,13 +11,11 @@ export function AccountPageSkeleton() {
       </div>
       <Frame spacing="default">
         <FramePanel className="flex flex-col gap-5">
-          <Skeleton className="h-10 w-64" />
+          <div className="flex flex-col gap-3">
+            <Skeleton className="h-10 w-64" />
+            <Skeleton className="h-5 w-96 max-w-full" />
+          </div>
           <Skeleton className="h-72 w-full" />
-        </FramePanel>
-        <FramePanel className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {Array.from({ length: 3 }, (_, i) => (
-            <Skeleton key={i} className="h-12 w-32" />
-          ))}
         </FramePanel>
       </Frame>
       <Frame spacing="default">

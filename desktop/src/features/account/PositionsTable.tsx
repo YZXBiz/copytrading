@@ -4,6 +4,7 @@ import { ArrowDownIcon, ArrowUpIcon, ChevronDownIcon, PackageOpenIcon } from "lu
 import type { AccountOverview } from "../../../shared/contract"
 import { Badge } from "@/components/reui/badge"
 import { DataGrid, type DataGridFeatures, dataGridFeatures } from "@/components/reui/data-grid/data-grid"
+import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header"
 import { DataGridScrollArea } from "@/components/reui/data-grid/data-grid-scroll-area"
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table"
 import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"
@@ -12,7 +13,7 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTi
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { money, monthDay, shares, signedMoney, signedPercent } from "@/lib/format"
 import { parseDec } from "./decimal"
-import { heldPositions } from "./model"
+import { heldPositions, holdingNote } from "./model"
 import { sharesText } from "@/lib/quantity"
 
 type Position = AccountOverview["positions"][number]
@@ -58,17 +59,22 @@ function SellCell({ position, onSell }: { position: Position; onSell: (position:
 const columns = (onSell: (position: Position, lot: Lot) => void): ColumnDef<DataGridFeatures, Position>[] => [
   {
     accessorKey: "symbol",
-    header: "Stock",
-    cell: ({ row }) => <span className="font-medium">{row.original.symbol}</span>,
-    enableSorting: false,
-    size: 80,
+    size: 120,
+    header: ({ column }) => <DataGridColumnHeader title="Stock" column={column} />,
+    cell: ({ row }) => (
+      <div className="flex flex-col">
+        <span className="font-medium">{row.original.symbol}</span>
+        <span className="text-muted-foreground text-xs">{holdingNote(row.original)}</span>
+      </div>
+    ),
   },
-  { accessorKey: "owned_qty", header: "Shares", cell: ({ row }) => shares(row.original.owned_qty), enableSorting: false, size: 110, meta: RIGHT },
-  { accessorKey: "current_price", header: "Price", cell: ({ row }) => money(row.original.current_price), enableSorting: false, size: 90, meta: RIGHT },
-  { accessorKey: "market_value", header: "Value", cell: ({ row }) => <span className="font-medium">{money(row.original.market_value)}</span>, enableSorting: false, size: 100, meta: RIGHT },
+  { accessorKey: "owned_qty", header: ({ column }) => <DataGridColumnHeader title="Shares" column={column} />, cell: ({ row }) => shares(row.original.owned_qty), size: 100, meta: RIGHT },
+  { accessorKey: "avg_entry_price", header: ({ column }) => <DataGridColumnHeader title="Avg cost" column={column} />, cell: ({ row }) => money(row.original.avg_entry_price), size: 90, meta: RIGHT },
+  { accessorKey: "current_price", header: ({ column }) => <DataGridColumnHeader title="Price" column={column} />, cell: ({ row }) => money(row.original.current_price), size: 90, meta: RIGHT },
+  { accessorKey: "market_value", header: ({ column }) => <DataGridColumnHeader title="Value" column={column} />, cell: ({ row }) => money(row.original.market_value), size: 100, meta: RIGHT },
   {
     accessorKey: "unrealized_pl",
-    header: "Gain",
+    header: ({ column }) => <DataGridColumnHeader title="Gain" column={column} />,
     cell: ({ row }) => {
       const pl = Number(row.original.unrealized_pl ?? 0)
       return (
@@ -81,7 +87,6 @@ const columns = (onSell: (position: Position, lot: Lot) => void): ColumnDef<Data
         </div>
       )
     },
-    enableSorting: false,
     size: 170,
     meta: RIGHT,
   },
@@ -126,7 +131,7 @@ export function PositionsTable({
             table={table}
             recordCount={data.length}
             tableLayout={{ dense: true }}
-            tableClassNames={{ base: "min-w-[560px]" }}
+            tableClassNames={{ base: "min-w-[640px]" }}
           >
             <DataGridScrollArea>
               <DataGridTable />
