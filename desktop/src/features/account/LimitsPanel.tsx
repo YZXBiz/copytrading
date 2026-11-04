@@ -1,6 +1,6 @@
 import { GaugeIcon } from "lucide-react"
 import type { AccountLimits, AccountOverview } from "../../../shared/contract"
-import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"
+import { Frame, FramePanel } from "@/components/reui/frame"
 import { RegionError } from "@/components/region-error"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
@@ -40,16 +40,17 @@ export function LimitsPanel({
 }) {
   const lossToday = Math.max(0, -Number(account.balance?.day_change_usd ?? 0))
   return (
-    <Frame spacing="default">
-      <FrameHeader className="flex-row items-center justify-between">
-        <FrameTitle>Limits</FrameTitle>
+    <Frame stacked className="@container w-full">
+      <FramePanel className="flex items-center justify-between gap-4 p-3.5!">
+        {/* Header */}
+        <h2 className="text-foreground text-base font-medium">Limits</h2>
         {limits.status === "ready" && limits.data && (
-          <Button type="button" size="xs" variant="outline" onClick={onEdit}>
+          <Button type="button" size="sm" variant="outline" onClick={onEdit}>
             Edit Limits
           </Button>
         )}
-      </FrameHeader>
-      <FramePanel className="flex flex-col gap-4">
+      </FramePanel>
+      <FramePanel className="flex flex-col gap-4 p-5!">
         {limits.status === "loading" && (
           <div role="status" aria-label="Loading limits" className="flex flex-col gap-4">
             {Array.from({ length: 5 }, (_, i) => (

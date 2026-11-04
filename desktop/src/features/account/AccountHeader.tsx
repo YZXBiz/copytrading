@@ -45,11 +45,11 @@ export function AccountHeader({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1.5">
-          <h1 className="truncate text-2xl font-semibold tracking-tight">{account.account_id}</h1>
+          {/* The balance panel below names the account and its mode; the page keeps its heading for screen readers. */}
+          <h1 className="sr-only">{account.account_id}</h1>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline">{account.environment === "paper" ? "Paper" : "Live"}</Badge>
             <Badge variant={badgeVariant(state)}>{COPYING_TITLE[state.word]}</Badge>
             {state.detail && isWarning(state) && <span className="text-muted-foreground text-xs">{state.detail}</span>}
           </div>
