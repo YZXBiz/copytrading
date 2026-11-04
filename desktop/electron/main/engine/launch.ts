@@ -1,10 +1,9 @@
 import { type ChildProcess, spawn } from "node:child_process"
-import { randomUUID } from "node:crypto"
-import { existsSync, rmSync } from "node:fs"
+import { existsSync } from "node:fs"
 import { join, resolve } from "node:path"
 import type { EngineState } from "../../../shared/contract"
 import { EngineBridge, EngineError } from "./bridge"
-import { makeThrowawayRoot } from "./safety"
+import { type EngineRoots, installationId } from "./data-root"
 
 const REPO = resolve(__dirname, "../../..")
 const PYTHON = "cpython/python/bin/python3.14"
@@ -124,26 +123,29 @@ export class EngineProcess {
   }
 }
 
-/** The command that runs the engine as AppModel.swift does: -u -m copytrading_engine, JSON lines on stdio. */
-export function engineTarget(): SpawnTarget & { cleanup: () => void; dataDir: string; logsDir: string } {
-  const runtime = findPython()
-  const python = process.env.COPYTRADING_PYTHON ?? (runtime && join(runtime, PYTHON))
-  if (!python) throw new Error("No Python runtime with the engine's dependencies found.")
-  const dirs = makeThrowawayRoot()
+/**
+ * The command that runs the engine as AppModel.swift does: -u -m copytrading_engine, JSON lines on stdio.
+ * `resourcesPath` is the built app's Contents/Resources, which holds Runtime/ and Engine/src; without
+ * it (dev, tests) the repo's engine runs on a runtime found on this Mac.
+ */
+export function engineTarget(roots: EngineRoots, resourcesPath: string | null): SpawnTarget & { cleanup: () => void; dataDir: string; logsDir: string } {
+  const runtime = resourcesPath ? join(resourcesPath, "Runtime") : findPython()
+  const python = resourcesPath ? join(runtime!, PYTHON) : (process.env.COPYTRADING_PYTHON ?? (runtime && join(runtime, PYTHON)))
+  if (!python || !existsSync(python)) throw new Error("No Python runtime with the engine's dependencies found.")
   return {
     command: python,
-    args: ["-u", "-m", "copytrading_engine", "--data-dir", dirs.data, "--instance-id", randomUUID()],
-    cwd: dirs.data,
+    args: ["-u", "-m", "copytrading_engine", "--data-dir", roots.data, "--instance-id", installationId(roots.owner)],
+    cwd: roots.data,
     env: {
       PATH: "/usr/bin:/bin",
-      PYTHONPATH: join(REPO, "engine/src"),
+      PYTHONPATH: join(resourcesPath ? join(resourcesPath, "Engine") : join(REPO, "engine"), "src"),
       PYTHONUNBUFFERED: "1",
       PYTHONDONTWRITEBYTECODE: "1",
-      COPYTRADING_DESKTOP_DIAGNOSTICS_STATE_DIR: dirs.logs,
-      COPYTRADING_DESKTOP_OWNER_SUPPORT_DIR: dirs.owner,
+      COPYTRADING_DESKTOP_DIAGNOSTICS_STATE_DIR: roots.logs,
+      COPYTRADING_DESKTOP_OWNER_SUPPORT_DIR: roots.owner,
     },
-    cleanup: () => rmSync(dirs.root, { recursive: true, force: true }),
-    dataDir: dirs.data,
-    logsDir: dirs.logs,
+    cleanup: roots.cleanup,
+    dataDir: roots.data,
+    logsDir: roots.logs,
   }
 }

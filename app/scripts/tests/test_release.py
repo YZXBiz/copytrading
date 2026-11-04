@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import importlib.util
 import json
@@ -35,13 +36,9 @@ def test_release_version_requires_preview_identity_and_matching_tag() -> None:
         release.validate_version("0.1.0-alpha.01", "v0.1.0-alpha.01")
 
 
-def test_release_core_version_must_match_app_and_engine(tmp_path: Path) -> None:
-    app = tmp_path / "app/Resources"
+def test_release_core_version_must_match_the_engine(tmp_path: Path) -> None:
     engine = tmp_path / "engine"
-    app.mkdir(parents=True)
     engine.mkdir()
-    with (app / "Info.plist").open("wb") as stream:
-        plistlib.dump({"CFBundleShortVersionString": "0.1.0"}, stream)
     (engine / "pyproject.toml").write_text('[project]\nversion = "0.1.0"\n')
 
     assert release.validate_bundle_versions("0.1.0-alpha.1", root=tmp_path) == "0.1.0"
@@ -347,7 +344,8 @@ def test_build_release_keeps_contents_path_relative_to_app_root(
             assert packed_app is not None
             shutil.copytree(packed_app, Path(arguments[-1]) / packed_app.name, symlinks=True)
             return ""
-        assert Path(arguments[1]).name == "build_app.py"
+        assert Path(arguments[1]).name == "build_desktop.py"
+        assert "--ad-hoc" in arguments
         app = Path(arguments[arguments.index("--app") + 1])
         contents = app / "Contents"
         runtime = app / release.RUNTIME
@@ -411,9 +409,25 @@ def test_build_release_keeps_contents_path_relative_to_app_root(
     )
 
     assert assets == output
+    feed = (assets / "latest-mac.yml").read_text()
+    assert feed.startswith(
+        "version: 0.1.0-alpha.1\nfiles:\n  - url: CopyTrading-v0.1.0-alpha.1-macos-arm64.zip\n"
+    )
     assert sealed_apps == ["CopyTrading.app"]
     assert inventory_checks == [
         "Contents/Resources/Runtime/bundle-files.json",
         "Contents/Resources/Runtime/bundle-files.json",
     ]
     release.verify_checksums(assets)
+
+
+def test_update_feed_names_the_zip_with_its_sha512_and_size(tmp_path: Path) -> None:
+    archive = tmp_path / "CopyTrading-v0.1.0-alpha.2-macos-arm64.zip"
+    archive.write_bytes(b"zip bytes")
+    digest = base64.b64encode(hashlib.sha512(b"zip bytes").digest()).decode()
+
+    feed = release.update_feed(archive, "0.1.0-alpha.2")
+
+    assert f"  - url: {archive.name}\n    sha512: {digest}\n    size: 9\n" in feed
+    assert f"path: {archive.name}\nsha512: {digest}\n" in feed
+    assert feed.startswith("version: 0.1.0-alpha.2\n")

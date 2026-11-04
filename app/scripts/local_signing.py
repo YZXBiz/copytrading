@@ -50,6 +50,24 @@ def sign_command(
     ]
 
 
+def sign_frameworks(app: Path, *, ad_hoc: bool = False) -> str | None:
+    """Re-sign an Electron app's frameworks and helper apps with the identity the app will carry.
+
+    Electron ships them signed by its own build, and a main executable signed by another identity
+    must not load them. `--deep` applies to each framework or helper only, so the app itself
+    (sealed afterwards by `sign_if_available`, once its inventory is written) alone carries the
+    `dev.copytrading.app` identifier.
+    """
+    identity = None if ad_hoc else local_identity()
+    for nested in sorted((app / "Contents/Frameworks").iterdir()):
+        if nested.suffix in {".app", ".framework"}:
+            subprocess.run(
+                ["/usr/bin/codesign", "--force", "--deep", "--sign", identity or "-", str(nested)],
+                check=True,
+            )
+    return identity
+
+
 def sign_if_available(app: Path, *, ad_hoc: bool = False) -> str | None:
     """Seal the assembled app, using the owner's identity unless explicitly ad-hoc."""
     identity = None if ad_hoc else local_identity()

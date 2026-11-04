@@ -35,7 +35,7 @@ from local_signing import local_identity
 from swift_paths import swift_bin_path
 
 ROOT = Path(__file__).resolve().parents[2]
-RELEASE_APP = ROOT / "dist/CopyTrading.app"
+RELEASE_APP = ROOT / "dist/swift/CopyTrading.app"
 DEBUG_APP = ROOT / "dist/ui-test/CopyTrading Debug.app"
 APP_NAME = "CopyTrading Debug"
 BUNDLE_ID = "dev.copytrading.app.uitest"

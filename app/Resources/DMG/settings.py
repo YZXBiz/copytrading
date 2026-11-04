@@ -8,7 +8,7 @@ compression_level = 9
 filesystem = "HFS+"
 files = [application]
 symlinks = {"Applications": "/Applications"}
-icon = os.path.join(application, "Contents/Resources/AppIcon.icns")
+icon = os.path.join(application, "Contents/Resources/icon.icns")
 background = defines["background"]  # noqa: F821
 # 420 points of content under a 32-point title bar.
 window_rect = ((200, 160), (660, 452))

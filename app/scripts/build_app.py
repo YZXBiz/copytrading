@@ -285,7 +285,8 @@ def stamp_versions(info_path: Path, version: str | None) -> None:
         plistlib.dump(info, stream)
 
 
-def build(app: Path, prepared: Path, version: str | None = None) -> None:
+def pinned_manifest(prepared: Path) -> dict:
+    """The committed runtime pins, once the prepared runtime is shown to be exactly them."""
     manifest_path = MACOS / "Resources/Runtime/artifacts.json"
     load_artifacts(manifest_path)
     manifest = json.loads(manifest_path.read_text())
@@ -297,6 +298,84 @@ def build(app: Path, prepared: Path, version: str | None = None) -> None:
     for artifact in manifest["artifacts"]:
         if not (prepared / artifact["binary_path"]).is_file():
             raise ValueError(f"missing prepared native binary: {artifact['name']}")
+    return manifest
+
+
+def stage_engine(resources: Path, manifest: dict) -> None:
+    """Put the pinned CPython with the engine's locked packages in `resources/Runtime`, and the
+    engine source in `resources/Engine/src`: where the Swift and the Electron app both start it."""
+    runtime = resources / "Runtime"
+    requirements = run(
+        "uv",
+        "export",
+        "--directory",
+        str(ENGINE),
+        "--frozen",
+        "--no-dev",
+        "--no-emit-project",
+        "--format",
+        "requirements.txt",
+        "--no-header",
+        "--no-annotate",
+        capture=True,
+    )
+    expected_packages = applicable_packages(requirements)
+    source_builds = source_build_policy(requirements, ENGINE / "uv.lock", BUILD_CONSTRAINTS)
+    restore_native_runtime(runtime, manifest, ROOT / "dist/desktop-runtime/cache")
+    for name in ("artifacts.json", "THIRD_PARTY_NOTICES.md"):
+        shutil.copy2(MACOS / "Resources/Runtime" / name, runtime / name)
+    shutil.copytree(
+        ENGINE / "src",
+        resources / "Engine/src",
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
+    )
+
+    python = runtime / "cpython/python/bin/python3.14"
+    site_packages = runtime / "cpython/python/lib/python3.14/site-packages"
+    preinstalled_packages = _distribution_versions(site_packages)
+    with tempfile.TemporaryDirectory(prefix="desktop-requirements-") as requirements_dir:
+        requirements_file = Path(requirements_dir) / "requirements.txt"
+        requirements_file.write_text(requirements)
+        run(
+            "uv",
+            "pip",
+            "install",
+            "--python",
+            str(python),
+            "--target",
+            str(site_packages),
+            "--python-platform",
+            "aarch64-apple-darwin",
+            "--python-version",
+            "3.14",
+            "--require-hashes",
+            "--no-deps",
+            *source_install_options(source_builds, BUILD_CONSTRAINTS),
+            "-r",
+            str(requirements_file),
+        )
+    remove_console_scripts(site_packages)
+    packages = installed_packages(site_packages, expected_packages, preinstalled_packages)
+    if not source_builds.keys() <= packages.keys():
+        raise ValueError("audited source package missing from bundled Python packages")
+    (runtime / "python-dependencies.json").write_text(
+        json.dumps(
+            {
+                "lock_sha256": hashlib.sha256((ENGINE / "uv.lock").read_bytes()).hexdigest(),
+                "packages": packages,
+                "source_builds": source_builds,
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(resources / "Engine/src")
+    run(str(python), "-c", "import copytrading_engine, pydantic, cryptography", env=env)
+
+
+def build(app: Path, prepared: Path, version: str | None = None) -> None:
+    manifest = pinned_manifest(prepared)
 
     run(
         "arch",
@@ -328,22 +407,6 @@ def build(app: Path, prepared: Path, version: str | None = None) -> None:
             capture=True,
         )
     )
-    requirements = run(
-        "uv",
-        "export",
-        "--directory",
-        str(ENGINE),
-        "--frozen",
-        "--no-dev",
-        "--no-emit-project",
-        "--format",
-        "requirements.txt",
-        "--no-header",
-        "--no-annotate",
-        capture=True,
-    )
-    expected_packages = applicable_packages(requirements)
-    source_builds = source_build_policy(requirements, ENGINE / "uv.lock", BUILD_CONSTRAINTS)
     app.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="desktop-build-", dir=app.parent) as temporary:
         staged = Path(temporary) / app.name
@@ -370,63 +433,8 @@ def build(app: Path, prepared: Path, version: str | None = None) -> None:
         helpers.mkdir()
         shutil.copy2(MACOS / "Resources/Helpers/copytrading", helpers / "copytrading")
         (helpers / "copytrading").chmod(0o755)
-        restore_native_runtime(runtime, manifest, ROOT / "dist/desktop-runtime/cache")
-        for name in ("artifacts.json", "THIRD_PARTY_NOTICES.md"):
-            shutil.copy2(MACOS / "Resources/Runtime" / name, runtime / name)
+        stage_engine(resources, manifest)
         shutil.copytree(MACOS / "Resources/Contracts", resources / "Contracts")
-        shutil.copytree(
-            ENGINE / "src",
-            resources / "Engine/src",
-            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
-        )
-
-        python = runtime / "cpython/python/bin/python3.14"
-        site_packages = runtime / "cpython/python/lib/python3.14/site-packages"
-        preinstalled_packages = _distribution_versions(site_packages)
-        with tempfile.TemporaryDirectory(prefix="desktop-requirements-") as requirements_dir:
-            requirements_file = Path(requirements_dir) / "requirements.txt"
-            requirements_file.write_text(requirements)
-            run(
-                "uv",
-                "pip",
-                "install",
-                "--python",
-                str(python),
-                "--target",
-                str(site_packages),
-                "--python-platform",
-                "aarch64-apple-darwin",
-                "--python-version",
-                "3.14",
-                "--require-hashes",
-                "--no-deps",
-                *source_install_options(source_builds, BUILD_CONSTRAINTS),
-                "-r",
-                str(requirements_file),
-            )
-        remove_console_scripts(site_packages)
-        packages = installed_packages(site_packages, expected_packages, preinstalled_packages)
-        if not source_builds.keys() <= packages.keys():
-            raise ValueError("audited source package missing from bundled Python packages")
-        (runtime / "python-dependencies.json").write_text(
-            json.dumps(
-                {
-                    "lock_sha256": hashlib.sha256((ENGINE / "uv.lock").read_bytes()).hexdigest(),
-                    "packages": packages,
-                    "source_builds": source_builds,
-                },
-                indent=2,
-            )
-            + "\n"
-        )
-        env = os.environ.copy()
-        env["PYTHONPATH"] = str(resources / "Engine/src")
-        run(
-            str(python),
-            "-c",
-            "import copytrading_engine, pydantic, cryptography",
-            env=env,
-        )
         (runtime / "bundle-files.json").write_text(
             json.dumps(bundle_inventory(staged / "Contents"), sort_keys=True) + "\n"
         )
@@ -445,7 +453,7 @@ def build(app: Path, prepared: Path, version: str | None = None) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--app", type=Path, default=ROOT / "dist/CopyTrading.app")
+    parser.add_argument("--app", type=Path, default=ROOT / "dist/swift/CopyTrading.app")
     parser.add_argument("--runtime", type=Path, default=ROOT / "dist/desktop-runtime/prepared")
     parser.add_argument("--version", help="the release version to show, such as 0.1.0-alpha.4")
     arguments = parser.parse_args()

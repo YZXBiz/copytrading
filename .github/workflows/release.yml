@@ -8,18 +8,22 @@ on:
   pull_request:
     paths:
       - .github/workflows/release.yml
-      - .swift-version
       - Makefile
       - CHANGELOG.md
-      - app/Package.swift
+      - desktop/package.json
+      - desktop/package-lock.json
+      - desktop/electron.vite.config.ts
       - app/Resources/DMG/**
       - app/scripts/build_app.py
+      - app/scripts/build_desktop.py
       - app/scripts/build_dmg.py
+      - app/scripts/local_signing.py
       - app/scripts/prepare_runtime.py
       - app/scripts/release.py
       - app/scripts/release_notes.py
-      - app/scripts/smoke_app.py
+      - app/scripts/smoke_desktop.py
       - app/scripts/verify_bundle.py
+      - app/scripts/verify_desktop_bundle.py
 
 permissions: {}
 
@@ -82,10 +86,12 @@ jobs:
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.11.21"
-      # The image's Xcode 26.6 ships Swift 6.3.3, which crashes compiling the app; 6.4 builds it.
-      - uses: swift-actions/setup-swift@7e293214cba9e9225c93ce3267f17f6efdb656a8 # main 2025-11-30 (swiftly); v2.4.0 predates Swift 6.4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          swift-version: "6.4.0"
+          node-version: "26"
+          package-manager-cache: false
+      - name: Install the desktop app's packages
+        run: npm ci --prefix desktop
 
       - name: Install Python 3.14 for Apple silicon
         run: |
@@ -114,6 +120,7 @@ jobs:
           make dmg RELEASE_VERSION="$RELEASE_VERSION" RELEASE_OUTPUT=dist/release-assets
           "$UV_PYTHON" app/scripts/release_notes.py --version "$RELEASE_VERSION" --output dist/release-notes.md
 
+      # Launches the released app on a throwaway data folder: its page loads and its bundled engine answers.
       - name: Smoke test the released app
         env:
           RELEASE_VERSION: ${{ steps.metadata.outputs.version }}
@@ -122,7 +129,7 @@ jobs:
           smoke_root="$RUNNER_TEMP/release-smoke"
           mkdir -p "$smoke_root"
           ditto -x -k "dist/release-assets/CopyTrading-v${RELEASE_VERSION}-macos-arm64.zip" "$smoke_root"
-          "$UV_PYTHON" app/scripts/smoke_app.py --app "$smoke_root/CopyTrading.app"
+          "$UV_PYTHON" app/scripts/smoke_desktop.py --app "$smoke_root/CopyTrading.app"
 
       - name: Verify the asset set, checksums, and provenance
         env:
@@ -142,6 +149,7 @@ jobs:
           image = {f"CopyTrading-{version}.dmg", f"CopyTrading-{version}.dmg.sha256"}
           manifested = {
               f"CopyTrading-v{version}-macos-arm64.zip",
+              "latest-mac.yml",
               f"copytrading-source-v{version}.tar.gz",
               "sbom.cyclonedx.json",
               "THIRD_PARTY_NOTICES.md",
@@ -180,8 +188,10 @@ jobs:
           path: dist/release-notes.md
           if-no-files-found: error
           retention-days: 1
-      # Sparkle (ADR-0009) installs only a download whose EdDSA signature matches the key in the
-      # app, so the release signs its DMG and adds itself to the feed the app reads.
+      # The Electron app updates from this release's latest-mac.yml (electron-updater). Copies still
+      # running the SwiftUI app update through Sparkle (ADR-0009), which installs only a download whose
+      # EdDSA signature matches the key in that app, so the release also signs its DMG and adds itself
+      # to the feed they read: that is how they move to this app. Drop this step with the Swift app.
       - name: Sign the update and add it to the feed
         if: github.event_name == 'push'
         env:
