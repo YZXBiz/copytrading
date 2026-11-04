@@ -4,7 +4,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { CheckNotice } from "./CheckNotice"
 import { EditorSheet } from "./EditorSheet"
 import { TextField } from "./TextField"
-import { connect, edit, isCopying, keysOf, useSetup } from "./setup-store"
+import { connect, edit, keysOf, useSetup } from "./setup-store"
 import { resultFor } from "./state"
 
 /** The channels the gurus post in and the token CopyTrading reads them with. */
@@ -12,7 +12,6 @@ export function DiscordSheet({ onClose }: { onClose: () => void }) {
   const s = useSetup()
   const { draft } = s
   const saved = keysOf(s)?.discord
-  const locked = isCopying(s)
   const result = resultFor(s.checks, draft, "discord")
   return (
     <EditorSheet
@@ -21,7 +20,7 @@ export function DiscordSheet({ onClose }: { onClose: () => void }) {
       onClose={onClose}
       footer={
         <>
-          <Button type="button" variant="outline" disabled={locked || result?.check === null} onClick={() => void connect("discord")}>
+          <Button type="button" variant="outline" disabled={result?.check === null} onClick={() => void connect("discord")}>
             {result?.check === null && <Spinner />}
             Connect
           </Button>
@@ -38,27 +37,21 @@ export function DiscordSheet({ onClose }: { onClose: () => void }) {
           value={draft.channels}
           onChange={(channels) => edit((d) => ({ ...d, channels }))}
           placeholder="1517754775674949742"
-          inputMode="numeric"
-          disabled={locked}
-        />
+          inputMode="numeric"        />
         <TextField
           label="Discord token"
           hint={saved ? "Kept encrypted on this Mac. Leave blank to keep the saved token." : "Kept encrypted on this Mac, never in the setup file."}
           value={draft.discord_token}
           onChange={(discord_token) => edit((d) => ({ ...d, discord_token }))}
           type="password"
-          placeholder={saved ? "Saved" : "Required"}
-          disabled={locked}
-        />
+          placeholder={saved ? "Saved" : "Required"}        />
         <TextField
           label="Only these users"
           hint="Optional. User IDs to read, when others post in the channel too."
           value={draft.authors}
           onChange={(authors) => edit((d) => ({ ...d, authors }))}
           placeholder="Anyone who posts"
-          inputMode="numeric"
-          disabled={locked}
-        />
+          inputMode="numeric"        />
       </FieldGroup>
       <CheckNotice subject="discord" result={result} notice={s.notices.discord} />
     </EditorSheet>

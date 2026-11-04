@@ -47,7 +47,7 @@ if (!result.ok && result.cancelled) return // the owner pressed Cancel; show not
 ```
 
 These actions show a native dialog from the main process first, and send nothing to the engine on Cancel:
-`confirmManualOrders`, `confirmLotSale`, `startTrading`, `pauseTrading`, `controlAccount`, `approveProposal`,
+`confirmManualOrders`, `confirmLotSale`, `startTrading`, `applyChanges`, `pauseTrading`, `controlAccount`, `approveProposal`,
 `deleteAccountRecord`, `completeRestoreCandidate`, `updateAccountLimits` (it changes copying at once; the dialog
 lists each limit before and after). The page cannot skip or reword the dialog: main builds its text from what
 the engine said or the saved setup holds, not from the request.
@@ -79,7 +79,15 @@ wording in `confirmations.ts` and a case in `tests/api.test.ts`.
   committed start also resumes each account the engine holds with buys off, as `turnOnEveryAccount` does: the start's
   dialog named every account, so that asks nothing more. A Cancel in the dialog puts the setup before the save back.
   The page's state for all of this, and the setup form, is `src/features/connections/setup-store.ts`.
-- Keys (Discord token, model key, each account's Alpaca key and secret) live encrypted with Electron `safeStorage` in
+- `applyChanges` is the same start while copying runs (`AppModel.applyChangesWhileCopying`): one confirmation, then main
+  pauses, validates, saves and starts the new setup, and when a check fails or the start does not take it starts the saved
+  setup again (no second dialog) and gives back the buys of the accounts that were buying. A key the change lacks is
+  refused before anything pauses.
+- Keys the owner types are held by `act.setSecrets` in main's memory only. `SecretStore.stage()` writes them to disk with
+  the keys before them when a start is journaled, `settle()` drops the old ones once the engine commits, and `rollback()`,
+  a Cancel (`discard()`), a refused start, or `act.discardSecrets` ("Discard changes") leaves the file as it was; a crash
+  mid-start leaves both on disk for the next launch's reconcile.
+- Keys (Discord token, model key, each account's Alpaca key and secret, once a start has saved them) live encrypted with Electron `safeStorage` in
   `userData`. The renderer writes them with `act.setSecrets` and sees only `read.getSecretStatus()` (booleans).
   Main adds them to the engine request for `validateTrading`, `startTrading`, `checkConnection`,
   `learnGuruPlaybook`, `evaluateHistoricalProfile` and `assistantAsk`, overriding anything the page sent, and

@@ -7,7 +7,7 @@ import { CheckNotice } from "./CheckNotice"
 import { EditorSheet } from "./EditorSheet"
 import { SelectField } from "./SelectField"
 import { TextField } from "./TextField"
-import { connect, edit, isCopying, keysOf, pickProvider, useSetup } from "./setup-store"
+import { connect, edit, keysOf, pickProvider, useSetup } from "./setup-store"
 import { resultFor } from "./state"
 
 /** The AI model that reads each post: its service, model name, and key. */
@@ -15,7 +15,6 @@ export function InterpreterSheet({ onClose }: { onClose: () => void }) {
   const s = useSetup()
   const { draft } = s
   const keySaved = keysOf(s)?.providerKey
-  const locked = isCopying(s)
   const result = resultFor(s.checks, draft, "interpreter")
   const address = draft.base_url ? baseUrlProblem(draft.provider, draft.base_url) : null
   return (
@@ -25,7 +24,7 @@ export function InterpreterSheet({ onClose }: { onClose: () => void }) {
       onClose={onClose}
       footer={
         <>
-          <Button type="button" variant="outline" disabled={locked || result?.check === null} onClick={() => void connect("interpreter")}>
+          <Button type="button" variant="outline" disabled={result?.check === null} onClick={() => void connect("interpreter")}>
             {result?.check === null && <Spinner />}
             Connect
           </Button>
@@ -40,16 +39,12 @@ export function InterpreterSheet({ onClose }: { onClose: () => void }) {
           label="Service"
           value={draft.provider}
           groups={PROVIDER_GROUPS.map((g) => ({ title: g.title, choices: g.providers.map((p) => ({ value: p, label: PROVIDER_TITLES[p] })) }))}
-          onChange={(provider) => pickProvider(provider as ProviderName)}
-          disabled={locked}
-        />
+          onChange={(provider) => pickProvider(provider as ProviderName)}        />
         <TextField
           label="Model"
           hint="The model's name, as the service writes it."
           value={draft.model}
-          onChange={(model) => edit((d) => ({ ...d, model }))}
-          disabled={locked}
-        />
+          onChange={(model) => edit((d) => ({ ...d, model }))}        />
         {acceptsBaseUrl(draft.provider) && (
           <TextField
             label="Base URL"
@@ -57,9 +52,7 @@ export function InterpreterSheet({ onClose }: { onClose: () => void }) {
             error={address}
             value={draft.base_url}
             onChange={(base_url) => edit((d) => ({ ...d, base_url }))}
-            placeholder="http://localhost:11434"
-            disabled={locked}
-          />
+            placeholder="http://localhost:11434"          />
         )}
         {requiresApiKey(draft.provider) && (
           <TextField
@@ -68,9 +61,7 @@ export function InterpreterSheet({ onClose }: { onClose: () => void }) {
             value={draft.provider_api_key}
             onChange={(provider_api_key) => edit((d) => ({ ...d, provider_api_key }))}
             type="password"
-            placeholder={keySaved ? "Saved" : "Required"}
-            disabled={locked}
-          />
+            placeholder={keySaved ? "Saved" : "Required"}          />
         )}
       </FieldGroup>
       <CheckNotice

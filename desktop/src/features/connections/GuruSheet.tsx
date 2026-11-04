@@ -10,7 +10,7 @@ import { SelectField } from "./SelectField"
 import { SwitchField } from "./SwitchField"
 import { TextField } from "./TextField"
 import { DEFAULT_REPEAT_WINDOW_MINUTES, PLAYBOOK_MAX_LENGTH, REPEAT_WINDOW_RANGE, accountChoices, effectiveChannel, policyOf, split } from "./draft"
-import { editGuru, isCopying, learnPlaybook, removeGuru, useSetup } from "./setup-store"
+import { editGuru, learnPlaybook, removeGuru, useSetup } from "./setup-store"
 import { sizing } from "./sizing"
 
 /** One guru: where they post, how to read their calls, and the account that copies them. */
@@ -23,7 +23,6 @@ export function GuruSheet({ uid, onClose }: { uid: string; onClose: () => void }
   const [learning, setLearning] = useState(false)
   const [learned, setLearned] = useState<{ ok: boolean; text: string } | null>(null)
   if (!guru) return null
-  const locked = isCopying(s)
   const channels = split(draft.channels)
   const channel = effectiveChannel(draft, guru)
   const channelChoices = channel && !channels.includes(channel) ? [...channels, channel] : channels
@@ -51,7 +50,7 @@ export function GuruSheet({ uid, onClose }: { uid: string; onClose: () => void }
       onClose={onClose}
       footer={
         <>
-          <Button type="button" variant="ghost" className="text-destructive" disabled={locked} onClick={() => setConfirmsRemove(true)}>
+          <Button type="button" variant="ghost" className="text-destructive" onClick={() => setConfirmsRemove(true)}>
             Remove guru
           </Button>
           <Button type="button" onClick={onClose}>
@@ -84,15 +83,13 @@ export function GuruSheet({ uid, onClose }: { uid: string; onClose: () => void }
         </Alert>
       )}
       <FieldGroup>
-        <TextField label="Name" value={guru.display_name} onChange={(display_name) => editGuru(uid, { display_name })} placeholder="How you refer to this guru" disabled={locked} />
+        <TextField label="Name" value={guru.display_name} onChange={(display_name) => editGuru(uid, { display_name })} placeholder="How you refer to this guru" />
         {channelChoices.length ? (
           <SelectField
             label="Discord channel"
             value={channel}
             groups={[{ choices: channelChoices.map((c) => ({ value: c, label: c })) }]}
-            onChange={(channel_id) => editGuru(uid, { channel_id })}
-            disabled={locked}
-          />
+            onChange={(channel_id) => editGuru(uid, { channel_id })}          />
         ) : (
           <Field>
             <FieldLabel>Discord channel</FieldLabel>
@@ -105,9 +102,7 @@ export function GuruSheet({ uid, onClose }: { uid: string; onClose: () => void }
           value={guru.author_id}
           onChange={(author_id) => editGuru(uid, { author_id })}
           placeholder="Any poster"
-          inputMode="numeric"
-          disabled={locked}
-        />
+          inputMode="numeric"        />
       </FieldGroup>
 
       <FieldSet>
@@ -120,9 +115,7 @@ export function GuruSheet({ uid, onClose }: { uid: string; onClose: () => void }
               value={guru.account_id}
               placeholder="Choose an account"
               groups={[{ choices: accountList.map((a) => ({ value: a, label: a })) }]}
-              onChange={(account_id) => editGuru(uid, { account_id })}
-              disabled={locked}
-            />
+              onChange={(account_id) => editGuru(uid, { account_id })}            />
           ) : (
             <Field>
               <FieldLabel>Account</FieldLabel>
@@ -136,9 +129,7 @@ export function GuruSheet({ uid, onClose }: { uid: string; onClose: () => void }
               value={guru.full_position_usd}
               onChange={(full_position_usd) => editGuru(uid, { full_position_usd })}
               placeholder={policy?.max_symbol_usd.trim() || "Required"}
-              inputMode="decimal"
-              disabled={locked}
-            />
+              inputMode="decimal"            />
           )}
         </FieldGroup>
         {sized ? (
@@ -164,12 +155,12 @@ export function GuruSheet({ uid, onClose }: { uid: string; onClose: () => void }
         <Field>
           <div className="flex items-center justify-between gap-2">
             <FieldLabel htmlFor={playbookId}>How the model should read this guru</FieldLabel>
-            <Button type="button" size="xs" variant="outline" disabled={locked || learning} onClick={() => void learn()}>
+            <Button type="button" size="xs" variant="outline" disabled={learning} onClick={() => void learn()}>
               {learning ? <Spinner className="size-3" /> : <SparklesIcon aria-hidden />}
               {guru.playbook.trim() ? "Learn again" : "Learn from channel"}
             </Button>
           </div>
-          <Textarea id={playbookId} value={guru.playbook} onChange={(event) => editGuru(uid, { playbook: event.target.value })} className="min-h-40" disabled={locked} spellCheck={false} />
+          <Textarea id={playbookId} value={guru.playbook} onChange={(event) => editGuru(uid, { playbook: event.target.value })} className="min-h-40" spellCheck={false} />
           <div className="text-muted-foreground flex justify-between gap-4 text-xs">
             <span>One rule per line, such as “英伟达 means NVDA”.</span>
             <span className={length > PLAYBOOK_MAX_LENGTH ? "text-destructive tabular-nums" : "tabular-nums"}>
@@ -193,9 +184,7 @@ export function GuruSheet({ uid, onClose }: { uid: string; onClose: () => void }
             title="Skip re-posted calls"
             hint={guru.repeat_window_minutes === null ? "Every post is copied, even a repeat." : "Same stock, price, and size counts once. A repeated sell counts once a day."}
             checked={guru.repeat_window_minutes !== null}
-            onChange={(on) => editGuru(uid, { repeat_window_minutes: on ? (guru.repeat_window_minutes ?? DEFAULT_REPEAT_WINDOW_MINUTES) : null })}
-            disabled={locked}
-          />
+            onChange={(on) => editGuru(uid, { repeat_window_minutes: on ? (guru.repeat_window_minutes ?? DEFAULT_REPEAT_WINDOW_MINUTES) : null })}          />
           {guru.repeat_window_minutes !== null && (
             <TextField
               label="Re-post window (minutes)"
@@ -206,9 +195,7 @@ export function GuruSheet({ uid, onClose }: { uid: string; onClose: () => void }
                 // A typed value outside a minute to a day is held to the nearest end.
                 if (Number.isFinite(minutes)) editGuru(uid, { repeat_window_minutes: Math.min(Math.max(Math.round(minutes), REPEAT_WINDOW_RANGE[0]), REPEAT_WINDOW_RANGE[1]) })
               }}
-              inputMode="numeric"
-              disabled={locked}
-            />
+              inputMode="numeric"            />
           )}
         </FieldGroup>
       </FieldSet>

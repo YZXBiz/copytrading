@@ -41,6 +41,8 @@ export type Start =
   | { phase: "idle" }
   | { phase: "checking" }
   | { phase: "starting" }
+  /** Copying is paused to apply an edited setup, which main checks and starts (or resumes the saved one). */
+  | { phase: "applying" }
   /** The engine has not confirmed the start yet; the saved setup stays the one before it until it does. */
   | { phase: "pending"; activationId: string }
   /** `paused`: accounts the engine holds that are still not buying, which the owner resumes on their page. */
@@ -347,12 +349,14 @@ async function settlePending(activationId: string) {
 
 /** The one Start Copying: checks every connection, saves exactly what was checked, then starts. */
 export async function startCopying() {
-  if (state.start.phase === "checking" || state.start.phase === "starting" || state.start.phase === "pending" || state.load.status !== "ready") return
+  if (["checking", "starting", "applying", "pending"].includes(state.start.phase) || state.load.status !== "ready") return
   const draft = state.draft
   const keys = facts()!
   const problem = incompleteKey(draft)
   if (problem) return set({ start: failure(problem) })
   if (!draft.discord_token && !keys.discord) return set({ start: failure("Enter your Discord token in Connections first.") })
+  // Claimed before anything is awaited, so a second press while this one builds or runs does nothing.
+  set({ start: { phase: "checking" } })
   let configuration: TradingConfiguration
   try {
     configuration = await buildConfiguration(draft)
@@ -360,7 +364,6 @@ export async function startCopying() {
     return set({ start: failure(error instanceof SetupProblem ? error.message : "The setup could not be read.") })
   }
   const act = window.copytrading.act
-  set({ start: { phase: "checking" } })
   const typed = typedSecrets(draft)
   if (typed) {
     const saved = await act.setSecrets({ ...typed, ...(typed.provider_api_key ? { provider_name: draft.provider } : {}) })
@@ -387,6 +390,48 @@ export async function startCopying() {
   await reload()
   const after = state.load.status === "ready" ? state.load.data : null
   if (after?.saved?.pending_activation) return set({ start: { phase: "pending", activationId } })
+  await finishStarted(configuration.accounts.map((a) => a.id))
+}
+
+/**
+ * Apply Changes while copying runs: main pauses copying, checks every connection, and starts the new setup, or starts the
+ * saved one again when a check fails (AppModel.applyChangesWhileCopying). A key missing for the change is refused before
+ * anything pauses.
+ */
+export async function applyChanges() {
+  const busy = ["checking", "starting", "applying", "pending"]
+  if (busy.includes(state.start.phase) || state.load.status !== "ready") return
+  const draft = state.draft
+  const problem = incompleteKey(draft)
+  if (problem) return set({ start: failure(problem) })
+  // Claimed before anything is awaited, so a second press while this one builds or runs does nothing.
+  set({ start: { phase: "applying" } })
+  let configuration: TradingConfiguration
+  try {
+    configuration = await buildConfiguration(draft)
+  } catch (error) {
+    return set({ start: failure(error instanceof SetupProblem ? error.message : "The setup could not be read.") })
+  }
+  const act = window.copytrading.act
+  const typed = typedSecrets(draft)
+  if (typed) {
+    const held = await act.setSecrets({ ...typed, ...(typed.provider_api_key ? { provider_name: draft.provider } : {}) })
+    if (!held.ok) return set({ start: failure(held.error) })
+    await refreshSecrets()
+  }
+  const applied = await act.applyChanges({ configuration })
+  if (!applied.ok) {
+    set({ start: applied.cancelled ? { phase: "idle" } : failure(applied.error) })
+    return void (await reload({ keepDraft: true }))
+  }
+  if (!applied.value.applied) {
+    // Nothing was saved and the saved setup copies again; the typed keys stay in the form, as main dropped them.
+    set({ start: { phase: "failed", message: applied.value.message ?? "The changes were not applied.", report: applied.value.report } })
+    return void (await reload({ keepDraft: true }))
+  }
+  await reload()
+  const pending = state.load.status === "ready" ? state.load.data.saved?.pending_activation : null
+  if (pending) return set({ start: { phase: "pending", activationId: pending.activation_id } })
   await finishStarted(configuration.accounts.map((a) => a.id))
 }
 

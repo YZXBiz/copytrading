@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { CapabilityCheck, Result, SetupView, TradingConfiguration } from "../../../shared/contract"
 import { buildConfiguration, draftFromSetup, newAccount, newGuru } from "./draft"
-import { addAccount, applyLimits, connect, discard, edit, editAccount, learnPlaybook, pickProvider, refreshStatus, reload, setupState, startCopying } from "./setup-store"
+import { addAccount, applyChanges, applyLimits, connect, discard, edit, editAccount, learnPlaybook, pickProvider, refreshStatus, reload, setupState, startCopying } from "./setup-store"
 
 // The store talks to main through window.copytrading; each test gives it a fake and reads what it was asked, in order.
 
@@ -37,6 +37,7 @@ function install(saved: SetupView | null, overrides: { act?: Record<string, unkn
     startTrading: log("startTrading", ok({ state: "running" })),
     controlAccount: log("controlAccount", ok({})),
     updateAccountLimits: log("updateAccountLimits", ok({ revision: "c".repeat(64) })),
+    applyChanges: log("applyChanges", ok({ applied: true, message: null, report: null })),
     learnGuruPlaybook: log("learnGuruPlaybook", ok({ posts_read: 12, playbook: "买 X", summary: "Short calls.", provider: "deepseek", model: "deepseek-flash", cost_notice: "" })),
     ...overrides.act,
   }
@@ -131,6 +132,13 @@ describe("startCopying", () => {
     // Main turns the accounts on; the page only reports one the engine still holds with buys off.
     expect(calls).not.toContain("controlAccount")
     expect(setupState().start).toEqual({ phase: "started", paused: ["zhap"] })
+  })
+
+  it("starts once however many times the button is pressed while it builds", async () => {
+    let starts = 0
+    await ready(await savedSetup(), { act: { startTrading: async () => (starts++, ok({ state: "running" })) } })
+    await Promise.all([startCopying(), startCopying()])
+    expect(starts).toBe(1)
   })
 
   it("reports every account buying as plainly started", async () => {
@@ -242,6 +250,85 @@ describe("startCopying", () => {
     await startCopying()
     expect(setupState().start).toMatchObject({ message: "Each guru needs a name." })
     expect(calls).toEqual([])
+  })
+})
+
+describe("applyChanges", () => {
+  async function copyingWithChange(overrides = {}) {
+    const fake = install(await savedSetup(), overrides)
+    await reload()
+    await discard()
+    edit((d) => ({ ...d, accounts: d.accounts.map((a) => ({ ...a, policy: { ...a.policy, max_order_usd: "250" } })) }))
+    return fake
+  }
+
+  it("sends the edited setup once, and refills the form from what main saved", async () => {
+    const sent: unknown[] = []
+    const { calls } = await copyingWithChange({ act: { applyChanges: async (p: unknown) => (sent.push(p), ok({ applied: true, message: null, report: null })) } })
+    await Promise.all([applyChanges(), applyChanges()]) // a second press while the first runs does nothing
+    expect(sent).toHaveLength(1)
+    expect((sent[0] as { configuration: TradingConfiguration }).configuration.accounts[0]!.policy.max_order_usd).toBe("250")
+    expect(setupState().start.phase).toBe("started")
+    expect(calls).not.toContain("saveSetup") // main saves it after the check, never the page
+  })
+
+  it("sends typed keys to main first, and says so when a check failed and the saved setup copies again", async () => {
+    const report = { configuration_revision: "b".repeat(64), activatable: false, cost_notice: "", checks: [check({ state: "failed", reason_code: "source_probe_timed_out" })] }
+    const { calls } = await copyingWithChange({
+      act: { applyChanges: async () => ok({ applied: false, message: "Some connections need attention. Your changes weren't saved. Copying continues with your saved setup.", report }) },
+    })
+    edit((d) => ({ ...d, discord_token: "typed-token" }))
+    await applyChanges()
+    expect(calls.indexOf("setSecrets")).toBeLessThan(calls.indexOf("getSetup", calls.indexOf("setSecrets")))
+    expect(setupState().start).toEqual({
+      phase: "failed",
+      message: "Some connections need attention. Your changes weren't saved. Copying continues with your saved setup.",
+      report,
+    })
+    // The edit and the typed key stay in the form for the owner to fix.
+    expect(setupState().draft.accounts[0]!.policy.max_order_usd).toBe("250")
+    expect(setupState().draft.discord_token).toBe("typed-token")
+  })
+
+  it("shows nothing when the owner says no, and main's reason when it refuses", async () => {
+    await copyingWithChange({ act: { applyChanges: async () => ({ ok: false, error: "Cancelled.", cancelled: true }) } })
+    await applyChanges()
+    expect(setupState().start.phase).toBe("idle")
+    await copyingWithChange({ act: { applyChanges: async () => ({ ok: false, error: "Enter the Alpaca API key and secret for “spare” first." }) } })
+    await applyChanges()
+    expect(setupState().start).toMatchObject({ phase: "failed", message: "Enter the Alpaca API key and secret for “spare” first." })
+  })
+
+  it("reaches no engine when the form is wrong", async () => {
+    const { calls } = await copyingWithChange()
+    calls.length = 0
+    edit((d) => ({ ...d, accounts: d.accounts.map((a) => ({ ...a, key: "k" })) }))
+    await applyChanges()
+    expect(setupState().start).toMatchObject({ message: "Enter both the API key and the secret for “zhap”." })
+    expect(calls).toEqual([])
+  })
+
+  it("leaves a change the engine has not confirmed pending, under the id main journaled", async () => {
+    const saved = await savedSetup()
+    const pending = { ...saved, pending_activation: { activation_id: "act-1", candidate_revision: "b".repeat(64) } }
+    const flag = { on: false }
+    install(saved, { act: { applyChanges: async () => ((flag.on = true), ok({ applied: true, message: null, report: null })) }, read: { getSetup: async () => ok(flag.on ? pending : saved) } })
+    await reload()
+    await discard()
+    edit((d) => ({ ...d, accounts: d.accounts.map((a) => ({ ...a, policy: { ...a.policy, max_order_usd: "250" } })) }))
+    await applyChanges()
+    expect(setupState().start).toEqual({ phase: "pending", activationId: "act-1" })
+  })
+})
+
+describe("discard", () => {
+  it("drops the keys main holds for the form, then shows the saved setup", async () => {
+    const { calls } = install(await savedSetup())
+    await reload()
+    edit((d) => ({ ...d, discord_token: "typed" }))
+    await discard()
+    expect(calls).toContain("discardSecrets")
+    expect(setupState().draft.discord_token).toBe("")
   })
 })
 

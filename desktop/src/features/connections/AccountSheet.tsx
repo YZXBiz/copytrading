@@ -42,7 +42,7 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
   if (!account) return null
   const name = account.name.trim()
   const subject = accountSubject(name)
-  const locked = isCopying(s)
+  const copying = isCopying(s)
   const savedKeys = Boolean(keysOf(s)?.brokers[name])
   const result = resultFor(s.checks, s.draft, subject)
   const savedPolicy = s.load.status === "ready" ? s.load.data.saved?.configuration.accounts.find((a) => a.id === name)?.policy : undefined
@@ -61,21 +61,20 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
       onClose={onClose}
       footer={
         <>
-          <Button type="button" variant="ghost" className="text-destructive" disabled={locked} onClick={() => setConfirmsRemove(true)}>
+          <Button type="button" variant="ghost" className="text-destructive" onClick={() => setConfirmsRemove(true)}>
             Remove account
           </Button>
           <div className="flex gap-2">
-            {locked ? (
+            {copying && (
               <Button type="button" variant="outline" disabled={applying || !savedPolicy || same(savedPolicy, account.policy)} onClick={() => void apply()}>
                 {applying && <Spinner />}
                 Apply limits now
               </Button>
-            ) : (
-              <Button type="button" variant="outline" disabled={result?.check === null} onClick={() => void connect(subject)}>
-                {result?.check === null && <Spinner />}
-                Connect
-              </Button>
             )}
+            <Button type="button" variant="outline" disabled={result?.check === null} onClick={() => void connect(subject)}>
+              {result?.check === null && <Spinner />}
+              Connect
+            </Button>
             <Button type="button" onClick={onClose}>
               Done
             </Button>
@@ -106,11 +105,11 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
           </AlertAction>
         </Alert>
       )}
-      {locked && (
+      {copying && (
         <Alert variant="info">
           <CircleAlertIcon aria-hidden />
           <AlertTitle>Copying is running</AlertTitle>
-          <AlertDescription>Limits apply to the next order. Pause copying to change anything else.</AlertDescription>
+          <AlertDescription>Apply limits now changes only this account's limits, from the next order. Any other change is applied from the start bar, which restarts copying for a few seconds.</AlertDescription>
         </Alert>
       )}
       <FieldGroup>
@@ -121,7 +120,6 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
           value={account.name}
           onChange={(value) => editAccount(uid, (a) => ({ ...a, name: value }))}
           placeholder="e.g. primary"
-          disabled={locked}
         />
         <ChoiceField
           label="Environment"
@@ -131,7 +129,6 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
             { value: "live", label: "Live" },
           ]}
           onChange={(environment) => editAccount(uid, (a) => ({ ...a, environment }))}
-          disabled={locked}
         />
         {account.environment === "live" && (
           <Alert variant="warning">
@@ -150,17 +147,13 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
             value={account.key}
             onChange={(key) => editAccount(uid, (a) => ({ ...a, key }))}
             type="password"
-            placeholder={savedKeys ? "Saved" : "Required"}
-            disabled={locked}
-          />
+            placeholder={savedKeys ? "Saved" : "Required"}          />
           <TextField
             label="API secret"
             value={account.secret}
             onChange={(secret) => editAccount(uid, (a) => ({ ...a, secret }))}
             type="password"
-            placeholder={savedKeys ? "Saved" : "Required"}
-            disabled={locked}
-          />
+            placeholder={savedKeys ? "Saved" : "Required"}          />
         </FieldGroup>
         <CheckNotice subject={subject} result={result} notice={s.notices[subject]} />
       </FieldSet>
@@ -211,6 +204,12 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
             hint="Off means you sell copied shares yourself."
             checked={account.policy.copy_exits}
             onChange={(copy_exits) => editPolicy(uid, { copy_exits })}
+          />
+          <SwitchField
+            title="Ask me before sending orders"
+            hint="No order goes out by itself: each waits for you to approve it from its post in Activity."
+            checked={account.policy.approve_orders}
+            onChange={(approve_orders) => editPolicy(uid, { approve_orders })}
           />
           <ChoiceField
             label="After a restart"

@@ -110,7 +110,7 @@ export function ConnectionsScreen({ routeId }: { routeId: string | null }) {
           <h2 id="accounts" className="text-sm font-medium">
             Broker accounts
           </h2>
-          <Button type="button" size="xs" variant="outline" disabled={derived.copying} onClick={() => setOpen({ kind: "account", uid: addAccount() })}>
+          <Button type="button" size="xs" variant="outline" onClick={() => setOpen({ kind: "account", uid: addAccount() })}>
             <PlusIcon aria-hidden /> Add account
           </Button>
         </div>
@@ -144,7 +144,7 @@ export function ConnectionsScreen({ routeId }: { routeId: string | null }) {
           <h2 id="gurus" className="text-sm font-medium">
             Gurus
           </h2>
-          <Button type="button" size="xs" variant="outline" disabled={derived.copying} onClick={() => setOpen({ kind: "guru", uid: addGuru() })}>
+          <Button type="button" size="xs" variant="outline" onClick={() => setOpen({ kind: "guru", uid: addGuru() })}>
             <PlusIcon aria-hidden /> Add guru
           </Button>
         </div>

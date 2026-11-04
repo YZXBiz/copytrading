@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { TradingStatus } from "../../../shared/contract"
 import { type Progress } from "./state"
-import { canStartCopying, startStatus } from "./start-status"
+import { canApplyChanges, canStartCopying, startStatus } from "./start-status"
 
 const trading = (state: TradingStatus["state"]): TradingStatus => ({
   state,
@@ -27,7 +27,7 @@ describe("startStatus", () => {
   })
 
   it("names the accounts a committed start left not buying, instead of saying all is well", () => {
-    const running = { ...base, trading: trading("running"), isCopying: true }
+    const running = { ...base, trading: trading("running"), isCopying: true, hasUnsaved: false }
     expect(startStatus({ ...running, start: { phase: "started", paused: [] } }).text).toBe("Copying is running")
     expect(startStatus({ ...running, start: { phase: "started", paused: ["a", "b"] } })).toMatchObject({
       text: "Started, but not buying everywhere",
@@ -46,9 +46,15 @@ describe("startStatus", () => {
     })
   })
 
-  it("waits for the engine, and locks the form while copying runs", () => {
+  it("waits for the engine, and offers to apply a change while copying runs", () => {
     expect(startStatus({ ...base, trading: null }).text).toBe("Waiting for the engine…")
-    expect(startStatus({ ...base, trading: trading("running"), isCopying: true }).text).toBe("Copying is running")
+    const running = { ...base, trading: trading("running"), isCopying: true }
+    expect(startStatus({ ...running, hasUnsaved: false }).text).toBe("Copying is running")
+    expect(startStatus({ ...running, hasUnsaved: true })).toMatchObject({
+      text: "You changed the setup",
+      detail: "Apply changes to use it. Copying restarts in a few seconds, and any post sent meanwhile is still copied.",
+    })
+    expect(startStatus({ ...running, start: { phase: "applying" } }).text).toBe("Applying your changes…")
   })
 
   it("counts the steps and points at the next while the setup is incomplete", () => {
@@ -62,6 +68,19 @@ describe("startStatus", () => {
   it("offers to start a filled-in setup", () => {
     expect(startStatus(base).text).toBe("Ready to start")
     expect(startStatus({ ...base, hasSaved: true }).text).toBe("You have unsaved changes")
+  })
+})
+
+describe("canApplyChanges", () => {
+  const copying = { start: { phase: "idle" } as const, progress: READY, isCopying: true, hasUnsaved: true }
+  it("needs copying running on a saved setup, an edited and filled-in form, and nothing under way", () => {
+    expect(canApplyChanges(copying)).toBe(true)
+    expect(canApplyChanges({ ...copying, isCopying: false })).toBe(false)
+    expect(canApplyChanges({ ...copying, hasUnsaved: false })).toBe(false)
+    expect(canApplyChanges({ ...copying, progress: progress(new Set(["discord"]), "interpreter") })).toBe(false)
+    // A second press while the first apply runs must not start another.
+    expect(canApplyChanges({ ...copying, start: { phase: "applying" } })).toBe(false)
+    expect(canApplyChanges({ ...copying, start: { phase: "pending", activationId: "x" } })).toBe(false)
   })
 })
 

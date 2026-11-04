@@ -24,6 +24,8 @@ export function startStatus(input: {
       return { text: "Checking every connection…", detail: null, tone: "working" }
     case "starting":
       return { text: "Saving and starting…", detail: null, tone: "working" }
+    case "applying":
+      return { text: "Applying your changes…", detail: "Copying is paused for a few seconds. A post sent meanwhile is still copied.", tone: "working" }
     case "pending":
       return { text: "Starting your new setup…", detail: "CopyTrading is waiting for the engine to confirm it.", tone: "working" }
     case "failed": {
@@ -48,7 +50,13 @@ export function startStatus(input: {
   }
   if (!trading) return { text: "Waiting for the engine…", detail: "Start copying is ready once it answers.", tone: "working" }
   if (isCopying) {
-    return { text: "Copying is running", detail: "Pause copying to change the setup. Each account's limits can still change.", tone: "positive" }
+    return hasUnsaved
+      ? {
+          text: "You changed the setup",
+          detail: "Apply changes to use it. Copying restarts in a few seconds, and any post sent meanwhile is still copied.",
+          tone: "neutral",
+        }
+      : { text: "Copying is running", detail: null, tone: "positive" }
   }
   if (!progress.isReadyToCheck) {
     const next = STEPS.find((s) => s.id === progress.next)
@@ -58,10 +66,18 @@ export function startStatus(input: {
   return { text: "Ready to start", detail: "Every connection is checked first. Nothing is saved or traded before that.", tone: "neutral" }
 }
 
+/** Apply changes can run: copying runs on the saved setup, the form differs from it and is filled in, and nothing is under way. */
+export const canApplyChanges = (input: { start: Start; progress: Progress; isCopying: boolean; hasUnsaved: boolean }): boolean =>
+  input.isCopying &&
+  input.hasUnsaved &&
+  input.progress.isReadyToCheck &&
+  !["checking", "starting", "applying", "pending"].includes(input.start.phase)
+
 /** Start copying can run: the four steps are filled in, copying is stopped, and no check or start is under way. */
 export const canStartCopying = (input: { start: Start; progress: Progress; trading: TradingStatus | null }): boolean =>
   input.progress.isReadyToCheck &&
   (input.trading?.state === "paused" || input.trading?.state === "failed") &&
   input.start.phase !== "checking" &&
   input.start.phase !== "starting" &&
+  input.start.phase !== "applying" &&
   input.start.phase !== "pending"
