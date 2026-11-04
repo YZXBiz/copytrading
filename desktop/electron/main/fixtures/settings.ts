@@ -1,4 +1,6 @@
 import type {
+  AgentAccess,
+  AgentAccessState,
   AgentAuditEntry,
   AgentProposal,
   AssistantTurnPage,
@@ -82,7 +84,18 @@ const turn: AssistantTurnPage = {
   ],
 }
 
+// The agent socket and the fills switch change in fixture mode too, so a capture can show either choice.
+const agentsProblem = process.env.COPYTRADING_FIXTURE_STATE === "agents-problem"
+let agentAccess: AgentAccessState = {
+  access: "propose",
+  listening: !agentsProblem,
+  problem: agentsProblem ? "Agents cannot connect: the agent control socket path is too long for a Unix socket." : null,
+}
+let fillAlerts = true
+
 export const settingsReads: Record<string, (params: Params) => Promise<Result<unknown>>> = {
+  getAgentAccess: () => ok(agentAccess),
+  getFillAlerts: () => ok(fillAlerts),
   getSecretStatus: () => ok(secrets),
   getEngineStatus: () => ok(engine),
   readDiagnostics: () => ok({ entries: journal, bytes: 184_320 }),
@@ -99,4 +112,12 @@ export const settingsActs: Record<string, (params: Params) => Promise<Result<unk
   chooseRestoreArchive: () => ok("/Users/owner/Documents/CopyTrading-Backup.zip"),
   chooseBackupDestination: () => ok("/Users/owner/Documents/CopyTrading-Backup.zip"),
   previewRestore: () => ok(restorePreview),
+  activateRestore: () => ok({ status: "restored" }),
+  rollbackRestore: () => ok(null),
+  setAgentAccess: (params) => {
+    const access = params?.access as AgentAccess
+    agentAccess = { access, listening: access !== "off", problem: null }
+    return ok(agentAccess)
+  },
+  setFillAlerts: (params) => ok((fillAlerts = params?.on === true)),
 }

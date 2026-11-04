@@ -7,7 +7,7 @@ import { dateTime } from "@/lib/format"
 import { Note, type NoteState } from "./Note"
 import { SettingsRow } from "./SettingsRow"
 import { SettingsSection } from "./SettingsSection"
-import { type RestoreOutcome, blockersText, finishRestore, restoreFromPreview } from "./restore-flow"
+import { type RestoreOutcome, blockersText, restore } from "./restore-flow"
 import { count, joined } from "./words"
 
 const acts = () => window.copytrading.act
@@ -15,7 +15,7 @@ const acts = () => window.copytrading.act
 function outcomeNote(outcome: RestoreOutcome): NoteState | null {
   switch (outcome.status) {
     case "done":
-      return { kind: "done", text: "Restored. Quit and reopen CopyTrading to use the restored records." }
+      return { kind: "done", text: "Restored. Each account's buys stay off until you turn them back on." }
     case "blocked":
       return { kind: "problem", text: blockersText(outcome.blockers) }
     case "failed":
@@ -82,7 +82,7 @@ function PendingRows({ pending, busy, onResume, onRollBack }: { pending: Pending
   )
 }
 
-/** Backing up the records, and restoring from a backup: preview first, then prepare, check against the broker, and complete (the last step is confirmed by main). */
+/** Backing up the records, and restoring from a backup: preview first, then restore (main confirms, switches the data, checks the broker, restarts the engine). */
 export function BackupRestore({ pending, checking, onChanged }: { pending: PendingRestoreCandidate | null; checking: boolean; onChanged: () => void }) {
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState<NoteState | null>(null)
@@ -123,17 +123,18 @@ export function BackupRestore({ pending, checking, onChanged }: { pending: Pendi
     })
   }
 
-  const restore = (text: string, run: () => Promise<RestoreOutcome>) =>
+  const restoreFrom = (text: string, target: { staging_id: string } | { candidate_id: string }) =>
     work(text, async () => {
-      const outcome = await run()
+      const outcome = await restore(acts(), target)
       if (outcome.status === "done") setPreview(null)
       return outcomeNote(outcome)
     })
 
   const rollBack = (candidate: PendingRestoreCandidate) =>
-    work("Rolling back…", async () => {
-      const result = await acts().abortRestoreCandidate({ candidate_id: candidate.candidate_id })
-      return result.ok ? { kind: "done", text: "Rolled back. Your records are as they were." } : { kind: "problem", text: result.error }
+    work("Undoing the restore…", async () => {
+      const result = await acts().rollbackRestore({ candidate_id: candidate.candidate_id })
+      if (result.ok) return { kind: "done", text: "Restore undone. CopyTrading is back on your data from before." }
+      return result.cancelled ? null : { kind: "problem", text: result.error }
     })
 
   return (
@@ -153,13 +154,13 @@ export function BackupRestore({ pending, checking, onChanged }: { pending: Pendi
       </SettingsSection>
       {note && <Note note={note} />}
       {preview && pending === null && (
-        <PreviewRows preview={preview} busy={busy} onRestore={() => restore("Preparing the restore and checking it again…", () => restoreFromPreview(acts(), preview.staging_id))} />
+        <PreviewRows preview={preview} busy={busy} onRestore={() => restoreFrom("Preparing the restore and checking it again…", { staging_id: preview.staging_id })} />
       )}
       {pending && (
         <PendingRows
           pending={pending}
           busy={busy}
-          onResume={() => restore("Checking the restore again…", () => finishRestore(acts(), pending.candidate_id))}
+          onResume={() => restoreFrom("Checking the restore again…", { candidate_id: pending.candidate_id })}
           onRollBack={() => rollBack(pending)}
         />
       )}

@@ -1,11 +1,8 @@
 // Words for engine codes and sizes, as Humanize.swift and RestoreBlocker.swift put them. Never a raw snake_case code on screen.
 
-/** "broker_state_mismatch" → "Broker state mismatch"; nothing → a dash. */
-export function humanCode(raw: string | null | undefined): string {
-  if (!raw) return "—"
-  const spaced = raw.replaceAll("_", " ").replaceAll("-", " ")
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1)
-}
+import { humanCode } from "../../../shared/proposal-words"
+
+export { humanCode }
 
 /** "1 account", "2 accounts". */
 export const count = (n: number, noun: string, plural = `${noun}s`): string => `${n.toLocaleString("en-US")} ${n === 1 ? noun : plural}`

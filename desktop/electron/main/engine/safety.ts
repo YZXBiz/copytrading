@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, realpathSync } from "node:fs"
+import { mkdtempSync, realpathSync } from "node:fs"
 import { homedir, tmpdir } from "node:os"
 import { join, resolve, sep } from "node:path"
 
@@ -20,10 +20,7 @@ export function assertThrowaway(path: string): string {
   return real
 }
 
-/** A fresh throwaway state root with the three directories the engine needs. */
-export function makeThrowawayRoot(): { root: string; data: string; owner: string; logs: string } {
-  const root = assertThrowaway(mkdtempSync(join(tmpdir(), "copytrading-dev-")))
-  const dirs = { root, data: join(root, "data"), owner: join(root, "owner"), logs: join(root, "logs") }
-  for (const dir of [dirs.data, dirs.owner, dirs.logs]) mkdirSync(dir, { mode: 0o700 })
-  return dirs
+/** A fresh throwaway installation root. The short prefix keeps its agent socket path under the 104 bytes macOS allows. */
+export function makeThrowawayRoot(): string {
+  return assertThrowaway(mkdtempSync(join(tmpdir(), "ct-")))
 }

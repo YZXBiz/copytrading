@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs"
+import { mkdtempSync, realpathSync, rmSync } from "node:fs"
 import { homedir, tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
@@ -20,10 +20,10 @@ describe("assertThrowaway", () => {
     expect(() => assertThrowaway(homedir())).toThrow(/throwaway/)
   })
 
-  it("hands an engine three separate throwaway folders", () => {
-    const dirs = makeThrowawayRoot()
-    rmSync(dirs.root, { recursive: true })
-    expect(new Set([dirs.data, dirs.owner, dirs.logs]).size).toBe(3)
-    for (const dir of [dirs.data, dirs.owner, dirs.logs]) expect(dir.startsWith(dirs.root)).toBe(true)
+  it("makes an installation root under the temp directory, short enough for the agent socket inside it", () => {
+    const root = makeThrowawayRoot()
+    rmSync(root, { recursive: true })
+    expect(root.startsWith(realpathSync(tmpdir()))).toBe(true)
+    expect(Buffer.byteLength(join(root, "control", "cli.sock"))).toBeLessThanOrEqual(103)
   })
 })

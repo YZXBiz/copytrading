@@ -24,6 +24,11 @@ process.stdin.on("data", (chunk) => {
     // Sends back the whole request line it received.
     if (mode === "echo-line") reply({ ok: { type: "echo", line: request } })
     // Answers get_status; on stop, "serve" exits cleanly, "ignore-stop" keeps running, "stubborn" also ignores SIGTERM.
+    // Answers get_status, and exits at the request to stop without replying to it.
+    if (mode === "exit-on-stop") {
+      if (request.operation === "stop") process.exit(0)
+      reply({ ok: { type: "status", status: { state: "running" } } })
+    }
     if (mode === "serve" || mode === "ignore-stop" || mode === "stubborn") {
       if (request.operation === "stop") {
         reply({ ok: { type: "stopping" } })

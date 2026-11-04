@@ -1,5 +1,6 @@
 import type {
   AccountControlCommand,
+  AgentAccess,
   AccountPolicy,
   AgentProposal,
   LotSaleConfirmation,
@@ -132,10 +133,30 @@ export function controlText(command: AccountControlCommand): string {
 export const deleteRecordText = (accountId: string) =>
   `Delete the record of ${accountId}? Its shares stay at Alpaca; only this app's record of them goes.`
 
-export function restoreText(candidate: PendingRestoreCandidate | null, candidateId: string): string {
+const RESTORE_DETAIL = "Copying pauses while it restores. If anything doesn't match your broker's records, nothing is replaced."
+
+/** A backup the owner previewed this session, or the half-finished restore the engine holds. */
+export function restoreText(accountIds: string[]): string {
+  return `Replace this Mac's CopyTrading records with the backup (${accountIds.length ? accountIds.join(", ") : "no accounts"})?\n\n${RESTORE_DETAIL}`
+}
+
+export function candidateText(candidate: PendingRestoreCandidate | null, candidateId: string): string {
   if (!candidate || candidate.candidate_id !== candidateId) throw new Refusal("The engine has no restore waiting under that id.")
-  const accounts = candidate.account_ids.length ? candidate.account_ids.join(", ") : "no accounts"
-  return `Replace this Mac's CopyTrading records with the backup (${accounts})?`
+  return restoreText(candidate.account_ids)
+}
+
+export const ROLLBACK_TEXT = "Undo the restore and go back to your records from before?\n\nCopying pauses while it does."
+
+const ACCESS_TEXT: Record<AgentAccess, string> = {
+  off: "Turn off agent access?\n\nPrograms such as the copytrading command and MCP server can no longer reach CopyTrading.",
+  read_pause: "Allow agents to read and pause?\n\nPrograms such as the copytrading command and MCP server can read your accounts and pause copying. They cannot ask you to approve anything.",
+  propose:
+    "Allow agents to read, pause, and ask for approval?\n\nPrograms such as the copytrading command and MCP server can read your accounts, pause copying, and ask for things that could trade. Each one waits for your approval here.",
+}
+
+export function accessText(access: unknown): string {
+  if (access !== "off" && access !== "read_pause" && access !== "propose") throw new Refusal("That is not a choice of agent access.")
+  return ACCESS_TEXT[access]
 }
 
 export function proposalText(proposal: AgentProposal): string {

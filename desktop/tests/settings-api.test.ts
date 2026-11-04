@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest"
 import { type Engine, createApi } from "../electron/main/api"
 import { SecretStore } from "../electron/main/secrets"
 import { SETUP_FILE, SetupFile } from "../electron/main/setup-file"
+import { unusedBackground } from "./background-stubs"
 
 const dirs: string[] = []
 afterEach(() => dirs.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true })))
@@ -32,34 +33,10 @@ function harness(subject: Record<string, unknown> = { kind: "resume_account", ac
     confirm: async (text) => (asked.push(text), true),
     diagnosticsDir: dir,
     pick: async (kind) => (kind === "backup-destination" ? "/tmp/b.zip" : null),
+    ...unusedBackground(dir),
   })
   return { api, secrets, sent, asked }
 }
-
-describe("restorePreflight", () => {
-  it("sends the keys from the key store with the environment from the saved setup, whatever the page sent", async () => {
-    const h = harness()
-    h.secrets.merge({ brokers: [{ account_id: "zhap-account-2", key: "KEY-FROM-STORE", secret: "SECRET-FROM-STORE" }] })
-    await h.api.act("restorePreflight", { candidate_id: "cand-1", accounts: [{ account_id: "x", key: "page", secret: "page" }] })
-    const request = h.sent.find((r) => r.op === "restore_preflight")!
-    expect(request.params).toEqual({
-      candidate_id: "cand-1",
-      accounts: [{ account_id: "zhap-account-2", environment: "paper", key: "KEY-FROM-STORE", secret: "SECRET-FROM-STORE" }],
-    })
-  })
-
-  it("refuses, naming the account, when its keys are not saved, and asks the engine nothing", async () => {
-    const h = harness()
-    const result = await h.api.act("restorePreflight", { candidate_id: "cand-1" })
-    expect(result).toMatchObject({ ok: false, error: expect.stringContaining("zhap-account-2") })
-    expect(h.sent.some((r) => r.op === "restore_preflight")).toBe(false)
-  })
-
-  it("refuses a candidate the engine does not hold", async () => {
-    const h = harness()
-    expect(await h.api.act("restorePreflight", { candidate_id: "other" })).toMatchObject({ ok: false })
-  })
-})
 
 describe("approveProposal", () => {
   it("refuses a request only the app can carry out, so it is not left running", async () => {

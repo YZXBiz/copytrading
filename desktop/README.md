@@ -104,6 +104,26 @@ Never point an engine at it. Only the built app (`app.isPackaged`) runs on it, t
 `COPYTRADING_STATE_ROOT=<existing folder under $TMPDIR>` gives the built app a throwaway folder instead, and with
 `COPYTRADING_SMOKE=1` it quits 0 once the page loaded and the engine answered.
 
+## Background duties (main process)
+
+- **Installation folder** (`engine/paths.ts`, port of `RuntimePaths.swift`): `installation-id`, `active-generation`,
+  `generations/<uuid>/` (the engine's `--data-dir`), `logs/`, `control/cli.sock`, `agent-access.json`, `preferences.json`.
+  `data-root.ts` picks the folder (dev: a fresh one under `$TMPDIR`, `ct-…`, removed at quit; the packaged app: the owner's, or
+  `COPYTRADING_STATE_ROOT`). The engine is started again on whichever generation is active (`engineTarget`), and `EngineProcess`
+  can be started again after a stop.
+- **Agent connection** (`agents/`): `AgentAccessController` owns `agent-access.json` (`off | read_pause | propose`) and the
+  socket, `AgentRelay` serves the `copytrading` CLI and MCP server: one JSON line per connection, 64 KB, 4 at once, 30 s,
+  folder 0700 and socket 0600, lines sent as the engine's `control` operation with the owner's level. Setup operations are
+  answered "cannot change its setup from here". `tests/relay.test.ts` runs the real CLI's `status` against a relay (needs `uv`).
+- **Keychain move** (`keychain-move.ts`): once, when the saved setup names keys the store does not hold, reads the SwiftUI
+  app's item with `/usr/bin/security` and moves it into the store. macOS may ask the owner to allow it. The Keychain item
+  is left alone.
+- **Restore** (`restore.ts`, port of `RestoreActivationCoordinator.swift`): `act.activateRestore` / `rollbackRestore` stop the
+  engine, switch the generation pointer, start on the candidate, check the broker, complete, restart; any failure switches back.
+- **Notifications** (`alerts/`): `AlertMonitor` polls a running engine every 2 s and posts macOS notifications for fills,
+  an agent's request, an account that stopped, and copying paused after a quit. Closing the window leaves it all running;
+  quitting stops the relay, the monitor, then the engine.
+
 ## Fixtures and capture
 
 `COPYTRADING_FIXTURES=1` serves the account captured on 2026-11-03 (`electron/main/fixtures/`, real engine shapes; the
@@ -142,7 +162,8 @@ The page never supplies the size or hash. Use `<PostPicture attachment={...}>`; 
 - `stop`, `control`, `authorize_setup`, `attach_account_readers`, `detach_account_readers` stay main-only (lifecycle,
   the agent-socket relay, paused-account readers); no page may send them.
 - The setup upgrade from an earlier version: `setup-file.ts` refuses such a file and says so.
-- Moving the owner's Keychain items into the key store: not done; the built app starts with an empty key store.
 - Packaging: `make desktop-build` builds `dist/CopyTrading.app` (`app/scripts/build_desktop.py`; the packaged app
   runs on the owner's data folder, `engine/data-root.ts`; updates in `update.ts`; see `docs/releases.md`).
+- The installation lock (`.app.lock`) that keeps this app and the SwiftUI app off one folder: only Electron's
+  single-instance lock guards the packaged app, so quit the SwiftUI app first.
 - Restarting a crashed engine: the footer says why it stopped.

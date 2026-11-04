@@ -765,6 +765,19 @@ export interface RestorePreflight {
   completion_token: string | null
 }
 
+/** A restore that went through, or one the broker's records stopped: the owner's data is as it was. */
+export type RestoreResult = { status: "restored" } | { status: "blocked"; blockers: string[] }
+
+/** What agents may do through the `copytrading` CLI and MCP server; `off` means the app does not listen for them at all. */
+export type AgentAccess = "off" | "read_pause" | "propose"
+
+export interface AgentAccessState {
+  access: AgentAccess
+  /** The socket is open now. False with access on means it could not open: `problem` says why. */
+  listening: boolean
+  problem: string | null
+}
+
 // ── Agent proposals and the assistant ──────────────────────────────────────
 
 export interface AgentManualOrder {
@@ -885,6 +898,10 @@ export interface ReadOperations {
   getAgentAudit: Op<{ limit?: number } | undefined, AgentAuditEntry[]>
   getRestoreCandidate: Op<undefined, PendingRestoreCandidate | null>
   getAssistantTurn: Op<{ turn_id: string; after: number }, AssistantTurnPage>
+  // Main process: the agent socket and the notification switch
+  getAgentAccess: Op<undefined, AgentAccessState>
+  /** Whether a macOS notification says each order sent and filled (Settings, "Fills"). Other alerts have no switch. */
+  getFillAlerts: Op<undefined, boolean>
   // Main process: the saved setup and the key store
   getSetup: Op<undefined, SetupView | null>
   getLimits: Op<{ account_id: string }, AccountLimits | null>
@@ -910,7 +927,15 @@ export interface ActOperations {
   controlAccount: Op<{ command: AccountControlCommand }, AccountControlResult>
   approveProposal: Op<{ proposal_id: string }, AgentProposal>
   deleteAccountRecord: Op<{ account_id: string }, null>
-  completeRestoreCandidate: Op<{ candidate_id: string; completion_token: string }, null>
+  /**
+   * Restores a previewed backup (`staging_id`) or finishes one left half-done (`candidate_id`): stops the engine,
+   * switches to the restored data, checks it against the broker, and restarts. Any failure puts the old data back.
+   */
+  activateRestore: Op<{ staging_id: string } | { candidate_id: string }, RestoreResult>
+  /** Undoes a half-finished restore, back to the data from before. */
+  rollbackRestore: Op<{ candidate_id: string }, null>
+  /** Opens, closes or narrows the agent socket. The dialog says which; turning it off or down is asked too. */
+  setAgentAccess: Op<{ access: AgentAccess }, AgentAccessState>
   /** Gives copying new account limits at once, and saves them in the setup file under the engine's revision. The dialog lists each change. */
   updateAccountLimits: Op<{ configuration: TradingConfiguration }, { revision: string }>
   // No confirmation below: none places an order or changes what copying does. A start still needs `startTrading`.
@@ -924,10 +949,7 @@ export interface ActOperations {
   forgetBroker: Op<{ account_id: string }, SecretStatus>
   createBackup: Op<{ destination: string }, BackupManifest>
   previewRestore: Op<{ archive_path: string }, RestorePreview>
-  prepareRestoreCandidate: Op<{ staging_id: string }, { candidate_id: string }>
-  abortRestoreCandidate: Op<{ candidate_id: string }, null>
-  /** Main reads the candidate's accounts from the engine, their environments from the saved setup and their keys from the key store. */
-  restorePreflight: Op<{ candidate_id: string }, RestorePreflight>
+  setFillAlerts: Op<{ on: boolean }, boolean>
   resolveOwnership: Op<{ account_id: string; resolution: OwnershipResolutionRequest }, OwnershipResolution>
   saveManualCorrection: Op<{ correction: ManualCorrectionRequest }, ManualCorrectionOutcome>
   rejectProposal: Op<{ proposal_id: string }, AgentProposal>
@@ -958,15 +980,15 @@ export const READS = [
   "getStatus", "getEngineStatus", "getTradingActivation", "getWorkflow", "getAccounts", "getEquityHistory",
   "getSourceActivity", "getGuruActivity", "getGuruDayStats", "getAccountFeed", "getQuote", "getManualCommand",
   "listManualCommands", "previewManualOrder", "previewLotSale", "listProposals", "getAgentAudit",
-  "getRestoreCandidate", "getAssistantTurn", "getSetup", "getLimits", "getSecretStatus",
+  "getRestoreCandidate", "getAssistantTurn", "getAgentAccess", "getFillAlerts", "getSetup", "getLimits", "getSecretStatus",
   "readDiagnostics",
 ] as const satisfies readonly ReadName[]
 
 export const ACTS = [
   "confirmManualOrders", "confirmLotSale", "startTrading", "applyChanges", "pauseTrading", "controlAccount", "approveProposal",
-  "deleteAccountRecord", "completeRestoreCandidate", "validateTrading", "checkConnection", "updateAccountLimits",
-  "saveSetup", "setSecrets", "discardSecrets", "forgetBroker", "createBackup", "previewRestore", "prepareRestoreCandidate",
-  "abortRestoreCandidate", "restorePreflight", "resolveOwnership", "saveManualCorrection", "rejectProposal",
+  "deleteAccountRecord", "activateRestore", "rollbackRestore", "setAgentAccess", "validateTrading", "checkConnection", "updateAccountLimits",
+  "saveSetup", "setSecrets", "discardSecrets", "forgetBroker", "createBackup", "previewRestore", "setFillAlerts",
+  "resolveOwnership", "saveManualCorrection", "rejectProposal",
   "completeProposal", "discardProposals", "learnGuruPlaybook", "evaluateHistoricalProfile", "assistantAsk",
   "assistantCancel", "assistantReset", "submitSelfTest",
   "chooseBackupDestination", "chooseRestoreArchive",

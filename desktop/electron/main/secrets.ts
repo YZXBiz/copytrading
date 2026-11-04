@@ -125,6 +125,13 @@ export class SecretStore {
     this.write({ ...without(this.disk), ...(this.disk.previous ? { previous: without(this.disk.previous) } : {}) })
   }
 
+  /** Takes a whole set of keys and the setup revision they belong to, on disk at once, replacing what was held. The one-time move from the Keychain. */
+  replace(revision: string, secrets: Secrets): void {
+    const saved: Saved = { revision, provider: null, secrets }
+    this.write(copy(saved))
+    this.working = copy(saved)
+  }
+
   /** Ties the keys to the setup file that was just saved. In memory until the start is staged. */
   setRevision(revision: string | null): void {
     this.working = { ...this.working, revision }
@@ -146,6 +153,12 @@ export class SecretStore {
     const previous = this.disk.previous ?? empty()
     this.working = copy(previous)
     this.write(copy(previous))
+  }
+
+  /** Keys were typed (or tied to a new setup) and not yet staged: the working set is not what is on disk. */
+  hasUnstaged(): boolean {
+    const { previous: _pending, ...saved } = this.disk
+    return JSON.stringify(this.working) !== JSON.stringify(saved)
   }
 
   /** Drops keys that were typed and never staged: the disk is what the owner had. */
