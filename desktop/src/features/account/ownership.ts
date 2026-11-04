@@ -1,6 +1,6 @@
 import type { OwnershipIncident, OwnershipResolutionRequest, Position } from "../../../shared/contract"
 import { decText, parseDec } from "./decimal"
-import { isCoin, sharesOf, sharesText } from "./quantity"
+import { isCoin, sharesOf, sharesText } from "@/lib/quantity"
 
 /**
  * The one answer that settles a holdings question (OwnershipFix.swift), worked out from what the broker holds

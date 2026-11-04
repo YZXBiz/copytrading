@@ -1,9 +1,11 @@
 import type { DestinationActivity, OrderActivity, SourceActivity } from "../../../shared/contract"
+import { decText, parseDec } from "@/features/account/decimal"
 import { money } from "@/lib/format"
+import { dollars, partOfText, sharesOf } from "@/lib/quantity"
+import { reasonText, sentence } from "@/lib/reasons"
 import { deadlineText, endOfTradingDay, tradingDay } from "./deadline"
-import { dollars, duration, filledAmount, num, orderDollars, plannedAmount, sharesOf, sharesOfOrder } from "./amounts"
+import { duration, filledAmount, num, orderDollars, plannedAmount } from "./amounts"
 import { decisionTitle, enteredByOwner } from "./reading"
-import { reasonText, sentence } from "./reasons"
 
 // What each account did with a post, in plain words (DestinationOutcome.swift, ActivityCardOutcome.swift).
 
@@ -185,11 +187,11 @@ function orderResult(order: OrderActivity, postedAt: number): Result {
     case "filled":
       headline = `${isOwnerSale(order) || (isOwnerEntry(order) && !buying) ? "You sold" : isOwnerEntry(order) ? "You bought" : buying ? "Bought" : "Sold"} ${filledAmount(order) ?? planned}`
       facts.push({ label: "Price", value: money(order.average_fill_price) })
-      facts.push({ label: "Shares", value: sharesOf(num(order.filled_quantity) ?? 0, order.symbol) })
+      facts.push({ label: "Shares", value: sharesOf(parseDec(order.filled_quantity) ?? 0n, order.symbol) })
       break
     case "partly":
       headline = order.status === "partially_filled" ? `Partly filled: ${filledAmount(order) ?? planned} so far` : `Partly filled: ${filledAmount(order) ?? planned}, the rest cancelled`
-      facts.push({ label: "Filled", value: sharesOfOrder(num(order.filled_quantity) ?? 0, num(order.quantity) ?? 0, order.symbol) })
+      facts.push({ label: "Filled", value: partOfText(parseDec(order.filled_quantity) ?? 0n, parseDec(order.quantity) ?? 0n, order.symbol) })
       facts.push({ label: "Price", value: money(order.average_fill_price) })
       break
     case "working":
@@ -219,7 +221,7 @@ function orderResult(order: OrderActivity, postedAt: number): Result {
   const budget = num(order.budget_usd)
   if (budget !== null) {
     if (wasTrimmed(order)) {
-      facts.push({ label: "Order", value: `${dollars(budget)} · ${CUT_BY[order.limited_by ?? ""] ?? "your largest single buy"}` })
+      facts.push({ label: "Order", value: `${dollars(order.budget_usd)} ·${CUT_BY[order.limited_by ?? ""] ?? "your largest single buy"}` })
       facts.push({ label: "The call asked for", value: dollars(order.requested_usd) })
     } else facts.push({ label: "Order", value: orderDollars(budget) })
   }
@@ -230,14 +232,15 @@ function limitResult(post: SourceActivity, hit: NonNullable<DestinationActivity[
   const symbol = post.instructions[hit.part]?.symbol ?? ""
   const selling = post.instructions[hit.part] !== undefined && post.instructions[hit.part]!.action !== "buy"
   const full = hit.scope === "symbol" ? `${symbol} is at your limit for one stock` : "you're at your total limit"
-  const room = Math.max((num(hit.limit) ?? 0) - (num(hit.current) ?? 0), 0)
+  const [limit, current] = [parseDec(hit.limit) ?? 0n, parseDec(hit.current) ?? 0n]
+  const room = limit > current ? limit - current : 0n
   return {
     tone: "inactive",
     headline: `${selling ? "Not sold" : "Not bought"}: ${full}`,
     facts: [
       { label: hit.scope === "symbol" ? `Holding ${symbol}` : "Holding in total", value: dollars(hit.current) },
       { label: "Limit", value: dollars(hit.limit) },
-      { label: "Room left", value: dollars(room) },
+      { label: "Room left", value: dollars(decText(room)) },
     ],
     note: "Less than $1 is left, Alpaca's smallest order.",
   }

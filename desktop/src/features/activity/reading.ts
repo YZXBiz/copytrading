@@ -1,6 +1,7 @@
 import type { PostReading, ReadCall, ReadPrice, ReadShare, ReadSize, SourceActivity, SourceInstruction } from "../../../shared/contract"
-import { dollars, fraction, num } from "./amounts"
-import { codeWords } from "./reasons"
+import { dollars } from "@/lib/quantity"
+import { codeWords } from "@/lib/reasons"
+import { fraction, num } from "./amounts"
 
 // How the reader read a post, in plain words (ReadAsText.swift, SourceActivity+Display.swift).
 

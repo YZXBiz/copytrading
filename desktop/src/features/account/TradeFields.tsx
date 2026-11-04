@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { BUY_SIZES, type Draft, type PriceChoice, SELL_SHARES, defaultChoice, sameShare, shareTitle } from "./manual-draft"
-import { dollars, sharesText, usd } from "./quantity"
+import { dollars, sharesText, usd } from "@/lib/quantity"
 import { type Holding, canQuote, livePrice, quoteDetail, quoteProblem } from "./quote"
 
 /** One choice among a few, as a row of toggles. */

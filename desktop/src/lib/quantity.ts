@@ -1,5 +1,5 @@
-import { money } from "@/lib/format"
-import { DEC_ONE, decRound, decText, parseDec } from "./decimal"
+import { DEC_ONE, decRound, decText, parseDec } from "@/features/account/decimal"
+import { money } from "./format"
 
 // How much of a stock or coin, and what it costs, as Humanize.swift words them.
 
@@ -15,7 +15,8 @@ function grouped(text: string): string {
   return `${sign}${digits}${fraction ? `.${fraction}` : ""}`
 }
 
-const isOne = (value: bigint) => decRound(value, 2) === DEC_ONE
+/** Within a hundredth of one, as Humanize.isOne says it: "1.004" is still "≈1 share". */
+const isOne = (value: bigint) => (value > DEC_ONE ? value - DEC_ONE : DEC_ONE - value) < DEC_ONE / 100n
 
 /**
  * The count alone: a stock's is whole when within a hundredth of a whole number, else to three decimals,

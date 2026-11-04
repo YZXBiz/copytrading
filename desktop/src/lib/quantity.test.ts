@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { parseDec } from "./decimal"
+import { parseDec } from "@/features/account/decimal"
 import { dollars, partOfText, shareCount, sharesOf, sharesText, usd } from "./quantity"
 
 const d = (text: string) => parseDec(text)!
@@ -15,6 +15,9 @@ describe("shares", () => {
     expect(sharesText(d("1"), "F")).toBe("1 share")
     expect(sharesText(d("1.004"), "F")).toBe("≈1 share")
     expect(sharesText(d("2"), "F")).toBe("2 shares")
+    expect(sharesText(d("1.007"), "F")).toBe("≈1 share")
+    expect(sharesText(d("1.01"), "F")).toBe("1.01 shares")
+    expect(partOfText(d("0"), d("1.007"), "F")).toBe("0 of ≈1 share")
   })
 
   it("counts a coin to the billionth and names the coin", () => {
@@ -37,5 +40,6 @@ describe("price", () => {
     expect(dollars("39.5")).toBe("$39.50")
     expect(dollars("1234")).toBe("$1,234")
     expect(dollars("junk")).toBe("—")
+    expect(dollars("39.999")).toBe("$40.00")
   })
 })

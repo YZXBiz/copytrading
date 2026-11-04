@@ -1,7 +1,7 @@
 import type { ManualCommandResult, ManualOrderPreview } from "../../../shared/contract"
 import { parseDec } from "./decimal"
-import { dollars, shareCount, sharesText, usd } from "./quantity"
-import { refusalLine, refusalOutcome, refusalReason, reasonText } from "./reasons"
+import { dollars, shareCount, sharesText, usd } from "@/lib/quantity"
+import { refusalLine, refusalOutcome, refusalReason, reasonText } from "@/lib/reasons"
 
 // What the engine says one drafted trade would place in one account (ManualPreviewResult.swift): the order, or
 // why it cannot go, then what became of it once sent.

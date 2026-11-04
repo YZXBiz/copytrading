@@ -2,8 +2,8 @@ import { useState } from "react"
 import { PaperclipIcon } from "lucide-react"
 import type { SourceAttachmentEvidence } from "../../../shared/contract"
 import { Attachment, AttachmentContent, AttachmentDescription, AttachmentMedia, AttachmentTitle } from "@/components/ui/attachment"
+import { codeWords } from "@/lib/reasons"
 import { cn } from "@/lib/utils"
-import { codeWords } from "./reasons"
 
 const size = (bytes: number) => (bytes >= 1_000_000 ? `${(bytes / 1_000_000).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1000))} KB`)
 

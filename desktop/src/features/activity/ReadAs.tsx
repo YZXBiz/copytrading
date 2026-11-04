@@ -1,6 +1,6 @@
 import type { SourceActivity } from "../../../shared/contract"
+import { reasonText } from "@/lib/reasons"
 import { callHeadline, callNote, callsOf, enteredByOwner, headline, isRepost, kindText, noCallLine } from "./reading"
-import { reasonText } from "./reasons"
 
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
 

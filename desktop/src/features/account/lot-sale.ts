@@ -1,7 +1,7 @@
 import type { LotSalePreview, LotSaleResult, ManualOrderPlan } from "../../../shared/contract"
 import { DEC_ONE, decDown, decMul, decRound, decText, parseDec } from "./decimal"
-import { isCoin, partOfText, sharesText, usd } from "./quantity"
-import { reasonText, humanCode } from "./reasons"
+import { isCoin, partOfText, sharesText, usd } from "@/lib/quantity"
+import { codeWords, reasonText } from "@/lib/reasons"
 
 // Selling shares from one lot (LotSaleFlow.swift, LotSaleSheet.swift): choose how much of it, review a fresh
 // preview, confirm once. Every quantity is an exact decimal, so the engine never hears of 0.30000000000000004.
@@ -80,6 +80,6 @@ export function saleOutcome(result: LotSaleResult, symbol: string): { title: str
     case "rejected":
       return { title: "Nothing was sent", detail: reasonText(result.reason), tone: "destructive" }
     default:
-      return { title: humanCode(result.status), detail: reasonText(result.reason ?? result.status), tone: "destructive" }
+      return { title: codeWords(result.status), detail: reasonText(result.reason ?? result.status), tone: "destructive" }
   }
 }
