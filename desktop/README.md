@@ -93,7 +93,17 @@ adding it to `READS` in `fixtures.ts`.
 
 `npm run capture` builds, then opens the app offscreen (no window, no focus) and saves light and dark PNGs to
 `dist/capture/`. Add a screen with a `[name, env]` pair in `scripts/capture.mjs`; set
-`COPYTRADING_CAPTURE_HASH` to its route. Read the PNGs: they are the visual check.
+`COPYTRADING_CAPTURE_HASH` to its route. Read the PNGs: they are the visual check. `node scripts/capture.mjs settings logs`
+captures only the entries whose name has one of those words; `COPYTRADING_CAPTURE_SCRIPT` runs a page script first (the
+assistant panel and the time zone list open that way). Fixtures can also serve acts (`ACTS` in `fixtures.ts`), and
+`COPYTRADING_FIXTURE_STATE=pending-restore` shows a half-finished restore.
+
+## Settings and the assistant
+
+`src/features/settings/` is Settings (`#/settings/general|agents|backups|logs`; the journal is read by main from the
+engine's log folder, newest 2000 records, `electron/main/journal.ts`). `src/features/assistant/` is the assistant panel,
+mounted once in the sidebar (⌘J). The time zone lives in `src/lib/time-zone.ts` and `format.ts` reads it. A request only the
+app can carry out (a setup change) cannot be approved yet: main refuses it, the pages offer Reject only.
 
 ## Pictures
 
