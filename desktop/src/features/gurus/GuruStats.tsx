@@ -31,7 +31,7 @@ export function GuruStats({ stats, holdings }: { stats: Stats; holdings: Holding
     {
       icon: <MessageSquareIcon aria-hidden="true" />,
       iconBg: "text-blue-600 dark:text-blue-400",
-      value: <RollingNumber value={stats.postsToday} format={COUNT} />,
+      value: stats.postsToday === null ? "—" : <RollingNumber value={stats.postsToday} format={COUNT} />,
       label: "Posts today",
       info: read && (
         <div className="flex flex-wrap gap-1.5">
