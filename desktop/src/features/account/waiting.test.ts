@@ -5,7 +5,6 @@ import {
   callPhrase,
   gainLine,
   openCall,
-  waited,
   waitingCall,
 } from "./waiting"
 
@@ -87,11 +86,6 @@ describe("how a call reads", () => {
     expect(gainLine({ action: "close", symbol: "X", price: "50", entry_price: "40" })?.line).toBe("+25.0% from $40.00")
     expect(gainLine({ action: "close", symbol: "X", price: "30", entry_price: "40" })?.line).toBe("−25.0% from $40.00")
     expect(gainLine({ action: "buy", symbol: "X", price: "50", entry_price: "40" })).toBeNull()
-  })
-
-  it("counts how long a post waited", () => {
-    expect(waited("2026-11-03T18:30:00Z", NOW)).toBe("30m")
-    expect(waited("2026-11-03T03:40:00Z", NOW)).toBe("15h 20m")
   })
 })
 

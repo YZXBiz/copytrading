@@ -28,12 +28,24 @@ export function endOfTradingDay(sourceAt: string): Date {
 
 const dayIn = (instant: Date, timeZone: string | undefined) => instant.toLocaleDateString("en-CA", { timeZone })
 
-/** "Deadline today: 5:00 PM PST", "Deadline tomorrow: 5:00 PM PST", or "Deadline on Fri 5:00 PM PST" further out. */
-export function deadlineText(deadline: Date, now: Date, timeZone?: string): string {
+/** When the deadline falls: today, tomorrow or a weekday further out, and the clock time with its zone name. */
+function deadlineWhen(deadline: Date, now: Date, timeZone: string | undefined): { when: "today" | "tomorrow" | string; clock: string } {
   const clock = deadline.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone, timeZoneName: "short" })
   const day = dayIn(deadline, timeZone)
-  if (day === dayIn(now, timeZone)) return `Deadline today: ${clock}`
+  if (day === dayIn(now, timeZone)) return { when: "today", clock }
   const [y, m, d] = dayIn(now, timeZone).split("-").map(Number) as [number, number, number]
-  if (day === new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10)) return `Deadline tomorrow: ${clock}`
-  return `Deadline on ${deadline.toLocaleDateString("en-US", { weekday: "short", timeZone })} ${clock}`
+  if (day === new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10)) return { when: "tomorrow", clock }
+  return { when: deadline.toLocaleDateString("en-US", { weekday: "short", timeZone }), clock }
+}
+
+/** "Deadline today: 5:00 PM PST", "Deadline tomorrow: 5:00 PM PST", or "Deadline on Fri 5:00 PM PST" further out. */
+export function deadlineText(deadline: Date, now: Date, timeZone?: string): string {
+  const { when, clock } = deadlineWhen(deadline, now, timeZone)
+  return when === "today" || when === "tomorrow" ? `Deadline ${when}: ${clock}` : `Deadline on ${when} ${clock}`
+}
+
+/** The deadline alone, for a card with no room for the word: "Until 5:00 PM PST", "Until tomorrow 5:00 PM PST", "Until Fri 5:00 PM PST". */
+export function untilText(deadline: Date, now: Date, timeZone?: string): string {
+  const { when, clock } = deadlineWhen(deadline, now, timeZone)
+  return when === "today" ? `Until ${clock}` : `Until ${when} ${clock}`
 }

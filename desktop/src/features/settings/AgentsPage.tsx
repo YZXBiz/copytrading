@@ -13,7 +13,7 @@ import { Note } from "./Note"
 import { ProposalActions } from "./ProposalActions"
 import { SettingsRow } from "./SettingsRow"
 import { SettingsSection } from "./SettingsSection"
-import { accountOf, auditLine, auditOutcome, callerName, canApprove, isLive, limitRows, summary } from "./proposals"
+import { accountOf, auditWhen, auditWho, auditOutcome, callerName, canApprove, isLive, limitRows, summary } from "./proposals"
 import { humanCode } from "./words"
 
 const AUDIT_SHOWN = 10
@@ -22,7 +22,8 @@ function ProposalRow({ proposal, setup, onDecided }: { proposal: AgentProposal; 
   const rows = limitRows(proposal, setup)
   const lines = [
     ...rows.map((row) => `${row.title}: ${row.now} → ${row.after}`),
-    `${callerName(proposal.requested_by.path)} · expires ${dateTime(proposal.expires_at)}`,
+    callerName(proposal.requested_by.path),
+    `Expires ${dateTime(proposal.expires_at)}`,
     ...(canApprove(proposal) ? [] : ["This changes the saved setup, which this version cannot apply yet. You can reject it."]),
   ]
   return (
@@ -75,7 +76,8 @@ function Waiting({ onDecided }: { onDecided: () => void }) {
 function AuditRow({ entry, now }: { entry: AgentAuditEntry; now: Date }) {
   const outcome = auditOutcome(entry)
   return (
-    <SettingsRow title={humanCode(entry.operation)} description={auditLine(entry, now)}>
+    <SettingsRow title={humanCode(entry.operation)} description={auditWho(entry)}>
+      <span className="text-muted-foreground text-xs tabular-nums">{auditWhen(entry, now)}</span>
       <Badge variant={outcome.tone === "outline" ? "outline" : outcome.tone === "secondary" ? "secondary" : `${outcome.tone}-light`}>{outcome.text}</Badge>
     </SettingsRow>
   )

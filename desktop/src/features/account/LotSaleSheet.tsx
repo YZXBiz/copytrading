@@ -1,6 +1,5 @@
 import { useState } from "react"
 import { CircleAlertIcon, CircleCheckIcon, CircleDashedIcon } from "lucide-react"
-import { Meta } from "@/components/meta"
 import type { LotSalePreview, LotSaleResult, PositionLot, TradingEnvironment } from "../../../shared/contract"
 import { Alert, AlertDescription, AlertTitle } from "@/components/reui/alert"
 import { Badge } from "@/components/reui/badge"
@@ -100,8 +99,9 @@ export function LotSaleSheet({ target, onClose }: { target: LotSaleTarget; onClo
       <SheetContent className="w-full sm:max-w-md">
         <SheetHeader>
           <SheetTitle>Sell {symbol}</SheetTitle>
-          <SheetDescription>
-            <Meta items={[accountId, target.environment === "live" ? "Live" : "Paper"]} />
+          <SheetDescription className="flex items-center gap-2">
+            {accountId}
+            <Badge variant={target.environment === "live" ? "warning-light" : "outline"}>{target.environment === "live" ? "Live" : "Paper"}</Badge>
           </SheetDescription>
         </SheetHeader>
         <div className="flex-1 overflow-y-auto px-4">

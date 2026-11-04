@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { Meta } from "@/components/meta"
 import { PlusIcon } from "lucide-react"
 import type { AccountOverview, ManualCorrectionOutcome, ManualOrderPreview, SourceActivity } from "../../../shared/contract"
 import { Alert, AlertDescription } from "@/components/reui/alert"
@@ -152,16 +153,17 @@ export function ManualReviewSheet({
   }
 
   const update = (id: string, draft: Draft) => setDrafts((all) => all.map((d) => (d.id === id ? draft : d)))
-  const lede = [guruName ?? source.guru_id, dateTime(source.source_at), { approve: "Waiting for your approval.", copy: "Waiting for you to copy it.", enter: guessed ? "Filled in from the post's words. Check it, then send." : "CopyTrading couldn't read a trade in this post." }[mode]]
+  const lede = [`${guruName ?? source.guru_id}, ${dateTime(source.source_at)}`, { approve: "Waiting for your approval.", copy: "Waiting for you to copy it.", enter: guessed ? "Filled in from the post's words. Check it, then send." : "CopyTrading couldn't read a trade in this post." }[mode]]
     .filter(Boolean)
-    .join(" · ")
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="w-full sm:max-w-xl">
         <SheetHeader>
           <SheetTitle>{MODE_TITLE[mode]}</SheetTitle>
-          <SheetDescription>{lede}</SheetDescription>
+          <SheetDescription>
+            <Meta items={lede} />
+          </SheetDescription>
         </SheetHeader>
         <div className="flex-1 overflow-y-auto px-4">
           <FieldGroup className="gap-6">

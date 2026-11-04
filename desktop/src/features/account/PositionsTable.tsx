@@ -7,7 +7,6 @@ import { DataGrid, type DataGridFeatures, dataGridFeatures } from "@/components/
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header"
 import { DataGridScrollArea } from "@/components/reui/data-grid/data-grid-scroll-area"
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table"
-import { Meta } from "@/components/meta"
 import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
@@ -26,9 +25,9 @@ type Lot = Position["lots"][number]
 /** Lots with shares left to sell. */
 export const sellable = (position: Position) => position.lots.filter((lot) => (parseDec(lot.remaining_qty) ?? 0n) > 0n)
 
-/** "赵哥 · Oct 22 · 2.052 shares": which buy a lot is. */
+/** "赵哥, Oct 22, 2.052 shares": which buy a lot is. */
 const lotLabel = (position: Position, lot: Lot) =>
-  [lot.guru_id ?? "A post", lot.posted_at && monthDay(lot.posted_at), sharesText(parseDec(lot.remaining_qty) ?? 0n, position.symbol)].filter(Boolean).join(" · ")
+  [lot.guru_id ?? "A post", lot.posted_at && monthDay(lot.posted_at), sharesText(parseDec(lot.remaining_qty) ?? 0n, position.symbol)].filter(Boolean).join(", ")
 
 /** Sell one lot of the stock: one Sell button, or a menu of the lots when several buys make it up. */
 function SellCell({ position, onSell }: { position: Position; onSell: (position: Position, lot: Lot) => void }) {
@@ -64,7 +63,7 @@ const columns = (onSell: (position: Position, lot: Lot) => void): ColumnDef<Data
     cell: ({ row }) => (
       <div className="flex flex-col">
         <span className="font-medium">{row.original.symbol}</span>
-        <Meta className="text-muted-foreground text-xs" text={holdingNote(row.original) ?? ""} />
+        <span className="text-muted-foreground text-xs">{holdingNote(row.original)}</span>
       </div>
     ),
   },

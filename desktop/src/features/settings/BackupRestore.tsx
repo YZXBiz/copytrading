@@ -1,6 +1,5 @@
 import { useState } from "react"
 import type { BackupManifest, PendingRestoreCandidate, RestorePreview } from "../../../shared/contract"
-import { Meta } from "@/components/meta"
 import { Badge } from "@/components/reui/badge"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -151,7 +150,12 @@ export function BackupRestore({ pending, checking, onChanged }: { pending: Pendi
             Choose
           </Button>
         </SettingsRow>
-        {manifest && <SettingsRow title="Last verified backup">{<Meta items={[dateTime(manifest.created_at), count(manifest.members.length, "file")]} />}</SettingsRow>}
+        {manifest && (
+          <SettingsRow title="Last verified backup">
+            <span className="text-muted-foreground text-xs tabular-nums">{dateTime(manifest.created_at)}</span>
+            <Badge variant="outline">{count(manifest.members.length, "file")}</Badge>
+          </SettingsRow>
+        )}
       </SettingsSection>
       {note && <Note note={note} />}
       {preview && pending === null && (

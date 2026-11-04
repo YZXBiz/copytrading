@@ -24,19 +24,11 @@ export function ReadAs({ post }: { post: SourceActivity }) {
         return (
           <div key={index} className={index === 0 ? undefined : "mt-2"}>
             <p className="font-medium tabular-nums">{title}</p>
-            {parts.length > 0 && (
-              <p className="text-muted-foreground text-sm">
-                <Meta text={capitalize(parts.join(" · "))} />
-              </p>
-            )}
+            {parts.length > 0 && <Meta className="text-muted-foreground text-sm" items={parts.map(capitalize)} />}
           </div>
         )
       })}
-      {reading && (
-        <p className="text-muted-foreground mt-1 text-xs">
-          <Meta text={capitalize([kindText(reading), by].filter(Boolean).join(" · "))} />
-        </p>
-      )}
+      {reading && <Meta className="text-muted-foreground mt-1 text-xs" items={([kindText(reading), by].filter(Boolean) as string[]).map(capitalize)} />}
       {!reading && (
         <>
           <p className="font-medium">{headline(post)}</p>

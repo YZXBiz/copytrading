@@ -32,7 +32,7 @@ describe("quote", () => {
   })
 
   it("says when it was quoted, or why there is no price", () => {
-    expect(quoteDetail(quote(), false, NOW)).toMatch(/^≈ \$40\.20 · /)
+    expect(quoteDetail(quote(), false, NOW)).toMatch(/^≈ \$40\.20 at /)
     expect(quoteProblem("F", quote(), false, NOW)).toBeNull()
     expect(quoteProblem("F", null, false, NOW)).toBe("No quote for F")
     expect(quoteProblem("F", quote({ timestamp: "2026-11-03T15:00:00Z" }), false, NOW)).toMatch(/^No live quote for F since /)

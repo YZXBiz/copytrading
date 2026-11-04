@@ -57,7 +57,7 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
   return (
     <EditorSheet
       title={name || "New account"}
-      description={account.environment === "live" ? "Live · real orders, real money" : "Paper · pretend money, real prices"}
+      description={account.environment === "live" ? "Live: real orders, real money" : "Paper: pretend money, real prices"}
       showDescription={account.environment === "live"}
       onClose={onClose}
       footer={

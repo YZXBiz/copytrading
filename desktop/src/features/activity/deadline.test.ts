@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { deadlineText, endOfTradingDay, tradingDay } from "./deadline"
+import { deadlineText, endOfTradingDay, tradingDay, untilText } from "./deadline"
 
 const LA = "America/Los_Angeles"
 
@@ -38,5 +38,14 @@ describe("deadlineText", () => {
   it("names the weekday further out", () => {
     const deadline = endOfTradingDay("2026-11-03T17:00:00Z")
     expect(deadlineText(deadline, new Date("2026-11-01T12:00:00Z"), LA)).toBe("Deadline on Tue 5:00 PM PST")
+  })
+})
+
+describe("untilText", () => {
+  it("says the deadline alone", () => {
+    const today = endOfTradingDay("2026-11-03T17:00:00Z")
+    expect(untilText(today, new Date("2026-11-03T21:00:00Z"), LA)).toBe("Until 5:00 PM PST")
+    expect(untilText(today, new Date("2026-11-02T21:00:00Z"), LA)).toBe("Until tomorrow 5:00 PM PST")
+    expect(untilText(today, new Date("2026-11-01T12:00:00Z"), LA)).toBe("Until Tue 5:00 PM PST")
   })
 })

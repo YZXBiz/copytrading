@@ -1,6 +1,7 @@
 import type { ManualOrderPreview } from "../../../shared/contract"
 import { Alert, AlertDescription } from "@/components/reui/alert"
 import { Badge } from "@/components/reui/badge"
+import { Meta } from "@/components/meta"
 import { type Outcome, outcomeProblems, previewDetail, previewHeadline, previewProblems, previewStatus, previewWarnings } from "./manual-preview"
 
 /** What the engine says one drafted trade would place in one account: the order, or why it can't go, then what became of it once sent. */
@@ -27,7 +28,7 @@ export function PreviewRow({
         <span className="font-medium tabular-nums">{previewHeadline(preview, accountId, index)}</span>
         {status && <Badge variant={status.tone}>{status.text}</Badge>}
       </div>
-      {preview && <span className="text-muted-foreground text-xs tabular-nums">{previewDetail(preview)}</span>}
+      {preview && <Meta className="text-muted-foreground text-xs tabular-nums" items={previewDetail(preview)} />}
       {[...new Set(problems)].map((problem) => (
         <p key={problem} role="alert" className="text-destructive text-xs">
           {problem}

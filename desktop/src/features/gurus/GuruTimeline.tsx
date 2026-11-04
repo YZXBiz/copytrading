@@ -1,9 +1,8 @@
 import { CheckIcon, ClockIcon, CircleAlertIcon, MinusIcon, type LucideIcon } from "lucide-react"
-import { Meta } from "@/components/meta"
 import { Timeline, TimelineContent, TimelineHeader, TimelineIndicator, TimelineItem, TimelineSeparator, TimelineTitle } from "@/components/reui/timeline"
 import { PostPicture } from "@/features/activity/PostPicture"
 import { quoteOf } from "@/features/activity/PostListItem"
-import { readableText } from "@/features/activity/reading"
+import { pictureOf } from "@/features/activity/reading"
 import { clockTime } from "@/features/activity/time"
 import { cn } from "@/lib/utils"
 import type { Day, Entry } from "./model"
@@ -22,7 +21,7 @@ function GuruPostEntry({ entry, step, onOpen }: { entry: Entry; step: number; on
   const { post } = entry
   const { icon: Icon, className } = markOf(entry)
   // A post with no words of its own shows its picture.
-  const picture = readableText(post) === "" ? post.source_event?.attachments.find((a) => a.status === "available") : undefined
+  const picture = pictureOf(post)
   return (
     <TimelineItem step={step} className="group-data-[orientation=vertical]/timeline:ms-10">
       <TimelineHeader>
@@ -41,11 +40,10 @@ function GuruPostEntry({ entry, step, onOpen }: { entry: Entry; step: number; on
         >
           {picture ? <PostPicture attachment={picture} className="max-h-44" /> : <span className="line-clamp-4 text-base break-words">{quoteOf(post)}</span>}
           {/* A post that was only chat has nothing to add to its icon. */}
-          {post.decision !== "ignore" && <Meta className="text-muted-foreground text-xs" text={entry.readAs} />}
+          {post.decision !== "ignore" && <span className="text-muted-foreground text-xs">{entry.readAs}</span>}
           {entry.accounts.map((account) => (
-            <span key={account.accountId} className="flex items-center gap-2 text-sm">
+            <span key={account.accountId} className="flex items-baseline gap-3 text-sm">
               <span className="font-medium">{account.accountId}</span>
-              <span aria-hidden className="bg-muted-foreground/40 size-1 shrink-0 rounded-full" />
               <span className={cn("text-muted-foreground", account.kind === "traded" && "text-success-foreground dark:text-success")}>{account.summary}</span>
             </span>
           ))}

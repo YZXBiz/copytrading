@@ -2,7 +2,6 @@ import { useState } from "react"
 import { ArrowDownIcon, ArrowUpIcon, ChartLineIcon } from "lucide-react"
 import { CartesianGrid, Line, LineChart, ReferenceDot, XAxis, YAxis } from "recharts"
 import type { AccountOverview, HistoryRange } from "../../../shared/contract"
-import { Meta } from "@/components/meta"
 import { Badge } from "@/components/reui/badge"
 import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"
 import { RegionError } from "@/components/region-error"
@@ -87,7 +86,7 @@ export function BalanceChart({ account }: { account: AccountOverview }) {
             {points.length > 1 && <span className="text-muted-foreground text-xs tabular-nums">{`${signedMoney(last - first)} over ${rangeLabel}`}</span>}
           </div>
           {balance && today ? (
-            <Meta className="text-muted-foreground text-xs tabular-nums" items={[`${signedMoney(today.amount)} today`, `closed ${money(balance.previous_close_equity)}`]} />
+            <span className="text-muted-foreground text-xs tabular-nums">{signedMoney(today.amount)} today</span>
           ) : (
             !balance && <span className="text-muted-foreground text-xs">Not read from the broker yet</span>
           )}

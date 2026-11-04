@@ -1,10 +1,12 @@
 import type { SourceActivity } from "../../../shared/contract"
 import { PostPicture } from "./PostPicture"
-import { readableEmbeds, readingText } from "./reading"
+import { isLabelOnly, readableEmbeds, readingText } from "./reading"
 
 /** The guru's own words, with what else came with them: embeds and pictures. Untrusted Discord content: React renders it as text only. */
 export function PostQuote({ post }: { post: SourceActivity }) {
-  const said = readingText(post)
+  // A relay's bare label ("赵哥-股票：") is not words: the pictures that came with it show instead.
+  const text = readingText(post)
+  const said = isLabelOnly(text) ? "" : text
   const embeds = readableEmbeds(post)
   const attachments = post.source_event?.attachments ?? []
   const omitted = post.source_event?.attachments_omitted ?? 0

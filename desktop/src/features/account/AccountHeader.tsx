@@ -1,7 +1,6 @@
 import { useState } from "react"
 import { PauseIcon } from "lucide-react"
 import type { AccountOverview, TradingStatus } from "../../../shared/contract"
-import { Meta } from "@/components/meta"
 import { Badge } from "@/components/reui/badge"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
@@ -15,13 +14,11 @@ import { COPYING_TITLE, accountCopying, badgeVariant, isWarning, resumeBlocked }
  */
 export function AccountHeader({
   account,
-  guru,
   status,
   saved,
   onChanged,
 }: {
   account: AccountOverview
-  guru: string | null
   status: Loaded<TradingStatus> & { retry: () => void }
   /** The limits were just saved: say they apply from the next order. */
   saved: boolean
@@ -55,7 +52,6 @@ export function AccountHeader({
             <Badge variant="outline">{account.environment === "paper" ? "Paper" : "Live"}</Badge>
             <Badge variant={badgeVariant(state)}>{COPYING_TITLE[state.word]}</Badge>
             {state.detail && isWarning(state) && <span className="text-muted-foreground text-xs">{state.detail}</span>}
-            {guru && <span className="text-muted-foreground text-xs">Copies {guru}</span>}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -87,7 +83,7 @@ export function AccountHeader({
       )}
       {saved && (
         <Badge variant="success-light" className="self-start">
-          <Meta items={["Saved", "applies to the next order"]} />
+          Saved for the next order
         </Badge>
       )}
     </div>

@@ -20,14 +20,14 @@ describe("recordSummary", () => {
   const position = (lots: number) => ({ symbol: "F", owned_qty: "1", lots: Array(lots).fill(lot), avg_entry_price: null, current_price: null, market_value: null, unrealized_pl: null, unrealized_plpc: null })
 
   it("says which Alpaca account, and what is still held", () => {
-    expect(recordSummary(account("a"))).toBe("Alpaca paper account ending 0f11 · No copied shares")
-    expect(recordSummary(account("a", { environment: "live", positions: [position(1), position(1)] }))).toBe("Alpaca live account ending 0f11 · 2 copied buys")
-    expect(recordSummary(account("a", { positions: [position(1)] }))).toBe("Alpaca paper account ending 0f11 · 1 copied buy")
+    expect(recordSummary(account("a"))).toBe("Alpaca paper account ending 0f11\nNo copied shares")
+    expect(recordSummary(account("a", { environment: "live", positions: [position(1), position(1)] }))).toBe("Alpaca live account ending 0f11\n2 copied buys")
+    expect(recordSummary(account("a", { positions: [position(1)] }))).toBe("Alpaca paper account ending 0f11\n1 copied buy")
   })
 
   it("adds when it was last active, never as a raw timestamp", () => {
     const text = recordSummary(account("a", { last_activity_at: "2026-10-12T18:15:00Z" }))
-    expect(text).toMatch(/· Last active Oct 12, \d{1,2}:15 [AP]M$/)
+    expect(text).toMatch(/\nLast active Oct 12, \d{1,2}:15 [AP]M$/)
     expect(text).not.toContain("2026-")
   })
 })

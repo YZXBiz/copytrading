@@ -45,7 +45,7 @@ describe("labels", () => {
   it("names a zone by its city and its long name", () => {
     expect(city("America/Argentina/Buenos_Aires")).toBe("Buenos Aires")
     expect(zoneName("America/Los_Angeles", winter)).toBe("Pacific Standard Time")
-    expect(zoneLabel("Asia/Tokyo", winter)).toBe("Tokyo · Japan Standard Time")
+    expect(zoneLabel("Asia/Tokyo", winter)).toBe("Tokyo (Japan Standard Time)")
   })
   it("calls New York market time, and the default automatic", () => {
     expect(zoneLabel(NEW_YORK, winter)).toBe("New York (market time)")

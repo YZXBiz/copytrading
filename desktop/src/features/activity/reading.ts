@@ -135,6 +135,9 @@ export function readableText(post: SourceActivity): string {
   return isLabelOnly(words) ? "" : words
 }
 
+/** The picture a post stands on when it has no words of its own (only a relay label, or nothing); undefined when it has words or none is available. */
+export const pictureOf = (post: SourceActivity) => (readableText(post) === "" ? post.source_event?.attachments.find((a) => a.status === "available") : undefined)
+
 export const enteredByOwner = (post: SourceActivity) => post.destinations.some((d) => (d.orders ?? []).some((o) => o.client_id.startsWith("manual-")))
 
 /** What the interpreter decided, in the words a trader would use. */
@@ -164,14 +167,9 @@ export function headline(post: SourceActivity): string {
   return instructionPhrase(first) + rest
 }
 
-/** How the reader took the post, in one line: "Buy PM at $201 · Full position". */
+/** How the reader took the post, in one line: "Buy PM at $201"; several calls are joined with semicolons. */
 export function readAsLine(post: SourceActivity): string {
   const calls = post.reading ? callsOf(post.reading) : []
   if (calls.length === 0) return headline(post)
-  return calls
-    .map((call) => {
-      const { title, detail } = callHeadline(call)
-      return detail ? `${title} · ${detail}` : title
-    })
-    .join("; ")
+  return calls.map((call) => callHeadline(call).title).join("; ")
 }

@@ -44,12 +44,6 @@ export function waitingCall(source: SourceActivity): WaitingCall | null {
 export const openCall = (source: SourceActivity, { skipped, now }: { skipped: boolean; now: Date }): WaitingCall | null =>
   skipped || !isOpenCall(source, now) ? null : waitingCall(source)
 
-/** "15h 20m": how long a post has waited. */
-export function waited(posted: string, now: Date): string {
-  const minutes = Math.max(0, Math.floor((now.getTime() - new Date(posted).getTime()) / 60_000))
-  return minutes < 60 ? `${minutes}m` : `${Math.floor(minutes / 60)}h ${minutes % 60}m`
-}
-
 const SHARES: [string, string][] = [
   ["0.75", "¾"],
   ["0.6666666666666666666666666666666666666667", "⅔"],

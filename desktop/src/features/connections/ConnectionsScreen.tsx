@@ -119,14 +119,13 @@ export function ConnectionsScreen({ routeId }: { routeId: string | null }) {
             {draft.accounts.map((account) => {
               const name = account.name.trim()
               const subject = accountSubject(name)
-              const guru = draft.gurus.find((g) => g.account_id.trim() === name)
               return (
                 <ConnectionRow
                   key={account.uid}
                   icon={LandmarkIcon}
                   label={name || "new account"}
                   title={name || "New account"}
-                  detail={`${account.environment === "live" ? "Live" : "Paper"}${guru?.display_name.trim() ? ` · copies ${guru.display_name.trim()}` : ""}`}
+                  detail={account.environment === "live" ? "Live" : "Paper"}
                   status={accountStatus(facts, account)}
                   onEdit={() => setOpen({ kind: "account", uid: account.uid })}
                   {...connectProps(subject)}

@@ -109,8 +109,8 @@ export function auditOutcome(entry: AgentAuditEntry): { text: string; tone: Tone
   }
 }
 
-/** "Largest single buy · You · 5 min ago". */
-export function auditLine(entry: AgentAuditEntry, now: Date): string {
-  const caller = entry.actor === "owner" ? "You" : callerName(entry.caller_path)
-  return `${caller} · ${ago(entry.at, now)}`
-}
+/** Who made a recorded request or decision: "You", or the agent's name. */
+export const auditWho = (entry: AgentAuditEntry): string => (entry.actor === "owner" ? "You" : callerName(entry.caller_path))
+
+/** How long ago it was recorded: "5 min ago". */
+export const auditWhen = (entry: AgentAuditEntry, now: Date): string => ago(entry.at, now)

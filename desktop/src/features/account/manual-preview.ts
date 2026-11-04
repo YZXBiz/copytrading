@@ -14,7 +14,7 @@ export function previewHeadline(preview: ManualOrderPreview | null, accountId: s
   const plan = preview?.plan
   if (!plan) {
     const instruction = preview?.instruction
-    return instruction ? `${instruction.action === "buy" ? "Buy" : "Sell"} ${instruction.symbol} in ${accountId}` : `${accountId} · trade ${index + 1}`
+    return instruction ? `${instruction.action === "buy" ? "Buy" : "Sell"} ${instruction.symbol} in ${accountId}` : `${accountId}, trade ${index + 1}`
   }
   if (plan.budget_usd !== null) return `Buy ${dollars(plan.budget_usd)} of ${plan.symbol} in ${accountId}`
   const quantity = parseDec(plan.qty)
@@ -30,8 +30,8 @@ function age(seconds: number): string {
   return `${Math.floor(seconds / 3600)} h`
 }
 
-/** A buy's shares at its limit, then the fresh price and the post's age, shown whether or not the order can go. */
-export function previewDetail(preview: ManualOrderPreview): string {
+/** A buy's shares at its limit, then the fresh price and the post's age, shown whether or not the order can go: one fact each. */
+export function previewDetail(preview: ManualOrderPreview): string[] {
   const parts: string[] = []
   const { plan } = preview
   const quantity = parseDec(plan?.qty)
@@ -40,7 +40,7 @@ export function previewDetail(preview: ManualOrderPreview): string {
   }
   if (preview.fresh_price) parts.push(`${preview.instruction.action === "buy" ? "Ask" : "Bid"} ${usd(preview.fresh_price)}`)
   parts.push(`posted ${age(preview.source_age_seconds)} ago`)
-  return parts.join(" · ")
+  return parts
 }
 
 /** Why the order cannot go, each reason once, in the by-hand flow's words. */
