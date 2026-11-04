@@ -12,6 +12,7 @@ import {
   startText,
 } from "./confirmations"
 import { EngineError } from "./engine/bridge"
+import { readJournal } from "./journal"
 import { type SecretStore, type Secrets, redact } from "./secrets"
 import { SetupFile, SetupFileError } from "./setup-file"
 
@@ -25,6 +26,10 @@ export interface Deps {
   secrets: SecretStore
   /** Shows the owner a native yes/no; resolves false for no. Production: dialog.showMessageBox in main. */
   confirm: (text: string) => Promise<boolean>
+  /** The folder the engine writes its journal to; absent where there is none (fixtures). */
+  diagnosticsDir?: string
+  /** A native file dialog: where to save a backup, or which backup to open. null for Cancel. */
+  pick?: (kind: "backup-destination" | "restore-archive") => Promise<string | null>
 }
 
 type Params = Record<string, unknown>
@@ -152,6 +157,26 @@ const READ_HANDLERS: Record<ReadName, Handler> = {
     }
   },
   getSecretStatus: async (_params, { secrets }) => secrets.status(),
+  readDiagnostics: async ({ limit }, { diagnosticsDir }) => {
+    if (!diagnosticsDir) throw new Refusal("There is no log to read here.")
+    return readJournal(diagnosticsDir, typeof limit === "number" && limit > 0 ? Math.min(limit, 5000) : undefined)
+  },
+}
+
+/** Proposals only the app can carry out: the engine leaves them running until the app reports back (control/proposals.py APP_PERFORMED). */
+const APP_PERFORMED = new Set(["set_recovery", "set_account_limits", "start_processing", "apply_setup"])
+
+/** The accounts a restore candidate holds, each with its environment from the saved setup and its keys from the store; refuses if any is missing. */
+async function preflightAccounts(ctx: Ctx, candidateId: string) {
+  const candidate = body(await ctx.engine.request("restore_candidate_status")).candidate as { candidate_id: string; account_ids: string[] } | null
+  if (!candidate || candidate.candidate_id !== candidateId) throw new Refusal("The engine has no restore waiting under that id.")
+  const configured = ctx.setup.load()?.configuration.accounts ?? []
+  return candidate.account_ids.map((account_id) => {
+    const environment = configured.find((a) => a.id === account_id)?.environment
+    const keys = ctx.secrets.secrets.brokers.find((b) => b.account_id === account_id)
+    if (!environment || !keys) throw new Refusal(`The backup needs ${account_id}, and this setup has no keys saved for it. Add it in Connections first.`)
+    return { account_id, environment, key: keys.key, secret: keys.secret }
+  })
 }
 
 /** Asks the engine to plan an order and keeps the plan. An id used once is never reused, so a plan cannot change under a dialog. */
@@ -205,6 +230,9 @@ const ACT_HANDLERS: Record<ActName, Handler> = {
       const proposals = body(await ctx.engine.request("list_proposals")).proposals as { proposal_id: string; digest: string }[]
       const proposal = proposals.find((x) => x.proposal_id === p.proposal_id)
       if (!proposal) throw new Refusal("The engine has no such request waiting.")
+      if (APP_PERFORMED.has((proposal as unknown as { subject: { kind: string } }).subject.kind)) {
+        throw new Refusal("This request changes the saved setup, which this version cannot apply yet. Reject it, or approve it in the SwiftUI app.")
+      }
       // The digest main holds is the one the dialog described; the page's is never sent.
       return { text: proposalText(proposal as never), send: { proposal_id: proposal.proposal_id, digest: proposal.digest } }
     },
@@ -263,7 +291,10 @@ const ACT_HANDLERS: Record<ActName, Handler> = {
   previewRestore: ask("preview_restore", value("preview")),
   prepareRestoreCandidate: ask("prepare_restore_candidate", field("candidate_id")),
   abortRestoreCandidate: ask("abort_restore_candidate", nothing),
-  restorePreflight: ask("restore_preflight", whole),
+  restorePreflight: ask("restore_preflight", whole, async (p, ctx) => ({
+    candidate_id: p.candidate_id,
+    accounts: await preflightAccounts(ctx, String(p.candidate_id)),
+  })),
   resolveOwnership: ask("resolve_ownership", value("resolution")),
   saveManualCorrection: ask("save_manual_correction", value("correction")),
   rejectProposal: ask("reject_proposal", value("proposal")),
@@ -281,6 +312,13 @@ const ACT_HANDLERS: Record<ActName, Handler> = {
   assistantCancel: ask("assistant_cancel", field("cancelled")),
   assistantReset: ask("assistant_reset", nothing),
   submitSelfTest: ask("submit_self_test", value("workflow")),
+  chooseBackupDestination: (_p, ctx) => pick(ctx, "backup-destination"),
+  chooseRestoreArchive: (_p, ctx) => pick(ctx, "restore-archive"),
+}
+
+async function pick(ctx: Ctx, kind: "backup-destination" | "restore-archive") {
+  if (!ctx.pick) throw new Refusal("There is no file dialog here.")
+  return ctx.pick(kind)
 }
 
 function words(error: unknown): string {
