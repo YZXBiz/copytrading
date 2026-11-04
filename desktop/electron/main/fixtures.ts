@@ -1,9 +1,11 @@
-import type { AccountOverview, EquityHistory, HistoryRange, Result, SourceActivity } from "../../shared/contract"
+import type { AccountOverview, EquityHistory, HistoryRange, Result } from "../../shared/contract"
 import type { Api } from "./api"
 import account from "./fixtures/account.json"
-import activity from "./fixtures/activity.json"
 import history from "./fixtures/history.json"
+import { peopleReads } from "./fixtures/people"
 import positions from "./fixtures/positions.json"
+
+export { seedFixturePictures } from "./fixtures/people"
 
 // Real zhap-account-2 data, captured Nov 3, served in the engine's wire shape so the renderer
 // runs the same adapters in fixture mode as against a live engine.
@@ -22,7 +24,7 @@ const overview: AccountOverview = {
     symbol: p.symbol,
     owned_qty: p.qty,
     lots: lots[p.symbol]
-      ? [{ lot_id: `lot-${p.symbol}`, guru_id: lots[p.symbol]!.guru, posted_at: POSTED[p.symbol] ?? null, remaining_qty: p.qty }]
+      ? [{ lot_id: `lot-${p.symbol}`, guru_id: lots[p.symbol]!.guru, posted_at: POSTED[p.symbol] ?? null, remaining_qty: p.qty, average_price: p.avg_entry_price, unrealized_pl: p.unrealized_pl }]
       : [],
     avg_entry_price: p.avg_entry_price,
     current_price: p.current_price,
@@ -39,22 +41,6 @@ const HISTORY_KEY: Record<HistoryRange, keyof typeof history | null> = {
   three_months: "3M",
   year: null,
 }
-
-const posts: SourceActivity[] = activity.map((a, index) => ({
-  sequence: activity.length - index,
-  source_at: a.at,
-  text: a.text,
-  decision: a.decision as SourceActivity["decision"],
-  guru_id: "赵哥",
-  instructions:
-    a.decision === "trade" ? [{ action: "close", symbol: "AEHR", price: "61.50" }] : [],
-  destinations:
-    a.decision === "trade"
-      ? [{ account_id: account.account_id, status: "delivered", instruction_outcomes: ["no_open_lot"] }]
-      : a.decision === "review"
-        ? [{ account_id: account.account_id, status: "review_required", instruction_outcomes: [] }]
-        : [],
-}))
 
 const delay = <T>(value: T) => new Promise<T>((done) => setTimeout(() => done(value), 150))
 const ok = async <T>(value: T): Promise<Result<T>> => ({ ok: true, value: await delay(value) })
@@ -86,8 +72,8 @@ const READS: Record<string, (params: Params) => Promise<Result<unknown>>> = {
       : null
     return ok(value)
   },
-  getSourceActivity: () => ok({ items: posts }),
   getLimits: () => ok(limits),
+  ...peopleReads,
 }
 
 const notCaptured = async (name: string): Promise<Result<never>> => ({ ok: false, error: `${name} is not in the captured fixtures.` })
