@@ -3,19 +3,16 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbP
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { href, navigate } from "@/features/shell/route"
-import { type AccountControl, ControlButton } from "./AccountControl"
 
-/** dashboard-8's navbar: Accounts > the account on the left; Stop or Start Copying and the account's actions on the right. */
+/** dashboard-8's navbar: Accounts > the account on the left, the account's actions on the right (Stop or Start Copying sits in the band). */
 export function AccountNavbar({
   accountId,
-  control,
   canEditLimits,
   onEditLimits,
   onRefresh,
   onOpenConnections,
 }: {
   accountId: string
-  control: AccountControl
   canEditLimits: boolean
   onEditLimits: () => void
   onRefresh: () => void
@@ -35,7 +32,6 @@ export function AccountNavbar({
         </BreadcrumbList>
       </Breadcrumb>
       <div className="flex shrink-0 items-center gap-2">
-        <ControlButton control={control} />
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button type="button" variant="outline" size="icon-sm" aria-label="Account actions" />}>
             <EllipsisIcon aria-hidden="true" />

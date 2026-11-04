@@ -89,7 +89,7 @@ export function AccountPage({
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
-      <AccountNavbar accountId={id} control={control} canEditLimits={canEditLimits} onEditLimits={() => setEditingLimits(true)} onRefresh={changed} onOpenConnections={onOpenConnections} />
+      <AccountNavbar accountId={id} canEditLimits={canEditLimits} onEditLimits={() => setEditingLimits(true)} onRefresh={changed} onOpenConnections={onOpenConnections} />
       <ControlNotes control={control} saved={limitsSaved} />
       <AccountNotices account={account} status={copyingStatus} onResolved={changed} />
       <AccountBand
