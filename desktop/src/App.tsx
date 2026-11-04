@@ -1,4 +1,6 @@
+import { useEffect } from "react"
 import { MotionConfig } from "motion/react"
+import { announceSkipped } from "@/features/account/skipped-calls"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { AppFrame } from "@/features/shell/AppFrame"
 import { FillToasts } from "@/features/shell/FillToasts"
@@ -10,6 +12,7 @@ import { useResult } from "@/lib/use-result"
 
 export default function App() {
   const route = useRoute()
+  useEffect(announceSkipped, [])
   const engine = useEngineState()
   // Reads again when the engine finishes starting, then every 5 s: balance, holdings and copying state move on their own.
   const accounts = useResult(() => window.copytrading.read.getAccounts(), `accounts:${engine.state}`, 5000)

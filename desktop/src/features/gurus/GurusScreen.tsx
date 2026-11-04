@@ -2,7 +2,8 @@ import { ChevronRightIcon, UsersIcon } from "lucide-react"
 import type { AccountOverviewPage } from "../../../shared/contract"
 import { RegionError } from "@/components/region-error"
 import { Frame, FramePanel } from "@/components/reui/frame"
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { EmptyState } from "@/components/empty-state"
+import { navigate } from "@/features/shell/route"
 import { Item, ItemActions, ItemContent, ItemGroup, ItemSeparator, ItemTitle } from "@/components/ui/item"
 import { Skeleton } from "@/components/ui/skeleton"
 import { href } from "@/features/shell/route"
@@ -37,15 +38,12 @@ export function GurusScreen({ guruId, accounts }: { guruId: string | null; accou
           </div>
         )}
         {setup.status === "ready" && gurus.length === 0 && (
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <UsersIcon />
-              </EmptyMedia>
-              <EmptyTitle>{guruId ? "This guru is not in your setup" : "No gurus yet"}</EmptyTitle>
-              <EmptyDescription>Gurus you copy appear here once they are set up in Connections.</EmptyDescription>
-            </EmptyHeader>
-          </Empty>
+          <EmptyState
+            icon={UsersIcon}
+            title={guruId ? "This guru is not in your setup" : "No gurus yet"}
+            description="Gurus you copy appear here once they are set up in Connections."
+            action={{ label: "Open Connections", onClick: () => navigate("connections") }}
+          />
         )}
         {setup.status === "ready" && gurus.length > 0 && (
           <ItemGroup className="gap-0 p-1">

@@ -31,7 +31,7 @@ const overview: AccountOverview = {
   total_exposure_usd: account.total_exposure_usd,
   pending_orders: account.pending_orders,
   balance: { ...account.balance, previous_close_equity: "2715.27" },
-  positions: positions.map((p) => ({
+  positions: (process.env.COPYTRADING_FIXTURE_SCENE === "empty" ? [] : positions).map((p) => ({
     symbol: p.symbol,
     owned_qty: p.qty,
     broker_qty: attention && p.symbol === "SOXL" ? "10" : p.qty,

@@ -11,7 +11,7 @@ import { RollingNumber } from "@/components/rolling-number"
 import { SymbolLogo } from "@/components/symbol-logo"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { EmptyState } from "@/components/empty-state"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -143,20 +143,7 @@ export function PositionsList({ account, onRefresh, onSell }: { account: Account
         <FramePanel className="px-5! pt-3! pb-4!">
           {/* Content */}
           {rows.length === 0 ? (
-            <Empty>
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <PackageOpenIcon />
-                </EmptyMedia>
-                <EmptyTitle>No stocks bought yet</EmptyTitle>
-                <EmptyDescription>Shares CopyTrading buys show up here.</EmptyDescription>
-              </EmptyHeader>
-              <EmptyContent>
-                <Button type="button" size="sm" variant="outline" onClick={onRefresh}>
-                  Refresh
-                </Button>
-              </EmptyContent>
-            </Empty>
+            <EmptyState icon={PackageOpenIcon} title="No stocks bought yet" description="Shares CopyTrading buys show up here." action={{ label: "Refresh", onClick: onRefresh }} />
           ) : (
             <ul className="flex flex-col">
               <AnimatePresence initial={false}>

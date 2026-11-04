@@ -46,6 +46,7 @@ function harness(answer: boolean, over: { preview?: RestorePreview; candidate?: 
     },
     prefs: new Prefs(dir),
     readers: { attach: async () => {} },
+    skipped: { set: () => {} },
   })
   return { api, calls, asked, dir, setup }
 }
@@ -167,5 +168,23 @@ describe("theme", () => {
     expect(new Prefs(h.dir).get("theme")).toBe("system")
     expect(await h.api.act("setTheme", { theme: "sepia" })).toMatchObject({ ok: false })
     expect(new Prefs(h.dir).get("theme")).toBe("system")
+  })
+})
+
+describe("menu bar", () => {
+  it("shows the balance until narrowed, keeps the choice, and refuses anything else", async () => {
+    const h = harness(true)
+    expect(await h.api.read("getMenuBar", undefined)).toEqual({ ok: true, value: "balance" })
+    expect(await h.api.act("setMenuBar", { mode: "off" })).toEqual({ ok: true, value: "off" })
+    expect(new Prefs(h.dir).get("menu_bar")).toBe("off")
+    expect(await h.api.act("setMenuBar", { mode: "loud" })).toMatchObject({ ok: false })
+    expect(new Prefs(h.dir).get("menu_bar")).toBe("off")
+  })
+
+  it("takes the skipped calls as a list of ids, and nothing else", async () => {
+    const h = harness(true)
+    expect(await h.api.act("setSkippedCalls", { ids: ["a", "b"] })).toEqual({ ok: true, value: null })
+    expect(await h.api.act("setSkippedCalls", { ids: [1] })).toMatchObject({ ok: false })
+    expect(await h.api.act("setSkippedCalls", {})).toMatchObject({ ok: false })
   })
 })

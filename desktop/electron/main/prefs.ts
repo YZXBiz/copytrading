@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { type Theme, THEMES } from "../../shared/contract"
+import { MENU_BAR_MODES, type MenuBarMode, type Theme, THEMES } from "../../shared/contract"
 
 interface Saved {
   /** Settings "Fills": a macOS notification for each order sent and filled. On unless the owner turns it off. */
@@ -9,6 +9,8 @@ interface Saved {
   copying_was_on: boolean
   /** Settings > General "Theme". The desk opens dark unless the owner chose otherwise. */
   theme: Theme
+  /** Settings > General "Menu bar". Balance and dot unless the owner narrows or removes it. */
+  menu_bar: MenuBarMode
 }
 
 /** The few choices the app itself remembers, in the installation root next to `agent-access.json`. */
@@ -24,7 +26,7 @@ export class Prefs {
     } catch {
       // An unreadable file is the same as none: these are only alert choices, and the defaults are safe.
     }
-    this.saved = { fill_alerts: read.fill_alerts ?? true, copying_was_on: read.copying_was_on ?? false, theme: THEMES.find((t) => t === read.theme) ?? "dark" }
+    this.saved = { fill_alerts: read.fill_alerts ?? true, copying_was_on: read.copying_was_on ?? false, theme: THEMES.find((t) => t === read.theme) ?? "dark", menu_bar: MENU_BAR_MODES.find((m) => m === read.menu_bar) ?? "balance" }
   }
 
   get<K extends keyof Saved>(key: K): Saved[K] {

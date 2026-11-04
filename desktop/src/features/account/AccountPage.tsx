@@ -91,6 +91,7 @@ export function AccountPage({
         recent={skipped.recent}
         onCopy={setReview}
         onSkip={(call) => skipped.skip(call.source.source_id ?? String(call.source.sequence), readableText(call.source))}
+        onSkipAll={() => skipped.skipAll(calls.map((call) => ({ sourceId: call.source.source_id ?? String(call.source.sequence), text: readableText(call.source) })))}
         onUndo={skipped.undo}
       />
       <PositionsList account={account} onRefresh={onRefresh} onSell={(position, lot) => setSale(saleTarget(position, lot))} />

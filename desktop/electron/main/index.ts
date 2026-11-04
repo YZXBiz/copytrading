@@ -2,6 +2,7 @@ import { join } from "node:path"
 import { BrowserWindow, Menu, Notification, app, dialog, ipcMain, nativeTheme, protocol, safeStorage, session } from "electron"
 import { autoUpdater } from "electron-updater"
 import { CHANNELS, type EngineState, type FillAlert, type Theme } from "../../shared/contract"
+import { ASSISTANT_EVENT, ASSISTANT_SHORTCUT, SCREEN_SHORTCUTS } from "../../shared/shortcuts"
 import { AgentAccessStore } from "./agents/access"
 import { AgentAccessController } from "./agents/controller"
 import { AlertMonitor } from "./alerts/monitor"
@@ -16,6 +17,7 @@ import { RuntimePaths } from "./engine/paths"
 import { fixtureApi, seedFixturePictures } from "./fixtures"
 import { moveKeychainSecrets, securityReader } from "./keychain-move"
 import { LOGO_SCHEME, LogoCache } from "./logos"
+import { MenuBar } from "./menubar/menubar"
 import { PICTURE_SCHEME, PictureIndex } from "./pictures"
 import { Prefs } from "./prefs"
 import { AccountReaders } from "./readers"
@@ -69,6 +71,9 @@ let agents: AgentAccessController | null = null
 let monitor: AlertMonitor | null = null
 let restore: Pick<RestoreCoordinator, "activate" | "rollback" | "isRunning"> | null = null
 const pictures = new PictureIndex()
+// The waiting calls the owner skipped, as the page last said (it keeps them); null until it has, so the menu bar never counts a skipped call.
+let skippedCalls: ReadonlySet<string> | null = null
+let menuBar: MenuBar | null = null
 protocol.registerSchemesAsPrivileged([PICTURE_SCHEME, LOGO_SCHEME].map((scheme) => ({ scheme, privileges: { standard: true, secure: true } })))
 
 /** The engine's state as the renderer may see it: a stopped engine's reason is the engine's own stderr. */
@@ -218,7 +223,7 @@ async function startServices(): Promise<Api> {
       .then(() => agents?.start())
       .then(() => monitor?.start())
       .catch((error: unknown) => engine.fail(error instanceof Error ? error.message : String(error)))
-    services = { engine, setup, secrets, confirm, diagnosticsDir: paths.logs, pick, agents, restore, prefs, readers }
+    services = { engine, setup, secrets, confirm, diagnosticsDir: paths.logs, pick, agents, restore, prefs, readers, skipped: { set: (ids) => void (skippedCalls = new Set(ids)) } }
     return createApi(services)
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error)
@@ -237,6 +242,7 @@ function registerIpc(): void {
     const result = await api.act(name, params)
     // The choice is saved by the api; the window follows it here, live.
     if (name === "setTheme" && result.ok) nativeTheme.themeSource = result.value as Theme
+    if (name === "setMenuBar" && result.ok) menuBar?.apply()
     return result
   })
   ipcMain.handle(CHANNELS.state, publicState)
@@ -290,6 +296,44 @@ async function copyingNow(): Promise<boolean> {
   }
 }
 
+/** The app menu, built with the app and again once updates run (only then does it offer "Check for Updates…"). The shortcuts work with the window closed. */
+function buildAppMenu(checkForUpdates?: () => void): void {
+  const assistant = () => {
+    const window = windows()[0]
+    if (window) void window.webContents.executeJavaScript(`window.dispatchEvent(new CustomEvent(${JSON.stringify(ASSISTANT_EVENT)}))`)
+  }
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate([
+      {
+        label: app.name,
+        submenu: [
+          { role: "about" },
+          ...(checkForUpdates ? [{ label: "Check for Updates…", click: checkForUpdates }] : []),
+          { type: "separator" },
+          { label: "Settings…", accelerator: "Command+,", click: () => openWindow("#/settings") },
+          { type: "separator" },
+          { role: "hide" },
+          { role: "hideOthers" },
+          { role: "unhide" },
+          { type: "separator" },
+          { role: "quit" },
+        ],
+      },
+      { role: "editMenu" },
+      { role: "viewMenu" },
+      {
+        label: "Go",
+        submenu: [
+          ...SCREEN_SHORTCUTS.filter((s) => s.screen !== "settings").map((s) => ({ label: s.title, accelerator: `Command+${s.key}`, click: () => openWindow(`#/${s.screen}`) })),
+          { type: "separator" },
+          { label: "Assistant", accelerator: `Command+${ASSISTANT_SHORTCUT.toUpperCase()}`, click: assistant },
+        ],
+      },
+      { role: "windowMenu" },
+    ]),
+  )
+}
+
 /** Looks for updates on GitHub Releases (app-update.yml in the bundle), as Sparkle did; offers them in a native dialog. */
 function startUpdates(marker: ResumeMarker): void {
   autoUpdater.autoDownload = false
@@ -310,14 +354,7 @@ function startUpdates(marker: ResumeMarker): void {
     copyingNow,
     (on) => (on ? marker.set() : void marker.take()),
   )
-  Menu.setApplicationMenu(
-    Menu.buildFromTemplate([
-      { label: app.name, submenu: [{ role: "about" }, { label: "Check for Updates…", click: () => void updates.check(true) }, { type: "separator" }, { role: "hide" }, { role: "hideOthers" }, { role: "unhide" }, { type: "separator" }, { role: "quit" }] },
-      { role: "editMenu" },
-      { role: "viewMenu" },
-      { role: "windowMenu" },
-    ]),
-  )
+  buildAppMenu(() => void updates.check(true))
   setTimeout(() => void updates.check(), 30_000)
   setInterval(() => void updates.check(), CHECK_EVERY_MS)
 }
@@ -328,6 +365,26 @@ async function resumeSaved(): Promise<string | null> {
   const setup = services.setup
   const autoConfirmed = createApi({ ...services, confirm: async () => true })
   return resumeCopying(autoConfirmed, () => setup.load(), (ms) => new Promise((done) => setTimeout(done, ms)))
+}
+
+/** Tells the owner a request from the menu bar did not go through; declining its confirmation says nothing. */
+async function report(what: string, result: { ok: boolean; error?: string; cancelled?: true }): Promise<void> {
+  if (!result.ok && !result.cancelled) await dialog.showMessageBox({ type: "error", message: what, detail: result.error })
+}
+
+/** The menu bar item. It asks through the same api, and so the same native confirmations, as the window's own buttons. */
+function createMenuBar(): MenuBar {
+  return new MenuBar({
+    api,
+    engine: publicState,
+    mode: () => services?.prefs.get("menu_bar") ?? "balance",
+    skipped: () => skippedCalls,
+    redact: (text) => redact(text, secrets?.values() ?? []),
+    open: openWindow,
+    pause: async () => report("Copying did not pause", await api.act("pauseTrading", undefined)),
+    start: async () => report("Copying did not start", await api.act("startCopying", undefined)),
+    quit: () => app.quit(),
+  })
 }
 
 /** After an update relaunch, starts copying again once the engine answers (update.resumesCopying). */
@@ -373,8 +430,10 @@ app.whenReady().then(async () => {
   const logos = fixtures ? null : new LogoCache(join(app.getPath("userData"), "logos"))
   protocol.handle(LOGO_SCHEME, (request) => logos?.respond(request.url) ?? new Response(null, { status: 404 }))
   registerIpc()
+  buildAppMenu()
   const window = createWindow()
   if (smoke) return runSmoke(window)
+  if (!captureDir) (menuBar = createMenuBar()).apply()
   if (!packaged) return
   const marker = new ResumeMarker(join(app.getPath("userData"), "resume-copying"))
   resumeAfterUpdate(marker)
@@ -405,6 +464,7 @@ app.on("before-quit", (event) => {
   event.preventDefault()
   stopped = true
   monitor?.stop()
+  menuBar?.remove()
   void (async () => {
     await agents?.stop()
     await restoreSettled()

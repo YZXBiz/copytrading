@@ -4,12 +4,14 @@ import {
   type AgentAccess,
   type AgentAccessState,
   type ApplyChangesResult,
+  MENU_BAR_MODES,
   READS,
   THEMES,
   type ReadName,
   type RestorePreview,
   type Result,
   type TradingConfiguration,
+  type TradingValidation,
 } from "../../shared/contract"
 import {
   PAUSE_TEXT,
@@ -60,12 +62,14 @@ export interface Deps {
   /** Restores and rollbacks; they stop and restart the engine. */
   restore: Pick<RestoreCoordinator, "activate" | "rollback">
   prefs: Prefs
+  /** Which waiting calls the owner skipped, as the page last said: the menu bar counts the rest. */
+  skipped: { set: (ids: string[]) => void }
   /** Gives the engine the saved accounts' read keys; called again after anything that changes the saved setup or its keys. */
   readers: Pick<AccountReaders, "attach">
 }
 
 /** The actions that save, replace or drop the setup or its keys. */
-const CHANGES_READ_KEYS: ReadonlySet<string> = new Set(["saveSetup", "startTrading", "applyChanges", "discardSecrets", "forgetBroker", "activateRestore", "rollbackRestore"])
+const CHANGES_READ_KEYS: ReadonlySet<string> = new Set(["saveSetup", "startTrading", "startCopying", "applyChanges", "discardSecrets", "forgetBroker", "activateRestore", "rollbackRestore"])
 
 type Params = Record<string, unknown>
 interface Ctx extends Deps {
@@ -196,6 +200,7 @@ const READ_HANDLERS: Record<ReadName, Handler> = {
   getAgentAccess: async (_params, { agents }) => agents.state(),
   getFillAlerts: async (_params, { prefs }) => prefs.get("fill_alerts"),
   getTheme: async (_params, { prefs }) => prefs.get("theme"),
+  getMenuBar: async (_params, { prefs }) => prefs.get("menu_bar"),
   getAssistantTurn: ask("assistant_turn", whole),
   getSetup: async (_params, ctx) => {
     await settleOnce(ctx).catch(() => {})
@@ -513,6 +518,13 @@ const ACT_HANDLERS: Record<ActName, Handler> = {
     applyChanges,
   ),
   pauseTrading: confirmed(() => ({ text: PAUSE_TEXT }), ask("pause_trading", value("trading"))),
+  startCopying: async (_p, ctx) => {
+    const saved = ctx.setup.load()
+    if (!saved) throw new Refusal("There is no saved setup to start. Set one up in Connections.")
+    const { activation_token, report } = (await ACT_HANDLERS.validateTrading({ configuration: saved.configuration }, ctx)) as TradingValidation
+    if (!report.activatable || !activation_token) throw new Refusal("The setup check did not pass. Connections shows what to fix.")
+    return ACT_HANDLERS.startTrading({ activation_id: randomUUID(), validation_token: activation_token }, ctx)
+  },
   controlAccount: confirmed(
     (p) => ({ text: controlText(p.command as never) }),
     ask("control_account", value("control"), (p) => ({ command: p.command })),
@@ -575,6 +587,18 @@ const ACT_HANDLERS: Record<ActName, Handler> = {
     if (!theme) throw new Refusal("That is not a theme.")
     ctx.prefs.set("theme", theme)
     return ctx.prefs.get("theme")
+  },
+
+  setMenuBar: async (p, ctx) => {
+    const mode = MENU_BAR_MODES.find((m) => m === p?.mode)
+    if (!mode) throw new Refusal("That is not a menu bar choice.")
+    ctx.prefs.set("menu_bar", mode)
+    return ctx.prefs.get("menu_bar")
+  },
+  setSkippedCalls: async (p, ctx) => {
+    if (!Array.isArray(p.ids) || !p.ids.every((id) => typeof id === "string")) throw new Refusal("That is not a list of calls.")
+    ctx.skipped.set(p.ids as string[])
+    return null
   },
 
   validateTrading: ask("validate_trading", whole, (p, ctx) => {

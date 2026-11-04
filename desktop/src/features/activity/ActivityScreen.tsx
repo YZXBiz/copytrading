@@ -5,10 +5,11 @@ import { FilterIcon, LandmarkIcon, MessageSquareIcon } from "lucide-react"
 import type { AccountOverviewPage } from "../../../shared/contract"
 import { RegionError } from "@/components/region-error"
 import { Button } from "@/components/ui/button"
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { EmptyState } from "@/components/empty-state"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { navigate } from "@/features/shell/route"
 import { guruName } from "@/features/gurus/model"
 import { useGurus } from "@/features/gurus/use-gurus"
 import { readClock } from "@/lib/clock"
@@ -92,27 +93,24 @@ export function ActivityScreen({ selectedSequence, accounts }: { selectedSequenc
       {posts.status === "loading" && <PostsSkeleton />}
       {posts.status === "error" && <RegionError title="Posts did not load" message={posts.error} onRetry={posts.retry} />}
       {posts.status === "ready" && shown.length === 0 && (
-        <Empty className="min-h-[280px] border-0 bg-transparent">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">{filtered ? <FilterIcon aria-hidden="true" /> : <MessageSquareIcon aria-hidden="true" />}</EmptyMedia>
-            <EmptyTitle>{EMPTY[filter].title}</EmptyTitle>
-            <EmptyDescription>{posts.hasOlder ? "Show older to look further back." : EMPTY[filter].hint}</EmptyDescription>
-          </EmptyHeader>
-          {filtered && (
-            <EmptyContent>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setFilter("all")
-                  setAccountId(null)
-                }}
-              >
-                Clear filter
-              </Button>
-            </EmptyContent>
-          )}
-        </Empty>
+        <EmptyState
+          icon={filtered ? FilterIcon : MessageSquareIcon}
+          title={EMPTY[filter].title}
+          description={posts.hasOlder ? "Show older to look further back." : EMPTY[filter].hint}
+          action={
+            filtered
+              ? {
+                  label: "Clear filter",
+                  onClick: () => {
+                    setFilter("all")
+                    setAccountId(null)
+                  },
+                }
+              : posts.hasOlder
+                ? undefined
+                : { label: "Open Connections", onClick: () => navigate("connections") }
+          }
+        />
       )}
       {shown.length > 0 && (
         <div className="space-y-8">
