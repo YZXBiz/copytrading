@@ -11,6 +11,7 @@ import {
   restoreText,
   startText,
 } from "./confirmations"
+import { randomUUID } from "node:crypto"
 import { isDeepStrictEqual } from "node:util"
 import { PROVIDER_TITLES } from "../../shared/providers"
 import { startFailure } from "../../shared/start-failure"
@@ -43,6 +44,8 @@ interface Ctx extends Deps {
   seen: Map<string, unknown>
   /** A start is being looked at; a second look waits for the next time. */
   settling: boolean
+  /** How each start this session ended, by activation id: null committed, otherwise the words for why it did not take. */
+  outcomes: Map<string, string | null>
 }
 type Handler = (params: Params, ctx: Ctx) => Promise<unknown>
 /** What a confirmation says, and the params to send in place of the page's when main knows better. */
@@ -267,6 +270,7 @@ async function settleOnce(ctx: Ctx): Promise<"committed" | "pending"> {
       (status.activation_id === id && status.candidate_revision === candidate && status.committed_revision === candidate && status.committed_activation_id === id)
     if (committed && (runsCandidate || status.phase === "ready" || status.phase === "stopped")) {
       ctx.setup.finalize(id)
+      ctx.outcomes.set(id, null)
       return "committed"
     }
     const ended = ["failed", "stopped", "interrupted", "not_found"].includes(status.phase) && ["paused", "failed"].includes(status.runtime_state)
@@ -276,13 +280,40 @@ async function settleOnce(ctx: Ctx): Promise<"committed" | "pending"> {
     const accounts = (body(body(await ctx.engine.request("get_trading_status")).trading).accounts ?? []) as { id: string; state: string; error_code: string | null }[]
     const why = startFailure(status.error_code, accounts, PROVIDER_TITLES[started?.provider.name ?? "anthropic"])
     ctx.secrets.setRevision(ctx.setup.rollback(id))
-    throw new Refusal(
-      !before || isDeepStrictEqual(before, started)
-        ? `Copying didn't start. ${why}`
-        : `The new setup didn't start, so your previous setup is still in place. ${why}`,
-    )
+    const message = !before || isDeepStrictEqual(before, started) ? `Copying didn't start. ${why}` : `The new setup didn't start, so your previous setup is still in place. ${why}`
+    // A look from a status read may settle a start that `startTrading` is still waiting on: it reads the outcome from here.
+    ctx.outcomes.set(id, message)
+    throw new Refusal(message)
   } finally {
     ctx.settling = false
+  }
+}
+
+/**
+ * After a start the owner already approved copying into every account in the setup (the dialog named each), so each one
+ * the engine holds with buys off is resumed, as AppModel.turnOnEveryAccount does. The engine opens accounts one at a time,
+ * so this looks again for a while before giving up on one.
+ */
+async function turnOnAccounts(ctx: Ctx, configuration: TradingConfiguration): Promise<void> {
+  const { looks, waitMs } = ctx.activation ?? { looks: 30, waitMs: 1000 }
+  const done = new Set<string>()
+  const wanted = configuration.accounts.map((a) => a.id)
+  for (let look = 0; look < looks && done.size < wanted.length; look++) {
+    if (look) await sleep(waitMs)
+    let items: { account_id: string; active_configuration?: boolean; entry_permission: string }[]
+    try {
+      items = (body(body(await ctx.engine.request("get_accounts", { limit: 100 })).accounts).items ?? []) as typeof items
+    } catch {
+      continue
+    }
+    for (const account of items) {
+      if (!wanted.includes(account.account_id) || done.has(account.account_id) || !account.active_configuration) continue
+      done.add(account.account_id)
+      if (account.entry_permission === "enabled") continue
+      await ctx.engine
+        .request("control_account", { command: { command_id: randomUUID(), account_id: account.account_id, action: "resume" } })
+        .catch(() => {}) // the account's page says it is still paused
+    }
   }
 }
 
@@ -325,10 +356,15 @@ const ACT_HANDLERS: Record<ActName, Handler> = {
         // No answer: the engine's activation record, read below, says whether it took.
       }
       const { looks, waitMs } = ctx.activation ?? { looks: 30, waitMs: 1000 }
-      for (let look = 0; look < looks; look++) {
-        if ((await settleOnce(ctx)) === "committed") break
+      const id = String(request.activation_id)
+      for (let look = 0; look < looks && !ctx.outcomes.has(id); look++) {
+        await settleOnce(ctx)
+        if (ctx.outcomes.has(id)) break
         await sleep(waitMs)
       }
+      const outcome = ctx.outcomes.get(id)
+      if (outcome) throw new Refusal(outcome)
+      if (outcome === null) await turnOnAccounts(ctx, request.configuration as TradingConfiguration)
       return value("trading")(await ctx.engine.request("get_trading_status"))
     },
     // Declined in the dialog: the setup saved for this start is not kept.
@@ -450,7 +486,7 @@ function reply(result: Result<unknown>, ctx: Ctx): Result<unknown> {
 }
 
 export function createApi(deps: Deps) {
-  const ctx: Ctx = { ...deps, seen: new Map(), settling: false }
+  const ctx: Ctx = { ...deps, seen: new Map(), settling: false, outcomes: new Map() }
   const run = async (handlers: Record<string, Handler>, names: readonly string[], name: unknown, params: unknown): Promise<Result<unknown>> => {
     if (typeof name !== "string" || !names.includes(name)) return { ok: false, error: "The request was not valid." }
     if (params !== undefined && (typeof params !== "object" || params === null || Array.isArray(params))) {

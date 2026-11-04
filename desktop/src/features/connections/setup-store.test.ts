@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { CapabilityCheck, Result, SetupView, TradingConfiguration } from "../../../shared/contract"
 import { buildConfiguration, draftFromSetup, newAccount, newGuru } from "./draft"
-import { addAccount, applyLimits, connect, discard, edit, editAccount, learnPlaybook, pickProvider, reload, setupState, startCopying } from "./setup-store"
+import { addAccount, applyLimits, connect, discard, edit, editAccount, learnPlaybook, pickProvider, refreshStatus, reload, setupState, startCopying } from "./setup-store"
 
 // The store talks to main through window.copytrading; each test gives it a fake and reads what it was asked, in order.
 
@@ -121,15 +121,24 @@ describe("startCopying", () => {
     return fake
   }
 
-  it("checks, saves exactly what was checked, then starts, and turns each account on", async () => {
+  it("checks, saves exactly what was checked, then starts, and names an account still not buying", async () => {
     const saved = await savedSetup()
     const { calls } = await ready(saved)
     calls.length = 0
     edit((d) => ({ ...d, model: "deepseek-chat" }))
     await startCopying()
     expect(calls.slice(0, 4)).toEqual(["validateTrading", "saveSetup", "startTrading", "getSetup"])
-    expect(setupState().start.phase).toBe("started")
-    await vi.waitFor(() => expect(calls).toContain("controlAccount"))
+    // Main turns the accounts on; the page only reports one the engine still holds with buys off.
+    expect(calls).not.toContain("controlAccount")
+    expect(setupState().start).toEqual({ phase: "started", paused: ["zhap"] })
+  })
+
+  it("reports every account buying as plainly started", async () => {
+    await ready(await savedSetup(), {
+      read: { getAccounts: async () => ok({ items: [{ account_id: "zhap", active_configuration: true, entry_permission: "enabled" }], unavailable_accounts: [] }) },
+    })
+    await startCopying()
+    expect(setupState().start).toEqual({ phase: "started", paused: [] })
   })
 
   it("sends the validation's revision and token on, and a fresh activation id", async () => {
@@ -168,13 +177,51 @@ describe("startCopying", () => {
     expect(setupState().start).toMatchObject({ phase: "failed", message: "Copying didn't start. Discord couldn't be reached." })
   })
 
-  it("leaves a start the engine has not confirmed pending", async () => {
-    const saved = await savedSetup()
-    const pending = { ...saved, pending_activation: { activation_id: "x", candidate_revision: "b".repeat(64) } }
-    let reads = 0
-    await ready(saved, { read: { getSetup: async () => ok(++reads <= 2 ? saved : pending) } })
-    await startCopying()
-    expect(setupState().start.phase).toBe("pending")
+  describe("a start the engine has not confirmed", () => {
+    const record = (over: Record<string, unknown>) => ({
+      requested_activation_id: "", activation_id: null, candidate_revision: null, committed_revision: null, committed_activation_id: null,
+      phase: "starting", runtime_state: "starting", error_code: null, ...over,
+    })
+
+    async function pendingStart(activation: () => Record<string, unknown>) {
+      const saved = await savedSetup()
+      const pending = { ...saved, pending_activation: { activation_id: "x", candidate_revision: "b".repeat(64) } }
+      const stillPending = { on: false }
+      await ready(saved, {
+        read: {
+          getSetup: async () => ok(stillPending.on ? pending : saved),
+          getTradingActivation: async () => ok(record(activation())),
+          getStatus: async () => ok({ state: "paused", configured_accounts: 1, active_accounts: 0, source_connected: false, model_ready: false, error_code: null, accounts: [{ id: "zhap", state: "failed", error_code: "broker_keys_rejected" }] }),
+        },
+      })
+      stillPending.on = true
+      await startCopying()
+      expect(setupState().start).toMatchObject({ phase: "pending" })
+      return stillPending
+    }
+
+    it("stays pending while the engine is still committing it", async () => {
+      await pendingStart(() => ({}))
+      await refreshStatus()
+      expect(setupState().start.phase).toBe("pending")
+    })
+
+    it("becomes started once the engine committed it", async () => {
+      const flag = await pendingStart(() => ({ phase: "ready", runtime_state: "running" }))
+      flag.on = false
+      await refreshStatus()
+      expect(setupState().start.phase).toBe("started")
+    })
+
+    it("becomes not started, with the account named, once the engine stopped without committing it", async () => {
+      const flag = await pendingStart(() => ({ phase: "failed", runtime_state: "paused" }))
+      flag.on = false
+      await refreshStatus()
+      expect(setupState().start).toMatchObject({
+        phase: "failed",
+        message: "The new setup didn't start. zhap didn't open: Alpaca didn't accept its API keys. Paste them again from your Alpaca dashboard.",
+      })
+    })
   })
 
   it("will not start without a Discord token, or with half a broker key", async () => {

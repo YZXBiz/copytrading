@@ -75,7 +75,9 @@ wording in `confirmations.ts` and a case in `tests/api.test.ts`.
   as a pending start (with the setup before it), sends it, then looks at the engine's own record (`get_trading_activation`)
   with `AppModel.reconcilePendingTradingActivation`'s rules: committed → finalized, stopped without committing → the setup
   before it is saved again and the error names the account or service (`shared/start-failure.ts`), anything else stays
-  pending until the next `getSetup` or `getStatus` read settles it. A Cancel in the dialog puts the setup before the save back.
+  pending until the next `getSetup` or `getStatus` read settles it (the page polls `getSetup` while a start is pending). A
+  committed start also resumes each account the engine holds with buys off, as `turnOnEveryAccount` does: the start's
+  dialog named every account, so that asks nothing more. A Cancel in the dialog puts the setup before the save back.
   The page's state for all of this, and the setup form, is `src/features/connections/setup-store.ts`.
 - Keys (Discord token, model key, each account's Alpaca key and secret) live encrypted with Electron `safeStorage` in
   `userData`. The renderer writes them with `act.setSecrets` and sees only `read.getSecretStatus()` (booleans).

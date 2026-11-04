@@ -1,4 +1,5 @@
 import type { TradingStatus } from "../../../shared/contract"
+import { joinAnd } from "../../../shared/start-failure"
 import { STEPS, type Progress } from "./state"
 import type { Start } from "./setup-store"
 
@@ -34,6 +35,15 @@ export function startStatus(input: {
         tone: "caution",
       }
     }
+    case "started":
+      if (start.paused.length) {
+        return {
+          text: "Started, but not buying everywhere",
+          detail: `${joinAnd(start.paused)} ${start.paused.length === 1 ? "is" : "are"} not buying yet. Resume ${start.paused.length === 1 ? "it" : "them"} on the account page.`,
+          tone: "caution",
+        }
+      }
+      break
     default:
   }
   if (!trading) return { text: "Waiting for the engine…", detail: "Start copying is ready once it answers.", tone: "working" }
@@ -44,7 +54,6 @@ export function startStatus(input: {
     const next = STEPS.find((s) => s.id === progress.next)
     return { text: `${progress.done.size} of ${STEPS.length} steps done`, detail: next ? `Next: ${next.title}.` : null, tone: "neutral" }
   }
-  if (start.phase === "started") return { text: "Copying started", detail: null, tone: "positive" }
   if (hasSaved && hasUnsaved) return { text: "You have unsaved changes", detail: "Starting checks and saves them.", tone: "neutral" }
   return { text: "Ready to start", detail: "Every connection is checked first. Nothing is saved or traded before that.", tone: "neutral" }
 }

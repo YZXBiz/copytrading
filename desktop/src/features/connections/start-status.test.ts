@@ -23,7 +23,17 @@ describe("startStatus", () => {
   it("says what is under way", () => {
     expect(startStatus({ ...base, start: { phase: "checking" } }).text).toBe("Checking every connection…")
     expect(startStatus({ ...base, start: { phase: "starting" } }).tone).toBe("working")
-    expect(startStatus({ ...base, start: { phase: "pending" } }).text).toBe("Starting your new setup…")
+    expect(startStatus({ ...base, start: { phase: "pending", activationId: "x" } }).text).toBe("Starting your new setup…")
+  })
+
+  it("names the accounts a committed start left not buying, instead of saying all is well", () => {
+    const running = { ...base, trading: trading("running"), isCopying: true }
+    expect(startStatus({ ...running, start: { phase: "started", paused: [] } }).text).toBe("Copying is running")
+    expect(startStatus({ ...running, start: { phase: "started", paused: ["a", "b"] } })).toMatchObject({
+      text: "Started, but not buying everywhere",
+      detail: "a and b are not buying yet. Resume them on the account page.",
+      tone: "caution",
+    })
   })
 
   it("counts the checks that need attention, and says a message that is not one", () => {

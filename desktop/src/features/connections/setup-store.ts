@@ -13,7 +13,8 @@ import type {
   TradingStatus,
   TradingValidation,
 } from "../../../shared/contract"
-import { acceptsBaseUrl, baseUrlProblem, requiresApiKey, suggestedModel } from "../../../shared/providers"
+import { PROVIDER_TITLES, acceptsBaseUrl, baseUrlProblem, requiresApiKey, suggestedModel } from "../../../shared/providers"
+import { startFailure } from "../../../shared/start-failure"
 import {
   type AccountDraft,
   type GuruDraft,
@@ -41,8 +42,9 @@ export type Start =
   | { phase: "checking" }
   | { phase: "starting" }
   /** The engine has not confirmed the start yet; the saved setup stays the one before it until it does. */
-  | { phase: "pending" }
-  | { phase: "started" }
+  | { phase: "pending"; activationId: string }
+  /** `paused`: accounts the engine holds that are still not buying, which the owner resumes on their page. */
+  | { phase: "started"; paused: string[] }
   | { phase: "failed"; message: string; report: Report | null }
 
 export interface Loaded {
@@ -313,33 +315,37 @@ function incompleteKey(draft: SetupDraft): string | null {
   return half ? `Enter both the API key and the secret for “${half.name.trim()}”.` : null
 }
 
-const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms))
+/** The start committed: main already turned on each account it could, so the owner is told of any still not buying. */
+async function finishStarted(ids: string[]) {
+  const page: Result<AccountOverviewPage> = await window.copytrading.read.getAccounts()
+  const paused = page.ok ? page.value.items.filter((a) => ids.includes(a.account_id) && a.entry_permission !== "enabled").map((a) => a.account_id) : []
+  set({ start: { phase: "started", paused } })
+}
 
 /**
- * After a start the owner already approved copying into every account in the setup, so each one's buys go on without
- * asking again: an account the engine holds with entries off is resumed (AppModel.turnOnEveryAccount).
+ * A start the engine had not confirmed when main stopped waiting. Reading the setup lets main settle it; once it is no
+ * longer pending, the engine's own record of this activation says whether it took (`reconcilePendingTradingActivation`).
  */
-async function turnOnAccounts(ids: string[]) {
+async function settlePending(activationId: string) {
+  await reload({ keepDraft: true })
+  if (state.load.status !== "ready" || state.load.data.saved?.pending_activation) return
   const read = window.copytrading.read
-  const act = window.copytrading.act
-  const done = new Set<string>()
-  for (let look = 0; look < 30 && done.size < ids.length; look++) {
-    if (look) await sleep(1000)
-    const page: Result<AccountOverviewPage> = await read.getAccounts()
-    if (!page.ok) continue
-    for (const account of page.value.items) {
-      if (!ids.includes(account.account_id) || done.has(account.account_id) || !account.active_configuration) continue
-      done.add(account.account_id)
-      if (account.entry_permission === "enabled") continue
-      const resumed = await act.controlAccount({ command: { command_id: crypto.randomUUID(), account_id: account.account_id, action: "resume" } })
-      if (!resumed.ok && resumed.cancelled) return
-    }
+  const [activation, status] = await Promise.all([read.getTradingActivation({ activation_id: activationId }), read.getStatus()])
+  if (!activation.ok) return
+  const record = activation.value
+  const ended = ["failed", "stopped", "interrupted", "not_found"].includes(record.phase) && ["paused", "failed"].includes(record.runtime_state)
+  const accounts = state.load.data.saved?.configuration.accounts.map((a) => a.id) ?? []
+  if (ended && record.committed_activation_id !== activationId) {
+    const provider = state.load.data.saved?.configuration.provider.name ?? "anthropic"
+    const why = startFailure(record.error_code, (status.ok && status.value.accounts) || [], PROVIDER_TITLES[provider])
+    return set({ start: failure(`The new setup didn't start. ${why}`) })
   }
+  await finishStarted(accounts)
 }
 
 /** The one Start Copying: checks every connection, saves exactly what was checked, then starts. */
 export async function startCopying() {
-  if (state.start.phase === "checking" || state.start.phase === "starting" || state.load.status !== "ready") return
+  if (state.start.phase === "checking" || state.start.phase === "starting" || state.start.phase === "pending" || state.load.status !== "ready") return
   const draft = state.draft
   const keys = facts()!
   const problem = incompleteKey(draft)
@@ -370,16 +376,16 @@ export async function startCopying() {
   set({ start: { phase: "starting" } })
   const saved = await act.saveSetup({ configuration, revision: report.configuration_revision })
   if (!saved.ok) return set({ start: failure(saved.error) })
-  const started = await act.startTrading({ activation_id: crypto.randomUUID(), validation_token: activation_token })
+  const activationId = crypto.randomUUID()
+  const started = await act.startTrading({ activation_id: activationId, validation_token: activation_token })
   if (!started.ok) {
     set({ start: started.cancelled ? { phase: "idle" } : failure(started.error) })
     return void (await reload({ keepDraft: true }))
   }
   await reload()
   const after = state.load.status === "ready" ? state.load.data : null
-  if (after?.saved?.pending_activation) return set({ start: { phase: "pending" } })
-  set({ start: { phase: "started" } })
-  void turnOnAccounts(configuration.accounts.map((a) => a.id))
+  if (after?.saved?.pending_activation) return set({ start: { phase: "pending", activationId } })
+  await finishStarted(configuration.accounts.map((a) => a.id))
 }
 
 /** The form differs from what is saved: typed keys, edits, or a first setup in progress. */
@@ -392,6 +398,7 @@ export function hasUnsavedChanges({ load, built, draft }: SetupState): boolean {
 
 /** Reads the engine's status again, for the screens that show it while the owner edits. */
 export async function refreshStatus() {
+  if (state.start.phase === "pending") return settlePending(state.start.activationId)
   const trading = await window.copytrading.read.getStatus()
   if (state.load.status === "ready" && trading.ok) set({ load: { status: "ready", data: { ...state.load.data, trading: trading.value } } })
 }

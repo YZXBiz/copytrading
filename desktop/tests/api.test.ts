@@ -500,6 +500,40 @@ describe("start journal", () => {
     expect(onDisk(h)).not.toHaveProperty("pendingActivation")
   })
 
+  it("reports a start that a status read rolled back meanwhile as not started, never as started", async () => {
+    const { h } = await changed()
+    activation(h, FAILED)
+    h.replies.get_trading_status = () => ({ type: "trading_status", trading: { state: "paused", accounts: [] } })
+    h.replies.start_trading = () => {
+      // The sidebar's status poll lands while the start is still waiting on the engine, and sees it fail first.
+      void h.api.read("getStatus", undefined)
+      return { type: "ok", trading: {} }
+    }
+    const result = await h.api.act("startTrading", START)
+    expect(result).toMatchObject({ ok: false, error: expect.stringContaining("didn't start") })
+    expect(onDisk(h)).toMatchObject({ configuration: saved.configuration })
+  })
+
+  it("turns on each account the engine holds with buys off, once the start is committed", async () => {
+    const { h } = await changed()
+    activation(h, { ...COMMITTED, candidate_revision: "b".repeat(64), committed_revision: "b".repeat(64) })
+    h.replies.get_accounts = () => ({
+      type: "accounts",
+      accounts: {
+        items: [
+          { account_id: "zhap-account-2", active_configuration: true, entry_permission: "paused" },
+          { account_id: "zhap-account-3", active_configuration: true, entry_permission: "enabled" },
+        ],
+      },
+    })
+    expect(await h.api.act("startTrading", START)).toMatchObject({ ok: true })
+    const resumed = h.sent("control_account")
+    expect(resumed).toHaveLength(1)
+    expect(resumed[0]!.params.command).toMatchObject({ account_id: "zhap-account-2", action: "resume" })
+    // The start's own dialog was the only one: the resume asked nothing.
+    expect(h.asked).toHaveLength(1)
+  })
+
   it("does not take an activation record that is not this setup's as a commit", async () => {
     const { h } = await changed()
     // The engine runs another setup (the previous one), so the candidate is not committed.
