@@ -1,0 +1,8 @@
+[
+ {"at":"2026-11-03T18:41:33Z","text":"riot今天反弹16%  仓位上持仓太满的现金不多的可以13.8出个riot持仓的10%调出些现金备用","decision":"ignore","read":"Just chat","outcome":"ignored"},
+ {"at":"2026-11-03T18:39:23Z","text":"cifr 今天+16%  仓位上持仓太慢的现金不多的可以7.95出个cifr持仓的10%调出些现金备用","decision":"review","read":"A suggestion, not a call","outcome":"waiting"},
+ {"at":"2026-11-03T16:01:22Z","text":"盘中减仓点有两个 时间就是美东12点-1点 他盘前那个qqq688没怎么突破仅仅摸一下","decision":"ignore","read":"Just chat","outcome":"ignored"},
+ {"at":"2026-11-03T13:36:40Z","text":"盘前冲高的像soxl +12%的或者存储的可以盘前高点 减点 成本上的","decision":"review","read":"Couldn't be read as one trade","outcome":"waiting"},
+ {"at":"2026-11-02T21:13:43Z","text":"aehr财报反而先出了利好超预期+19%  61.5出了aehr后面再看了","decision":"trade","read":"Sell all AEHR at $61.50","outcome":"skipped","reason":"No AEHR bought for this guru"},
+ {"at":"2026-11-02T03:14:32Z","text":"周末主要暗盘和韩国开盘都有资金流入soxl  这周也是主要 苹果和amd两个财报","decision":"ignore","read":"Just chat","outcome":"ignored"}
+]

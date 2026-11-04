@@ -1,0 +1,4 @@
+{"account_id":"zhap-account-2","environment":"paper","copying":"copying","total_exposure_usd":"722.04","pending_orders":0,
+ "balance":{"equity":"2700.08","day_change_usd":"-15.19","cash":"2170.32","buying_power":"9119.47","observed_at":"2026-11-04T03:07:10Z"},
+ "limits":{"daily_loss_cap_usd":250,"loss_today_usd":15.19,"max_total_usd":3000,"max_order_usd":200,"max_symbol_usd":1000,"max_entries_per_day":30},
+ "lots":{"SOXL":{"guru":"赵哥","posted":"Oct 22","bought":"12.199964"},"SOXS":{"guru":"赵哥","posted":"Oct 22","bought":"7.189508"},"SOL/USD":{"guru":"赵哥-加密","posted":"Oct 24","bought":"1.924067"}}}

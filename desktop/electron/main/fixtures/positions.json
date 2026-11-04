@@ -1,0 +1,32 @@
+[
+ {
+  "symbol": "SOLUSD",
+  "qty": "0.000000001",
+  "avg_entry_price": "102.7",
+  "current_price": "90.2694",
+  "market_value": "0",
+  "unrealized_pl": "0",
+  "unrealized_plpc": "0",
+  "change_today": "-0.00189"
+ },
+ {
+  "symbol": "SOXL",
+  "qty": "6.679793",
+  "avg_entry_price": "93.455033",
+  "current_price": "65.64",
+  "market_value": "438.461613",
+  "unrealized_pl": "-185.798662",
+  "unrealized_plpc": "-0.29763",
+  "change_today": "-0.1023"
+ },
+ {
+  "symbol": "SOXS",
+  "qty": "1.542291",
+  "avg_entry_price": "40.498507",
+  "current_price": "59.34",
+  "market_value": "91.519548",
+  "unrealized_pl": "29.059065",
+  "unrealized_plpc": "0.46524",
+  "change_today": "0.10626"
+ }
+]
