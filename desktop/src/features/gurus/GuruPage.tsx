@@ -28,7 +28,7 @@ export function GuruPage({ guru, accounts, setUpAccountIds }: { guru: Guru; acco
   const [filter, setFilter] = useState<PostFilter>("all")
   const [open, setOpen] = useState<number | null>(null)
 
-  const dayStats = day.status === "ready" ? day.data.items.find((s) => s.guru_id === guru.id) : undefined
+  const dayStats = day.status === "ready" ? day.data.gurus.find((s) => s.guru_id === guru.id) : undefined
   const feed = posts.status === "ready" ? buildFeed(guru.id, posts.items, dayStats, now) : null
   const opened = feed?.days.flatMap((d) => d.entries).find((e) => e.post.sequence === open)?.post
   const holdings = accounts.status === "ready" ? guruHoldings(guru.id, accounts.data.items, setUpAccountIds) : null

@@ -408,5 +408,5 @@ export const peopleReads: Record<string, (params: Params) => Promise<Result<unkn
   getSetup: () => ok(setup),
   getSourceActivity: (params) => ok(page(posts, params)),
   getGuruActivity: (params) => ok(page(posts.filter((p) => p.guru_id === params?.guru_id), params)),
-  getGuruDayStats: (params) => ok({ items: dayStats(params) }),
+  getGuruDayStats: (params) => ok({ day_start: params?.day_start ?? "", day_end: params?.day_end ?? "", gurus: dayStats(params) }),
 }
