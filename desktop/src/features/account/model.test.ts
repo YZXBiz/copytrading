@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import type { SourceActivity } from "../../../shared/contract"
 import { cardOutcome, isOpenCall } from "@/features/activity/outcome"
 import { reasonText } from "@/lib/reasons"
-import { dayChange, holdingNote, postOutcome } from "./model"
+import { dayChange, postOutcome } from "./model"
 
 const post = (over: Partial<SourceActivity>): SourceActivity => ({
   sequence: 1,
@@ -69,14 +69,6 @@ describe("postOutcome says what Activity says", () => {
 
   it("is empty for an account the post never reached", () => {
     expect(postOutcome(post({ destinations: delivered("no_open_lot") }), "other", NOW).read).toBe("")
-  })
-})
-
-describe("holdingNote", () => {
-  it("says when the holding was bought, and nothing without a date", () => {
-    const position = (posted_at: string | null) => ({ lots: [{ posted_at }] }) as never
-    expect(holdingNote(position("2026-10-22T15:00:00Z"))).toBe("Bought Oct 22")
-    expect(holdingNote(position(null))).toBeNull()
   })
 })
 

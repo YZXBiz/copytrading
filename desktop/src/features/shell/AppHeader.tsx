@@ -1,12 +1,11 @@
 import { PanelLeftIcon } from "lucide-react"
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
+import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { AssistantToggle } from "@/features/assistant/AssistantToggle"
-import { href } from "./route"
 import { SCREENS } from "./screens"
 import type { Route } from "./route"
 
-/** app-shell-2's header: the breadcrumb on the left, with the Assistant's one control on the right. */
+/** app-shell-2's header: the screen's breadcrumb on the left, with the Assistant's one control on the right. */
 export function AppHeader({ route, selectedAccountId, onToggleNav }: { route: Route; selectedAccountId: string | null; onToggleNav: () => void }) {
   const screen = SCREENS[route.screen]
   return (
@@ -16,21 +15,16 @@ export function AppHeader({ route, selectedAccountId, onToggleNav }: { route: Ro
         <Button type="button" variant="ghost" size="icon-sm" aria-label="Show navigation" onClick={onToggleNav} className="-ml-1 opacity-60 hover:opacity-100 md:hidden">
           <PanelLeftIcon aria-hidden="true" />
         </Button>
-        <Breadcrumb className="min-w-0">
-          <BreadcrumbList className="flex-nowrap">
-            {selectedAccountId && (
-              <>
-                <BreadcrumbItem>
-                  <BreadcrumbLink href={href("accounts")}>{screen.title}</BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-              </>
-            )}
-            <BreadcrumbItem className="min-w-0">
-              <BreadcrumbPage className="truncate">{selectedAccountId ?? screen.title}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
+        {/* An account page carries its own breadcrumb row beside its actions. */}
+        {!selectedAccountId && (
+          <Breadcrumb className="min-w-0">
+            <BreadcrumbList className="flex-nowrap">
+              <BreadcrumbItem className="min-w-0">
+                <BreadcrumbPage className="truncate">{screen.title}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        )}
       </div>
       <div className="ms-auto shrink-0 pr-4">
         <AssistantToggle />

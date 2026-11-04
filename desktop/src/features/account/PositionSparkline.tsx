@@ -27,12 +27,12 @@ export function PositionSparkline({ symbol, bars }: { symbol: string; bars: Bar[
   const data = bars.map((bar) => ({ period: bar.at, value: Number(bar.close) }))
 
   return (
-    <div className="relative me-2 hidden h-11 w-32 shrink-0 @xl:block @3xl:w-40">
+    <div className="relative hidden h-8 w-16 shrink-0 @sm:block">
       <span
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 [background-image:linear-gradient(to_right,var(--color-border)_1px,transparent_1px),linear-gradient(to_bottom,var(--color-border)_1px,transparent_1px)] [mask-image:linear-gradient(to_right,transparent,black_14%,black_86%,transparent)] [background-size:12px_12px] opacity-30"
       />
-      <ChartContainer config={chartConfig} className="relative z-10 aspect-auto! h-11 w-full" initialDimension={{ width: 160, height: 44 }}>
+      <ChartContainer config={chartConfig} className="relative z-10 aspect-auto! h-8 w-full" initialDimension={{ width: 64, height: 32 }}>
         <LineChart accessibilityLayer data={data} margin={{ top: 4, right: 0, bottom: 4, left: 0 }}>
           <XAxis dataKey="period" hide />
           <YAxis hide domain={["dataMin", "dataMax"]} />

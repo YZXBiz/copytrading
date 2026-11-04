@@ -14,24 +14,9 @@ export const RANGES = [
   name: string
 }[]
 
-export type RangeKey = HistoryRange
+export const DEFAULT_RANGE: HistoryRange = "month"
 
-export type ViewState = {
-  range: RangeKey
-  markers: boolean
-  average: boolean
-}
-
-export const DEFAULT_VIEW: ViewState = {
-  range: "month",
-  markers: true,
-  average: false,
-}
-
+/** One accent, win or lose: the primary token (the change reads from its sign). */
 export const CHART_CONFIG = {
-  // The block root sets this to the primary token: one accent, win or lose.
-  balance: { label: "Balance", color: "var(--chart-4-balance)" },
-  average: { label: "Average", color: "var(--muted-foreground)" },
+  balance: { label: "Balance", color: "var(--primary)" },
 } satisfies ChartConfig
-
-export type SeriesKey = keyof typeof CHART_CONFIG

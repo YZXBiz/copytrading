@@ -1,23 +1,25 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import type { AccountOverview, Position } from "../../../shared/contract"
 import { readableText } from "@/features/activity/reading"
 import { readClock } from "@/lib/clock"
 import { useResult } from "@/lib/use-result"
-import { AccountHeader } from "./AccountHeader"
+import { AccountBand } from "./AccountBand"
+import { ControlNotes, useAccountControl } from "./AccountControl"
+import { AccountNavbar } from "./AccountNavbar"
 import { AccountNotices } from "./AccountNotices"
-import { BalancePanel } from "./balance-panel/chart"
+import { BalancePanel } from "./balance-panel/BalancePanel"
 import { useDeepLink } from "./deep-link"
-import { LimitsPanel } from "./LimitsPanel"
+import { LimitsHoldings, sellable } from "./LimitsHoldings"
 import { LimitsSheet } from "./LimitsSheet"
 import { type LotSaleTarget, LotSaleSheet } from "./LotSaleSheet"
 import { ManualReviewSheet } from "./ManualReviewSheet"
 import { heldPositions } from "./model"
-import { NeedsYou } from "./NeedsYou"
-import { PositionsList, sellable } from "./PositionsList"
-import { RecentPosts } from "./RecentPosts"
+import { type PostFilter, sourceKey } from "./post-rows"
+import { PostsTable } from "./PostsTable"
 import { useSkippedCalls } from "./skipped-calls"
 import { type WaitingCall, openCall } from "./waiting"
 
+/** The account page, ReUI's dashboard-8 filled with this account: navbar, command band, chart beside limits and holdings, then the posts. */
 export function AccountPage({
   account,
   accounts,
@@ -41,13 +43,17 @@ export function AccountPage({
   const [sale, setSale] = useState<LotSaleTarget | null>(null)
   const [editingLimits, setEditingLimits] = useState(false)
   const [limitsSaved, setLimitsSaved] = useState(false)
+  const [filter, setFilter] = useState<PostFilter>("all")
+  const [version, setVersion] = useState(0)
+  const table = useRef<HTMLDivElement>(null)
 
   const guru = limits.status === "ready" && limits.data ? limits.data.guru : null
   const copyingStatus = status.status === "ready" ? status.data : null
+  const canEditLimits = limits.status === "ready" && limits.data !== null
   const calls =
     posts.status === "ready"
       ? posts.data.items
-          .flatMap((post) => openCall(post, { skipped: skipped.has(post.source_id ?? String(post.sequence)), now }) ?? [])
+          .flatMap((post) => openCall(post, { skipped: skipped.has(sourceKey(post)), now }) ?? [])
           .filter((call) => call.accountIds.includes(id))
           .sort((a, b) => b.source.source_at.localeCompare(a.source.source_at))
       : []
@@ -62,13 +68,15 @@ export function AccountPage({
     }
   })
 
-  /** Something may have changed in the engine: read the account, its posts, its limits and its state again. */
+  /** Something may have changed in the engine: read the account, its posts, its limits, its state and its balance history again. */
   const changed = () => {
     onRefresh()
     posts.retry()
     limits.retry()
     status.retry()
+    setVersion((v) => v + 1)
   }
+  const control = useAccountControl(account, status, changed)
 
   const saleTarget = (position: Position, lot: Position["lots"][number]): LotSaleTarget => ({
     accountId: id,
@@ -80,24 +88,50 @@ export function AccountPage({
   })
 
   return (
-    <div className="flex flex-col gap-6">
-      <AccountHeader account={account} status={status} saved={limitsSaved} onChanged={changed} />
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
+      <AccountNavbar accountId={id} canEditLimits={canEditLimits} onEditLimits={() => setEditingLimits(true)} onRefresh={changed} onOpenConnections={onOpenConnections} />
+      <ControlNotes control={control} saved={limitsSaved} />
       <AccountNotices account={account} status={copyingStatus} onResolved={changed} />
-      <BalancePanel account={account} onRefresh={changed} />
-      <NeedsYou
-        calls={calls}
-        canCopy={copyingStatus?.state === "running" || copyingStatus?.state === "degraded"}
+      <AccountBand
+        account={account}
+        guru={guru}
         now={now}
-        recent={skipped.recent}
-        onCopy={setReview}
-        onSkip={(call) => skipped.skip(call.source.source_id ?? String(call.source.sequence), readableText(call.source))}
-        onSkipAll={() => skipped.skipAll(calls.map((call) => ({ sourceId: call.source.source_id ?? String(call.source.sequence), text: readableText(call.source) })))}
-        onUndo={skipped.undo}
+        waiting={calls.length}
+        control={control}
+        canEditLimits={canEditLimits}
+        onEditLimits={() => setEditingLimits(true)}
+        onShowWaiting={() => {
+          setFilter("waiting")
+          table.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+        }}
       />
-      <PositionsList account={account} onRefresh={onRefresh} onSell={(position, lot) => setSale(saleTarget(position, lot))} />
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <RecentPosts accountId={id} posts={posts} now={now} />
-        <LimitsPanel account={account} limits={limits} onOpenConnections={onOpenConnections} onEdit={() => setEditingLimits(true)} />
+      <div className="grid min-w-0 items-stretch gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
+        <BalancePanel accountId={id} version={version} onRefresh={changed} />
+        <LimitsHoldings
+          account={account}
+          limits={limits}
+          onRefresh={onRefresh}
+          onOpenConnections={onOpenConnections}
+          onEditLimits={() => setEditingLimits(true)}
+          onSell={(position, lot) => setSale(saleTarget(position, lot))}
+        />
+      </div>
+      <div ref={table}>
+        <PostsTable
+          accountId={id}
+          posts={posts}
+          calls={calls}
+          canCopy={copyingStatus?.state === "running" || copyingStatus?.state === "degraded"}
+          now={now}
+          recent={skipped.recent}
+          skipped={skipped.has}
+          filter={filter}
+          onFilterChange={setFilter}
+          onCopy={setReview}
+          onSkip={(call) => skipped.skip(sourceKey(call.source), readableText(call.source))}
+          onSkipAll={() => skipped.skipAll(calls.map((call) => ({ sourceId: sourceKey(call.source), text: readableText(call.source) })))}
+          onUndo={skipped.undo}
+        />
       </div>
       {review && (
         <ManualReviewSheet
