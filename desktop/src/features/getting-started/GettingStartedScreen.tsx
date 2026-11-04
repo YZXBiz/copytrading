@@ -59,7 +59,7 @@ export function GettingStartedScreen() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
       <header className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold tracking-tight">Getting started</h1>
+        <h1 className="text-xl font-semibold tracking-tight">Getting Started</h1>
         {progress.next && <p className="text-muted-foreground text-sm">About 10 minutes. Have your Discord, AI provider, and Alpaca logins at hand.</p>}
       </header>
 

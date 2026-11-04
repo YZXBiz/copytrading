@@ -24,10 +24,11 @@ const RANGES: { value: HistoryRange; label: string }[] = [
 ]
 
 /** A marker's caption, anchored away from the nearer edge so it never runs off the plot or onto the value axis. */
-const markLabel = (text: string, leftHalf: boolean, dy: number) =>
+const markLabel = (text: string, leftHalf: boolean, dy: number, beside = false) =>
   function MarkLabel({ viewBox }: { viewBox?: { x?: number; y?: number } }) {
+    const reach = beside ? 10 : 4
     return (
-      <text x={(viewBox?.x ?? 0) + (leftHalf ? 4 : -4)} y={(viewBox?.y ?? 0) + dy} textAnchor={leftHalf ? "start" : "end"} fill="var(--muted-foreground)" fontSize={12}>
+      <text x={(viewBox?.x ?? 0) + (leftHalf ? reach : -reach)} y={(viewBox?.y ?? 0) + dy} textAnchor={leftHalf ? "start" : "end"} fill="var(--muted-foreground)" fontSize={12}>
         {text}
       </text>
     )
@@ -152,7 +153,7 @@ export function BalanceChart({ account }: { account: AccountOverview }) {
                     stroke="var(--color-equity)"
                     strokeWidth={2}
                     ifOverflow="visible"
-                    label={markLabel(`Low ${money(low.equity)}`, points.indexOf(low) < points.length / 2, 18)}
+                    label={markLabel(`Low ${money(low.equity)}`, points.indexOf(low) < points.length / 2, 4, true)}
                   />
                 </>
               )}

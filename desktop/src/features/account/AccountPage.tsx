@@ -93,7 +93,7 @@ export function AccountPage({
         onSkip={(call) => skipped.skip(call.source.source_id ?? String(call.source.sequence), call.source.text)}
         onUndo={skipped.undo}
       />
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <BalanceChart account={account} />
         <LimitsPanel account={account} limits={limits} onOpenConnections={onOpenConnections} onEdit={() => setEditingLimits(true)} />
       </div>

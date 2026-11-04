@@ -28,8 +28,8 @@ export function PostListItem({ post, guruName, now, selected }: { post: SourceAc
           <Meta items={[guruName, feedTime(post.source_at, now)]} />
         </ItemDescription>
         <ItemTitle className="line-clamp-2 w-full font-normal break-words">{quoteOf(post)}</ItemTitle>
-        {/* An ignored post has nothing more to say than its badge. */}
-        {outcome.tone !== "inactive" && <ItemDescription className="line-clamp-1">{headline(post)}</ItemDescription>}
+        {/* An ignored post has nothing more to say than its badge; a skipped or cancelled call still names what it asked for. */}
+        {post.decision !== "ignore" &&<ItemDescription className="line-clamp-1">{headline(post)}</ItemDescription>}
       </ItemContent>
       <ItemActions>
         <Badge variant={BADGE[outcome.tone]}>{outcome.title}</Badge>

@@ -3,6 +3,9 @@ import { cn } from "@/lib/utils"
 
 const SEPARATOR = " · "
 
+/** The facts of one engine string: split at " · ", empty ones dropped. */
+export const metaSegments = (text: string): string[] => text.split(SEPARATOR).filter((s) => s !== "")
+
 /**
  * A line of meta facts with the house inline separator between them, never a typed dot.
  * Pass the segments, or one engine string whose segments are joined by " · " (it is split here);
@@ -18,7 +21,7 @@ export function Meta({ items, text, className }: { items?: ReactNode[]; text?: s
       </span>
     )
   }
-  const segments = (items ?? (text ? text.split(SEPARATOR) : [])).filter((s) => s !== null && s !== undefined && s !== false && s !== "")
+  const segments = (items ?? (text ? metaSegments(text) : [])).filter((s) => s !== null && s !== undefined && s !== false && s !== "")
   return (
     <span className={cn("inline-flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5", className)}>
       {segments.map((segment, i) => (
