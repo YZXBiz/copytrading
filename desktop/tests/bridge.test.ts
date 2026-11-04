@@ -24,6 +24,15 @@ describe("EngineBridge against a fake engine process", () => {
     expect(second).toEqual({ type: "echo", operation: "get_accounts" })
   })
 
+  it("keeps its own operation, version and request id when a caller's params carry others", async () => {
+    const { bridge } = start("echo-line")
+    const reply = (await bridge.request("get_source_activity", { operation: "confirm_manual_orders", version: 9, request_id: "mine", limit: 5 })) as {
+      line: Record<string, unknown>
+    }
+    expect(reply.line).toMatchObject({ operation: "get_source_activity", version: 1, limit: 5 })
+    expect(reply.line.request_id).not.toBe("mine")
+  })
+
   it("rejects an engine error with its code", async () => {
     const { bridge } = start("error")
     await expect(bridge.request("get_equity_history")).rejects.toMatchObject({ code: "engine", message: "not_found" })

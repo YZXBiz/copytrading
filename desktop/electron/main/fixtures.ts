@@ -1,5 +1,5 @@
-import type { AccountOverview, EquityHistory, HistoryRange, SourceActivity } from "../../shared/contract"
-import type { EngineApi } from "./api"
+import type { AccountOverview, EquityHistory, HistoryRange, Result, SourceActivity } from "../../shared/contract"
+import type { Api } from "./api"
 import account from "./fixtures/account.json"
 import activity from "./fixtures/activity.json"
 import history from "./fixtures/history.json"
@@ -57,14 +57,27 @@ const posts: SourceActivity[] = activity.map((a, index) => ({
 }))
 
 const delay = <T>(value: T) => new Promise<T>((done) => setTimeout(() => done(value), 150))
-const ok = async <T>(value: T) => ({ ok: true as const, value: await delay(value) })
+const ok = async <T>(value: T): Promise<Result<T>> => ({ ok: true, value: await delay(value) })
 
-export const fixtureApi: EngineApi = {
+const limits = {
+  guru: "赵哥",
+  full_position_usd: 1000,
+  daily_loss_cap_usd: account.limits.daily_loss_cap_usd,
+  max_total_usd: account.limits.max_total_usd,
+  max_order_usd: account.limits.max_order_usd,
+  max_symbol_usd: account.limits.max_symbol_usd,
+  max_entries_per_day: account.limits.max_entries_per_day,
+}
+
+type Params = Record<string, unknown> | undefined
+
+// Only what the account page reads is captured; every other operation says so instead of inventing data.
+const READS: Record<string, (params: Params) => Promise<Result<unknown>>> = {
   getStatus: () =>
     ok({ state: "running", configured_accounts: 1, active_accounts: 1, source_connected: true, model_ready: true, error_code: null }),
   getAccounts: () => ok({ items: [overview], unavailable_accounts: [] }),
-  getEquityHistory: (_id, range) => {
-    const key = HISTORY_KEY[range]
+  getEquityHistory: (params) => {
+    const key = HISTORY_KEY[params?.range as HistoryRange]
     const value: EquityHistory | null = key
       ? {
           base_value: String(history[key][0]?.v ?? ""),
@@ -74,14 +87,12 @@ export const fixtureApi: EngineApi = {
     return ok(value)
   },
   getSourceActivity: () => ok({ items: posts }),
-  getLimits: () =>
-    ok({
-      guru: "赵哥",
-      full_position_usd: 1000,
-      daily_loss_cap_usd: account.limits.daily_loss_cap_usd,
-      max_total_usd: account.limits.max_total_usd,
-      max_order_usd: account.limits.max_order_usd,
-      max_symbol_usd: account.limits.max_symbol_usd,
-      max_entries_per_day: account.limits.max_entries_per_day,
-    }),
+  getLimits: () => ok(limits),
+}
+
+const notCaptured = async (name: string): Promise<Result<never>> => ({ ok: false, error: `${name} is not in the captured fixtures.` })
+
+export const fixtureApi: Api = {
+  read: (name, params) => (typeof name === "string" && READS[name] ? READS[name](params as Params) : notCaptured(String(name))),
+  act: (name) => notCaptured(String(name)),
 }

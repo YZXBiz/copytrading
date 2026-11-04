@@ -39,7 +39,8 @@ export class EngineBridge {
   request(operation: string, params: Record<string, unknown> = {}): Promise<unknown> {
     if (this.closed) return Promise.reject(new EngineError("disconnected", "The engine stopped."))
     const requestId = randomUUID()
-    const line = JSON.stringify({ version: 1, request_id: requestId, operation, ...params })
+    // The envelope comes after the params so a caller's own `operation` can never replace the one that was gated.
+    const line = JSON.stringify({ ...params, version: 1, request_id: requestId, operation })
     if (Buffer.byteLength(line) > MAX_REQUEST_BYTES) {
       return Promise.reject(new EngineError("too_large", "The request is too large."))
     }

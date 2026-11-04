@@ -23,8 +23,8 @@ export function AccountPage({
   const id = account.account_id
   // One reading of the clock per visit: whether a post still waits depends on its trading day.
   const [now] = useState(readClock)
-  const posts = useResult(() => window.copytrading.getSourceActivity(), id)
-  const limits = useResult(() => window.copytrading.getLimits(id), id)
+  const posts = useResult(() => window.copytrading.read.getSourceActivity(), id)
+  const limits = useResult(() => window.copytrading.read.getLimits({ account_id: id }), id)
   const waiting = posts.status === "ready" ? posts.data.items.filter((post) => isWaiting(post, now)) : []
   const guru = limits.status === "ready" && limits.data ? limits.data.guru : null
 

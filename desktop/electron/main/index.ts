@@ -1,41 +1,80 @@
 import { join } from "node:path"
-import { BrowserWindow, app, ipcMain, session } from "electron"
-import { CHANNELS } from "../../shared/contract"
-import { type EngineApi, engineApi } from "./api"
-import { launchEngine } from "./engine/launch"
+import { BrowserWindow, app, dialog, ipcMain, safeStorage, session } from "electron"
+import { CHANNELS, type EngineState } from "../../shared/contract"
+import { type Api, createApi } from "./api"
 import { captureWindow } from "./capture"
+import { EngineProcess, engineTarget } from "./engine/launch"
 import { fixtureApi } from "./fixtures"
+import { SecretStore, redactState } from "./secrets"
+import { SetupFile } from "./setup-file"
 
 // COPYTRADING_CAPTURE_DIR + COPYTRADING_CAPTURE_NAME: save PNGs of the window and quit (npm run capture).
+// COPYTRADING_CAPTURE_HASH opens a screen, for example #/gurus.
 const captureDir = process.env.COPYTRADING_CAPTURE_DIR
 // COPYTRADING_FIXTURES=1 serves the captured account instead of starting an engine.
 const fixtures = process.env.COPYTRADING_FIXTURES === "1"
 const devServer = process.env.ELECTRON_RENDERER_URL
 
-let stopEngine = () => {}
-let api: EngineApi
+const engine = new EngineProcess()
+let api: Api
+let secrets: SecretStore | null = null
 
-function startApi(): EngineApi {
+/** The engine's state as the renderer may see it: a stopped engine's reason is the engine's own stderr. */
+const publicState = (): EngineState => redactState(fixtures ? { state: "running" } : engine.state, secrets?.values() ?? [])
+
+const windows = () => BrowserWindow.getAllWindows()
+
+/** A native yes/no that the page cannot reach, skip, or reword. Cancel is the default button. */
+async function confirm(text: string): Promise<boolean> {
+  // macOS shows `message` in bold and `detail` below it.
+  const [message = "", ...rest] = text.split("\n\n")
+  const options: Electron.MessageBoxOptions = {
+    type: "question",
+    buttons: ["Cancel", "Confirm"],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
+    message,
+    detail: rest.join("\n\n") || undefined,
+  }
+  const parent = BrowserWindow.getFocusedWindow() ?? windows()[0]
+  const { response } = parent ? await dialog.showMessageBox(parent, options) : await dialog.showMessageBox(options)
+  return response === 1
+}
+
+const cipher = {
+  encrypt: (text: string) => {
+    if (!safeStorage.isEncryptionAvailable()) throw new Error("This Mac's secure storage is not available, so keys cannot be saved.")
+    return safeStorage.encryptString(text)
+  },
+  decrypt: (data: Buffer) => safeStorage.decryptString(data),
+}
+
+/** Every request answers with the reason the engine is not there. */
+const unavailableApi = (reason: string): Api => ({
+  read: async () => ({ ok: false, error: reason }),
+  act: async () => ({ ok: false, error: reason }),
+})
+
+function startServices(): Api {
   if (fixtures) return fixtureApi
-  const engine = launchEngine()
-  stopEngine = engine.stop
-  return engineApi(engine.bridge)
+  try {
+    const target = engineTarget()
+    secrets = new SecretStore(join(app.getPath("userData"), "secrets.bin"), cipher)
+    void engine.start(target).catch((error: unknown) => engine.fail(error instanceof Error ? error.message : String(error)))
+    return createApi({ engine, setup: new SetupFile(target.dataDir), secrets, confirm })
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error)
+    engine.fail(reason)
+    return unavailableApi(reason)
+  }
 }
 
 function registerIpc(): void {
-  ipcMain.handle(CHANNELS.getStatus, () => api.getStatus())
-  ipcMain.handle(CHANNELS.getAccounts, () => api.getAccounts())
-  ipcMain.handle(CHANNELS.getEquityHistory, (_event, accountId: unknown, range: unknown) => {
-    const ranges = ["day", "week", "month", "three_months", "year"] as const
-    if (typeof accountId !== "string" || !ranges.some((r) => r === range)) {
-      return { ok: false, error: "The request was not valid." }
-    }
-    return api.getEquityHistory(accountId, range as (typeof ranges)[number])
-  })
-  ipcMain.handle(CHANNELS.getSourceActivity, () => api.getSourceActivity())
-  ipcMain.handle(CHANNELS.getLimits, (_event, accountId: unknown) =>
-    typeof accountId === "string" ? api.getLimits(accountId) : { ok: false, error: "The request was not valid." },
-  )
+  ipcMain.handle(CHANNELS.read, (_event, name: unknown, params: unknown) => api.read(name, params))
+  ipcMain.handle(CHANNELS.act, (_event, name: unknown, params: unknown) => api.act(name, params))
+  ipcMain.handle(CHANNELS.state, publicState)
+  engine.onState(() => windows().forEach((w) => w.webContents.send(CHANNELS.stateChanged, publicState())))
 }
 
 function createWindow(): BrowserWindow {
@@ -57,18 +96,27 @@ function createWindow(): BrowserWindow {
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }))
   window.webContents.on("will-navigate", (event) => event.preventDefault())
   // Fixture mode pins the page's clock to when the data was captured: posts expire with their trading day.
-  const query = fixtures ? { now: "2026-11-03T21:00:00Z" } : undefined
-  if (devServer) void window.loadURL(query ? `${devServer}?now=${query.now}` : devServer)
-  else void window.loadFile(join(__dirname, "../renderer/index.html"), { query })
+  const now = fixtures ? "2026-11-03T21:00:00Z" : undefined
+  const hash = process.env.COPYTRADING_CAPTURE_HASH ?? ""
+  if (devServer) void window.loadURL(`${devServer}${now ? `?now=${now}` : ""}${hash}`)
+  else void window.loadFile(join(__dirname, "../renderer/index.html"), { query: now ? { now } : undefined, hash })
   if (captureDir) captureWindow(window, captureDir, process.env.COPYTRADING_CAPTURE_NAME ?? "window")
   return window
 }
 
 app.whenReady().then(() => {
   session.defaultSession.setPermissionRequestHandler((_wc, _permission, deny) => deny(false))
-  api = startApi()
+  api = startServices()
   registerIpc()
   createWindow()
 })
 app.on("window-all-closed", () => app.quit())
-app.on("before-quit", () => stopEngine())
+
+// Quitting waits for the engine to exit, as ProcessSupervisor.stop does, before the app goes.
+let stopped = false
+app.on("before-quit", (event) => {
+  if (stopped) return
+  event.preventDefault()
+  stopped = true
+  void engine.stop().finally(() => app.quit())
+})

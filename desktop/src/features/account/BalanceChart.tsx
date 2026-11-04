@@ -24,7 +24,7 @@ const RANGES: { value: HistoryRange; label: string }[] = [
 
 export function BalanceChart({ accountId }: { accountId: string }) {
   const [range, setRange] = useState<HistoryRange>("month")
-  const history = useResult(() => window.copytrading.getEquityHistory(accountId, range), `${accountId}:${range}`)
+  const history = useResult(() => window.copytrading.read.getEquityHistory({ account_id: accountId, range }), `${accountId}:${range}`)
 
   const points =
     history.status === "ready" && history.data

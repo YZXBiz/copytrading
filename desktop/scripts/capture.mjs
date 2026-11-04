@@ -1,5 +1,7 @@
-// Opens the built app offscreen twice (fixtures, then a live engine on a throwaway data dir)
-// and saves light and dark PNGs of each to dist/capture. Never shows a window or takes focus.
+// Opens the built app offscreen three times (the account page on fixtures, a placeholder screen on
+// fixtures, then a live engine on a throwaway data dir) and saves light and dark PNGs of each to
+// dist/capture. Add a screen: add a [name, env] pair with COPYTRADING_CAPTURE_HASH set to its route.
+// Never shows a window or takes focus.
 import { spawnSync } from "node:child_process"
 import { createRequire } from "node:module"
 import { resolve } from "node:path"
@@ -9,6 +11,7 @@ const out = resolve("dist/capture")
 
 for (const [name, env] of [
   ["fixture", { COPYTRADING_FIXTURES: "1" }],
+  ["placeholder-gurus", { COPYTRADING_FIXTURES: "1", COPYTRADING_CAPTURE_HASH: "#/gurus" }],
   ["live", {}],
 ]) {
   const run = spawnSync(electron, ["."], {

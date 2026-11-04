@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { CircleIcon } from "lucide-react"
-import type { TradingRunState, TradingStatus } from "../../../shared/contract"
+import type { EngineState, TradingRunState, TradingStatus } from "../../../shared/contract"
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar"
 import { ago } from "@/lib/format"
 
@@ -17,15 +17,16 @@ const STATES: Record<TradingRunState, { label: string; tone: string }> = {
 
 type Read = { status: TradingStatus; at: string } | { error: string } | null
 
-/** The sidebar footer's copying status, read from the engine every ten seconds. */
-export function CopyingStatus() {
+/** Copying status, read from the engine every ten seconds once the engine is running. */
+function useCopyingRead(running: boolean) {
   const [read, setRead] = useState<Read>(null)
   const [now, setNow] = useState(() => new Date())
 
   useEffect(() => {
+    if (!running) return
     let current = true
     const load = () =>
-      window.copytrading.getStatus().then(
+      window.copytrading.read.getStatus().then(
         (result) => {
           if (!current) return
           const at = new Date()
@@ -40,14 +41,47 @@ export function CopyingStatus() {
       current = false
       clearInterval(timer)
     }
-  }, [])
+  }, [running])
 
-  const state = read && "status" in read ? STATES[read.status.state] : null
-  const text = !read ? "Checking the engine" : "error" in read ? "Engine not reachable" : `${state?.label} · ${ago(read.at, now)}`
+  return { read, now }
+}
+
+/** The sidebar footer: the engine starting or stopped (with why), else whether copying is on. */
+export function CopyingStatus({ engine }: { engine: EngineState }) {
+  const { read, now } = useCopyingRead(engine.state === "running")
+
+  let text: string
+  let tone: string
+  let title: string | undefined
+  if (engine.state === "starting") {
+    text = "Engine starting"
+    tone = "text-warning"
+  } else if (engine.state === "stopped") {
+    text = `Engine stopped: ${engine.reason}`
+    tone = "text-destructive"
+    title = engine.reason
+  } else if (!read) {
+    text = "Checking the engine"
+    tone = "text-muted-foreground"
+  } else if ("error" in read) {
+    text = "Engine not reachable"
+    tone = "text-destructive"
+    title = read.error
+  } else {
+    const state = STATES[read.status.state]
+    text = `${state.label} · ${ago(read.at, now)}`
+    tone = state.tone
+  }
+
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton role="status" title={read && "error" in read ? read.error : undefined}>
-        <CircleIcon aria-hidden="true" className={state?.tone ?? (read ? "text-destructive" : "text-muted-foreground")} />
+      <SidebarMenuButton
+        role="status"
+        title={title}
+        // A stopped engine's reason may be a sentence: let it wrap to three lines instead of one cut-off line.
+        className={engine.state === "stopped" ? "h-auto items-start py-1.5 [&>span:last-child]:line-clamp-3 [&>span:last-child]:whitespace-normal" : undefined}
+      >
+        <CircleIcon aria-hidden="true" className={tone} />
         <span>{text}</span>
       </SidebarMenuButton>
     </SidebarMenuItem>
