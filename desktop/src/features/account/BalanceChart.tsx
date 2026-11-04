@@ -40,7 +40,7 @@ const markLabel = (text: string, leftHalf: boolean, dy: number, beside = false) 
 export function BalanceChart({ account }: { account: AccountOverview }) {
   const accountId = account.account_id
   const [range, setRange] = useState<HistoryRange>("month")
-  const history = useResult(() => window.copytrading.read.getEquityHistory({ account_id: accountId, range }), `${accountId}:${range}`)
+  const history = useResult(() => window.copytrading.read.getEquityHistory({ account_id: accountId, range }), `${accountId}:${range}`, 60_000)
   const balance = account.balance
   const today = dayChange(account)
 

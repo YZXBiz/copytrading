@@ -11,8 +11,8 @@ import { useResult } from "@/lib/use-result"
 export default function App() {
   const route = useRoute()
   const engine = useEngineState()
-  // Reads again when the engine finishes starting: until then every read answers that it is not ready.
-  const accounts = useResult(() => window.copytrading.read.getAccounts(), `accounts:${engine.state}`)
+  // Reads again when the engine finishes starting, then every 5 s: balance, holdings and copying state move on their own.
+  const accounts = useResult(() => window.copytrading.read.getAccounts(), `accounts:${engine.state}`, 5000)
   const screen = SCREENS[route.screen]
   const selectedAccountId = route.screen === "accounts" ? (route.id ?? (accounts.status === "ready" ? accounts.data.items[0]?.account_id : null) ?? null) : null
 

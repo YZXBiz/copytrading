@@ -34,9 +34,9 @@ export function AccountPage({
   const id = account.account_id
   // One reading of the clock per visit: whether a post still waits depends on its trading day.
   const [now] = useState(readClock)
-  const posts = useResult(() => window.copytrading.read.getSourceActivity(), id)
-  const limits = useResult(() => window.copytrading.read.getLimits({ account_id: id }), id)
-  const status = useResult(() => window.copytrading.read.getStatus(), id)
+  const posts = useResult(() => window.copytrading.read.getSourceActivity(), id, 15_000)
+  const limits = useResult(() => window.copytrading.read.getLimits({ account_id: id }), id, 15_000)
+  const status = useResult(() => window.copytrading.read.getStatus(), id, 5000)
   const skipped = useSkippedCalls()
   const [review, setReview] = useState<WaitingCall | null>(null)
   const [sale, setSale] = useState<LotSaleTarget | null>(null)
