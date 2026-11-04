@@ -16,7 +16,6 @@ import { dayWindow } from "@/features/activity/time"
 import { readClock } from "@/lib/clock"
 import { type Loaded, useResult } from "@/lib/use-result"
 import { GuruDestinations } from "./GuruDestinations"
-import { GuruHoldingsLine } from "./GuruHoldingsLine"
 import { GuruStats } from "./GuruStats"
 import { GuruTimeline } from "./GuruTimeline"
 import { POST_FILTERS, type PostFilter, buildFeed, guruHoldings, guruStats, includesEntry, type Guru } from "./model"
@@ -37,21 +36,22 @@ export function GuruPage({ guru, accounts, setUpAccountIds }: { guru: Guru; acco
 
   return (
     <div className="flex max-w-4xl flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h2 className="text-2xl font-semibold tracking-tight">{guru.name}</h2>
-        <GuruDestinations guru={guru} />
+      <header className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <h2 className="text-2xl font-semibold tracking-tight">{guru.name}</h2>
+          <GuruDestinations guru={guru} />
+        </div>
+        {day.status === "error" ? (
+          <RegionError title="Today's numbers did not load" message={day.error} onRetry={day.retry} />
+        ) : (
+          <GuruStats stats={guruStats(dayStats, feed?.waitingCount ?? 0, day.status === "ready" && feed !== null)} holdings={holdings} />
+        )}
       </header>
-      {day.status === "error" ? (
-        <RegionError title="Today's numbers did not load" message={day.error} onRetry={day.retry} />
-      ) : (
-        <GuruStats stats={guruStats(dayStats, feed?.waitingCount ?? 0, day.status === "ready" && feed !== null)} />
-      )}
-      <GuruHoldingsLine holdings={holdings} />
       <Frame spacing="sm">
         <FramePanel>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <h3 className="font-medium">Posts</h3>
-            <ToggleGroup aria-label="Filter posts" variant="outline" size="sm" spacing={0} value={[filter]} onValueChange={(next) => next[0] && setFilter(next[0] as PostFilter)}>
+            <h3 className="text-sm font-medium">Posts</h3>
+            <ToggleGroup aria-label="Filter posts" variant="outline" size="sm" spacing={1} value={[filter]} onValueChange={(next) => next[0] && setFilter(next[0] as PostFilter)}>
               {POST_FILTERS.map(({ id, label }) => (
                 <ToggleGroupItem key={id} value={id}>
                   {label}
@@ -67,7 +67,7 @@ export function GuruPage({ guru, accounts, setUpAccountIds }: { guru: Guru; acco
       <Sheet open={opened !== undefined} onOpenChange={(next) => !next && setOpen(null)}>
         <SheetContent className="flex flex-col gap-0 space-y-0 sm:max-w-xl">
           <SheetHeader>
-            <SheetTitle>{guru.name}</SheetTitle>
+            <SheetTitle className="sr-only">{guru.name}</SheetTitle>
             <SheetDescription className="sr-only">The post in full, and what each account did.</SheetDescription>
           </SheetHeader>
           <ScrollArea className="min-h-0 flex-1">

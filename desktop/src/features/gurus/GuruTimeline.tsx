@@ -10,9 +10,9 @@ import type { Day, Entry } from "./model"
 /** The node's icon and fill say what became of the post: traded, waiting for the owner, working, or nothing to do. */
 function markOf(entry: Entry): { icon: LucideIcon; className: string } {
   const kinds = entry.accounts.map((a) => a.kind)
-  if (kinds.includes("traded")) return { icon: CheckIcon, className: "bg-success text-white" }
-  if (entry.isWaiting) return { icon: CircleAlertIcon, className: "bg-warning text-white" }
-  if (kinds.includes("working")) return { icon: ClockIcon, className: "bg-info text-white" }
+  if (kinds.includes("traded")) return { icon: CheckIcon, className: "bg-success/15 text-success-foreground dark:text-success" }
+  if (entry.isWaiting) return { icon: CircleAlertIcon, className: "bg-warning/15 text-warning-foreground dark:text-warning" }
+  if (kinds.includes("working")) return { icon: ClockIcon, className: "bg-info/15 text-info-foreground dark:text-info" }
   return { icon: MinusIcon, className: "" }
 }
 
@@ -26,7 +26,7 @@ function GuruPostEntry({ entry, step, onOpen }: { entry: Entry; step: number; on
     <TimelineItem step={step} className="group-data-[orientation=vertical]/timeline:ms-10">
       <TimelineHeader>
         <TimelineSeparator className="group-data-[orientation=vertical]/timeline:-left-7 group-data-[orientation=vertical]/timeline:h-[calc(100%-1.5rem-0.25rem)] group-data-[orientation=vertical]/timeline:translate-y-6.5" />
-        <TimelineTitle className="mt-0.5 tabular-nums">{clockTime(post.source_at)}</TimelineTitle>
+        <TimelineTitle className="text-muted-foreground mt-0.5 text-xs font-normal tabular-nums">{clockTime(post.source_at)}</TimelineTitle>
         <TimelineIndicator className={cn("bg-primary/10 flex size-6 items-center justify-center border-none group-data-[orientation=vertical]/timeline:-left-7", className)}>
           <Icon aria-hidden className="size-3.5" />
         </TimelineIndicator>
@@ -38,12 +38,12 @@ function GuruPostEntry({ entry, step, onOpen }: { entry: Entry; step: number; on
           onClick={() => onOpen(post.sequence)}
           className="hover:bg-muted focus-visible:ring-ring/50 -mx-2 flex w-[calc(100%+1rem)] flex-col gap-1.5 rounded-lg px-2 py-1.5 text-left outline-none transition-colors focus-visible:ring-3"
         >
-          {picture ? <PostPicture attachment={picture} className="max-h-44" /> : <span className="line-clamp-4 text-base break-words">{quoteOf(post)}</span>}
+          {picture ? <PostPicture attachment={picture} className="max-h-32" /> : <span className="line-clamp-2 text-sm break-words">{quoteOf(post)}</span>}
           {/* A post that was only chat has nothing to add to its icon. */}
           {post.decision !== "ignore" && !(post.decision === "review" && post.instructions.length === 0) && <span className="text-muted-foreground text-xs">{entry.readAs}</span>}
           {entry.accounts.map((account) => (
-            <span key={account.accountId} className="flex items-baseline gap-3 text-sm">
-              <span className="font-medium">{account.accountId}</span>
+            <span key={account.accountId} className="flex items-baseline gap-3 text-xs">
+              <span className="shrink-0 font-medium">{account.accountId}</span>
               <span className={cn("text-muted-foreground", account.kind === "traded" && "text-success-foreground dark:text-success")}>{account.summary}</span>
             </span>
           ))}
@@ -56,10 +56,10 @@ function GuruPostEntry({ entry, step, onOpen }: { entry: Entry; step: number; on
 /** Every post of the guru newest first, a timeline for each day. */
 export function GuruTimeline({ days, onOpen }: { days: Day[]; onOpen: (sequence: number) => void }) {
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
       {days.map((day) => (
         <section key={day.label} aria-label={day.label}>
-          <h3 className="mb-3 text-sm font-semibold tracking-tight">{day.label}</h3>
+          <h3 className="text-muted-foreground mb-3 text-xs font-medium">{day.label}</h3>
           <Timeline value={0}>
             {day.entries.map((entry, index) => (
               <GuruPostEntry key={entry.post.sequence} entry={entry} step={index + 1} onOpen={onOpen} />

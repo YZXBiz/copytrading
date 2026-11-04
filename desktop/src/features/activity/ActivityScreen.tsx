@@ -40,7 +40,7 @@ export function ActivityScreen({ selectedSequence, accounts }: { selectedSequenc
           aria-label="Filter posts"
           variant="outline"
           size="sm"
-          spacing={0}
+          spacing={1}
           value={[filter]}
           onValueChange={(next) => next[0] && setFilter(next[0] as ActivityFilter)}
         >
@@ -65,7 +65,7 @@ export function ActivityScreen({ selectedSequence, accounts }: { selectedSequenc
           </Select>
         )}
       </div>
-      <div className={cn("grid items-start gap-4", (posts.status === "loading" || selected) && "lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]")}>
+      <div className={cn("grid items-start gap-4", (posts.status === "loading" || selected) && "min-[900px]:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]")}>
         <Frame spacing="sm" dense>
           <FramePanel className="p-0">
             <PostList
@@ -79,12 +79,16 @@ export function ActivityScreen({ selectedSequence, accounts }: { selectedSequenc
             />
           </FramePanel>
         </Frame>
-        {(posts.status === "loading" || selected) && (
-          <Frame spacing="sm" className="lg:sticky lg:top-0">
-            <FramePanel>
-              {selected ? <PostView post={selected} guruName={guruName(gurus, selected.guru_id)} now={now} accountId={accountId} /> : <PostListSkeleton />}
-            </FramePanel>
-          </Frame>
+        {selected ? (
+          <PostView post={selected} guruName={guruName(gurus, selected.guru_id)} now={now} accountId={accountId} className="min-[900px]:sticky min-[900px]:top-0" />
+        ) : (
+          posts.status === "loading" && (
+            <Frame spacing="sm">
+              <FramePanel>
+                <PostListSkeleton />
+              </FramePanel>
+            </Frame>
+          )
         )}
       </div>
     </div>

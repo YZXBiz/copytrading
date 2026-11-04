@@ -13,7 +13,7 @@ export function PostQuote({ post }: { post: SourceActivity }) {
   return (
     <div className="flex flex-col gap-4">
       {said ? (
-        <blockquote className="text-lg leading-relaxed whitespace-pre-wrap break-words">“{said}”</blockquote>
+        <blockquote className="text-base leading-relaxed whitespace-pre-wrap break-words">“{said}”</blockquote>
       ) : (
         embeds.length === 0 &&
         attachments.length === 0 && <p className="text-muted-foreground">No message text was captured.</p>

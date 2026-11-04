@@ -315,7 +315,45 @@ const extraCalls: Draft[] =
       ]
     : []
 
-const sorted = [...drafts, ...extraCalls, crypto]
+// COPYTRADING_FIXTURE_SCENE=busy adds a day of fills and chat to Nov 3; empty has no posts at all.
+const filled = (source_at: string, text: string, symbol: string, price: string, quantity: string): Draft => ({
+  source_at,
+  text,
+  decision: "trade",
+  interpreted_by: "deepseek-flash",
+  reading: {
+    kind: "trade_made",
+    summary: `Bought ${symbol} at $${price}`,
+    calls: [{ action: "buy", action_words: "进", stock: { ticker: symbol, words: symbol }, price: exact(price, price), size: { kind: "not_given" } }],
+  },
+  instructions: [{ action: "buy", symbol, price }],
+  destinations: [
+    destination("delivered", ["order_linked"], [
+      order(`sig-${symbol}-${source_at}`, { symbol, side: "buy", status: "filled", quantity, filled_quantity: quantity, limit_price: price, average_fill_price: price, created_at: source_at, requested_usd: "100", budget_usd: "100" }),
+    ]),
+  ],
+})
+const chat = (source_at: string, text: string): Draft => ({ source_at, text, decision: "ignore", reading: { kind: "chatter" } })
+
+const busyDay: Draft[] =
+  scene === "busy"
+    ? [
+        chat("2026-11-03T13:02:11Z", "早上好各位，今天关注科技股"),
+        filled("2026-11-03T13:31:40Z", "AMD 167.4 进", "AMD", "167.40", "0.597"),
+        chat("2026-11-03T13:48:02Z", "大盘高开，别追"),
+        filled("2026-11-03T14:05:19Z", "PLTR 71.2 进", "PLTR", "71.20", "1.404"),
+        chat("2026-11-03T14:12:55Z", "看到这个量能我就放心了"),
+        filled("2026-11-03T15:21:07Z", "NVDA 186.9 进", "NVDA", "186.90", "0.535"),
+        chat("2026-11-03T15:40:30Z", "午饭时间，下午再看"),
+        filled("2026-11-03T16:02:48Z", "TSLA 405.5 进", "TSLA", "405.50", "0.247"),
+        chat("2026-11-03T16:15:12Z", "都冷静点，没到位置"),
+        filled("2026-11-03T16:50:33Z", "SOFI 24.3 进", "SOFI", "24.30", "4.115"),
+        chat("2026-11-03T18:04:21Z", "收盘前不动"),
+        filled("2026-11-03T18:45:09Z", "INTC 36.8 进", "INTC", "36.80", "2.717"),
+      ]
+    : []
+
+const sorted = (scene === "empty" ? [] : [...drafts, ...extraCalls, ...busyDay, crypto])
   .filter((draft) => scene !== "quiet" || !draft.destinations?.some((d) => d.status === "review_required"))
   .sort((a, b) => Date.parse(a.source_at) - Date.parse(b.source_at))
 

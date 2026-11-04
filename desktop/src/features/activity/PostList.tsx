@@ -8,16 +8,19 @@ import { ItemGroup, ItemSeparator } from "@/components/ui/item"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { PostListItem } from "./PostListItem"
+import { groupByDay } from "./time"
 import type { Posts } from "./use-posts"
 
 export function PostListSkeleton() {
   return (
     <div role="status" aria-label="Loading posts" className="flex flex-col gap-4 p-3">
-      {Array.from({ length: 5 }, (_, i) => (
-        <div key={i} className="flex flex-col gap-1.5">
-          <Skeleton className="h-3 w-1/3" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-3 w-1/2" />
+      {Array.from({ length: 6 }, (_, i) => (
+        <div key={i} className="flex items-center justify-between gap-4">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-3 w-1/2" />
+          </div>
+          <Skeleton className="h-5 w-16" />
         </div>
       ))}
     </div>
@@ -75,14 +78,19 @@ export function PostList({
           </EmptyHeader>
         </Empty>
       ) : (
-        <ItemGroup className="gap-0 p-1">
-          {shown.map((post, index) => (
-            <Fragment key={post.sequence}>
-              {index > 0 && <ItemSeparator className="my-0" />}
-              <PostListItem post={post} guruName={guruName(post.guru_id)} now={now} selected={post.sequence === selected} />
-            </Fragment>
-          ))}
-        </ItemGroup>
+        groupByDay(shown, (post) => post.source_at, now).map(({ label, items }) => (
+          <section key={label} aria-label={label}>
+            <h3 className="text-muted-foreground px-3 pt-3 pb-1 text-xs font-medium">{label}</h3>
+            <ItemGroup className="gap-0 px-1 pb-1">
+              {items.map((post, index) => (
+                <Fragment key={post.sequence}>
+                  {index > 0 && <ItemSeparator className="my-0" />}
+                  <PostListItem post={post} guruName={guruName(post.guru_id)} now={now} selected={post.sequence === selected} />
+                </Fragment>
+              ))}
+            </ItemGroup>
+          </section>
+        ))
       )}
       {older}
     </>
