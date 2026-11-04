@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="indigo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7377f5"/>
+      <stop offset="1" stop-color="#4338ca"/>
+    </linearGradient>
+  </defs>
+  <!-- macOS grid: an 824 px squircle inset 100 px on the 1024 px canvas -->
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#indigo)"/>
+  <!-- the ink line, rising in steps to a dot that stands apart from it -->
+  <path d="M276 662 L412 530 L506 606 L630 468" fill="none" stroke="#fff" stroke-width="70" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="748" cy="350" r="62" fill="#fff"/>
+</svg>

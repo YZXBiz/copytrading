@@ -1,6 +1,8 @@
 // ReUI's Integrations list (list-8), installed as shipped and wired to the calls waiting for the owner: a row per
 // call with its tile, title and one description line, and the buttons on the right. Pressing a row opens the review.
-import { PencilLineIcon } from "lucide-react"
+import { CheckIcon, PencilLineIcon } from "lucide-react"
+import { EmptyState } from "@/components/empty-state"
+import { navigate } from "@/features/shell/route"
 import { Badge } from "@/components/reui/badge"
 import { Frame, FramePanel } from "@/components/reui/frame"
 import { IconTile } from "@/components/reui/icon-tile"
@@ -74,6 +76,7 @@ export function NeedsYou({
   recent,
   onCopy,
   onSkip,
+  onSkipAll,
   onUndo,
 }: {
   calls: WaitingCall[]
@@ -82,17 +85,32 @@ export function NeedsYou({
   recent: Recent | null
   onCopy: (call: WaitingCall) => void
   onSkip: (call: WaitingCall) => void
+  onSkipAll: () => void
   onUndo: () => void
 }) {
-  if (calls.length === 0 && !recent) return null
   return (
     <section aria-label="Calls waiting for you" className="flex flex-col gap-3">
+      {calls.length === 0 && (
+        <Frame stacked className="@container w-full">
+          <FramePanel className="flex items-center gap-2 px-3.5! py-4!">
+            <h2 className="text-foreground text-base font-medium">Waiting for you</h2>
+          </FramePanel>
+          <FramePanel className="p-5!">
+            <EmptyState icon={CheckIcon} title="Nothing is waiting for you" action={{ label: "See Activity", onClick: () => navigate("activity") }} />
+          </FramePanel>
+        </Frame>
+      )}
       {calls.length > 0 && (
         <Frame stacked className="@container w-full">
           <FramePanel className="flex items-center gap-2 px-3.5! py-4!">
             {/* Header */}
             <h2 className="text-foreground text-base font-medium">Waiting for you</h2>
             <Badge variant="warning-light">{calls.length}</Badge>
+            {calls.length > 1 && (
+              <Button type="button" variant="ghost" size="sm" className="ml-auto" onClick={onSkipAll}>
+                Skip all
+              </Button>
+            )}
           </FramePanel>
 
           <FramePanel className="p-5!">
@@ -115,7 +133,7 @@ export function NeedsYou({
       )}
       {recent && (
         <div className="text-muted-foreground flex items-baseline gap-3 py-1 text-sm">
-          <span className="truncate">{recent.text ? `Skipped “${recent.text}”` : "Skipped"}</span>
+          <span className="truncate">{recent.text ? `Skipped “${recent.text}”` : recent.sourceIds.length > 1 ? `Skipped ${recent.sourceIds.length} calls` : "Skipped"}</span>
           <Button type="button" size="xs" variant="ghost" onClick={onUndo}>
             Undo
           </Button>

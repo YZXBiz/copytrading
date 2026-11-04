@@ -16,6 +16,10 @@ export type Decimal = string
 export const THEMES = ["dark", "light", "system"] as const
 export type Theme = (typeof THEMES)[number]
 
+/** Settings > General "Menu bar": the menu bar item shows the balance with its dot, the dot alone, or nothing. */
+export const MENU_BAR_MODES = ["balance", "dot", "off"] as const
+export type MenuBarMode = (typeof MENU_BAR_MODES)[number]
+
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string; cancelled?: true }
 
 // ── Engine state, owned by the main process ────────────────────────────────
@@ -908,6 +912,8 @@ export interface ReadOperations {
   getFillAlerts: Op<undefined, boolean>
   /** Settings > General "Theme". Main also applies it to the window (nativeTheme), so the page and macOS vibrancy follow it before first paint. */
   getTheme: Op<undefined, Theme>
+  /** Settings > General "Menu bar". Main also applies it live: it shows, narrows or removes the menu bar item. */
+  getMenuBar: Op<undefined, MenuBarMode>
   // Main process: the saved setup and the key store
   getSetup: Op<undefined, SetupView | null>
   getLimits: Op<{ account_id: string }, AccountLimits | null>
@@ -930,6 +936,8 @@ export interface ActOperations {
    */
   applyChanges: Op<{ configuration: TradingConfiguration }, ApplyChangesResult>
   pauseTrading: Op<undefined, TradingStatus>
+  /** The Start button without the form, for ⌘K and the menu bar: checks the saved setup, then asks (`startTrading`'s confirmation) and starts it. Saves nothing. */
+  startCopying: Op<undefined, TradingStatus>
   controlAccount: Op<{ command: AccountControlCommand }, AccountControlResult>
   approveProposal: Op<{ proposal_id: string }, AgentProposal>
   deleteAccountRecord: Op<{ account_id: string }, null>
@@ -957,6 +965,9 @@ export interface ActOperations {
   previewRestore: Op<{ archive_path: string }, RestorePreview>
   setFillAlerts: Op<{ on: boolean }, boolean>
   setTheme: Op<{ theme: Theme }, Theme>
+  setMenuBar: Op<{ mode: MenuBarMode }, MenuBarMode>
+  /** Tells main which waiting calls the owner skipped (the page keeps them), so the menu bar counts only the ones still waiting. */
+  setSkippedCalls: Op<{ ids: string[] }, null>
   resolveOwnership: Op<{ account_id: string; resolution: OwnershipResolutionRequest }, OwnershipResolution>
   saveManualCorrection: Op<{ correction: ManualCorrectionRequest }, ManualCorrectionOutcome>
   rejectProposal: Op<{ proposal_id: string }, AgentProposal>
@@ -987,14 +998,14 @@ export const READS = [
   "getStatus", "getEngineStatus", "getTradingActivation", "getWorkflow", "getAccounts", "getEquityHistory",
   "getSourceActivity", "getGuruActivity", "getGuruDayStats", "getAccountFeed", "getQuote", "getManualCommand",
   "listManualCommands", "previewManualOrder", "previewLotSale", "listProposals", "getAgentAudit",
-  "getRestoreCandidate", "getAssistantTurn", "getAgentAccess", "getFillAlerts", "getTheme", "getSetup", "getLimits", "getSecretStatus",
+  "getRestoreCandidate", "getAssistantTurn", "getAgentAccess", "getFillAlerts", "getTheme", "getMenuBar", "getSetup", "getLimits", "getSecretStatus",
   "readDiagnostics",
 ] as const satisfies readonly ReadName[]
 
 export const ACTS = [
-  "confirmManualOrders", "confirmLotSale", "startTrading", "applyChanges", "pauseTrading", "controlAccount", "approveProposal",
+  "confirmManualOrders", "confirmLotSale", "startTrading", "applyChanges", "pauseTrading", "startCopying", "controlAccount", "approveProposal",
   "deleteAccountRecord", "activateRestore", "rollbackRestore", "setAgentAccess", "validateTrading", "checkConnection", "updateAccountLimits",
-  "saveSetup", "setSecrets", "discardSecrets", "forgetBroker", "createBackup", "previewRestore", "setFillAlerts", "setTheme",
+  "saveSetup", "setSecrets", "discardSecrets", "forgetBroker", "createBackup", "previewRestore", "setFillAlerts", "setTheme", "setMenuBar", "setSkippedCalls",
   "resolveOwnership", "saveManualCorrection", "rejectProposal",
   "completeProposal", "discardProposals", "learnGuruPlaybook", "evaluateHistoricalProfile", "assistantAsk",
   "assistantCancel", "assistantReset", "submitSelfTest",

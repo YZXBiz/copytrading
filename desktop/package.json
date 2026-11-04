@@ -29,7 +29,7 @@
     "mac": {
       "target": "dir",
       "identity": null,
-      "icon": "../app/Resources/AppIcon.icns",
+      "icon": "resources/AppIcon.icns",
       "category": "public.app-category.finance",
       "minimumSystemVersion": "26.0"
     },

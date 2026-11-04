@@ -1,5 +1,6 @@
 import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react"
 import type { TradingConfiguration } from "../../../shared/contract"
+import { ASSISTANT_EVENT } from "../../../shared/shortcuts"
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar"
 import { navigate, useRoute } from "@/features/shell/route"
 import { useResult } from "@/lib/use-result"
@@ -38,7 +39,12 @@ function AssistantBody({ onOpen, wide, onWide, children }: { onOpen: () => void;
       }
     }
     window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
+    // The app menu's ⌘J reaches the page as this event instead of a key press, so one or the other fires, never both.
+    window.addEventListener(ASSISTANT_EVENT, toggleSidebar)
+    return () => {
+      window.removeEventListener("keydown", onKey)
+      window.removeEventListener(ASSISTANT_EVENT, toggleSidebar)
+    }
   }, [toggleSidebar])
 
   // The shell may fold its own sidebar when the panel opens; a ref keeps that to the moment of opening.

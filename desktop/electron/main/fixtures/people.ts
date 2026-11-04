@@ -287,7 +287,7 @@ const crypto: Draft = {
   ],
 }
 
-// COPYTRADING_FIXTURE_SCENE=calls puts six calls in front of the owner, quiet none, for `npm run capture`.
+// COPYTRADING_FIXTURE_SCENE=calls puts six calls in front of the owner, quiet none, empty no posts and no holdings, for `npm run capture`.
 const scene = process.env.COPYTRADING_FIXTURE_SCENE
 
 const suggestion = (source_at: string, text: string, call: SourceInstruction): Draft => ({

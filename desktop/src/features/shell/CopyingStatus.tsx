@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
-import type { EngineState, TradingRunState, TradingStatus } from "../../../shared/contract"
+import type { EngineState, TradingStatus } from "../../../shared/contract"
+import { COPYING_STATES, type Tone } from "../../../shared/copying-state"
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar"
 import { ago } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -7,14 +8,7 @@ import { copyingProblem } from "./copying-problem"
 
 const POLL_MS = 10_000
 
-const STATES: Record<TradingRunState, { label: string; tone: string }> = {
-  running: { label: "Copying", tone: "bg-success" },
-  starting: { label: "Starting", tone: "bg-warning" },
-  degraded: { label: "Copying, with problems", tone: "bg-warning" },
-  pausing: { label: "Pausing", tone: "bg-warning" },
-  paused: { label: "Not copying", tone: "bg-muted-foreground/50" },
-  failed: { label: "Stopped by an error", tone: "bg-destructive" },
-}
+const DOT: Record<Tone, string> = { success: "bg-success", warning: "bg-warning", idle: "bg-muted-foreground/50", destructive: "bg-destructive" }
 
 type Read = { status: TradingStatus; at: string } | { error: string } | null
 
@@ -74,8 +68,8 @@ export function CopyingStatus({ engine }: { engine: EngineState }) {
     tone = "bg-destructive"
     title = read.error
   } else {
-    const state = STATES[read.status.state]
-    tone = state.tone
+    const state = COPYING_STATES[read.status.state]
+    tone = DOT[state.tone]
     // With problems, the footer says which: the account or service, what happened, what to do. A sentence has no room for the age.
     const problem = read.status.state === "degraded" ? copyingProblem(read.status) : undefined
     text = problem ?? state.label

@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react"
-import { FileTextIcon, LandmarkIcon, SearchIcon, UsersIcon } from "lucide-react"
-import type { AccountOverview, TradingConfiguration } from "../../../shared/contract"
+import { FileTextIcon, LandmarkIcon, MonitorIcon, MoonIcon, PauseIcon, PlayIcon, SearchIcon, SparklesIcon, SkipForwardIcon, SunIcon, UsersIcon } from "lucide-react"
+import type { AccountOverview, Theme, TradingConfiguration } from "../../../shared/contract"
+import { ASSISTANT_EVENT, ASSISTANT_SHORTCUT, shortcutOf } from "../../../shared/shortcuts"
 import { Button } from "@/components/ui/button"
 import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandShortcut } from "@/components/ui/command"
 import { Kbd } from "@/components/ui/kbd"
 import { SidebarGroup, SidebarGroupContent } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
-import { quoteOf } from "@/features/activity/reading"
+import { skipCalls, useSkippedCalls } from "@/features/account/skipped-calls"
+import { openCall } from "@/features/account/waiting"
+import { quoteOf, readableText } from "@/features/activity/reading"
 import { guruDirectory, guruName } from "@/features/gurus/model"
 import { readClock } from "@/lib/clock"
 import { ago } from "@/lib/format"
@@ -21,6 +24,12 @@ interface Props {
 }
 
 const POSTS = 20
+
+const THEME_ACTIONS = [
+  { theme: "dark", label: "Dark", icon: MoonIcon },
+  { theme: "light", label: "Light", icon: SunIcon },
+  { theme: "system", label: "System", icon: MonitorIcon },
+] as const satisfies { theme: Theme; label: string; icon: unknown }[]
 
 /** app-shell-2's search: a button in the sidebar and ⌘K open a dialog. It finds screens, accounts, gurus and the latest posts. */
 export function SearchForm({ live, old, setup }: Props) {
@@ -64,26 +73,76 @@ export function SearchForm({ live, old, setup }: Props) {
 
 function SearchResults({ open, live, old, setup, close }: Props & { open: boolean; close: () => void }) {
   const gurus = guruDirectory(setup)
-  // The newest posts are read each time the dialog opens, so a post that arrived while it was shut is there.
-  const posts = useResult(async () => (open ? window.copytrading.read.getSourceActivity({ limit: POSTS }) : { ok: true as const, value: { items: [] } }), `search:${open}`)
+  // The posts are read each time the dialog opens, so a post that arrived while it was shut is there. The same read says which calls wait.
+  const posts = useResult(async () => (open ? window.copytrading.read.getSourceActivity() : { ok: true as const, value: { items: [] } }), `search:${open}`)
+  const status = useResult(async () => (open ? window.copytrading.read.getStatus() : { ok: false as const, error: "closed" }), `search-status:${open}`)
+  const skipped = useSkippedCalls()
   const now = readClock()
+  const waiting = posts.status === "ready" ? posts.data.items.flatMap((post) => openCall(post, { skipped: skipped.has(post.source_id ?? String(post.sequence)), now }) ?? []) : []
+  const state = status.status === "ready" ? status.data.state : null
+  const copying = state === "running" || state === "degraded"
   const go = (screen: Parameters<typeof navigate>[0], id?: string) => () => {
     close()
     navigate(screen, id)
   }
+
+  /** Runs an action: the confirmations are main's own, the same ones the window's buttons show. */
+  const act = (run: () => void) => () => {
+    close()
+    run()
+  }
+  const startCopying = () => void window.copytrading.act.startCopying()
+  const setTheme = (theme: Theme) => void window.copytrading.act.setTheme({ theme })
 
   return (
     <Command>
       <CommandInput placeholder="Search accounts, gurus, posts..." />
       <CommandList>
         <CommandEmpty>Nothing matches.</CommandEmpty>
+        <CommandGroup heading="Actions">
+          {state !== null && !copying && state !== "pausing" && state !== "starting" ? (
+            <CommandItem value="action Start Copying" onSelect={act(startCopying)}>
+              <PlayIcon aria-hidden="true" />
+              Start Copying
+            </CommandItem>
+          ) : null}
+          {state === null || copying ? (
+            <CommandItem value="action Pause Copying" onSelect={act(() => void window.copytrading.act.pauseTrading())}>
+              <PauseIcon aria-hidden="true" />
+              Pause Copying
+            </CommandItem>
+          ) : null}
+          {waiting.length > 0 && (
+            <CommandItem
+              value="action Skip all waiting calls"
+              onSelect={act(() => skipCalls(waiting.map((call) => ({ sourceId: call.source.source_id ?? String(call.source.sequence), text: readableText(call.source) }))))}
+            >
+              <SkipForwardIcon aria-hidden="true" />
+              Skip all waiting calls
+              <CommandShortcut className="tracking-normal tabular-nums">{waiting.length}</CommandShortcut>
+            </CommandItem>
+          )}
+          {THEME_ACTIONS.map(({ theme, label, icon: Icon }) => (
+            <CommandItem key={theme} value={`action theme ${label}`} onSelect={act(() => setTheme(theme))}>
+              <Icon aria-hidden="true" />
+              {label} theme
+            </CommandItem>
+          ))}
+        </CommandGroup>
         <CommandGroup heading="Screens">
-          {SCREEN_IDS.filter((id) => id !== "accounts").map((id) => {
+          <CommandItem value="screen Assistant" onSelect={act(() => window.dispatchEvent(new CustomEvent(ASSISTANT_EVENT)))}>
+            <SparklesIcon aria-hidden="true" />
+            Assistant
+            <CommandShortcut className="tracking-normal">⌘{ASSISTANT_SHORTCUT.toUpperCase()}</CommandShortcut>
+          </CommandItem>
+          {SCREEN_IDS.map((id) => {
             const { title, icon: Icon } = SCREENS[id]
+            const keys = shortcutOf(id)
             return (
               <CommandItem key={id} value={`screen ${title}`} onSelect={go(id)}>
                 <Icon aria-hidden="true" />
                 {title}
+                {keys && <CommandShortcut className="tracking-normal">{keys}</CommandShortcut>}
               </CommandItem>
             )
           })}
@@ -123,7 +182,7 @@ function SearchResults({ open, live, old, setup, close }: Props & { open: boolea
               </Button>
             </div>
           ) : (
-            posts.data.items.map((post) => (
+            posts.data.items.slice(0, POSTS).map((post) => (
               <CommandItem key={post.sequence} value={`post ${post.sequence} ${guruName(gurus, post.guru_id)} ${quoteOf(post)}`} onSelect={go("activity", String(post.sequence))}>
                 <FileTextIcon aria-hidden="true" />
                 <span className="min-w-0 flex-1 truncate">{quoteOf(post)}</span>

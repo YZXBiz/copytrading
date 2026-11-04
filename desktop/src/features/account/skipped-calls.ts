@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useSyncExternalStore } from "react"
 
 // The waiting calls the owner chose to skip (SkippedCalls.swift, ADR-0007). Skipping places nothing and changes
 // nothing in the engine: it only takes a call off the owner's list, so it is kept in the app's storage and
@@ -24,35 +24,54 @@ export function readSkipped(storage: Pick<Storage, "getItem">, now: number): Ski
   }
 }
 
+/** The last skip, for Undo while it can still be undone: every call it skipped, and the guru's words when it was one. */
 export interface Recent {
-  sourceId: string
+  sourceIds: string[]
   text: string
 }
 
-/** The skipped calls, the last one for Undo while it can still be undone, and the two ways to change them. */
+// One store for the whole window: the account page, ⌘K and the menu bar's count must all see the same skips. A skip is
+// written to localStorage and told to main (which keeps the list for the menu bar), and the last one stays undoable.
+// Read on first use, so importing this file touches no storage.
+let loaded: Skipped | null = null
+const skippedNow = (): Skipped => (loaded ??= readSkipped(localStorage, Date.now()))
+let recent: Recent | null = null
+let timer: ReturnType<typeof setTimeout> | undefined
+const listeners = new Set<() => void>()
+
+const tellMain = () => void window.copytrading?.act.setSkippedCalls({ ids: Object.keys(skippedNow()) })
+function change(next: Skipped, last: Recent | null) {
+  loaded = next
+  recent = last
+  localStorage.setItem(KEY, JSON.stringify(next))
+  tellMain()
+  clearTimeout(timer)
+  if (last) timer = setTimeout(() => change(skippedNow(), null), UNDO_MS)
+  listeners.forEach((listener) => listener())
+}
+
+/** Skips every call in `entries` at once; one Undo brings them all back. */
+export function skipCalls(entries: { sourceId: string; text: string }[]): void {
+  if (entries.length === 0) return
+  const now = Date.now()
+  const text = entries.length === 1 ? entries[0]!.text : ""
+  change({ ...skippedNow(), ...Object.fromEntries(entries.map((e) => [e.sourceId, now])) }, { sourceIds: entries.map((e) => e.sourceId), text })
+}
+
+export function undoSkip(): void {
+  if (!recent) return
+  const back = new Set(recent.sourceIds)
+  change(Object.fromEntries(Object.entries(skippedNow()).filter(([id]) => !back.has(id))), null)
+}
+
+/** The window tells main what is skipped when it opens, so a count made before any skip is not too high. */
+export const announceSkipped = tellMain
+
+const subscribe = (listener: () => void) => (listeners.add(listener), () => listeners.delete(listener))
+
+/** The skipped calls and the last skip, the same everywhere, and the ways to change them. */
 export function useSkippedCalls() {
-  const [skipped, setSkipped] = useState<Skipped>(() => readSkipped(localStorage, Date.now()))
-  const [recent, setRecent] = useState<Recent | null>(null)
-
-  const save = (next: Skipped) => {
-    localStorage.setItem(KEY, JSON.stringify(next))
-    setSkipped(next)
-  }
-  const skip = (sourceId: string, text: string) => {
-    save({ ...skipped, [sourceId]: Date.now() })
-    setRecent({ sourceId, text })
-  }
-  const undo = () => {
-    if (!recent) return
-    const { [recent.sourceId]: _, ...rest } = skipped
-    save(rest)
-    setRecent(null)
-  }
-  useEffect(() => {
-    if (!recent) return
-    const timer = setTimeout(() => setRecent(null), UNDO_MS)
-    return () => clearTimeout(timer)
-  }, [recent])
-
-  return { has: useCallback((sourceId: string) => sourceId in skipped, [skipped]), skip, undo, recent }
+  const now = useSyncExternalStore(subscribe, skippedNow)
+  const last = useSyncExternalStore(subscribe, () => recent)
+  return { has: (sourceId: string) => sourceId in now, skip: (sourceId: string, text: string) => skipCalls([{ sourceId, text }]), skipAll: skipCalls, undo: undoSkip, recent: last }
 }

@@ -126,6 +126,12 @@ for (const [name, env] of [
   ["guru-sheet-1280x860", { ...fixtures, COPYTRADING_CAPTURE_SIZE: "1280x860", COPYTRADING_CAPTURE_HASH: `#/gurus/${zhao}`, COPYTRADING_CAPTURE_CLICK: 'button[data-sequence="5"]' }],
   ["guru-sheet-980x860", { ...fixtures, COPYTRADING_CAPTURE_SIZE: "980x860", COPYTRADING_CAPTURE_HASH: `#/gurus/${zhao}`, COPYTRADING_CAPTURE_CLICK: 'button[data-sequence="5"]' }],
   ["gurus", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/gurus" }],
+  // Every empty list: no holdings, nothing waiting, no posts (the account page and Activity), and a setup with no gurus.
+  ...["1280x860", "980x860", "1280x1500"].flatMap((size) => [
+    [`empty-account-${size}`, { ...fixtures, COPYTRADING_FIXTURE_SCENE: "empty", COPYTRADING_CAPTURE_SIZE: size, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2" }],
+    [`empty-activity-${size}`, { ...fixtures, COPYTRADING_FIXTURE_SCENE: "empty", COPYTRADING_CAPTURE_SIZE: size, COPYTRADING_CAPTURE_HASH: "#/activity" }],
+    [`empty-gurus-${size}`, { ...fixtures, COPYTRADING_FIXTURE_SETUP: "none", COPYTRADING_CAPTURE_SIZE: size, COPYTRADING_CAPTURE_HASH: "#/gurus" }],
+  ]),
   ["guru-page", { ...fixtures, COPYTRADING_CAPTURE_HASH: `#/gurus/${zhao}` }],
   ["guru-post-sheet-filled", { ...fixtures, COPYTRADING_CAPTURE_HASH: `#/gurus/${zhao}`, COPYTRADING_CAPTURE_CLICK: 'button[data-sequence="8"]' }],
   ["guru-post-sheet-waiting", { ...fixtures, COPYTRADING_CAPTURE_HASH: `#/gurus/${zhao}`, COPYTRADING_CAPTURE_CLICK: 'button[data-sequence="9"]' }],

@@ -1,4 +1,4 @@
-import { THEMES, type Theme } from "../../../shared/contract"
+import { MENU_BAR_MODES, type MenuBarMode, THEMES, type Theme } from "../../../shared/contract"
 import type {
   AgentAccess,
   AgentAccessState,
@@ -105,11 +105,13 @@ let agentAccess: AgentAccessState = {
 }
 let fillAlerts = true
 let theme: Theme = "dark"
+let menuBar: MenuBarMode = "balance"
 
 export const settingsReads: Record<string, (params: Params) => Promise<Result<unknown>>> = {
   getAgentAccess: () => ok(agentAccess),
   getFillAlerts: () => ok(fillAlerts),
   getTheme: () => ok(theme),
+  getMenuBar: () => ok(menuBar),
   getSecretStatus: () => ok(secrets),
   getEngineStatus: () => ok(engine),
   readDiagnostics: () => ok({ entries: journal, bytes: 184_320 }),
@@ -135,4 +137,6 @@ export const settingsActs: Record<string, (params: Params) => Promise<Result<unk
   },
   setFillAlerts: (params) => ok((fillAlerts = params?.on === true)),
   setTheme: (params) => ok((theme = THEMES.find((t) => t === params?.theme) ?? theme)),
+  setMenuBar: (params) => ok((menuBar = MENU_BAR_MODES.find((m) => m === params?.mode) ?? menuBar)),
+  setSkippedCalls: () => ok(null),
 }

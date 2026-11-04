@@ -5,7 +5,7 @@ import type { SourceActivityPage } from "../../../shared/contract"
 import { Frame, FramePanel } from "@/components/reui/frame"
 import { RegionError } from "@/components/region-error"
 import { Button } from "@/components/ui/button"
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { EmptyState } from "@/components/empty-state"
 import { Skeleton } from "@/components/ui/skeleton"
 import { navigate } from "@/features/shell/route"
 import { type Loaded } from "@/lib/use-result"
@@ -44,20 +44,7 @@ export function RecentPosts({
         )}
         {posts.status === "error" && <RegionError title="Guru posts did not load" message={posts.error} onRetry={posts.retry} />}
         {posts.status === "ready" && posts.data.items.length === 0 && (
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <MessageSquareIcon />
-              </EmptyMedia>
-              <EmptyTitle>No posts yet</EmptyTitle>
-              <EmptyDescription>Posts from the gurus you copy appear here as they arrive.</EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>
-              <Button type="button" size="sm" variant="outline" onClick={posts.retry}>
-                Refresh
-              </Button>
-            </EmptyContent>
-          </Empty>
+          <EmptyState icon={MessageSquareIcon} title="No posts yet" description="Posts from the gurus you copy appear here as they arrive." action={{ label: "Refresh", onClick: posts.retry }} />
         )}
         {posts.status === "ready" && posts.data.items.length > 0 && (
           <ul className="flex flex-col">
