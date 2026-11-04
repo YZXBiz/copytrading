@@ -14,6 +14,7 @@ import {
   FrameTitle,
 } from "@/components/reui/frame"
 import { IconTile } from "@/components/reui/icon-tile"
+import { RollingNumber } from "@/components/rolling-number"
 import { RegionError } from "@/components/region-error"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
@@ -32,6 +33,8 @@ import {
   type ViewState,
 } from "./data"
 import {
+  USD_OPTIONS,
+  USD_SIGNED_OPTIONS,
   formatFullDay,
   formatSignedPercent,
   formatSignedUsd,
@@ -58,7 +61,7 @@ function Stat({
   meta,
 }: {
   label: string
-  value: string
+  value: ReactNode
   meta?: string
 }) {
   return (
@@ -197,9 +200,11 @@ export function BalancePanel({
           <div className="flex min-w-0 flex-col gap-2.5">
             <span className="text-muted-foreground text-sm">Balance</span>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <span className="text-3xl leading-none font-semibold tracking-tight tabular-nums">
-                {balance ? formatUsd(equity) : "—"}
-              </span>
+              <RollingNumber
+                value={balance ? equity : null}
+                format={USD_OPTIONS}
+                className="text-3xl leading-none font-semibold tracking-tight tabular-nums"
+              />
               {stats ? (
                 <div className="flex items-center gap-2">
                   <ChangeBadge ratio={stats.changeRatio} />
@@ -258,16 +263,16 @@ export function BalancePanel({
 
       <FramePanel className="@container">
         <dl className="grid grid-cols-2 gap-5 @2xl:-mx-(--frame-panel-px) @2xl:-my-(--frame-panel-py) @2xl:grid-cols-4 @2xl:gap-0">
-          <Stat label="Cash" value={formatUsd(Number(balance?.cash))} meta={share(balance?.cash)} />
-          <Stat label="Buying power" value={formatUsd(Number(balance?.buying_power))} />
+          <Stat label="Cash" value={<RollingNumber value={Number(balance?.cash)} format={USD_OPTIONS} />} meta={share(balance?.cash)} />
+          <Stat label="Buying power" value={<RollingNumber value={Number(balance?.buying_power)} format={USD_OPTIONS} />} />
           <Stat
             label="Invested by CopyTrading"
-            value={formatUsd(Number(account.total_exposure_usd ?? 0))}
+            value={<RollingNumber value={Number(account.total_exposure_usd ?? 0)} format={USD_OPTIONS} />}
             meta={account.pending_orders ? `${account.pending_orders} orders waiting` : share(account.total_exposure_usd)}
           />
           <Stat
             label="Today"
-            value={today ? formatSignedUsd(today.amount) : "—"}
+            value={<RollingNumber value={today?.amount} format={USD_SIGNED_OPTIONS} />}
             meta={today ? `${formatSignedPercent(today.fraction)} from yesterday's close` : undefined}
           />
         </dl>

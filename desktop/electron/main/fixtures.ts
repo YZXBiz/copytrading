@@ -46,6 +46,20 @@ const overview: AccountOverview = {
   })),
 }
 
+// Only in a build made with `electron-vite build --mode tick` (or `dev --mode tick`) and COPYTRADING_FIXTURE_TICK=1: every
+// read of the accounts moves the balance, a gain, a loss, a big swing, so the rolling figures can be watched and captured.
+// A normal build's mode is "production" or "development", so the bundler drops this and the table: the app never has it.
+const TICKS = import.meta.env.MODE === "tick" && process.env.COPYTRADING_FIXTURE_TICK === "1" ? [37.42, -112.9, 1204.5, -1500.25, 8.01] : []
+let ticked = 0
+const shift = (value: string, by: number) => (Number(value) + by).toFixed(2)
+function accountsNow(): AccountOverview {
+  if (TICKS.length === 0) return overview
+  const by = TICKS[ticked++ % TICKS.length]!
+  const b = overview.balance!
+  overview.balance = { ...b, equity: shift(b.equity, by), day_change_usd: shift(b.day_change_usd, by), cash: shift(b.cash, by), buying_power: shift(b.buying_power, by) }
+  return overview
+}
+
 const HISTORY_KEY: Record<HistoryRange, keyof typeof history | null> = {
   day: "1D",
   week: "1W",
@@ -91,7 +105,7 @@ const READS: Record<string, (params: Params) => Promise<Result<unknown>>> = {
       ? Promise.resolve<Result<never>>({ ok: false, error: "The engine did not answer the accounts request." })
       : accountsState === "accounts-loading"
         ? new Promise<Result<never>>((done) => setTimeout(() => done({ ok: false, error: "The engine did not answer the accounts request." }), 120_000))
-        : ok({ items: records ? [...oldRecords, overview] : [overview], unavailable_accounts: [] }),
+        : ok({ items: records ? [...oldRecords, accountsNow()] : [accountsNow()], unavailable_accounts: [] }),
   getEquityHistory: (params) => {
     const key = HISTORY_KEY[params?.range as HistoryRange]
     const value: EquityHistory | null = key

@@ -15,8 +15,16 @@
   "build": {
     "appId": "dev.copytrading.app",
     "productName": "CopyTrading",
-    "directories": { "output": "dist/package" },
-    "files": ["dist/main/**", "dist/preload/**", "dist/renderer/**", "package.json", "!node_modules/**"],
+    "directories": {
+      "output": "dist/package"
+    },
+    "files": [
+      "dist/main/**",
+      "dist/preload/**",
+      "dist/renderer/**",
+      "package.json",
+      "!node_modules/**"
+    ],
     "npmRebuild": false,
     "mac": {
       "target": "dir",
@@ -25,7 +33,11 @@
       "category": "public.app-category.finance",
       "minimumSystemVersion": "26.0"
     },
-    "publish": { "provider": "github", "owner": "YZXBiz", "repo": "copytrading" }
+    "publish": {
+      "provider": "github",
+      "owner": "YZXBiz",
+      "repo": "copytrading"
+    }
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.4",
@@ -48,6 +60,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@fontsource-variable/geist": "^5.3.0",
+    "@number-flow/react": "^0.6.2",
     "@shadcn/react": "^0.3.1",
     "@tanstack/react-table": "^9.3.1",
     "@tanstack/react-virtual": "^3.14.26",
