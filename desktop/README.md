@@ -48,8 +48,9 @@ if (!result.ok && result.cancelled) return // the owner pressed Cancel; show not
 
 These actions show a native dialog from the main process first, and send nothing to the engine on Cancel:
 `confirmManualOrders`, `confirmLotSale`, `startTrading`, `applyChanges`, `pauseTrading`, `controlAccount`, `approveProposal`,
-`deleteAccountRecord`, `completeRestoreCandidate`, `updateAccountLimits` (it changes copying at once; the dialog
-lists each limit before and after). The page cannot skip or reword the dialog: main builds its text from what
+`deleteAccountRecord`, `activateRestore`, `rollbackRestore`, `setAgentAccess`, `updateAccountLimits` (it changes copying at once;
+the dialog lists each limit before and after). A restore is only for a backup this session previewed (`previewRestore`) or a
+half-finished one the engine holds, and is refused while a start, an unstarted saved setup or unsaved typed keys exist. The page cannot skip or reword the dialog: main builds its text from what
 the engine said or the saved setup holds, not from the request.
 
 - An order is confirmed after a preview in the same session: call `read.previewLotSale` / `read.previewManualOrder`
@@ -137,7 +138,7 @@ adding it to `READS` in `fixtures.ts`.
 `COPYTRADING_CAPTURE_HASH` to its route. Read the PNGs: they are the visual check. `node scripts/capture.mjs settings logs`
 captures only the entries whose name has one of those words; `COPYTRADING_CAPTURE_SCRIPT` runs a page script first (the
 assistant panel and the time zone list open that way). Fixtures can also serve acts (`ACTS` in `fixtures.ts`), and
-`COPYTRADING_FIXTURE_STATE=pending-restore` shows a half-finished restore.
+`COPYTRADING_FIXTURE_STATE=pending-restore` shows a half-finished restore, `agents-problem` an agent socket that could not open.
 
 ## Settings and the assistant
 

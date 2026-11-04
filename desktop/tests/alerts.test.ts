@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { parseDec } from "@/features/account/decimal"
+import { sharesOf as pageSharesOf } from "@/lib/quantity"
 import type { AgentProposal, SourceActivity, TradingStatus } from "../shared/contract"
 import { AlertMonitor } from "../electron/main/alerts/monitor"
 import { CopyingMemory, FillWatch, StoppedWatch, copyingStoppedDue, inTradingHours } from "../electron/main/alerts/watch"
@@ -155,6 +157,13 @@ describe("words", () => {
     expect(sharesOf("2.9854", "PM")).toBe("≈2.985 shares")
     expect(sharesOf("1200", "F")).toBe("1,200 shares")
     expect(sharesOf("0.001231481", "BTC/USD")).toBe("0.001231481")
+  })
+
+  // main cannot import src/lib/quantity.ts (it pulls the page's time zone store and React), so this is a second copy: it must not drift.
+  it("says shares exactly as the page's own wording does (src/lib/quantity.ts)", () => {
+    for (const [value, symbol] of [["9.804", "GFS"], ["1", "F"], ["1.004", "F"], ["0.995", "F"], ["2.9854", "PM"], ["1200.5", "F"], ["0", "F"], ["0.001231481", "BTC/USD"], ["2", "ETH/USD"]] as const) {
+      expect(sharesOf(value, symbol)).toBe(pageSharesOf(parseDec(value)!, symbol))
+    }
   })
 
   const fill = (over = {}) => ({ clientId: "o", side: "buy", symbol: "GFS", shares: "9.804", price: "51", accountId: "paper", guruId: "zhao" as string | null, byOwner: false, ...over })
