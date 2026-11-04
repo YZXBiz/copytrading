@@ -1,45 +1,56 @@
-import { CheckCircle2Icon, CircleAlertIcon, CircleDashedIcon, ClockIcon, MinusCircleIcon, XCircleIcon, type LucideIcon } from "lucide-react"
+import type { ReactNode } from "react"
+import { CircleDashedIcon } from "lucide-react"
 import type { SourceActivity } from "../../../shared/contract"
 import { Badge } from "@/components/reui/badge"
 import { cn } from "@/lib/utils"
+import { toneIcon } from "./OutcomeBadge"
 import { type AccountOutcome, type Result, type Tone, cardOutcome } from "./outcome"
 
-const MARK: Record<Tone, { icon: LucideIcon; className: string }> = {
-  positive: { icon: CheckCircle2Icon, className: "text-success" },
-  caution: { icon: CircleAlertIcon, className: "text-warning" },
-  critical: { icon: XCircleIcon, className: "text-destructive" },
-  neutral: { icon: ClockIcon, className: "text-muted-foreground" },
-  inactive: { icon: MinusCircleIcon, className: "text-muted-foreground" },
+const COLOR: Record<Tone, string> = {
+  positive: "text-success",
+  caution: "text-warning",
+  critical: "text-destructive",
+  neutral: "text-muted-foreground",
+  inactive: "text-muted-foreground",
+}
+
+/** One fact of a result, label over value: the audit log's detail row (solution-users-6). */
+function DetailRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <dt className="text-muted-foreground text-xs">{label}</dt>
+      <dd className="text-foreground flex min-w-0 items-center text-sm font-medium tabular-nums">{children}</dd>
+    </div>
+  )
 }
 
 function ResultBlock({ result }: { result: Result }) {
-  const { icon: Icon, className } = MARK[result.tone]
+  const Icon = toneIcon(result.tone)
   return (
-    <div className="flex gap-2.5">
-      <Icon aria-hidden className={cn("mt-0.5 size-4 shrink-0", className)} />
-      <div className="flex min-w-0 flex-col gap-2">
-        <p className="leading-snug font-medium tabular-nums">{result.headline}</p>
-        {result.facts.length > 0 && (
-          <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-sm">
-            {result.facts.map((fact) => (
-              <div key={fact.label} className="contents">
-                <dt className="text-muted-foreground">{fact.label}</dt>
-                <dd className="tabular-nums">{fact.value}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
-        {result.note && <p className="text-muted-foreground text-sm">{result.note}</p>}
-      </div>
+    <div className="space-y-3">
+      <p className="flex items-start gap-2 text-sm leading-snug font-medium tabular-nums">
+        <Icon aria-hidden className={cn("mt-0.5 size-4 shrink-0", COLOR[result.tone])} />
+        {result.headline}
+      </p>
+      {result.facts.length > 0 && (
+        <dl className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          {result.facts.map((fact) => (
+            <DetailRow key={fact.label} label={fact.label}>
+              {fact.value}
+            </DetailRow>
+          ))}
+        </dl>
+      )}
+      {result.note && <p className="text-muted-foreground text-xs leading-5">{result.note}</p>}
     </div>
   )
 }
 
 function AccountBlock({ account }: { account: AccountOutcome }) {
   return (
-    <div role="group" aria-label={`Account ${account.id}`} className="flex flex-col gap-3">
-      <div className="flex items-center gap-2 text-sm font-medium">
-        <span>{account.id}</span>
+    <div role="group" aria-label={`Account ${account.id}`} className="space-y-3 border-t pt-2.5">
+      <div className="flex items-center justify-between gap-2.5">
+        <span className="min-w-0 truncate text-sm font-medium">{account.id}</span>
         {account.environment === "live" ? <Badge variant="warning-light">Live</Badge> : <Badge variant="outline">Paper</Badge>}
       </div>
       {account.results.map((result, index) => (
@@ -56,17 +67,11 @@ export function AccountResults({ post, now, accountId }: { post: SourceActivity;
     // "Yet" only while the trade is still on its way to the accounts.
     const onTheWay = post.decision === "trade" && post.delivery_status !== "delivered"
     return (
-      <p className="text-muted-foreground flex items-center gap-2 text-sm">
+      <p className="text-muted-foreground flex items-center gap-2 border-t pt-2.5 text-xs">
         <CircleDashedIcon aria-hidden className="size-4" />
         {onTheWay ? "No account has acted on this post yet." : "No account was asked to act on this post."}
       </p>
     )
   }
-  return (
-    <div className="flex flex-col gap-6">
-      {shown.map((account) => (
-        <AccountBlock key={account.id} account={account} />
-      ))}
-    </div>
-  )
+  return shown.map((account) => <AccountBlock key={account.id} account={account} />)
 }

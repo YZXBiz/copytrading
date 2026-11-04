@@ -2,7 +2,7 @@ import type { AccountOverview, GuruDayStats, SourceActivity, TradingConfiguratio
 import { num } from "../activity/amounts"
 import { isOpenCall, orderOutcome, isOwnerSale, cardOutcome } from "../activity/outcome"
 import { readAsLine } from "../activity/reading"
-import { dayLabel } from "../activity/time"
+import { groupByDay } from "../activity/time"
 
 // The gurus a saved setup copies, and what their pages show (GuruDirectory, GuruFeed, GuruStats, GuruHoldings).
 
@@ -91,14 +91,8 @@ export function buildFeed(guruId: string, loaded: SourceActivity[], day: GuruDay
   const posts = [...waiting, ...loaded.filter((p) => !waitingIds.has(p.sequence))]
     .filter((p) => p.guru_id === guruId)
     .sort((a, b) => Date.parse(b.source_at) - Date.parse(a.source_at) || b.sequence - a.sequence)
-  const days: Day[] = []
-  for (const post of posts) {
-    const entry: Entry = { post, readAs: readAsLine(post), accounts: guruAccountOutcomes(post, now), isWaiting: waitingIds.has(post.sequence) }
-    const label = dayLabel(post.source_at, now)
-    const last = days[days.length - 1]
-    if (last && last.label === label) last.entries.push(entry)
-    else days.push({ label, entries: [entry] })
-  }
+  const entries = posts.map((post): Entry => ({ post, readAs: readAsLine(post), accounts: guruAccountOutcomes(post, now), isWaiting: waitingIds.has(post.sequence) }))
+  const days = groupByDay(entries, (e) => e.post.source_at, now).map(({ label, items }): Day => ({ label, entries: items }))
   return { days, waitingCount: posts.filter((p) => waitingIds.has(p.sequence)).length }
 }
 
