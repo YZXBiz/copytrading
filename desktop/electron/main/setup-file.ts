@@ -29,7 +29,6 @@ export class SetupFileError extends Error {}
 const isRevision = (value: unknown): value is string => typeof value === "string" && /^[0-9a-f]{64}$/.test(value)
 
 export class SetupFile {
-  readonly path: string
   /**
    * The setup the engine last confirmed, held from the first `save` after it until a start finalizes or rolls back:
    * `undefined` when the file is what the owner last confirmed, `null` when there was no file. Saving and starting are
@@ -37,8 +36,15 @@ export class SetupFile {
    */
   private confirmed: Revision | null | undefined
 
-  constructor(private readonly dataDir: string) {
-    this.path = join(dataDir, SETUP_FILE)
+  /** `where` is a function so the file follows the engine's active generation when a restore switches it. */
+  constructor(private readonly where: string | (() => string)) {}
+
+  private get dataDir(): string {
+    return typeof this.where === "string" ? this.where : this.where()
+  }
+
+  get path(): string {
+    return join(this.dataDir, SETUP_FILE)
   }
 
   private read(): Envelope | null {
@@ -135,6 +141,11 @@ export class SetupFile {
     else rmSync(this.path, { force: true })
     this.confirmed = undefined
     return previous?.secretRevision ?? null
+  }
+
+  /** A setup was saved and not yet started or declined: the setup before it is held in memory for a rollback. */
+  hasUnstartedSave(): boolean {
+    return this.confirmed !== undefined
   }
 
   /** The start the engine has not confirmed, if any. */

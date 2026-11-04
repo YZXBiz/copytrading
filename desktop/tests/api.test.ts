@@ -6,6 +6,7 @@ import { type Engine, createApi } from "../electron/main/api"
 import { EngineError } from "../electron/main/engine/bridge"
 import { SecretStore, redactState } from "../electron/main/secrets"
 import { SETUP_FILE, SetupFile } from "../electron/main/setup-file"
+import { unusedBackground } from "./background-stubs"
 
 const FIXTURE = join(__dirname, "fixtures", SETUP_FILE)
 const saved = JSON.parse(readFileSync(FIXTURE, "utf8"))
@@ -27,7 +28,7 @@ const plan = (side: string, qty: string, symbol: string, limit: string | null) =
 
 const MUTATING = [
   "confirm_manual_orders", "confirm_lot_sale", "start_trading", "pause_trading", "control_account",
-  "approve_proposal", "delete_account_record", "complete_restore_candidate", "update_account_limits",
+  "approve_proposal", "delete_account_record", "update_account_limits",
 ]
 
 /** The saved setup with the first account's limits changed. */
@@ -82,6 +83,7 @@ function harness(answer = true, whileAsking: () => Promise<unknown> = async () =
       await whileAsking()
       return answer
     },
+    ...unusedBackground(dir),
   })
   return { api, setup, secrets, requests, asked, replies, dir, sent: (op: string) => requests.filter((r) => r.op === op) }
 }
@@ -171,11 +173,6 @@ const CONFIRMED: [string, string, (h: Harness) => Promise<unknown>, Record<strin
   [
     "deleteAccountRecord", "delete_account_record", async () => {}, { account_id: "zhap-account-3" },
     "Delete the record of zhap-account-3? Its shares stay at Alpaca; only this app's record of them goes.",
-  ],
-  [
-    "completeRestoreCandidate", "complete_restore_candidate", async () => {},
-    { candidate_id: "cand-1", completion_token: "e".repeat(32) },
-    "Replace this Mac's CopyTrading records with the backup (zhap-account-2)?",
   ],
 ]
 

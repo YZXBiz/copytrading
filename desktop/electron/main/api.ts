@@ -1,8 +1,22 @@
-import { ACTS, type ActName, type ApplyChangesResult, READS, type ReadName, type Result, type TradingConfiguration } from "../../shared/contract"
+import {
+  ACTS,
+  type ActName,
+  type AgentAccess,
+  type AgentAccessState,
+  type ApplyChangesResult,
+  READS,
+  type ReadName,
+  type RestorePreview,
+  type Result,
+  type TradingConfiguration,
+} from "../../shared/contract"
 import {
   PAUSE_TEXT,
+  ROLLBACK_TEXT,
   applyText,
   Refusal,
+  accessText,
+  candidateText,
   controlText,
   deleteRecordText,
   limitsText,
@@ -18,6 +32,8 @@ import { PROVIDER_TITLES, requiresApiKey } from "../../shared/providers"
 import { joinAnd, startFailure } from "../../shared/start-failure"
 import { EngineError } from "./engine/bridge"
 import { readJournal } from "./journal"
+import type { Prefs } from "./prefs"
+import type { RestoreCoordinator } from "./restore"
 import { type SecretStore, type Secrets, redact } from "./secrets"
 import { SetupFile, SetupFileError } from "./setup-file"
 
@@ -37,6 +53,11 @@ export interface Deps {
   pick?: (kind: "backup-destination" | "restore-archive") => Promise<string | null>
   /** How long a start waits for the engine to confirm it before leaving it pending. Default: 30 looks, a second apart. */
   activation?: { looks: number; waitMs: number }
+  /** The agent socket: whether it is open, and the way to open, narrow or close it. */
+  agents: { state: () => AgentAccessState; set: (access: AgentAccess) => Promise<AgentAccessState> }
+  /** Restores and rollbacks; they stop and restart the engine. */
+  restore: Pick<RestoreCoordinator, "activate" | "rollback">
+  prefs: Prefs
 }
 
 type Params = Record<string, unknown>
@@ -47,6 +68,8 @@ interface Ctx extends Deps {
   settling: boolean
   /** How each start this session ended, by activation id: null committed, otherwise the words for why it did not take. */
   outcomes: Map<string, string | null>
+  /** Backups the owner opened this session, by staging id: what a restore's dialog says about them. */
+  staged: Map<string, RestorePreview>
 }
 type Handler = (params: Params, ctx: Ctx) => Promise<unknown>
 /** What a confirmation says, and the params to send in place of the page's when main knows better. */
@@ -163,6 +186,8 @@ const READ_HANDLERS: Record<ReadName, Handler> = {
   listProposals: ask("list_proposals", value("proposals")),
   getAgentAudit: ask("agent_audit", value("entries")),
   getRestoreCandidate: ask("restore_candidate_status", value("candidate")),
+  getAgentAccess: async (_params, { agents }) => agents.state(),
+  getFillAlerts: async (_params, { prefs }) => prefs.get("fill_alerts"),
   getAssistantTurn: ask("assistant_turn", whole),
   getSetup: async (_params, ctx) => {
     await settleOnce(ctx).catch(() => {})
@@ -197,19 +222,6 @@ const READ_HANDLERS: Record<ReadName, Handler> = {
 
 /** Proposals only the app can carry out: the engine leaves them running until the app reports back (control/proposals.py APP_PERFORMED). */
 const APP_PERFORMED = new Set(["set_recovery", "set_account_limits", "start_processing", "apply_setup"])
-
-/** The accounts a restore candidate holds, each with its environment from the saved setup and its keys from the store; refuses if any is missing. */
-async function preflightAccounts(ctx: Ctx, candidateId: string) {
-  const candidate = body(await ctx.engine.request("restore_candidate_status")).candidate as { candidate_id: string; account_ids: string[] } | null
-  if (!candidate || candidate.candidate_id !== candidateId) throw new Refusal("The engine has no restore waiting under that id.")
-  const configured = ctx.setup.load()?.configuration.accounts ?? []
-  return candidate.account_ids.map((account_id) => {
-    const environment = configured.find((a) => a.id === account_id)?.environment
-    const keys = ctx.secrets.secrets.brokers.find((b) => b.account_id === account_id)
-    if (!environment || !keys) throw new Refusal(`The backup needs ${account_id}, and this setup has no keys saved for it. Add it in Connections first.`)
-    return { account_id, environment, key: keys.key, secret: keys.secret }
-  })
-}
 
 /** Asks the engine to plan an order and keeps the plan. An id used once is never reused, so a plan cannot change under a dialog. */
 async function preview(ctx: Ctx, operation: string, params: Params): Promise<unknown> {
@@ -514,12 +526,42 @@ const ACT_HANDLERS: Record<ActName, Handler> = {
     (p) => ({ text: deleteRecordText(String(p.account_id)) }),
     ask("delete_account_record", nothing, (p) => ({ account_id: p.account_id })),
   ),
-  completeRestoreCandidate: confirmed(
-    async (p, ctx) => ({
-      text: restoreText(body(await ctx.engine.request("restore_candidate_status")).candidate as never, String(p.candidate_id)),
-    }),
-    ask("complete_restore_candidate", nothing, (p) => ({ candidate_id: p.candidate_id, completion_token: p.completion_token })),
+  // A backup is restored only if the owner previewed it in this session (main kept what the preview said), or the engine
+  // holds it as a half-finished restore. The dialog is worded from that, and the page's own claims about it are ignored.
+  activateRestore: confirmed(
+    async (p, ctx) => {
+      // A start under way, a saved setup not yet started, or typed keys not yet saved belong to the data about to be replaced:
+      // keeping them in memory across the switch could write them into the restored data later.
+      if (ctx.setup.pending() || ctx.setup.hasUnstartedSave() || ctx.secrets.hasUnstaged()) throw new Refusal("Finish starting or stopping copying, then restore.")
+      if (typeof p.staging_id === "string") {
+        const preview = ctx.staged.get(p.staging_id)
+        if (!preview) throw new Refusal("Open the backup again to restore it.")
+        if (!preview.matches_installation) throw new Refusal("This backup was made by a different installation, so it cannot be restored here.")
+        return { text: restoreText(preview.account_ids) }
+      }
+      const candidateId = String(p.candidate_id)
+      return { text: candidateText(body(await ctx.engine.request("restore_candidate_status")).candidate as never, candidateId) }
+    },
+    async (p, ctx) => {
+      if (typeof p.staging_id === "string") return ctx.restore.activate({ stagingId: p.staging_id, matchesInstallation: ctx.staged.get(p.staging_id)?.matches_installation === true })
+      return ctx.restore.activate({ candidateId: String(p.candidate_id) })
+    },
   ),
+  rollbackRestore: confirmed(
+    () => ({ text: ROLLBACK_TEXT }),
+    async (p, ctx) => {
+      await ctx.restore.rollback(String(p.candidate_id))
+      return null
+    },
+  ),
+  setAgentAccess: confirmed(
+    (p) => ({ text: accessText(p.access) }),
+    (p, ctx) => ctx.agents.set(p.access as AgentAccess),
+  ),
+  setFillAlerts: async (p, ctx) => {
+    ctx.prefs.set("fill_alerts", p.on === true)
+    return ctx.prefs.get("fill_alerts")
+  },
 
   validateTrading: ask("validate_trading", whole, (p, ctx) => {
     needToken(ctx.secrets.secrets)
@@ -564,13 +606,11 @@ const ACT_HANDLERS: Record<ActName, Handler> = {
     return ctx.secrets.status()
   },
   createBackup: ask("create_backup", value("manifest")),
-  previewRestore: ask("preview_restore", value("preview")),
-  prepareRestoreCandidate: ask("prepare_restore_candidate", field("candidate_id")),
-  abortRestoreCandidate: ask("abort_restore_candidate", nothing),
-  restorePreflight: ask("restore_preflight", whole, async (p, ctx) => ({
-    candidate_id: p.candidate_id,
-    accounts: await preflightAccounts(ctx, String(p.candidate_id)),
-  })),
+  previewRestore: async (p, ctx) => {
+    const preview = value("preview")(await ctx.engine.request("preview_restore", p)) as RestorePreview
+    ctx.staged.set(preview.staging_id, preview)
+    return preview
+  },
   resolveOwnership: ask("resolve_ownership", value("resolution")),
   saveManualCorrection: ask("save_manual_correction", value("correction")),
   rejectProposal: ask("reject_proposal", value("proposal")),
@@ -609,7 +649,7 @@ function reply(result: Result<unknown>, ctx: Ctx): Result<unknown> {
 }
 
 export function createApi(deps: Deps) {
-  const ctx: Ctx = { ...deps, seen: new Map(), settling: false, outcomes: new Map() }
+  const ctx: Ctx = { ...deps, seen: new Map(), settling: false, outcomes: new Map(), staged: new Map() }
   const run = async (handlers: Record<string, Handler>, names: readonly string[], name: unknown, params: unknown): Promise<Result<unknown>> => {
     if (typeof name !== "string" || !names.includes(name)) return { ok: false, error: "The request was not valid." }
     if (params !== undefined && (typeof params !== "object" || params === null || Array.isArray(params))) {

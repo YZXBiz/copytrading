@@ -7,6 +7,7 @@ import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/co
 import { readClock } from "@/lib/clock"
 import { dateTime } from "@/lib/format"
 import { useResult } from "@/lib/use-result"
+import { AgentAccess } from "./AgentAccess"
 import { Note } from "./Note"
 import { ProposalActions } from "./ProposalActions"
 import { SettingsRow } from "./SettingsRow"
@@ -100,6 +101,7 @@ export function AgentsPage() {
   const [decisions, setDecisions] = useState(0)
   return (
     <div className="flex flex-col gap-6">
+      <AgentAccess />
       <Waiting onDecided={() => setDecisions((n) => n + 1)} />
       <Recent version={decisions} />
     </div>

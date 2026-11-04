@@ -66,7 +66,10 @@ for (const [name, env] of [
   // Settings and tools
   ["settings-general", settings("general")],
   ["settings-general-timezone-open", settings("general", { COPYTRADING_CAPTURE_SCRIPT: openTimeZones })],
+  ["settings-general-fills-off", settings("general", { COPYTRADING_CAPTURE_SCRIPT: `(async () => { document.querySelector('[role="switch"]').click(); await new Promise((r) => setTimeout(r, 600)) })()` })],
   ["settings-agents", settings("agents")],
+  ["settings-agents-off", settings("agents", { COPYTRADING_CAPTURE_SCRIPT: click("button", "Nothing") })],
+  ["settings-agents-problem", settings("agents", { COPYTRADING_FIXTURE_STATE: "agents-problem" })],
   ["settings-backups", settings("backups")],
   ["settings-backups-preview", settings("backups", { COPYTRADING_CAPTURE_SCRIPT: click("button", "Choose") })],
   ["settings-backups-pending-restore", settings("backups", { COPYTRADING_FIXTURE_STATE: "pending-restore" })],
@@ -79,6 +82,8 @@ for (const [name, env] of [
   ["live-activity", { COPYTRADING_CAPTURE_HASH: "#/activity" }],
   ["live-gurus", { COPYTRADING_CAPTURE_HASH: "#/gurus" }],
   ["live-settings-logs", { COPYTRADING_CAPTURE_HASH: "#/settings/logs" }],
+  // The real engine on a throwaway installation folder: access starts off, with no socket.
+  ["live-settings-agents", { COPYTRADING_CAPTURE_HASH: "#/settings/agents" }],
 ]) {
   const only = process.argv.slice(2)
   if (only.length && !only.some((word) => name.includes(word))) continue

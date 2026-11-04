@@ -1,15 +1,25 @@
 import { join } from "node:path"
-import { BrowserWindow, Menu, app, dialog, ipcMain, protocol, safeStorage, session } from "electron"
+import { BrowserWindow, Menu, Notification, app, dialog, ipcMain, protocol, safeStorage, session } from "electron"
 import { autoUpdater } from "electron-updater"
 import { CHANNELS, type EngineState } from "../../shared/contract"
-import { type Api, createApi } from "./api"
+import { AgentAccessStore } from "./agents/access"
+import { AgentAccessController } from "./agents/controller"
+import { AlertMonitor } from "./alerts/monitor"
+import { CopyingMemory } from "./alerts/watch"
+import type { Note } from "./alerts/words"
+import { type Api, type Deps, createApi } from "./api"
 import { captureWindow } from "./capture"
 import { type EngineRoots, resolveRoots } from "./engine/data-root"
 import { EngineProcess, engineTarget } from "./engine/launch"
+import { superviseEngine } from "./engine/supervise"
+import { RuntimePaths } from "./engine/paths"
 import { fixtureApi, seedFixturePictures } from "./fixtures"
+import { moveKeychainSecrets, securityReader } from "./keychain-move"
 import { PICTURE_SCHEME, PictureIndex } from "./pictures"
+import { Prefs } from "./prefs"
+import { RestoreCoordinator } from "./restore"
 import { ResumeMarker, resumeCopying } from "./resume"
-import { SecretStore, redactState } from "./secrets"
+import { SecretStore, redact, redactState } from "./secrets"
 import { SetupFile } from "./setup-file"
 import { CHECK_EVERY_MS, Updates } from "./update"
 
@@ -37,15 +47,21 @@ if (!fixtures) {
     rootsError = error instanceof Error ? error.message : String(error)
   }
 }
-// A second copy would fight the first over the engine's data; the first one comes forward instead.
+// A second copy would fight the first over the engine's data: it quits at once, and the first one comes forward,
+// with a new window if the owner had closed it (closing the window leaves the app running).
 if (packaged && !app.requestSingleInstanceLock()) app.exit(0)
+app.on("second-instance", () => app.isReady() && openWindow())
 
 const engine = new EngineProcess()
 let api: Api
 let secrets: SecretStore | null = null
-let setupFile: SetupFile | null = null
-// `<data dir>/attachments`: the only place ct-picture:// reads from.
-let attachments: string | null = null
+// What the api was built from, for the one caller that answers every confirmation itself (copying resumed after an update).
+let services: Deps | null = null
+// `<active generation>/attachments`: the only place ct-picture:// reads from. It follows a restore's switch of generation.
+let attachments: (() => string) | null = null
+let agents: AgentAccessController | null = null
+let monitor: AlertMonitor | null = null
+let restore: Pick<RestoreCoordinator, "activate" | "rollback" | "isRunning"> | null = null
 const pictures = new PictureIndex()
 protocol.registerSchemesAsPrivileged([{ scheme: PICTURE_SCHEME, privileges: { standard: true, secure: true } }])
 
@@ -53,6 +69,27 @@ protocol.registerSchemesAsPrivileged([{ scheme: PICTURE_SCHEME, privileges: { st
 const publicState = (): EngineState => redactState(fixtures ? { state: "running" } : engine.state, secrets?.values() ?? [])
 
 const windows = () => BrowserWindow.getAllWindows()
+
+/** Shows the window (opening one if the owner closed it), at `route` if one is named. */
+function openWindow(route?: string): void {
+  const window = windows()[0] ?? createWindow()
+  if (window.isMinimized()) window.restore()
+  window.show()
+  window.focus()
+  // The route is built by main from ids, and quoted as a string, so it can only ever set the hash.
+  if (route) void window.webContents.executeJavaScript(`location.hash = ${JSON.stringify(route)}`)
+}
+
+const shown = new Set<Notification>()
+/** A macOS notification with the system sound. Clicking it opens CopyTrading where the news is. */
+function notify(note: Note): void {
+  if (!Notification.isSupported()) return
+  const notification = new Notification({ title: note.title, body: note.body })
+  shown.add(notification)
+  notification.on("click", () => openWindow(note.route))
+  notification.on("close", () => shown.delete(notification))
+  notification.show()
+}
 
 /** A native yes/no that the page cannot reach, skip, or reword. Cancel is the default button. */
 async function confirm(text: string): Promise<boolean> {
@@ -100,19 +137,74 @@ const unavailableApi = (reason: string): Api => ({
   act: async () => ({ ok: false, error: reason }),
 })
 
-function startServices(): Api {
+async function startServices(): Promise<Api> {
   if (fixtures) {
-    attachments = seedFixturePictures()
+    const seeded = seedFixturePictures()
+    attachments = () => seeded
     return fixtureApi
   }
   try {
     if (!roots) throw new Error(rootsError ?? "The engine's data folder could not be chosen.")
-    const target = engineTarget(roots, packaged ? process.resourcesPath : null)
-    attachments = join(target.dataDir, "attachments")
+    const paths = new RuntimePaths(roots.owner)
+    const generation = () => paths.activeGeneration().dir
+    attachments = () => join(generation(), "attachments")
     secrets = new SecretStore(join(app.getPath("userData"), "secrets.bin"), cipher)
-    setupFile = new SetupFile(target.dataDir)
-    void engine.start(target).catch((error: unknown) => engine.fail(error instanceof Error ? error.message : String(error)))
-    return createApi({ engine, setup: setupFile, secrets, confirm, diagnosticsDir: target.logsDir, pick })
+    const setup = new SetupFile(generation)
+    // The SwiftUI app's keys come across once, so the owner never types them again. macOS may ask to allow it.
+    await moveKeychainSecrets({ setup, secrets, installationId: paths.installationIdentity(), read: securityReader }).catch(() => "unreadable")
+    const prefs = new Prefs(paths.owner)
+    const store = secrets
+    const startRuntime = async () => {
+      await engine.start(engineTarget(paths, packaged ? process.resourcesPath : null))
+      if (engine.state.state !== "running") throw new Error(engine.state.state === "stopped" ? engine.state.reason : "The engine did not start.")
+    }
+    const request = (operation: string, params?: Record<string, unknown>) => engine.request(operation, params)
+    const coordinator = new RestoreCoordinator({ paths, request, secrets: () => ({ revision: store.revision, secrets: store.secrets }), stopRuntime: () => engine.stop(), startRuntime })
+    // The engine goes down and comes back during a restore, and a gated candidate may report a failure on the way: nothing is
+    // watched meanwhile, as AppModel cancels its status tasks, and watching resumes after (unless the app is quitting).
+    const unwatched = async <T>(run: () => Promise<T>): Promise<T> => {
+      monitor?.stop()
+      try {
+        return await run()
+      } finally {
+        if (!stopped) monitor?.start()
+      }
+    }
+    restore = {
+      activate: (input) => unwatched(() => coordinator.activate(input)),
+      rollback: (candidateId) => unwatched(() => coordinator.rollback(candidateId)),
+      get isRunning() {
+        return coordinator.isRunning
+      },
+    }
+    agents = new AgentAccessController(new AgentAccessStore(paths.owner), paths.controlSocket, request)
+    const memory = new CopyingMemory(prefs.get("copying_was_on"), (on) => prefs.set("copying_was_on", on))
+    monitor = new AlertMonitor({
+      request,
+      notify,
+      fillsOn: () => prefs.get("fill_alerts"),
+      guruName: (id) => setup.load()?.configuration.profiles.find((p) => p.guru_id === id)?.display_name ?? null,
+      hasSetup: () => setup.load() !== null,
+      memory,
+    })
+    // An engine that dies while the app runs is started again, as ProcessSupervisor does; copying resumes if it was on.
+    superviseEngine(engine, {
+      restart: startRuntime,
+      busy: () => stopped || restore?.isRunning === true,
+      wasCopying: () => memory.wasOn,
+      onRestarted: (copying) => {
+        if (!copying) return
+        void resumeSaved().then((why) => why && notify({ id: "copying-not-resumed", thread: "copying-stopped", title: "Copying is paused", body: `The engine restarted after a problem, but copying did not resume: ${why}` }))
+      },
+      onGaveUp: (reason) => notify({ id: "engine-stopped", thread: "engine", title: "The engine stopped", body: `${redact(reason, store.values())}\n\nCopying is paused. Quit and reopen CopyTrading to try again.` }),
+    })
+    // Agents and notifications start with the engine, and the engine starts in the background so the window is not kept waiting.
+    void startRuntime()
+      .then(() => agents?.start())
+      .then(() => monitor?.start())
+      .catch((error: unknown) => engine.fail(error instanceof Error ? error.message : String(error)))
+    services = { engine, setup, secrets, confirm, diagnosticsDir: paths.logs, pick, agents, restore, prefs }
+    return createApi(services)
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error)
     engine.fail(reason)
@@ -200,14 +292,19 @@ function startUpdates(marker: ResumeMarker): void {
   setInterval(() => void updates.check(), CHECK_EVERY_MS)
 }
 
+/** Starts the saved setup with the Start button's checks, every confirmation answered yes (the owner agreed to an update, or copying was on). Resolves with why it did not, or null. */
+async function resumeSaved(): Promise<string | null> {
+  if (!services) return "There is nothing to resume."
+  const setup = services.setup
+  const autoConfirmed = createApi({ ...services, confirm: async () => true })
+  return resumeCopying(autoConfirmed, () => setup.load(), (ms) => new Promise((done) => setTimeout(done, ms)))
+}
+
 /** After an update relaunch, starts copying again once the engine answers (update.resumesCopying). */
 function resumeAfterUpdate(marker: ResumeMarker): void {
-  if (!setupFile || !secrets || !roots) return
-  const setup = setupFile
-  const autoConfirmed = createApi({ engine, setup, secrets, confirm: async () => true, diagnosticsDir: roots.logs })
   const resume = () => {
     if (!marker.take()) return
-    void resumeCopying(autoConfirmed, () => setup.load(), (ms) => new Promise((done) => setTimeout(done, ms))).then((why) => why && console.error(`Copying did not resume after the update: ${why}`))
+    void resumeSaved().then((why) => why && console.error(`Copying did not resume after the update: ${why}`))
   }
   if (engine.state.state === "running") return resume()
   const stop = engine.onState((state) => {
@@ -234,14 +331,14 @@ function runSmoke(window: BrowserWindow): void {
     if (reason) return finish(1, `smoke failed: the engine stopped: ${reason}`)
     const bridge = await window.webContents.executeJavaScript("typeof window.copytrading?.read?.getStatus")
     if (bridge !== "function") return finish(1, "smoke failed: the page has no engine bridge")
-    finish(0, `smoke ok: version ${app.getVersion()}, engine running on ${roots?.data}`)
+    finish(0, `smoke ok: version ${app.getVersion()}, engine running on ${roots?.owner}`)
   })
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   session.defaultSession.setPermissionRequestHandler((_wc, _permission, deny) => deny(false))
-  api = startServices()
-  protocol.handle(PICTURE_SCHEME, (request) => (attachments ? pictures.respond(attachments, request.url) : new Response(null, { status: 404 })))
+  api = await startServices()
+  protocol.handle(PICTURE_SCHEME, (request) => (attachments ? pictures.respond(attachments(), request.url) : new Response(null, { status: 404 })))
   registerIpc()
   const window = createWindow()
   if (smoke) return runSmoke(window)
@@ -250,19 +347,35 @@ app.whenReady().then(() => {
   resumeAfterUpdate(marker)
   // A throwaway folder is a test run: it never offers an update.
   if (!stateRoot) startUpdates(marker)
-  app.on("second-instance", () => {
-    const [front] = windows()
-    if (front?.isMinimized()) front.restore()
-    front?.focus()
-  })
 })
-app.on("window-all-closed", () => app.quit())
+// Closing the window leaves copying, the agent socket and the notifications running, as the SwiftUI app does; quitting stops them.
+app.on("window-all-closed", () => {
+  if (captureDir) app.quit()
+})
+app.on("activate", () => {
+  if (api && !windows().length) createWindow()
+})
 
-// Quitting waits for the engine to exit, as ProcessSupervisor.stop does, before the app goes.
+const RESTORE_WAIT_MS = 120_000
+
+/** Waits for a restore that is under way, since the engine stops and restarts inside it. */
+async function restoreSettled(): Promise<void> {
+  const deadline = Date.now() + RESTORE_WAIT_MS
+  while (restore?.isRunning && Date.now() < deadline) await new Promise((done) => setTimeout(done, 100))
+}
+
+// Quitting stops the agent socket first (nothing new reaches the engine), then waits for the engine to exit as
+// ProcessSupervisor.stop does: it may cancel working orders, so the app does not go until it has.
 let stopped = false
 app.on("before-quit", (event) => {
   if (stopped) return
   event.preventDefault()
   stopped = true
-  void engine.stop().finally(() => app.quit())
+  monitor?.stop()
+  void (async () => {
+    await agents?.stop()
+    await restoreSettled()
+    await engine.stop()
+    roots?.cleanup()
+  })().finally(() => app.quit())
 })

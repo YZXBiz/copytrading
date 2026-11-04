@@ -1,58 +1,35 @@
 import { describe, expect, it } from "vitest"
-import type { Result } from "../../../shared/contract"
-import { blockersText, finishRestore, restoreFromPreview } from "./restore-flow"
+import type { Result, RestoreResult } from "../../../shared/contract"
+import { blockersText, restore } from "./restore-flow"
 
-const ok = <T>(value: T): Result<T> => ({ ok: true, value })
-const preflight = (over: object = {}) => ok({ candidate_id: "c1", eligible: true, checked_account_count: 1, blockers: [], completion_token: "tok", ...over })
+const acts = (result: Result<RestoreResult>) => ({ activateRestore: async () => result })
 
-type Fake = Parameters<typeof restoreFromPreview>[0] & { calls: string[] }
-
-function acts(over: Partial<Record<string, unknown>> = {}): Fake {
-  const calls: string[] = []
-  return {
-    calls,
-    prepareRestoreCandidate: async () => (calls.push("prepare"), ok({ candidate_id: "c1" })),
-    restorePreflight: async () => (calls.push("preflight"), preflight()),
-    completeRestoreCandidate: async (p: object) => (calls.push(`complete:${JSON.stringify(p)}`), ok(null)),
-    ...over,
-  } as never
-}
-
-describe("finishRestore", () => {
-  it("completes with the token the check returned", async () => {
-    const a = acts()
-    expect(await finishRestore(a, "c1")).toEqual({ status: "done" })
-    expect(a.calls).toEqual(["preflight", 'complete:{"candidate_id":"c1","completion_token":"tok"}'])
+describe("restore", () => {
+  it("is done when main restored", async () => {
+    expect(await restore(acts({ ok: true, value: { status: "restored" } }), { staging_id: "s" })).toEqual({ status: "done" })
   })
 
-  it("stops with the blockers, and completes nothing, when the broker does not match", async () => {
-    const a = acts({ restorePreflight: async () => preflight({ eligible: false, completion_token: null, blockers: ["broker_state_mismatch"] }) })
-    expect(await finishRestore(a, "c1")).toEqual({ status: "blocked", blockers: ["broker_state_mismatch"] })
-    expect(a.calls).toEqual([])
+  it("passes the target on, a previewed backup or a half-done restore", async () => {
+    const sent: unknown[] = []
+    const fake = { activateRestore: async (p: unknown) => (sent.push(p), { ok: true, value: { status: "restored" } } as Result<RestoreResult>) }
+    await restore(fake, { staging_id: "s" })
+    await restore(fake, { candidate_id: "c" })
+    expect(sent).toEqual([{ staging_id: "s" }, { candidate_id: "c" }])
   })
 
-  it("treats an eligible check with no token as blocked rather than guessing", async () => {
-    const a = acts({ restorePreflight: async () => preflight({ completion_token: null }) })
-    expect((await finishRestore(a, "c1")).status).toBe("blocked")
+  it("is blocked, with the blockers, when the broker does not match", async () => {
+    expect(await restore(acts({ ok: true, value: { status: "blocked", blockers: ["broker_state_mismatch"] } }), { candidate_id: "c" })).toEqual({
+      status: "blocked",
+      blockers: ["broker_state_mismatch"],
+    })
   })
 
-  it("reports a refusal in the engine's words, and a Cancel as cancelled", async () => {
-    expect(await finishRestore(acts({ restorePreflight: async () => ({ ok: false, error: "No keys are saved for X." }) }), "c1")).toEqual({ status: "failed", error: "No keys are saved for X." })
-    expect(await finishRestore(acts({ completeRestoreCandidate: async () => ({ ok: false, error: "Cancelled.", cancelled: true }) }), "c1")).toEqual({ status: "cancelled" })
-    expect(await finishRestore(acts({ completeRestoreCandidate: async () => ({ ok: false, error: "The engine did not accept the request." }) }), "c1")).toEqual({ status: "failed", error: "The engine did not accept the request." })
-  })
-})
-
-describe("restoreFromPreview", () => {
-  it("prepares, checks, then completes", async () => {
-    const a = acts()
-    expect(await restoreFromPreview(a, "stage")).toEqual({ status: "done" })
-    expect(a.calls.slice(0, 2)).toEqual(["prepare", "preflight"])
-  })
-  it("goes no further when preparing fails", async () => {
-    const a = acts({ prepareRestoreCandidate: async () => ({ ok: false, error: "Another restore is waiting." }) })
-    expect(await restoreFromPreview(a, "stage")).toEqual({ status: "failed", error: "Another restore is waiting." })
-    expect(a.calls).toEqual([])
+  it("reports a refusal in main's words, and a Cancel as cancelled", async () => {
+    expect(await restore(acts({ ok: false, error: "Your data changed while restoring, so nothing was restored. Try again." }), { staging_id: "s" })).toEqual({
+      status: "failed",
+      error: "Your data changed while restoring, so nothing was restored. Try again.",
+    })
+    expect(await restore(acts({ ok: false, error: "Cancelled.", cancelled: true }), { staging_id: "s" })).toEqual({ status: "cancelled" })
   })
 })
 

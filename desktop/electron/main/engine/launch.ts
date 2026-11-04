@@ -3,7 +3,7 @@ import { existsSync } from "node:fs"
 import { join, resolve } from "node:path"
 import type { EngineState } from "../../../shared/contract"
 import { EngineBridge, EngineError } from "./bridge"
-import { type EngineRoots, installationId } from "./data-root"
+import type { RuntimePaths } from "./paths"
 
 const REPO = resolve(__dirname, "../../..")
 const PYTHON = "cpython/python/bin/python3.14"
@@ -29,20 +29,30 @@ export interface SpawnTarget {
   cwd: string
 }
 
-/** The engine process for the life of the app: starting, running, or stopped with the reason. */
+/** Whether the engine took the request to stop (it has finished its work), or never heard it (ProcessSupervisorStopReport). */
+export type Drain = "acknowledged" | "unconfirmed" | "no_live_engine"
+
+/** The engine process: starting, running, or stopped with the reason. It can be started again after a stop, as a restore does. */
 export class EngineProcess {
   private current: EngineState = { state: "starting" }
   private readonly listeners = new Set<(state: EngineState) => void>()
+  private readonly crashListeners = new Set<(reason: string) => void>()
   private child: ChildProcess | null = null
   private bridge: EngineBridge | null = null
-  private cleanup: () => void = () => {}
-  private stopping = false
+  /** The stop under way or finished for the current process; a second `stop` shares it. */
+  private stopped: Promise<Drain> | null = null
   private exited: Promise<void> = Promise.resolve()
 
   constructor(private readonly timing = { stopAskMs: STOP_ASK_MS, terminateGraceMs: TERMINATE_GRACE_MS }) {}
 
   get state(): EngineState {
     return this.current
+  }
+
+  /** Called with the engine's own words when it exits without having been asked to stop. */
+  onCrash(listener: (reason: string) => void): () => void {
+    this.crashListeners.add(listener)
+    return () => this.crashListeners.delete(listener)
   }
 
   onState(listener: (state: EngineState) => void): () => void {
@@ -59,32 +69,39 @@ export class EngineProcess {
     return this.bridge.request(operation, params)
   }
 
-  /** Spawns the engine on a throwaway data folder and resolves once it answers, or fails with the reason. */
-  async start(target: SpawnTarget & { cleanup?: () => void }): Promise<void> {
-    this.cleanup = target.cleanup ?? (() => {})
+  /** Spawns the engine and resolves once it answers, or fails with the reason. */
+  async start(target: SpawnTarget): Promise<void> {
+    if (this.child) throw new Error("The engine is already running.")
+    this.stopped = null
+    if (this.current.state !== "starting") this.set({ state: "starting" })
     const child = spawn(target.command, target.args, { cwd: target.cwd, env: target.env, stdio: ["pipe", "pipe", "pipe"] })
     const bridge = new EngineBridge(child.stdin!, child.stdout!)
     this.child = child
     this.bridge = bridge
     let stderr = ""
     child.stderr!.on("data", (chunk: Buffer) => (stderr = (stderr + chunk).slice(-2000)))
+    // Each handler acts only for the process that started it, so a late exit never touches a restarted engine.
+    const ended = (reason: string) => {
+      bridge.failAll(new EngineError("disconnected", reason))
+      if (this.child !== child) return
+      this.child = null
+      this.bridge = null
+      if (this.current.state !== "stopped") this.set({ state: "stopped", reason: this.stopped ? "Stopped." : reason })
+      // Nobody asked it to stop: a crash.
+      if (!this.stopped) this.crashListeners.forEach((listener) => listener(reason))
+    }
     this.exited = new Promise((done) => {
       child.on("close", (code) => {
-        const reason = stderr.trim() || `The engine exited (code ${code}).`
-        bridge.failAll(new EngineError("disconnected", reason))
-        this.bridge = null
-        if (this.current.state !== "stopped") this.set({ state: "stopped", reason: this.stopping ? "Stopped." : reason })
+        ended(stderr.trim() || `The engine exited (code ${code}).`)
         done()
       })
       child.on("error", (error) => {
-        bridge.failAll(new EngineError("disconnected", error.message))
-        this.bridge = null
-        this.set({ state: "stopped", reason: error.message })
+        ended(error.message)
         done()
       })
     })
     const deadline = Date.now() + STARTUP_TIMEOUT_MS
-    while (this.current.state === "starting") {
+    while (this.current.state === "starting" && this.child === child) {
       try {
         await bridge.request("get_status")
         this.set({ state: "running" })
@@ -98,18 +115,28 @@ export class EngineProcess {
   }
 
   /** Asks the engine to stop, then terminates and kills it if it has not, and waits for it to be gone. */
-  async stop(): Promise<void> {
+  stop(): Promise<Drain> {
     const child = this.child
-    if (!child || this.stopping) return this.exited
-    this.stopping = true
-    const gone = (ms: number) => Promise.race([this.exited.then(() => true), new Promise<boolean>((done) => setTimeout(() => done(false), ms))])
-    await this.bridge?.request("stop").catch(() => {})
+    if (!child) return Promise.resolve("no_live_engine")
+    this.stopped ??= this.halt(child)
+    return this.stopped
+  }
+
+  private async halt(child: ChildProcess): Promise<Drain> {
+    const exited = this.exited
+    const gone = (ms: number) => Promise.race([exited.then(() => true), new Promise<boolean>((done) => setTimeout(() => done(false), ms))])
+    const drain: Drain = (await this.bridge?.request("stop").then(
+      () => true,
+      () => false,
+    ))
+      ? "acknowledged"
+      : "unconfirmed"
     if (!(await gone(this.timing.stopAskMs))) {
       child.kill("SIGTERM")
       if (!(await gone(this.timing.terminateGraceMs))) child.kill("SIGKILL")
     }
-    await this.exited
-    this.cleanup()
+    await exited
+    return drain
   }
 
   /** The engine could not be started at all (no runtime, a refused folder): say why in the footer. */
@@ -124,28 +151,27 @@ export class EngineProcess {
 }
 
 /**
- * The command that runs the engine as AppModel.swift does: -u -m copytrading_engine, JSON lines on stdio.
+ * The command that runs the engine as AppModel.swift does: -u -m copytrading_engine, JSON lines on stdio,
+ * on whichever generation is active now, with the installation's own id. Call it again after a restore switches generations.
  * `resourcesPath` is the built app's Contents/Resources, which holds Runtime/ and Engine/src; without
  * it (dev, tests) the repo's engine runs on a runtime found on this Mac.
  */
-export function engineTarget(roots: EngineRoots, resourcesPath: string | null): SpawnTarget & { cleanup: () => void; dataDir: string; logsDir: string } {
+export function engineTarget(paths: RuntimePaths, resourcesPath: string | null): SpawnTarget {
   const runtime = resourcesPath ? join(resourcesPath, "Runtime") : findPython()
   const python = resourcesPath ? join(runtime!, PYTHON) : (process.env.COPYTRADING_PYTHON ?? (runtime && join(runtime, PYTHON)))
   if (!python || !existsSync(python)) throw new Error("No Python runtime with the engine's dependencies found.")
+  const { dir } = paths.activeGeneration()
   return {
     command: python,
-    args: ["-u", "-m", "copytrading_engine", "--data-dir", roots.data, "--instance-id", installationId(roots.owner)],
-    cwd: roots.data,
+    args: ["-u", "-m", "copytrading_engine", "--data-dir", dir, "--instance-id", paths.installationIdentity()],
+    cwd: dir,
     env: {
       PATH: "/usr/bin:/bin",
       PYTHONPATH: join(resourcesPath ? join(resourcesPath, "Engine") : join(REPO, "engine"), "src"),
       PYTHONUNBUFFERED: "1",
       PYTHONDONTWRITEBYTECODE: "1",
-      COPYTRADING_DESKTOP_DIAGNOSTICS_STATE_DIR: roots.logs,
-      COPYTRADING_DESKTOP_OWNER_SUPPORT_DIR: roots.owner,
+      COPYTRADING_DESKTOP_DIAGNOSTICS_STATE_DIR: paths.logs,
+      COPYTRADING_DESKTOP_OWNER_SUPPORT_DIR: paths.owner,
     },
-    cleanup: roots.cleanup,
-    dataDir: roots.data,
-    logsDir: roots.logs,
   }
 }
