@@ -43,3 +43,8 @@ app/Resources/Runtime/
 # Private runtime files retained for existing installations; no tracked deployment code.
 /deploy/
 docs/audits/
+
+# React desktop app
+desktop/node_modules
+desktop/dist
+desktop/.env.local
