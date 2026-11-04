@@ -177,6 +177,11 @@ describe("words", () => {
     expect(notes.map((n) => n.id)).toEqual(["sent-o", "fill-p"])
   })
 
+  it("marks only a fill, which the open window shows as a toast", () => {
+    const notes = fillNotes({ sent: [fill()], filled: [fill({ clientId: "p" })] }, names)
+    expect(notes.map((n) => n.fill)).toEqual([undefined, true])
+  })
+
   it("words a sell, a market order, the owner's sale, and an unnamed guru", () => {
     const [sell, market, own, unnamed] = fillNotes(
       { sent: [fill({ side: "sell" }), fill({ price: null }), fill({ byOwner: true, guruId: null }), fill({ guruId: "unknown" })], filled: [] },

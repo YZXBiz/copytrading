@@ -2,15 +2,24 @@
 // header (here ordering the list), a row per holding with its price and trend badge on the left and its value
 // and holdings on the right, now with the Sell action and the columns the old table had.
 import { useState } from "react"
+import { AnimatePresence, motion } from "motion/react"
 import { ArrowDownIcon, ArrowUpIcon, ChevronDownIcon, PackageOpenIcon } from "lucide-react"
 import type { AccountOverview } from "../../../shared/contract"
 import { Badge } from "@/components/reui/badge"
 import { Frame, FramePanel } from "@/components/reui/frame"
+import { RollingNumber } from "@/components/rolling-number"
+import { SymbolLogo } from "@/components/symbol-logo"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { USD_OPTIONS } from "@/features/account/balance-panel/format"
+import { TickFlash } from "@/features/live/TickFlash"
+import { TICK_MS, liveRow } from "@/features/live/live"
+import { useLivePrices } from "@/features/live/use-live-prices"
+import { SPRING } from "@/lib/motion"
 import { money, monthDay, shares, signedMoney, signedPercent } from "@/lib/format"
 import { sharesText } from "@/lib/quantity"
 import { parseDec } from "./decimal"
@@ -54,48 +63,68 @@ function SellCell({ position, onSell }: { position: Position; onSell: (position:
   )
 }
 
-function TrendBadge({ position }: { position: Position }) {
-  const down = Number(position.unrealized_pl ?? 0) < 0
+function TrendBadge({ gain, fraction }: { gain: number | null; fraction: number | null }) {
+  const down = (gain ?? 0) < 0
   return (
     <Badge variant={down ? "destructive-light" : "success-light"}>
       {down ? <ArrowDownIcon aria-hidden="true" /> : <ArrowUpIcon aria-hidden="true" />}
-      {signedPercent(position.unrealized_plpc)}
+      {signedPercent(fraction)}
     </Badge>
   )
 }
 
-function PositionRow({ position, showSeparator, onSell }: { position: Position; showSeparator: boolean; onSell: (position: Position, lot: Lot) => void }) {
-  const note = holdingNote(position)
+/** A figure that rolls to a new value; with a live price behind it, hovering says so. */
+function Figure({ value, live, className }: { value: number | null; live: boolean; className: string }) {
+  const figure = <RollingNumber value={value} format={USD_OPTIONS} className={className} />
+  if (!live) return figure
   return (
-    <li>
-      <div className="flex items-center gap-2">
+    <Tooltip>
+      <TooltipTrigger render={<span className="cursor-default" />}>{figure}</TooltipTrigger>
+      <TooltipContent>{`The price shown is live, read every ${TICK_MS / 1000} seconds`}</TooltipContent>
+    </Tooltip>
+  )
+}
+
+function PositionRow({ position, livePrice, showSeparator, onSell }: { position: Position; livePrice: number | null; showSeparator: boolean; onSell: (position: Position, lot: Lot) => void }) {
+  const note = holdingNote(position)
+  const row = liveRow(position, livePrice)
+  const isLive = livePrice !== null
+  return (
+    // A new row fades in and the rows around it glide on the shared spring; the first paint animates nothing.
+    <motion.li layout="position" transition={SPRING} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative">
+      <TickFlash price={row.price} />
+      <div className="relative flex items-center gap-2">
+        <SymbolLogo symbol={position.symbol} />
         <div className="flex min-w-0 flex-1 flex-col gap-0">
           <p className="text-foreground text-base leading-5 font-medium">
             {position.symbol}
             {note && <span className="text-muted-foreground ms-2 text-sm font-normal">{note}</span>}
           </p>
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <span className="text-muted-foreground text-sm leading-4 tabular-nums">{money(position.current_price)}</span>
-            <TrendBadge position={position} />
-            <span className="text-muted-foreground text-sm leading-4 tabular-nums">{signedMoney(position.unrealized_pl)}</span>
+            <Figure value={row.price} live={isLive} className="text-muted-foreground text-sm leading-4 tabular-nums" />
+            <TrendBadge gain={row.gain} fraction={row.gainFraction} />
+            <span className="text-muted-foreground text-sm leading-4 tabular-nums">{signedMoney(row.gain)}</span>
           </div>
         </div>
 
         <div className="flex shrink-0 flex-col gap-0 text-right">
-          <p className="text-foreground text-base leading-5 font-medium tabular-nums">{money(position.market_value)}</p>
+          <p className="text-foreground text-base leading-5 font-medium tabular-nums">
+            <RollingNumber value={row.value} format={USD_OPTIONS} />
+          </p>
           <p className="text-muted-foreground text-sm leading-4 tabular-nums">{`${shares(position.owned_qty)} shares at ${money(position.avg_entry_price)}`}</p>
         </div>
 
         <SellCell position={position} onSell={onSell} />
       </div>
       {showSeparator ? <Separator className="my-3.5 w-auto border-t border-dashed bg-transparent" /> : null}
-    </li>
+    </motion.li>
   )
 }
 
 export function PositionsList({ account, onRefresh, onSell }: { account: AccountOverview; onRefresh: () => void; onSell: (position: Position, lot: Lot) => void }) {
   const [sort, setSort] = useState<SortKey>("value")
   const rows = sortPositions(heldPositions(account), sort)
+  const prices = useLivePrices(account.account_id, rows.map((p) => p.symbol))
   return (
     <Tabs value={sort} onValueChange={(next) => setSort(next as SortKey)} className="w-full">
       <Frame stacked className="@container w-full">
@@ -130,9 +159,11 @@ export function PositionsList({ account, onRefresh, onSell }: { account: Account
             </Empty>
           ) : (
             <ul className="flex flex-col">
-              {rows.map((position, index) => (
-                <PositionRow key={position.symbol} position={position} showSeparator={index < rows.length - 1} onSell={onSell} />
-              ))}
+              <AnimatePresence initial={false}>
+                {rows.map((position, index) => (
+                  <PositionRow key={position.symbol} position={position} livePrice={prices[position.symbol] ?? null} showSeparator={index < rows.length - 1} onSell={onSell} />
+                ))}
+              </AnimatePresence>
             </ul>
           )}
         </FramePanel>

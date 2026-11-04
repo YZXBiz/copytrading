@@ -1012,7 +1012,17 @@ export interface DesktopApi {
     state(): Promise<EngineState>
     /** Calls `listener` on every change; returns the way to stop. */
     onState(listener: (state: EngineState) => void): () => void
+    /** Calls `listener` when a copied order fills; returns the way to stop. The same words as the macOS notification. */
+    onFill(listener: (fill: FillAlert) => void): () => void
   }
 }
 
-export const CHANNELS = { read: "engine:read", act: "engine:act", state: "engine:state", stateChanged: "engine:state-changed" } as const
+/** An order that filled, as the page's toast says it: "Bought 9.804 shares of GFS at $48.49", and whose it was. */
+export interface FillAlert {
+  title: string
+  body: string
+  /** Where the fill is shown, as a route hash. */
+  route: string
+}
+
+export const CHANNELS = { read: "engine:read", act: "engine:act", state: "engine:state", stateChanged: "engine:state-changed", fill: "engine:fill" } as const
