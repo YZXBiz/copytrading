@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { ArrowDownIcon, ArrowUpIcon, ChartLineIcon } from "lucide-react"
 import type { AccountOverview, HistoryRange } from "../../../shared/contract"
 import { Badge } from "@/components/reui/badge"
@@ -48,9 +48,15 @@ export function BalanceChart({ account }: { account: AccountOverview }) {
 
   const data = history.status === "ready" ? history.data : null
   // Stable between the page's own re-renders: a new array would redraw the line.
-  const points = useMemo(() => data?.points.map((p) => ({ at: p.at, equity: Number(p.equity) })) ?? [], [data])
+  const read = useMemo(() => data?.points.map((p) => ({ at: p.at, equity: Number(p.equity) })) ?? null, [data])
+  // A new range keeps drawing the last one until its points land, so the line morphs instead of being redrawn.
+  const last = useRef<{ points: { at: string; equity: number }[]; range: HistoryRange } | null>(null)
+  if (history.status === "ready") last.current = read && { points: read, range }
+  const switching = history.status === "loading" && last.current !== null
+  const shown = switching ? last.current! : { points: read ?? [], range }
+  const points = shown.points
   const up = (points.at(-1)?.equity ?? 0) >= (points[0]?.equity ?? 0)
-  const tick = (at: string) => (range === "day" ? timeOfDay(at) : monthDay(at))
+  const tick = (at: string) => (shown.range === "day" ? timeOfDay(at) : monthDay(at))
 
   return (
     <Frame spacing="default">
@@ -85,7 +91,7 @@ export function BalanceChart({ account }: { account: AccountOverview }) {
             ))}
           </ToggleGroup>
         </div>
-        {history.status === "loading" && <Skeleton className="h-72 w-full" role="status" aria-label="Loading balance history" />}
+        {history.status === "loading" && !switching && <Skeleton className="h-72 w-full" role="status" aria-label="Loading balance history" />}
         {history.status === "error" && <RegionError title="Balance history did not load" message={history.error} onRetry={history.retry} />}
         {history.status === "ready" && points.length < 2 && (
           <Empty className="h-72">
@@ -102,7 +108,7 @@ export function BalanceChart({ account }: { account: AccountOverview }) {
             </EmptyContent>
           </Empty>
         )}
-        {history.status === "ready" && points.length >= 2 && <BalancePlot points={points} tick={tick} up={up} />}
+        {(history.status === "ready" || switching) && points.length >= 2 && <BalancePlot points={points} tick={tick} up={up} />}
       </FramePanel>
       <FramePanel>
         <dl className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-0">
