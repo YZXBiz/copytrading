@@ -124,6 +124,10 @@ engine's log folder, newest 2000 records, `electron/main/journal.ts`). `src/feat
 mounted once in the sidebar (⌘J). The time zone lives in `src/lib/time-zone.ts` and `format.ts` reads it. A request only the
 app can carry out (a setup change) cannot be approved yet: main refuses it, the pages offer Reject only.
 
+An account page opens its sheet from the route, so a capture can show one: `#/accounts/<id>?open=review|sale|limits`.
+`COPYTRADING_FIXTURE_SCENE=attention` serves the states the captured account never had (a stopped account, a holdings
+mismatch). Capture waits until no region is still loading before it saves.
+
 ## Pictures
 
 A post's captured pictures reach the page as `ct-picture://<evidence_id>` (`electron/main/pictures.ts`). Main notes each

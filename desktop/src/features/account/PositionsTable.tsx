@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { type ColumnDef, useTable } from "@tanstack/react-table"
-import { PackageOpenIcon } from "lucide-react"
+import { ChevronDownIcon, PackageOpenIcon } from "lucide-react"
 import type { AccountOverview } from "../../../shared/contract"
 import { Badge } from "@/components/reui/badge"
 import { DataGrid, type DataGridFeatures, dataGridFeatures } from "@/components/reui/data-grid/data-grid"
@@ -10,14 +10,53 @@ import { DataGridTable } from "@/components/reui/data-grid/data-grid-table"
 import { Frame, FrameDescription, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
-import { money, shares, signedMoney, signedPercent } from "@/lib/format"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { money, monthDay, shares, signedMoney, signedPercent } from "@/lib/format"
+import { parseDec } from "./decimal"
 import { heldPositions, holdingNote } from "./model"
+import { sharesText } from "./quantity"
 
 type Position = AccountOverview["positions"][number]
 
 const RIGHT = { headerClassName: "text-end [&>div]:justify-end", cellClassName: "text-end tabular-nums" }
 
-const columns: ColumnDef<DataGridFeatures, Position>[] = [
+type Lot = Position["lots"][number]
+
+/** Lots with shares left to sell. */
+export const sellable = (position: Position) => position.lots.filter((lot) => (parseDec(lot.remaining_qty) ?? 0n) > 0n)
+
+/** "赵哥 · Oct 22 · 2.052 shares": which buy a lot is. */
+const lotLabel = (position: Position, lot: Lot) =>
+  [lot.guru_id ?? "A post", lot.posted_at && monthDay(lot.posted_at), sharesText(parseDec(lot.remaining_qty) ?? 0n, position.symbol)].filter(Boolean).join(" · ")
+
+/** Sell one lot of the stock: one Sell button, or a menu of the lots when several buys make it up. */
+function SellCell({ position, onSell }: { position: Position; onSell: (position: Position, lot: Lot) => void }) {
+  const lots = sellable(position)
+  if (lots.length === 0) return null
+  if (lots.length === 1) {
+    return (
+      <Button type="button" size="xs" variant="outline" aria-label={`Sell ${lotLabel(position, lots[0]!)}`} onClick={() => onSell(position, lots[0]!)}>
+        Sell
+      </Button>
+    )
+  }
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={<Button type="button" size="xs" variant="outline" aria-label={`Sell ${position.symbol}: choose a buy`} />}>
+        Sell <ChevronDownIcon aria-hidden />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-auto">
+        {lots.map((lot) => (
+          <DropdownMenuItem key={lot.lot_id} onClick={() => onSell(position, lot)}>
+            {lotLabel(position, lot)}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+const columns = (onSell: (position: Position, lot: Lot) => void): ColumnDef<DataGridFeatures, Position>[] => [
   {
     accessorKey: "symbol",
     header: ({ column }) => <DataGridColumnHeader title="Stock" column={column} />,
@@ -29,9 +68,9 @@ const columns: ColumnDef<DataGridFeatures, Position>[] = [
     ),
   },
   { accessorKey: "owned_qty", header: ({ column }) => <DataGridColumnHeader title="Shares" column={column} />, cell: ({ row }) => shares(row.original.owned_qty), meta: RIGHT },
-  { accessorKey: "avg_entry_price", header: ({ column }) => <DataGridColumnHeader title="Avg cost" column={column} />, cell: ({ row }) => money(row.original.avg_entry_price), meta: RIGHT },
-  { accessorKey: "current_price", header: ({ column }) => <DataGridColumnHeader title="Price" column={column} />, cell: ({ row }) => money(row.original.current_price), meta: RIGHT },
-  { accessorKey: "market_value", header: ({ column }) => <DataGridColumnHeader title="Value" column={column} />, cell: ({ row }) => money(row.original.market_value), meta: RIGHT },
+  { accessorKey: "avg_entry_price", header: ({ column }) => <DataGridColumnHeader title="Avg cost" column={column} />, cell: ({ row }) => money(row.original.avg_entry_price), size: 110, meta: RIGHT },
+  { accessorKey: "current_price", header: ({ column }) => <DataGridColumnHeader title="Price" column={column} />, cell: ({ row }) => money(row.original.current_price), size: 110, meta: RIGHT },
+  { accessorKey: "market_value", header: ({ column }) => <DataGridColumnHeader title="Value" column={column} />, cell: ({ row }) => money(row.original.market_value), size: 110, meta: RIGHT },
   {
     accessorKey: "unrealized_pl",
     header: ({ column }) => <DataGridColumnHeader title="Gain" column={column} />,
@@ -46,11 +85,21 @@ const columns: ColumnDef<DataGridFeatures, Position>[] = [
     },
     meta: RIGHT,
   },
+  { id: "sell", header: () => <span className="sr-only">Sell</span>, cell: ({ row }) => <SellCell position={row.original} onSell={onSell} />, size: 90, meta: RIGHT },
 ]
 
-export function PositionsTable({ account, onRefresh }: { account: AccountOverview; onRefresh: () => void }) {
+export function PositionsTable({
+  account,
+  onRefresh,
+  onSell,
+}: {
+  account: AccountOverview
+  onRefresh: () => void
+  onSell: (position: Position, lot: Lot) => void
+}) {
   const data = useMemo(() => heldPositions(account), [account])
-  const table = useTable({ features: dataGridFeatures, data, columns, getRowId: (row) => row.symbol })
+  const cols = useMemo(() => columns(onSell), [onSell])
+  const table = useTable({ features: dataGridFeatures, data, columns: cols, getRowId: (row) => row.symbol })
   return (
     <Frame spacing="sm">
       <FrameHeader>

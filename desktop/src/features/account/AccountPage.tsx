@@ -1,22 +1,32 @@
 import { useState } from "react"
-import type { AccountOverview } from "../../../shared/contract"
+import type { AccountOverview, Position } from "../../../shared/contract"
 import { readClock } from "@/lib/clock"
 import { useResult } from "@/lib/use-result"
 import { AccountHeader } from "./AccountHeader"
+import { AccountNotices } from "./AccountNotices"
 import { BalanceChart } from "./BalanceChart"
+import { useDeepLink } from "./deep-link"
 import { LimitsPanel } from "./LimitsPanel"
+import { LimitsSheet } from "./LimitsSheet"
+import { type LotSaleTarget, LotSaleSheet } from "./LotSaleSheet"
+import { ManualReviewSheet } from "./ManualReviewSheet"
+import { heldPositions } from "./model"
 import { NeedsYou } from "./NeedsYou"
-import { PositionsTable } from "./PositionsTable"
+import { PositionsTable, sellable } from "./PositionsTable"
 import { RecentPosts } from "./RecentPosts"
 import { StatsRow } from "./StatsRow"
-import { isWaiting } from "./model"
+import { useSkippedCalls } from "./skipped-calls"
+import { type WaitingCall, openCall } from "./waiting"
 
 export function AccountPage({
   account,
+  accounts,
   onRefresh,
   onOpenConnections,
 }: {
   account: AccountOverview
+  /** Every account, for the ones a post reached. */
+  accounts: AccountOverview[]
   onRefresh: () => void
   onOpenConnections: () => void
 }) {
@@ -25,20 +35,109 @@ export function AccountPage({
   const [now] = useState(readClock)
   const posts = useResult(() => window.copytrading.read.getSourceActivity(), id)
   const limits = useResult(() => window.copytrading.read.getLimits({ account_id: id }), id)
-  const waiting = posts.status === "ready" ? posts.data.items.filter((post) => isWaiting(post, now)) : []
+  const status = useResult(() => window.copytrading.read.getStatus(), id)
+  const skipped = useSkippedCalls()
+  const [review, setReview] = useState<WaitingCall | null>(null)
+  const [sale, setSale] = useState<LotSaleTarget | null>(null)
+  const [editingLimits, setEditingLimits] = useState(false)
+  const [limitsSaved, setLimitsSaved] = useState(false)
+
   const guru = limits.status === "ready" && limits.data ? limits.data.guru : null
+  const copyingStatus = status.status === "ready" ? status.data : null
+  const calls =
+    posts.status === "ready"
+      ? posts.data.items
+          .flatMap((post) => openCall(post, { skipped: skipped.has(post.source_id ?? String(post.sequence)), now }) ?? [])
+          .filter((call) => call.accountIds.includes(id))
+          .sort((a, b) => b.source.source_at.localeCompare(a.source.source_at))
+      : []
+
+  useDeepLink(posts.status === "ready" && limits.status !== "loading", (sheet) => {
+    if (sheet === "limits") setEditingLimits(true)
+    if (sheet === "review") setReview(calls[0] ?? null)
+    if (sheet === "sale") {
+      const position = heldPositions(account).find((p) => sellable(p).length > 0)
+      const lot = position && sellable(position)[0]
+      if (position && lot) setSale(saleTarget(position, lot))
+    }
+  })
+
+  /** Something may have changed in the engine: read the account, its posts, its limits and its state again. */
+  const changed = () => {
+    onRefresh()
+    posts.retry()
+    limits.retry()
+    status.retry()
+  }
+
+  const saleTarget = (position: Position, lot: Position["lots"][number]): LotSaleTarget => ({
+    accountId: id,
+    environment: account.environment,
+    symbol: position.symbol,
+    lot,
+    guruName: guru,
+    currentPrice: position.current_price,
+  })
 
   return (
     <div className="flex flex-col gap-6">
-      <AccountHeader account={account} guru={guru} />
-      <NeedsYou waiting={waiting} />
+      <AccountHeader account={account} guru={guru} status={copyingStatus} saved={limitsSaved} onChanged={changed} />
+      <AccountNotices account={account} status={copyingStatus} onResolved={changed} />
+      <NeedsYou
+        calls={calls}
+        guruName={guru}
+        canCopy={copyingStatus?.state === "running" || copyingStatus?.state === "degraded"}
+        now={now}
+        recent={skipped.recent}
+        onCopy={setReview}
+        onSkip={(call) => skipped.skip(call.source.source_id ?? String(call.source.sequence), call.source.text)}
+        onUndo={skipped.undo}
+      />
       <StatsRow account={account} />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <BalanceChart accountId={id} />
-        <LimitsPanel account={account} limits={limits} onOpenConnections={onOpenConnections} />
+        <LimitsPanel account={account} limits={limits} onOpenConnections={onOpenConnections} onEdit={() => setEditingLimits(true)} />
       </div>
-      <PositionsTable account={account} onRefresh={onRefresh} />
+      <PositionsTable
+        account={account}
+        onRefresh={onRefresh}
+        onSell={(position, lot) => setSale(saleTarget(position, lot))}
+      />
       <RecentPosts accountId={id} posts={posts} now={now} />
+      {review && (
+        <ManualReviewSheet
+          source={review.source}
+          call={review}
+          accounts={accounts}
+          guruName={guru}
+          now={now}
+          onClose={() => {
+            setReview(null)
+            changed()
+          }}
+        />
+      )}
+      {sale && (
+        <LotSaleSheet
+          target={sale}
+          onClose={() => {
+            setSale(null)
+            changed()
+          }}
+        />
+      )}
+      {editingLimits && (
+        <LimitsSheet
+          accountId={id}
+          onClose={(saved) => {
+            setEditingLimits(false)
+            if (saved) {
+              setLimitsSaved(true)
+              changed()
+            }
+          }}
+        />
+      )}
     </div>
   )
 }

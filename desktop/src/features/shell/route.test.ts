@@ -12,6 +12,10 @@ describe("route", () => {
     expect(parseHash("#/accounts/zhap-account-2")).toEqual({ screen: "accounts", id: "zhap-account-2" })
   })
 
+  it("leaves a query after the path out of the id", () => {
+    expect(parseHash("#/accounts/zhap-account-2?open=limits")).toEqual({ screen: "accounts", id: "zhap-account-2" })
+  })
+
   it("round-trips an id that needs escaping, such as a Chinese guru name", () => {
     expect(parseHash(href("gurus", "赵哥/1"))).toEqual({ screen: "gurus", id: "赵哥/1" })
   })

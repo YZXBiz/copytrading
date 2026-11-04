@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { SourceActivity } from "../../../shared/contract"
-import { dayChange, isWaiting, postOutcome, tradingDay } from "./model"
+import { dayChange, postOutcome } from "./model"
+import { isWaiting, tradingDay } from "./waiting"
 
 const post = (over: Partial<SourceActivity>): SourceActivity => ({
   sequence: 1,
@@ -37,8 +38,49 @@ describe("postOutcome", () => {
   it("never shows a raw code", () => {
     expect(postOutcome(post({ destinations: delivered("some_new_reason") }), "a", NOW).read).toContain("Some new reason")
   })
-  it("marks a placed order copied", () => {
-    expect(postOutcome(post({ destinations: delivered("order_linked") }), "a", NOW).label).toBe("Copied")
+  it("does not call an order Copied before it filled", () => {
+    expect(postOutcome(post({ destinations: delivered("order_linked") }), "a", NOW).label).toBe("Order placed")
+  })
+})
+
+describe("what an order did", () => {
+  const order = (over: Record<string, unknown>) =>
+    ({ client_id: "c1", symbol: "PM", side: "buy", status: "filled", quantity: "1.6", filled_quantity: "1.6", limit_price: "125", average_fill_price: "124.89", budget_usd: "200", ...over }) as never
+  const withOrder = (over: Record<string, unknown>) =>
+    postOutcome(post({ destinations: [{ account_id: "a", status: "done", instruction_outcomes: ["order_linked"], orders: [order(over)] }] }), "a", NOW)
+
+  it("calls an order Copied only once it filled", () => {
+    expect(withOrder({})).toEqual({ label: "Copied", tone: "success-light", read: "Bought $199.82 of PM" })
+    expect(withOrder({ side: "sell" }).read).toBe("Sold $199.82 of PM")
+    expect(withOrder({ client_id: "manual-1" }).read).toBe("You bought $199.82 of PM")
+  })
+
+  it("says a cancelled, expired or released order was cancelled, never Copied", () => {
+    for (const status of ["canceled", "expired", "done_for_day", "replaced", "released_unsubmitted", "aborted_before_submit"]) {
+      expect(withOrder({ status, filled_quantity: "0", average_fill_price: null })).toEqual({ label: "Cancelled", tone: "outline", read: "Order for $200 of PM was cancelled" })
+    }
+  })
+
+  it("keeps what an order filled before it was cancelled", () => {
+    expect(withOrder({ status: "canceled", filled_quantity: "0.8", average_fill_price: "125" })).toEqual({ label: "Partly filled", tone: "warning-light", read: "Bought $100.00 of PM, rest cancelled" })
+  })
+
+  it("says a rejected order failed, an unconfirmed one needs review, and an open one is working", () => {
+    expect(withOrder({ status: "rejected" })).toMatchObject({ label: "Failed", tone: "destructive-light", read: "The broker rejected the order for PM" })
+    expect(withOrder({ status: "uncertain" }).label).toBe("Needs review")
+    expect(withOrder({ status: "new", filled_quantity: "0" })).toMatchObject({ label: "Working", read: "Buying $200 of PM at up to $125.00" })
+    expect(withOrder({ status: "partially_filled" })).toMatchObject({ label: "Partly filled", read: "Partly bought: $199.82 of PM so far" })
+  })
+
+  it("sizes an order with no budget by its shares at its limit, and says several orders once", () => {
+    expect(withOrder({ status: "canceled", budget_usd: null, filled_quantity: "0", quantity: "2" }).read).toBe("Order for $250 of PM was cancelled")
+    const two = postOutcome(post({ destinations: [{ account_id: "a", status: "done", instruction_outcomes: [], orders: [order({}), order({ client_id: "c2" })] }] }), "a", NOW)
+    expect(two.read).toBe("Bought $199.82 of PM and 1 more")
+  })
+
+  it("leaves out a lot the owner sold by hand", () => {
+    const sold = postOutcome(post({ destinations: [{ account_id: "a", status: "done", instruction_outcomes: ["order_linked"], orders: [order({ client_id: "lotsale-1" })] }] }), "a", NOW)
+    expect(sold.label).toBe("Order placed")
   })
 })
 

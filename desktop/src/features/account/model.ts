@@ -1,8 +1,11 @@
-import type { AccountOverview, SourceActivity } from "../../../shared/contract"
+import type { AccountOverview, OrderActivity, SourceActivity } from "../../../shared/contract"
 import { monthDay } from "@/lib/format"
+import { decMul, decRound, decText, parseDec } from "./decimal"
+import { dollars, usd } from "./quantity"
+import { callPhrase, isWaiting } from "./waiting"
 
 /** The badge tones the page uses for what became of a post. */
-export type OutcomeTone = "success-light" | "warning-light" | "outline"
+export type OutcomeTone = "success-light" | "warning-light" | "destructive-light" | "outline"
 
 export interface PostOutcome {
   label: string
@@ -24,11 +27,50 @@ function words(code: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
-function call(post: SourceActivity): string {
-  const first = post.instructions[0]
-  if (!first) return "Trade call"
-  const verb = first.action === "buy" ? "Buy" : first.action === "close" ? "Sell all" : "Trim"
-  return `${verb} ${first.symbol}${first.price ? ` at $${Number(first.price).toFixed(2)}` : ""}`
+const call = (post: SourceActivity) => (post.instructions[0] ? callPhrase(post.instructions[0]) : "Trade call")
+
+/** Orders that ended without filling, as the broker's states name them. */
+const ENDED = new Set(["canceled", "expired", "done_for_day", "replaced", "released_unsubmitted", "aborted_before_submit"])
+
+/** "$200 of PM": what the order was sized to spend, its budget or its shares at its limit. */
+function planned(order: OrderActivity): string {
+  const budget = parseDec(order.budget_usd)
+  const quantity = parseDec(order.quantity)
+  const limit = parseDec(order.limit_price)
+  const usd = budget ?? (quantity !== null && limit !== null ? decMul(quantity, limit) : null)
+  return usd === null ? order.symbol : `${dollars(decText(decRound(usd, 2)))} of ${order.symbol}`
+}
+
+/** "$199.82 of PM": what filled, or what was planned when the fill is not on record. */
+function filled(order: OrderActivity): string {
+  const quantity = parseDec(order.filled_quantity)
+  const price = parseDec(order.average_fill_price)
+  return quantity !== null && quantity > 0n && price !== null ? `${usd(decText(decMul(quantity, price)))} of ${order.symbol}` : planned(order)
+}
+
+/** What one order did, in the order a trader cares about (DestinationOutcome.swift): Copied only when it filled. */
+export function orderOutcome(order: OrderActivity, count: number): PostOutcome {
+  const selling = order.side === "sell"
+  const done = filled(order)
+  const some = (parseDec(order.filled_quantity) ?? 0n) > 0n
+  if (order.status === "filled") {
+    const text = `${order.client_id.startsWith("manual-") ? (selling ? "You sold" : "You bought") : selling ? "Sold" : "Bought"} ${done}`
+    return { label: "Copied", tone: "success-light", read: count > 1 ? `${text} and ${count - 1} more` : text }
+  }
+  if (order.status === "partially_filled") {
+    return { label: "Partly filled", tone: "warning-light", read: `${selling ? "Partly sold" : "Partly bought"}: ${done} so far` }
+  }
+  if (ENDED.has(order.status)) {
+    return some
+      ? { label: "Partly filled", tone: "warning-light", read: `${selling ? "Sold" : "Bought"} ${done}, rest cancelled` }
+      : { label: "Cancelled", tone: "outline", read: `Order for ${planned(order)} was cancelled` }
+  }
+  if (order.status === "rejected") return { label: "Failed", tone: "destructive-light", read: `The broker rejected the order for ${order.symbol}` }
+  if (order.status === "uncertain" || order.status === "unrecognized") {
+    return { label: "Needs review", tone: "warning-light", read: `The broker has not confirmed the order for ${order.symbol}` }
+  }
+  const limit = order.limit_price ? ` at up to ${usd(order.limit_price)}` : ""
+  return { label: "Working", tone: "outline", read: `${selling ? "Selling" : "Buying"} ${planned(order)}${limit}` }
 }
 
 /** What a guru post did for one account: chat, a suggestion waiting for the owner, or a trade call. */
@@ -36,8 +78,12 @@ export function postOutcome(post: SourceActivity, accountId: string, now: Date):
   if (post.decision === "ignore") return { label: "Chat", tone: "outline", read: "Just chat" }
   if (isWaiting(post, now)) return { label: "Waits for you", tone: "warning-light", read: "Needs your review" }
   const read = call(post)
-  const outcomes = post.destinations.find((d) => d.account_id === accountId)?.instruction_outcomes ?? []
-  if (outcomes.includes("order_linked")) return { label: "Copied", tone: "success-light", read }
+  const destination = post.destinations.find((d) => d.account_id === accountId)
+  // What the post itself did; a lot the owner later sold by hand is theirs, not the post's.
+  const orders = (destination?.orders ?? []).filter((o) => !o.client_id.startsWith("lotsale-"))
+  if (orders[0]) return orderOutcome(orders[0], orders.length)
+  const outcomes = destination?.instruction_outcomes ?? []
+  if (outcomes.includes("order_linked")) return { label: "Order placed", tone: "outline", read }
   if (outcomes.length === 0 && post.decision === "review") {
     return { label: "Not copied", tone: "outline", read: "Its trading day ended before you decided" }
   }
@@ -47,39 +93,6 @@ export function postOutcome(post: SourceActivity, accountId: string, now: Date):
   const code = outcomes.find((o) => o !== "pending" && o !== "waiting_for_quote") ?? ""
   const symbol = post.instructions[0]?.symbol ?? ""
   return { label: "Skipped", tone: "outline", read: `${read} · ${SKIP_REASONS[code]?.(symbol) ?? words(code)}` }
-}
-
-/** Skips that hold a call for the owner rather than refuse it (the engine's HELD_FOR_OWNER). */
-const HELD_FOR_OWNER = new Set(["approval_required", "named_buy_not_held"])
-
-/** The New York trading day an instant belongs to; from 20:00 it is the next day's (WaitingCall.swift). */
-export function tradingDay(instant: Date): string {
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-US", {
-      timeZone: "America/New_York",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      hourCycle: "h23",
-    })
-      .formatToParts(instant)
-      .map((part) => [part.type, Number(part.value)]),
-  ) as Record<"year" | "month" | "day" | "hour", number>
-  const day = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + (parts.hour >= 20 ? 1 : 0)))
-  return day.toISOString().slice(0, 10)
-}
-
-/**
- * A post waits for the owner while an account holds its call (a review, an approval, a sell naming
- * a buy that is not held) and its trading day is not over, as WaitingCall.swift decides. The
- * owner's own skips and hand-entered trades live in the app, not the engine, so they are not seen.
- */
-export function isWaiting(post: SourceActivity, now: Date): boolean {
-  const held = post.destinations.some(
-    (d) => d.status === "review_required" || d.instruction_outcomes.some((o) => HELD_FOR_OWNER.has(o)),
-  )
-  return held && tradingDay(new Date(post.source_at)) === tradingDay(now)
 }
 
 /** Positions worth a row: the broker keeps fractions of a cent after a sale. */

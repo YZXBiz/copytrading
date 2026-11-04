@@ -31,16 +31,23 @@ export function LimitsPanel({
   account,
   limits,
   onOpenConnections,
+  onEdit,
 }: {
   account: AccountOverview
   limits: Loaded<AccountLimits | null> & { retry: () => void }
   onOpenConnections: () => void
+  onEdit: () => void
 }) {
   const lossToday = Math.max(0, -Number(account.balance?.day_change_usd ?? 0))
   return (
     <Frame spacing="sm">
-      <FrameHeader>
+      <FrameHeader className="flex-row items-center justify-between">
         <FrameTitle>Limits</FrameTitle>
+        {limits.status === "ready" && limits.data && (
+          <Button type="button" size="xs" variant="outline" onClick={onEdit}>
+            Edit Limits
+          </Button>
+        )}
       </FrameHeader>
       <FramePanel className="flex flex-col gap-4">
         {limits.status === "loading" && (
@@ -58,7 +65,7 @@ export function LimitsPanel({
                 <GaugeIcon />
               </EmptyMedia>
               <EmptyTitle>No limits to show</EmptyTitle>
-              <EmptyDescription>This account's limits are saved in the setup, which this screen does not read yet.</EmptyDescription>
+              <EmptyDescription>This account has no saved limits yet. Save it in Connections and they appear here.</EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
               <Button type="button" size="sm" variant="outline" onClick={onOpenConnections}>

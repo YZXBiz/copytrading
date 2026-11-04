@@ -13,7 +13,8 @@ export interface Route {
 }
 
 export function parseHash(hash: string): Route {
-  const [screen, id] = hash.replace(/^#\/?/, "").split("/")
+  // A `?name=value` after the path is for the screen (an account page opens its sheet from `?open=`), not part of the id.
+  const [screen, id] = hash.replace(/^#\/?/, "").split("?")[0]!.split("/")
   return {
     screen: SCREEN_IDS.find((s) => s === screen) ?? "accounts",
     id: id ? decodeURIComponent(id) : null,
