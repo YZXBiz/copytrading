@@ -1,88 +1,106 @@
-import { useEffect, useState } from "react"
-import { SparklesIcon, SquarePenIcon } from "lucide-react"
+import { type KeyboardEvent } from "react"
+import { ChevronsLeftRightIcon, SparklesIcon, SquarePenIcon, XIcon } from "lucide-react"
 import { RegionError } from "@/components/region-error"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, useSidebar } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
-import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar"
-import { navigate, useRoute } from "@/features/shell/route"
-import { useResult } from "@/lib/use-result"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { type Loaded } from "@/lib/use-result"
 import { AssistantComposer } from "./AssistantComposer"
 import { AssistantEmpty } from "./AssistantEmpty"
 import { AssistantTranscript } from "./AssistantTranscript"
-import { assistantContext, assistantGurus, hasModel, suggestions } from "./context"
-import { useAssistant } from "./use-assistant"
+import type { useAssistant } from "./use-assistant"
 
-/** The assistant's button for the sidebar, and its panel: a sheet on the right that closes on Esc, with ⌘J to open it. */
-export function AssistantPanel() {
-  const [open, setOpen] = useState(false)
-  const route = useRoute()
-  const assistant = useAssistant()
+const MUTED_ICON_BUTTON = "text-muted-foreground hover:text-foreground"
 
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.metaKey && event.key.toLowerCase() === "j") {
-        event.preventDefault()
-        setOpen((was) => !was)
-      }
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [])
+interface Props {
+  model: Loaded<unknown> & { retry: () => void }
+  ready: boolean
+  /** The model that answers. */
+  provider: { name: string; model: string } | null
+  suggestions: string[]
+  assistant: ReturnType<typeof useAssistant>
+  wide: boolean
+  onWide: (wide: boolean) => void
+  onAsk: (text: string) => void
+  onOpenConnections: () => void
+}
 
-  // Read again each time the panel opens, so a model set up in Connections is seen.
-  const model = useResult(async () => {
-    const { read } = window.copytrading
-    const [setup, secrets] = await Promise.all([read.getSetup(), read.getSecretStatus()])
-    if (!setup.ok) return setup
-    if (!secrets.ok) return secrets
-    return { ok: true as const, value: { setup: setup.value?.configuration ?? null, hasModel: hasModel(setup.value, secrets.value) } }
-  }, `model:${open}`)
-
-  const configuration = model.status === "ready" ? model.data.setup : null
-  const gurus = assistantGurus(configuration)
-  const guru = (route.screen === "gurus" && gurus.find((g) => g.id === route.id)?.name) || gurus[0]?.name || null
-  const ready = model.status === "ready" && model.data.hasModel
-  const ask = (text: string) => void assistant.ask(text, assistantContext(route, configuration), ready)
+/** ai-chat-8's docked panel: a floating right sidebar with a quiet header, the conversation, and a composer pinned under it. */
+export function AssistantPanel({ model, ready, provider, suggestions, assistant, wide, onWide, onAsk, onOpenConnections }: Props) {
+  const { isMobile, open, setOpen, toggleSidebar } = useSidebar()
+  // Off canvas leaves the composer and its buttons focusable behind the page.
+  const offscreen = !isMobile && !open
 
   return (
-    <>
-      <SidebarMenuItem>
-        <SidebarMenuButton onClick={() => setOpen(true)} tooltip="Assistant (⌘J)">
-          <SparklesIcon aria-hidden="true" />
-          <span>Assistant</span>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent className="gap-0 p-0 sm:max-w-md" aria-label="Assistant">
-          <SheetHeader className="flex-row items-center gap-2 border-b py-3 pr-14">
-            <SheetTitle>Assistant</SheetTitle>
-            <SheetDescription className="sr-only">Ask about your posts, accounts, and setup.</SheetDescription>
+    <Sidebar
+      side="right"
+      variant="floating"
+      collapsible="offcanvas"
+      aria-label="Assistant"
+      aria-hidden={offscreen || undefined}
+      inert={offscreen || undefined}
+      onKeyDown={(event: KeyboardEvent) => {
+        if (event.key === "Escape") setOpen(false)
+      }}
+    >
+      <SidebarHeader className="shrink-0 gap-0 border-b p-0">
+        <div className="flex min-h-12 items-center gap-1 px-3">
+          <span className="text-primary">
+            <SparklesIcon className="size-4 shrink-0" aria-hidden="true" />
+          </span>
+          <span className="min-w-0 truncate ps-2 text-start text-sm font-medium">Assistant</span>
+          <div className="ms-auto flex shrink-0 items-center gap-0.5">
+            <Tooltip>
+              <TooltipTrigger
+                render={<Button type="button" variant="ghost" size="icon-sm" aria-label="Widen the panel" aria-pressed={wide} onClick={() => onWide(!wide)} className={`${MUTED_ICON_BUTTON} aria-pressed:text-foreground`} />}
+              >
+                <ChevronsLeftRightIcon className="size-3.5" aria-hidden="true" />
+              </TooltipTrigger>
+              <TooltipContent>{wide ? "Narrow" : "Widen"}</TooltipContent>
+            </Tooltip>
             {assistant.messages.length > 0 && (
-              <Button type="button" variant="ghost" size="icon-sm" className="ml-auto" aria-label="New conversation" onClick={() => void assistant.reset()}>
-                <SquarePenIcon />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger
+                  render={<Button type="button" variant="ghost" size="icon-sm" aria-label="New conversation" onClick={() => void assistant.reset()} className={MUTED_ICON_BUTTON} />}
+                >
+                  <SquarePenIcon className="size-3.5" aria-hidden="true" />
+                </TooltipTrigger>
+                <TooltipContent>New chat</TooltipContent>
+              </Tooltip>
             )}
-          </SheetHeader>
-          {model.status === "error" ? (
-            <div className="p-4">
-              <RegionError title="The assistant's model did not load" message={model.error} onRetry={model.retry} />
-            </div>
-          ) : model.status === "loading" ? (
-            <div className="flex flex-1 flex-col gap-3 p-4">
-              <Skeleton className="h-6 w-2/3" />
-              <Skeleton className="h-12 w-full" />
-            </div>
-          ) : assistant.messages.length === 0 ? (
-            <AssistantEmpty hasModel={ready} suggestions={suggestions(route.screen, guru, configuration !== null)} onAsk={ask} onOpenConnections={() => (setOpen(false), navigate("connections"))} />
-          ) : (
-            <div className="min-h-0 flex-1">
-              <AssistantTranscript messages={assistant.messages} answering={assistant.answering} onNavigate={() => setOpen(false)} />
-            </div>
-          )}
-          <AssistantComposer answering={assistant.answering} enabled={ready} onSend={ask} onStop={() => void assistant.stop()} />
-        </SheetContent>
-      </Sheet>
-    </>
+            <Tooltip>
+              <TooltipTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label="Hide assistant" onClick={toggleSidebar} className={MUTED_ICON_BUTTON} />}>
+                <XIcon aria-hidden="true" />
+              </TooltipTrigger>
+              <TooltipContent>Hide</TooltipContent>
+            </Tooltip>
+          </div>
+        </div>
+      </SidebarHeader>
+
+      {/* The slot ships overflow-auto, which would nest a second scroll container inside the transcript's own viewport. */}
+      <SidebarContent className="overflow-hidden">
+        {model.status === "error" ? (
+          <div className="p-4">
+            <RegionError title="The assistant's model did not load" message={model.error} onRetry={model.retry} />
+          </div>
+        ) : model.status === "loading" ? (
+          <div role="status" aria-label="Loading the assistant" className="flex flex-1 flex-col gap-3 p-4">
+            <Skeleton className="h-6 w-2/3" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        ) : assistant.messages.length === 0 ? (
+          <AssistantEmpty hasModel={ready} suggestions={suggestions} onAsk={onAsk} onOpenConnections={onOpenConnections} />
+        ) : (
+          <AssistantTranscript messages={assistant.messages} answering={assistant.answering} />
+        )}
+      </SidebarContent>
+
+      {/* The transcript's bottom fade is absolutely positioned, so it paints above anything in normal flow until the composer is raised past it. */}
+      <SidebarFooter className="relative z-10 mt-2 shrink-0 gap-2 px-4 pt-2 pb-4">
+        <AssistantComposer open={open} answering={assistant.answering} enabled={ready} provider={provider} onSend={onAsk} onStop={() => void assistant.stop()} />
+      </SidebarFooter>
+    </Sidebar>
   )
 }

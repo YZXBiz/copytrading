@@ -1,18 +1,18 @@
 import { useEffect, useState } from "react"
-import { CircleIcon } from "lucide-react"
 import type { EngineState, TradingRunState, TradingStatus } from "../../../shared/contract"
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar"
 import { ago } from "@/lib/format"
+import { cn } from "@/lib/utils"
 
 const POLL_MS = 10_000
 
 const STATES: Record<TradingRunState, { label: string; tone: string }> = {
-  running: { label: "Copying", tone: "text-success" },
-  starting: { label: "Starting", tone: "text-warning" },
-  degraded: { label: "Copying, with problems", tone: "text-warning" },
-  pausing: { label: "Pausing", tone: "text-warning" },
-  paused: { label: "Not copying", tone: "text-muted-foreground" },
-  failed: { label: "Stopped by an error", tone: "text-destructive" },
+  running: { label: "Copying", tone: "bg-success" },
+  starting: { label: "Starting", tone: "bg-warning" },
+  degraded: { label: "Copying, with problems", tone: "bg-warning" },
+  pausing: { label: "Pausing", tone: "bg-warning" },
+  paused: { label: "Not copying", tone: "bg-muted-foreground/50" },
+  failed: { label: "Stopped by an error", tone: "bg-destructive" },
 }
 
 type Read = { status: TradingStatus; at: string } | { error: string } | null
@@ -57,17 +57,17 @@ export function CopyingStatus({ engine }: { engine: EngineState }) {
   let title: string | undefined
   if (engine.state === "starting") {
     text = "Engine starting"
-    tone = "text-warning"
+    tone = "bg-warning"
   } else if (engine.state === "stopped") {
     text = `Engine stopped: ${engine.reason}`
-    tone = "text-destructive"
+    tone = "bg-destructive"
     title = engine.reason
   } else if (!read) {
     text = "Checking the engine"
-    tone = "text-muted-foreground"
+    tone = "bg-muted-foreground/50"
   } else if ("error" in read) {
     text = "Engine not reachable"
-    tone = "text-destructive"
+    tone = "bg-destructive"
     title = read.error
   } else {
     const state = STATES[read.status.state]
@@ -76,17 +76,24 @@ export function CopyingStatus({ engine }: { engine: EngineState }) {
     tone = state.tone
   }
 
+  // The dot pulses only while copying runs; every other state is a still dot.
+  const live = engine.state === "running" && read !== null && !("error" in read) && read.status.state === "running"
+
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton
-        role="status"
-        title={title}
-        // A stopped engine's reason may be a sentence: let it wrap to three lines instead of one cut-off line.
-        className={engine.state === "stopped" ? "h-auto items-start py-1.5 [&>span:last-child]:line-clamp-3 [&>span:last-child]:whitespace-normal" : undefined}
-      >
-        <CircleIcon aria-hidden="true" className={tone} />
+      <SidebarMenuButton role="status" tooltip={title ?? text} title={title}>
+        <span className="flex size-4 shrink-0 items-center justify-center" aria-hidden="true">
+          <span
+            className={cn(
+              "relative size-1.5 rounded-full",
+              tone,
+              live &&
+                "before:bg-success after:bg-success before:absolute before:inset-0 before:animate-ping before:rounded-full before:opacity-80 before:duration-1500 after:absolute after:inset-0 after:animate-ping after:rounded-full after:opacity-40 after:delay-500 after:duration-1500 motion-reduce:before:animate-none motion-reduce:after:animate-none",
+            )}
+          />
+        </span>
         <span>{text}</span>
-        {age && <span className="text-muted-foreground ml-auto text-xs tabular-nums">{age}</span>}
+        {age && <span className="text-muted-foreground ml-auto text-xs tabular-nums in-data-[state=collapsed]:hidden">{age}</span>}
       </SidebarMenuButton>
     </SidebarMenuItem>
   )
