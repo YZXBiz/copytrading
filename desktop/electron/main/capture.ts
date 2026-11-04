@@ -15,7 +15,9 @@ export function captureWindow(window: BrowserWindow, dir: string, name: string, 
     const wait = (ms: number) => new Promise((done) => setTimeout(done, ms))
     await wait(SETTLE_MS)
     // A slow start must not be saved as a skeleton: wait (up to 15 s) until no region is still loading.
-    for (let i = 0; i < 60 && (await window.webContents.executeJavaScript(`document.querySelector('[role="status"]') !== null`)); i++) await wait(250)
+    // A capture of the loading state (COPYTRADING_FIXTURE_STATE=reads-loading) keeps its skeletons, so it does not wait for them to go.
+    const loading = process.env.COPYTRADING_FIXTURE_STATE === "reads-loading"
+    for (let i = 0; !loading && i < 60 && (await window.webContents.executeJavaScript(`document.querySelector('[role="status"]') !== null`)); i++) await wait(250)
     if (click) {
       await window.webContents.executeJavaScript(`document.querySelector(${JSON.stringify(click)})?.click()`)
       await wait(800)

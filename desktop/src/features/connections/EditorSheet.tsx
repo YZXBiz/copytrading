@@ -1,23 +1,23 @@
 import type { ReactNode } from "react"
-import { Meta } from "@/components/meta"
+import type { LucideIcon } from "lucide-react"
+import { IconTile } from "@/components/reui/icon-tile"
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { cn } from "@/lib/utils"
 
 /**
- * The frame every editor shares: a side sheet with a title, a scrolling form and a footer of actions (Gumloop's setup panel).
- * `description` names the sheet for screen readers; it shows only when `showDescription` says it carries a fact the owner needs.
+ * The frame every editor shares, in the shape of ReUI's connection sheets (sheet-22, sheet-23): a header band with the
+ * kind's icon tile, the title and one line on it, a scrolling form, and a footer of actions.
  */
 export function EditorSheet({
+  icon: Icon,
   title,
   description,
-  showDescription = false,
   onClose,
   footer,
   children,
 }: {
+  icon: LucideIcon
   title: string
   description: string
-  showDescription?: boolean
   onClose: () => void
   footer: ReactNode
   children: ReactNode
@@ -25,14 +25,17 @@ export function EditorSheet({
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="gap-0 data-[side=right]:sm:max-w-md">
-        <SheetHeader className="border-b">
-          <SheetTitle>{title}</SheetTitle>
-          <SheetDescription className={cn(!showDescription && "sr-only")}>
-            <Meta text={description} />
-          </SheetDescription>
+        <SheetHeader className="flex-row items-center gap-3 border-b px-5 py-3 pr-12">
+          <IconTile variant="elevated" aria-hidden="true">
+            <Icon />
+          </IconTile>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <SheetTitle className="truncate">{title}</SheetTitle>
+            <SheetDescription className="line-clamp-2">{description}</SheetDescription>
+          </div>
         </SheetHeader>
-        <div className="flex flex-1 flex-col gap-6 overflow-y-auto p-4">{children}</div>
-        <SheetFooter className="border-t sm:flex-row sm:justify-between">{footer}</SheetFooter>
+        <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-5 py-4">{children}</div>
+        <SheetFooter className="border-t px-5 py-3 sm:flex-row sm:justify-between">{footer}</SheetFooter>
       </SheetContent>
     </Sheet>
   )

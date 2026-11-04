@@ -1,6 +1,6 @@
 import type { AccountOverviewPage } from "../../../shared/contract"
 import { RegionError } from "@/components/region-error"
-import { Skeleton } from "@/components/ui/skeleton"
+import { SectionSkeleton } from "./SettingsSection"
 import { type Loaded, useResult } from "@/lib/use-result"
 import { BackupRestore } from "./BackupRestore"
 import { EarlierAccounts } from "./EarlierAccounts"
@@ -10,9 +10,9 @@ export function BackupsPage({ accounts }: { accounts: Loaded<AccountOverviewPage
   const setup = useResult(() => window.copytrading.read.getSetup(), "setup")
   const pending = useResult(() => window.copytrading.read.getRestoreCandidate(), "restore-candidate")
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       {setup.status === "loading" ? (
-        <Skeleton className="h-16 w-full" />
+        <SectionSkeleton />
       ) : setup.status === "error" ? (
         <RegionError title="The saved setup did not load" message={setup.error} onRetry={setup.retry} />
       ) : (

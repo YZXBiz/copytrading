@@ -1,3 +1,4 @@
+import { SparklesIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { FieldGroup } from "@/components/ui/field"
 import { Spinner } from "@/components/ui/spinner"
@@ -19,9 +20,9 @@ export function InterpreterSheet({ onClose }: { onClose: () => void }) {
   const address = draft.base_url ? baseUrlProblem(draft.provider, draft.base_url) : null
   return (
     <EditorSheet
+      icon={SparklesIcon}
       title="Interpreter"
       description="A service uses your own key and bills you for what it reads; a model on this Mac costs nothing."
-      showDescription
       onClose={onClose}
       footer={
         <>

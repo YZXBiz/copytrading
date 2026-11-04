@@ -94,7 +94,18 @@ const ACTS: Record<string, (params: Params) => Promise<Result<unknown>>> = { ...
 
 const notCaptured = async (name: string): Promise<Result<never>> => ({ ok: false, error: `${name} is not in the captured fixtures.` })
 
+// COPYTRADING_FIXTURE_STATE=reads-error makes every read fail, reads-loading makes every read wait forever, for the capture of those states.
+const readsState = process.env.COPYTRADING_FIXTURE_STATE
+const failing = async (): Promise<Result<never>> => ({ ok: false, error: "The engine did not answer in time. Check that it is running, then try again." })
+
 export const fixtureApi: Api = {
-  read: (name, params) => (typeof name === "string" && READS[name] ? READS[name](params as Params) : notCaptured(String(name))),
+  read: (name, params) =>
+    readsState === "reads-error"
+      ? failing()
+      : readsState === "reads-loading"
+        ? new Promise<never>((_, reject) => setTimeout(() => reject(new Error("never answered")), 10 * 60_000))
+        : typeof name === "string" && READS[name]
+          ? READS[name](params as Params)
+          : notCaptured(String(name)),
   act: (name, params) => (typeof name === "string" && ACTS[name] ? ACTS[name](params as Params) : notCaptured(String(name))),
 }

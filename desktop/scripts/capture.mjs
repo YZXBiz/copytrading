@@ -30,12 +30,25 @@ function setupCaptures() {
     COPYTRADING_FIXTURE_SETUP: setup,
     COPYTRADING_FIXTURE_TRADING: trading,
   })
+  // Each screen at 1280×860 and at the SwiftUI app's 980-wide minimum, in each state the screen has.
+  const screens = [
+    ["getting-started", "#/getting-started", ["first-run:none:paused", "saved:saved:paused", "copying:saved:running"]],
+    ["connections", "#/connections", ["first-run:none:paused", "saved:saved:paused", "copying:saved:running"]],
+  ]
+  const sized = screens.flatMap(([screen, hash, states]) =>
+    states.flatMap((state) => {
+      const [label, setup, trading] = state.split(":")
+      return ["1280x860", "980x860"].map((size) => [`${screen}-${label}-${size}`, { ...fixture(hash, setup, trading), COPYTRADING_CAPTURE_SIZE: size }])
+    }),
+  )
+  const broken = ["getting-started", "connections"].flatMap((screen) =>
+    ["error", "loading"].flatMap((state) =>
+      ["1280x860", "980x860"].map((size) => [`${screen}-${state}-${size}`, { ...fixture(`#/${screen}`, "saved", "paused"), COPYTRADING_FIXTURE_STATE: `reads-${state}`, COPYTRADING_CAPTURE_SIZE: size }]),
+    ),
+  )
   return [
-    ["getting-started-first-run", fixture("#/getting-started", "none", "paused")],
-    ["getting-started-saved", fixture("#/getting-started", "saved", "paused")],
-    ["connections-first-run", fixture("#/connections", "none", "paused")],
-    ["connections-saved", fixture("#/connections", "saved", "paused")],
-    ["connections-copying", fixture("#/connections", "saved", "running")],
+    ...sized,
+    ...broken,
     ["sheet-discord", fixture("#/connections/discord", "saved", "paused")],
     ["sheet-interpreter", fixture("#/connections/interpreter", "saved", "paused")],
     ["sheet-account", fixture("#/connections/account:0", "saved", "paused")],
@@ -84,6 +97,12 @@ for (const [name, env] of [
   ["settings-backups-preview", settings("backups", { COPYTRADING_CAPTURE_SCRIPT: click("button", "Choose") })],
   ["settings-backups-pending-restore", settings("backups", { COPYTRADING_FIXTURE_STATE: "pending-restore" })],
   ["settings-logs", settings("logs")],
+  // Every Settings page at 1280×860 and at the 980-wide minimum, then with every read failing and every read waiting.
+  ...["general", "agents", "backups", "logs"].flatMap((page) =>
+    ["", "reads-error", "reads-loading"].flatMap((state) =>
+      ["1280x860", "980x860"].map((size) => [`settings-${page}-${state || "ready"}-${size}`, settings(page, { COPYTRADING_CAPTURE_SIZE: size, ...(state && { COPYTRADING_FIXTURE_STATE: state }) })]),
+    ),
+  ),
   ["assistant-empty", { ...fixtures, COPYTRADING_CAPTURE_SCRIPT: click("button", "Assistant") }],
   ["assistant-answer", { ...fixtures, COPYTRADING_CAPTURE_SCRIPT: askAssistant }],
   // Getting Started and Connections
