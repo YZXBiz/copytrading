@@ -444,7 +444,9 @@ export interface GuruDayStats {
 }
 
 export interface GuruDayStatsPage {
-  items: GuruDayStats[]
+  day_start: string
+  day_end: string
+  gurus: GuruDayStats[]
 }
 
 export interface AccountFeedItem {
