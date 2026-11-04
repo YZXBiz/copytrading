@@ -61,7 +61,6 @@ type Params = Record<string, unknown> | undefined
 
 // Only what the account page reads is captured; every other operation says so instead of inventing data.
 const READS: Record<string, (params: Params) => Promise<Result<unknown>>> = {
-  ...setupReads,
   getAccounts: () => ok({ items: [overview], unavailable_accounts: [] }),
   getEquityHistory: (params) => {
     const key = HISTORY_KEY[params?.range as HistoryRange]
@@ -76,6 +75,7 @@ const READS: Record<string, (params: Params) => Promise<Result<unknown>>> = {
   getLimits: () => ok(limits),
   ...peopleReads,
   ...settingsReads,
+  ...setupReads,
 }
 
 const ACTS: Record<string, (params: Params) => Promise<Result<unknown>>> = { ...settingsActs }

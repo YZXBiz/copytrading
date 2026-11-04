@@ -69,7 +69,8 @@ const trading = (): TradingStatus => ({
 const ok = async <T>(value: T): Promise<Result<T>> => ({ ok: true, value })
 
 export const setupReads: Record<string, () => Promise<Result<unknown>>> = {
-  getSetup: () => ok(first ? null : saved),
+  // The people fixtures (Gurus, Activity) have their own getSetup; this one answers only the setup captures that ask for it.
+  ...(process.env.COPYTRADING_FIXTURE_SETUP ? { getSetup: () => ok(first ? null : saved) } : {}),
   getSecretStatus: () => ok(keys(!first)),
   getStatus: () => ok(trading()),
 }
