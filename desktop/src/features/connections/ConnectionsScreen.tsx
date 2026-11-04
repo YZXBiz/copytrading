@@ -3,7 +3,7 @@ import { LandmarkIcon, MessageSquareIcon, PlusIcon, SparklesIcon, UserIcon, User
 import { RegionError } from "@/components/region-error"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
-import { Frame, FramePanel } from "@/components/reui/frame"
+import { Frame, FrameDescription, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"
 import { ItemGroup, ItemSeparator } from "@/components/ui/item"
 import { Skeleton } from "@/components/ui/skeleton"
 import { providerShortTitle, requiresApiKey } from "../../../shared/providers"
@@ -74,16 +74,14 @@ export function ConnectionsScreen({ routeId }: { routeId: string | null }) {
     (model ? draftStatus(!requiresApiKey(draft.provider) || Boolean(draft.provider_api_key) || facts.keys.providerKey, "Needs an API key") : { text: "Not set up", tone: "caution" })
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
-      <header className="flex flex-col gap-1">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
+      <header className="flex flex-col gap-0.5">
         <h1 className="text-xl font-semibold tracking-tight">Connections</h1>
+        <p className="text-muted-foreground text-sm">Each Connect checks its service before anything is saved.</p>
       </header>
 
-      <section aria-labelledby="services" className="flex flex-col gap-3">
-        <h2 id="services" className="text-sm font-medium">
-          Services
-        </h2>
-        <Rows>
+      <Section id="services" title="Services" description="Where the calls come from, and the AI that reads them.">
+        <Rows title="Services">
           <ConnectionRow
             icon={MessageSquareIcon}
             label="Discord"
@@ -103,19 +101,20 @@ export function ConnectionsScreen({ routeId }: { routeId: string | null }) {
             {...connectProps("interpreter")}
           />
         </Rows>
-      </section>
+      </Section>
 
-      <section aria-labelledby="accounts" className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 id="accounts" className="text-sm font-medium">
-            Broker accounts
-          </h2>
-          <Button type="button" size="xs" variant="outline" onClick={() => setOpen({ kind: "account", uid: addAccount() })}>
+      <Section
+        id="accounts"
+        title="Broker accounts"
+        description="Where orders go."
+        action={
+          <Button type="button" size="sm" variant="outline" onClick={() => setOpen({ kind: "account", uid: addAccount() })}>
             <PlusIcon aria-hidden /> Add account
           </Button>
-        </div>
+        }
+      >
         {draft.accounts.length ? (
-          <Rows>
+          <Rows title="Broker accounts">
             {draft.accounts.map((account) => {
               const name = account.name.trim()
               const subject = accountSubject(name)
@@ -136,19 +135,20 @@ export function ConnectionsScreen({ routeId }: { routeId: string | null }) {
         ) : (
           <EmptyRegion icon={LandmarkIcon} title="No broker accounts yet" description="Add an Alpaca paper account to start." />
         )}
-      </section>
+      </Section>
 
-      <section aria-labelledby="gurus" className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 id="gurus" className="text-sm font-medium">
-            Gurus
-          </h2>
-          <Button type="button" size="xs" variant="outline" onClick={() => setOpen({ kind: "guru", uid: addGuru() })}>
+      <Section
+        id="gurus"
+        title="Gurus"
+        description="Each guru is one Discord channel."
+        action={
+          <Button type="button" size="sm" variant="outline" onClick={() => setOpen({ kind: "guru", uid: addGuru() })}>
             <PlusIcon aria-hidden /> Add guru
           </Button>
-        </div>
+        }
+      >
         {draft.gurus.length ? (
-          <Rows>
+          <Rows title="Gurus">
             {draft.gurus.map((guru) => {
               const channel = guru.channel_id.trim() || channels[0] || ""
               return (
@@ -165,9 +165,9 @@ export function ConnectionsScreen({ routeId }: { routeId: string | null }) {
             })}
           </Rows>
         ) : (
-          <EmptyRegion icon={UsersIcon} title="No gurus yet" description="Each guru is one Discord channel." />
+          <EmptyRegion icon={UsersIcon} title="No gurus yet" description="Add one to copy their calls." />
         )}
-      </section>
+      </Section>
 
       <StartBar s={s} derived={derived} />
 
@@ -179,16 +179,38 @@ export function ConnectionsScreen({ routeId }: { routeId: string | null }) {
   )
 }
 
-/** One section's connections in a single frame, a hairline between rows. */
-function Rows({ children }: { children: ReactNode }) {
+/** A section's heading: the title with a line under it and, when the section can grow, its Add button at the right (settings-16). */
+function Section({ id, title, description, action, children }: { id: string; title: string; description: string; action?: ReactNode; children: ReactNode }) {
+  return (
+    <section aria-labelledby={id} className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-1">
+          <h2 id={id} className="text-sm font-semibold">
+            {title}
+          </h2>
+          <p className="text-muted-foreground text-sm">{description}</p>
+        </div>
+        {action}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+/** One section's connections in a single Frame, a hairline between rows (settings-16's Frame, with its title kept for screen readers). */
+function Rows({ title, children }: { title: string; children: ReactNode }) {
   const rows = Children.toArray(children)
   return (
-    <Frame spacing="sm">
-      <FramePanel className="p-0">
+    <Frame>
+      <FrameHeader className="sr-only">
+        <FrameTitle>{title}</FrameTitle>
+        <FrameDescription>Status and actions for each connection.</FrameDescription>
+      </FrameHeader>
+      <FramePanel className="p-0!">
         <ItemGroup className="gap-0">
           {rows.map((row, index) => (
             <Fragment key={index}>
-              {index > 0 && <ItemSeparator className="my-0!" />}
+              {index > 0 && <ItemSeparator className="my-0" />}
               {row}
             </Fragment>
           ))}
@@ -200,28 +222,50 @@ function Rows({ children }: { children: ReactNode }) {
 
 function EmptyRegion({ icon: Icon, title, description }: { icon: typeof UsersIcon; title: string; description: string }) {
   return (
-    <Empty className="border border-dashed py-8">
-      <EmptyHeader>
-        <EmptyMedia variant="icon">
-          <Icon />
-        </EmptyMedia>
-        <EmptyTitle>{title}</EmptyTitle>
-        <EmptyDescription>{description}</EmptyDescription>
-      </EmptyHeader>
-    </Empty>
+    <Frame>
+      <FramePanel>
+        <Empty className="py-6">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Icon />
+            </EmptyMedia>
+            <EmptyTitle>{title}</EmptyTitle>
+            <EmptyDescription>{description}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </FramePanel>
+    </Frame>
   )
 }
 
+/** Three sections of rows in the real layout while the setup is read. */
 function ConnectionsSkeleton() {
   return (
-    <div role="status" aria-label="Loading connections" className="mx-auto flex w-full max-w-2xl flex-col gap-8">
-      <Skeleton className="h-12 w-64" />
+    <div role="status" aria-label="Loading connections" className="mx-auto flex w-full max-w-3xl flex-col gap-5">
+      <div className="flex flex-col gap-1.5">
+        <Skeleton className="h-7 w-40" />
+        <Skeleton className="h-4 w-72" />
+      </div>
       {[2, 1, 1].map((rows, i) => (
         <div key={i} className="flex flex-col gap-3">
-          <Skeleton className="h-4 w-32" />
-          {Array.from({ length: rows }, (_, j) => (
-            <Skeleton key={j} className="h-14 w-full" />
-          ))}
+          <div className="flex flex-col gap-1.5">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-56" />
+          </div>
+          <Frame>
+            <FramePanel className="flex flex-col gap-3 p-4!">
+              {Array.from({ length: rows }, (_, j) => (
+                <div key={j} className="flex items-center gap-3">
+                  <Skeleton className="size-10 rounded-md" />
+                  <div className="flex flex-1 flex-col gap-1.5">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-3.5 w-28" />
+                  </div>
+                  <Skeleton className="h-8 w-20" />
+                </div>
+              ))}
+            </FramePanel>
+          </Frame>
         </div>
       ))}
     </div>

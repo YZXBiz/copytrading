@@ -1,21 +1,20 @@
 import { RegionError } from "@/components/region-error"
 import { Badge } from "@/components/reui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useResult } from "@/lib/use-result"
 import { SettingsRow } from "./SettingsRow"
-import { SettingsSection } from "./SettingsSection"
+import { SectionSkeleton, SettingsSection } from "./SettingsSection"
 import { bytes, humanCode } from "./words"
 
 /** Whether the engine is writing its log, what it left out, and how much disk the log takes. */
 export function LogHealth({ journalBytes }: { journalBytes: number | null }) {
   const status = useResult(() => window.copytrading.read.getEngineStatus(), "engine-status")
-  if (status.status === "loading") return <Skeleton className="h-40 w-full" />
+  if (status.status === "loading") return <SectionSkeleton rows={4} />
   if (status.status === "error") return <RegionError title="Log health did not load" message={status.error} onRetry={status.retry} />
   const engine = status.data
   const gaps = engine.diagnostic_capture
   return (
-    <SettingsSection title="Log Health" hint="Each stage, post, model reply, and trade outcome, in a private file on this Mac. Keys are removed first.">
+    <SettingsSection title="Log Health" hint="Stages, posts and trades, in a private file here.">
       <SettingsRow title="Logging">
         <Badge variant={engine.telemetry_state === "healthy" ? "success-light" : "warning-light"}>{engine.telemetry_state === "healthy" ? "Healthy" : "Degraded"}</Badge>
       </SettingsRow>

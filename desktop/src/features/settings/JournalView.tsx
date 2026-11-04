@@ -3,6 +3,7 @@ import { CheckIcon, RefreshCwIcon, SearchIcon, TriangleAlertIcon } from "lucide-
 import type { DiagnosticsPage } from "../../../shared/contract"
 import { RegionError } from "@/components/region-error"
 import { Button } from "@/components/ui/button"
+import { Frame, FramePanel } from "@/components/reui/frame"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
 import { Item, ItemContent, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item"
@@ -43,15 +44,35 @@ function useJournal(onBytes: (bytes: number) => void) {
 
 function EmptyLog({ text }: { text: string }) {
   return (
-    <Empty className="min-h-48">
-      <EmptyHeader>
-        <EmptyMedia variant="icon">
-          <SearchIcon />
-        </EmptyMedia>
-        <EmptyTitle>{text}</EmptyTitle>
-        <EmptyDescription>The log fills in as the engine works.</EmptyDescription>
-      </EmptyHeader>
-    </Empty>
+    <Frame>
+      <FramePanel>
+        <Empty className="min-h-40">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <SearchIcon />
+            </EmptyMedia>
+            <EmptyTitle>{text}</EmptyTitle>
+            <EmptyDescription>The log fills in as the engine works.</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </FramePanel>
+    </Frame>
+  )
+}
+
+/** The filters and the two panes in their real layout while the log is read. */
+function JournalSkeleton() {
+  return (
+    <div role="status" aria-label="Loading the log" className="flex flex-col gap-3">
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-8 w-72" />
+        <Skeleton className="ml-auto h-8 w-48" />
+      </div>
+      <div className="grid grid-cols-[minmax(16rem,20rem)_1fr] gap-4">
+        <Skeleton className="h-72 w-full" />
+        <Skeleton className="h-72 w-full" />
+      </div>
+    </div>
   )
 }
 
@@ -66,7 +87,7 @@ export function JournalView({ onBytes }: { onBytes: (bytes: number) => void }) {
   const visible = useMemo(() => entries.filter((e) => includes(filter, e) && (!needle || searchText(e).includes(needle))), [entries, filter, needle])
   const entry = visible.find((e) => e.id === selected) ?? visible[0]
 
-  if (state.status === "loading") return <Skeleton className="h-64 w-full" />
+  if (state.status === "loading") return <JournalSkeleton />
   if (state.status === "error") return <RegionError title="The log did not load" message={state.error} onRetry={refresh} />
   if (entries.length === 0) return <EmptyLog text="Nothing logged yet" />
   return (
@@ -95,7 +116,9 @@ export function JournalView({ onBytes }: { onBytes: (bytes: number) => void }) {
         <EmptyLog text={needle ? `No records match “${query.trim()}”.` : FILTER_EMPTY[filter]} />
       ) : (
         <div className="grid min-h-0 grid-cols-[minmax(16rem,20rem)_1fr] items-start gap-4">
-          <ItemGroup className="max-h-[32rem] gap-0 overflow-y-auto rounded-lg border" role="listbox" aria-label="Log records">
+          <Frame dense spacing="sm" className="min-w-0">
+            <FramePanel className="p-0!">
+              <ItemGroup className="max-h-[32rem] gap-0 overflow-y-auto" role="listbox" aria-label="Log records">
             {visible.map((row) => (
               <Item
                 key={row.id}
@@ -119,7 +142,9 @@ export function JournalView({ onBytes }: { onBytes: (bytes: number) => void }) {
                 </ItemContent>
               </Item>
             ))}
-          </ItemGroup>
+              </ItemGroup>
+            </FramePanel>
+          </Frame>
           {entry && <JournalDetail entry={entry} />}
         </div>
       )}

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { CircleAlertIcon } from "lucide-react"
+import { CircleAlertIcon, LandmarkIcon } from "lucide-react"
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/reui/alert"
 import { Button } from "@/components/ui/button"
 import { FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field"
@@ -56,9 +56,9 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
 
   return (
     <EditorSheet
+      icon={LandmarkIcon}
       title={name || "New account"}
       description={account.environment === "live" ? "Live: real orders, real money" : "Paper: pretend money, real prices"}
-      showDescription={account.environment === "live"}
       onClose={onClose}
       footer={
         <>
