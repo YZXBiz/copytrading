@@ -20,6 +20,7 @@ from copytrading_engine.execution.domain.manual_commands import (
     ManualSourceEvidence,
 )
 from copytrading_engine.execution.presentation.account_feed import AccountFeedPage, account_feed
+from copytrading_engine.execution.presentation.guru_performance import REPLAY_KINDS
 from copytrading_engine.execution.presentation.operator_views import (
     AccountEventPage,
     AccountOverview,
@@ -462,6 +463,21 @@ def retained_feed(path: Path, *, before_seq: int | None, limit: int) -> AccountF
     return account_feed(path.parent.name, snapshot, rows, limit)
 
 
+def retained_fills(path: Path) -> tuple[LedgerSnapshot, tuple[JournalEvent, ...]]:
+    """A retained account's ledger and, from the same read transaction, every journal event that
+    changes what a lot holds by a sale or a fill, oldest first."""
+    kinds = ",".join("?" * len(REPLAY_KINDS))
+    with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)) as db:
+        db.execute("BEGIN")
+        snapshot = _retained_snapshot(db)
+        rows = db.execute(
+            f"SELECT event FROM journal WHERE json_extract(event, '$.payload.kind') IN ({kinds}) "
+            "ORDER BY id",
+            REPLAY_KINDS,
+        ).fetchall()
+    return snapshot, tuple(JournalEvent.model_validate_json(raw) for (raw,) in rows)
+
+
 def retained_account(
     path: Path, *, before_seq: int | None = None, limit: int = 50
 ) -> tuple[AccountOverview, LedgerSnapshot, AccountEventPage]:
@@ -524,6 +540,9 @@ class SQLiteOperatorEvidence:
 
     def retained_feed(self, path: Path, *, before_seq: int | None, limit: int) -> AccountFeedPage:
         return retained_feed(path, before_seq=before_seq, limit=limit)
+
+    def retained_fills(self, path: Path) -> tuple[LedgerSnapshot, tuple[JournalEvent, ...]]:
+        return retained_fills(path)
 
     def retained_message_events(
         self, path: Path, message_ids: set[str]

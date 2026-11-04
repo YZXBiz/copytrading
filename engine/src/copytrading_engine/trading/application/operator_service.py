@@ -4,21 +4,30 @@ import asyncio
 import datetime as dt
 import logging
 from dataclasses import dataclass, field
+from decimal import Decimal
 from pathlib import Path
 
 from copytrading_engine.execution.application.manual_commands import (
     manual_command_page_from_snapshot,
 )
 from copytrading_engine.execution.application.ports import ACCOUNT_FAILURES
-from copytrading_engine.execution.domain.ledger_state import HELD_FOR_OWNER, EarlierLedgerVersion
+from copytrading_engine.execution.domain.ledger_state import (
+    HELD_FOR_OWNER,
+    EarlierLedgerVersion,
+    LedgerSnapshot,
+)
 from copytrading_engine.execution.domain.manual_commands import (
     ManualCommandPage,
     ManualCommandPageRequest,
     ManualRefusal,
 )
-from copytrading_engine.execution.domain.market import EquityHistory, HistoryWindow, Quote
+from copytrading_engine.execution.domain.market import Bar, EquityHistory, HistoryWindow, Quote
 from copytrading_engine.execution.domain.sessions import ET, trade_date
 from copytrading_engine.execution.presentation.account_feed import AccountFeedPage
+from copytrading_engine.execution.presentation.guru_performance import (
+    GuruPerformance,
+    guru_performance,
+)
 from copytrading_engine.execution.presentation.operator_views import (
     AccountEventPage,
     AccountOverview,
@@ -317,6 +326,50 @@ class OperatorQueryService:
         if not self._reader.holds(account_id):
             raise KeyError(account_id)
         return await self._reader.quote(account_id, symbol)
+
+    async def bars(self, account_id: str, symbols: tuple[str, ...]) -> dict[str, tuple[Bar, ...]]:
+        """Held stocks' five-minute bars through the account's read keys, for the Positions."""
+        if not self._reader.holds(account_id):
+            raise KeyError(account_id)
+        return await self._reader.bars(account_id, symbols)
+
+    async def guru_performance(self, account_id: str, guru_id: str) -> GuruPerformance:
+        """What one guru's copied calls made in one account: realized from its retained ledger
+        and journal, unrealized from the open lots at the broker's price when it can be read."""
+        database = self._access.retained_paths().get(account_id)
+        if database is None:
+            # An account the setup lists has made nothing yet, which is not "not found".
+            configuration = self._access.configuration()
+            if self._reader.holds(account_id) or (
+                configuration is not None
+                and account_id in {item.id for item in configuration.accounts}
+            ):
+                return guru_performance(
+                    LedgerSnapshot(),
+                    (),
+                    guru_id=guru_id,
+                    account_id=account_id,
+                    unrealized_usd=Decimal(0),
+                )
+            raise KeyError(account_id)
+        snapshot, events = await asyncio.wait_for(
+            asyncio.to_thread(self._access.evidence.retained_fills, database), timeout=5
+        )
+        overview, _, _ = await self._access.retained_account(database, timeout=2)
+        lots = [
+            lot
+            for position in (await self._live(account_id, overview)).positions
+            for lot in position.lots
+            if lot.guru_id == guru_id and lot.remaining_qty > 0
+        ]
+        unrealized = (
+            sum((lot.unrealized_pl or Decimal(0) for lot in lots), Decimal(0))
+            if all(lot.unrealized_pl is not None for lot in lots)
+            else None
+        )
+        return guru_performance(
+            snapshot, events, guru_id=guru_id, account_id=account_id, unrealized_usd=unrealized
+        )
 
     async def source_activity(self, before_seq: int | None, limit: int) -> SourceActivityPage:
         page = await asyncio.wait_for(

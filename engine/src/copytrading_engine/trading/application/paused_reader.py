@@ -3,7 +3,7 @@
 Copying decides whether orders go out; it should not decide whether the owner can see their
 money. The app hands over read keys when the owner unlocks and takes them back when they lock.
 The keys stay in memory, and the reader can only ask for an account, its positions, its equity
-curve, and a stock's latest quote: it has no path to an order.
+curve, a stock's latest quote, and its bars of the day: it has no path to an order.
 """
 
 import asyncio
@@ -18,6 +18,7 @@ from pydantic import SecretStr
 from copytrading_engine.execution.application.ports import BrokerError
 from copytrading_engine.execution.domain.market import (
     Account,
+    Bar,
     EquityHistory,
     HistoryWindow,
     Position,
@@ -31,6 +32,8 @@ FACTS_REUSE = dt.timedelta(seconds=10)
 HISTORY_REUSE = dt.timedelta(seconds=60)
 # A stock typed into the trade sheet is quoted as the owner types; a repeat inside this is reused.
 QUOTE_REUSE = dt.timedelta(seconds=2)
+# A held stock's day of bars barely changes between the app's reads.
+BARS_REUSE = dt.timedelta(seconds=60)
 
 
 class ReadOnlyBroker(Protocol):
@@ -40,6 +43,7 @@ class ReadOnlyBroker(Protocol):
     def positions(self) -> tuple[Position, ...]: ...
     def equity_history(self, window: HistoryWindow) -> EquityHistory: ...
     def quote(self, symbol: str) -> Quote: ...
+    def bars(self, symbol: str) -> tuple[Bar, ...]: ...
     def close(self) -> None: ...
 
 
@@ -72,6 +76,7 @@ class PausedAccountReader:
         self._facts: dict[str, LiveFacts] = {}
         self._histories: dict[tuple[str, HistoryWindow], tuple[dt.datetime, EquityHistory]] = {}
         self._quotes: dict[tuple[str, str], tuple[dt.datetime, Quote | None]] = {}
+        self._bars: dict[tuple[str, str], tuple[dt.datetime, tuple[Bar, ...]]] = {}
 
     def attach(self, keys: Iterable[ReadKeys]) -> None:
         """Hold these accounts' read keys until `detach`, replacing any held before."""
@@ -90,6 +95,7 @@ class PausedAccountReader:
         self._facts.clear()
         self._histories.clear()
         self._quotes.clear()
+        self._bars.clear()
 
     async def facts(self, account_id: str) -> LiveFacts | None:
         """The account and its positions as the broker reports them now, or None."""
@@ -148,3 +154,27 @@ class PausedAccountReader:
             quote = None
         self._quotes[(account_id, symbol)] = (now, quote)
         return quote
+
+    async def bars(self, account_id: str, symbols: tuple[str, ...]) -> dict[str, tuple[Bar, ...]]:
+        """Each symbol's five-minute bars of its latest session through this account's keys,
+        each read at most once a minute. A symbol the broker cannot give bars for has none."""
+        broker = self._brokers.get(account_id)
+        if broker is None:
+            return {}
+
+        async def one(symbol: str) -> tuple[Bar, ...]:
+            now = self._clock()
+            cached = self._bars.get((account_id, symbol))
+            if cached is not None and now - cached[0] < BARS_REUSE:
+                return cached[1]
+            try:
+                bars = await asyncio.to_thread(broker.bars, symbol)
+            except BrokerError as exc:
+                log.warning("paused_bars_failed id=%s status=%s", account_id, exc.status)
+                return cached[1] if cached is not None else ()
+            self._bars[(account_id, symbol)] = (now, bars)
+            return bars
+
+        return dict(
+            zip(symbols, await asyncio.gather(*(one(symbol) for symbol in symbols)), strict=True)
+        )

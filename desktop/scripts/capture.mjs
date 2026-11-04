@@ -100,6 +100,8 @@ for (const [name, env] of [
     `account-${scene || "default"}-${size || "full"}`,
     { ...fixtures, COPYTRADING_FIXTURE_SCENE: scene, COPYTRADING_CAPTURE_SIZE: size, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2" },
   ]),
+  // The Positions with their sparklines, in a window tall enough to show them, at 1280 and at the 980-wide minimum.
+  ...["1280", "980"].map((width) => [`account-positions-${width}x1500`, { ...fixtures, COPYTRADING_CAPTURE_SIZE: `${width}x1500`, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2" }]),
   // Copying paused: the primary action is Resume Copying.
   ["account-paused", { ...fixtures, COPYTRADING_FIXTURE_TRADING: "paused", COPYTRADING_CAPTURE_SIZE: "1280x860", COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2" }],
   // Pressing a waiting call's row (not its buttons) opens the same review as Copy.
@@ -121,6 +123,8 @@ for (const [name, env] of [
       [`guru-${name}`, { ...env, COPYTRADING_CAPTURE_HASH: `#/gurus/${zhao}` }],
     ]
   }),
+  // A guru's performance card: the empty state is the default (guru-day-*); this scene serves synthetic figures with a line, a best and a worst call.
+  ...["1280x860", "980x860"].map((size) => [`guru-performance-${size}`, { ...fixtures, COPYTRADING_FIXTURE_SCENE: "performance", COPYTRADING_CAPTURE_SIZE: size, COPYTRADING_CAPTURE_HASH: `#/gurus/${zhao}` }]),
   ["activity-post-1280x860", { ...fixtures, COPYTRADING_CAPTURE_SIZE: "1280x860", COPYTRADING_CAPTURE_HASH: "#/activity/5" }],
   ["activity-post-980x860", { ...fixtures, COPYTRADING_CAPTURE_SIZE: "980x860", COPYTRADING_CAPTURE_HASH: "#/activity/5" }],
   ["guru-sheet-1280x860", { ...fixtures, COPYTRADING_CAPTURE_SIZE: "1280x860", COPYTRADING_CAPTURE_HASH: `#/gurus/${zhao}`, COPYTRADING_CAPTURE_CLICK: 'button[data-sequence="5"]' }],

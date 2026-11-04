@@ -1,7 +1,8 @@
-import type { AccountOverview, EquityHistory, HistoryRange, Result } from "../../shared/contract"
+import type { AccountOverview, Bar, EquityHistory, GuruPerformance, HistoryRange, Result } from "../../shared/contract"
 import type { Api } from "./api"
 import { setupReads } from "./fixtures-setup"
 import account from "./fixtures/account.json"
+import bars from "./fixtures/bars.json"
 import history from "./fixtures/history.json"
 import { peopleReads } from "./fixtures/people"
 import positions from "./fixtures/positions.json"
@@ -84,6 +85,35 @@ const oldRecords: AccountOverview[] = ["testing", "primary", "jean-testing"].map
 const records = process.env.COPYTRADING_FIXTURE_SCENE === "records"
 const accountsState = process.env.COPYTRADING_FIXTURE_STATE
 
+// SOXL's and SOXS's real five-minute IEX bars of Nov 4, read through AlpacaBroker.bars (the engine's get_bars).
+const barsBySymbol = bars as Record<string, Bar[]>
+
+// A guru with no closed trades answers its empty state. COPYTRADING_FIXTURE_SCENE=performance serves SYNTHETIC figures
+// (not captured: the captured account has no replayed sales) so the card can be captured with a line, a best and a worst call.
+const performanceScene = process.env.COPYTRADING_FIXTURE_SCENE === "performance"
+const closed = (symbol: string, profit: string, day: string, excerpt: string) => ({ symbol, profit_usd: profit, closed_on: day, source_id: `discord:1100000000000000001:${symbol}`, excerpt, posted_at: `${day}T15:00:00Z` })
+const performance = (guru_id: string, account_id: string): GuruPerformance =>
+  performanceScene
+    ? {
+        guru_id,
+        account_id,
+        realized_usd: "63.40",
+        unrealized_usd: "-18.25",
+        closed_trades: 5,
+        winning_trades: 4,
+        unmatched_sells: 0,
+        best: closed("SOXL", "52.10", "2026-10-30", "SOXL 加 40.2"),
+        worst: closed("SOXS", "-14.30", "2026-11-03", "SOXS 减 8.5"),
+        series: [
+          { day: "2026-10-27", cumulative_usd: "8.20" },
+          { day: "2026-10-28", cumulative_usd: "21.70" },
+          { day: "2026-10-29", cumulative_usd: "15.10" },
+          { day: "2026-10-30", cumulative_usd: "67.20" },
+          { day: "2026-11-03", cumulative_usd: "63.40" },
+        ],
+      }
+    : { guru_id, account_id, realized_usd: "0", unrealized_usd: "0", closed_trades: 0, winning_trades: 0, unmatched_sells: 0, best: null, worst: null, series: [] }
+
 const delay = <T>(value: T) => new Promise<T>((done) => setTimeout(() => done(value), 150))
 const ok = async <T>(value: T): Promise<Result<T>> => ({ ok: true, value: await delay(value) })
 
@@ -121,6 +151,8 @@ const READS: Record<string, (params: Params) => Promise<Result<unknown>>> = {
   ...peopleReads,
   ...settingsReads,
   ...setupReads,
+  getBars: (params) => ok(Object.fromEntries(((params?.symbols as string[]) ?? []).map((symbol) => [symbol, barsBySymbol[symbol] ?? []]))),
+  getGuruPerformance: (params) => ok(performance(String(params?.guru_id), String(params?.account_id))),
   // A quote from just before the pinned clock, so Market reads live.
   // In a tick build the quote moves up and down on each ask, so a held row's live price can be watched.
   getQuote: () => {

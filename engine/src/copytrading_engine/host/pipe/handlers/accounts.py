@@ -7,9 +7,11 @@ from copytrading_engine.host.pipe.requests import (
     DetachAccountReadersRequest,
     GetAccountFeedRequest,
     GetAccountsRequest,
+    GetBarsRequest,
     GetEquityHistoryRequest,
     GetGuruActivityRequest,
     GetGuruDayStatsRequest,
+    GetGuruPerformanceRequest,
     GetQuoteRequest,
     GetSourceActivityRequest,
     PipeRequest,
@@ -38,6 +40,8 @@ class AccountHandlers:
             GetAccountFeedRequest: self._on_get_account_feed,
             GetEquityHistoryRequest: self._on_get_equity_history,
             GetQuoteRequest: self._on_get_quote,
+            GetBarsRequest: self._on_get_bars,
+            GetGuruPerformanceRequest: self._on_get_guru_performance,
             AttachAccountReadersRequest: self._on_attach_account_readers,
             DetachAccountReadersRequest: self._on_detach_account_readers,
             DeleteAccountRecordRequest: self._on_delete_account_record,
@@ -57,6 +61,36 @@ class AccountHandlers:
                 "symbol": request.symbol,
                 "quote": None if quote is None else quote.model_dump(mode="json"),
             },
+        )
+
+    async def _on_get_bars(self, request: GetBarsRequest) -> bytes:
+        """Bars are read-only market data, asked through the account's read keys."""
+        if self._trading is None:
+            return reply(request.version, request.request_id, error="unavailable")
+        bars = await self._trading.operator.bars(request.account_id, request.symbols)
+        return reply(
+            request.version,
+            request.request_id,
+            ok={
+                "type": "bars",
+                "account_id": request.account_id,
+                "bars": {
+                    symbol: [bar.model_dump(mode="json") for bar in series]
+                    for symbol, series in bars.items()
+                },
+            },
+        )
+
+    async def _on_get_guru_performance(self, request: GetGuruPerformanceRequest) -> bytes:
+        if self._trading is None:
+            return reply(request.version, request.request_id, error="unavailable")
+        performance = await self._trading.operator.guru_performance(
+            request.account_id, request.guru_id
+        )
+        return reply(
+            request.version,
+            request.request_id,
+            ok={"type": "guru_performance", "performance": performance.model_dump(mode="json")},
         )
 
     async def _on_attach_account_readers(self, request: AttachAccountReadersRequest) -> bytes:

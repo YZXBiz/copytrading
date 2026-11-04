@@ -7,7 +7,7 @@ import pytest
 from pydantic import SecretStr
 
 from copytrading_engine.execution.application.ports import BrokerError
-from copytrading_engine.execution.domain.market import HistoryWindow, Position, Quote
+from copytrading_engine.execution.domain.market import Bar, HistoryWindow, Position, Quote
 from copytrading_engine.execution.presentation.operator_views import (
     AccountOverview,
     PositionView,
@@ -52,6 +52,19 @@ class ReadOnly(FakeBroker):
 
     def close(self) -> None:
         self.closed = True
+
+
+class WithBars(ReadOnly):
+    def __init__(self) -> None:
+        super().__init__()
+        self.asked: list[str] = []
+        self.bar_failing = False
+
+    def bars(self, symbol: str) -> tuple[Bar, ...]:
+        self.asked.append(symbol)
+        if self.bar_failing:
+            raise BrokerError(503)
+        return (Bar(at=NOW, open=Decimal("40"), close=Decimal("41")),)
 
 
 def _reader(broker: ReadOnly, clock: list[dt.datetime]) -> PausedAccountReader:
@@ -187,3 +200,31 @@ async def test_history_of_an_account_with_a_record_but_no_keys_is_empty_not_miss
     assert await service.equity_history("primary", window) is None
     with pytest.raises(KeyError):
         await service.equity_history("ira", window)
+
+
+async def test_bars_are_read_once_a_minute_per_symbol_and_forgotten_when_locked():
+    broker, clock = WithBars(), [NOW]
+    reader = _reader(broker, clock)
+    first = await reader.bars("primary", ("ABC", "DEF"))
+    assert set(first) == {"ABC", "DEF"}
+    assert first["ABC"][0].close == Decimal("41")
+    clock[0] = NOW + dt.timedelta(seconds=59)
+    await reader.bars("primary", ("ABC",))
+    assert broker.asked == ["ABC", "DEF"]
+    clock[0] = NOW + dt.timedelta(seconds=61)
+    await reader.bars("primary", ("ABC",))
+    assert broker.asked == ["ABC", "DEF", "ABC"]
+    reader.detach()
+    assert await reader.bars("primary", ("ABC",)) == {}
+
+
+async def test_a_failed_bars_read_keeps_the_last_answer_or_has_none():
+    broker, clock = WithBars(), [NOW]
+    reader = _reader(broker, clock)
+    broker.bar_failing = True
+    assert await reader.bars("primary", ("ABC",)) == {"ABC": ()}
+    broker.bar_failing = False
+    first = await reader.bars("primary", ("ABC",))
+    broker.bar_failing = True
+    clock[0] = NOW + dt.timedelta(seconds=120)
+    assert await reader.bars("primary", ("ABC",)) == first

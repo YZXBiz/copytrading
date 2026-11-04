@@ -13,6 +13,7 @@ import { dayWindow } from "@/features/activity/time"
 import { readClock } from "@/lib/clock"
 import { type Loaded, useResult } from "@/lib/use-result"
 import { GuruDestinations } from "./GuruDestinations"
+import { GuruPerformanceCard } from "./GuruPerformanceCard"
 import { GuruPostSheet } from "./GuruPostSheet"
 import { GuruStats } from "./GuruStats"
 import { GuruTimeline } from "./GuruTimeline"
@@ -46,6 +47,8 @@ export function GuruPage({ guru, accounts, setUpAccountIds }: { guru: Guru; acco
       ) : (
         <GuruStats stats={guruStats(dayStats, feed?.waitingCount ?? 0, day.status === "ready" && feed !== null)} holdings={holdings} />
       )}
+
+      <GuruPerformanceCard guru={guru} />
 
       <section className="w-full" aria-labelledby="guru-posts-title">
         {/* Content header (title + filter tabs) */}

@@ -14,6 +14,7 @@ from pydantic import (
 from copytrading_engine.execution.domain.market import (
     Account,
     Asset,
+    Bar,
     BrokerOrder,
     CalendarDay,
     EquityHistory,
@@ -105,6 +106,17 @@ def _exact_decimal(value: object) -> object:
     return str(value) if isinstance(value, float) else value
 
 
+class AlpacaBar(AlpacaValue):
+    t: dt.datetime
+    o: Quantity
+    c: Quantity
+
+    @field_validator("o", "c", mode="before")
+    @classmethod
+    def exact_price(cls, value: object) -> object:
+        return _exact_decimal(value)
+
+
 class AlpacaPortfolioHistory(AlpacaValue):
     timestamp: tuple[int, ...]
     equity: tuple[Money | None, ...]
@@ -151,6 +163,12 @@ def decode_crypto_quote(value: object, symbol: str) -> Quote:
     quotes = value.get("quotes") if isinstance(value, dict) else None
     wire = AlpacaQuote.model_validate(quotes.get(symbol) if isinstance(quotes, dict) else None)
     return Quote(feed="crypto", bid=wire.bp, ask=wire.ap, timestamp=wire.t)
+
+
+def decode_bars(value: object) -> tuple[Bar, ...]:
+    """The bars of one symbol: a stock's reply lists them, a coin's keys them by pair."""
+    wire = TypeAdapter(tuple[AlpacaBar, ...]).validate_python(value)
+    return tuple(Bar(at=bar.t, open=bar.o, close=bar.c) for bar in wire)
 
 
 def decode_portfolio_history(value: object, window: HistoryWindow) -> EquityHistory:
