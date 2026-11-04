@@ -4,6 +4,9 @@ import { decMul, decRound, decText, parseDec } from "./decimal"
 import { dollars, usd } from "./quantity"
 import { callPhrase, isWaiting } from "./waiting"
 
+// The Activity and Gurus screens read the trading day from here; its one definition is in waiting.ts.
+export { tradingDay } from "./waiting"
+
 /** The badge tones the page uses for what became of a post. */
 export type OutcomeTone = "success-light" | "warning-light" | "destructive-light" | "outline"
 
