@@ -11,7 +11,7 @@ export function GuruHoldingsLine({ holdings }: { holdings: Holdings | null }) {
   const up = gain >= 0
   return (
     <p className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
-      Holding {dollars(String(Math.round(cost)))} in {stocks === 1 ? "1 stock" : `${stocks} stocks`} from these calls
+      Holding {dollars(String(Math.round(cost)))} in {stocks === 1 ? "1 stock" : `${stocks} stocks`}
       {cost > 0 && (
         <Badge variant={up ? "success-light" : "destructive-light"}>
           {up ? <ArrowUpIcon aria-hidden="true" /> : <ArrowDownIcon aria-hidden="true" />}

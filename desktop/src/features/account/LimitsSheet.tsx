@@ -111,8 +111,8 @@ export function LimitsSheet({ accountId, onClose }: { accountId: string; onClose
     <Sheet open onOpenChange={(open) => !open && onClose(false)}>
       <SheetContent className="w-full sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>Limits · {accountId}</SheetTitle>
-          <SheetDescription>Every order into this account stays inside these. Changes apply from the next order.</SheetDescription>
+          <SheetTitle>Limits for {accountId}</SheetTitle>
+          <SheetDescription>Changes apply from the next order.</SheetDescription>
         </SheetHeader>
         {setup.status === "loading" && (
           <div role="status" aria-label="Loading limits" className="flex flex-col gap-4 px-4">
@@ -133,7 +133,7 @@ export function LimitsSheet({ accountId, onClose }: { accountId: string; onClose
                 <SlidersHorizontalIcon />
               </EmptyMedia>
               <EmptyTitle>No saved limits for this account</EmptyTitle>
-              <EmptyDescription>Save this account in Connections first; its limits are kept in the saved setup.</EmptyDescription>
+              <EmptyDescription>Save the account in Connections first.</EmptyDescription>
             </EmptyHeader>
           </Empty>
         )}

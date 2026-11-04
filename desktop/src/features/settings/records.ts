@@ -8,7 +8,7 @@ export function earlierAccounts(accounts: AccountOverview[], saved: string[]): A
   return accounts.filter((a) => !inSetup.has(a.account_id))
 }
 
-/** "Alpaca paper account ending 0f11 · 2 copied buys · Last active Oct 12, 2:15 PM". */
+/** One fact to a line: "Alpaca paper account ending 0f11", "2 copied buys", "Last active Oct 12, 2:15 PM". */
 export function recordSummary(account: AccountOverview): string {
   const buys = account.positions.reduce((total, p) => total + p.lots.length, 0)
   const parts = [
@@ -16,5 +16,5 @@ export function recordSummary(account: AccountOverview): string {
     buys === 0 ? "No copied shares" : count(buys, "copied buy"),
   ]
   if (account.last_activity_at) parts.push(`Last active ${dateTime(account.last_activity_at)}`)
-  return parts.join(" · ")
+  return parts.join("\n")
 }

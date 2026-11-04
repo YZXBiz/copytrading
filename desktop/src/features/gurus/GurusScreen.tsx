@@ -19,7 +19,7 @@ export function GurusScreen({ guruId, accounts }: { guruId: string | null; accou
   if (guru) return <GuruPage guru={guru} accounts={accounts} setUpAccountIds={new Set(config?.accounts.map((a) => a.id))} />
 
   return (
-    <Frame spacing="sm" className="max-w-3xl">
+    <Frame spacing="sm">
       <FramePanel className="p-0">
         {setup.status === "loading" && (
           <div role="status" aria-label="Loading gurus" className="flex flex-col gap-4 p-3">
@@ -55,9 +55,9 @@ export function GurusScreen({ guruId, accounts }: { guruId: string | null; accou
                 <Item render={<a href={href("gurus", g.id)} />}>
                   <ItemContent>
                     <ItemTitle>{g.name}</ItemTitle>
-                    <GuruDestinations guru={g} />
                   </ItemContent>
                   <ItemActions>
+                    <GuruDestinations guru={g} />
                     <ChevronRightIcon aria-hidden className="text-muted-foreground size-4" />
                   </ItemActions>
                 </Item>

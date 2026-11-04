@@ -44,17 +44,17 @@ describe("previewHeadline", () => {
 
   it("names the stock when nothing could be planned", () => {
     expect(previewHeadline(preview({ plan: null }), "a", 0)).toBe("Buy SOXS in a")
-    expect(previewHeadline(null, "a", 1)).toBe("a · trade 2")
+    expect(previewHeadline(null, "a", 1)).toBe("a, trade 2")
   })
 })
 
 describe("previewDetail", () => {
   it("shows a buy's shares at its limit, the ask, and the post's age", () => {
-    expect(previewDetail(preview())).toBe("≈2.469 shares at $40.45 or less · Ask $40.40 · posted 2 min ago")
+    expect(previewDetail(preview())).toEqual(["≈2.469 shares at $40.45 or less", "Ask $40.40", "posted 2 min ago"])
   })
 
   it("quotes the bid for a sell", () => {
-    expect(previewDetail(preview({ instruction: { ...preview().instruction, action: "close" }, plan: plan({ budget_usd: null }) }))).toBe("Bid $40.40 · posted 2 min ago")
+    expect(previewDetail(preview({ instruction: { ...preview().instruction, action: "close" }, plan: plan({ budget_usd: null }) }))).toEqual(["Bid $40.40", "posted 2 min ago"])
   })
 })
 

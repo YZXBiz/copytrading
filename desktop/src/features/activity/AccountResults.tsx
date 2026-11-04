@@ -38,9 +38,9 @@ function ResultBlock({ result }: { result: Result }) {
 function AccountBlock({ account }: { account: AccountOutcome }) {
   return (
     <div role="group" aria-label={`Account ${account.id}`} className="flex flex-col gap-3">
-      <div className="flex items-center gap-2 text-xs font-medium tracking-wide uppercase">
-        <span className="text-muted-foreground">{account.id}</span>
-        {account.environment === "live" ? <Badge variant="warning-light" size="sm">Live</Badge> : <span className="text-muted-foreground">Paper</span>}
+      <div className="flex items-center gap-2 text-sm font-medium">
+        <span>{account.id}</span>
+        {account.environment === "live" ? <Badge variant="warning-light">Live</Badge> : <Badge variant="outline">Paper</Badge>}
       </div>
       {account.results.map((result, index) => (
         <ResultBlock key={index} result={result} />

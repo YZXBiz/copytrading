@@ -1,8 +1,9 @@
 import type { ReactNode } from "react"
+import { Meta } from "@/components/meta"
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item"
 import { cn } from "cn"
 
-/** One row of a settings section: what it is, one line on it, and its control or value on the right. */
+/** One row of a settings section: what it is, a line on it only when it changes what the owner does, and its control or value on the right. */
 export function SettingsRow({
   title,
   description,
@@ -19,7 +20,11 @@ export function SettingsRow({
     <Item size="sm" className="rounded-none border-0">
       <ItemContent>
         <ItemTitle>{title}</ItemTitle>
-        {description && <ItemDescription className={cn("whitespace-pre-line", tone === "caution" && "text-warning-foreground dark:text-warning")}>{description}</ItemDescription>}
+        {description && (
+          <ItemDescription className={cn(tone === "caution" && "text-warning-foreground dark:text-warning")}>
+            {typeof description === "string" ? <Meta text={description} /> : description}
+          </ItemDescription>
+        )}
       </ItemContent>
       {children && <ItemActions>{children}</ItemActions>}
     </Item>

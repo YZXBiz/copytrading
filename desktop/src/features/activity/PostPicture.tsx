@@ -32,7 +32,7 @@ export function PostPicture({ attachment, className }: { attachment: SourceAttac
       </AttachmentMedia>
       <AttachmentContent>
         {attachment.filename && <AttachmentTitle>{attachment.filename}</AttachmentTitle>}
-        <AttachmentDescription>{known === null ? state : `${size(known)} · ${state}`}</AttachmentDescription>
+        <AttachmentDescription>{known === null ? state : `${state} (${size(known)})`}</AttachmentDescription>
       </AttachmentContent>
     </Attachment>
   )

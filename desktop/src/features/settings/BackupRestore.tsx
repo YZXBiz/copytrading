@@ -140,17 +140,22 @@ export function BackupRestore({ pending, checking, onChanged }: { pending: Pendi
   return (
     <>
       <SettingsSection title="Backup & Restore" hint="Holds your records, setup, posts, and attachments. Keys and logs are left out.">
-        <SettingsRow title="Create Backup…" description="Copying waits a moment while it runs.">
+        <SettingsRow title="Create Backup…">
           <Button type="button" size="sm" variant="outline" disabled={busy} onClick={createBackup}>
             Create
           </Button>
         </SettingsRow>
-        <SettingsRow title="Restore from Backup…" description="Shows what a backup holds first. Nothing changes until you restore it.">
+        <SettingsRow title="Restore from Backup…">
           <Button type="button" size="sm" variant="outline" disabled={busy || checking || pending !== null} onClick={openBackup}>
             Choose
           </Button>
         </SettingsRow>
-        {manifest && <SettingsRow title="Last verified backup">{`${dateTime(manifest.created_at)} · ${count(manifest.members.length, "file")}`}</SettingsRow>}
+        {manifest && (
+          <SettingsRow title="Last verified backup">
+            <span className="text-muted-foreground text-xs tabular-nums">{dateTime(manifest.created_at)}</span>
+            <Badge variant="outline">{count(manifest.members.length, "file")}</Badge>
+          </SettingsRow>
+        )}
       </SettingsSection>
       {note && <Note note={note} />}
       {preview && pending === null && (

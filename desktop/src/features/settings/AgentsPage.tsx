@@ -1,5 +1,6 @@
 import { useState } from "react"
 import type { AgentAuditEntry, AgentProposal, TradingConfiguration } from "../../../shared/contract"
+import { Meta } from "@/components/meta"
 import { RegionError } from "@/components/region-error"
 import { Badge } from "@/components/reui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -12,7 +13,7 @@ import { Note } from "./Note"
 import { ProposalActions } from "./ProposalActions"
 import { SettingsRow } from "./SettingsRow"
 import { SettingsSection } from "./SettingsSection"
-import { accountOf, auditLine, auditOutcome, callerName, canApprove, isLive, limitRows, summary } from "./proposals"
+import { accountOf, auditWhen, auditWho, auditOutcome, callerName, canApprove, isLive, limitRows, summary } from "./proposals"
 import { humanCode } from "./words"
 
 const AUDIT_SHOWN = 10
@@ -21,7 +22,8 @@ function ProposalRow({ proposal, setup, onDecided }: { proposal: AgentProposal; 
   const rows = limitRows(proposal, setup)
   const lines = [
     ...rows.map((row) => `${row.title}: ${row.now} → ${row.after}`),
-    `${callerName(proposal.requested_by.path)} · expires ${dateTime(proposal.expires_at)}`,
+    callerName(proposal.requested_by.path),
+    `Expires ${dateTime(proposal.expires_at)}`,
     ...(canApprove(proposal) ? [] : ["This changes the saved setup, which this version cannot apply yet. You can reject it."]),
   ]
   return (
@@ -31,7 +33,9 @@ function ProposalRow({ proposal, setup, onDecided }: { proposal: AgentProposal; 
           {summary(proposal)}
           {accountOf(proposal) && isLive(proposal, setup) && <Badge variant="warning-light">Live</Badge>}
         </ItemTitle>
-        <ItemDescription className="line-clamp-none whitespace-pre-line">{lines.join("\n")}</ItemDescription>
+        <ItemDescription className="line-clamp-none">
+          <Meta text={lines.join("\n")} />
+        </ItemDescription>
       </ItemContent>
       <ItemActions>
         <ProposalActions proposal={proposal} onDecided={onDecided} />
@@ -60,7 +64,7 @@ function Waiting({ onDecided }: { onDecided: () => void }) {
       {outcome && <Note note={{ kind: outcome.startsWith("Done") ? "done" : "problem", text: outcome }} />}
       <SettingsSection title="Waiting for You" hint="Approve only if you asked for this. Agents read messages written by other people, so a request can come from text you have never seen.">
         {waiting.length === 0 ? (
-          <SettingsRow title="Nothing is waiting" description="When the assistant or an agent asks for something that could trade, it waits here for you." />
+          <SettingsRow title="Nothing is waiting" />
         ) : (
           waiting.map((proposal) => <ProposalRow key={proposal.proposal_id} proposal={proposal} setup={configuration} onDecided={decided} />)
         )}
@@ -72,7 +76,8 @@ function Waiting({ onDecided }: { onDecided: () => void }) {
 function AuditRow({ entry, now }: { entry: AgentAuditEntry; now: Date }) {
   const outcome = auditOutcome(entry)
   return (
-    <SettingsRow title={humanCode(entry.operation)} description={auditLine(entry, now)}>
+    <SettingsRow title={humanCode(entry.operation)} description={auditWho(entry)}>
+      <span className="text-muted-foreground text-xs tabular-nums">{auditWhen(entry, now)}</span>
       <Badge variant={outcome.tone === "outline" ? "outline" : outcome.tone === "secondary" ? "secondary" : `${outcome.tone}-light`}>{outcome.text}</Badge>
     </SettingsRow>
   )
@@ -87,7 +92,7 @@ function Recent({ version }: { version: number }) {
   return (
     <SettingsSection title="Recent Requests">
       {audit.data.length === 0 ? (
-        <SettingsRow title="No requests yet" description="What the assistant and agents ask for, and what you decide, is listed here." />
+        <SettingsRow title="No requests yet" />
       ) : (
         audit.data.slice(0, AUDIT_SHOWN).map((entry, index) => <AuditRow key={index} entry={entry} now={now} />)
       )}

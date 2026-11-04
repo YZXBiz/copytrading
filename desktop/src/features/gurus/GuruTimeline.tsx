@@ -2,7 +2,7 @@ import { CheckIcon, ClockIcon, CircleAlertIcon, MinusIcon, type LucideIcon } fro
 import { Timeline, TimelineContent, TimelineHeader, TimelineIndicator, TimelineItem, TimelineSeparator, TimelineTitle } from "@/components/reui/timeline"
 import { PostPicture } from "@/features/activity/PostPicture"
 import { quoteOf } from "@/features/activity/PostListItem"
-import { readableText } from "@/features/activity/reading"
+import { pictureOf } from "@/features/activity/reading"
 import { clockTime } from "@/features/activity/time"
 import { cn } from "@/lib/utils"
 import type { Day, Entry } from "./model"
@@ -21,7 +21,7 @@ function GuruPostEntry({ entry, step, onOpen }: { entry: Entry; step: number; on
   const { post } = entry
   const { icon: Icon, className } = markOf(entry)
   // A post with no words of its own shows its picture.
-  const picture = readableText(post) === "" ? post.source_event?.attachments.find((a) => a.status === "available") : undefined
+  const picture = pictureOf(post)
   return (
     <TimelineItem step={step} className="group-data-[orientation=vertical]/timeline:ms-10">
       <TimelineHeader>
@@ -39,11 +39,12 @@ function GuruPostEntry({ entry, step, onOpen }: { entry: Entry; step: number; on
           className="hover:bg-muted focus-visible:ring-ring/50 -mx-2 flex w-[calc(100%+1rem)] flex-col gap-1.5 rounded-lg px-2 py-1.5 text-left outline-none transition-colors focus-visible:ring-3"
         >
           {picture ? <PostPicture attachment={picture} className="max-h-44" /> : <span className="line-clamp-4 text-base break-words">{quoteOf(post)}</span>}
-          <span className="text-muted-foreground line-clamp-2 text-xs">{entry.readAs}</span>
+          {/* A post that was only chat has nothing to add to its icon. */}
+          {post.decision !== "ignore" && !(post.decision === "review" && post.instructions.length === 0) && <span className="text-muted-foreground text-xs">{entry.readAs}</span>}
           {entry.accounts.map((account) => (
-            <span key={account.accountId} className="text-sm">
+            <span key={account.accountId} className="flex items-baseline gap-3 text-sm">
               <span className="font-medium">{account.accountId}</span>
-              <span className={cn("text-muted-foreground", account.kind === "traded" && "text-success-foreground")}> · {account.summary}</span>
+              <span className={cn("text-muted-foreground", account.kind === "traded" && "text-success-foreground dark:text-success")}>{account.summary}</span>
             </span>
           ))}
         </button>
@@ -58,7 +59,7 @@ export function GuruTimeline({ days, onOpen }: { days: Day[]; onOpen: (sequence:
     <div className="flex flex-col gap-6">
       {days.map((day) => (
         <section key={day.label} aria-label={day.label}>
-          <h3 className="text-muted-foreground mb-3 text-xs font-medium tracking-wide uppercase">{day.label}</h3>
+          <h3 className="mb-3 text-sm font-semibold tracking-tight">{day.label}</h3>
           <Timeline value={0}>
             {day.entries.map((entry, index) => (
               <GuruPostEntry key={entry.post.sequence} entry={entry} step={index + 1} onOpen={onOpen} />

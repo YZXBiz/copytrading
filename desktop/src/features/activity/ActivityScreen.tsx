@@ -80,7 +80,7 @@ export function ActivityScreen({ selectedSequence, accounts }: { selectedSequenc
           </FramePanel>
         </Frame>
         {(posts.status === "loading" || selected) && (
-          <Frame spacing="sm">
+          <Frame spacing="sm" className="lg:sticky lg:top-0">
             <FramePanel>
               {selected ? <PostView post={selected} guruName={guruName(gurus, selected.guru_id)} now={now} accountId={accountId} /> : <PostListSkeleton />}
             </FramePanel>

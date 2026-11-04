@@ -12,9 +12,7 @@ export function AssistantEmpty({ hasModel, suggestions, onAsk, onOpenConnections
           <SparklesIcon />
         </EmptyMedia>
         <EmptyTitle>Ask about your trading</EmptyTitle>
-        <EmptyDescription>
-          {hasModel ? "Answers come from your own posts, accounts, and setup." : "It answers with the model that reads your posts. Choose one in Connections to begin."}
-        </EmptyDescription>
+        {!hasModel && <EmptyDescription>Choose a model in Connections to begin.</EmptyDescription>}
       </EmptyHeader>
       <EmptyContent className="max-w-none">
         {hasModel ? (

@@ -1,4 +1,5 @@
 import type { SourceActivity } from "../../../shared/contract"
+import { Meta } from "@/components/meta"
 import { reasonText } from "@/lib/reasons"
 import { callHeadline, callNote, callsOf, enteredByOwner, headline, isRepost, kindText, noCallLine } from "./reading"
 
@@ -10,10 +11,7 @@ export function ReadAs({ post }: { post: SourceActivity }) {
   const calls = reading ? callsOf(reading) : []
   const by = post.interpreted_by ? `read by ${post.interpreted_by}` : null
   return (
-    <section aria-labelledby="read-as" className="flex flex-col gap-1">
-      <h3 id="read-as" className="text-muted-foreground mb-1 text-xs font-medium tracking-wide uppercase">
-        Read as
-      </h3>
+    <section aria-label="Read as" className="flex flex-col gap-1">
       {reading && calls.length === 0 && (
         <>
           <p className="font-medium">{noCallLine(reading)}</p>
@@ -26,11 +24,11 @@ export function ReadAs({ post }: { post: SourceActivity }) {
         return (
           <div key={index} className={index === 0 ? undefined : "mt-2"}>
             <p className="font-medium tabular-nums">{title}</p>
-            {parts.length > 0 && <p className="text-muted-foreground text-sm">{capitalize(parts.join(" · "))}</p>}
+            {parts.length > 0 && <Meta className="text-muted-foreground text-sm" items={parts.map(capitalize)} />}
           </div>
         )
       })}
-      {reading && <p className="text-muted-foreground mt-1 text-xs">{capitalize([kindText(reading), by].filter(Boolean).join(" · "))}</p>}
+      {reading && <Meta className="text-muted-foreground mt-1 text-xs" items={([kindText(reading), by].filter(Boolean) as string[]).map(capitalize)} />}
       {!reading && (
         <>
           <p className="font-medium">{headline(post)}</p>

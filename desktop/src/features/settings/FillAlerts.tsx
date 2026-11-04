@@ -27,7 +27,7 @@ export function FillAlerts() {
     <>
       {note && <Note note={note} />}
       <SettingsSection title="While Copying">
-        <SettingsRow title="Tell me when a trade fills" description="A notification when each copied order goes out and when it fills.">
+        <SettingsRow title="Tell me when a trade fills">
           <Switch aria-label="Tell me when a trade fills" checked={changed ?? on.data} onCheckedChange={(next) => void change(next)} />
         </SettingsRow>
       </SettingsSection>

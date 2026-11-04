@@ -1,5 +1,6 @@
 import { useState } from "react"
 import type { AccountOverview, Position } from "../../../shared/contract"
+import { readableText } from "@/features/activity/reading"
 import { readClock } from "@/lib/clock"
 import { useResult } from "@/lib/use-result"
 import { AccountHeader } from "./AccountHeader"
@@ -81,23 +82,22 @@ export function AccountPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <AccountHeader account={account} guru={guru} status={status} saved={limitsSaved} onChanged={changed} />
+      <AccountHeader account={account} status={status} saved={limitsSaved} onChanged={changed} />
       <AccountNotices account={account} status={copyingStatus} onResolved={changed} />
       <NeedsYou
         calls={calls}
-        guruName={guru}
         canCopy={copyingStatus?.state === "running" || copyingStatus?.state === "degraded"}
         now={now}
         recent={skipped.recent}
         onCopy={setReview}
-        onSkip={(call) => skipped.skip(call.source.source_id ?? String(call.source.sequence), call.source.text)}
+        onSkip={(call) => skipped.skip(call.source.source_id ?? String(call.source.sequence), readableText(call.source))}
         onUndo={skipped.undo}
       />
-      <StatsRow account={account} />
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <BalanceChart accountId={id} />
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <BalanceChart account={account} />
         <LimitsPanel account={account} limits={limits} onOpenConnections={onOpenConnections} onEdit={() => setEditingLimits(true)} />
       </div>
+      <StatsRow account={account} />
       <PositionsTable
         account={account}
         onRefresh={onRefresh}

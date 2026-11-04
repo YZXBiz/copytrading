@@ -7,8 +7,8 @@ import { TimeZoneField } from "./TimeZoneField"
 export function GeneralPage() {
   return (
     <div className="flex flex-col gap-6">
-      <SettingsSection title="Time Zone">
-        <SettingsRow title="Show times in" description="Post times, deadlines, and market hours use this zone.">
+      <SettingsSection>
+        <SettingsRow title="Show times in">
           <TimeZoneField />
         </SettingsRow>
       </SettingsSection>

@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react"
+import { Children, Fragment, type ReactNode, useEffect, useRef, useState } from "react"
 import { LandmarkIcon, MessageSquareIcon, PlusIcon, SparklesIcon, UserIcon, UsersIcon } from "lucide-react"
 import { RegionError } from "@/components/region-error"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
-import { ItemGroup } from "@/components/ui/item"
+import { Frame, FramePanel } from "@/components/reui/frame"
+import { ItemGroup, ItemSeparator } from "@/components/ui/item"
 import { Skeleton } from "@/components/ui/skeleton"
 import { providerShortTitle, requiresApiKey } from "../../../shared/providers"
 import { AccountSheet } from "./AccountSheet"
@@ -76,19 +77,18 @@ export function ConnectionsScreen({ routeId }: { routeId: string | null }) {
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
       <header className="flex flex-col gap-1">
         <h1 className="text-xl font-semibold tracking-tight">Connections</h1>
-        <p className="text-muted-foreground text-sm">Where posts come from, the AI model that reads them, and the broker account that copies them.</p>
       </header>
 
       <section aria-labelledby="services" className="flex flex-col gap-3">
         <h2 id="services" className="text-sm font-medium">
           Services
         </h2>
-        <ItemGroup>
+        <Rows>
           <ConnectionRow
             icon={MessageSquareIcon}
             label="Discord"
             title="Discord"
-            detail={channels.length ? `${plural(channels.length, "channel")}, ${authors.length ? plural(authors.length, "author") : "anyone who posts"}` : "Where your gurus post their calls"}
+            detail={channels.length ? `${plural(channels.length, "channel")}, ${authors.length ? plural(authors.length, "author") : "anyone who posts"}` : undefined}
             status={discord}
             onEdit={() => setOpen({ kind: "discord" })}
             {...connectProps("discord")}
@@ -97,12 +97,12 @@ export function ConnectionsScreen({ routeId }: { routeId: string | null }) {
             icon={SparklesIcon}
             label="Interpreter"
             title={model ? providerShortTitle(draft.provider) : "Interpreter"}
-            detail={model || "The AI model that reads each post"}
+            detail={model || undefined}
             status={interpreter}
             onEdit={() => setOpen({ kind: "interpreter" })}
             {...connectProps("interpreter")}
           />
-        </ItemGroup>
+        </Rows>
       </section>
 
       <section aria-labelledby="accounts" className="flex flex-col gap-3">
@@ -115,27 +115,26 @@ export function ConnectionsScreen({ routeId }: { routeId: string | null }) {
           </Button>
         </div>
         {draft.accounts.length ? (
-          <ItemGroup>
+          <Rows>
             {draft.accounts.map((account) => {
               const name = account.name.trim()
               const subject = accountSubject(name)
-              const guru = draft.gurus.find((g) => g.account_id.trim() === name)
               return (
                 <ConnectionRow
                   key={account.uid}
                   icon={LandmarkIcon}
                   label={name || "new account"}
                   title={name || "New account"}
-                  detail={`${account.environment === "live" ? "Live" : "Paper"}${guru?.display_name.trim() ? ` · copies ${guru.display_name.trim()}` : ""}`}
+                  detail={account.environment === "live" ? "Live" : "Paper"}
                   status={accountStatus(facts, account)}
                   onEdit={() => setOpen({ kind: "account", uid: account.uid })}
                   {...connectProps(subject)}
                 />
               )
             })}
-          </ItemGroup>
+          </Rows>
         ) : (
-          <EmptyRegion icon={LandmarkIcon} title="No broker accounts yet" description="Add an Alpaca paper account to start: it trades pretend money at real prices." />
+          <EmptyRegion icon={LandmarkIcon} title="No broker accounts yet" description="Add an Alpaca paper account to start." />
         )}
       </section>
 
@@ -149,7 +148,7 @@ export function ConnectionsScreen({ routeId }: { routeId: string | null }) {
           </Button>
         </div>
         {draft.gurus.length ? (
-          <ItemGroup>
+          <Rows>
             {draft.gurus.map((guru) => {
               const channel = guru.channel_id.trim() || channels[0] || ""
               return (
@@ -164,9 +163,9 @@ export function ConnectionsScreen({ routeId }: { routeId: string | null }) {
                 />
               )
             })}
-          </ItemGroup>
+          </Rows>
         ) : (
-          <EmptyRegion icon={UsersIcon} title="No gurus yet" description="Each guru is one Discord channel, copied into one account." />
+          <EmptyRegion icon={UsersIcon} title="No gurus yet" description="Each guru is one Discord channel." />
         )}
       </section>
 
@@ -177,6 +176,25 @@ export function ConnectionsScreen({ routeId }: { routeId: string | null }) {
       {open?.kind === "account" && <AccountSheet uid={open.uid} onClose={close} />}
       {open?.kind === "guru" && <GuruSheet uid={open.uid} onClose={close} />}
     </div>
+  )
+}
+
+/** One section's connections in a single frame, a hairline between rows. */
+function Rows({ children }: { children: ReactNode }) {
+  const rows = Children.toArray(children)
+  return (
+    <Frame spacing="sm">
+      <FramePanel className="p-0">
+        <ItemGroup className="gap-0">
+          {rows.map((row, index) => (
+            <Fragment key={index}>
+              {index > 0 && <ItemSeparator className="my-0!" />}
+              {row}
+            </Fragment>
+          ))}
+        </ItemGroup>
+      </FramePanel>
+    </Frame>
   )
 }
 

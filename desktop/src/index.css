@@ -1,3 +1,6 @@
+/* Hallmark · checked: 2026-11-03 · genre: modern-minimal (inferred) · shape: app screen
+ * floor: 0 FAIL in feature code · waived: installed ReUI and shadcn parts (ReUI outranks Hallmark), the .dark token block
+ * built: the project · redesign: polish · v2.0.0 */
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -153,5 +156,10 @@
     }
   html {
     @apply font-sans;
+    scrollbar-color: var(--border) transparent;
+    }
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 18%, transparent);
+    color: var(--foreground);
     }
 }

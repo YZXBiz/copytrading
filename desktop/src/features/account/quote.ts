@@ -38,10 +38,10 @@ export const livePrice = (quote: MarketQuote | null, isSell: boolean, now: Date)
 /** When it was quoted: "8:19 AM" today, "Oct 14, 7:19 PM" before. */
 const when = (iso: string, now: Date) => (new Date(iso).toDateString() === now.toDateString() ? timeOfDay(iso) : dateTime(iso))
 
-/** "≈ $226.56 · 11:53 AM" beside Market while the quote is live; null otherwise. */
+/** "≈ $226.56 at 11:53 AM" beside Market while the quote is live; null otherwise. */
 export function quoteDetail(quote: MarketQuote | null, isSell: boolean, now: Date): string | null {
   const price = livePrice(quote, isSell, now)
-  return price && quote?.timestamp ? `≈ ${usd(price)} · ${when(quote.timestamp, now)}` : null
+  return price && quote?.timestamp ? `≈ ${usd(price)} at ${when(quote.timestamp, now)}` : null
 }
 
 /** Why there is no market price, said plainly. Null while the quote is live. */

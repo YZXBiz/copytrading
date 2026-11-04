@@ -7,7 +7,7 @@ import { DataGrid, type DataGridFeatures, dataGridFeatures } from "@/components/
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header"
 import { DataGridScrollArea } from "@/components/reui/data-grid/data-grid-scroll-area"
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table"
-import { Frame, FrameDescription, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"
+import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -25,9 +25,9 @@ type Lot = Position["lots"][number]
 /** Lots with shares left to sell. */
 export const sellable = (position: Position) => position.lots.filter((lot) => (parseDec(lot.remaining_qty) ?? 0n) > 0n)
 
-/** "赵哥 · Oct 22 · 2.052 shares": which buy a lot is. */
+/** "赵哥, Oct 22, 2.052 shares": which buy a lot is. */
 const lotLabel = (position: Position, lot: Lot) =>
-  [lot.guru_id ?? "A post", lot.posted_at && monthDay(lot.posted_at), sharesText(parseDec(lot.remaining_qty) ?? 0n, position.symbol)].filter(Boolean).join(" · ")
+  [lot.guru_id ?? "A post", lot.posted_at && monthDay(lot.posted_at), sharesText(parseDec(lot.remaining_qty) ?? 0n, position.symbol)].filter(Boolean).join(", ")
 
 /** Sell one lot of the stock: one Sell button, or a menu of the lots when several buys make it up. */
 function SellCell({ position, onSell }: { position: Position; onSell: (position: Position, lot: Lot) => void }) {
@@ -35,14 +35,14 @@ function SellCell({ position, onSell }: { position: Position; onSell: (position:
   if (lots.length === 0) return null
   if (lots.length === 1) {
     return (
-      <Button type="button" size="xs" variant="outline" aria-label={`Sell ${lotLabel(position, lots[0]!)}`} onClick={() => onSell(position, lots[0]!)}>
+      <Button type="button" size="xs" variant="ghost" aria-label={`Sell ${lotLabel(position, lots[0]!)}`} onClick={() => onSell(position, lots[0]!)}>
         Sell
       </Button>
     )
   }
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button type="button" size="xs" variant="outline" aria-label={`Sell ${position.symbol}: choose a buy`} />}>
+      <DropdownMenuTrigger render={<Button type="button" size="xs" variant="ghost" aria-label={`Sell ${position.symbol}: choose a buy`} />}>
         Sell <ChevronDownIcon aria-hidden />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-auto">
@@ -104,7 +104,6 @@ export function PositionsTable({
     <Frame spacing="sm">
       <FrameHeader>
         <FrameTitle>Positions</FrameTitle>
-        <FrameDescription>Bought by CopyTrading</FrameDescription>
       </FrameHeader>
       <FramePanel className="p-0">
         {data.length === 0 ? (
@@ -114,7 +113,7 @@ export function PositionsTable({
                 <PackageOpenIcon />
               </EmptyMedia>
               <EmptyTitle>No stocks bought yet</EmptyTitle>
-              <EmptyDescription>Shares CopyTrading buys for this account show up here.</EmptyDescription>
+              <EmptyDescription>Shares CopyTrading buys show up here.</EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
               <Button type="button" size="sm" variant="outline" onClick={onRefresh}>

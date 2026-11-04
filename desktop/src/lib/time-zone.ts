@@ -61,5 +61,5 @@ export function zoneName(zone: string, at: Date = new Date()): string {
 export function zoneLabel(zone: string | undefined, at: Date = new Date()): string {
   if (zone === undefined) return `Automatic (${zoneName(macTimeZone(), at)})`
   if (zone === NEW_YORK) return "New York (market time)"
-  return `${city(zone)} · ${zoneName(zone, at)}`
+  return `${city(zone)} (${zoneName(zone, at)})`
 }

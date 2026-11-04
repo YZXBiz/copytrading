@@ -37,7 +37,7 @@ export type OutcomeKind = "traded" | "notTraded" | "waiting" | "working" | "sett
 
 export interface GuruAccountOutcome {
   accountId: string
-  /** "primary · Not bought: the price ran above your limit" is account and summary. */
+  /** What the account did, such as "Not bought: the price ran above your limit". */
   summary: string
   kind: OutcomeKind
 }

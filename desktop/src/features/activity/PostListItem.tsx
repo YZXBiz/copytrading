@@ -23,11 +23,15 @@ export function PostListItem({ post, guruName, now, selected }: { post: SourceAc
       render={<a href={href("activity", String(post.sequence))} aria-current={selected ? "true" : undefined} />}
     >
       <ItemContent className="gap-0.5">
-        <ItemDescription className="tabular-nums">
-          {guruName} · {feedTime(post.source_at, now)}
+        <ItemDescription className="flex w-full items-baseline justify-between gap-3 tabular-nums">
+          <span className="truncate">{guruName}</span>
+          <span className="shrink-0">{feedTime(post.source_at, now)}</span>
         </ItemDescription>
         <ItemTitle className="line-clamp-2 w-full font-normal break-words">{quoteOf(post)}</ItemTitle>
-        <ItemDescription className="line-clamp-1">{headline(post)}</ItemDescription>
+        {/* An ignored post has nothing more to say than its badge; a skipped or cancelled call still names what it asked for. */}
+        {post.decision !== "ignore" && !(post.decision === "review" && post.instructions.length === 0) && (
+          <ItemDescription className="line-clamp-1">{headline(post)}</ItemDescription>
+        )}
       </ItemContent>
       <ItemActions>
         <Badge variant={BADGE[outcome.tone]}>{outcome.title}</Badge>

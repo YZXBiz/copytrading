@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react"
 import { CheckIcon, CircleDashedIcon } from "lucide-react"
+import { Badge } from "@/components/reui/badge"
 import { Frame, FramePanel } from "@/components/reui/frame"
 import { Stepper, StepperContent, StepperIndicator, StepperItem, StepperNav, StepperPanel, StepperTitle, StepperTrigger } from "@/components/reui/stepper"
 import { RegionError } from "@/components/region-error"
@@ -23,7 +24,7 @@ const pending = <CircleDashedIcon className="text-ring/60 size-3.5" aria-hidden=
 const loading = (
   <svg viewBox="0 0 14 14" fill="none" strokeWidth={1.2} className="size-3.5" aria-hidden="true">
     <circle cx="7" cy="7" r="6" pathLength={40} strokeDasharray="3 1" transform="rotate(-54 7 7)" className="stroke-ring/80" />
-    <circle cx="7" cy="7" r="6" pathLength={360} strokeDasharray="140 220" strokeDashoffset={118} className="origin-center stroke-blue-500 motion-safe:animate-spin" />
+    <circle cx="7" cy="7" r="6" pathLength={360} strokeDasharray="140 220" strokeDashoffset={118} className="stroke-primary origin-center motion-safe:animate-spin" />
   </svg>
 )
 const indicators = { completed, inactive: pending, loading }
@@ -58,10 +59,8 @@ export function GettingStartedScreen() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
       <header className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold tracking-tight">Getting started</h1>
-        <p className="text-muted-foreground text-sm">
-          {progress.next ? "About 10 minutes, five steps. Have your Discord, AI provider, and Alpaca logins at hand." : "You're set up. This page stays here as your guide."}
-        </p>
+        <h1 className="text-xl font-semibold tracking-tight">Getting Started</h1>
+        {progress.next && <p className="text-muted-foreground text-sm">About 10 minutes. Have your Discord, AI provider, and Alpaca logins at hand.</p>}
       </header>
 
       <Stepper value={current} onValueChange={setPicked} orientation="vertical" indicators={indicators} className="@container" aria-label="Setup steps">
@@ -80,7 +79,7 @@ export function GettingStartedScreen() {
                       className="hover:bg-muted/50 data-[state=active]:bg-muted/50 w-full gap-2 rounded-[calc(var(--frame-panel-radius)-3px)] border-transparent bg-transparent px-[calc(var(--frame-panel-px)-1px)] shadow-none data-[state=active]:border-(--frame-panel-border-color)"
                     >
                       <StepperIndicator className="size-3.5 overflow-visible bg-transparent data-[state=active]:bg-transparent data-[state=completed]:bg-transparent" />
-                      <StepperTitle className="data-[state=inactive]:text-muted-foreground min-w-0 flex-1 truncate leading-5 data-[state=active]:text-blue-500">{step.title}</StepperTitle>
+                      <StepperTitle className="data-[state=inactive]:text-muted-foreground min-w-0 flex-1 truncate leading-5 data-[state=active]:text-foreground">{step.title}</StepperTitle>
                       <span className="sr-only">, {done ? "done" : number === current ? "in progress" : "to do"}</span>
                     </StepperTrigger>
                   </StepperItem>
@@ -95,13 +94,12 @@ export function GettingStartedScreen() {
             <StepperPanel>
               {STEPS.map((step, index) => (
                 <StepperContent key={step.id} value={index + 1}>
-                  <div id={panelId} className="flex flex-col gap-1">
-                    <p className="text-muted-foreground text-xs">
-                      Step {index + 1} of {STEPS.length}
-                    </p>
-                    <p className="text-sm font-medium">{step.title}</p>
+                  <div id={panelId} className="flex flex-col items-start gap-2">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">{step.title}</p>
+                      <Badge variant={progress.done.has(step.id) ? "success-light" : "outline"}>{progress.done.has(step.id) ? "Done" : step.id === "start" ? "Not started" : "To do"}</Badge>
+                    </div>
                     <p className="text-muted-foreground text-sm text-pretty">{step.detail}</p>
-                    <p className="text-sm">{progress.done.has(step.id) ? "Done." : step.id === "start" ? "Not started yet." : "Not done yet."}</p>
                   </div>
                 </StepperContent>
               ))}

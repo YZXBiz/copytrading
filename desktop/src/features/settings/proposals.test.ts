@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { AgentAuditEntry, AgentProposal, TradingConfiguration } from "../../../shared/contract"
-import { accountOf, auditLine, auditOutcome, callerName, canApprove, isLive, limitRows, resultMessage, statusLine, summary } from "./proposals"
+import { accountOf, auditWhen, auditWho, auditOutcome, callerName, canApprove, isLive, limitRows, resultMessage, statusLine, summary } from "./proposals"
 
 const proposal = (subject: AgentProposal["subject"], over: Partial<AgentProposal> = {}): AgentProposal => ({
   proposal_id: "p-0123456789ab", state: "pending", subject, digest: "d", created_at: "2026-11-03T14:00:00Z", expires_at: "2026-11-03T14:10:00Z",
@@ -75,7 +75,8 @@ describe("audit", () => {
   })
   it("says who and when", () => {
     const now = new Date("2026-11-03T14:00:00Z")
-    expect(auditLine(entry({}), now)).toBe("claude · 5 min ago")
-    expect(auditLine(entry({ actor: "owner" }), now)).toBe("You · 5 min ago")
+    expect(auditWho(entry({}))).toBe("claude")
+    expect(auditWho(entry({ actor: "owner" }))).toBe("You")
+    expect(auditWhen(entry({}), now)).toBe("5 min ago")
   })
 })

@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest"
 import type { SourceActivity } from "../../../shared/contract"
-import { isOpenCall } from "@/features/activity/outcome"
-import { dayChange, postOutcome } from "./model"
+import { cardOutcome, isOpenCall } from "@/features/activity/outcome"
+import { reasonText } from "@/lib/reasons"
+import { dayChange, holdingNote, postOutcome } from "./model"
 
 const post = (over: Partial<SourceActivity>): SourceActivity => ({
   sequence: 1,
@@ -17,55 +18,48 @@ const post = (over: Partial<SourceActivity>): SourceActivity => ({
 const NOW = new Date("2026-11-03T19:00:00Z")
 const held = [{ account_id: "a", status: "review_required", instruction_outcomes: [] as string[] }]
 
-const delivered = (...instruction_outcomes: string[]) => [
-  { account_id: "a", status: "delivered", instruction_outcomes },
-]
+const delivered = (...instruction_outcomes: string[]) => [{ account_id: "a", status: "delivered", instruction_outcomes }]
 
-describe("postOutcome", () => {
-  it("calls chat chat and a review a wait", () => {
-    expect(postOutcome(post({ decision: "ignore" }), "a", NOW).label).toBe("Chat")
+const order = (over: Record<string, unknown>) =>
+  ({ client_id: "c1", symbol: "PM", side: "buy", status: "filled", quantity: "1.6", filled_quantity: "1.6", limit_price: "125", average_fill_price: "124.89", budget_usd: "200", ...over }) as never
+const withOrder = (over: Record<string, unknown>) =>
+  postOutcome(post({ destinations: [{ account_id: "a", status: "done", instruction_outcomes: ["order_linked"], orders: [order(over)] }] }), "a", NOW)
+
+describe("postOutcome says what Activity says", () => {
+  it("calls chat Ignored and a review Waiting for you", () => {
+    expect(postOutcome(post({ decision: "ignore" }), "a", NOW).label).toBe("Ignored")
     expect(postOutcome(post({ decision: "review", destinations: held, source_at: "2026-11-03T18:00:00Z" }), "a", NOW)).toMatchObject({
-      label: "Waits for you",
+      label: "Waiting for you",
       tone: "warning-light",
     })
   })
-  it("says a skipped sale in words", () => {
+
+  it("gives the same title and tone as Activity for every shape of post", () => {
+    const shapes = [
+      post({ decision: "ignore" }),
+      post({ destinations: delivered("no_open_lot") }),
+      post({ destinations: delivered("order_linked") }),
+      post({ decision: "review", destinations: held, source_at: "2026-11-02T18:00:00Z" }),
+      post({ destinations: [{ account_id: "a", status: "done", instruction_outcomes: [], orders: [order({}), order({ client_id: "c2" })] }] }),
+      post({ destinations: [{ account_id: "a", status: "done", instruction_outcomes: ["order_linked"], orders: [order({ client_id: "lotsale-1" })] }] }),
+    ]
+    for (const shape of shapes) expect(postOutcome(shape, "a", NOW).label).toBe(cardOutcome(shape, NOW).title)
+  })
+
+  it("says a skipped call by its reason, in the shared reason wording", () => {
     expect(postOutcome(post({ destinations: delivered("no_open_lot") }), "a", NOW)).toMatchObject({
       label: "Skipped",
-      read: "Sell all AEHR at $61.50 · No AEHR bought for this guru",
+      read: reasonText("no_open_lot"),
     })
   })
+
   it("never shows a raw code", () => {
     expect(postOutcome(post({ destinations: delivered("some_new_reason") }), "a", NOW).read).toContain("Some new reason")
   })
-  it("does not call an order Copied before it filled", () => {
-    expect(postOutcome(post({ destinations: delivered("order_linked") }), "a", NOW).label).toBe("Order placed")
-  })
-})
 
-describe("what an order did", () => {
-  const order = (over: Record<string, unknown>) =>
-    ({ client_id: "c1", symbol: "PM", side: "buy", status: "filled", quantity: "1.6", filled_quantity: "1.6", limit_price: "125", average_fill_price: "124.89", budget_usd: "200", ...over }) as never
-  const withOrder = (over: Record<string, unknown>) =>
-    postOutcome(post({ destinations: [{ account_id: "a", status: "done", instruction_outcomes: ["order_linked"], orders: [order(over)] }] }), "a", NOW)
-
-  // The order wording is Activity's `orderOutcome` (tested there); the feed only maps it onto its labels.
-  it("calls an order Copied only once it filled", () => {
-    expect(withOrder({})).toEqual({ label: "Copied", tone: "success-light", read: "Bought $199.82 of PM stock" })
-    expect(withOrder({ client_id: "manual-1" }).read).toMatch(/^You bought/)
-  })
-
-  it("says a cancelled, expired or released order was cancelled, never Copied", () => {
-    for (const status of ["canceled", "expired", "done_for_day", "replaced", "released_unsubmitted", "aborted_before_submit"]) {
-      expect(withOrder({ status, filled_quantity: "0", average_fill_price: null })).toMatchObject({ label: "Cancelled", tone: "outline", read: "Order for $200 of PM stock was cancelled" })
-    }
-  })
-
-  it("says a rejected order failed, an unconfirmed one needs review, and an open one is working", () => {
+  it("says what a filled order did, and calls a failed one failed", () => {
+    expect(withOrder({})).toMatchObject({ label: "Traded", tone: "success-light", read: "Bought $199.82 of PM stock" })
     expect(withOrder({ status: "rejected" })).toMatchObject({ label: "Failed", tone: "destructive-light" })
-    expect(withOrder({ status: "uncertain" }).label).toBe("Needs review")
-    expect(withOrder({ status: "new", filled_quantity: "0" }).label).toBe("Working")
-    expect(withOrder({ status: "partially_filled" }).label).toBe("Partly filled")
   })
 
   it("says several orders once", () => {
@@ -73,9 +67,16 @@ describe("what an order did", () => {
     expect(two.read).toMatch(/and 1 more$/)
   })
 
-  it("leaves out a lot the owner sold by hand", () => {
-    const sold = postOutcome(post({ destinations: [{ account_id: "a", status: "done", instruction_outcomes: ["order_linked"], orders: [order({ client_id: "lotsale-1" })] }] }), "a", NOW)
-    expect(sold.label).toBe("Order placed")
+  it("is empty for an account the post never reached", () => {
+    expect(postOutcome(post({ destinations: delivered("no_open_lot") }), "other", NOW).read).toBe("")
+  })
+})
+
+describe("holdingNote", () => {
+  it("says when the holding was bought, and nothing without a date", () => {
+    const position = (posted_at: string | null) => ({ lots: [{ posted_at }] }) as never
+    expect(holdingNote(position("2026-10-22T15:00:00Z"))).toBe("Bought Oct 22")
+    expect(holdingNote(position(null))).toBeNull()
   })
 })
 
@@ -94,16 +95,12 @@ describe("whether a post waits is Activity's rule", () => {
     post({ destinations: held, source_at: "2026-11-02T18:00:00Z" }),
     post({ destinations: [{ ...held[0]!, orders: [{ client_id: "manual-1" } as never] }], source_at: "2026-11-03T18:00:00Z" }),
   ]
-  it("shows Waits for you exactly when isOpenCall says the post is open", () => {
+  it("shows Waiting for you exactly when isOpenCall says the post is open", () => {
     for (const p of posts) {
-      expect(postOutcome(p, "a", NOW).label === "Waits for you").toBe(isOpenCall(p, NOW))
+      expect(postOutcome(p, "a", NOW).label === "Waiting for you").toBe(isOpenCall(p, NOW))
     }
     expect(isOpenCall(posts[0]!, NOW)).toBe(true)
     expect(isOpenCall(posts[2]!, NOW)).toBe(false)
     expect(isOpenCall(posts[4]!, NOW)).toBe(false)
-  })
-  it("says a review whose day ended was not copied", () => {
-    const old = post({ decision: "review", destinations: held, source_at: "2026-11-02T18:00:00Z" })
-    expect(postOutcome(old, "a", NOW).label).toBe("Not copied")
   })
 })

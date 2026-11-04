@@ -221,7 +221,7 @@ function orderResult(order: OrderActivity, postedAt: number): Result {
   const budget = num(order.budget_usd)
   if (budget !== null) {
     if (wasTrimmed(order)) {
-      facts.push({ label: "Order", value: `${dollars(order.budget_usd)} ·${CUT_BY[order.limited_by ?? ""] ?? "your largest single buy"}` })
+      facts.push({ label: "Order", value: `${dollars(order.budget_usd)}, cut to ${CUT_BY[order.limited_by ?? ""] ?? "your largest single buy"}` })
       facts.push({ label: "The call asked for", value: dollars(order.requested_usd) })
     } else facts.push({ label: "Order", value: orderDollars(budget) })
   }

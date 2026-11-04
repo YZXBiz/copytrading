@@ -26,7 +26,7 @@ export function JournalDetail({ entry }: { entry: DiagnosticsEntry }) {
         <FramePanel>
           <p className="text-muted-foreground mb-2 text-xs">Payload, with keys removed</p>
           {entry.payload_unreadable ? (
-            <p className="text-sm">This record's bytes were not text, so they are not shown.</p>
+            <p className="text-sm">This record’s bytes were not text, so they are not shown.</p>
           ) : (
             <pre className="max-h-96 overflow-auto font-mono text-xs break-words whitespace-pre-wrap">{entry.payload_json}</pre>
           )}

@@ -2,29 +2,28 @@ import { BellIcon } from "lucide-react"
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/reui/alert"
 import { Badge } from "@/components/reui/badge"
 import { Button } from "@/components/ui/button"
-import { dateTime, timeOfDay } from "@/lib/format"
-import { deadlineText, endOfTradingDay } from "@/features/activity/deadline"
+import { endOfTradingDay, untilText } from "@/features/activity/deadline"
 import { namedBuyNote } from "@/features/activity/outcome"
-import { type WaitingCall, callPhrase, gainLine, waited } from "./waiting"
+import { PostPicture } from "@/features/activity/PostPicture"
+import { pictureOf, readableText } from "@/features/activity/reading"
+import { type WaitingCall, callPhrase, gainLine } from "./waiting"
 import type { Recent } from "./skipped-calls"
 
 /** The button's word: enter the trade yourself, approve what the account held, or copy what the post called. */
 const copyLabel = (call: WaitingCall) => (call.calls.length === 0 ? "Enter Trade…" : call.awaitsApproval ? "Approve…" : "Copy…")
 
 /**
- * One waiting call as a ticket: how long it has waited and until when it can be copied, what copying places,
- * what that is worth against the buy it sells, the guru's own message, and the two answers.
+ * One waiting call: what copying places as the title, the guru's own words as one quoted line (or their picture when
+ * they wrote none), what it is worth against the buy it sells, until when it can be copied, and the two answers.
  */
 function CallTicket({
   call,
-  guruName,
   canCopy,
   now,
   onCopy,
   onSkip,
 }: {
   call: WaitingCall
-  guruName: string | null
   canCopy: boolean
   now: Date
   onCopy: () => void
@@ -34,32 +33,24 @@ function CallTicket({
   const title = first ? callPhrase(first) + (call.calls.length > 1 ? ` and ${call.calls.length - 1} more` : "") : "Enter the trade yourself"
   const held = namedBuyNote(call.source)
   const gain = first ? gainLine(first) : null
-  const sameDay = new Date(call.source.source_at).toDateString() === now.toDateString()
+  // The post is untrusted Discord text: rendered as text, never as HTML. A relay's bare label is not words, so the picture shows instead.
+  const said = readableText(call.source)
+  const picture = pictureOf(call.source)
   return (
     <Alert variant="warning" aria-label="Call waiting for you">
       <BellIcon aria-hidden />
       <AlertTitle className="line-clamp-none">{title}</AlertTitle>
       <AlertDescription>
-        <p>
-          Waiting {waited(call.source.source_at, now)} · {deadlineText(endOfTradingDay(call.source.source_at), now)}
-        </p>
-        {/* A sell held for its buy price has no buy to gain on: it says what came of that buy. */}
-        {held ? (
-          <p>{held}</p>
-        ) : (
-          gain && (
-            <Badge variant={gain.change < 0 ? "destructive-light" : "success-light"} className="tabular-nums">
-              {gain.line}
-            </Badge>
-          )
-        )}
-        <div className="bg-background mt-1.5 w-full rounded-md border px-3 py-2">
-          <div className="text-xs">
-            <span className="text-foreground font-medium">{guruName ?? call.source.guru_id}</span>
-            <span className="tabular-nums"> · {sameDay ? timeOfDay(call.source.source_at) : dateTime(call.source.source_at)}</span>
-          </div>
-          {/* The post is untrusted Discord text: rendered as text, never as HTML. */}
-          <p className="text-foreground line-clamp-3 text-sm">{call.source.text || "A post with no words"}</p>
+        {said && <p className="text-foreground line-clamp-2 break-words">“{said}”</p>}
+        {picture && <PostPicture attachment={picture} className="max-h-24" />}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 tabular-nums">
+          <span>{untilText(endOfTradingDay(call.source.source_at), now)}</span>
+          {/* A sell held for its buy price has no buy to gain on: it says what came of that buy. */}
+          {held ? (
+            <span>{held}</span>
+          ) : (
+            gain && <Badge variant={gain.change < 0 ? "destructive-light" : "success-light"}>{gain.line}</Badge>
+          )}
         </div>
       </AlertDescription>
       <AlertAction>
@@ -74,10 +65,9 @@ function CallTicket({
   )
 }
 
-/** The calls this account holds for the owner, newest first, each a ticket with Skip and Copy, until its trading day ends. Nothing shows when nothing waits. */
+/** The calls this account holds for the owner, newest first, each with Skip and Copy, until its trading day ends. Nothing shows when nothing waits. */
 export function NeedsYou({
   calls,
-  guruName,
   canCopy,
   now,
   recent,
@@ -86,7 +76,6 @@ export function NeedsYou({
   onUndo,
 }: {
   calls: WaitingCall[]
-  guruName: string | null
   canCopy: boolean
   now: Date
   recent: Recent | null
@@ -106,7 +95,7 @@ export function NeedsYou({
         </div>
       )}
       {calls.map((call) => (
-        <CallTicket key={call.source.sequence} call={call} guruName={guruName} canCopy={canCopy} now={now} onCopy={() => onCopy(call)} onSkip={() => onSkip(call)} />
+        <CallTicket key={call.source.sequence} call={call} canCopy={canCopy} now={now} onCopy={() => onCopy(call)} onSkip={() => onSkip(call)} />
       ))}
     </section>
   )

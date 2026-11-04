@@ -117,7 +117,7 @@ export function TradeFields({
         {draft.isSell && holding && (
           <FieldDescription>
             You hold {sharesText(holding.shares, holding.symbol)}
-            {holding.price ? ` · ${usd(holding.price)} each` : ""}
+            {holding.price ? ` at ${usd(holding.price)} each` : ""}
           </FieldDescription>
         )}
         {draft.isSell && draft.entryPrice.trim() !== "" && <FieldDescription>Sells from the buy at {dollars(draft.entryPrice)}.</FieldDescription>}
