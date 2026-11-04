@@ -146,7 +146,7 @@ export interface SecretStatus {
   brokers: Record<string, boolean>
 }
 
-/** Keys the owner typed; `act.setSecrets` merges them into the encrypted store. */
+/** Keys the owner typed; `act.setSecrets` holds them in main's memory, and they reach the encrypted store only with a start that is staged. */
 export interface SecretUpdate {
   discord_token?: string
   provider_api_key?: string
@@ -906,6 +906,8 @@ export interface ActOperations {
   /** Saves a validated setup; refused unless copying is paused. */
   saveSetup: Op<{ configuration: TradingConfiguration; revision: string }, null>
   setSecrets: Op<SecretUpdate, SecretStatus>
+  /** Drops the keys typed and not yet saved by a start; the encrypted store is what it was. */
+  discardSecrets: Op<undefined, SecretStatus>
   forgetBroker: Op<{ account_id: string }, SecretStatus>
   createBackup: Op<{ destination: string }, BackupManifest>
   previewRestore: Op<{ archive_path: string }, RestorePreview>
@@ -950,7 +952,7 @@ export const READS = [
 export const ACTS = [
   "confirmManualOrders", "confirmLotSale", "startTrading", "pauseTrading", "controlAccount", "approveProposal",
   "deleteAccountRecord", "completeRestoreCandidate", "validateTrading", "checkConnection", "updateAccountLimits",
-  "saveSetup", "setSecrets", "forgetBroker", "createBackup", "previewRestore", "prepareRestoreCandidate",
+  "saveSetup", "setSecrets", "discardSecrets", "forgetBroker", "createBackup", "previewRestore", "prepareRestoreCandidate",
   "abortRestoreCandidate", "restorePreflight", "resolveOwnership", "saveManualCorrection", "rejectProposal",
   "completeProposal", "discardProposals", "learnGuruPlaybook", "evaluateHistoricalProfile", "assistantAsk",
   "assistantCancel", "assistantReset", "submitSelfTest",

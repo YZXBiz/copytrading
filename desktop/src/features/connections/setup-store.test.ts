@@ -30,6 +30,7 @@ function install(saved: SetupView | null, overrides: { act?: Record<string, unkn
   const secrets = { discord_token: true, provider_api_key: true, notification_token: false, brokers: { zhap: true }, ...overrides.secrets }
   const act = {
     setSecrets: log("setSecrets", ok(secrets)),
+    discardSecrets: log("discardSecrets", ok(secrets)),
     checkConnection: log("checkConnection", ok(check())),
     validateTrading: log("validateTrading", ok({ report: { configuration_revision: "b".repeat(64), activatable: true, checks: [], cost_notice: "" }, activation_token: "tok" })),
     saveSetup: log("saveSetup", ok(null)),
@@ -116,8 +117,7 @@ describe("startCopying", () => {
   async function ready(saved: SetupView | null, overrides = {}) {
     const fake = install(saved, overrides)
     await reload()
-    discard()
-    await reload()
+    await discard()
     return fake
   }
 

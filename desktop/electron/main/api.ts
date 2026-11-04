@@ -270,6 +270,7 @@ async function settleOnce(ctx: Ctx): Promise<"committed" | "pending"> {
       (status.activation_id === id && status.candidate_revision === candidate && status.committed_revision === candidate && status.committed_activation_id === id)
     if (committed && (runsCandidate || status.phase === "ready" || status.phase === "stopped")) {
       ctx.setup.finalize(id)
+      ctx.secrets.settle()
       ctx.outcomes.set(id, null)
       return "committed"
     }
@@ -279,7 +280,8 @@ async function settleOnce(ctx: Ctx): Promise<"committed" | "pending"> {
     const started = ctx.setup.current()?.configuration
     const accounts = (body(body(await ctx.engine.request("get_trading_status")).trading).accounts ?? []) as { id: string; state: string; error_code: string | null }[]
     const why = startFailure(status.error_code, accounts, PROVIDER_TITLES[started?.provider.name ?? "anthropic"])
-    ctx.secrets.setRevision(ctx.setup.rollback(id))
+    ctx.setup.rollback(id)
+    ctx.secrets.rollback()
     const message = !before || isDeepStrictEqual(before, started) ? `Copying didn't start. ${why}` : `The new setup didn't start, so your previous setup is still in place. ${why}`
     // A look from a status read may settle a start that `startTrading` is still waiting on: it reads the outcome from here.
     ctx.outcomes.set(id, message)
@@ -294,10 +296,9 @@ async function settleOnce(ctx: Ctx): Promise<"committed" | "pending"> {
  * the engine holds with buys off is resumed, as AppModel.turnOnEveryAccount does. The engine opens accounts one at a time,
  * so this looks again for a while before giving up on one.
  */
-async function turnOnAccounts(ctx: Ctx, configuration: TradingConfiguration): Promise<void> {
+async function turnOnAccounts(ctx: Ctx, wanted: string[]): Promise<void> {
   const { looks, waitMs } = ctx.activation ?? { looks: 30, waitMs: 1000 }
   const done = new Set<string>()
-  const wanted = configuration.accounts.map((a) => a.id)
   for (let look = 0; look < looks && done.size < wanted.length; look++) {
     if (look) await sleep(waitMs)
     let items: { account_id: string; active_configuration?: boolean; entry_permission: string }[]
@@ -315,6 +316,49 @@ async function turnOnAccounts(ctx: Ctx, configuration: TradingConfiguration): Pr
         .catch(() => {}) // the account's page says it is still paused
     }
   }
+}
+
+/** A setup saved for a start that was never sent: the setup before it is saved again, and the keys typed for it are dropped. */
+function discardUnstarted(ctx: Ctx): void {
+  ctx.setup.discardUnstarted()
+  ctx.secrets.discard()
+}
+
+/**
+ * Journals a start, sends it, and waits for the engine to commit it. The keys go to disk with the start (the ones before
+ * it are kept), so a start that does not take leaves the key store as it was. Returns null once committed, the words for
+ * why it did not take as a Refusal, and undefined while the engine has not said (the page keeps looking).
+ */
+async function runStart(ctx: Ctx, request: Params): Promise<null | undefined> {
+  const id = String(request.activation_id)
+  ctx.setup.stage(id)
+  try {
+    ctx.secrets.stage()
+  } catch {
+    ctx.setup.rollback(id)
+    ctx.secrets.discard()
+    throw new Refusal("The keys could not be saved on this Mac, so nothing was started.")
+  }
+  try {
+    await ctx.engine.request("start_trading", request)
+  } catch (error) {
+    if (error instanceof EngineError && error.code === "engine") {
+      // The engine answered no: nothing started, so the setup and keys before it are saved again.
+      ctx.setup.rollback(id)
+      ctx.secrets.rollback()
+      throw new Refusal(`Copying didn't start. ${words(error)}`)
+    }
+    // No answer: the engine's activation record, read below, says whether it took.
+  }
+  const { looks, waitMs } = ctx.activation ?? { looks: 30, waitMs: 1000 }
+  for (let look = 0; look < looks && !ctx.outcomes.has(id); look++) {
+    await settleOnce(ctx)
+    if (ctx.outcomes.has(id)) break
+    await sleep(waitMs)
+  }
+  const outcome = ctx.outcomes.get(id)
+  if (outcome) throw new Refusal(outcome)
+  return outcome === null ? null : undefined
 }
 
 const ACT_HANDLERS: Record<ActName, Handler> = {
@@ -343,35 +387,12 @@ const ACT_HANDLERS: Record<ActName, Handler> = {
       // The file is what the dialog described, or nothing starts: a page cannot swap the setup while the dialog is open.
       const now = ctx.setup.current()
       if (!now || now.revision !== revision || !isDeepStrictEqual(now.configuration, request.configuration)) throw new Refusal("The saved setup changed while you were confirming. Try again.")
-      // Journal the start before it is sent; a lost reply is then settled from the engine's own record of it.
-      ctx.setup.stage(String(request.activation_id))
-      try {
-        await ctx.engine.request("start_trading", request)
-      } catch (error) {
-        if (error instanceof EngineError && error.code === "engine") {
-          // The engine answered no: nothing started, so the setup before it is saved again.
-          ctx.secrets.setRevision(ctx.setup.rollback(String(request.activation_id)))
-          throw new Refusal(`Copying didn't start. ${words(error)}`)
-        }
-        // No answer: the engine's activation record, read below, says whether it took.
-      }
-      const { looks, waitMs } = ctx.activation ?? { looks: 30, waitMs: 1000 }
-      const id = String(request.activation_id)
-      for (let look = 0; look < looks && !ctx.outcomes.has(id); look++) {
-        await settleOnce(ctx)
-        if (ctx.outcomes.has(id)) break
-        await sleep(waitMs)
-      }
-      const outcome = ctx.outcomes.get(id)
-      if (outcome) throw new Refusal(outcome)
-      if (outcome === null) await turnOnAccounts(ctx, request.configuration as TradingConfiguration)
+      const outcome = await runStart(ctx, request)
+      if (outcome === null) await turnOnAccounts(ctx, (request.configuration as TradingConfiguration).accounts.map((a) => a.id))
       return value("trading")(await ctx.engine.request("get_trading_status"))
     },
-    // Declined in the dialog: the setup saved for this start is not kept.
-    (ctx) => {
-      const keys = ctx.setup.discardUnstarted()
-      if (keys !== undefined) ctx.secrets.setRevision(keys)
-    },
+    // Declined in the dialog: the setup saved for this start is not kept, and neither are the keys typed for it.
+    discardUnstarted,
   ),
   pauseTrading: confirmed(() => ({ text: PAUSE_TEXT }), ask("pause_trading", value("trading"))),
   controlAccount: confirmed(
@@ -434,6 +455,10 @@ const ACT_HANDLERS: Record<ActName, Handler> = {
   },
   setSecrets: async (p, ctx) => {
     ctx.secrets.merge(p)
+    return ctx.secrets.status()
+  },
+  discardSecrets: async (_p, ctx) => {
+    ctx.secrets.discard()
     return ctx.secrets.status()
   },
   forgetBroker: async (p, ctx) => {

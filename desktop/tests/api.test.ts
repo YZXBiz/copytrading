@@ -269,6 +269,9 @@ describe("secrets", () => {
       provider_api_key: PROVIDER,
       brokers: [{ account_id: "zhap-account-2", key: BROKER_KEY, secret: BROKER_SECRET }],
     })
+    // These are the keys a start committed earlier: on disk.
+    h.secrets.stage()
+    h.secrets.settle()
     return h
   }
 
@@ -400,6 +403,8 @@ describe("start journal", () => {
     const h = harness(answer)
     h.secrets.setRevision(saved.secretRevision)
     h.secrets.merge({ discord_token: DISCORD })
+    h.secrets.stage() // the keys a start committed before: on disk
+    h.secrets.settle()
     const candidate = withLimits({ max_order_usd: "250" })
     expect(await h.api.act("saveSetup", { configuration: candidate, revision: "b".repeat(64) })).toMatchObject({ ok: true })
     return { h, candidate }
@@ -532,6 +537,89 @@ describe("start journal", () => {
     expect(resumed[0]!.params.command).toMatchObject({ account_id: "zhap-account-2", action: "resume" })
     // The start's own dialog was the only one: the resume asked nothing.
     expect(h.asked).toHaveLength(1)
+  })
+
+  describe("the key store when a start does not take", () => {
+    const NEW = "SENTINEL-new-discord-token-0008"
+    /** What a fresh launch would read from the encrypted file. */
+    const onDiskKeys = (h: Harness) => {
+      const store = new SecretStore(join(h.dir, "secrets.bin"), cipher)
+      return { discord: store.secrets.discord_token, revision: store.revision }
+    }
+    const asBefore = (h: Harness) => {
+      expect(onDiskKeys(h)).toEqual({ discord: DISCORD, revision: saved.secretRevision })
+      expect(h.secrets.secrets.discord_token).toBe(DISCORD)
+      expect(h.secrets.revision).toBe(saved.secretRevision)
+    }
+    /** A changed setup with a new Discord token typed for it, as the page sends them. */
+    async function typed(answer = true) {
+      const made = await changed(answer)
+      expect(await made.h.api.act("setSecrets", { discord_token: NEW })).toMatchObject({ ok: true })
+      return made.h
+    }
+
+    it("leaves the old keys readable and unchanged when the engine stops without committing", async () => {
+      const h = await typed()
+      activation(h, FAILED)
+      expect(await h.api.act("startTrading", START)).toMatchObject({ ok: false })
+      asBefore(h)
+    })
+
+    it("leaves them unchanged when the owner says no in the dialog", async () => {
+      const h = await typed(false)
+      expect(await h.api.act("startTrading", START)).toMatchObject({ ok: false, cancelled: true })
+      asBefore(h)
+    })
+
+    it("leaves them unchanged when the engine refuses the start", async () => {
+      const h = await typed()
+      h.replies.start_trading = () => {
+        throw new EngineError("engine", "invalid_request")
+      }
+      expect(await h.api.act("startTrading", START)).toMatchObject({ ok: false })
+      asBefore(h)
+    })
+
+    it("leaves the file untouched by a Connect that fails or is abandoned", async () => {
+      const h = await typed()
+      const before = readFileSync(join(h.dir, "secrets.bin"))
+      h.replies.check_connection = () => {
+        throw new EngineError("engine", "invalid_request")
+      }
+      await h.api.act("checkConnection", { connection: { kind: "source", source: saved.configuration.source } })
+      // The typed token was used for the check, and never written.
+      expect(h.sent("check_connection")[0]!.params.connection).toMatchObject({ token: NEW })
+      expect(readFileSync(join(h.dir, "secrets.bin")).equals(before)).toBe(true)
+      expect(await h.api.act("discardSecrets", undefined)).toMatchObject({ ok: true })
+      asBefore(h)
+    })
+
+    it("keeps the new keys, and drops the old ones, once the engine commits the start", async () => {
+      const h = await typed()
+      activation(h, { ...COMMITTED, candidate_revision: "b".repeat(64), committed_revision: "b".repeat(64) })
+      expect(await h.api.act("startTrading", START)).toMatchObject({ ok: true })
+      expect(onDiskKeys(h).discord).toBe(NEW)
+      const file = new SecretStore(join(h.dir, "secrets.bin"), cipher)
+      file.rollback() // nothing pending: this must not bring the old keys back
+      expect(file.secrets.discord_token).toBe("")
+    })
+
+    it("puts the old keys back after a restart that finds the start did not take", async () => {
+      const h = await typed()
+      h.replies.start_trading = () => {
+        // The app dies here: the new keys and the old are both on disk.
+        throw new EngineError("disconnected", "The engine stopped.")
+      }
+      activation(h, { ...COMMITTED, phase: "starting", runtime_state: "starting", committed_revision: null, committed_activation_id: null })
+      await h.api.act("startTrading", START)
+      expect(onDiskKeys(h).discord).toBe(NEW)
+      // A new launch: same files, a new store and api.
+      const relaunched = new SecretStore(join(h.dir, "secrets.bin"), cipher)
+      expect(relaunched.secrets.discord_token).toBe(NEW)
+      relaunched.rollback()
+      expect(relaunched.secrets.discord_token).toBe(DISCORD)
+      expect(new SecretStore(join(h.dir, "secrets.bin"), cipher).secrets.discord_token).toBe(DISCORD)
+    })
   })
 
   it("does not take an activation record that is not this setup's as a commit", async () => {

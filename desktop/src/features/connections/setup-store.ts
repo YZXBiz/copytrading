@@ -189,9 +189,11 @@ export async function reload({ keepDraft = false }: { keepDraft?: boolean } = {}
 }
 
 /** Forgets the form's edits and typed keys, and shows the saved setup again. */
-export function discard() {
+export async function discard() {
   set({ start: { phase: "idle" } })
-  void reload()
+  // Keys typed for a Connect are held in main until a start saves them; discarding the form drops them there too.
+  await window.copytrading.act.discardSecrets()
+  await reload()
 }
 
 /** Which keys are already saved, as far as the form's setup may use them; null until the setup is loaded. */
