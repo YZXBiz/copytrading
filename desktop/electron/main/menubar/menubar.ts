@@ -42,6 +42,7 @@ export class MenuBar {
   private running = false
   private image: { tone: Tone; icon: NativeImage } | null = null
   private route: string | null = null
+  private items: Item[] = []
 
   constructor(private readonly deps: MenuBarDeps) {}
 
@@ -76,14 +77,22 @@ export class MenuBar {
       if (mode === "off" || !this.timer) return
       const shown = view({ engine, status, accounts: accounts?.items ?? [], posts: posts?.items ?? [], skipped: this.deps.skipped(), now: new Date() }, mode)
       this.route = shown.waitingRoute
-      const tray = (this.tray ??= new Tray(this.icon(shown.tone)))
+      this.items = shown.items
+      const tray = (this.tray ??= this.create(shown.tone))
       tray.setImage(this.icon(shown.tone))
       tray.setTitle(this.deps.redact(shown.title), { fontType: "monospacedDigit" })
       tray.setToolTip("CopyTrading")
-      tray.setContextMenu(Menu.buildFromTemplate(shown.items.map((item) => this.menuItem(item))))
     } finally {
       this.running = false
     }
+  }
+
+  /** The menu is built when clicked, never swapped in on a timer: a refresh would close a menu the owner is reading. */
+  private create(tone: Tone): Tray {
+    const tray = new Tray(this.icon(tone))
+    tray.on("click", () => tray.popUpContextMenu(Menu.buildFromTemplate(this.items.map((item) => this.menuItem(item)))))
+    tray.on("right-click", () => tray.popUpContextMenu(Menu.buildFromTemplate(this.items.map((item) => this.menuItem(item)))))
+    return tray
   }
 
   /** One image per tone, kept until the tone changes. */
