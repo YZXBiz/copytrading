@@ -88,7 +88,7 @@ for (const [name, env] of [
       COPYTRADING_CAPTURE_FRAMES: "3",
       COPYTRADING_CAPTURE_SIZE: "1280x1500",
       COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2",
-      COPYTRADING_CAPTURE_SCRIPT: `(async () => { const read = () => [...document.querySelectorAll("ul li")].find((e) => e.innerText.includes("Bought"))?.innerText; await new Promise((r) => setTimeout(r, 1500)); const before = read(); for (let i = 0; i < 400 && read() === before; i++) await new Promise((r) => setTimeout(r, 40)) })()`,
+      COPYTRADING_CAPTURE_SCRIPT: `(async () => { const read = () => [...document.querySelectorAll("ul li")].find((e) => e.innerText.includes(" shares"))?.innerText; await new Promise((r) => setTimeout(r, 1500)); const before = read(); for (let i = 0; i < 400 && read() === before; i++) await new Promise((r) => setTimeout(r, 40)) })()`,
     },
   ],
   ["account-review", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2?open=review" }],
@@ -96,16 +96,14 @@ for (const [name, env] of [
   ["account-limits", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2?open=limits" }],
   // The account page in a 1280×860 window, at the SwiftUI app's 980-wide minimum, and as one tall page ("full"):
   // no waiting calls, the two the captured account has, and six.
-  ...["quiet", "", "calls"].flatMap((scene) => ["1280x860", "980x860", ""].map((size) => [scene, size])).map(([scene, size]) => [
+  ...["quiet", "", "calls"].flatMap((scene) => ["1280x860", "1440x900", "980x860", ""].map((size) => [scene, size])).map(([scene, size]) => [
     `account-${scene || "default"}-${size || "full"}`,
     { ...fixtures, COPYTRADING_FIXTURE_SCENE: scene, COPYTRADING_CAPTURE_SIZE: size, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2" },
   ]),
-  // The Positions with their sparklines, in a window tall enough to show them, at 1280 and at the 980-wide minimum.
-  ...["1280", "980"].map((width) => [`account-positions-${width}x1500`, { ...fixtures, COPYTRADING_CAPTURE_SIZE: `${width}x1500`, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2" }]),
-  // Copying paused: the primary action is Resume Copying.
+  // Copying paused: the primary action is Start Copying.
   ["account-paused", { ...fixtures, COPYTRADING_FIXTURE_TRADING: "paused", COPYTRADING_CAPTURE_SIZE: "1280x860", COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2" }],
   // Pressing a waiting call's row (not its buttons) opens the same review as Copy.
-  ["account-row-review", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2", COPYTRADING_CAPTURE_CLICK: '[data-slot="item"]' }],
+  ["account-row-review", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2", COPYTRADING_CAPTURE_CLICK: "tbody tr" }],
   ["account-attention", { ...fixtures, COPYTRADING_FIXTURE_SCENE: "attention", COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2" }],
   ["activity-timed-out", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/activity/5" }],
   ["activity-picture", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/activity/6" }],
