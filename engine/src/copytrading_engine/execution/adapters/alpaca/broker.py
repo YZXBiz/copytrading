@@ -12,6 +12,7 @@ from pydantic import SecretStr, TypeAdapter, ValidationError
 from copytrading_engine.execution.adapters.alpaca.models import (
     decode_account,
     decode_asset,
+    decode_bars,
     decode_broker_order,
     decode_calendar,
     decode_crypto_quote,
@@ -30,6 +31,7 @@ from copytrading_engine.execution.domain.ledger_state import LedgerSnapshot
 from copytrading_engine.execution.domain.market import (
     Account,
     Asset,
+    Bar,
     BrokerOrder,
     CalendarDay,
     EquityHistory,
@@ -53,6 +55,7 @@ _HISTORY_PARAMS: dict[HistoryRange, dict[str, str]] = {
     "three_months": {"period": "3M", "timeframe": "1D"},
     "year": {"period": "1A", "timeframe": "1D"},
 }
+_MAX_BAR_PAGES = 5
 _ACTIVITIES_PAGE_SIZE = 100
 _MAX_RESTORE_ORDER_PAGES = 100
 _MAX_RESTORE_ACTIVITY_PAGES = 100
@@ -448,6 +451,43 @@ class AlpacaBroker:
                 continue
         oldest = dt.datetime.min.replace(tzinfo=dt.UTC)
         return max(quotes, key=lambda quote: quote.timestamp or oldest)
+
+    def bars(self, symbol: str) -> tuple[Bar, ...]:
+        """Five-minute bars of the symbol's latest session, oldest first; none when it has not
+        traded in the last few days. A stock's come from IEX, the feed every account has."""
+        # The last few New York days reach back over a weekend or a holiday.
+        start = dt.datetime.combine(
+            self.now().astimezone(ET).date() - dt.timedelta(days=4), dt.time(), ET
+        )
+        params: dict[str, str | int] = {
+            "timeframe": "5Min",
+            "start": start.isoformat(),
+            "limit": 1000,
+            "sort": "asc",
+        }
+        if is_crypto(symbol):
+            url = "https://data.alpaca.markets/v1beta3/crypto/us/bars"
+            params["symbols"] = symbol
+        else:
+            url = f"https://data.alpaca.markets/v2/stocks/{symbol}/bars"
+            params["feed"] = "iex"
+        bars: list[Bar] = []
+        for _ in range(_MAX_BAR_PAGES):
+            result = self.request("GET", url, params=params)
+            if not isinstance(result, dict):
+                raise BrokerResponseError()
+            listed = result.get("bars")
+            if is_crypto(symbol):
+                listed = listed.get(symbol) if isinstance(listed, dict) else None
+            bars.extend(self.decode_normalized(decode_bars, listed or []))
+            token = result.get("next_page_token")
+            if not token:
+                break
+            params["page_token"] = token
+        if not bars:
+            return ()
+        session = bars[-1].at.astimezone(ET).date()
+        return tuple(bar for bar in bars if bar.at.astimezone(ET).date() == session)
 
     def _quote(self, symbol: str, feed: QuoteFeed) -> Quote:
         result = self.request(

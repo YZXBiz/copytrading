@@ -98,6 +98,9 @@ class FakeBroker:
     def calendar(self, date):
         return decode_calendar([{"date": date, "open": "09:30", "close": "16:00"}])
 
+    def bars(self, symbol):
+        return ()
+
     def positions(self):
         # Alpaca lists a coin held without its pair's slash (BTCUSD), as the adapter decodes it.
         return decode_positions(

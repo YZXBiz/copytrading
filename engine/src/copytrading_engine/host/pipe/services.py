@@ -27,13 +27,14 @@ from copytrading_engine.execution.domain.manual_commands import (
     ManualOrderPreview,
     ManualPreviewRequest,
 )
-from copytrading_engine.execution.domain.market import EquityHistory, HistoryWindow, Quote
+from copytrading_engine.execution.domain.market import Bar, EquityHistory, HistoryWindow, Quote
 from copytrading_engine.execution.domain.ownership import (
     OwnershipResolution,
     OwnershipResolutionRequest,
 )
 from copytrading_engine.execution.domain.sizing import RouteConnection
 from copytrading_engine.execution.presentation.account_feed import AccountFeedPage
+from copytrading_engine.execution.presentation.guru_performance import GuruPerformance
 from copytrading_engine.execution.presentation.operator_views import (
     AccountOverviewPage,
 )
@@ -108,6 +109,12 @@ class OperatorReads(Protocol):
     ) -> EquityHistory | None: ...
 
     async def quote(self, account_id: str, symbol: str) -> Quote | None: ...
+
+    async def bars(
+        self, account_id: str, symbols: tuple[str, ...]
+    ) -> dict[str, tuple[Bar, ...]]: ...
+
+    async def guru_performance(self, account_id: str, guru_id: str) -> GuruPerformance: ...
 
     async def list_manual_commands(
         self, request: ManualCommandPageRequest

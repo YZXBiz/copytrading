@@ -281,6 +281,30 @@ class GetQuoteRequest(PipeRequest):
     symbol: str = Field(pattern=SYMBOL_PATTERN)
 
 
+class GetBarsRequest(PipeRequest):
+    """The five-minute bars of the stocks an account holds, for the sparklines in its Positions."""
+
+    operation: Literal["get_bars"]
+    account_id: str = Field(min_length=1, max_length=64)
+    symbols: tuple[Annotated[str, Field(pattern=SYMBOL_PATTERN)], ...] = Field(
+        min_length=1, max_length=50
+    )
+
+    @model_validator(mode="after")
+    def _distinct(self) -> GetBarsRequest:
+        if len(set(self.symbols)) != len(self.symbols):
+            raise ValueError("Each symbol is asked for once")
+        return self
+
+
+class GetGuruPerformanceRequest(PipeRequest):
+    """What one guru's copied calls made in one account."""
+
+    operation: Literal["get_guru_performance"]
+    account_id: str = Field(min_length=1, max_length=64)
+    guru_id: str = Field(pattern=r"^[a-zA-Z0-9_-]{1,64}$")
+
+
 class SaveManualCorrectionRequest(PipeRequest):
     operation: Literal["save_manual_correction"]
     correction: ManualCorrectionRequest
@@ -423,6 +447,8 @@ RequestType = Annotated[
     | GetAccountFeedRequest
     | GetEquityHistoryRequest
     | GetQuoteRequest
+    | GetBarsRequest
+    | GetGuruPerformanceRequest
     | AttachAccountReadersRequest
     | DetachAccountReadersRequest
     | DeleteAccountRecordRequest

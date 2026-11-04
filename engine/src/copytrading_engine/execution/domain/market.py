@@ -122,6 +122,14 @@ class Quote(Value):
     timestamp: AwareDatetime | None
 
 
+class Bar(Value):
+    """One five-minute bar of a symbol's session: what it opened at and closed at."""
+
+    at: AwareDatetime
+    open: Quantity
+    close: Quantity
+
+
 class EquityPoint(Value):
     at: AwareDatetime
     equity: Money

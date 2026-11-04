@@ -307,7 +307,7 @@ def _buy_view(
         order_id=entry,
         source_id=message.key if message is not None else None,
         posted_at=message.timestamp if message is not None else None,
-        excerpt=_excerpt(message.text) if message is not None else None,
+        excerpt=excerpt(message.text) if message is not None else None,
         bought_at=order.created_at if order is not None else None,
         # What the buy brought in: a coin's fill less the fee Alpaca kept of it.
         bought_qty=order.received_qty if order is not None else remaining,
@@ -329,7 +329,7 @@ def _lot_view(
         source_id=message.key if message is not None else None,
         guru_id=message.guru if message is not None else None,
         posted_at=message.timestamp if message is not None else None,
-        excerpt=_excerpt(message.text) if message is not None else None,
+        excerpt=excerpt(message.text) if message is not None else None,
         bought_at=order.created_at if order is not None else None,
         original_qty=lot.original_qty,
         remaining_qty=lot.remaining_qty,
@@ -355,7 +355,7 @@ def _lot_order(lot: LotView) -> tuple[bool, dt.datetime, str]:
     return (lot.bought_at is None, lot.bought_at or earliest, lot.lot_id)
 
 
-def _excerpt(text: str) -> str | None:
+def excerpt(text: str) -> str | None:
     words = " ".join(text.split())
     if not words:
         return None
