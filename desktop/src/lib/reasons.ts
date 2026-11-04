@@ -1,16 +1,10 @@
-import type { ManualCommandResult } from "../../../shared/contract"
+import type { ManualCommandResult } from "../../shared/contract"
 
-// Engine reason codes in a trader's words: Reason.swift for the shared ones, ManualRefusalText.swift for the
-// by-hand flow, which says why and then what to do. A code with no line still reads as words, never as snake_case.
-
-/** "no_open_lot" becomes "No open lot". */
-export function humanCode(code: string | null | undefined): string {
-  if (!code) return "—"
-  const text = code.replace(/[_-]/g, " ")
-  return text.charAt(0).toUpperCase() + text.slice(1)
-}
-
-const REASONS: Record<string, string> = {
+// Engine reason codes in the words a trader would use: Reason.swift for skips and refusals everywhere,
+// ManualRefusalText.swift for the by-hand flow, which says why and then what to do. A code with no sentence
+// here reads as its words, never as snake_case.
+const KNOWN: Record<string, string> = {
+  partial_symbol: "The ticker is not a whole word in the post",
   lot_unavailable: "CopyTrading holds none of these shares",
   preview_expired: "The price check ran out before you confirmed",
   account_facts_changed: "The account changed since you reviewed the sale",
@@ -30,10 +24,19 @@ const REASONS: Record<string, string> = {
   alpaca_account_shared: "Another account in this setup uses keys for the same Alpaca account",
   broker_keys_rejected: "Alpaca didn't accept the API keys",
   broker_unreachable: "Alpaca couldn't be reached",
+  accounts_unavailable: "More than one account couldn't open",
+  storage_unavailable: "CopyTrading couldn't open its data on this Mac",
+  routing_state_unavailable: "CopyTrading couldn't read its saved gurus",
   processing_unavailable: "Copying stopped unexpectedly",
+  activation_journal_unavailable: "CopyTrading couldn't record the start",
+  notification_unavailable: "Alerts couldn't be sent",
+  source_unavailable: "Discord could not be reached",
+  source_unauthorized: "Discord turned down the token",
   account_risk_unavailable: "Risk could not be checked",
   recovery_pending: "Still checking the account after a restart",
   manual_resume_required: "This account waits for its Start Copying after the restart",
+  stale_during_recovery: "Too old by the time the account's restart checks finished",
+  stale_waiting_for_resume: "Waited for the account's Start Copying after the restart, and got too old",
   outside_session: "The market was closed",
   overnight_halted: "Overnight trading was halted",
   overnight_not_supported: "Overnight trading is not supported",
@@ -61,26 +64,72 @@ const REASONS: Record<string, string> = {
   position_mismatch: "Holdings differ from the broker",
   duplicate: "A repeat of an earlier call",
   stale: "Too old to copy: older than this account copies buys. A sell is always copied.",
+  provider_rejected: "The model service refused the request",
+  provider_key_rejected: "The model service didn't accept the API key",
+  provider_model_not_found: "The model service has no model by that name",
+  out_of_order: "Arrived out of order",
   review_required: "Needs your review",
+  ignored: "Ignored",
   halted: "Copying was halted",
+  session_changed: "The market session changed",
   processing_stopped: "Copying is paused",
   not_checked: "Not checked yet",
+  stale_signal: "Too old to copy",
+  future_signal: "The post's time was ahead of this Mac's clock",
+  attachments_require_human_review: "The post has a picture, so it waits for you",
+  decode_attempts_exhausted: "The model couldn't read it after three tries",
+  daily_model_request_budget_exhausted: "Not read: today's 2,000 model reads were used up",
+  source_profile_not_configured: "No guru is set up for this poster",
+  evidence_validation_failed: "The model's reading didn't match the post",
+  invalid_model_output: "The model's answer couldn't be read",
+  model_output_budget_exceeded: "The model's answer was too long",
+  provider_timeout: "The model service didn't answer in time",
+  provider_unavailable: "The model service couldn't be reached",
   broker_rejected: "The broker rejected the order",
+  sells_from_holdings: "Sells from what the account holds",
   unresolved_order_incident: "An earlier order needs your review",
   unresolved_account_order: "An open order at the broker needs your review",
   incomplete_account_orders: "The broker's order list was incomplete",
   plan_unavailable: "The order couldn't be planned",
+  conditional: "The guru would trade only if something happens",
+  suggestion: "The guru suggested it but didn't trade",
+  unclear: "The post's meaning wasn't clear",
+  chatter: "Just chat, nothing to trade",
+  price_range: "The guru gave a price range",
+  price_at_market: "The guru said to trade at the market price",
+  price_not_given: "The post gave no price",
   approval_required: "You asked to approve every order for this account",
   named_buy_not_held: "None of your buys is at the buy price the guru named",
   bought_after_sell: "Every buy it would sell was posted after this sell",
   already_selling: "Already selling these shares",
   waiting_for_quote: "Waiting for a price to sell at",
+  sell_share_not_given: "The sell doesn't say how much",
+  batch_size_not_given: "The playbook doesn't say how big a batch is",
+  repeats_an_earlier_call: "The post repeats an earlier call of the guru's",
+  repeats_a_recent_call: "A re-post of a call already copied",
   approved_by_owner: "You approved this call",
   waiting_expired: "Too late to copy: its trading day is over",
+  account_ownership_pending: "An account you removed still holds what CopyTrading bought",
+  routing_change_pending: "Posts were still being read or sent",
+  no_open_lot: "No shares bought from this guru are held, so there is nothing to sell",
 }
 
-/** An engine reason in words. */
-export const reasonText = (code: string | null | undefined) => (code && REASONS[code]) || humanCode(code)
+/** "review_required" becomes "Review required"; nothing becomes a dash. */
+export function codeWords(code: string | null | undefined): string {
+  if (!code) return "—"
+  const text = code.replace(/[_-]/g, " ")
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}
+
+export const reasonText = (code: string | null | undefined): string => (code ? (KNOWN[code] ?? codeWords(code)) : "—")
+
+/** A phrase as a sentence: capital first, full stop last. */
+export function sentence(text: string): string {
+  const trimmed = text.trim()
+  if (!trimmed) return ""
+  const cap = trimmed.charAt(0).toUpperCase() + trimmed.slice(1)
+  return /[.!?]$/.test(cap) ? cap : `${cap}.`
+}
 
 const REFUSALS: Record<string, string> = {
   // Saving the call in an account.

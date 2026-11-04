@@ -11,8 +11,8 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { dateTime, signedMoney } from "@/lib/format"
 import { decMul, decText, parseDec } from "./decimal"
 import { reviewLabel, saleChoices, saleOutcome, saleSentence, sharesLine } from "./lot-sale"
-import { usd } from "./quantity"
-import { reasonText } from "./reasons"
+import { usd } from "@/lib/quantity"
+import { reasonText } from "@/lib/reasons"
 
 /** The lot a Sell sheet is open for, in the account it belongs to. */
 export interface LotSaleTarget {

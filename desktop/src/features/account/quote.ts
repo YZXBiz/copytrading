@@ -1,7 +1,7 @@
 import type { AccountOverview, MarketQuote } from "../../../shared/contract"
 import { timeOfDay, dateTime } from "@/lib/format"
 import { parseDec } from "./decimal"
-import { usd } from "./quantity"
+import { usd } from "@/lib/quantity"
 
 // A stock's latest quote from the account's broker, asked for as the trade sheet opens and as the owner types a
 // ticker (LiveQuote.swift): a buy pays the ask, a sell gets the bid. The price says when it was quoted, and a quote

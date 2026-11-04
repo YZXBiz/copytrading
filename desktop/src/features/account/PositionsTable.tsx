@@ -14,7 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { money, monthDay, shares, signedMoney, signedPercent } from "@/lib/format"
 import { parseDec } from "./decimal"
 import { heldPositions, holdingNote } from "./model"
-import { sharesText } from "./quantity"
+import { sharesText } from "@/lib/quantity"
 
 type Position = AccountOverview["positions"][number]
 

@@ -3,7 +3,7 @@ import type { AccountOverview, TradingStatus } from "../../../shared/contract"
 import { Alert, AlertDescription, AlertTitle } from "@/components/reui/alert"
 import { STOPPED_BODY, accountCopying, stoppedTitle } from "./copying"
 import { OwnershipRow } from "./OwnershipRow"
-import { reasonText } from "./reasons"
+import { reasonText } from "@/lib/reasons"
 
 /** A check that simply hasn't run yet, as while copying is off, is not a warning and stays out of sight. */
 const shown = (reason: string | null | undefined) => (reason && reason !== "not_checked" ? reason : null)

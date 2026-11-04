@@ -13,7 +13,7 @@ import { type Draft, MODE_REASON, MODE_TITLE, draftFromCall, guessDraft, isValid
 import { type Outcome, hasSent, isReady } from "./manual-preview"
 import { PreviewRow } from "./PreviewRow"
 import { holdings as heldBy, livePrice } from "./quote"
-import { refusalLine, refusalReason } from "./reasons"
+import { refusalLine, refusalReason } from "@/lib/reasons"
 import { TradeFields } from "./TradeFields"
 import { useQuotes } from "./use-quotes"
 import type { WaitingCall } from "./waiting"

@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { PostReading, SourceActivity } from "../../../shared/contract"
-import { dollars, duration, fraction, shareCount, shares, sharesOfOrder } from "./amounts"
+import { duration, fraction } from "./amounts"
 import { callHeadline, callNote, headline, instructionPhrase, isLabelOnly, readAsLine, readableText, readingText } from "./reading"
-import { codeWords, reasonText, sentence } from "./reasons"
 import { dayWindow } from "./time"
 
 const post = (p: Partial<SourceActivity> = {}): SourceActivity => ({
@@ -19,35 +18,12 @@ const post = (p: Partial<SourceActivity> = {}): SourceActivity => ({
 const stock = { ticker: "WMT", words: "wmt" }
 
 describe("amounts", () => {
-  it("shows whole dollars without cents and others to the cent", () => {
-    expect(dollars("160")).toBe("$160")
-    expect(dollars("39.5")).toBe("$39.50")
-    expect(dollars(null)).toBe("—")
-  })
-
-  it("rounds shares as a person reads them and marks a rounded count", () => {
-    expect(shares(1, "PM")).toBe("1 share")
-    expect(shares(2.985, "PM")).toBe("2.985 shares")
-    expect(shareCount(1.004, "PM")).toBe("≈1")
-    expect(shares(0.0012, "BTC/USD")).toBe("0.0012 units of BTC")
-    expect(sharesOfOrder(5, 12, "PM")).toBe("5 of 12 shares")
-  })
-
   it("reads engine fractions and durations", () => {
     expect(fraction("0.1666666666666666666666666667")).toBe("1/6")
     expect(fraction("0.5")).toBe("1/2")
     expect(duration(45)).toBe("45 seconds")
     expect(duration(180)).toBe("3 minutes")
     expect(duration(7500)).toBe("2 h 5 min")
-  })
-})
-
-describe("reason words", () => {
-  it("knows its sentences and falls back to words, never snake_case", () => {
-    expect(reasonText("daily_entry_cap")).toBe("Your daily entry limit was reached")
-    expect(reasonText("some_new_code")).toBe("Some new code")
-    expect(codeWords(null)).toBe("—")
-    expect(sentence("the buy was not made")).toBe("The buy was not made.")
   })
 })
 

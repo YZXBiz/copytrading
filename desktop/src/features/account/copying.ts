@@ -1,6 +1,6 @@
 import type { AccountOverview, TradingStatus } from "../../../shared/contract"
 import type { BadgeProps } from "@/components/reui/badge"
-import { reasonText } from "./reasons"
+import { reasonText } from "@/lib/reasons"
 
 // Whether CopyTrading copies into one account, in the five words the owner sees (CopyingState.swift), with the
 // line under it saying why it stopped, what it waits for, or what is wrong while it still copies.
