@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode, useEffect, useRef } from "react"
+import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react"
 import type { TradingConfiguration } from "../../../shared/contract"
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar"
 import { navigate, useRoute } from "@/features/shell/route"
@@ -8,21 +8,24 @@ import { assistantContext, assistantGurus, hasModel, suggestions } from "./conte
 import { useAssistant } from "./use-assistant"
 
 /** ai-chat-8's width: 28rem where there is room, a share of the window where there is not. The sidebar token paints the panel as a card. */
-const PANEL = { "--sidebar-width": "min(28rem, 45vw)", "--sidebar": "var(--card)" } as CSSProperties
+const PANEL = (wide: boolean) => ({ "--sidebar-width": wide ? "min(40rem, 60vw)" : "min(28rem, 45vw)", "--sidebar": "var(--card)" }) as CSSProperties
 
 /**
  * The page and the Assistant docked beside it (ai-chat-8): a second sidebar on the right, closed until ⌘J or the header's
  * Assistant button opens it, whose flow gap narrows the page. The conversation lives here, so closing the panel keeps it.
  */
 export function AssistantFrame({ onOpen, children }: { onOpen: () => void; children: ReactNode }) {
+  const [wide, setWide] = useState(false)
   return (
-    <SidebarProvider defaultOpen={false} shortcut={false} className="min-h-0 flex-1" style={PANEL}>
-      <AssistantBody onOpen={onOpen}>{children}</AssistantBody>
+    <SidebarProvider defaultOpen={false} shortcut={false} className="min-h-0 flex-1" style={PANEL(wide)}>
+      <AssistantBody onOpen={onOpen} wide={wide} onWide={setWide}>
+        {children}
+      </AssistantBody>
     </SidebarProvider>
   )
 }
 
-function AssistantBody({ onOpen, children }: { onOpen: () => void; children: ReactNode }) {
+function AssistantBody({ onOpen, wide, onWide, children }: { onOpen: () => void; wide: boolean; onWide: (wide: boolean) => void; children: ReactNode }) {
   const { open, setOpen, toggleSidebar } = useSidebar()
   const route = useRoute()
   const assistant = useAssistant()
@@ -69,6 +72,8 @@ function AssistantBody({ onOpen, children }: { onOpen: () => void; children: Rea
         provider={configuration?.provider ?? null}
         suggestions={suggestions(route.screen, guru, configuration !== null)}
         assistant={assistant}
+        wide={wide}
+        onWide={onWide}
         onAsk={ask}
         onOpenConnections={() => (setOpen(false), navigate("connections"))}
       />

@@ -1,5 +1,5 @@
 import { type KeyboardEvent } from "react"
-import { SparklesIcon, SquarePenIcon, XIcon } from "lucide-react"
+import { ChevronsLeftRightIcon, SparklesIcon, SquarePenIcon, XIcon } from "lucide-react"
 import { RegionError } from "@/components/region-error"
 import { Button } from "@/components/ui/button"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, useSidebar } from "@/components/ui/sidebar"
@@ -20,12 +20,14 @@ interface Props {
   provider: { name: string; model: string } | null
   suggestions: string[]
   assistant: ReturnType<typeof useAssistant>
+  wide: boolean
+  onWide: (wide: boolean) => void
   onAsk: (text: string) => void
   onOpenConnections: () => void
 }
 
 /** ai-chat-8's docked panel: a floating right sidebar with a quiet header, the conversation, and a composer pinned under it. */
-export function AssistantPanel({ model, ready, provider, suggestions, assistant, onAsk, onOpenConnections }: Props) {
+export function AssistantPanel({ model, ready, provider, suggestions, assistant, wide, onWide, onAsk, onOpenConnections }: Props) {
   const { isMobile, open, setOpen, toggleSidebar } = useSidebar()
   // Off canvas leaves the composer and its buttons focusable behind the page.
   const offscreen = !isMobile && !open
@@ -49,6 +51,14 @@ export function AssistantPanel({ model, ready, provider, suggestions, assistant,
           </span>
           <span className="min-w-0 truncate ps-2 text-start text-sm font-medium">Assistant</span>
           <div className="ms-auto flex shrink-0 items-center gap-0.5">
+            <Tooltip>
+              <TooltipTrigger
+                render={<Button type="button" variant="ghost" size="icon-sm" aria-label="Widen the panel" aria-pressed={wide} onClick={() => onWide(!wide)} className={`${MUTED_ICON_BUTTON} aria-pressed:text-foreground`} />}
+              >
+                <ChevronsLeftRightIcon className="size-3.5" aria-hidden="true" />
+              </TooltipTrigger>
+              <TooltipContent>{wide ? "Narrow" : "Widen"}</TooltipContent>
+            </Tooltip>
             {assistant.messages.length > 0 && (
               <Tooltip>
                 <TooltipTrigger
