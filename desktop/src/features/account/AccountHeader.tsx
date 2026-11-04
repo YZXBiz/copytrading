@@ -57,11 +57,11 @@ export function AccountHeader({
         <div className="flex items-center gap-2">
           {pending && <Spinner aria-label="Saving account command" />}
           {copying ? (
-            <Button type="button" variant="outline" disabled={pending} onClick={() => control("pause")} title="No new buys in this account. Sells of what it copied still follow the guru.">
+            <Button size="sm" type="button" variant="outline" disabled={pending} onClick={() => control("pause")} title="No new buys in this account. Sells of what it copied still follow the guru.">
               <SquareInCircleIcon aria-hidden className="size-4" /> Stop Copying
             </Button>
           ) : (
-            <Button type="button" disabled={pending || blocked !== null || status.status !== "ready"} onClick={() => control("resume")} title="Copy the guru's buys and sells into this account.">
+            <Button size="sm" type="button" disabled={pending || blocked !== null || status.status !== "ready"} onClick={() => control("resume")} title="Copy the guru's buys and sells into this account.">
               <CirclePlayIcon aria-hidden className="size-4" /> Resume Copying
             </Button>
           )}

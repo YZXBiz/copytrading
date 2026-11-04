@@ -23,6 +23,8 @@ interface Props {
 export function AppSidebar({ route, accounts, live, old, setup, selectedAccountId, engine }: Props) {
   return (
     <Sidebar collapsible="icon" variant="floating">
+      {/* The traffic lights sit here, inset in the sidebar (hiddenInset); the strip drags the window. */}
+      <div className="drag-region h-6 shrink-0" aria-hidden="true" />
       <SidebarHeader className="flex flex-row items-center justify-between in-data-[state=collapsed]:flex-col in-data-[state=collapsed]:items-start in-data-[state=collapsed]:justify-center">
         <div className="inline-flex min-h-10 items-center gap-2 px-0.5 transition-all duration-200 ease-linear">
           <Logo />

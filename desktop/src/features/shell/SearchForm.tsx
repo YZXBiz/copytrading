@@ -42,6 +42,7 @@ export function SearchForm({ live, old, setup }: Props) {
       <SidebarGroup className="py-0">
         <SidebarGroupContent className="relative">
           <Button
+            size="sm"
             id="search"
             type="button"
             variant="outline"

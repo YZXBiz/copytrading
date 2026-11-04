@@ -163,6 +163,17 @@ An account page opens its sheet from the route, so a capture can show one: `#/ac
 mismatch). `calls` puts six calls waiting for the owner on the page, `quiet` none; `busy` adds a dozen posts to Nov 3 and `empty` serves no posts at all (Activity and the guru page). `COPYTRADING_CAPTURE_SIZE=1280x860` captures a window
 of that size instead of one tall page. Capture waits until no region is still loading before it saves.
 
+## Theme and window
+
+The desk opens dark. Settings > General has Dark, Light and System (`getTheme` / `setTheme`, saved in `preferences.json`).
+Main sets `nativeTheme.themeSource` from it before the window exists, so the page's `prefers-color-scheme` and macOS
+vibrancy are right at first paint; `src/main.tsx` only follows that media query. The window has a hidden title bar
+(`hiddenInset`, traffic lights inset in the sidebar), a `sidebar` vibrancy material and a transparent background: `body`
+is transparent so the sidebar and its gutter show the desktop, and the page paints `--background` itself. A capture
+renders offscreen, where there is no desktop, so it paints `--window` instead. The header and the strip above the
+sidebar logo carry `drag-region`; anything pressable inside is `no-drag` (one rule in `index.css`). The window is at
+least 980×640.
+
 ## Rolling numbers
 
 The balance, the stat strip, the sidebar's balances and the chart's hover readout are `<RollingNumber>`

@@ -1,3 +1,4 @@
+import { THEMES, type Theme } from "../../../shared/contract"
 import type {
   AgentAccess,
   AgentAccessState,
@@ -103,10 +104,12 @@ let agentAccess: AgentAccessState = {
   problem: agentsProblem ? "Agents cannot connect: the agent control socket path is too long for a Unix socket." : null,
 }
 let fillAlerts = true
+let theme: Theme = "dark"
 
 export const settingsReads: Record<string, (params: Params) => Promise<Result<unknown>>> = {
   getAgentAccess: () => ok(agentAccess),
   getFillAlerts: () => ok(fillAlerts),
+  getTheme: () => ok(theme),
   getSecretStatus: () => ok(secrets),
   getEngineStatus: () => ok(engine),
   readDiagnostics: () => ok({ entries: journal, bytes: 184_320 }),
@@ -131,4 +134,5 @@ export const settingsActs: Record<string, (params: Params) => Promise<Result<unk
     return ok(agentAccess)
   },
   setFillAlerts: (params) => ok((fillAlerts = params?.on === true)),
+  setTheme: (params) => ok((theme = THEMES.find((t) => t === params?.theme) ?? theme)),
 }

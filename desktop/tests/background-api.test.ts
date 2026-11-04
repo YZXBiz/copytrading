@@ -158,3 +158,14 @@ describe("fill alerts", () => {
     expect(new Prefs(h.dir).get("fill_alerts")).toBe(false)
   })
 })
+
+describe("theme", () => {
+  it("opens dark, keeps the choice, and refuses anything else", async () => {
+    const h = harness(true)
+    expect(await h.api.read("getTheme", undefined)).toEqual({ ok: true, value: "dark" })
+    expect(await h.api.act("setTheme", { theme: "system" })).toEqual({ ok: true, value: "system" })
+    expect(new Prefs(h.dir).get("theme")).toBe("system")
+    expect(await h.api.act("setTheme", { theme: "sepia" })).toMatchObject({ ok: false })
+    expect(new Prefs(h.dir).get("theme")).toBe("system")
+  })
+})

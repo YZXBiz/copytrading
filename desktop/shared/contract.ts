@@ -12,6 +12,10 @@
 export type Decimal = string
 
 /** `cancelled` is set when the owner said no in a confirmation: nothing went to the engine, and the page need show no error. */
+/** The window's appearance: the desk is dark by default; System follows macOS. */
+export const THEMES = ["dark", "light", "system"] as const
+export type Theme = (typeof THEMES)[number]
+
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string; cancelled?: true }
 
 // ── Engine state, owned by the main process ────────────────────────────────
@@ -902,6 +906,8 @@ export interface ReadOperations {
   getAgentAccess: Op<undefined, AgentAccessState>
   /** Whether a macOS notification says each order sent and filled (Settings, "Fills"). Other alerts have no switch. */
   getFillAlerts: Op<undefined, boolean>
+  /** Settings > General "Theme". Main also applies it to the window (nativeTheme), so the page and macOS vibrancy follow it before first paint. */
+  getTheme: Op<undefined, Theme>
   // Main process: the saved setup and the key store
   getSetup: Op<undefined, SetupView | null>
   getLimits: Op<{ account_id: string }, AccountLimits | null>
@@ -950,6 +956,7 @@ export interface ActOperations {
   createBackup: Op<{ destination: string }, BackupManifest>
   previewRestore: Op<{ archive_path: string }, RestorePreview>
   setFillAlerts: Op<{ on: boolean }, boolean>
+  setTheme: Op<{ theme: Theme }, Theme>
   resolveOwnership: Op<{ account_id: string; resolution: OwnershipResolutionRequest }, OwnershipResolution>
   saveManualCorrection: Op<{ correction: ManualCorrectionRequest }, ManualCorrectionOutcome>
   rejectProposal: Op<{ proposal_id: string }, AgentProposal>
@@ -980,14 +987,14 @@ export const READS = [
   "getStatus", "getEngineStatus", "getTradingActivation", "getWorkflow", "getAccounts", "getEquityHistory",
   "getSourceActivity", "getGuruActivity", "getGuruDayStats", "getAccountFeed", "getQuote", "getManualCommand",
   "listManualCommands", "previewManualOrder", "previewLotSale", "listProposals", "getAgentAudit",
-  "getRestoreCandidate", "getAssistantTurn", "getAgentAccess", "getFillAlerts", "getSetup", "getLimits", "getSecretStatus",
+  "getRestoreCandidate", "getAssistantTurn", "getAgentAccess", "getFillAlerts", "getTheme", "getSetup", "getLimits", "getSecretStatus",
   "readDiagnostics",
 ] as const satisfies readonly ReadName[]
 
 export const ACTS = [
   "confirmManualOrders", "confirmLotSale", "startTrading", "applyChanges", "pauseTrading", "controlAccount", "approveProposal",
   "deleteAccountRecord", "activateRestore", "rollbackRestore", "setAgentAccess", "validateTrading", "checkConnection", "updateAccountLimits",
-  "saveSetup", "setSecrets", "discardSecrets", "forgetBroker", "createBackup", "previewRestore", "setFillAlerts",
+  "saveSetup", "setSecrets", "discardSecrets", "forgetBroker", "createBackup", "previewRestore", "setFillAlerts", "setTheme",
   "resolveOwnership", "saveManualCorrection", "rejectProposal",
   "completeProposal", "discardProposals", "learnGuruPlaybook", "evaluateHistoricalProfile", "assistantAsk",
   "assistantCancel", "assistantReset", "submitSelfTest",
