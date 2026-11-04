@@ -33,6 +33,7 @@ import { joinAnd, startFailure } from "../../shared/start-failure"
 import { EngineError } from "./engine/bridge"
 import { readJournal } from "./journal"
 import type { Prefs } from "./prefs"
+import type { AccountReaders } from "./readers"
 import type { RestoreCoordinator } from "./restore"
 import { type SecretStore, type Secrets, redact } from "./secrets"
 import { SetupFile, SetupFileError } from "./setup-file"
@@ -58,7 +59,12 @@ export interface Deps {
   /** Restores and rollbacks; they stop and restart the engine. */
   restore: Pick<RestoreCoordinator, "activate" | "rollback">
   prefs: Prefs
+  /** Gives the engine the saved accounts' read keys; called again after anything that changes the saved setup or its keys. */
+  readers: Pick<AccountReaders, "attach">
 }
+
+/** The actions that save, replace or drop the setup or its keys. */
+const CHANGES_READ_KEYS: ReadonlySet<string> = new Set(["saveSetup", "startTrading", "applyChanges", "discardSecrets", "forgetBroker", "activateRestore", "rollbackRestore"])
 
 type Params = Record<string, unknown>
 interface Ctx extends Deps {
@@ -660,6 +666,9 @@ export function createApi(deps: Deps) {
     } catch (error) {
       if (error instanceof Cancelled) return { ok: false, error: "Cancelled.", cancelled: true }
       return reply({ ok: false, error: error instanceof SetupFileError || error instanceof Refusal ? error.message : words(error) }, ctx)
+    } finally {
+      // A refused or rolled-back start can change them too, so this is not only for success.
+      if (handlers === ACT_HANDLERS && CHANGES_READ_KEYS.has(name)) await ctx.readers.attach()
     }
   }
   return {

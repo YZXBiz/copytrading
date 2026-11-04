@@ -291,7 +291,13 @@ class OperatorQueryService:
         configured = configuration is not None and account_id in {
             item.id for item in configuration.accounts
         }
-        if not configured and not self._reader.holds(account_id):
+        # An account the app lists from its record is known even before its keys are attached or
+        # copying has started in this engine: it has no curve to show yet, which is not "not found".
+        if (
+            not configured
+            and not self._reader.holds(account_id)
+            and account_id not in self._access.retained_paths()
+        ):
             raise KeyError(account_id)
         supervisor = self._access.supervisors().get(account_id)
         if supervisor is not None and supervisor.owner is not None and supervisor.state != "failed":

@@ -3,6 +3,7 @@ import { existsSync } from "node:fs"
 import { join, resolve } from "node:path"
 import type { EngineState } from "../../../shared/contract"
 import { EngineBridge, EngineError } from "./bridge"
+import { appendEngineLog } from "./engine-log"
 import type { RuntimePaths } from "./paths"
 
 const REPO = resolve(__dirname, "../../..")
@@ -27,6 +28,8 @@ export interface SpawnTarget {
   args: string[]
   env: Record<string, string>
   cwd: string
+  /** Where the engine's stderr is kept (rotating); none in tests that do not look at it. */
+  logFile?: string
 }
 
 /** Whether the engine took the request to stop (it has finished its work), or never heard it (ProcessSupervisorStopReport). */
@@ -79,7 +82,11 @@ export class EngineProcess {
     this.child = child
     this.bridge = bridge
     let stderr = ""
-    child.stderr!.on("data", (chunk: Buffer) => (stderr = (stderr + chunk).slice(-2000)))
+    if (target.logFile) appendEngineLog(target.logFile, `--- engine started ${new Date().toISOString()} ---\n`)
+    child.stderr!.on("data", (chunk: Buffer) => {
+      stderr = (stderr + chunk).slice(-2000)
+      if (target.logFile) appendEngineLog(target.logFile, chunk)
+    })
     // Each handler acts only for the process that started it, so a late exit never touches a restarted engine.
     const ended = (reason: string) => {
       bridge.failAll(new EngineError("disconnected", reason))
@@ -165,6 +172,7 @@ export function engineTarget(paths: RuntimePaths, resourcesPath: string | null):
     command: python,
     args: ["-u", "-m", "copytrading_engine", "--data-dir", dir, "--instance-id", paths.installationIdentity()],
     cwd: dir,
+    logFile: join(paths.logs, "engine.log"),
     env: {
       PATH: "/usr/bin:/bin",
       PYTHONPATH: join(resourcesPath ? join(resourcesPath, "Engine") : join(REPO, "engine"), "src"),

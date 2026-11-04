@@ -3,6 +3,7 @@
 import datetime as dt
 from decimal import Decimal
 
+import pytest
 from pydantic import SecretStr
 
 from copytrading_engine.execution.application.ports import BrokerError
@@ -12,6 +13,9 @@ from copytrading_engine.execution.presentation.operator_views import (
     PositionView,
     with_live_facts,
 )
+from copytrading_engine.trading.adapters.operator_queries import SQLiteOperatorEvidence
+from copytrading_engine.trading.application.account_access import AccountAccess
+from copytrading_engine.trading.application.operator_service import OperatorQueryService
 from copytrading_engine.trading.application.paused_reader import PausedAccountReader, ReadKeys
 
 from ..execution.fakes import FakeBroker
@@ -163,3 +167,23 @@ async def test_an_unknown_symbol_or_an_empty_book_has_no_quote():
     assert await reader.quote("ira", "AAPL") is None
     reader.detach()
     assert await reader.quote("primary", "AAPL") is None
+
+
+async def test_history_of_an_account_with_a_record_but_no_keys_is_empty_not_missing(tmp_path):
+    # Copying has not started in this engine yet (an app relaunch) and no keys are attached: the
+    # account is listed from its record, so its history is "nothing yet", never "not found".
+    (tmp_path / "accounts" / "primary").mkdir(parents=True)
+    (tmp_path / "accounts" / "primary" / "execution.sqlite3").touch()
+    service = OperatorQueryService(
+        AccountAccess(
+            tmp_path,
+            lambda: {},
+            configuration=lambda: None,
+            runtime_state=lambda: "paused",
+            evidence=SQLiteOperatorEvidence(),
+        )
+    )
+    window = HistoryWindow(range="month")
+    assert await service.equity_history("primary", window) is None
+    with pytest.raises(KeyError):
+        await service.equity_history("ira", window)
