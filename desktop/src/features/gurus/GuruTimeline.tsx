@@ -40,7 +40,7 @@ function GuruPostEntry({ entry, step, onOpen }: { entry: Entry; step: number; on
         >
           {picture ? <PostPicture attachment={picture} className="max-h-44" /> : <span className="line-clamp-4 text-base break-words">{quoteOf(post)}</span>}
           {/* A post that was only chat has nothing to add to its icon. */}
-          {post.decision !== "ignore" && <span className="text-muted-foreground text-xs">{entry.readAs}</span>}
+          {post.decision !== "ignore" && !(post.decision === "review" && post.instructions.length === 0) && <span className="text-muted-foreground text-xs">{entry.readAs}</span>}
           {entry.accounts.map((account) => (
             <span key={account.accountId} className="flex items-baseline gap-3 text-sm">
               <span className="font-medium">{account.accountId}</span>
