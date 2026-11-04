@@ -260,7 +260,7 @@ const ENGINE_SRC = resolve(__dirname, "../../engine/src")
 
 async function cli(stateRoot: string, ...args: string[]) {
   const env = { PATH: process.env.PATH ?? "", HOME: process.env.HOME ?? "", PYTHONPATH: ENGINE_SRC, COPYTRADING_STATE_ROOT: stateRoot }
-  return run("uv", ["run", "--no-project", "--python", "3.14", "--with", "pydantic", "python", "-m", "copytrading_engine.control", ...args], { cwd: stateRoot, env }).then(
+  return run("uv", ["run", "--quiet", "--no-project", "--python", "3.14", "--with", "pydantic", "python", "-m", "copytrading_engine.control", ...args], { cwd: stateRoot, env }).then(
     (done) => ({ code: 0, stdout: done.stdout, stderr: done.stderr }),
     (error: { code: number; stdout: string; stderr: string }) => ({ code: error.code, stdout: error.stdout, stderr: error.stderr }),
   )
