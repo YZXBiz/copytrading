@@ -173,3 +173,10 @@ export function readAsLine(post: SourceActivity): string {
   if (calls.length === 0) return headline(post)
   return calls.map((call) => callHeadline(call).title).join("; ")
 }
+
+/** What a list row says of a post: their words, or what came with them in place of words. */
+export function quoteOf(post: SourceActivity): string {
+  const said = readableText(post)
+  if (said) return `“${said}”`
+  return (post.source_event?.attachments.length ?? 0) > 0 ? "A picture, no words" : "No message text"
+}

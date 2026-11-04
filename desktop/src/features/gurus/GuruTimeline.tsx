@@ -1,68 +1,78 @@
-import { CheckIcon, ClockIcon, CircleAlertIcon, MinusIcon, type LucideIcon } from "lucide-react"
-import { Timeline, TimelineContent, TimelineHeader, TimelineIndicator, TimelineItem, TimelineSeparator, TimelineTitle } from "@/components/reui/timeline"
+// ReUI's Finance Activity (timeline-3), installed as shipped: an avatar node and its line, a sentence, a muted detail line, an
+// action button and the date with a status badge. Its attachment and participants have no counterpart here.
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { Timeline, TimelineContent, TimelineDate, TimelineHeader, TimelineIndicator, TimelineItem, TimelineSeparator } from "@/components/reui/timeline"
+import { OutcomeBadge } from "@/features/activity/OutcomeBadge"
 import { PostPicture } from "@/features/activity/PostPicture"
-import { quoteOf } from "@/features/activity/PostListItem"
-import { pictureOf } from "@/features/activity/reading"
+import { cardOutcome } from "@/features/activity/outcome"
+import { pictureOf, readableText } from "@/features/activity/reading"
 import { clockTime } from "@/features/activity/time"
-import { cn } from "@/lib/utils"
 import type { Day, Entry } from "./model"
 
-/** The node's icon and fill say what became of the post: traded, waiting for the owner, working, or nothing to do. */
-function markOf(entry: Entry): { icon: LucideIcon; className: string } {
-  const kinds = entry.accounts.map((a) => a.kind)
-  if (kinds.includes("traded")) return { icon: CheckIcon, className: "bg-success/15 text-success-foreground dark:text-success" }
-  if (entry.isWaiting) return { icon: CircleAlertIcon, className: "bg-warning/15 text-warning-foreground dark:text-warning" }
-  if (kinds.includes("working")) return { icon: ClockIcon, className: "bg-info/15 text-info-foreground dark:text-info" }
-  return { icon: MinusIcon, className: "" }
-}
-
-/** One post on the timeline (the "Git Activity" timeline, a node per kind of event): the time to the second, the guru's words with how they were read, and what each account did. */
-function GuruPostEntry({ entry, step, onOpen }: { entry: Entry; step: number; onOpen: (sequence: number) => void }) {
+function GuruPostEntry({ entry, guruName, now, step, onOpen }: { entry: Entry; guruName: string; now: Date; step: number; onOpen: (sequence: number) => void }) {
   const { post } = entry
-  const { icon: Icon, className } = markOf(entry)
+  const outcome = cardOutcome(post, now)
   // A post with no words of its own shows its picture.
   const picture = pictureOf(post)
+  const said = readableText(post)
+  // A post that was only chat has nothing to add to its badge.
+  const detail = post.decision !== "ignore" && !(post.decision === "review" && post.instructions.length === 0)
   return (
-    <TimelineItem step={step} className="group-data-[orientation=vertical]/timeline:ms-10">
+    <TimelineItem step={step} className="group-data-[orientation=vertical]/timeline:ms-10 group-data-[orientation=vertical]/timeline:not-last:pb-4">
       <TimelineHeader>
-        <TimelineSeparator className="group-data-[orientation=vertical]/timeline:-left-7 group-data-[orientation=vertical]/timeline:h-[calc(100%-1.5rem-0.25rem)] group-data-[orientation=vertical]/timeline:translate-y-6.5" />
-        <TimelineTitle className="text-muted-foreground mt-0.5 text-xs font-normal tabular-nums">{clockTime(post.source_at)}</TimelineTitle>
-        <TimelineIndicator className={cn("bg-primary/10 flex size-6 items-center justify-center border-none group-data-[orientation=vertical]/timeline:-left-7", className)}>
-          <Icon aria-hidden className="size-3.5" />
+        <TimelineSeparator className="bg-border! group-data-[orientation=vertical]/timeline:top-2 group-data-[orientation=vertical]/timeline:-left-8 group-data-[orientation=vertical]/timeline:h-[calc(100%-2.25rem)] group-data-[orientation=vertical]/timeline:translate-y-6" />
+        <TimelineIndicator className="size-7 overflow-hidden rounded-full border-none group-data-[orientation=vertical]/timeline:-left-8">
+          <Avatar className="size-7">
+            <AvatarFallback className="text-[10px] font-medium">{Array.from(guruName)[0]}</AvatarFallback>
+          </Avatar>
         </TimelineIndicator>
       </TimelineHeader>
-      <TimelineContent className="text-foreground">
-        <button
-          type="button"
-          data-sequence={post.sequence}
-          onClick={() => onOpen(post.sequence)}
-          className="hover:bg-muted focus-visible:ring-ring/50 -mx-2 flex w-[calc(100%+1rem)] flex-col gap-1.5 rounded-lg px-2 py-1.5 text-left outline-none transition-colors focus-visible:ring-3"
-        >
-          {picture ? <PostPicture attachment={picture} className="max-h-32" /> : <span className="line-clamp-2 text-sm break-words">{quoteOf(post)}</span>}
-          {/* A post that was only chat has nothing to add to its icon. */}
-          {post.decision !== "ignore" && !(post.decision === "review" && post.instructions.length === 0) && <span className="text-muted-foreground text-xs">{entry.readAs}</span>}
-          {entry.accounts.map((account) => (
-            <span key={account.accountId} className="flex items-baseline gap-3 text-xs">
-              <span className="shrink-0 font-medium">{account.accountId}</span>
-              <span className={cn("text-muted-foreground", account.kind === "traded" && "text-success-foreground dark:text-success")}>{account.summary}</span>
-            </span>
-          ))}
-        </button>
+
+      <TimelineContent className="min-w-0 pb-1">
+        <div className="min-w-0">
+          <p className="text-sm leading-5">
+            <span className="text-foreground font-medium">{guruName}</span> <span className="text-muted-foreground">{picture ? "posted a picture" : said ? "posted" : "posted no words"}</span>{" "}
+            {said && <span className="text-foreground line-clamp-2 font-medium break-words">“{said}”</span>}
+          </p>
+        </div>
+        {detail && <p className="text-muted-foreground mt-1 text-xs leading-4">{entry.readAs}</p>}
+        {entry.accounts.map((account) => (
+          <p key={account.accountId} className="text-muted-foreground mt-1 text-xs leading-4">
+            <span className="text-foreground font-medium">{account.accountId}</span> {account.summary}
+          </p>
+        ))}
+        {picture && (
+          <div className="mt-2">
+            <PostPicture attachment={picture} className="max-h-32" />
+          </div>
+        )}
+        <div className="mt-2 flex max-w-full flex-wrap items-center gap-1.5">
+          <Button type="button" size="xs" variant="outline" data-sequence={post.sequence} onClick={() => onOpen(post.sequence)}>
+            View post
+          </Button>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <TimelineDate dateTime={post.source_at} className="mt-0 mb-0">
+            {clockTime(post.source_at)}
+          </TimelineDate>
+          <OutcomeBadge title={outcome.title} tone={outcome.tone} />
+        </div>
       </TimelineContent>
     </TimelineItem>
   )
 }
 
 /** Every post of the guru newest first, a timeline for each day. */
-export function GuruTimeline({ days, onOpen }: { days: Day[]; onOpen: (sequence: number) => void }) {
+export function GuruTimeline({ days, guruName, now, onOpen }: { days: Day[]; guruName: string; now: Date; onOpen: (sequence: number) => void }) {
   return (
-    <div className="flex flex-col gap-8">
+    <div className="space-y-8">
       {days.map((day) => (
-        <section key={day.label} aria-label={day.label}>
-          <h3 className="text-muted-foreground mb-3 text-xs font-medium">{day.label}</h3>
-          <Timeline value={0}>
+        <section key={day.label} aria-label={day.label} className="space-y-4">
+          <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{day.label}</h2>
+          <Timeline defaultValue={day.entries.length}>
             {day.entries.map((entry, index) => (
-              <GuruPostEntry key={entry.post.sequence} entry={entry} step={index + 1} onOpen={onOpen} />
+              <GuruPostEntry key={entry.post.sequence} entry={entry} guruName={guruName} now={now} step={index + 1} onOpen={onOpen} />
             ))}
           </Timeline>
         </section>

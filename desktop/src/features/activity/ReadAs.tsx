@@ -11,7 +11,7 @@ export function ReadAs({ post }: { post: SourceActivity }) {
   const calls = reading ? callsOf(reading) : []
   const by = post.interpreted_by ? `read by ${post.interpreted_by}` : null
   return (
-    <section aria-label="Read as" className="flex flex-col gap-1">
+    <section aria-label="Read as" className="flex flex-col gap-1 border-t pt-2.5">
       {reading && calls.length === 0 && (
         <>
           <p className="font-medium">{noCallLine(reading)}</p>

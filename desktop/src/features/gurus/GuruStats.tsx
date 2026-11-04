@@ -1,46 +1,92 @@
-import { ArrowDownIcon, ArrowUpIcon } from "lucide-react"
-import { Figure } from "@/components/figure"
+// ReUI's Support Metrics (stats-12), installed as shipped: a Frame per figure with its icon tile, the figure, its label and a badge.
+import type { ReactNode } from "react"
+import { ArrowDownIcon, ArrowUpIcon, MessageSquareIcon, TimerIcon, WalletIcon } from "lucide-react"
 import { Badge } from "@/components/reui/badge"
+import { Frame, FramePanel } from "@/components/reui/frame"
+import { Item, ItemMedia } from "@/components/ui/item"
 import { duration } from "@/features/activity/amounts"
 import { money } from "@/lib/format"
 import { dollars } from "@/lib/quantity"
+import { cn } from "@/lib/utils"
 import type { Holdings, Stats } from "./model"
 
-/**
- * Today's numbers for one guru, as the engine counted the owner's whole day, and what is held from their calls, in one quiet
- * row. Before the day is read every count is a dash, never a zero it has not counted. Waiting is the only count that carries a tone.
- */
-export function GuruStats({ stats, holdings }: { stats: Stats; holdings: Holdings | null }) {
-  const count = (n: number | null) => (n === null ? "—" : n.toLocaleString("en-US"))
-  const waiting = stats.postsToday === null ? "—" : stats.waiting > 0 ? <Badge variant="warning-light">{stats.waiting}</Badge> : "0"
-  return (
-    <dl aria-label="Today" className="flex flex-wrap gap-x-8 gap-y-2">
-      <Figure label="Posts today" value={count(stats.postsToday)} />
-      <Figure label="Traded" value={count(stats.tradedToday)} />
-      <Figure label="Waiting" value={waiting} />
-      <Figure label="Read in" value={stats.averageRead === null ? "—" : duration(stats.averageRead)} />
-      {holdings && <Holding holdings={holdings} />}
-    </dl>
-  )
+interface CardData {
+  icon: ReactNode
+  iconBg: string
+  value: string
+  label: string
+  info?: ReactNode
 }
 
-/** What the owner holds from this guru's calls right now, then how that stands today. Nothing shows while nothing is held. */
-function Holding({ holdings: { cost, gain, stocks } }: { holdings: Holdings }) {
-  const up = gain >= 0
+/**
+ * Today's numbers for one guru, as the engine counted the owner's whole day, and what is held from their calls. Before the
+ * day is read every count is a dash, never a zero it has not counted. Nothing shows for holdings while nothing is held.
+ */
+export function GuruStats({ stats, holdings }: { stats: Stats; holdings: Holdings | null }) {
+  const read = stats.postsToday !== null
+  const cards: CardData[] = [
+    {
+      icon: <MessageSquareIcon aria-hidden="true" />,
+      iconBg: "text-blue-600 dark:text-blue-400",
+      value: stats.postsToday === null ? "—" : stats.postsToday.toLocaleString("en-US"),
+      label: "Posts today",
+      info: read && (
+        <div className="flex flex-wrap gap-1.5">
+          <Badge variant="success-light">{(stats.tradedToday ?? 0).toLocaleString("en-US")} traded</Badge>
+          <Badge variant={stats.waiting > 0 ? "warning-light" : "outline"}>{stats.waiting.toLocaleString("en-US")} waiting</Badge>
+        </div>
+      ),
+    },
+    {
+      icon: <TimerIcon aria-hidden="true" />,
+      iconBg: "text-emerald-600 dark:text-emerald-400",
+      value: stats.averageRead === null ? "—" : duration(stats.averageRead),
+      label: "Read in",
+    },
+  ]
+  if (holdings) {
+    const up = holdings.gain >= 0
+    cards.push({
+      icon: <WalletIcon aria-hidden="true" />,
+      iconBg: "text-amber-600 dark:text-amber-400",
+      value: dollars(String(Math.round(holdings.cost))),
+      label: `Held in ${holdings.stocks === 1 ? "1 stock" : `${holdings.stocks} stocks`}`,
+      info: holdings.cost > 0 && (
+        <Badge variant={up ? "success-light" : "destructive-light"}>
+          {up ? <ArrowUpIcon aria-hidden="true" /> : <ArrowDownIcon aria-hidden="true" />}
+          {money(Math.abs(holdings.gain))} ({Math.abs((holdings.gain / holdings.cost) * 100).toFixed(1)}%)
+        </Badge>
+      ),
+    })
+  }
   return (
-    <Figure
-      label="Holding"
-      value={
-        <span className="inline-flex items-baseline gap-1.5">
-          {dollars(String(Math.round(cost)))} in {stocks === 1 ? "1 stock" : `${stocks} stocks`}
-          {cost > 0 && (
-            <Badge variant={up ? "success-light" : "destructive-light"}>
-              {up ? <ArrowUpIcon aria-hidden="true" /> : <ArrowDownIcon aria-hidden="true" />}
-              {money(Math.abs(gain))} ({Math.abs((gain / cost) * 100).toFixed(1)}%)
-            </Badge>
-          )}
-        </span>
-      }
-    />
+    <div className="@container w-full grow">
+      {/* Grid */}
+      <div className="grid grow grid-cols-1 gap-5 @xl:grid-cols-3">
+        {cards.map((card) => (
+          <Frame key={card.label}>
+            <FramePanel className="flex flex-col items-start gap-6">
+              <Item
+                className={cn(
+                  "border-background bg-muted flex size-10.5 items-center justify-center border-2 p-0 shadow-[0_1px_3px_0_rgba(0,0,0,0.14)] dark:border [&_svg]:size-5",
+                  card.iconBg
+                )}
+              >
+                <ItemMedia variant="icon" className="size-auto">
+                  {card.icon}
+                </ItemMedia>
+              </Item>
+
+              <div className="space-y-0.5">
+                <div className="text-foreground text-2xl leading-none font-bold tabular-nums">{card.value}</div>
+                <div className="text-muted-foreground text-sm font-medium">{card.label}</div>
+              </div>
+
+              {card.info}
+            </FramePanel>
+          </Frame>
+        ))}
+      </div>
+    </div>
   )
 }
