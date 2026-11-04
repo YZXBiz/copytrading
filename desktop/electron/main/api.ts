@@ -11,6 +11,9 @@ import {
   restoreText,
   startText,
 } from "./confirmations"
+import { isDeepStrictEqual } from "node:util"
+import { PROVIDER_TITLES } from "../../shared/providers"
+import { startFailure } from "../../shared/start-failure"
 import { EngineError } from "./engine/bridge"
 import { readJournal } from "./journal"
 import { type SecretStore, type Secrets, redact } from "./secrets"
@@ -30,12 +33,16 @@ export interface Deps {
   diagnosticsDir?: string
   /** A native file dialog: where to save a backup, or which backup to open. null for Cancel. */
   pick?: (kind: "backup-destination" | "restore-archive") => Promise<string | null>
+  /** How long a start waits for the engine to confirm it before leaving it pending. Default: 30 looks, a second apart. */
+  activation?: { looks: number; waitMs: number }
 }
 
 type Params = Record<string, unknown>
 interface Ctx extends Deps {
   /** Previews the engine planned this session, by preview id: what a later confirmation asks about. */
   seen: Map<string, unknown>
+  /** A start is being looked at; a second look waits for the next time. */
+  settling: boolean
 }
 type Handler = (params: Params, ctx: Ctx) => Promise<unknown>
 /** What a confirmation says, and the params to send in place of the page's when main knows better. */
@@ -82,15 +89,32 @@ function savedSetup({ setup, secrets }: Ctx) {
   return saved
 }
 
-/** The pieces a handler for one operation sends that only main may fill in. */
-const withKeys = (ctx: Ctx, keys: (secrets: Secrets) => Params) => keys(ctx.secrets.secrets)
+/** The model key for the provider a request names: a key typed for another provider is never sent to it. */
+const providerKey = (ctx: Ctx, provider: unknown): string =>
+  ctx.secrets.providerKey(String((provider as { name?: unknown } | undefined)?.name), ctx.setup.current()?.configuration.provider.name)
 
-function connection(check: Params, secrets: Secrets): Params {
+/** The pieces a handler for one operation sends that only main may fill in. */
+const withKeys = (ctx: Ctx, params: Params, keys: (secrets: Secrets, provider_api_key: string) => Params) =>
+  keys(ctx.secrets.secrets, providerKey(ctx, params.provider))
+
+/** What `validate_trading` and `start_trading` take: only the keys this setup uses, so a removed account's keys never reach the engine. */
+function engineSecrets(configuration: TradingConfiguration, ctx: Ctx): Secrets {
+  const { secrets } = ctx.secrets
+  const accounts = new Set(configuration.accounts.map((a) => a.id))
+  return {
+    discord_token: secrets.discord_token,
+    provider_api_key: ctx.secrets.providerKey(configuration.provider.name, ctx.setup.current()?.configuration.provider.name),
+    brokers: secrets.brokers.filter((b) => accounts.has(b.account_id)),
+    ...(configuration.notification && secrets.notification_token ? { notification_token: secrets.notification_token } : {}),
+  }
+}
+
+function connection(check: Params, secrets: Secrets, ctx: Ctx): Params {
   switch (check.kind) {
     case "source":
       return { ...check, token: needToken(secrets) }
     case "model":
-      return { ...check, api_key: secrets.provider_api_key }
+      return { ...check, api_key: providerKey(ctx, check.provider) }
     case "broker": {
       const id = (check.account as { id: string }).id
       const keys = secrets.brokers.find((b) => b.account_id === id)
@@ -111,7 +135,10 @@ async function pausedOrRefuse(ctx: Ctx) {
 }
 
 const READ_HANDLERS: Record<ReadName, Handler> = {
-  getStatus: ask("get_trading_status", value("trading")),
+  getStatus: async (params, ctx) => {
+    await settleOnce(ctx).catch(() => {}) // a start a crash left pending; its failure shows in the status
+    return ask("get_trading_status", value("trading"))(params, ctx)
+  },
   getEngineStatus: ask("get_status", value("status")),
   getTradingActivation: ask("get_trading_activation", value("activation")),
   getWorkflow: ask("get_workflow", value("workflow")),
@@ -133,11 +160,12 @@ const READ_HANDLERS: Record<ReadName, Handler> = {
   getAgentAudit: ask("agent_audit", value("entries")),
   getRestoreCandidate: ask("restore_candidate_status", value("candidate")),
   getAssistantTurn: ask("assistant_turn", whole),
-  getSetup: async (_params, { setup, secrets }) => {
-    const saved = setup.load()
+  getSetup: async (_params, ctx) => {
+    await settleOnce(ctx).catch(() => {})
+    const saved = ctx.setup.load()
     if (!saved) return null
     const { secretRevision, ...view } = saved
-    return { ...view, keys_present: secrets.revision?.toLowerCase() === secretRevision.toLowerCase() }
+    return { ...view, keys_present: ctx.secrets.revision?.toLowerCase() === secretRevision.toLowerCase() }
   },
   getLimits: async ({ account_id }, { setup }) => {
     const config = setup.load()?.configuration
@@ -190,14 +218,73 @@ async function preview(ctx: Ctx, operation: string, params: Params): Promise<unk
 
 /** Runs `handler` only after the owner says yes to what `describe` says it will do. */
 const confirmed =
-  (describe: Describe, handler: Handler): Handler =>
+  (describe: Describe, handler: Handler, onCancel?: (ctx: Ctx) => void): Handler =>
   async (params, ctx) => {
     const { text, send } = await describe(params, ctx)
-    if (!(await ctx.confirm(text))) throw new Cancelled()
+    if (!(await ctx.confirm(text))) {
+      onCancel?.(ctx)
+      throw new Cancelled()
+    }
     return handler(send ?? params, ctx)
   }
 
 class Cancelled extends Error {}
+
+const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms))
+
+interface Activation {
+  phase: string
+  runtime_state: string
+  activation_id: string | null
+  candidate_revision: string | null
+  committed_revision: string | null
+  committed_activation_id?: string | null
+  error_code: string | null
+}
+
+/**
+ * One look at the start the setup file says is waiting, with the rules AppModel.reconcilePendingTradingActivation uses:
+ * the engine committing exactly this setup finalizes it; the engine stopped without committing rolls it back and says why
+ * (as a Refusal); anything else leaves it pending. A look the engine cannot answer leaves it pending too.
+ */
+async function settleOnce(ctx: Ctx): Promise<"committed" | "pending"> {
+  const pending = ctx.setup.pending()
+  if (!pending || ctx.settling) return pending ? "pending" : "committed"
+  ctx.settling = true
+  try {
+    let status: Activation
+    try {
+      status = body(await ctx.engine.request("get_trading_activation", { activation_id: pending.activation_id })).activation as Activation
+    } catch {
+      return "pending"
+    }
+    if (!status) return "pending"
+    const id = pending.activation_id
+    const candidate = pending.candidate_revision
+    const runsCandidate = status.phase !== "starting" && status.committed_revision === candidate && ["running", "degraded"].includes(status.runtime_state)
+    const committed =
+      runsCandidate ||
+      (status.activation_id === id && status.candidate_revision === candidate && status.committed_revision === candidate && status.committed_activation_id === id)
+    if (committed && (runsCandidate || status.phase === "ready" || status.phase === "stopped")) {
+      ctx.setup.finalize(id)
+      return "committed"
+    }
+    const ended = ["failed", "stopped", "interrupted", "not_found"].includes(status.phase) && ["paused", "failed"].includes(status.runtime_state)
+    if (!ended || committed) return "pending"
+    const before = ctx.setup.load()?.configuration
+    const started = ctx.setup.current()?.configuration
+    const accounts = (body(body(await ctx.engine.request("get_trading_status")).trading).accounts ?? []) as { id: string; state: string; error_code: string | null }[]
+    const why = startFailure(status.error_code, accounts, PROVIDER_TITLES[started?.provider.name ?? "anthropic"])
+    ctx.secrets.setRevision(ctx.setup.rollback(id))
+    throw new Refusal(
+      !before || isDeepStrictEqual(before, started)
+        ? `Copying didn't start. ${why}`
+        : `The new setup didn't start, so your previous setup is still in place. ${why}`,
+    )
+  } finally {
+    ctx.settling = false
+  }
+}
 
 const ACT_HANDLERS: Record<ActName, Handler> = {
   confirmManualOrders: confirmed(
@@ -211,14 +298,44 @@ const ACT_HANDLERS: Record<ActName, Handler> = {
   startTrading: confirmed(
     // The setup and keys are read once, here: the request carries exactly what the dialog described,
     // even if the page saves another setup or key while the dialog is open.
-    (p, ctx) => {
-      const { configuration } = savedSetup(ctx)
+    async (p, ctx) => {
+      await settleOnce(ctx).catch(() => {}) // an earlier start is settled first; if it is still pending, this one is refused below
+      const { configuration, revision, secretRevision } = ctx.setup.current() ?? savedSetup(ctx)
+      if (ctx.setup.pending()) throw new Refusal("The last start is still waiting for the engine to confirm it.")
+      if (ctx.secrets.revision?.toLowerCase() !== secretRevision.toLowerCase()) throw new Refusal("This setup's saved keys are not in this app yet.")
       return {
         text: startText(configuration),
-        send: { configuration, secrets: structuredClone(ctx.secrets.secrets), validation_token: p.validation_token, activation_id: p.activation_id },
+        send: { configuration, revision, secrets: engineSecrets(configuration, ctx), validation_token: p.validation_token, activation_id: p.activation_id },
       }
     },
-    ask("start_trading", value("trading")),
+    async ({ revision, ...request }, ctx) => {
+      // The file is what the dialog described, or nothing starts: a page cannot swap the setup while the dialog is open.
+      const now = ctx.setup.current()
+      if (!now || now.revision !== revision || !isDeepStrictEqual(now.configuration, request.configuration)) throw new Refusal("The saved setup changed while you were confirming. Try again.")
+      // Journal the start before it is sent; a lost reply is then settled from the engine's own record of it.
+      ctx.setup.stage(String(request.activation_id))
+      try {
+        await ctx.engine.request("start_trading", request)
+      } catch (error) {
+        if (error instanceof EngineError && error.code === "engine") {
+          // The engine answered no: nothing started, so the setup before it is saved again.
+          ctx.secrets.setRevision(ctx.setup.rollback(String(request.activation_id)))
+          throw new Refusal(`Copying didn't start. ${words(error)}`)
+        }
+        // No answer: the engine's activation record, read below, says whether it took.
+      }
+      const { looks, waitMs } = ctx.activation ?? { looks: 30, waitMs: 1000 }
+      for (let look = 0; look < looks; look++) {
+        if ((await settleOnce(ctx)) === "committed") break
+        await sleep(waitMs)
+      }
+      return value("trading")(await ctx.engine.request("get_trading_status"))
+    },
+    // Declined in the dialog: the setup saved for this start is not kept.
+    (ctx) => {
+      const keys = ctx.setup.discardUnstarted()
+      if (keys !== undefined) ctx.secrets.setRevision(keys)
+    },
   ),
   pauseTrading: confirmed(() => ({ text: PAUSE_TEXT }), ask("pause_trading", value("trading"))),
   controlAccount: confirmed(
@@ -251,10 +368,10 @@ const ACT_HANDLERS: Record<ActName, Handler> = {
 
   validateTrading: ask("validate_trading", whole, (p, ctx) => {
     needToken(ctx.secrets.secrets)
-    return { configuration: p.configuration, secrets: ctx.secrets.secrets }
+    return { configuration: p.configuration, secrets: engineSecrets(p.configuration as TradingConfiguration, ctx) }
   }),
   checkConnection: ask("check_connection", value("check"), (p, ctx) => ({
-    connection: connection(p.connection as Params, ctx.secrets.secrets),
+    connection: connection(p.connection as Params, ctx.secrets.secrets, ctx),
   })),
   // Copying takes new limits at once, so this asks too, wording the dialog from the difference to the saved setup.
   updateAccountLimits: confirmed(
@@ -302,13 +419,13 @@ const ACT_HANDLERS: Record<ActName, Handler> = {
   discardProposals: ask("discard_proposals", field("count")),
   learnGuruPlaybook: ask("learn_guru_playbook", value("playbook"), (p, ctx) => ({
     ...p,
-    ...withKeys(ctx, (s) => ({ discord_token: needToken(s), provider_api_key: s.provider_api_key })),
+    ...withKeys(ctx, p, (s, provider_api_key) => ({ discord_token: needToken(s), provider_api_key })),
   })),
   evaluateHistoricalProfile: ask("evaluate_historical_profile", value("evaluation"), (p, ctx) => ({
     ...p,
-    ...withKeys(ctx, (s) => ({ provider_api_key: s.provider_api_key })),
+    ...withKeys(ctx, p, (_s, provider_api_key) => ({ provider_api_key })),
   })),
-  assistantAsk: ask("assistant_ask", field("turn_id"), (p, ctx) => ({ ...p, ...withKeys(ctx, (s) => ({ provider_api_key: s.provider_api_key })) })),
+  assistantAsk: ask("assistant_ask", field("turn_id"), (p, ctx) => ({ ...p, ...withKeys(ctx, p, (_s, provider_api_key) => ({ provider_api_key })) })),
   assistantCancel: ask("assistant_cancel", field("cancelled")),
   assistantReset: ask("assistant_reset", nothing),
   submitSelfTest: ask("submit_self_test", value("workflow")),
@@ -333,7 +450,7 @@ function reply(result: Result<unknown>, ctx: Ctx): Result<unknown> {
 }
 
 export function createApi(deps: Deps) {
-  const ctx: Ctx = { ...deps, seen: new Map() }
+  const ctx: Ctx = { ...deps, seen: new Map(), settling: false }
   const run = async (handlers: Record<string, Handler>, names: readonly string[], name: unknown, params: unknown): Promise<Result<unknown>> => {
     if (typeof name !== "string" || !names.includes(name)) return { ok: false, error: "The request was not valid." }
     if (params !== undefined && (typeof params !== "object" || params === null || Array.isArray(params))) {

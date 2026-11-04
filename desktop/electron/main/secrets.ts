@@ -32,6 +32,8 @@ export const redactState = (state: EngineState, values: string[]): EngineState =
 interface Saved {
   /** The `secretRevision` of the setup file these keys belong to. */
   revision: string | null
+  /** The provider `secrets.provider_api_key` was typed for; null for a key saved before this was recorded. */
+  provider?: string | null
   secrets: Secrets
 }
 
@@ -77,15 +79,24 @@ export class SecretStore {
     }
   }
 
+  /** The model key for `provider`, or "" when the saved key was typed for another one: one service's key never goes to another's. `setupProvider` covers a key saved before its provider was recorded. */
+  providerKey(provider: string, setupProvider: string | undefined): string {
+    return (this.saved.provider ?? setupProvider) === provider ? this.saved.secrets.provider_api_key : ""
+  }
+
   merge(update: SecretUpdate): void {
     const next = { ...this.saved.secrets, brokers: [...this.saved.secrets.brokers] }
+    let provider = this.saved.provider
     if (update.discord_token !== undefined) next.discord_token = update.discord_token
-    if (update.provider_api_key !== undefined) next.provider_api_key = update.provider_api_key
+    if (update.provider_api_key !== undefined) {
+      next.provider_api_key = update.provider_api_key
+      provider = update.provider_name ?? null
+    }
     if (update.notification_token !== undefined) next.notification_token = update.notification_token
     for (const broker of update.brokers ?? []) {
       next.brokers = [...next.brokers.filter((b) => b.account_id !== broker.account_id), broker]
     }
-    this.write({ ...this.saved, secrets: next })
+    this.write({ ...this.saved, provider, secrets: next })
   }
 
   forgetBroker(accountId: string): void {

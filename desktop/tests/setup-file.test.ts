@@ -97,6 +97,41 @@ describe("SetupFile", () => {
     expect(() => file.save(loaded.configuration, "c".repeat(64))).toThrow(/waiting/)
   })
 
+  it("stages a start with the setup before it, and settles it either way", () => {
+    const id = "9d3f2c1a-0000-4000-8000-000000000001"
+    const dir = folder()
+    const file = new SetupFile(dir)
+    const loaded = file.load()!
+    file.save(loaded.configuration, "a".repeat(64))
+    file.stage(id)
+    expect(written(dir).pendingActivation).toMatchObject({ activationID: id, candidateRevision: "a".repeat(64), previous: { revision: original.revision } })
+    expect(file.pending()).toEqual({ activation_id: id, candidate_revision: "a".repeat(64) })
+    expect(() => file.stage(id)).toThrow(/waiting/)
+    expect(() => file.finalize("other")).toThrow(/not this one/)
+    expect(file.rollback(id)).toBe(original.secretRevision)
+    expect(written(dir)).toEqual(original)
+    file.save(loaded.configuration, "a".repeat(64))
+    file.stage(id)
+    file.finalize(id)
+    expect(Object.keys(written(dir))).toEqual(["version", "configuration", "revision", "secretRevision"])
+    expect(written(dir).revision).toBe("a".repeat(64))
+  })
+
+  it("refuses to stage a start with an id the engine would not take", () => {
+    expect(() => new SetupFile(folder()).stage("a")).toThrow(/valid id/)
+    expect(() => new SetupFile(folder(false)).stage("9d3f2c1a-0000-4000-8000-000000000001")).toThrow(/no saved setup/)
+  })
+
+  it("removes the file when a first start does not take", () => {
+    const id = "9d3f2c1a-0000-4000-8000-000000000001"
+    const dir = folder(false)
+    const file = new SetupFile(dir)
+    file.save(original.configuration, original.revision)
+    file.stage(id)
+    expect(file.rollback(id)).toBeNull()
+    expect(file.load()).toBeNull()
+  })
+
   it("reports a setup from an earlier version instead of rewriting it", () => {
     const file = edited((f) => (f.configuration.version = 9))
     expect(() => file.load()).toThrow(/earlier version \(9\)/)

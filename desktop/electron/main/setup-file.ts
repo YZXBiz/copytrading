@@ -30,6 +30,12 @@ const isRevision = (value: unknown): value is string => typeof value === "string
 
 export class SetupFile {
   readonly path: string
+  /**
+   * The setup the engine last confirmed, held from the first `save` after it until a start finalizes or rolls back:
+   * `undefined` when the file is what the owner last confirmed, `null` when there was no file. Saving and starting are
+   * separate calls, so this is what a start that does not take, or a Cancel, puts back.
+   */
+  private confirmed: Revision | null | undefined
 
   constructor(private readonly dataDir: string) {
     this.path = join(dataDir, SETUP_FILE)
@@ -78,10 +84,63 @@ export class SetupFile {
     return {
       configuration: stable.configuration,
       revision: stable.revision,
-      secretRevision: stable.secretRevision,
+      // The keys in the store are the candidate's while a start is pending: it is the one that was saved with them.
+      secretRevision: saved.secretRevision,
       keys_present: false,
       pending_activation: pending ? { activation_id: pending.activationID, candidate_revision: pending.candidateRevision } : null,
     }
+  }
+
+  /** The setup as last saved, the candidate included: what a start starts. Null when there is no file. */
+  current(): Revision | null {
+    const saved = this.read()
+    return saved && { configuration: saved.configuration, revision: saved.revision, secretRevision: saved.secretRevision }
+  }
+
+  /** Journals a start before it is sent (`stageValidatedActivation`): the candidate, and the setup to put back if it does not take. */
+  stage(activationId: string): void {
+    const saved = this.read()
+    if (!saved) throw new SetupFileError("There is no saved setup yet.")
+    if (saved.pendingActivation) throw new SetupFileError("A start is waiting for the engine to confirm it.")
+    if (!/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(activationId)) throw new SetupFileError("The start has no valid id.")
+    const { configuration, revision, secretRevision } = saved
+    const previous = this.confirmed === undefined ? { configuration, revision, secretRevision } : this.confirmed
+    this.write({ ...saved, pendingActivation: { activationID: activationId, candidateRevision: revision, ...(previous ? { previous } : {}) } })
+  }
+
+  /** The engine committed this start: the candidate is the saved setup. */
+  finalize(activationId: string): void {
+    const saved = this.read()
+    if (saved?.pendingActivation?.activationID !== activationId) throw new SetupFileError("The start in the saved setup is not this one.")
+    const { pendingActivation: _pending, ...settled } = saved
+    this.write(settled)
+    this.confirmed = undefined
+  }
+
+  /** The start did not take: the setup before it is saved again. Returns that setup's key revision, null when there was none. */
+  rollback(activationId: string): string | null {
+    const saved = this.read()
+    if (saved?.pendingActivation?.activationID !== activationId) throw new SetupFileError("The start in the saved setup is not this one.")
+    return this.restore(saved.pendingActivation.previous)
+  }
+
+  /** A save the owner then declined to start: the setup before it is saved again. Returns its key revision, null when there was none. */
+  discardUnstarted(): string | null | undefined {
+    if (this.confirmed === undefined || this.read()?.pendingActivation) return undefined
+    return this.restore(this.confirmed)
+  }
+
+  private restore(previous: Revision | undefined | null): string | null {
+    if (previous) this.write({ version: 1, ...previous })
+    else rmSync(this.path, { force: true })
+    this.confirmed = undefined
+    return previous?.secretRevision ?? null
+  }
+
+  /** The start the engine has not confirmed, if any. */
+  pending(): { activation_id: string; candidate_revision: string } | null {
+    const pending = this.read()?.pendingActivation
+    return pending ? { activation_id: pending.activationID, candidate_revision: pending.candidateRevision } : null
   }
 
   /** Saves a validated setup under the revision the engine reported for it, with a new key revision. */
@@ -89,7 +148,11 @@ export class SetupFile {
     if (configuration.version !== CONFIGURATION_VERSION || !isRevision(revision)) {
       throw new SetupFileError("The setup is invalid.")
     }
-    if (this.read()?.pendingActivation) throw new SetupFileError("A start is waiting for the engine to confirm it.")
+    const existing = this.read()
+    if (existing?.pendingActivation) throw new SetupFileError("A start is waiting for the engine to confirm it.")
+    if (this.confirmed === undefined) {
+      this.confirmed = existing && { configuration: existing.configuration, revision: existing.revision, secretRevision: existing.secretRevision }
+    }
     // Swift's UUID().uuidString is uppercase; the same spelling keeps the file readable by both apps.
     const secretRevision = randomUUID().toUpperCase()
     this.write({ version: 1, configuration, revision, secretRevision })

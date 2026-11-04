@@ -3,6 +3,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import { type Engine, createApi } from "../electron/main/api"
+import { EngineError } from "../electron/main/engine/bridge"
 import { SecretStore, redactState } from "../electron/main/secrets"
 import { SETUP_FILE, SetupFile } from "../electron/main/setup-file"
 
@@ -70,21 +71,25 @@ function harness(answer = true, whileAsking: () => Promise<unknown> = async () =
   copyFileSync(FIXTURE, join(dir, SETUP_FILE))
   const secrets = new SecretStore(join(dir, "secrets.bin"), cipher)
   const asked: string[] = []
+  const setup = new SetupFile(dir)
   const api = createApi({
     engine,
-    setup: new SetupFile(dir),
+    setup,
     secrets,
+    activation: { looks: 2, waitMs: 0 },
     confirm: async (text) => {
       asked.push(text)
       await whileAsking()
       return answer
     },
   })
-  return { api, secrets, requests, asked, replies, dir, sent: (op: string) => requests.filter((r) => r.op === op) }
+  return { api, setup, secrets, requests, asked, replies, dir, sent: (op: string) => requests.filter((r) => r.op === op) }
 }
 
 type Harness = ReturnType<typeof harness>
 
+const ACTIVATION = "9d3f2c1a-0000-4000-8000-000000000001"
+const START = { activation_id: ACTIVATION, validation_token: "t" }
 const lotSale = { sale: { command_id: "c-1", preview_id: "pv-1", account_id: "zhap-account-2", actor: "owner" } }
 const order = { commands: [{ command_id: "c-2", preview_id: "pv-2", account_id: "zhap-account-2", actor: "owner" }] }
 
@@ -184,11 +189,11 @@ describe("confirmation gate", () => {
     const h = harness(true)
     h.secrets.setRevision(saved.secretRevision)
     h.secrets.merge({ discord_token: DISCORD })
-    await h.api.act("startTrading", { activation_id: "a", validation_token: "t", configuration: { version: 10, routes: [] } })
+    await h.api.act("startTrading", { ...START, configuration: { version: 10, routes: [] } })
     expect(h.sent("start_trading")[0]!.params.configuration).toEqual(saved.configuration)
   })
 
-  it("starts what the dialog described, even if the page saves another setup or key while it is open", async () => {
+  it("starts nothing if the page saves another setup while the dialog is open, and never sends another key", async () => {
     const during: unknown[] = []
     let h: Harness
     h = harness(true, async () => {
@@ -197,12 +202,10 @@ describe("confirmation gate", () => {
     })
     h.secrets.setRevision(saved.secretRevision)
     h.secrets.merge({ discord_token: DISCORD })
-    const result = await h.api.act("startTrading", { activation_id: "a", validation_token: "t" })
+    const result = await h.api.act("startTrading", START)
     expect(during).toMatchObject([{ ok: true }, { ok: true }]) // the page really did change both mid-dialog
-    expect(result).toMatchObject({ ok: true })
-    const sent = h.sent("start_trading")[0]!.params as { configuration: unknown; secrets: { discord_token: string } }
-    expect(sent.configuration).toEqual(saved.configuration)
-    expect(sent.secrets.discord_token).toBe(DISCORD)
+    expect(result).toMatchObject({ ok: false, error: expect.stringContaining("changed while you were confirming") })
+    expect(h.sent("start_trading")).toEqual([])
   })
 
   it("refuses to change limits if the saved setup changed while the dialog was open", async () => {
@@ -234,7 +237,7 @@ describe("confirmation gate", () => {
 
   it("will not start a setup whose keys are not in this app", async () => {
     const h = harness(true)
-    const result = await h.api.act("startTrading", { activation_id: "a", validation_token: "t" })
+    const result = await h.api.act("startTrading", START)
     expect(result).toMatchObject({ ok: false, error: expect.stringContaining("keys are not in this app") })
     expect(h.asked).toEqual([])
   })
@@ -344,5 +347,164 @@ describe("secrets", () => {
       error: "No keys are saved for zhap-account-2.",
     })
     expect(h.requests).toEqual([])
+  })
+
+  it("send a model key only to the provider it was typed for", async () => {
+    const h = harness(true)
+    h.secrets.setRevision(saved.secretRevision)
+    h.secrets.merge({ discord_token: DISCORD, provider_api_key: PROVIDER, provider_name: "deepseek" })
+    await h.api.act("checkConnection", { connection: { kind: "model", provider: { name: "anthropic", model: "m" } } })
+    expect(h.sent("check_connection")[0]!.params.connection).toMatchObject({ api_key: "" })
+    await h.api.act("learnGuruPlaybook", { channel_id: "1", provider: { name: "openai", model: "m" } })
+    expect(h.sent("learn_guru_playbook")[0]!.params).toMatchObject({ provider_api_key: "" })
+    await h.api.act("checkConnection", { connection: { kind: "model", provider: { name: "deepseek", model: "m" } } })
+    expect(h.sent("check_connection")[1]!.params.connection).toMatchObject({ api_key: PROVIDER })
+    const other = { ...saved.configuration, provider: { name: "anthropic", model: "m" } }
+    await h.api.act("validateTrading", { configuration: other })
+    expect(h.sent("validate_trading")[0]!.params.secrets).toMatchObject({ provider_api_key: "" })
+  })
+
+  it("send only the accounts the setup has, and no alert token without alerts", async () => {
+    const h = harness(true)
+    h.secrets.merge({
+      discord_token: DISCORD,
+      notification_token: "SENTINEL-alert-token-0005",
+      brokers: [
+        { account_id: "zhap-account-2", key: BROKER_KEY, secret: BROKER_SECRET },
+        { account_id: "removed-account", key: "SENTINEL-removed-key-0006", secret: "SENTINEL-removed-secret-0007" },
+      ],
+    })
+    const { notification: _alerts, ...withoutAlerts } = saved.configuration
+    await h.api.act("validateTrading", { configuration: withoutAlerts })
+    const sent = h.sent("validate_trading")[0]!.params.secrets as { brokers: { account_id: string }[]; notification_token?: string }
+    expect(sent.brokers.map((b) => b.account_id)).toEqual(["zhap-account-2"])
+    expect(sent).not.toHaveProperty("notification_token")
+    await h.api.act("validateTrading", { configuration: saved.configuration })
+    expect(h.sent("validate_trading")[1]!.params.secrets).toMatchObject({ notification_token: "SENTINEL-alert-token-0005" })
+  })
+})
+
+describe("start journal", () => {
+  const COMMITTED = {
+    phase: "ready", runtime_state: "running", activation_id: ACTIVATION, candidate_revision: saved.revision,
+    committed_revision: saved.revision, committed_activation_id: ACTIVATION, error_code: null,
+  }
+  const FAILED = { phase: "failed", runtime_state: "paused", activation_id: ACTIVATION, candidate_revision: saved.revision, committed_revision: null, error_code: "accounts_unavailable" }
+  const onDisk = (h: Harness) => JSON.parse(readFileSync(join(h.dir, SETUP_FILE), "utf8"))
+  const activation = (h: Harness, status: Record<string, unknown>) => {
+    h.replies.get_trading_activation = () => ({ type: "trading_activation", activation: status })
+  }
+
+  /** A harness whose saved setup was just replaced by a changed one, with this app's keys for it. */
+  async function changed(answer = true) {
+    const h = harness(answer)
+    h.secrets.setRevision(saved.secretRevision)
+    h.secrets.merge({ discord_token: DISCORD })
+    const candidate = withLimits({ max_order_usd: "250" })
+    expect(await h.api.act("saveSetup", { configuration: candidate, revision: "b".repeat(64) })).toMatchObject({ ok: true })
+    return { h, candidate }
+  }
+
+  it("saves the candidate for good once the engine commits it", async () => {
+    const { h, candidate } = await changed()
+    h.replies.get_trading_status = () => ({ type: "trading_status", trading: { state: "running" } })
+    activation(h, { ...COMMITTED, candidate_revision: "b".repeat(64), committed_revision: "b".repeat(64) })
+    expect(await h.api.act("startTrading", START)).toMatchObject({ ok: true, value: { state: "running" } })
+    expect(onDisk(h)).toMatchObject({ configuration: candidate, revision: "b".repeat(64) })
+    expect(onDisk(h)).not.toHaveProperty("pendingActivation")
+    expect(await h.api.read("getSetup", undefined)).toMatchObject({ ok: true, value: { pending_activation: null, keys_present: true } })
+  })
+
+  it("journals the start before it is sent, with the setup to put back", async () => {
+    const { h } = await changed()
+    h.replies.start_trading = () => {
+      expect(onDisk(h).pendingActivation).toMatchObject({ activationID: ACTIVATION, candidateRevision: "b".repeat(64), previous: { revision: saved.revision } })
+      return { type: "ok", trading: {} }
+    }
+    activation(h, { ...COMMITTED, candidate_revision: "b".repeat(64), committed_revision: "b".repeat(64) })
+    await h.api.act("startTrading", START)
+    expect(h.sent("start_trading")).toHaveLength(1)
+  })
+
+  it("leaves a start the engine is still committing pending, showing the setup before it", async () => {
+    const { h } = await changed()
+    activation(h, { ...COMMITTED, phase: "starting", runtime_state: "starting", committed_revision: null, committed_activation_id: null })
+    expect(await h.api.act("startTrading", START)).toMatchObject({ ok: true })
+    expect(await h.api.read("getSetup", undefined)).toMatchObject({
+      ok: true,
+      value: { revision: saved.revision, pending_activation: { activation_id: ACTIVATION, candidate_revision: "b".repeat(64) } },
+    })
+    // Another start is refused until this one settles.
+    expect(await h.api.act("startTrading", { ...START, activation_id: "9d3f2c1a-0000-4000-8000-000000000002" })).toMatchObject({
+      ok: false,
+      error: expect.stringContaining("still waiting"),
+    })
+  })
+
+  it("puts the setup before it back when the engine stops without committing, and says why", async () => {
+    const { h } = await changed()
+    activation(h, FAILED)
+    h.replies.get_trading_status = () => ({
+      type: "trading_status",
+      trading: { state: "paused", accounts: [{ id: "zhap-account-2", state: "failed", error_code: "broker_keys_rejected" }] },
+    })
+    const result = await h.api.act("startTrading", START)
+    expect(result).toMatchObject({
+      ok: false,
+      error:
+        "The new setup didn't start, so your previous setup is still in place. zhap-account-2 didn't open: Alpaca didn't accept its API keys. Paste them again from your Alpaca dashboard.",
+    })
+    expect(onDisk(h)).toMatchObject({ configuration: saved.configuration, revision: saved.revision, secretRevision: saved.secretRevision })
+    expect(onDisk(h)).not.toHaveProperty("pendingActivation")
+    expect(h.secrets.revision).toBe(saved.secretRevision)
+  })
+
+  it("keeps nothing it saved when the owner says no in the dialog", async () => {
+    const { h } = await changed(false)
+    expect(await h.api.act("startTrading", START)).toMatchObject({ ok: false, cancelled: true })
+    expect(h.sent("start_trading")).toEqual([])
+    expect(onDisk(h)).toMatchObject({ configuration: saved.configuration, secretRevision: saved.secretRevision })
+    expect(h.secrets.revision).toBe(saved.secretRevision)
+  })
+
+  it("rolls back at once when the engine refuses the start", async () => {
+    const { h } = await changed()
+    h.replies.start_trading = () => {
+      throw new EngineError("engine", "invalid_request")
+    }
+    expect(await h.api.act("startTrading", START)).toMatchObject({
+      ok: false,
+      error: "Copying didn't start. The engine did not accept the request.",
+    })
+    expect(onDisk(h)).toMatchObject({ configuration: saved.configuration })
+    expect(h.sent("get_trading_activation")).toEqual([])
+  })
+
+  it("settles a start whose reply was lost from the engine's record of it", async () => {
+    const { h } = await changed()
+    h.replies.start_trading = () => {
+      throw new EngineError("timed_out", "The engine did not answer in time.")
+    }
+    activation(h, { ...COMMITTED, candidate_revision: "b".repeat(64), committed_revision: "b".repeat(64) })
+    expect(await h.api.act("startTrading", START)).toMatchObject({ ok: true })
+    expect(onDisk(h)).not.toHaveProperty("pendingActivation")
+  })
+
+  it("settles a start a crash left pending the next time the engine is asked for its status", async () => {
+    const h = harness(true)
+    h.secrets.setRevision(saved.secretRevision)
+    h.setup.stage(ACTIVATION)
+    expect(onDisk(h).pendingActivation).toBeDefined()
+    activation(h, COMMITTED)
+    await h.api.read("getStatus", undefined)
+    expect(onDisk(h)).not.toHaveProperty("pendingActivation")
+  })
+
+  it("does not take an activation record that is not this setup's as a commit", async () => {
+    const { h } = await changed()
+    // The engine runs another setup (the previous one), so the candidate is not committed.
+    activation(h, { ...COMMITTED, phase: "starting", runtime_state: "running", candidate_revision: "b".repeat(64), committed_revision: saved.revision })
+    await h.api.act("startTrading", START)
+    expect(onDisk(h).pendingActivation).toBeDefined()
   })
 })

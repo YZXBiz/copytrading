@@ -150,6 +150,8 @@ export interface SecretStatus {
 export interface SecretUpdate {
   discord_token?: string
   provider_api_key?: string
+  /** The provider `provider_api_key` is for. Main sends the key only to a request that names this provider. */
+  provider_name?: ProviderName
   notification_token?: string
   brokers?: { account_id: string; key: string; secret: string }[]
 }
