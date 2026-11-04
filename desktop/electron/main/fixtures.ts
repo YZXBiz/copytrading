@@ -4,6 +4,7 @@ import account from "./fixtures/account.json"
 import history from "./fixtures/history.json"
 import { peopleReads } from "./fixtures/people"
 import positions from "./fixtures/positions.json"
+import { settingsActs, settingsReads } from "./fixtures/settings"
 
 export { seedFixturePictures } from "./fixtures/people"
 
@@ -74,11 +75,14 @@ const READS: Record<string, (params: Params) => Promise<Result<unknown>>> = {
   },
   getLimits: () => ok(limits),
   ...peopleReads,
+  ...settingsReads,
 }
+
+const ACTS: Record<string, (params: Params) => Promise<Result<unknown>>> = { ...settingsActs }
 
 const notCaptured = async (name: string): Promise<Result<never>> => ({ ok: false, error: `${name} is not in the captured fixtures.` })
 
 export const fixtureApi: Api = {
   read: (name, params) => (typeof name === "string" && READS[name] ? READS[name](params as Params) : notCaptured(String(name))),
-  act: (name) => notCaptured(String(name)),
+  act: (name, params) => (typeof name === "string" && ACTS[name] ? ACTS[name](params as Params) : notCaptured(String(name))),
 }

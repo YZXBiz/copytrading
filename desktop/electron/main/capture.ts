@@ -17,6 +17,12 @@ export function captureWindow(window: BrowserWindow, dir: string, name: string, 
       await window.webContents.executeJavaScript(`document.querySelector(${JSON.stringify(click)})?.click()`)
       await new Promise((done) => setTimeout(done, 800))
     }
+    // COPYTRADING_CAPTURE_SCRIPT: page script to run first, for a panel that needs more than one press; its effects get a moment to show.
+    if (process.env.COPYTRADING_CAPTURE_SCRIPT) {
+      // A script that throws still gets its screenshot, and says why, instead of leaving the app open.
+      await window.webContents.executeJavaScript(process.env.COPYTRADING_CAPTURE_SCRIPT).catch((error: unknown) => console.error("capture script failed:", error))
+      await new Promise((done) => setTimeout(done, SETTLE_MS))
+    }
     for (const theme of ["light", "dark"] as const) {
       nativeTheme.themeSource = theme
       await new Promise((done) => setTimeout(done, 400))

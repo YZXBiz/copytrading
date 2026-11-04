@@ -4,6 +4,7 @@ import type { AccountOverviewPage } from "../../../shared/contract"
 import { AccountsScreen } from "@/features/account/AccountsScreen"
 import { ActivityScreen } from "@/features/activity/ActivityScreen"
 import { GurusScreen } from "@/features/gurus/GurusScreen"
+import { SettingsScreen } from "@/features/settings/SettingsScreen"
 import { type Loaded } from "@/lib/use-result"
 import { ScreenPlaceholder } from "./ScreenPlaceholder"
 import { type Route, type ScreenId, navigate } from "./route"
@@ -46,5 +47,5 @@ export const SCREENS: Record<ScreenId, Screen> = {
   },
   "getting-started": { title: "Getting Started", icon: RocketIcon, render: placeholder("Getting Started") },
   connections: { title: "Connections", icon: PlugIcon, render: placeholder("Connections") },
-  settings: { title: "Settings", icon: SettingsIcon, render: placeholder("Settings") },
+  settings: { title: "Settings", icon: SettingsIcon, render: ({ route, accounts }) => <SettingsScreen page={route.id} accounts={accounts} /> },
 }
