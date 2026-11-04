@@ -81,7 +81,7 @@ export function AccountPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <AccountHeader account={account} guru={guru} status={copyingStatus} saved={limitsSaved} onChanged={changed} />
+      <AccountHeader account={account} guru={guru} status={status} saved={limitsSaved} onChanged={changed} />
       <AccountNotices account={account} status={copyingStatus} onResolved={changed} />
       <NeedsYou
         calls={calls}

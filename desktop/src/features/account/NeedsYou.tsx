@@ -3,7 +3,8 @@ import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/r
 import { Badge } from "@/components/reui/badge"
 import { Button } from "@/components/ui/button"
 import { dateTime, timeOfDay } from "@/lib/format"
-import { type WaitingCall, callPhrase, deadline, deadlineText, gainLine, namedBuySentence, waited } from "./waiting"
+import { deadlineText, endOfTradingDay } from "@/features/activity/deadline"
+import { type WaitingCall, callPhrase, gainLine, namedBuySentence, waited } from "./waiting"
 import type { Recent } from "./skipped-calls"
 
 /** The button's word: enter the trade yourself, approve what the account held, or copy what the post called. */
@@ -39,7 +40,7 @@ function CallTicket({
       <AlertTitle className="line-clamp-none">{title}</AlertTitle>
       <AlertDescription>
         <p>
-          Waiting {waited(call.source.source_at, now)} · {deadlineText(deadline(call.source), now)}
+          Waiting {waited(call.source.source_at, now)} · {deadlineText(endOfTradingDay(call.source.source_at), now)}
         </p>
         {/* A sell held for its buy price has no buy to gain on: it says what came of that buy. */}
         {held ? (

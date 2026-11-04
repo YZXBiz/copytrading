@@ -90,32 +90,6 @@ export function tradingDay(instant: Date): string {
 /** Whether the post's trading day has ended, after which it can no longer be copied. */
 export const hasExpired = (source: SourceActivity, now: Date) => tradingDay(new Date(source.source_at)) !== tradingDay(now)
 
-/** 20:00 New York time on the trading day the post belongs to. */
-export function deadline(source: SourceActivity): Date {
-  const day = tradingDay(new Date(source.source_at))
-  // New York is 4 or 5 hours behind UTC; the candidate that reads 20:00 there is the deadline.
-  const [year, month, date] = day.split("-").map(Number) as [number, number, number]
-  const at = (offset: number) => new Date(Date.UTC(year, month - 1, date, 20 + offset))
-  const wall = (instant: Date) => {
-    const { hour, day: d } = newYork(instant)
-    return hour === 20 && d === date
-  }
-  return wall(at(4)) ? at(4) : at(5)
-}
-
-/** "Deadline today: 8:00 PM ET", "tomorrow", or "Fri 8:00 PM ET" further out, on the New York clock. */
-export function deadlineText(at: Date, now: Date): string {
-  const clock = at.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" })
-  const date = (instant: Date) => {
-    const { year, month, day } = newYork(instant)
-    return Date.UTC(year, month - 1, day)
-  }
-  const days = (date(at) - date(now)) / 86_400_000
-  if (days <= 0) return `Deadline today: ${clock} ET`
-  if (days === 1) return `Deadline tomorrow: ${clock} ET`
-  return `Deadline ${at.toLocaleDateString("en-US", { weekday: "short", timeZone: "America/New_York" })} ${clock} ET`
-}
-
 /** "15h 20m": how long a post has waited. */
 export function waited(posted: string, now: Date): string {
   const minutes = Math.max(0, Math.floor((now.getTime() - new Date(posted).getTime()) / 60_000))

@@ -4,6 +4,7 @@ import type { AccountOverview, TradingStatus } from "../../../shared/contract"
 import { Badge } from "@/components/reui/badge"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
+import type { Loaded } from "@/lib/use-result"
 import { COPYING_TITLE, accountCopying, badgeVariant, isWarning, resumeBlocked } from "./copying"
 
 /**
@@ -19,16 +20,18 @@ export function AccountHeader({
 }: {
   account: AccountOverview
   guru: string | null
-  status: TradingStatus | null
+  status: Loaded<TradingStatus> & { retry: () => void }
   /** The limits were just saved: say they apply from the next order. */
   saved: boolean
   onChanged: () => void
 }) {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const state = accountCopying(account, status)
+  const current = status.status === "ready" ? status.data : null
+  const state = accountCopying(account, current)
   const copying = state.word === "copying"
-  const blocked = copying ? null : resumeBlocked(account, status)
+  // Until the engine has said whether copying runs, Resume has nothing true to say about why it is off.
+  const blocked = copying || status.status !== "ready" ? null : resumeBlocked(account, current)
 
   async function control(action: "pause" | "resume") {
     setPending(true)
@@ -60,13 +63,21 @@ export function AccountHeader({
               <PauseIcon aria-hidden /> Stop Copying
             </Button>
           ) : (
-            <Button type="button" disabled={pending || blocked !== null} onClick={() => control("resume")} title="Copy the guru's buys and sells into this account.">
+            <Button type="button" disabled={pending || blocked !== null || status.status !== "ready"} onClick={() => control("resume")} title="Copy the guru's buys and sells into this account.">
               <PlayIcon aria-hidden /> Resume Copying
             </Button>
           )}
         </div>
       </div>
       {blocked && <p className="text-muted-foreground text-xs">{blocked}</p>}
+      {status.status === "error" && (
+        <p role="alert" className="text-destructive flex items-center gap-2 text-xs">
+          Whether copying runs did not load: {status.error}
+          <Button type="button" size="xs" variant="outline" onClick={status.retry}>
+            Retry
+          </Button>
+        </p>
+      )}
       {error && (
         <p role="alert" className="text-destructive text-xs">
           {error}

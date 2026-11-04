@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest"
 import type { SourceActivity } from "../../../shared/contract"
 import {
   callPhrase,
-  deadline,
-  deadlineText,
   gainLine,
   namedBuySentence,
   openCall,
@@ -74,20 +72,6 @@ describe("openCall", () => {
     const order = { client_id: "manual-1" } as never
     const entered = post({ destinations: [{ ...dest("a", "review_required"), orders: [order] }] })
     expect(openCall(entered, { skipped: false, now: NOW })).toBeNull()
-  })
-})
-
-describe("deadline", () => {
-  it("is 20:00 New York on the post's trading day, in daylight and standard time", () => {
-    expect(deadline(post({ source_at: "2026-11-03T15:00:00Z" })).toISOString()).toBe("2026-11-04T01:00:00.000Z") // EST
-    expect(deadline(post({ source_at: "2026-07-01T15:00:00Z" })).toISOString()).toBe("2026-07-02T00:00:00.000Z") // EDT
-  })
-
-  it("says today, tomorrow, or a weekday", () => {
-    const at = deadline(post())
-    expect(deadlineText(at, NOW)).toBe("Deadline today: 8:00 PM ET")
-    expect(deadlineText(at, new Date("2026-11-03T03:00:00Z"))).toBe("Deadline tomorrow: 8:00 PM ET")
-    expect(deadlineText(at, new Date("2026-11-01T15:00:00Z"))).toBe("Deadline Tue 8:00 PM ET")
   })
 })
 
