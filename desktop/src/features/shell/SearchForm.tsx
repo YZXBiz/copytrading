@@ -6,7 +6,7 @@ import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, Comma
 import { Kbd } from "@/components/ui/kbd"
 import { SidebarGroup, SidebarGroupContent } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
-import { quoteOf } from "@/features/activity/PostListItem"
+import { quoteOf } from "@/features/activity/reading"
 import { guruDirectory, guruName } from "@/features/gurus/model"
 import { readClock } from "@/lib/clock"
 import { ago } from "@/lib/format"
