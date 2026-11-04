@@ -47,14 +47,31 @@ export function manualOrdersText(commands: ManualConfirmation[], seen: Map<strin
 const joinAnd = (items: string[]) => (items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`)
 
 /** One line per route, so a guru is never named against an account it does not copy into. */
-export function startText(configuration: TradingConfiguration): string {
+function routeLines(configuration: TradingConfiguration): { lines: string[]; live: boolean } {
   const environment = (id: string) => configuration.accounts.find((a) => a.id === id)?.environment ?? "unknown"
   const lines = configuration.routes.map((route) => {
     const guru = configuration.profiles.find((p) => p.guru_id === route.guru_id && p.profile_revision === route.profile_revision)
     return `${guru?.display_name ?? route.guru_id} into ${joinAnd(route.connections.map((c) => `${c.account_id} (${environment(c.account_id)})`))}`
   })
-  const live = configuration.routes.some((r) => r.connections.some((c) => environment(c.account_id) === "live"))
+  return { lines, live: configuration.routes.some((r) => r.connections.some((c) => environment(c.account_id) === "live")) }
+}
+
+export function startText(configuration: TradingConfiguration): string {
+  const { lines, live } = routeLines(configuration)
   return `Start copying?\n\n${lines.join("\n")}\n\n${live ? "This places real orders with real money." : "This places paper orders."}`
+}
+
+/** Applying an edited setup while copying: what will copy where, which limits change, and what happens to copying meanwhile. */
+export function applyText(saved: TradingConfiguration, requested: TradingConfiguration): string {
+  const { lines, live } = routeLines(requested)
+  const changes = limitLines(saved, requested)
+  return [
+    "Apply changes?",
+    lines.join("\n"),
+    ...(changes.length ? [changes.join("\n")] : []),
+    "Copying pauses for a few seconds, checks every connection, and starts with the new setup. A post sent meanwhile is still copied. If a check fails, your saved setup starts again.",
+    live ? "This places real orders with real money." : "This places paper orders.",
+  ].join("\n\n")
 }
 
 type Show = (value: string | number | boolean) => string
@@ -83,8 +100,8 @@ const LIMITS: Partial<Record<keyof AccountPolicy, [label: string, show: Show]>> 
 }
 
 /** What changing the saved limits to the requested ones does, account by account. */
-export function limitsText(saved: TradingConfiguration, requested: TradingConfiguration): string {
-  const lines = requested.accounts.flatMap((account) => {
+function limitLines(saved: TradingConfiguration, requested: TradingConfiguration): string[] {
+  return requested.accounts.flatMap((account) => {
     const before = saved.accounts.find((a) => a.id === account.id)?.policy
     if (!before) return []
     const keys = new Set([...Object.keys(before), ...Object.keys(account.policy)]) as Set<keyof AccountPolicy>
@@ -96,6 +113,10 @@ export function limitsText(saved: TradingConfiguration, requested: TradingConfig
       })
     return changes.length ? [`${account.id}: ${changes.join("; ")}`] : []
   })
+}
+
+export function limitsText(saved: TradingConfiguration, requested: TradingConfiguration): string {
+  const lines = limitLines(saved, requested)
   if (!lines.length) throw new Refusal("No limit is different from the saved one.")
   return `Change copying limits now?\n\n${lines.join("\n")}\n\nCopying uses them from the next post.`
 }

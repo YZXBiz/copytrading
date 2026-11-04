@@ -88,6 +88,40 @@ function harness(answer = true, whileAsking: () => Promise<unknown> = async () =
 
 type Harness = ReturnType<typeof harness>
 
+/** An engine that is copying until it is paused and then takes whatever it is asked to start, with the owner's keys on disk. */
+function copyingEngine(h: Harness) {
+  h.secrets.setRevision(saved.secretRevision)
+  h.secrets.merge({
+    discord_token: DISCORD,
+    provider_api_key: PROVIDER,
+    provider_name: "deepseek",
+    brokers: ["zhap-account-2", "zhap-account-3"].map((account_id) => ({ account_id, key: `${BROKER_KEY}-${account_id}`, secret: `${BROKER_SECRET}-${account_id}` })),
+  })
+  h.secrets.stage()
+  h.secrets.settle()
+  const engine = { state: "running", entry: "enabled" }
+  h.replies.get_trading_status = () => ({ type: "trading_status", trading: { state: engine.state, accounts: [] } })
+  h.replies.get_accounts = () => ({
+    type: "accounts",
+    accounts: { items: ["zhap-account-2", "zhap-account-3"].map((account_id) => ({ account_id, active_configuration: true, entry_permission: engine.entry })) },
+  })
+  h.replies.pause_trading = () => ((engine.state = "paused"), (engine.entry = "paused"), { type: "ok", trading: {} })
+  h.replies.validate_trading = () => ({
+    type: "trading_validation",
+    report: { configuration_revision: "b".repeat(64), activatable: true, checks: [], cost_notice: "" },
+    activation_token: "tok",
+  })
+  h.replies.start_trading = () => ((engine.state = "running"), { type: "ok", trading: {} })
+  h.replies.get_trading_activation = (p) => {
+    const candidate = h.setup.pending()?.candidate_revision
+    return {
+      type: "trading_activation",
+      activation: { phase: "ready", runtime_state: "running", activation_id: p.activation_id, candidate_revision: candidate, committed_revision: candidate, committed_activation_id: p.activation_id, error_code: null },
+    }
+  }
+  return engine
+}
+
 const ACTIVATION = "9d3f2c1a-0000-4000-8000-000000000001"
 const START = { activation_id: ACTIVATION, validation_token: "t" }
 const lotSale = { sale: { command_id: "c-1", preview_id: "pv-1", account_id: "zhap-account-2", actor: "owner" } }
@@ -122,6 +156,11 @@ const CONFIRMED: [string, string, (h: Harness) => Promise<unknown>, Record<strin
     { configuration: withLimits({ max_order_usd: "250", approve_orders: true }) },
     "Change copying limits now?\n\nzhap-account-2: Each order $100 → $250; Approve each order off → on\n\nCopying uses them from the next post.",
   ],
+  [
+    "applyChanges", "pause_trading", async (h) => void copyingEngine(h),
+    { configuration: withLimits({ max_order_usd: "250" }) },
+    "Apply changes?\n\n赵哥 into zhap-account-2 (paper)\nStandard stock alerts into zhap-account-2 (paper) and zhap-account-3 (paper)\n\nzhap-account-2: Each order $100 → $250\n\nCopying pauses for a few seconds, checks every connection, and starts with the new setup. A post sent meanwhile is still copied. If a check fails, your saved setup starts again.\n\nThis places paper orders.",
+  ],
   ["pauseTrading", "pause_trading", async () => {}, undefined, "Pause copying? No new posts are copied until you start again."],
   [
     "controlAccount", "control_account", async () => {},
@@ -142,7 +181,8 @@ const CONFIRMED: [string, string, (h: Harness) => Promise<unknown>, Record<strin
 
 describe("confirmation gate", () => {
   it("covers every action that moves money or changes copying", () => {
-    expect(CONFIRMED.map((c) => c[1]).sort()).toEqual([...MUTATING].sort())
+    // Two actions may share the engine operation that changes copying first: Pause, and Apply changes (which pauses).
+    expect([...new Set(CONFIRMED.map((c) => c[1]))].sort()).toEqual([...MUTATING].sort())
   })
 
   it.each(CONFIRMED)("%s: a No reaches no engine operation that changes anything", async (name, _op, setup, params) => {
@@ -628,5 +668,118 @@ describe("start journal", () => {
     activation(h, { ...COMMITTED, phase: "starting", runtime_state: "running", candidate_revision: "b".repeat(64), committed_revision: saved.revision })
     await h.api.act("startTrading", START)
     expect(onDisk(h).pendingActivation).toBeDefined()
+  })
+})
+
+describe("apply changes while copying", () => {
+  const NEW = "SENTINEL-new-discord-token-0009"
+  const CHANGE = { configuration: withLimits({ max_order_usd: "250" }) }
+  const ops = (h: Harness) => h.requests.map((r) => r.op).filter((op) => ["pause_trading", "validate_trading", "start_trading", "control_account"].includes(op))
+  const onDisk = (h: Harness) => JSON.parse(readFileSync(join(h.dir, SETUP_FILE), "utf8"))
+  const diskToken = (h: Harness) => new SecretStore(join(h.dir, "secrets.bin"), cipher).secrets.discord_token
+  const failedCheck = { configuration_revision: "b".repeat(64), activatable: false, checks: [{ name: "source", state: "failed", reason_code: "source_probe_timed_out" }], cost_notice: "" }
+
+  function copying() {
+    const h = harness(true)
+    return { h, engine: copyingEngine(h) }
+  }
+
+  it("pauses, checks, starts the new setup, and gives the accounts that were buying their buys back", async () => {
+    const { h } = copying()
+    expect(await h.api.act("applyChanges", CHANGE)).toEqual({ ok: true, value: { applied: true, message: null, report: null } })
+    expect(ops(h)).toEqual(["pause_trading", "validate_trading", "start_trading", "control_account", "control_account"])
+    expect(onDisk(h)).toMatchObject({ configuration: CHANGE.configuration, revision: "b".repeat(64) })
+    expect(onDisk(h)).not.toHaveProperty("pendingActivation")
+    expect(h.sent("control_account").map((r) => (r.params.command as { account_id: string }).account_id).sort()).toEqual(["zhap-account-2", "zhap-account-3"])
+    // One dialog named it all: the pause, the start and the resumes asked nothing more.
+    expect(h.asked).toHaveLength(1)
+  })
+
+  it("sends the typed keys with the new setup and keeps them once it is committed", async () => {
+    const { h } = copying()
+    await h.api.act("setSecrets", { discord_token: NEW })
+    await h.api.act("applyChanges", CHANGE)
+    expect((h.sent("validate_trading")[0]!.params.secrets as { discord_token: string }).discord_token).toBe(NEW)
+    expect(diskToken(h)).toBe(NEW)
+  })
+
+  it("resumes the saved setup when a check fails, without saving the change, its keys, or asking again", async () => {
+    const { h } = copying()
+    await h.api.act("setSecrets", { discord_token: NEW })
+    let checks = 0
+    h.replies.validate_trading = () =>
+      ++checks === 1
+        ? { type: "trading_validation", report: failedCheck, activation_token: null }
+        : { type: "trading_validation", report: { configuration_revision: saved.revision, activatable: true, checks: [], cost_notice: "" }, activation_token: "tok" }
+    const result = await h.api.act("applyChanges", CHANGE)
+    expect(result).toMatchObject({
+      ok: true,
+      value: { applied: false, report: failedCheck, message: "Some connections need attention. Your changes weren't saved. Copying continues with your saved setup." },
+    })
+    expect(ops(h).slice(0, 4)).toEqual(["pause_trading", "validate_trading", "validate_trading", "start_trading"])
+    expect(h.sent("start_trading")[0]!.params.configuration).toEqual(saved.configuration)
+    expect((h.sent("validate_trading")[1]!.params.secrets as { discord_token: string }).discord_token).toBe(DISCORD)
+    expect(onDisk(h)).toMatchObject({ configuration: saved.configuration, revision: saved.revision })
+    expect(diskToken(h)).toBe(DISCORD)
+    expect(h.secrets.secrets.discord_token).toBe(DISCORD)
+    expect(h.asked).toHaveLength(1)
+  })
+
+  it("resumes the saved setup, and its keys, when the new setup is saved but does not start", async () => {
+    const { h } = copying()
+    await h.api.act("setSecrets", { discord_token: NEW })
+    let starts = 0
+    h.replies.start_trading = () => {
+      if (++starts === 1) throw new EngineError("engine", "invalid_request")
+      return { type: "ok", trading: {} }
+    }
+    h.replies.validate_trading = () => ({
+      type: "trading_validation",
+      report: { configuration_revision: starts === 0 ? "b".repeat(64) : saved.revision, activatable: true, checks: [], cost_notice: "" },
+      activation_token: "tok",
+    })
+    const result = await h.api.act("applyChanges", CHANGE)
+    expect(result).toMatchObject({ ok: true, value: { applied: false, message: "Copying didn't start. The engine did not accept the request. Copying continues with your saved setup." } })
+    expect(onDisk(h)).toMatchObject({ configuration: saved.configuration, revision: saved.revision })
+    expect(diskToken(h)).toBe(DISCORD)
+  })
+
+  it("says so when the saved setup cannot start again either", async () => {
+    const { h } = copying()
+    h.replies.validate_trading = () => ({ type: "trading_validation", report: failedCheck, activation_token: null })
+    const result = await h.api.act("applyChanges", CHANGE)
+    expect(result).toMatchObject({
+      ok: true,
+      value: { applied: false, message: expect.stringContaining("Your saved setup did not pass its check either, so copying stays paused.") },
+    })
+  })
+
+  it("refuses a change missing its keys before pausing anything", async () => {
+    const { h } = copying()
+    const config = structuredClone(CHANGE.configuration)
+    config.accounts.push({ id: "spare", environment: "paper", policy: config.accounts[0].policy })
+    expect(await h.api.act("applyChanges", { configuration: config })).toEqual({ ok: false, error: "Enter the Alpaca API key and secret for “spare” first." })
+    expect(h.asked).toEqual([])
+    expect(ops(h)).toEqual([])
+  })
+
+  it("refuses when copying is not running, and when it will not pause", async () => {
+    const stopped = copying()
+    stopped.engine.state = "paused"
+    expect(await stopped.h.api.act("applyChanges", CHANGE)).toEqual({ ok: false, error: "Copying is not running. Use Start copying." })
+    expect(stopped.h.asked).toEqual([])
+
+    const stuck = copying()
+    stuck.h.replies.pause_trading = () => ({ type: "ok", trading: {} }) // never gets to "paused"
+    expect(await stuck.h.api.act("applyChanges", CHANGE)).toEqual({ ok: false, error: "Copying didn't pause, so your changes weren't applied. Try again." })
+    expect(ops(stuck.h)).toEqual(["pause_trading"])
+  })
+
+  it("applies nothing if the saved setup changed while the dialog was open", async () => {
+    let h: Harness
+    h = harness(true, async () => void h.setup.save(withLimits({ max_symbol_usd: "700" }), "f".repeat(64)))
+    copyingEngine(h)
+    expect(await h.api.act("applyChanges", CHANGE)).toMatchObject({ ok: false, error: expect.stringContaining("changed while you were confirming") })
+    expect(ops(h)).toEqual([])
   })
 })

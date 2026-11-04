@@ -1,6 +1,7 @@
-import { ACTS, type ActName, READS, type ReadName, type Result, type TradingConfiguration } from "../../shared/contract"
+import { ACTS, type ActName, type ApplyChangesResult, READS, type ReadName, type Result, type TradingConfiguration } from "../../shared/contract"
 import {
   PAUSE_TEXT,
+  applyText,
   Refusal,
   controlText,
   deleteRecordText,
@@ -13,8 +14,8 @@ import {
 } from "./confirmations"
 import { randomUUID } from "node:crypto"
 import { isDeepStrictEqual } from "node:util"
-import { PROVIDER_TITLES } from "../../shared/providers"
-import { startFailure } from "../../shared/start-failure"
+import { PROVIDER_TITLES, requiresApiKey } from "../../shared/providers"
+import { joinAnd, startFailure } from "../../shared/start-failure"
 import { EngineError } from "./engine/bridge"
 import { readJournal } from "./journal"
 import { type SecretStore, type Secrets, redact } from "./secrets"
@@ -361,6 +362,89 @@ async function runStart(ctx: Ctx, request: Params): Promise<null | undefined> {
   return outcome === null ? null : undefined
 }
 
+const reasonOf = (error: unknown): string => (error instanceof SetupFileError || error instanceof Refusal ? error.message : words(error))
+
+/** What a setup's keys still lack, so a change that cannot start is refused before copying pauses (the Swift contract check). */
+function missingKeys(configuration: TradingConfiguration, ctx: Ctx): string[] {
+  const keys = engineSecrets(configuration, ctx)
+  return [
+    keys.discord_token ? null : "the Discord token",
+    requiresApiKey(configuration.provider.name) && !keys.provider_api_key ? "the model API key" : null,
+    ...configuration.accounts
+      .filter((a) => !keys.brokers.some((b) => b.account_id === a.id && b.key && b.secret))
+      .map((a) => `the Alpaca API key and secret for “${a.id}”`),
+  ].filter((what): what is string => what !== null)
+}
+
+const tradingState = async (ctx: Ctx): Promise<string> => String(body(body(await ctx.engine.request("get_trading_status")).trading).state)
+
+/** Pausing answers "pausing" while open orders and the source wind down; wait for "paused". */
+async function waitUntilPaused(ctx: Ctx): Promise<boolean> {
+  const { looks, waitMs } = ctx.activation ?? { looks: 30, waitMs: 1000 }
+  for (let look = 0; look < looks; look++) {
+    const state = await tradingState(ctx)
+    if (state === "paused") return true
+    if (!["pausing", "running", "degraded"].includes(state)) return false
+    await sleep(waitMs)
+  }
+  return false
+}
+
+/** The accounts the engine is buying into now, so the apply gives them back their buys, as `accountsCopyingBeforeApply` does. */
+async function accountsBuying(ctx: Ctx): Promise<string[]> {
+  const items = (body(body(await ctx.engine.request("get_accounts", { limit: 100 })).accounts).items ?? []) as { account_id: string; entry_permission: string }[]
+  return items.filter((a) => a.entry_permission === "enabled").map((a) => a.account_id)
+}
+
+type Validation = { report: { configuration_revision: string; activatable: boolean }; activation_token: string | null }
+
+/** Validates `configuration` and starts it. Returns null once committed, undefined while pending, and a report when a check failed. */
+async function checkAndStart(ctx: Ctx, configuration: TradingConfiguration, save: boolean): Promise<{ outcome: null | undefined } | { failed: Validation["report"] }> {
+  const checked = (await ctx.engine.request("validate_trading", { configuration, secrets: engineSecrets(configuration, ctx) })) as Validation
+  const { report, activation_token: token } = checked
+  if (!report.activatable || !token) return { failed: report }
+  if (save) ctx.secrets.setRevision(ctx.setup.save(configuration, report.configuration_revision))
+  const outcome = await runStart(ctx, {
+    configuration,
+    secrets: engineSecrets(configuration, ctx),
+    validation_token: token,
+    activation_id: randomUUID(),
+  })
+  return { outcome }
+}
+
+/** The change could not be applied, so copying paused for it starts again with the setup that was saved. Returns what to tell the owner. */
+async function resumeSaved(ctx: Ctx, buying: string[]): Promise<string> {
+  ctx.secrets.discard() // keys typed for the change are not the saved setup's
+  const saved = ctx.setup.current()
+  if (!saved) return "There is no saved setup to resume, so copying stays paused. Set one up in Connections."
+  try {
+    const result = await checkAndStart(ctx, saved.configuration, false)
+    if ("failed" in result) return "Your saved setup did not pass its check either, so copying stays paused. Review Connections, then start copying."
+    if (result.outcome === null) await turnOnAccounts(ctx, buying.filter((id) => saved.configuration.accounts.some((a) => a.id === id)))
+    return result.outcome === null ? "Copying continues with your saved setup." : "Your saved setup is starting again; the engine has not confirmed it yet."
+  } catch (error) {
+    return `Your saved setup did not start either (${reasonOf(error)}), so copying stays paused. Start copying from Connections.`
+  }
+}
+
+/** Applying an edited setup while copying runs (AppModel.applyChangesWhileCopying): pause, check, start, and on a failure resume the saved one. */
+async function applyChanges(p: Params, ctx: Ctx): Promise<ApplyChangesResult> {
+  const requested = p.configuration as TradingConfiguration
+  if (ctx.setup.current()?.revision !== p.expect) throw new Refusal("The saved setup changed while you were confirming. Try again.")
+  const buying = await accountsBuying(ctx)
+  await ctx.engine.request("pause_trading")
+  if (!(await waitUntilPaused(ctx))) throw new Refusal("Copying didn't pause, so your changes weren't applied. Try again.")
+  try {
+    const result = await checkAndStart(ctx, requested, true)
+    if ("failed" in result) return { applied: false, report: result.failed as ApplyChangesResult["report"], message: `Some connections need attention. Your changes weren't saved. ${await resumeSaved(ctx, buying)}` }
+    if (result.outcome === null) await turnOnAccounts(ctx, buying.filter((id) => requested.accounts.some((a) => a.id === id)))
+    return { applied: true, report: null, message: null }
+  } catch (error) {
+    return { applied: false, report: null, message: `${reasonOf(error)} ${await resumeSaved(ctx, buying)}` }
+  }
+}
+
 const ACT_HANDLERS: Record<ActName, Handler> = {
   confirmManualOrders: confirmed(
     (p, ctx) => ({ text: manualOrdersText(p.commands as never, ctx.seen) }),
@@ -393,6 +477,20 @@ const ACT_HANDLERS: Record<ActName, Handler> = {
     },
     // Declined in the dialog: the setup saved for this start is not kept, and neither are the keys typed for it.
     discardUnstarted,
+  ),
+  applyChanges: confirmed(
+    async (p, ctx) => {
+      const requested = p.configuration as TradingConfiguration
+      await settleOnce(ctx).catch(() => {})
+      const current = ctx.setup.current()
+      if (!current) throw new Refusal("There is no saved setup yet.")
+      if (ctx.setup.pending()) throw new Refusal("The last start is still waiting for the engine to confirm it.")
+      if (!["running", "degraded"].includes(await tradingState(ctx))) throw new Refusal("Copying is not running. Use Start copying.")
+      const missing = missingKeys(requested, ctx)
+      if (missing.length) throw new Refusal(`Enter ${joinAnd(missing)} first.`)
+      return { text: applyText(current.configuration, requested), send: { configuration: requested, expect: current.revision } }
+    },
+    applyChanges,
   ),
   pauseTrading: confirmed(() => ({ text: PAUSE_TEXT }), ask("pause_trading", value("trading"))),
   controlAccount: confirmed(

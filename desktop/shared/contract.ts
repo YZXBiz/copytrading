@@ -193,6 +193,13 @@ export interface TradingValidation {
   activation_token: string | null
 }
 
+/** How applying changes while copying ended. `applied: false` says why in `message` (and `report` holds the failed checks); the saved setup copies again. */
+export interface ApplyChangesResult {
+  applied: boolean
+  message: string | null
+  report: TradingValidation["report"] | null
+}
+
 // ── Accounts, positions, activity ──────────────────────────────────────────
 
 export interface AccountBalance {
@@ -893,6 +900,12 @@ export interface ActOperations {
   confirmLotSale: Op<{ sale: LotSaleConfirmation }, LotSaleResult>
   /** Starts the saved setup; `validate` first, then `saveSetup` with its revision. */
   startTrading: Op<{ activation_id: string; validation_token: string }, TradingStatus>
+  /**
+   * An edited setup while copying runs (AppModel.applyChangesWhileCopying): pauses copying, checks every connection, saves
+   * and starts the new setup; if a check fails or the start does not take, the saved setup is started again. One
+   * confirmation names it all. Refused, before anything pauses, if a key the new setup needs is missing.
+   */
+  applyChanges: Op<{ configuration: TradingConfiguration }, ApplyChangesResult>
   pauseTrading: Op<undefined, TradingStatus>
   controlAccount: Op<{ command: AccountControlCommand }, AccountControlResult>
   approveProposal: Op<{ proposal_id: string }, AgentProposal>
@@ -950,7 +963,7 @@ export const READS = [
 ] as const satisfies readonly ReadName[]
 
 export const ACTS = [
-  "confirmManualOrders", "confirmLotSale", "startTrading", "pauseTrading", "controlAccount", "approveProposal",
+  "confirmManualOrders", "confirmLotSale", "startTrading", "applyChanges", "pauseTrading", "controlAccount", "approveProposal",
   "deleteAccountRecord", "completeRestoreCandidate", "validateTrading", "checkConnection", "updateAccountLimits",
   "saveSetup", "setSecrets", "discardSecrets", "forgetBroker", "createBackup", "previewRestore", "prepareRestoreCandidate",
   "abortRestoreCandidate", "restorePreflight", "resolveOwnership", "saveManualCorrection", "rejectProposal",
