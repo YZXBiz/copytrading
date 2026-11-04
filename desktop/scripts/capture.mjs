@@ -78,6 +78,19 @@ for (const [name, env] of [
       COPYTRADING_CAPTURE_SCRIPT: `(async () => { const read = () => document.querySelector("main number-flow-react").shadowRoot.textContent; const before = read(); for (let i = 0; i < 300 && read() === before; i++) await new Promise((r) => setTimeout(r, 40)) })()`,
     },
   ],
+  // A held row's live price ticking: needs the same tick build. Waits for the first held row's gain to change (a read every 5 s),
+  // then saves frames while its row flashes and the digits roll.
+  [
+    "account-live-tick",
+    {
+      ...fixtures,
+      COPYTRADING_FIXTURE_TICK: "1",
+      COPYTRADING_CAPTURE_FRAMES: "3",
+      COPYTRADING_CAPTURE_SIZE: "1280x1500",
+      COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2",
+      COPYTRADING_CAPTURE_SCRIPT: `(async () => { const read = () => [...document.querySelectorAll("ul li")].find((e) => e.innerText.includes("Bought"))?.innerText; await new Promise((r) => setTimeout(r, 1500)); const before = read(); for (let i = 0; i < 400 && read() === before; i++) await new Promise((r) => setTimeout(r, 40)) })()`,
+    },
+  ],
   ["account-review", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2?open=review" }],
   ["account-sale", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2?open=sale" }],
   ["account-limits", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2?open=limits" }],

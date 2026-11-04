@@ -14,6 +14,8 @@ export interface Note {
   thread: string
   /** Where clicking it opens the window, as a route hash. */
   route?: string
+  /** An order that filled: the open window shows it as a toast. */
+  fill?: boolean
 }
 
 const isCoin = (symbol: string) => symbol.includes("/")
@@ -61,6 +63,7 @@ export function fillNotes(news: { sent: Fill[]; filled: Fill[] }, guruName: (id:
     body: origin(fill, guruName),
     thread: fill.accountId,
     route: `#/accounts/${encodeURIComponent(fill.accountId)}`,
+    ...(kind === "fill" && { fill: true }),
   })
   return [...news.sent.map((f) => note(f, "sent", sentTitle(f))), ...news.filled.map((f) => note(f, "fill", filledTitle(f)))]
 }

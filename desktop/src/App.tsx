@@ -1,6 +1,7 @@
 import { MotionConfig } from "motion/react"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { AppFrame } from "@/features/shell/AppFrame"
+import { FillToasts } from "@/features/shell/FillToasts"
 import { useEngineState } from "@/features/shell/engine-state"
 import { splitRecords } from "@/features/shell/records"
 import { useRoute } from "@/features/shell/route"
@@ -24,6 +25,7 @@ export default function App() {
         <AppFrame route={route} accounts={accounts} live={live} old={old} setup={config} selectedAccountId={selectedAccountId} engine={engine}>
           {SCREENS[route.screen].render({ route: route.screen === "accounts" && !route.id ? { ...route, id: selectedAccountId } : route, accounts })}
         </AppFrame>
+        <FillToasts />
       </TooltipProvider>
     </MotionConfig>
   )

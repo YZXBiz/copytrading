@@ -1,9 +1,10 @@
 // ReUI's Integrations list (list-8), installed as shipped and wired to the calls waiting for the owner: a row per
 // call with its tile, title and one description line, and the buttons on the right. Pressing a row opens the review.
-import { PencilLineIcon, TrendingDownIcon, TrendingUpIcon } from "lucide-react"
+import { PencilLineIcon } from "lucide-react"
 import { Badge } from "@/components/reui/badge"
 import { Frame, FramePanel } from "@/components/reui/frame"
 import { IconTile } from "@/components/reui/icon-tile"
+import { SymbolLogo } from "@/components/symbol-logo"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { endOfTradingDay, untilText } from "@/features/activity/deadline"
@@ -25,13 +26,16 @@ function CallRow({ call, showSeparator, canCopy, now, onCopy, onSkip }: { call: 
   // The post is untrusted Discord text: rendered as text, never as HTML. A relay's bare label is not words, so the picture shows instead.
   const said = readableText(call.source)
   const picture = pictureOf(call.source)
-  const Glyph = !first ? PencilLineIcon : first.action === "buy" ? TrendingUpIcon : TrendingDownIcon
   return (
     <li aria-label="Call waiting for you">
       <div className={canCopy ? "flex cursor-pointer items-center gap-2" : "flex items-center gap-2"} onClick={canCopy ? onCopy : undefined}>
-        <IconTile variant="frame" aria-hidden="true">
-          <Glyph />
-        </IconTile>
+        {first ? (
+          <SymbolLogo symbol={first.symbol} />
+        ) : (
+          <IconTile variant="frame" size="sm" aria-hidden="true">
+            <PencilLineIcon />
+          </IconTile>
+        )}
 
         <div className="min-w-0 flex-1 space-y-0.5">
           <p className="text-foreground flex items-center gap-2 text-sm font-medium">

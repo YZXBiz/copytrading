@@ -1,7 +1,7 @@
 import { join } from "node:path"
 import { BrowserWindow, Menu, Notification, app, dialog, ipcMain, nativeTheme, protocol, safeStorage, session } from "electron"
 import { autoUpdater } from "electron-updater"
-import { CHANNELS, type EngineState, type Theme } from "../../shared/contract"
+import { CHANNELS, type EngineState, type FillAlert, type Theme } from "../../shared/contract"
 import { AgentAccessStore } from "./agents/access"
 import { AgentAccessController } from "./agents/controller"
 import { AlertMonitor } from "./alerts/monitor"
@@ -15,6 +15,7 @@ import { superviseEngine } from "./engine/supervise"
 import { RuntimePaths } from "./engine/paths"
 import { fixtureApi, seedFixturePictures } from "./fixtures"
 import { moveKeychainSecrets, securityReader } from "./keychain-move"
+import { LOGO_SCHEME, LogoCache } from "./logos"
 import { PICTURE_SCHEME, PictureIndex } from "./pictures"
 import { Prefs } from "./prefs"
 import { AccountReaders } from "./readers"
@@ -68,7 +69,7 @@ let agents: AgentAccessController | null = null
 let monitor: AlertMonitor | null = null
 let restore: Pick<RestoreCoordinator, "activate" | "rollback" | "isRunning"> | null = null
 const pictures = new PictureIndex()
-protocol.registerSchemesAsPrivileged([{ scheme: PICTURE_SCHEME, privileges: { standard: true, secure: true } }])
+protocol.registerSchemesAsPrivileged([PICTURE_SCHEME, LOGO_SCHEME].map((scheme) => ({ scheme, privileges: { standard: true, secure: true } })))
 
 /** The engine's state as the renderer may see it: a stopped engine's reason is the engine's own stderr. */
 const publicState = (): EngineState => redactState(fixtures ? { state: "running" } : engine.state, secrets?.values() ?? [])
@@ -88,6 +89,12 @@ function openWindow(route?: string): void {
 const shown = new Set<Notification>()
 /** A macOS notification with the system sound. Clicking it opens CopyTrading where the news is. */
 function notify(note: Note): void {
+  // A fill is a toast in every open window; the macOS banner is for when the owner is looking elsewhere.
+  if (note.fill && note.route) {
+    const alert: FillAlert = { title: note.title, body: note.body, route: note.route }
+    windows().forEach((w) => w.webContents.send(CHANNELS.fill, alert))
+    if (windows().some((w) => w.isFocused())) return
+  }
   if (!Notification.isSupported()) return
   const notification = new Notification({ title: note.title, body: note.body })
   shown.add(notification)
@@ -362,6 +369,9 @@ app.whenReady().then(async () => {
   session.defaultSession.setPermissionRequestHandler((_wc, _permission, deny) => deny(false))
   api = await startServices()
   protocol.handle(PICTURE_SCHEME, (request) => (attachments ? pictures.respond(attachments(), request.url) : new Response(null, { status: 404 })))
+  // Fixture and capture runs never reach the network: their logos are the letter tiles.
+  const logos = fixtures ? null : new LogoCache(join(app.getPath("userData"), "logos"))
+  protocol.handle(LOGO_SCHEME, (request) => logos?.respond(request.url) ?? new Response(null, { status: 404 }))
   registerIpc()
   const window = createWindow()
   if (smoke) return runSmoke(window)
