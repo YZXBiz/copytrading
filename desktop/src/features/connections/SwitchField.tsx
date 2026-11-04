@@ -23,7 +23,7 @@ export function SwitchField({
         <FieldTitle id={`${id}-title`}>{title}</FieldTitle>
         <FieldDescription>{hint}</FieldDescription>
       </FieldContent>
-      <Switch aria-labelledby={`${id}-title`} checked={checked} onCheckedChange={onChange} disabled={disabled} />
+      <Switch size="sm" aria-labelledby={`${id}-title`} checked={checked} onCheckedChange={onChange} disabled={disabled} />
     </Field>
   )
 }

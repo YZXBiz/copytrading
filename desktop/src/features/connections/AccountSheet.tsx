@@ -62,21 +62,21 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
       onClose={onClose}
       footer={
         <>
-          <Button type="button" variant="ghost" className="text-destructive" onClick={() => setConfirmsRemove(true)}>
+          <Button size="sm" type="button" variant="ghost" className="text-destructive" onClick={() => setConfirmsRemove(true)}>
             Remove account
           </Button>
           <div className="flex gap-2">
             {copying && (
-              <Button type="button" variant="outline" disabled={applying || !savedPolicy || same(savedPolicy, account.policy)} onClick={() => void apply()}>
+              <Button size="sm" type="button" variant="outline" disabled={applying || !savedPolicy || same(savedPolicy, account.policy)} onClick={() => void apply()}>
                 {applying && <Spinner />}
                 Apply limits now
               </Button>
             )}
-            <Button type="button" variant="outline" disabled={result?.check === null} onClick={() => void connect(subject)}>
+            <Button size="sm" type="button" variant="outline" disabled={result?.check === null} onClick={() => void connect(subject)}>
               {result?.check === null && <Spinner />}
               Connect
             </Button>
-            <Button type="button" onClick={onClose}>
+            <Button size="sm" type="button" onClick={onClose}>
               Done
             </Button>
           </div>

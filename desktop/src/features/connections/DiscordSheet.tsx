@@ -22,11 +22,11 @@ export function DiscordSheet({ onClose }: { onClose: () => void }) {
       onClose={onClose}
       footer={
         <>
-          <Button type="button" variant="outline" disabled={result?.check === null} onClick={() => void connect("discord")}>
+          <Button size="sm" type="button" variant="outline" disabled={result?.check === null} onClick={() => void connect("discord")}>
             {result?.check === null && <Spinner />}
             Connect
           </Button>
-          <Button type="button" onClick={onClose}>
+          <Button size="sm" type="button" onClick={onClose}>
             Done
           </Button>
         </>

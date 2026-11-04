@@ -207,6 +207,7 @@ export function ManualReviewSheet({
                       </FieldTitle>
                     </FieldContent>
                     <Switch
+                      size="sm"
                       aria-label={account.account_id}
                       checked={selected.has(account.account_id)}
                       onCheckedChange={(on) =>
@@ -255,23 +256,23 @@ export function ManualReviewSheet({
           </FieldGroup>
         </div>
         <SheetFooter className="flex-row justify-end">
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button size="sm" type="button" variant="outline" onClick={onClose}>
             {sent ? "Done" : "Close"}
           </Button>
           {!correctionId ? (
-            <Button type="button" disabled={!canSave} onClick={check}>
+            <Button size="sm" type="button" disabled={!canSave} onClick={check}>
               Check Order
             </Button>
           ) : checking || sending ? (
-            <Button type="button" disabled>
+            <Button size="sm" type="button" disabled>
               {sending ? "Placing…" : "Checking…"}
             </Button>
           ) : ready.length > 0 ? (
-            <Button type="button" onClick={place}>
+            <Button size="sm" type="button" onClick={place}>
               Place {ready.length} {ready.length === 1 ? "Order" : "Orders"}…
             </Button>
           ) : !sent ? (
-            <Button type="button" onClick={change}>
+            <Button size="sm" type="button" onClick={change}>
               Change It
             </Button>
           ) : null}

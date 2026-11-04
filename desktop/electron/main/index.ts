@@ -1,7 +1,7 @@
 import { join } from "node:path"
-import { BrowserWindow, Menu, Notification, app, dialog, ipcMain, protocol, safeStorage, session } from "electron"
+import { BrowserWindow, Menu, Notification, app, dialog, ipcMain, nativeTheme, protocol, safeStorage, session } from "electron"
 import { autoUpdater } from "electron-updater"
-import { CHANNELS, type EngineState } from "../../shared/contract"
+import { CHANNELS, type EngineState, type Theme } from "../../shared/contract"
 import { AgentAccessStore } from "./agents/access"
 import { AgentAccessController } from "./agents/controller"
 import { AlertMonitor } from "./alerts/monitor"
@@ -52,6 +52,10 @@ if (!fixtures) {
 // with a new window if the owner had closed it (closing the window leaves the app running).
 if (packaged && !app.requestSingleInstanceLock()) app.exit(0)
 app.on("second-instance", () => app.isReady() && openWindow())
+
+// The desk opens dark. The saved choice replaces this once the preferences are read, before the window exists, so the page's
+// prefers-color-scheme (and macOS vibrancy behind it) is right at first paint and never flashes light.
+nativeTheme.themeSource = "dark"
 
 const engine = new EngineProcess()
 let api: Api
@@ -154,6 +158,7 @@ async function startServices(): Promise<Api> {
     // The SwiftUI app's keys come across once, so the owner never types them again. macOS may ask to allow it.
     await moveKeychainSecrets({ setup, secrets, installationId: paths.installationIdentity(), read: securityReader }).catch(() => "unreadable")
     const prefs = new Prefs(paths.owner)
+    nativeTheme.themeSource = prefs.get("theme")
     const store = secrets
     const request = (operation: string, params?: Record<string, unknown>) => engine.request(operation, params)
     const readers = new AccountReaders(request, setup, store)
@@ -221,7 +226,12 @@ function registerIpc(): void {
     if (result.ok) pictures.learn(result.value)
     return result
   })
-  ipcMain.handle(CHANNELS.act, (_event, name: unknown, params: unknown) => api.act(name, params))
+  ipcMain.handle(CHANNELS.act, async (_event, name: unknown, params: unknown) => {
+    const result = await api.act(name, params)
+    // The choice is saved by the api; the window follows it here, live.
+    if (name === "setTheme" && result.ok) nativeTheme.themeSource = result.value as Theme
+    return result
+  })
   ipcMain.handle(CHANNELS.state, publicState)
   engine.onState(() => windows().forEach((w) => w.webContents.send(CHANNELS.stateChanged, publicState())))
 }
@@ -234,6 +244,13 @@ function createWindow(): BrowserWindow {
     height: sizeHeight || (captureDir ? 1700 : 860),
     show: !captureDir && !smoke,
     title: "CopyTrading",
+    minWidth: 980,
+    minHeight: 640,
+    // A hidden title bar with the traffic lights inset in the sidebar, which shows the desktop through macOS vibrancy. A
+    // capture renders offscreen, where there is no desktop to show through, so it paints the window colour instead.
+    titleBarStyle: "hiddenInset",
+    trafficLightPosition: { x: 16, y: 14 },
+    ...(captureDir ? {} : { vibrancy: "sidebar" as const, backgroundColor: "#00000000" }),
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       contextIsolation: true,
@@ -246,6 +263,7 @@ function createWindow(): BrowserWindow {
   // The window only ever shows the app itself: no popups, no navigating away.
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }))
   window.webContents.on("will-navigate", (event) => event.preventDefault())
+  if (captureDir) window.webContents.on("dom-ready", () => void window.webContents.insertCSS("body { background: var(--window); }"))
   // Fixture mode pins the page's clock to when the data was captured: posts expire with their trading day.
   const now = fixtures ? "2026-11-03T21:00:00Z" : undefined
   const hash = process.env.COPYTRADING_CAPTURE_HASH ?? ""

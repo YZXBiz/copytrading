@@ -89,10 +89,10 @@ export function TradeFields({
       <Field>
         <FieldLabel>Side</FieldLabel>
         <ButtonGroup aria-label="Side">
-          <Button type="button" variant={!draft.isSell ? "default" : "outline"} aria-pressed={!draft.isSell} onClick={() => setSell(false)}>
+          <Button size="sm" type="button" variant={!draft.isSell ? "default" : "outline"} aria-pressed={!draft.isSell} onClick={() => setSell(false)}>
             <TrendingUpIcon aria-hidden /> Buy
           </Button>
-          <Button type="button" variant={draft.isSell ? "default" : "outline"} aria-pressed={draft.isSell} onClick={() => setSell(true)}>
+          <Button size="sm" type="button" variant={draft.isSell ? "default" : "outline"} aria-pressed={draft.isSell} onClick={() => setSell(true)}>
             <TrendingDownIcon aria-hidden /> Sell
           </Button>
         </ButtonGroup>
