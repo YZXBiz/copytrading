@@ -124,6 +124,11 @@ Never point an engine at it. Only the built app (`app.isPackaged`) runs on it, t
 - **Notifications** (`alerts/`): `AlertMonitor` polls a running engine every 2 s and posts macOS notifications for fills,
   an agent's request, an account that stopped, and copying paused after a quit. Closing the window leaves it all running;
   quitting stops the relay, the monitor, then the engine.
+- **Crash restarts** (`engine/supervise.ts`): an engine that exits without being asked to stop is started again, 1 s later, up
+  to 3 times (`ProcessSupervisor.swift`); copying resumes if it was on (the update relaunch's `resumeCopying`). After the last
+  failure the footer shows the engine's reason and a notification says so. A restore or a quit owns the engine meanwhile.
+- **One app at a time**: the packaged app takes `app.requestSingleInstanceLock()`; a second launch quits and the first one
+  comes forward, with a new window if it had been closed.
 
 ## Fixtures and capture
 
@@ -167,4 +172,4 @@ The page never supplies the size or hash. Use `<PostPicture attachment={...}>`; 
   runs on the owner's data folder, `engine/data-root.ts`; updates in `update.ts`; see `docs/releases.md`).
 - The installation lock (`.app.lock`) that keeps this app and the SwiftUI app off one folder: only Electron's
   single-instance lock guards the packaged app, so quit the SwiftUI app first.
-- Restarting a crashed engine: the footer says why it stopped.
+- Resetting the crash-restart count: like `ProcessSupervisor.swift`, 3 restarts per run of the app, however long the engine ran between them.

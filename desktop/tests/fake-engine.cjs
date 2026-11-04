@@ -29,6 +29,11 @@ process.stdin.on("data", (chunk) => {
       if (request.operation === "stop") process.exit(0)
       reply({ ok: { type: "status", status: { state: "running" } } })
     }
+    // A crash: "serve" engines die on this request, with what a crashing engine prints.
+    if (mode === "serve" && request.operation === "die") {
+      process.stderr.write("boom: the engine fell over")
+      process.exit(7)
+    }
     if (mode === "serve" || mode === "ignore-stop" || mode === "stubborn") {
       if (request.operation === "stop") {
         reply({ ok: { type: "stopping" } })

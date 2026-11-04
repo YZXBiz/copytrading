@@ -11,6 +11,7 @@ import { type Api, type Deps, createApi } from "./api"
 import { captureWindow } from "./capture"
 import { type EngineRoots, resolveRoots } from "./engine/data-root"
 import { EngineProcess, engineTarget } from "./engine/launch"
+import { superviseEngine } from "./engine/supervise"
 import { RuntimePaths } from "./engine/paths"
 import { fixtureApi, seedFixturePictures } from "./fixtures"
 import { moveKeychainSecrets, securityReader } from "./keychain-move"
@@ -18,7 +19,7 @@ import { PICTURE_SCHEME, PictureIndex } from "./pictures"
 import { Prefs } from "./prefs"
 import { RestoreCoordinator } from "./restore"
 import { ResumeMarker, resumeCopying } from "./resume"
-import { SecretStore, redactState } from "./secrets"
+import { SecretStore, redact, redactState } from "./secrets"
 import { SetupFile } from "./setup-file"
 import { CHECK_EVERY_MS, Updates } from "./update"
 
@@ -46,8 +47,10 @@ if (!fixtures) {
     rootsError = error instanceof Error ? error.message : String(error)
   }
 }
-// A second copy would fight the first over the engine's data; the first one comes forward instead.
+// A second copy would fight the first over the engine's data: it quits at once, and the first one comes forward,
+// with a new window if the owner had closed it (closing the window leaves the app running).
 if (packaged && !app.requestSingleInstanceLock()) app.exit(0)
+app.on("second-instance", () => app.isReady() && openWindow())
 
 const engine = new EngineProcess()
 let api: Api
@@ -175,13 +178,25 @@ async function startServices(): Promise<Api> {
       },
     }
     agents = new AgentAccessController(new AgentAccessStore(paths.owner), paths.controlSocket, request)
+    const memory = new CopyingMemory(prefs.get("copying_was_on"), (on) => prefs.set("copying_was_on", on))
     monitor = new AlertMonitor({
       request,
       notify,
       fillsOn: () => prefs.get("fill_alerts"),
       guruName: (id) => setup.load()?.configuration.profiles.find((p) => p.guru_id === id)?.display_name ?? null,
       hasSetup: () => setup.load() !== null,
-      memory: new CopyingMemory(prefs.get("copying_was_on"), (on) => prefs.set("copying_was_on", on)),
+      memory,
+    })
+    // An engine that dies while the app runs is started again, as ProcessSupervisor does; copying resumes if it was on.
+    superviseEngine(engine, {
+      restart: startRuntime,
+      busy: () => stopped || restore?.isRunning === true,
+      wasCopying: () => memory.wasOn,
+      onRestarted: (copying) => {
+        if (!copying) return
+        void resumeSaved().then((why) => why && notify({ id: "copying-not-resumed", thread: "copying-stopped", title: "Copying is paused", body: `The engine restarted after a problem, but copying did not resume: ${why}` }))
+      },
+      onGaveUp: (reason) => notify({ id: "engine-stopped", thread: "engine", title: "The engine stopped", body: `${redact(reason, store.values())}\n\nCopying is paused. Quit and reopen CopyTrading to try again.` }),
     })
     // Agents and notifications start with the engine, and the engine starts in the background so the window is not kept waiting.
     void startRuntime()
@@ -277,14 +292,19 @@ function startUpdates(marker: ResumeMarker): void {
   setInterval(() => void updates.check(), CHECK_EVERY_MS)
 }
 
-/** After an update relaunch, starts copying again once the engine answers (update.resumesCopying). */
-function resumeAfterUpdate(marker: ResumeMarker): void {
-  if (!services) return
+/** Starts the saved setup with the Start button's checks, every confirmation answered yes (the owner agreed to an update, or copying was on). Resolves with why it did not, or null. */
+async function resumeSaved(): Promise<string | null> {
+  if (!services) return "There is nothing to resume."
   const setup = services.setup
   const autoConfirmed = createApi({ ...services, confirm: async () => true })
+  return resumeCopying(autoConfirmed, () => setup.load(), (ms) => new Promise((done) => setTimeout(done, ms)))
+}
+
+/** After an update relaunch, starts copying again once the engine answers (update.resumesCopying). */
+function resumeAfterUpdate(marker: ResumeMarker): void {
   const resume = () => {
     if (!marker.take()) return
-    void resumeCopying(autoConfirmed, () => setup.load(), (ms) => new Promise((done) => setTimeout(done, ms))).then((why) => why && console.error(`Copying did not resume after the update: ${why}`))
+    void resumeSaved().then((why) => why && console.error(`Copying did not resume after the update: ${why}`))
   }
   if (engine.state.state === "running") return resume()
   const stop = engine.onState((state) => {
@@ -327,11 +347,6 @@ app.whenReady().then(async () => {
   resumeAfterUpdate(marker)
   // A throwaway folder is a test run: it never offers an update.
   if (!stateRoot) startUpdates(marker)
-  app.on("second-instance", () => {
-    const [front] = windows()
-    if (front?.isMinimized()) front.restore()
-    front?.focus()
-  })
 })
 // Closing the window leaves copying, the agent socket and the notifications running, as the SwiftUI app does; quitting stops them.
 app.on("window-all-closed", () => {

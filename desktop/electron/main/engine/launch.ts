@@ -36,6 +36,7 @@ export type Drain = "acknowledged" | "unconfirmed" | "no_live_engine"
 export class EngineProcess {
   private current: EngineState = { state: "starting" }
   private readonly listeners = new Set<(state: EngineState) => void>()
+  private readonly crashListeners = new Set<(reason: string) => void>()
   private child: ChildProcess | null = null
   private bridge: EngineBridge | null = null
   /** The stop under way or finished for the current process; a second `stop` shares it. */
@@ -46,6 +47,12 @@ export class EngineProcess {
 
   get state(): EngineState {
     return this.current
+  }
+
+  /** Called with the engine's own words when it exits without having been asked to stop. */
+  onCrash(listener: (reason: string) => void): () => void {
+    this.crashListeners.add(listener)
+    return () => this.crashListeners.delete(listener)
   }
 
   onState(listener: (state: EngineState) => void): () => void {
@@ -80,6 +87,8 @@ export class EngineProcess {
       this.child = null
       this.bridge = null
       if (this.current.state !== "stopped") this.set({ state: "stopped", reason: this.stopped ? "Stopped." : reason })
+      // Nobody asked it to stop: a crash.
+      if (!this.stopped) this.crashListeners.forEach((listener) => listener(reason))
     }
     this.exited = new Promise((done) => {
       child.on("close", (code) => {
