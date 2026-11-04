@@ -173,26 +173,26 @@ export function LotSaleSheet({ target, onClose }: { target: LotSaleTarget; onClo
           {phase.name === "finished" ? (
             <>
               {phase.result.status === "rejected" && (
-                <Button type="button" variant="outline" onClick={startOver}>
+                <Button size="sm" type="button" variant="outline" onClick={startOver}>
                   Review Again
                 </Button>
               )}
-              <Button type="button" onClick={onClose}>
+              <Button size="sm" type="button" onClick={onClose}>
                 Done
               </Button>
             </>
           ) : (
             <>
-              <Button type="button" variant="outline" disabled={busy} onClick={phase.name === "reviewing" ? startOver : onClose}>
+              <Button size="sm" type="button" variant="outline" disabled={busy} onClick={phase.name === "reviewing" ? startOver : onClose}>
                 {phase.name === "reviewing" ? "Back" : "Cancel"}
               </Button>
               {(phase.name === "choosing" || phase.name === "checking") && (
-                <Button type="button" disabled={busy || !(shares > 0n && shares <= remaining)} onClick={review}>
+                <Button size="sm" type="button" disabled={busy || !(shares > 0n && shares <= remaining)} onClick={review}>
                   {phase.name === "checking" ? "Checking…" : reviewLabel(shares, symbol)}
                 </Button>
               )}
               {phase.name === "reviewing" && phase.preview.plan && (
-                <Button type="button" onClick={() => sell(phase.preview)}>
+                <Button size="sm" type="button" onClick={() => sell(phase.preview)}>
                   Sell {decText(parseDec(phase.preview.plan.qty) ?? shares)} {symbol}
                 </Button>
               )}

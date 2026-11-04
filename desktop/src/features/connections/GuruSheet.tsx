@@ -51,10 +51,10 @@ export function GuruSheet({ uid, onClose }: { uid: string; onClose: () => void }
       onClose={onClose}
       footer={
         <>
-          <Button type="button" variant="ghost" className="text-destructive" onClick={() => setConfirmsRemove(true)}>
+          <Button size="sm" type="button" variant="ghost" className="text-destructive" onClick={() => setConfirmsRemove(true)}>
             Remove guru
           </Button>
-          <Button type="button" onClick={onClose}>
+          <Button size="sm" type="button" onClick={onClose}>
             Done
           </Button>
         </>

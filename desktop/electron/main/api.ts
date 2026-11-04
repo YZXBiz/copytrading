@@ -5,6 +5,7 @@ import {
   type AgentAccessState,
   type ApplyChangesResult,
   READS,
+  THEMES,
   type ReadName,
   type RestorePreview,
   type Result,
@@ -194,6 +195,7 @@ const READ_HANDLERS: Record<ReadName, Handler> = {
   getRestoreCandidate: ask("restore_candidate_status", value("candidate")),
   getAgentAccess: async (_params, { agents }) => agents.state(),
   getFillAlerts: async (_params, { prefs }) => prefs.get("fill_alerts"),
+  getTheme: async (_params, { prefs }) => prefs.get("theme"),
   getAssistantTurn: ask("assistant_turn", whole),
   getSetup: async (_params, ctx) => {
     await settleOnce(ctx).catch(() => {})
@@ -567,6 +569,12 @@ const ACT_HANDLERS: Record<ActName, Handler> = {
   setFillAlerts: async (p, ctx) => {
     ctx.prefs.set("fill_alerts", p.on === true)
     return ctx.prefs.get("fill_alerts")
+  },
+  setTheme: async (p, ctx) => {
+    const theme = THEMES.find((t) => t === p?.theme)
+    if (!theme) throw new Refusal("That is not a theme.")
+    ctx.prefs.set("theme", theme)
+    return ctx.prefs.get("theme")
   },
 
   validateTrading: ask("validate_trading", whole, (p, ctx) => {

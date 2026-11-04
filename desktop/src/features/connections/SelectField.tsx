@@ -31,7 +31,7 @@ export function SelectField({
     <Field>
       <FieldLabel id={id}>{label}</FieldLabel>
       <Select value={value || null} items={items} onValueChange={(next) => next && onChange(next as string)} disabled={disabled}>
-        <SelectTrigger aria-labelledby={id} className="w-full">
+        <SelectTrigger size="sm" aria-labelledby={id} className="w-full">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>

@@ -62,7 +62,7 @@ function Form({ setup, accountId, policy, onClose }: { setup: SetupView; account
                   <FieldTitle>{f.title}</FieldTitle>
                   <FieldDescription>{f.hint}</FieldDescription>
                 </FieldContent>
-                <Switch aria-label={f.title} checked={draft[f.key]} onCheckedChange={(on) => setDraft((d) => setFlag(d, f.key, on))} />
+                <Switch size="sm" aria-label={f.title} checked={draft[f.key]} onCheckedChange={(on) => setDraft((d) => setFlag(d, f.key, on))} />
               </Field>
             ))}
             <Field orientation="horizontal">
@@ -89,10 +89,10 @@ function Form({ setup, accountId, policy, onClose }: { setup: SetupView; account
       </div>
       <SheetFooter className="flex-row items-center justify-end">
         {saving && <Spinner aria-label="Saving" />}
-        <Button type="button" variant="outline" disabled={saving} onClick={() => onClose(false)}>
+        <Button size="sm" type="button" variant="outline" disabled={saving} onClick={() => onClose(false)}>
           Cancel
         </Button>
-        <Button type="button" disabled={saving || !changed || Object.keys(errors).length > 0} onClick={save}>
+        <Button size="sm" type="button" disabled={saving || !changed || Object.keys(errors).length > 0} onClick={save}>
           Save Limits
         </Button>
       </SheetFooter>
