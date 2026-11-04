@@ -16,11 +16,22 @@ import httpx2 as httpx
 from copytrading_engine.sources.application import AttachmentReference, AttachmentStatus
 from copytrading_engine.sources.evidence import MAX_ATTACHMENTS_PER_MESSAGE
 
-MAX_ATTACHMENT_BYTES = 1024 * 1024
-MAX_MESSAGE_ATTACHMENT_BYTES = 4 * 1024 * 1024
+# A chart screenshot is commonly 1-3 MB.
+MAX_ATTACHMENT_BYTES = 4 * 1024 * 1024
+MAX_MESSAGE_ATTACHMENT_BYTES = 8 * 1024 * 1024
 MAX_ATTACHMENT_REDIRECTS = 3
 ATTACHMENT_CAPTURE_TIMEOUT_SECONDS = 15
 ALLOWED_ATTACHMENT_HOSTS = frozenset({"cdn.discordapp.com", "media.discordapp.net"})
+# Discord's own copy of a picture linked from elsewhere, as a relay's embed shows it.
+_DISCORD_IMAGE_PROXY = re.compile(r"^images-ext-[0-9]+\.discordapp\.net$")
+
+
+def discord_host(host: str | None) -> bool:
+    """Whether Discord itself serves this host's files."""
+    host = (host or "").casefold()
+    return host in ALLOWED_ATTACHMENT_HOSTS or bool(_DISCORD_IMAGE_PROXY.fullmatch(host))
+
+
 _REDIRECT_CODES = frozenset({301, 302, 303, 307, 308})
 _CONTENT_ADDRESS = re.compile(r"^attachments/([0-9a-f]{2})/([0-9a-f]{64})$")
 
@@ -138,8 +149,7 @@ def _allowed_url(value: str) -> bool:
         parsed = urlsplit(value)
         return (
             parsed.scheme == "https"
-            and parsed.hostname is not None
-            and parsed.hostname.casefold() in ALLOWED_ATTACHMENT_HOSTS
+            and discord_host(parsed.hostname)
             and parsed.port in {None, 443}
             and parsed.username is None
             and parsed.password is None

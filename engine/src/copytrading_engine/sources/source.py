@@ -1,13 +1,13 @@
 """Translate Discord objects without involving persistence or publication."""
 
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 import discord
 from pydantic import JsonValue, ValidationError
 
 from copytrading_engine.shared.raw_message import RawMessage
 from copytrading_engine.sources.application import AttachmentReference
-from copytrading_engine.sources.attachments import ALLOWED_ATTACHMENT_HOSTS
+from copytrading_engine.sources.attachments import discord_host
 from copytrading_engine.sources.evidence import MAX_ATTACHMENTS_PER_MESSAGE
 
 
@@ -74,7 +74,9 @@ def _embed_pictures(message: discord.Message) -> list[AttachmentReference]:
             url = _picture_url(getattr(embed, kind, None))
             if url is None:
                 continue
-            name = urlsplit(url).path.rsplit("/", 1)[-1]
+            # Discord's proxy path ends in the whole original address, signed query and all;
+            # keep only that address's file name.
+            name = urlsplit(unquote(urlsplit(url).path)).path.rsplit("/", 1)[-1]
             result.append(
                 AttachmentReference(
                     attachment_id=f"embed-{index}-{kind}",
@@ -93,7 +95,7 @@ def _picture_url(picture: object) -> str | None:
     is kept so the capture records it as rejected rather than silently dropping the picture."""
     url, proxy = getattr(picture, "url", None), getattr(picture, "proxy_url", None)
     for candidate in (url, proxy):
-        if isinstance(candidate, str) and urlsplit(candidate).hostname in ALLOWED_ATTACHMENT_HOSTS:
+        if isinstance(candidate, str) and discord_host(urlsplit(candidate).hostname):
             return candidate
     return url if isinstance(url, str) and url else None
 

@@ -3,6 +3,7 @@ post is read."""
 
 import datetime as dt
 from types import SimpleNamespace
+from urllib.parse import quote
 
 import discord
 import httpx2
@@ -62,14 +63,21 @@ def test_an_outside_picture_is_fetched_through_discords_proxy_or_recorded_as_rej
     assert [ref.url for ref in attachment_references(proxied)] == [PROXY]
 
     outside = message(
-        relay(
-            {
-                "url": "https://i.imgur.com/a.png",
-                "proxy_url": "https://images-ext-1.discordapp.net/x",
-            }
-        )
+        relay({"url": "https://i.imgur.com/a.png", "proxy_url": "https://evil.test/x"})
     )
     assert [ref.url for ref in attachment_references(outside)] == ["https://i.imgur.com/a.png"]
+
+
+def test_a_chart_linked_from_another_site_comes_from_discords_copy_without_its_signed_address():
+    original = (
+        "https://assets-2-prod.whop.com/uploads/image/2026-11-03/d58f.png"
+        "?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAEXAMPLE&X-Amz-Signature=abc"
+    )
+    proxy = "https://images-ext-1.discordapp.net/external/HASH/" + quote(original, safe="")
+    (picture,) = attachment_references(message(relay({"url": original, "proxy_url": proxy})))
+
+    assert picture.url == proxy
+    assert picture.filename == "d58f.png"
 
 
 def test_only_an_image_embeds_thumbnail_is_its_picture():
