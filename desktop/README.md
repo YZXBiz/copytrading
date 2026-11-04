@@ -95,6 +95,13 @@ adding it to `READS` in `fixtures.ts`.
 `dist/capture/`. Add a screen with a `[name, env]` pair in `scripts/capture.mjs`; set
 `COPYTRADING_CAPTURE_HASH` to its route. Read the PNGs: they are the visual check.
 
+## Pictures
+
+A post's captured pictures reach the page as `ct-picture://<evidence_id>` (`electron/main/pictures.ts`). Main notes each
+attachment the engine reports as its reply passes through, and serves a file from `<data dir>/attachments/<sha[:2]>/<sha>`
+only when its size and SHA-256 match that record, it is a plain raster picture, and the path is not a link; anything else is a 404.
+The page never supplies the size or hash. Use `<PostPicture attachment={...}>`; fixture mode writes one picture to a temp folder.
+
 ## Not here yet
 
 - `stop`, `control`, `authorize_setup`, `attach_account_readers`, `detach_account_readers` stay main-only (lifecycle,

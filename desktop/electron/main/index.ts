@@ -1,10 +1,11 @@
 import { join } from "node:path"
-import { BrowserWindow, app, dialog, ipcMain, safeStorage, session } from "electron"
+import { BrowserWindow, app, dialog, ipcMain, protocol, safeStorage, session } from "electron"
 import { CHANNELS, type EngineState } from "../../shared/contract"
 import { type Api, createApi } from "./api"
 import { captureWindow } from "./capture"
 import { EngineProcess, engineTarget } from "./engine/launch"
-import { fixtureApi } from "./fixtures"
+import { fixtureApi, seedFixturePictures } from "./fixtures"
+import { PICTURE_SCHEME, PictureIndex } from "./pictures"
 import { SecretStore, redactState } from "./secrets"
 import { SetupFile } from "./setup-file"
 
@@ -18,6 +19,10 @@ const devServer = process.env.ELECTRON_RENDERER_URL
 const engine = new EngineProcess()
 let api: Api
 let secrets: SecretStore | null = null
+// `<data dir>/attachments`: the only place ct-picture:// reads from.
+let attachments: string | null = null
+const pictures = new PictureIndex()
+protocol.registerSchemesAsPrivileged([{ scheme: PICTURE_SCHEME, privileges: { standard: true, secure: true } }])
 
 /** The engine's state as the renderer may see it: a stopped engine's reason is the engine's own stderr. */
 const publicState = (): EngineState => redactState(fixtures ? { state: "running" } : engine.state, secrets?.values() ?? [])
@@ -57,9 +62,13 @@ const unavailableApi = (reason: string): Api => ({
 })
 
 function startServices(): Api {
-  if (fixtures) return fixtureApi
+  if (fixtures) {
+    attachments = seedFixturePictures()
+    return fixtureApi
+  }
   try {
     const target = engineTarget()
+    attachments = join(target.dataDir, "attachments")
     secrets = new SecretStore(join(app.getPath("userData"), "secrets.bin"), cipher)
     void engine.start(target).catch((error: unknown) => engine.fail(error instanceof Error ? error.message : String(error)))
     return createApi({ engine, setup: new SetupFile(target.dataDir), secrets, confirm })
@@ -71,7 +80,11 @@ function startServices(): Api {
 }
 
 function registerIpc(): void {
-  ipcMain.handle(CHANNELS.read, (_event, name: unknown, params: unknown) => api.read(name, params))
+  ipcMain.handle(CHANNELS.read, async (_event, name: unknown, params: unknown) => {
+    const result = await api.read(name, params)
+    if (result.ok) pictures.learn(result.value)
+    return result
+  })
   ipcMain.handle(CHANNELS.act, (_event, name: unknown, params: unknown) => api.act(name, params))
   ipcMain.handle(CHANNELS.state, publicState)
   engine.onState(() => windows().forEach((w) => w.webContents.send(CHANNELS.stateChanged, publicState())))
@@ -100,13 +113,14 @@ function createWindow(): BrowserWindow {
   const hash = process.env.COPYTRADING_CAPTURE_HASH ?? ""
   if (devServer) void window.loadURL(`${devServer}${now ? `?now=${now}` : ""}${hash}`)
   else void window.loadFile(join(__dirname, "../renderer/index.html"), { query: now ? { now } : undefined, hash })
-  if (captureDir) captureWindow(window, captureDir, process.env.COPYTRADING_CAPTURE_NAME ?? "window")
+  if (captureDir) captureWindow(window, captureDir, process.env.COPYTRADING_CAPTURE_NAME ?? "window", process.env.COPYTRADING_CAPTURE_CLICK)
   return window
 }
 
 app.whenReady().then(() => {
   session.defaultSession.setPermissionRequestHandler((_wc, _permission, deny) => deny(false))
   api = startServices()
+  protocol.handle(PICTURE_SCHEME, (request) => (attachments ? pictures.respond(attachments, request.url) : new Response(null, { status: 404 })))
   registerIpc()
   createWindow()
 })

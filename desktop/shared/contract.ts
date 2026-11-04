@@ -300,6 +300,10 @@ export interface OrderActivity {
   submitted_at?: string | null
   cancel_reason?: string | null
   ended_at?: string | null
+  source_price?: Decimal | null
+  entry_tolerance_pct?: Decimal | null
+  quote_bid?: Decimal | null
+  quote_ask?: Decimal | null
 }
 
 export interface DestinationActivity {
@@ -307,9 +311,79 @@ export interface DestinationActivity {
   status: string
   instruction_outcomes: string[]
   environment?: string
+  /** A buy skipped for want of room under a limit: the call (`part`), which limit, and its numbers. */
+  limits_hit?: { part: number; scope: "symbol" | "total"; current: Decimal; proposed: Decimal; limit: Decimal }[]
+  /** A sell skipped because every buy it would sell was posted after it. */
+  later_buys?: { part: number; bought_at: string }[]
+  /** A sell held because no buy is at the price it names, and what came of the guru's buy. */
+  named_buys?: { part: number; posted_at: string | null; outcome: string | null }[]
   orders?: OrderActivity[]
   timeline?: { step: string; at: string; client_id: string | null; reason: string | null; quantity: Decimal | null; price: Decimal | null }[]
 }
+
+/** A picture or file captured with a post. A picture is shown only when main finds its file with this size and SHA-256. */
+export interface SourceAttachmentEvidence {
+  evidence_id: string
+  attachment_id: string
+  filename: string
+  content_type: string | null
+  declared_size: number
+  status: string
+  byte_size: number | null
+  sha256: string | null
+  omitted_count: number
+}
+
+export interface SourceEmbedEvidence {
+  title: string | null
+  description: string | null
+  fields: { name: string; value: string; inline: boolean }[]
+}
+
+/** What Discord sent, as captured. Untrusted text. */
+export interface SourceEventEvidence {
+  event_type: string
+  message_id: string | null
+  channel_id: string | null
+  author_id: string | null
+  timestamp: string | null
+  content: string
+  embeds: SourceEmbedEvidence[]
+  attachments: SourceAttachmentEvidence[]
+  attachments_omitted: number
+  capture_status: string
+  payload_bytes: number
+}
+
+/** How the reader read a call; every stated value comes with the post's own words. */
+export type ReadPrice =
+  | { kind: "exact"; value: Decimal; words: string }
+  | { kind: "range"; low: Decimal; high: Decimal; low_words: string; high_words: string }
+  | { kind: "at_market"; words: string }
+  | { kind: "not_given" }
+export type ReadSize =
+  | { kind: "fraction"; value: Decimal; words: string }
+  | { kind: "batch"; number: number; words: string }
+  | { kind: "dollars"; value: Decimal; words: string }
+  | { kind: "not_given" }
+export type ReadShare = { kind: "fraction"; value: Decimal; words: string } | { kind: "all"; words: string } | { kind: "not_given" }
+export type ReadSellFrom = { kind: "lot"; buy_price: Decimal; words: string } | { kind: "not_said" }
+export type ReadCall =
+  | { action: "buy"; action_words: string; stock: { ticker: string; words: string }; price: ReadPrice; size: ReadSize; repeats?: string | null }
+  | {
+      action: "sell"
+      action_words: string
+      stock: { ticker: string; words: string }
+      price: ReadPrice
+      share: ReadShare
+      sell_from: ReadSellFrom
+      repeats?: string | null
+    }
+export type PostReading =
+  | { kind: "trade_made" | "instruction" | "suggestion"; summary: string; calls: ReadCall[] }
+  | { kind: "conditional"; summary: string; condition: string; calls: ReadCall[] }
+  | { kind: "commentary" | "unclear"; summary: string }
+  | { kind: "chatter" }
 
 export interface SourceActivity {
   sequence: number
@@ -329,6 +403,11 @@ export interface SourceActivity {
   read_started_at?: string | null
   read_at?: string | null
   delivered_at?: string | null
+  captured_at?: string
+  capture_status?: string
+  interpreted_by?: string | null
+  reading?: PostReading | null
+  source_event?: SourceEventEvidence
 }
 
 export interface SourceActivityPage {
