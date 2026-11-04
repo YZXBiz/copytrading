@@ -3,7 +3,8 @@ import { FilterIcon, MessageSquareIcon } from "lucide-react"
 import type { AccountOverviewPage } from "../../../shared/contract"
 import { RegionError } from "@/components/region-error"
 import { Button } from "@/components/ui/button"
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { EmptyState } from "@/components/empty-state"
+import { navigate } from "@/features/shell/route"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PostsSkeleton } from "@/features/activity/PostsSkeleton"
@@ -74,20 +75,12 @@ export function GuruPage({ guru, accounts, setUpAccountIds }: { guru: Guru; acco
         {posts.status === "loading" && <PostsSkeleton />}
         {posts.status === "error" && <RegionError title="Posts did not load" message={posts.error} onRetry={posts.retry} />}
         {feed && days.length === 0 && (
-          <Empty className="min-h-[280px] border-0 bg-transparent">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">{filter === "all" ? <MessageSquareIcon aria-hidden="true" /> : <FilterIcon aria-hidden="true" />}</EmptyMedia>
-              <EmptyTitle>{filter === "all" ? "No posts yet" : "No posts match"}</EmptyTitle>
-              <EmptyDescription>{more ? "Show older to look further back." : "Posts from this guru appear here as they arrive."}</EmptyDescription>
-            </EmptyHeader>
-            {filter !== "all" && (
-              <EmptyContent>
-                <Button type="button" variant="outline" onClick={() => setFilter("all")}>
-                  Clear filter
-                </Button>
-              </EmptyContent>
-            )}
-          </Empty>
+          <EmptyState
+            icon={filter === "all" ? MessageSquareIcon : FilterIcon}
+            title={filter === "all" ? "No posts yet" : "No posts match"}
+            description={more ? "Show older to look further back." : "Posts from this guru appear here as they arrive."}
+            action={more ? undefined : filter === "all" ? { label: "Open Connections", onClick: () => navigate("connections") } : { label: "Clear filter", onClick: () => setFilter("all") }}
+          />
         )}
         {days.length > 0 && <GuruTimeline days={days} guruName={guru.name} now={now} onOpen={setOpen} />}
         {posts.status === "ready" && more && (

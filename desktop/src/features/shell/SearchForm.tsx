@@ -91,7 +91,7 @@ function SearchResults({ open, live, old, setup, close }: Props & { open: boolea
     close()
     run()
   }
-  const startCopying = () => void window.copytrading.act.startCopying().then((result) => !result.ok && !result.cancelled && navigate("connections"))
+  const startCopying = () => void window.copytrading.act.startCopying()
   const setTheme = (theme: Theme) => void window.copytrading.act.setTheme({ theme })
 
   return (

@@ -1,4 +1,4 @@
-import { Menu, type NativeImage, Tray, nativeImage } from "electron"
+import { Menu, app, type NativeImage, Tray, nativeImage } from "electron"
 import type { Tone } from "../../../shared/copying-state"
 import type { EngineState, MenuBarMode, Result, SourceActivity, AccountOverviewPage, TradingStatus } from "../../../shared/contract"
 import type { Api } from "../api"
@@ -101,7 +101,8 @@ export class MenuBar {
     if (action === "quit") return this.deps.quit()
     if (action === "waiting") return this.deps.open(this.route ?? "#/accounts")
     if (action === "open") return this.deps.open()
-    // A confirmation is a sheet on the window, so the window comes forward first.
+    // A confirmation is a sheet on the window, so the app and its window come forward first (a menu bar click does not activate the app).
+    app.focus({ steal: true })
     this.deps.open()
     await (action === "pause" ? this.deps.pause() : this.deps.start())
     void this.refresh()

@@ -243,6 +243,8 @@ function registerIpc(): void {
     // The choice is saved by the api; the window follows it here, live.
     if (name === "setTheme" && result.ok) nativeTheme.themeSource = result.value as Theme
     if (name === "setMenuBar" && result.ok) menuBar?.apply()
+    // ⌘K has no form to show why a start failed, so main says it in the same native dialog the menu bar item uses.
+    if (name === "startCopying" && !result.ok) void report("Copying did not start", result)
     return result
   })
   ipcMain.handle(CHANNELS.state, publicState)
