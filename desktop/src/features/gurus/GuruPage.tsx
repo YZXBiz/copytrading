@@ -5,6 +5,7 @@ import { RegionError } from "@/components/region-error"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Frame, FramePanel } from "@/components/reui/frame"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Spinner } from "@/components/ui/spinner"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
@@ -64,12 +65,14 @@ export function GuruPage({ guru, accounts, setUpAccountIds }: { guru: Guru; acco
         </FramePanel>
       </Frame>
       <Sheet open={opened !== undefined} onOpenChange={(next) => !next && setOpen(null)}>
-        <SheetContent className="overflow-auto p-6 sm:max-w-xl">
-          <SheetHeader className="p-0">
+        <SheetContent className="flex flex-col gap-0 space-y-0 sm:max-w-xl">
+          <SheetHeader>
             <SheetTitle>{guru.name}</SheetTitle>
             <SheetDescription>The post in full, and what each account did.</SheetDescription>
           </SheetHeader>
-          {opened && <PostView post={opened} guruName={guru.name} now={now} />}
+          <ScrollArea className="min-h-0 flex-1">
+            <div className="px-4 pb-6">{opened && <PostView post={opened} guruName={guru.name} now={now} />}</div>
+          </ScrollArea>
         </SheetContent>
       </Sheet>
     </div>

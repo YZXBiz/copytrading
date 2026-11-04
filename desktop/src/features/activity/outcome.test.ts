@@ -124,7 +124,7 @@ describe("cardOutcome", () => {
     const open = cardOutcome(review, NOW)
     expect(open).toMatchObject({ title: "Waiting for you", tone: "caution" })
     expect(open.accounts[0]).toMatchObject({ waits: true })
-    expect(open.accounts[0]!.results[0]).toMatchObject({ headline: "Waiting for you: the guru gave a price range", facts: [{ label: "Copy by", value: "8:00 PM ET" }] })
+    expect(open.accounts[0]!.results[0]).toMatchObject({ headline: "Waiting for you: the guru gave a price range", facts: [{ label: "Copy by", value: expect.stringMatching(/^Deadline today: \d{1,2}:00 [AP]M \w+$/) }] })
     const late = cardOutcome(review, new Date("2026-11-05T15:00:00Z"))
     expect(late.title).toBe("Expired")
     expect(late.accounts[0]!.results[0]!.note).toBe("Too late to copy: its trading day is over.")

@@ -1,6 +1,7 @@
 import type { DestinationActivity, OrderActivity, SourceActivity } from "../../../shared/contract"
 import { tradingDay } from "@/features/account/model"
 import { money } from "@/lib/format"
+import { deadlineText, endOfTradingDay } from "./deadline"
 import { dollars, duration, filledAmount, num, orderDollars, plannedAmount, sharesOf, sharesOfOrder } from "./amounts"
 import { decisionTitle, enteredByOwner } from "./reading"
 import { reasonText, sentence } from "./reasons"
@@ -255,7 +256,7 @@ function namedBuySentence(named: NonNullable<DestinationActivity["named_buys"]>[
   return `${sentence(`The ${buy} buy on ${day} wasn't made`)} ${sentence(reasonText(named.outcome))}`
 }
 
-function waitingResult(d: DestinationActivity, post: SourceActivity, open: boolean): Result {
+function waitingResult(d: DestinationActivity, post: SourceActivity, open: boolean, now: Date): Result {
   const code = post.decision === "review" ? post.parser_reason : d.instruction_outcomes.find((o) => HELD_FOR_OWNER.has(o))
   // An account that asked to approve every order is asked to approve, not to copy.
   const approving = d.instruction_outcomes.includes("approval_required") && post.decision !== "review"
@@ -272,8 +273,7 @@ function waitingResult(d: DestinationActivity, post: SourceActivity, open: boole
   return {
     tone: "caution",
     headline: approving ? "Waiting for your approval" : short ? `Waiting for you: ${short}` : "Waiting for you",
-    // A post's trading day ends at 20:00 New York time.
-    facts: [{ label: approving ? "Approve by" : "Copy by", value: "8:00 PM ET" }],
+    facts: [{ label: approving ? "Approve by" : "Copy by", value: deadlineText(endOfTradingDay(post.source_at), now) }],
     note: (named && namedBuySentence(named, post)) || (short === undefined && code ? sentence(reasonText(code)) : undefined),
   }
 }
@@ -284,7 +284,7 @@ function staleNote(post: SourceActivity): string {
   return `Read ${duration(late)} after it was posted: older than this account copies buys. A sell is always copied.`
 }
 
-function resultsFor(d: DestinationActivity, post: SourceActivity, waits: boolean, open: boolean): Result[] {
+function resultsFor(d: DestinationActivity, post: SourceActivity, waits: boolean, open: boolean, now: Date): Result[] {
   const postedAt = Date.parse(post.source_at)
   const results = (d.orders ?? []).map((o) => orderResult(o, postedAt))
   d.instruction_outcomes.forEach((outcome, part) => {
@@ -305,7 +305,7 @@ function resultsFor(d: DestinationActivity, post: SourceActivity, waits: boolean
   })
   // A sell with no fresh bid yet keeps waiting, and asks Alpaca again every 30 seconds.
   if (d.instruction_outcomes.includes("waiting_for_quote")) results.push({ tone: "neutral", headline: reasonText("waiting_for_quote"), facts: [] })
-  if (waits) results.push(waitingResult(d, post, open))
+  if (waits) results.push(waitingResult(d, post, open, now))
   else if (["stale", "out_of_order"].includes(d.status) && results.length === 0) {
     results.push({ tone: "inactive", headline: "Not copied", facts: [], note: d.status === "stale" ? staleNote(post) : reasonText(d.status) })
   }
@@ -319,7 +319,7 @@ export function cardOutcome(post: SourceActivity, now: Date): CardOutcome {
   const open = isOpenCall(post, now)
   const accounts = post.destinations.map((d) => {
     const waits = held.includes(d.account_id) && !(d.orders ?? []).some(isOwnerEntry)
-    return { id: d.account_id, environment: d.environment ?? "paper", results: resultsFor(d, post, waits, open), waits: waits && open }
+    return { id: d.account_id, environment: d.environment ?? "paper", results: resultsFor(d, post, waits, open, now), waits: waits && open }
   })
   // The owner's own sales are theirs, not the post's: they never decide how the post did.
   const orders = post.destinations.flatMap((d) => d.orders ?? []).filter((o) => !isOwnerSale(o))

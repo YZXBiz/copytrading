@@ -14,7 +14,7 @@ const zhao = encodeURIComponent("赵哥")
 // Posts in the fixtures, oldest first: 3 a skipped sell, 5 a buy that timed out, 6 a picture, 8 a fill, 9 a post waiting for the owner.
 for (const [name, env] of [
   ["fixture", fixtures],
-  ["placeholder-gurus", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/settings" }],
+  ["placeholder-settings", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/settings" }],
   ["activity-timed-out", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/activity/5" }],
   ["activity-picture", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/activity/6" }],
   ["activity-filled", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/activity/8" }],
@@ -23,7 +23,8 @@ for (const [name, env] of [
   ["activity-needs-you", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/activity", COPYTRADING_CAPTURE_CLICK: '[data-slot="toggle-group-item"]:nth-child(2)' }],
   ["gurus", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/gurus" }],
   ["guru-page", { ...fixtures, COPYTRADING_CAPTURE_HASH: `#/gurus/${zhao}` }],
-  ["guru-post-sheet", { ...fixtures, COPYTRADING_CAPTURE_HASH: `#/gurus/${zhao}`, COPYTRADING_CAPTURE_CLICK: '[data-slot="timeline-content"] button' }],
+  ["guru-post-sheet-filled", { ...fixtures, COPYTRADING_CAPTURE_HASH: `#/gurus/${zhao}`, COPYTRADING_CAPTURE_CLICK: 'button[data-sequence="8"]' }],
+  ["guru-post-sheet-waiting", { ...fixtures, COPYTRADING_CAPTURE_HASH: `#/gurus/${zhao}`, COPYTRADING_CAPTURE_CLICK: 'button[data-sequence="9"]' }],
   ["live", {}],
   ["live-activity", { COPYTRADING_CAPTURE_HASH: "#/activity" }],
   ["live-gurus", { COPYTRADING_CAPTURE_HASH: "#/gurus" }],
