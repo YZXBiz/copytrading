@@ -45,13 +45,22 @@ describe("AccountReaders", () => {
   it("sends each saved account's keys with its environment, and only that account's", async () => {
     const h = harness()
     h.secrets.merge({ brokers: [broker("zhap-account-2"), broker("removed-account")] })
+    h.secrets.stage()
     await h.readers.attach()
     expect(h.attached).toEqual([{ accounts: [{ account_id: "zhap-account-2", environment: "paper", key: KEY, secret: SECRET }] }])
+  })
+
+  it("does not send keys the owner typed and has not saved with a start", async () => {
+    const h = harness()
+    h.secrets.merge({ brokers: [broker("zhap-account-2")] })
+    await h.readers.attach()
+    expect(h.attached).toEqual([{ accounts: [] }])
   })
 
   it("sends nothing for an account that has no key and secret yet", async () => {
     const h = harness()
     h.secrets.merge({ brokers: [broker("zhap-account-2", KEY, ""), broker("zhap-account-3", "", SECRET)] })
+    h.secrets.stage()
     await h.readers.attach()
     expect(h.attached).toEqual([{ accounts: [] }])
   })
@@ -59,10 +68,12 @@ describe("AccountReaders", () => {
   it("does not send again while nothing changed, so the engine keeps its cached reads", async () => {
     const h = harness()
     h.secrets.merge({ brokers: [broker("zhap-account-2")] })
+    h.secrets.stage()
     await h.readers.attach()
     await h.readers.attach()
     expect(h.attached).toHaveLength(1)
     h.secrets.merge({ brokers: [broker("zhap-account-2", "PKNEWKEY2222")] })
+    h.secrets.stage()
     await h.readers.attach()
     expect(h.attached).toHaveLength(2)
   })
@@ -70,6 +81,7 @@ describe("AccountReaders", () => {
   it("sends again after the engine started, since a new engine holds no keys", async () => {
     const h = harness()
     h.secrets.merge({ brokers: [broker("zhap-account-2")] })
+    h.secrets.stage()
     await h.readers.attach()
     await h.readers.attach(true)
     expect(h.attached).toHaveLength(2)
@@ -78,6 +90,7 @@ describe("AccountReaders", () => {
   it("never throws when the engine does not answer, and tries again at the next change", async () => {
     const failing = harness({ failing: true })
     failing.secrets.merge({ brokers: [broker("zhap-account-2")] })
+    failing.secrets.stage()
     await expect(failing.readers.attach()).resolves.toBeUndefined()
     await failing.readers.attach()
     expect(failing.sent.filter((op) => op === "attach_account_readers")).toHaveLength(2)
@@ -88,6 +101,7 @@ describe("through the api", () => {
   it("attaches the keys after a setup is saved, and the page's reply never carries them", async () => {
     const h = harness()
     h.secrets.merge({ brokers: [broker("zhap-account-2")] })
+    h.secrets.stage()
     const saved = h.setup.current()!
     const result = await h.api.act("saveSetup", { configuration: saved.configuration, revision: saved.revision })
     expect(result).toMatchObject({ ok: true })
@@ -95,11 +109,12 @@ describe("through the api", () => {
     expect(JSON.stringify(result)).not.toContain(KEY)
   })
 
-  it("attaches after an action that is refused too: a rolled-back start can change the keys", async () => {
+  it("sends the keys again, without the account's, after they are forgotten", async () => {
     const h = harness()
     h.secrets.merge({ brokers: [broker("zhap-account-2")] })
-    await h.api.act("discardSecrets", {})
-    expect(h.sent).toContain("attach_account_readers") // the discarded working keys are what the engine holds now: none
+    h.secrets.stage()
+    await h.readers.attach()
+    await h.api.act("forgetBroker", { account_id: "zhap-account-2" })
     expect(h.attached.at(-1)).toEqual({ accounts: [] })
   })
 

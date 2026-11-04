@@ -21,7 +21,7 @@ export class AccountReaders {
     if (fresh) this.sent = null
     let accounts: { account_id: string; environment: string; key: string; secret: string }[]
     try {
-      const keys = new Map(this.secrets.secrets.brokers.map((b) => [b.account_id, b]))
+      const keys = new Map(this.secrets.saved.brokers.map((b) => [b.account_id, b]))
       accounts = (this.setup.current()?.configuration.accounts ?? []).flatMap(({ id, environment }) => {
         const broker = keys.get(id)
         return broker?.key && broker.secret ? [{ account_id: id, environment, key: broker.key, secret: broker.secret }] : []
