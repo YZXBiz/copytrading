@@ -15,6 +15,7 @@ import {
   SidebarMenuSkeleton,
   SidebarSeparator,
 } from "@/components/ui/sidebar"
+import { AssistantPanel } from "@/features/assistant/AssistantPanel"
 import { money } from "@/lib/format"
 import { type Loaded } from "@/lib/use-result"
 import { CopyingStatus } from "./CopyingStatus"
@@ -91,6 +92,7 @@ export function AppSidebar({ route, accounts, selectedAccountId, engine }: Props
       <SidebarFooter>
         <SidebarSeparator className="mx-0" />
         <SidebarMenu>
+          <AssistantPanel />
           <NavItem screen="getting-started" route={route} />
           <NavItem screen="connections" route={route} />
           <NavItem screen="settings" route={route} />

@@ -62,6 +62,8 @@ export interface EngineStatus {
   telemetry_state: "healthy" | "degraded"
   telemetry_dropped: number
   telemetry_error_code: string | null
+  /** Records the journal had to leave out: too large, or not safely cleaned of keys. */
+  diagnostic_capture?: { source_event_gaps: number; model_request_gaps: number; model_response_gaps: number }
 }
 
 export interface WorkflowView {
@@ -738,6 +740,7 @@ export interface PendingRestoreCandidate {
   candidate_valid: boolean
 }
 
+/** What the engine takes for one account. Main fills it from the setup and the key store; the page sends only the candidate. */
 export interface RestorePreflightAccount {
   account_id: string
   environment: TradingEnvironment
@@ -819,6 +822,32 @@ export interface AssistantTurnPage {
   }[]
 }
 
+// ── Settings and tools (the diagnostics journal) ───────────────────────────
+
+/** One line of the engine's private journal, shaped for reading by main (DiagnosticsJournal.swift). */
+export interface DiagnosticsEntry {
+  id: string
+  kind: "stage" | "payload" | "trading"
+  at: string
+  /** What happened: the stage, the capture kind, or the trading operation. */
+  name: string
+  /** How it ended: an outcome or a capture status. */
+  outcome: string
+  trace_id: string | null
+  workflow_id: string | null
+  /** Every recorded field except the payload, by name. */
+  fields: { name: string; value: string }[]
+  /** The redacted payload as indented JSON, when one was captured and is readable. */
+  payload_json: string | null
+  payload_unreadable: boolean
+}
+
+/** The newest entries first, and the bytes the journal holds on disk. */
+export interface DiagnosticsPage {
+  entries: DiagnosticsEntry[]
+  bytes: number
+}
+
 // ── The operations ─────────────────────────────────────────────────────────
 // Each entry is [params, result]. `undefined` params means none; `X | undefined` means optional.
 
@@ -851,6 +880,8 @@ export interface ReadOperations {
   getSetup: Op<undefined, SetupView | null>
   getLimits: Op<{ account_id: string }, AccountLimits | null>
   getSecretStatus: Op<undefined, SecretStatus>
+  // Settings and tools: main reads the tail of the journal file; the engine is not asked.
+  readDiagnostics: Op<{ limit?: number } | undefined, DiagnosticsPage>
 }
 
 export interface ActOperations {
@@ -878,7 +909,8 @@ export interface ActOperations {
   previewRestore: Op<{ archive_path: string }, RestorePreview>
   prepareRestoreCandidate: Op<{ staging_id: string }, { candidate_id: string }>
   abortRestoreCandidate: Op<{ candidate_id: string }, null>
-  restorePreflight: Op<{ candidate_id: string; accounts: RestorePreflightAccount[] }, RestorePreflight>
+  /** Main reads the candidate's accounts from the engine, their environments from the saved setup and their keys from the key store. */
+  restorePreflight: Op<{ candidate_id: string }, RestorePreflight>
   resolveOwnership: Op<{ account_id: string; resolution: OwnershipResolutionRequest }, OwnershipResolution>
   saveManualCorrection: Op<{ correction: ManualCorrectionRequest }, ManualCorrectionOutcome>
   rejectProposal: Op<{ proposal_id: string }, AgentProposal>
@@ -893,6 +925,9 @@ export interface ActOperations {
   assistantCancel: Op<{ turn_id: string }, { cancelled: boolean }>
   assistantReset: Op<undefined, null>
   submitSelfTest: Op<{ command: { command_id: string; text: string; destination_ids: string[] } }, WorkflowView>
+  // Settings and tools: the native file pickers. The path is for the next call; null is Cancel.
+  chooseBackupDestination: Op<undefined, string | null>
+  chooseRestoreArchive: Op<undefined, string | null>
 }
 
 /** Engine operations only main sends: lifecycle, the agent socket relay, and the paused-account readers. */
@@ -907,6 +942,7 @@ export const READS = [
   "getSourceActivity", "getGuruActivity", "getGuruDayStats", "getAccountFeed", "getQuote", "getManualCommand",
   "listManualCommands", "previewManualOrder", "previewLotSale", "listProposals", "getAgentAudit",
   "getRestoreCandidate", "getAssistantTurn", "getSetup", "getLimits", "getSecretStatus",
+  "readDiagnostics",
 ] as const satisfies readonly ReadName[]
 
 export const ACTS = [
@@ -916,6 +952,7 @@ export const ACTS = [
   "abortRestoreCandidate", "restorePreflight", "resolveOwnership", "saveManualCorrection", "rejectProposal",
   "completeProposal", "discardProposals", "learnGuruPlaybook", "evaluateHistoricalProfile", "assistantAsk",
   "assistantCancel", "assistantReset", "submitSelfTest",
+  "chooseBackupDestination", "chooseRestoreArchive",
 ] as const satisfies readonly ActName[]
 
 // Compile-time check that the lists are complete: a name missing from READS or ACTS is a type error here.

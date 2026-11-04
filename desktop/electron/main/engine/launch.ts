@@ -125,7 +125,7 @@ export class EngineProcess {
 }
 
 /** The command that runs the engine as AppModel.swift does: -u -m copytrading_engine, JSON lines on stdio. */
-export function engineTarget(): SpawnTarget & { cleanup: () => void; dataDir: string } {
+export function engineTarget(): SpawnTarget & { cleanup: () => void; dataDir: string; logsDir: string } {
   const runtime = findPython()
   const python = process.env.COPYTRADING_PYTHON ?? (runtime && join(runtime, PYTHON))
   if (!python) throw new Error("No Python runtime with the engine's dependencies found.")
@@ -144,5 +144,6 @@ export function engineTarget(): SpawnTarget & { cleanup: () => void; dataDir: st
     },
     cleanup: () => rmSync(dirs.root, { recursive: true, force: true }),
     dataDir: dirs.data,
+    logsDir: dirs.logs,
   }
 }

@@ -1,4 +1,6 @@
 // Display formatting for engine values. Decimals arrive as strings; null or junk shows an em dash.
+// Times show in the zone chosen in Settings (src/lib/time-zone.ts) unless a call names one.
+import { getTimeZone } from "./time-zone"
 
 type Num = string | number | null | undefined
 
@@ -50,7 +52,7 @@ export function shares(value: Num): string {
 type Zone = { timeZone?: string }
 
 /** Nov 3, 1:41 PM */
-export function dateTime(iso: string, { timeZone }: Zone = {}): string {
+export function dateTime(iso: string, { timeZone = getTimeZone() }: Zone = {}): string {
   return new Date(iso).toLocaleString("en-US", {
     month: "short",
     day: "numeric",
@@ -61,12 +63,12 @@ export function dateTime(iso: string, { timeZone }: Zone = {}): string {
 }
 
 /** 1:41 PM */
-export function timeOfDay(iso: string, { timeZone }: Zone = {}): string {
+export function timeOfDay(iso: string, { timeZone = getTimeZone() }: Zone = {}): string {
   return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone })
 }
 
 /** Nov 3 */
-export function monthDay(iso: string, { timeZone }: Zone = {}): string {
+export function monthDay(iso: string, { timeZone = getTimeZone() }: Zone = {}): string {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone })
 }
 

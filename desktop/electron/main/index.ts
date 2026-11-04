@@ -47,6 +47,20 @@ async function confirm(text: string): Promise<boolean> {
   return response === 1
 }
 
+/** Where to save a backup, or which one to open: a native dialog the page cannot reach. null for Cancel. */
+async function pick(kind: "backup-destination" | "restore-archive"): Promise<string | null> {
+  const parent = BrowserWindow.getFocusedWindow() ?? windows()[0]
+  const filters = [{ name: "Backup", extensions: ["zip"] }]
+  if (kind === "backup-destination") {
+    const options = { filters, defaultPath: "CopyTrading-Backup.zip" }
+    const { canceled, filePath } = await (parent ? dialog.showSaveDialog(parent, options) : dialog.showSaveDialog(options))
+    return canceled || !filePath ? null : filePath
+  }
+  const options = { filters, properties: ["openFile" as const] }
+  const { canceled, filePaths } = await (parent ? dialog.showOpenDialog(parent, options) : dialog.showOpenDialog(options))
+  return canceled || !filePaths[0] ? null : filePaths[0]
+}
+
 const cipher = {
   encrypt: (text: string) => {
     if (!safeStorage.isEncryptionAvailable()) throw new Error("This Mac's secure storage is not available, so keys cannot be saved.")
@@ -71,7 +85,7 @@ function startServices(): Api {
     attachments = join(target.dataDir, "attachments")
     secrets = new SecretStore(join(app.getPath("userData"), "secrets.bin"), cipher)
     void engine.start(target).catch((error: unknown) => engine.fail(error instanceof Error ? error.message : String(error)))
-    return createApi({ engine, setup: new SetupFile(target.dataDir), secrets, confirm })
+    return createApi({ engine, setup: new SetupFile(target.dataDir), secrets, confirm, diagnosticsDir: target.logsDir, pick })
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error)
     engine.fail(reason)
