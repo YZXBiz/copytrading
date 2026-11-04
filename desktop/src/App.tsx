@@ -1,9 +1,8 @@
 import { MotionConfig } from "motion/react"
-import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { AppSidebar } from "@/features/shell/AppSidebar"
+import { AppFrame } from "@/features/shell/AppFrame"
 import { useEngineState } from "@/features/shell/engine-state"
+import { splitRecords } from "@/features/shell/records"
 import { useRoute } from "@/features/shell/route"
 import { SCREENS } from "@/features/shell/screens"
 import { useResult } from "@/lib/use-result"
@@ -13,35 +12,19 @@ export default function App() {
   const engine = useEngineState()
   // Reads again when the engine finishes starting, then every 5 s: balance, holdings and copying state move on their own.
   const accounts = useResult(() => window.copytrading.read.getAccounts(), `accounts:${engine.state}`, 5000)
-  const screen = SCREENS[route.screen]
-  const selectedAccountId = route.screen === "accounts" ? (route.id ?? (accounts.status === "ready" ? accounts.data.items[0]?.account_id : null) ?? null) : null
+  // The saved setup says which accounts are live; the rest are records left from earlier runs.
+  const setup = useResult(() => window.copytrading.read.getSetup(), `setup:${engine.state}`, 5000)
+  const config = setup.status === "ready" ? (setup.data?.configuration ?? null) : undefined
+  const { live, old } = splitRecords(accounts.status === "ready" ? accounts.data.items : [], config)
+  const selectedAccountId = route.screen === "accounts" ? (route.id ?? live[0]?.account_id ?? null) : null
 
   return (
     <MotionConfig reducedMotion="user">
-    <TooltipProvider>
-      <SidebarProvider>
-        <AppSidebar route={route} accounts={accounts} selectedAccountId={selectedAccountId} engine={engine} />
-        <SidebarInset className="min-w-0 overflow-hidden">
-          <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
-            <SidebarTrigger className="-ml-1" />
-            <Breadcrumb className="min-w-0">
-              <BreadcrumbList className="flex-nowrap">
-                {selectedAccountId && (
-                  <>
-                    <BreadcrumbItem>{screen.title}</BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                  </>
-                )}
-                <BreadcrumbItem className="min-w-0">
-                  <BreadcrumbPage className="truncate">{selectedAccountId ?? screen.title}</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-          </header>
-          <main className="flex-1 overflow-auto p-6">{screen.render({ route, accounts })}</main>
-        </SidebarInset>
-      </SidebarProvider>
-    </TooltipProvider>
+      <TooltipProvider>
+        <AppFrame route={route} accounts={accounts} live={live} old={old} setup={config} selectedAccountId={selectedAccountId} engine={engine}>
+          {SCREENS[route.screen].render({ route, accounts })}
+        </AppFrame>
+      </TooltipProvider>
     </MotionConfig>
   )
 }
