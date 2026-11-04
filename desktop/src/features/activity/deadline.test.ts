@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest"
-import { deadlineText, endOfTradingDay } from "./deadline"
+import { deadlineText, endOfTradingDay, tradingDay } from "./deadline"
 
 const LA = "America/Los_Angeles"
+
+describe("tradingDay", () => {
+  it("rolls to the next day from 20:00 New York", () => {
+    expect(tradingDay(new Date("2026-11-03T00:30:00Z"))).toBe("2026-11-02") // 19:30 Nov 2 in New York
+    expect(tradingDay(new Date("2026-11-03T01:30:00Z"))).toBe("2026-11-03") // 20:30 Nov 2 in New York
+  })
+})
 
 describe("endOfTradingDay", () => {
   it("is 20:00 New York time on the post's day: 01:00 UTC in winter, 00:00 UTC in summer", () => {

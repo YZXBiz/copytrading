@@ -42,5 +42,5 @@ export function AccountsScreen({
       </Empty>
     )
   }
-  return <AccountPage key={account.account_id} account={account} onRefresh={onRefresh} onOpenConnections={onOpenConnections} />
+  return <AccountPage key={account.account_id} account={account} accounts={accounts.data.items} onRefresh={onRefresh} onOpenConnections={onOpenConnections} />
 }

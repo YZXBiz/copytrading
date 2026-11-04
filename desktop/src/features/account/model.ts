@@ -1,8 +1,10 @@
 import type { AccountOverview, SourceActivity } from "../../../shared/contract"
 import { monthDay } from "@/lib/format"
+import { BADGE, isOpenCall, isOwnerSale, orderOutcome } from "@/features/activity/outcome"
+import { callPhrase } from "./waiting"
 
-/** The badge tones the page uses for what became of a post. */
-export type OutcomeTone = "success-light" | "warning-light" | "outline"
+/** The badge tones the page uses for what became of a post: Activity's, so a post reads the same on both screens. */
+export type OutcomeTone = (typeof BADGE)[keyof typeof BADGE]
 
 export interface PostOutcome {
   label: string
@@ -24,20 +26,23 @@ function words(code: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
-function call(post: SourceActivity): string {
-  const first = post.instructions[0]
-  if (!first) return "Trade call"
-  const verb = first.action === "buy" ? "Buy" : first.action === "close" ? "Sell all" : "Trim"
-  return `${verb} ${first.symbol}${first.price ? ` at $${Number(first.price).toFixed(2)}` : ""}`
-}
+const call = (post: SourceActivity) => (post.instructions[0] ? callPhrase(post.instructions[0]) : "Trade call")
 
 /** What a guru post did for one account: chat, a suggestion waiting for the owner, or a trade call. */
 export function postOutcome(post: SourceActivity, accountId: string, now: Date): PostOutcome {
-  if (post.decision === "ignore") return { label: "Chat", tone: "outline", read: "Just chat" }
-  if (isWaiting(post, now)) return { label: "Waits for you", tone: "warning-light", read: "Needs your review" }
+  if (post.decision === "ignore") return { label: "Chat", tone: BADGE.inactive, read: "Just chat" }
+  if (isOpenCall(post, now)) return { label: "Waits for you", tone: BADGE.caution, read: "Needs your review" }
   const read = call(post)
-  const outcomes = post.destinations.find((d) => d.account_id === accountId)?.instruction_outcomes ?? []
-  if (outcomes.includes("order_linked")) return { label: "Copied", tone: "success-light", read }
+  const destination = post.destinations.find((d) => d.account_id === accountId)
+  // What the post itself did, said as Activity says it (Copied only once an order filled); a lot the owner later
+  // sold by hand is theirs, not the post's.
+  const orders = (destination?.orders ?? []).filter((o) => !isOwnerSale(o))
+  if (orders[0]) {
+    const outcome = orderOutcome(orders[0], orders.length)
+    return { label: outcome.kind === "filled" ? "Copied" : outcome.title, tone: BADGE[outcome.tone], read: outcome.detail }
+  }
+  const outcomes = destination?.instruction_outcomes ?? []
+  if (outcomes.includes("order_linked")) return { label: "Order placed", tone: "outline", read }
   if (outcomes.length === 0 && post.decision === "review") {
     return { label: "Not copied", tone: "outline", read: "Its trading day ended before you decided" }
   }
@@ -47,39 +52,6 @@ export function postOutcome(post: SourceActivity, accountId: string, now: Date):
   const code = outcomes.find((o) => o !== "pending" && o !== "waiting_for_quote") ?? ""
   const symbol = post.instructions[0]?.symbol ?? ""
   return { label: "Skipped", tone: "outline", read: `${read} · ${SKIP_REASONS[code]?.(symbol) ?? words(code)}` }
-}
-
-/** Skips that hold a call for the owner rather than refuse it (the engine's HELD_FOR_OWNER). */
-const HELD_FOR_OWNER = new Set(["approval_required", "named_buy_not_held"])
-
-/** The New York trading day an instant belongs to; from 20:00 it is the next day's (WaitingCall.swift). */
-export function tradingDay(instant: Date): string {
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-US", {
-      timeZone: "America/New_York",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      hourCycle: "h23",
-    })
-      .formatToParts(instant)
-      .map((part) => [part.type, Number(part.value)]),
-  ) as Record<"year" | "month" | "day" | "hour", number>
-  const day = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + (parts.hour >= 20 ? 1 : 0)))
-  return day.toISOString().slice(0, 10)
-}
-
-/**
- * A post waits for the owner while an account holds its call (a review, an approval, a sell naming
- * a buy that is not held) and its trading day is not over, as WaitingCall.swift decides. The
- * owner's own skips and hand-entered trades live in the app, not the engine, so they are not seen.
- */
-export function isWaiting(post: SourceActivity, now: Date): boolean {
-  const held = post.destinations.some(
-    (d) => d.status === "review_required" || d.instruction_outcomes.some((o) => HELD_FOR_OWNER.has(o)),
-  )
-  return held && tradingDay(new Date(post.source_at)) === tradingDay(now)
 }
 
 /** Positions worth a row: the broker keeps fractions of a cent after a sale. */

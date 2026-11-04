@@ -12,10 +12,13 @@ const SETTLE_MS = 2500
 export function captureWindow(window: BrowserWindow, dir: string, name: string, click?: string): void {
   window.webContents.once("did-finish-load", async () => {
     mkdirSync(dir, { recursive: true })
-    await new Promise((done) => setTimeout(done, SETTLE_MS))
+    const wait = (ms: number) => new Promise((done) => setTimeout(done, ms))
+    await wait(SETTLE_MS)
+    // A slow start must not be saved as a skeleton: wait (up to 15 s) until no region is still loading.
+    for (let i = 0; i < 60 && (await window.webContents.executeJavaScript(`document.querySelector('[role="status"]') !== null`)); i++) await wait(250)
     if (click) {
       await window.webContents.executeJavaScript(`document.querySelector(${JSON.stringify(click)})?.click()`)
-      await new Promise((done) => setTimeout(done, 800))
+      await wait(800)
     }
     // COPYTRADING_CAPTURE_SCRIPT: page script to run first, for a panel that needs more than one press; its effects get a moment to show.
     if (process.env.COPYTRADING_CAPTURE_SCRIPT) {
