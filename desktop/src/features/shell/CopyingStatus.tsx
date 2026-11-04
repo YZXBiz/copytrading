@@ -3,6 +3,7 @@ import type { EngineState, TradingRunState, TradingStatus } from "../../../share
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar"
 import { ago } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { copyingProblem } from "./copying-problem"
 
 const POLL_MS = 10_000
 
@@ -55,6 +56,8 @@ export function CopyingStatus({ engine }: { engine: EngineState }) {
   let age: string | undefined
   let tone: string
   let title: string | undefined
+  // Whether the text is the engine's reason or a problem, which runs to a sentence.
+  let sentenceText = false
   if (engine.state === "starting") {
     text = "Engine starting"
     tone = "bg-warning"
@@ -62,6 +65,7 @@ export function CopyingStatus({ engine }: { engine: EngineState }) {
     text = `Engine stopped: ${engine.reason}`
     tone = "bg-destructive"
     title = engine.reason
+    sentenceText = true
   } else if (!read) {
     text = "Checking the engine"
     tone = "bg-muted-foreground/50"
@@ -71,9 +75,13 @@ export function CopyingStatus({ engine }: { engine: EngineState }) {
     title = read.error
   } else {
     const state = STATES[read.status.state]
-    text = state.label
-    age = ago(read.at, now)
     tone = state.tone
+    // With problems, the footer says which: the account or service, what happened, what to do. A sentence has no room for the age.
+    const problem = read.status.state === "degraded" ? copyingProblem(read.status) : undefined
+    text = problem ?? state.label
+    title = problem
+    sentenceText = problem !== undefined
+    if (!problem) age = ago(read.at, now)
   }
 
   // The dot pulses only while copying runs; every other state is a still dot.
@@ -81,7 +89,13 @@ export function CopyingStatus({ engine }: { engine: EngineState }) {
 
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton role="status" tooltip={title ?? text} title={title}>
+      <SidebarMenuButton
+        role="status"
+        tooltip={title ?? text}
+        title={title}
+        // A stopped engine's reason, or a problem, is a sentence: let it wrap to five lines instead of one cut-off line.
+        className={sentenceText ? "h-auto items-start py-1.5 [&>span:last-child]:line-clamp-5 [&>span:last-child]:whitespace-normal" : undefined}
+      >
         <span className="flex size-4 shrink-0 items-center justify-center" aria-hidden="true">
           <span
             className={cn(

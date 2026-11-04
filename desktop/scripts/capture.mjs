@@ -52,6 +52,7 @@ function setupCaptures() {
   return [
     ...sized,
     ...broken,
+    ["footer-degraded", fixture("#/accounts/zhap-account-2", "saved", "degraded")],
     ["sheet-discord", fixture("#/connections/discord", "saved", "paused")],
     ["sheet-interpreter", fixture("#/connections/interpreter", "saved", "paused")],
     ["sheet-account", fixture("#/connections/account:0", "saved", "paused")],

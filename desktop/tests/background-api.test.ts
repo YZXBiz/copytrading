@@ -45,6 +45,7 @@ function harness(answer: boolean, over: { preview?: RestorePreview; candidate?: 
       rollback: async (id) => void calls.push(`rollback:${id}`),
     },
     prefs: new Prefs(dir),
+    readers: { attach: async () => {} },
   })
   return { api, calls, asked, dir, setup }
 }

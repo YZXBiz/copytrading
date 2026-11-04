@@ -105,6 +105,12 @@ Never point an engine at it. Only the built app (`app.isPackaged`) runs on it, t
 `COPYTRADING_STATE_ROOT=<existing folder under $TMPDIR>` gives the built app a throwaway folder instead, and with
 `COPYTRADING_SMOKE=1` it quits 0 once the page loaded and the engine answered.
 
+The engine holds no broker keys of its own until copying starts, so main hands it each saved account's keys with
+`attach_account_readers` (`electron/main/readers.ts`, `AccountReaders`): after every engine start, and after any action that saves the
+setup or changes its keys. They go from the key store to the engine only. Without them a paused account has no balance, history or live
+price (`get_equity_history` and `get_quote` answer `not_found`). The engine's stderr is kept in `logs/engine.log` (256 KB, then
+`engine.log.1`) beside the diagnostics journal.
+
 ## Background duties (main process)
 
 - **Installation folder** (`engine/paths.ts`, port of `RuntimePaths.swift`): `installation-id`, `active-generation`,

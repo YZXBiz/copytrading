@@ -17,6 +17,7 @@ import { fixtureApi, seedFixturePictures } from "./fixtures"
 import { moveKeychainSecrets, securityReader } from "./keychain-move"
 import { PICTURE_SCHEME, PictureIndex } from "./pictures"
 import { Prefs } from "./prefs"
+import { AccountReaders } from "./readers"
 import { RestoreCoordinator } from "./restore"
 import { ResumeMarker, resumeCopying } from "./resume"
 import { SecretStore, redact, redactState } from "./secrets"
@@ -154,11 +155,13 @@ async function startServices(): Promise<Api> {
     await moveKeychainSecrets({ setup, secrets, installationId: paths.installationIdentity(), read: securityReader }).catch(() => "unreadable")
     const prefs = new Prefs(paths.owner)
     const store = secrets
+    const request = (operation: string, params?: Record<string, unknown>) => engine.request(operation, params)
+    const readers = new AccountReaders(request, setup, store)
     const startRuntime = async () => {
       await engine.start(engineTarget(paths, packaged ? process.resourcesPath : null))
       if (engine.state.state !== "running") throw new Error(engine.state.state === "stopped" ? engine.state.reason : "The engine did not start.")
+      await readers.attach(true) // every start, restarts and restores included: a new engine holds no keys
     }
-    const request = (operation: string, params?: Record<string, unknown>) => engine.request(operation, params)
     const coordinator = new RestoreCoordinator({ paths, request, secrets: () => ({ revision: store.revision, secrets: store.secrets }), stopRuntime: () => engine.stop(), startRuntime })
     // The engine goes down and comes back during a restore, and a gated candidate may report a failure on the way: nothing is
     // watched meanwhile, as AppModel cancels its status tasks, and watching resumes after (unless the app is quitting).
@@ -203,7 +206,7 @@ async function startServices(): Promise<Api> {
       .then(() => agents?.start())
       .then(() => monitor?.start())
       .catch((error: unknown) => engine.fail(error instanceof Error ? error.message : String(error)))
-    services = { engine, setup, secrets, confirm, diagnosticsDir: paths.logs, pick, agents, restore, prefs }
+    services = { engine, setup, secrets, confirm, diagnosticsDir: paths.logs, pick, agents, restore, prefs, readers }
     return createApi(services)
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error)

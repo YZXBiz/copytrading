@@ -70,6 +70,11 @@ export class SecretStore {
     return this.working.secrets
   }
 
+  /** The keys on disk: what a start saved, without keys typed since and not yet staged. */
+  get saved(): Secrets {
+    return this.disk.secrets
+  }
+
   get revision(): string | null {
     return this.working.revision
   }

@@ -2,7 +2,7 @@ import type { Result, SecretStatus, SetupView, TradingConfiguration, TradingStat
 
 // The setup the Connections and Getting Started screens read in fixture mode. The guru's id and profile revision are the
 // engine's own digests (guru-927e2da2 = sha256("discord:1100000000000000001")[:8]), so the form reads this setup as saved.
-// COPYTRADING_FIXTURE_SETUP=none shows a first run; COPYTRADING_FIXTURE_TRADING=paused|running sets copying.
+// COPYTRADING_FIXTURE_SETUP=none shows a first run; COPYTRADING_FIXTURE_TRADING=paused|running|degraded sets copying.
 
 const CHANNEL = "1100000000000000001"
 const REVISION = "658cae5cd6e59b372cad69696b464021d78c388f4cb79741821213e39a3c498e"
@@ -57,14 +57,19 @@ const configuration: TradingConfiguration = {
 const first = process.env.COPYTRADING_FIXTURE_SETUP === "none"
 const saved: SetupView = { configuration, revision: "c0ffee".repeat(10) + "c0ff", keys_present: true, pending_activation: null }
 const keys = (on: boolean): SecretStatus => ({ discord_token: on, provider_api_key: on, notification_token: false, brokers: on ? { "zhap-account-2": true } : {} })
-const trading = (): TradingStatus => ({
-  state: process.env.COPYTRADING_FIXTURE_TRADING === "paused" ? "paused" : "running",
-  configured_accounts: first ? 0 : 1,
-  active_accounts: process.env.COPYTRADING_FIXTURE_TRADING === "paused" ? 0 : 1,
-  source_connected: true,
-  model_ready: true,
-  error_code: null,
-})
+const trading = (): TradingStatus => {
+  const state = process.env.COPYTRADING_FIXTURE_TRADING
+  const degraded = state === "degraded"
+  return {
+    state: state === "paused" ? "paused" : degraded ? "degraded" : "running",
+    configured_accounts: first ? 0 : 1,
+    active_accounts: state === "paused" || degraded ? 0 : 1,
+    source_connected: true,
+    model_ready: true,
+    error_code: degraded ? "broker_unreachable" : null,
+    ...(degraded ? { accounts: [{ id: "zhap-account-2", state: "failed", error_code: "broker_unreachable" }] } : {}),
+  }
+}
 
 const ok = async <T>(value: T): Promise<Result<T>> => ({ ok: true, value })
 
