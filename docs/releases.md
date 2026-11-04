@@ -38,17 +38,43 @@ its build number (`CFBundleVersion`), which only grows on `main`.
 
 ## Updates
 
-Installed copies update through Sparkle ([ADR-0009](adr/0009-updates-with-sparkle.md)).
-A tagged release signs its DMG with Sparkle's `sign_update` and the private key in
-the `SPARKLE_ED_PRIVATE_KEY` repository secret, adds itself to `appcast.xml`
-(`app/scripts/appcast.py`), and pushes that feed to the `appcast` branch after the
-GitHub release exists. The app reads the feed from
-`https://raw.githubusercontent.com/YZXBiz/copytrading/appcast/appcast.xml` and checks
-each download against the public key in its `Info.plist`.
+The app is Electron (`desktop/`), built by `app/scripts/build_desktop.py` into
+`CopyTrading.app` with the pinned CPython and the engine inside
+(`Contents/Resources/Runtime`, `Contents/Resources/Engine`). Its bundle id is
+`dev.copytrading.app`, so it opens the same data folder as the SwiftUI app.
 
-The private key is also in the owner's login Keychain ("Sparkle EdDSA key for
-CopyTrading updates"), because a repository secret cannot be read back. Copies from
-before 0.1.0-alpha.4 have no updater and need that one DMG installed by hand.
+Installed copies update with `electron-updater` from the GitHub releases of
+`YZXBiz/copytrading` (`Contents/Resources/app-update.yml`). Every release carries
+`latest-mac.yml`, which names the app ZIP with its SHA-512; the app checks 30 seconds
+after launch and every six hours, and **Check for Updates…** in the app menu checks
+at once. It asks in a native dialog, downloads, remembers whether copying was on, and
+relaunches; the next launch starts a paper-only setup again (`update.resumesCopying`
+in the SwiftUI app). A throwaway data folder (`COPYTRADING_STATE_ROOT`) never offers
+an update.
+
+macOS installs an update only when the new app is signed by the identity that signed
+the old one. Release builds are sealed ad hoc, which has no identity, so an installed
+copy cannot install one in place: it says so and points to the release page, and the
+DMG replaces the app by hand. A signing identity that stays the same from release to
+release would change that; none is set up, and the release workflow does not use one.
+
+Copies still running the SwiftUI app update through Sparkle
+([ADR-0009](adr/0009-updates-with-sparkle.md)): a tagged release also signs its DMG
+with Sparkle's `sign_update` and the private key in the `SPARKLE_ED_PRIVATE_KEY`
+repository secret, adds itself to `appcast.xml` (`app/scripts/appcast.py`), and pushes
+that feed to the `appcast` branch after the GitHub release exists. That is how they
+move to the Electron app. The private key is also in the owner's login Keychain
+("Sparkle EdDSA key for CopyTrading updates"). The step goes away with the SwiftUI app.
+
+## The app's data folder
+
+The built app runs its engine on `~/Library/Application Support/CopyTrading`, through
+the generation pointer, as the SwiftUI app does; its own state (the key store) is in
+`desktop/` beside it. Development and tests never get that folder: the engine runs on a
+fresh folder under the temp directory, and `assertThrowaway` refuses the owner's.
+`COPYTRADING_STATE_ROOT=<existing folder under $TMPDIR>` runs the built app on a
+throwaway folder, and `COPYTRADING_SMOKE=1` with it quits 0 once the page has loaded and
+the engine has answered (`make desktop-smoke`).
 
 ## Release assets
 
@@ -56,6 +82,7 @@ before 0.1.0-alpha.4 have no updater and need that one DMG installed by hand.
   most people download.
 - `CopyTrading-v<version>-macos-arm64.zip`: the same app as a ZIP.
 - `copytrading-source-v<version>.tar.gz`: the source of the tagged commit.
+- `latest-mac.yml`: the update feed `electron-updater` reads, naming the ZIP and its SHA-512.
 - `sbom.cyclonedx.json`: a CycloneDX inventory of the app's dependencies.
 - `THIRD_PARTY_NOTICES.md` and `THIRD_PARTY_LICENSES.zip`: runtime notices and
   license texts, also inside the app under `Contents/Resources`.

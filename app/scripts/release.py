@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import gzip
+import hashlib
 import json
 import platform
 import plistlib
@@ -16,13 +18,15 @@ import tempfile
 import tomllib
 import uuid
 import zipfile
+from datetime import UTC, datetime
 from email.message import Message
 from email.parser import Parser
 from pathlib import Path, PurePosixPath
 from urllib.parse import quote
 
 from local_signing import sign_if_available
-from verify_bundle import bundle_inventory, sha256, verify
+from verify_bundle import bundle_inventory, sha256
+from verify_desktop_bundle import verify
 
 ROOT = Path(__file__).resolve().parents[2]
 APP_NAME = "CopyTrading.app"
@@ -69,22 +73,16 @@ def validate_version(version: str, tag: str) -> tuple[str, str]:
 
 
 def validate_bundle_versions(version: str, *, root: Path = ROOT) -> str:
-    """Require the preview's core version to match the app and engine metadata."""
+    """Require the preview's core version to match the engine's; the app is built with it."""
     match = _VERSION.fullmatch(version)
     if match is None:
         raise ReleaseError("invalid developer-preview version")
-    info_path = root / "app/Resources/Info.plist"
     try:
-        with info_path.open("rb") as stream:
-            info = plistlib.load(stream)
         engine = tomllib.loads((root / "engine/pyproject.toml").read_text(encoding="utf-8"))
-    except (OSError, ValueError, plistlib.InvalidFileException) as error:
+    except (OSError, ValueError) as error:
         raise ReleaseError(f"cannot read release version metadata: {error}") from error
     core = match.group("core")
-    app_version = info.get("CFBundleShortVersionString")
     engine_version = engine.get("project", {}).get("version")
-    if app_version != core:
-        raise ReleaseError(f"app bundle version {app_version!r} does not match {core}")
     if engine_version != core:
         raise ReleaseError(f"engine version {engine_version!r} does not match {core}")
     return core
@@ -531,6 +529,22 @@ def extract_and_verify_app_zip(
     return app
 
 
+def update_feed(archive: Path, version: str) -> str:
+    """The `latest-mac.yml` electron-updater reads: the app ZIP with its SHA-512 and size."""
+    digest = base64.b64encode(hashlib.sha512(archive.read_bytes()).digest()).decode("ascii")
+    published = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    return (
+        f"version: {version}\n"
+        f"files:\n"
+        f"  - url: {archive.name}\n"
+        f"    sha512: {digest}\n"
+        f"    size: {archive.stat().st_size}\n"
+        f"path: {archive.name}\n"
+        f"sha512: {digest}\n"
+        f"releaseDate: '{published}'\n"
+    )
+
+
 def _create_license_zip(source: Path, output: Path) -> None:
     """Write a stable license archive with Unix modes and sorted member names."""
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
@@ -617,13 +631,14 @@ def build_release(
         built_app = stage / APP_NAME
         _run(
             sys.executable,
-            str(root / "app/scripts/build_app.py"),
+            str(root / "app/scripts/build_desktop.py"),
             "--app",
             str(built_app),
             "--runtime",
             str(runtime_path.expanduser().absolute()),
             "--version",
             version,
+            "--ad-hoc",
             cwd=root,
         )
         source_name = f"copytrading-source-v{version}.tar.gz"
@@ -685,6 +700,10 @@ def build_release(
         extracted_app = extract_and_verify_app_zip(app_zip, extraction, version, tag, source_commit)
         if not extracted_app.is_dir():
             raise ReleaseError("app ZIP extraction did not produce an application bundle")
+        # Installed copies find this release through electron-updater, which reads this file and
+        # checks the ZIP against its SHA-512.
+        feed_name = "latest-mac.yml"
+        (assets / feed_name).write_text(update_feed(app_zip, version), encoding="utf-8")
 
         manifest = {
             "schema_version": 1,
@@ -719,6 +738,7 @@ def build_release(
             },
             "assets": [
                 _asset_record(assets, app_name, "application/zip"),
+                _asset_record(assets, feed_name, "text/yaml"),
                 _asset_record(assets, source_name, "application/gzip"),
                 _asset_record(assets, sbom_name, "application/vnd.cyclonedx+json"),
                 _asset_record(assets, "THIRD_PARTY_NOTICES.md", "text/markdown"),

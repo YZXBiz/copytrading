@@ -5,11 +5,12 @@ endif
 ENGINE_ENV := $(if $(ARM_PYTHON),UV_PYTHON=$(ARM_PYTHON),)
 PYTHON ?= $(if $(ARM_PYTHON),$(ARM_PYTHON),python3)
 APP ?= dist/CopyTrading.app
+SWIFT_APP ?= dist/swift/CopyTrading.app
 RUNTIME ?= dist/desktop-runtime/prepared
 RELEASE_RUNTIME ?= $(RUNTIME)
 RELEASE_OUTPUT ?= dist/releases/v$(RELEASE_VERSION)
 RELEASE_TAG ?= v$(RELEASE_VERSION)
-.PHONY: help doctor app dev dev-app check check-linux check-mutations desktop-build desktop-check desktop-tests desktop-smoke ui-journeys release dmg
+.PHONY: help doctor app dev dev-app check check-linux check-mutations desktop-build swift-build desktop-check desktop-tests desktop-smoke ui-journeys release dmg
 
 help:
 	@echo 'make doctor          Check this Mac can build and run CopyTrading'
@@ -17,12 +18,13 @@ help:
 	@echo 'make check-linux     Run the engine tests on Linux in Docker'
 	@echo 'make dev             Install the engine environment for your editor'
 	@echo 'make check           Engine tests with coverage (80% gate), Ruff, Ty, app-script tests'
-	@echo 'make desktop-build   Build the local app bundle'
+	@echo 'make desktop-build   Build the Electron app into dist/CopyTrading.app'
+	@echo 'make swift-build     Build the SwiftUI app into dist/swift/CopyTrading.app'
 	@echo 'make desktop-check   Engine checks, Swift lint, and make desktop-tests'
-	@echo 'make desktop-tests   Build the app and run every Swift suite against it'
-	@echo 'make desktop-smoke   Smoke-test the built app'
+	@echo 'make desktop-tests   Build the SwiftUI app and run every Swift suite against it'
+	@echo 'make desktop-smoke   Launch the built Electron app on a throwaway data folder'
 	@echo 'make lint-swift      Check Swift formatting (make format-swift fixes it)'
-	@echo 'make ui-journeys     Drive the real app window through docs/acceptance.md'
+	@echo 'make ui-journeys     Drive the SwiftUI app window through docs/acceptance.md'
 	@echo 'make dev-app         Open a debug app on a first launch with Connections filled from test keys'
 	@echo 'make release RELEASE_VERSION=0.1.0-alpha.1  Build verified preview assets'
 	@echo 'make dmg RELEASE_VERSION=0.1.0-alpha.1      Wrap a built release in the drag-to-install DMG'
@@ -52,23 +54,30 @@ check-linux:
 	sh engine/tools/linux-tests.sh
 
 
-desktop-build:
-	$(ENGINE_ENV) $(PYTHON) app/scripts/build_app.py --app '$(APP)' --runtime '$(RUNTIME)'
+desktop/node_modules: desktop/package-lock.json
+	npm ci --prefix desktop
+	@touch '$@'
+
+desktop-build: desktop/node_modules
+	$(ENGINE_ENV) $(PYTHON) app/scripts/build_desktop.py --app '$(APP)' --runtime '$(RUNTIME)'
+
+swift-build:
+	$(ENGINE_ENV) $(PYTHON) app/scripts/build_app.py --app '$(SWIFT_APP)' --runtime '$(RUNTIME)'
 
 desktop-check: check lint-swift desktop-tests
 
-desktop-tests: desktop-build
+desktop-tests: swift-build
 	arch -arm64 swift build --package-path app -Xswiftc -strict-concurrency=complete -Xswiftc -warnings-as-errors
-	COPYTRADING_RUNTIME_ROOT='$(CURDIR)/dist/CopyTrading.app/Contents/Resources/Runtime' \
-		COPYTRADING_ENGINE_ROOT='$(CURDIR)/dist/CopyTrading.app/Contents/Resources/Engine' \
-		COPYTRADING_PYTHON_LIBRARY_PATH='$(CURDIR)/dist/CopyTrading.app/Contents/Resources/Runtime/cpython/python/lib/python3.14/site-packages' \
+	COPYTRADING_RUNTIME_ROOT='$(CURDIR)/$(SWIFT_APP)/Contents/Resources/Runtime' \
+		COPYTRADING_ENGINE_ROOT='$(CURDIR)/$(SWIFT_APP)/Contents/Resources/Engine' \
+		COPYTRADING_PYTHON_LIBRARY_PATH='$(CURDIR)/$(SWIFT_APP)/Contents/Resources/Runtime/cpython/python/lib/python3.14/site-packages' \
 		arch -arm64 swift test --package-path app --no-parallel -Xswiftc -warnings-as-errors
-	$(ENGINE_ENV) $(PYTHON) app/scripts/verify_bundle.py --app 'dist/CopyTrading.app'
+	$(ENGINE_ENV) $(PYTHON) app/scripts/verify_bundle.py --app '$(SWIFT_APP)'
 
 desktop-smoke:
-	$(ENGINE_ENV) $(PYTHON) app/scripts/smoke_app.py --app 'dist/CopyTrading.app'
+	$(ENGINE_ENV) $(PYTHON) app/scripts/smoke_desktop.py --app '$(APP)'
 
-ui-journeys: desktop-build
+ui-journeys: swift-build
 	$(ENGINE_ENV) $(PYTHON) app/scripts/ui_journeys.py
 
 dev-app:

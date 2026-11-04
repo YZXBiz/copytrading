@@ -9,7 +9,23 @@
     "build": "electron-vite build",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "capture": "electron-vite build && node scripts/capture.mjs"
+    "capture": "electron-vite build && node scripts/capture.mjs",
+    "package": "electron-vite build && electron-builder --dir --arm64"
+  },
+  "build": {
+    "appId": "dev.copytrading.app",
+    "productName": "CopyTrading",
+    "directories": { "output": "dist/package" },
+    "files": ["dist/main/**", "dist/preload/**", "dist/renderer/**", "package.json", "!node_modules/**"],
+    "npmRebuild": false,
+    "mac": {
+      "target": "dir",
+      "identity": null,
+      "icon": "../app/Resources/AppIcon.icns",
+      "category": "public.app-category.finance",
+      "minimumSystemVersion": "26.0"
+    },
+    "publish": { "provider": "github", "owner": "YZXBiz", "repo": "copytrading" }
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.4",
@@ -18,6 +34,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.2.1",
     "electron": "^45.2.2",
+    "electron-builder": "^26.18.0",
     "electron-vite": "^6.0.0",
     "tailwindcss": "^4.3.4",
     "typescript": "^7.0.2",
@@ -36,6 +53,7 @@
     "@tanstack/react-virtual": "^3.14.26",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",
+    "electron-updater": "^6.8.11",
     "lucide-react": "^1.67.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

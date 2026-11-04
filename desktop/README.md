@@ -100,7 +100,9 @@ wording in `confirmations.ts` and a case in `tests/api.test.ts`.
 Main starts the engine on launch, shows its state in the sidebar footer (`window.copytrading.engine`), and on quit
 asks it to stop, then terminates, then kills it, as `ProcessSupervisor.swift` does. Dev and tests use a throwaway
 data folder under `$TMPDIR`; `engine/safety.ts` refuses the owner's `~/Library/Application Support/CopyTrading`.
-Never point an engine at it.
+Never point an engine at it. Only the built app (`app.isPackaged`) runs on it, through `engine/data-root.ts`;
+`COPYTRADING_STATE_ROOT=<existing folder under $TMPDIR>` gives the built app a throwaway folder instead, and with
+`COPYTRADING_SMOKE=1` it quits 0 once the page loaded and the engine answered.
 
 ## Fixtures and capture
 
@@ -140,6 +142,7 @@ The page never supplies the size or hash. Use `<PostPicture attachment={...}>`; 
 - `stop`, `control`, `authorize_setup`, `attach_account_readers`, `detach_account_readers` stay main-only (lifecycle,
   the agent-socket relay, paused-account readers); no page may send them.
 - The setup upgrade from an earlier version: `setup-file.ts` refuses such a file and says so.
-- Moving the owner's Keychain items into the key store, a persistent data folder, and the packaged-app flag that
-  allows the owner's folder: wave 3.
+- Moving the owner's Keychain items into the key store: not done; the built app starts with an empty key store.
+- Packaging: `make desktop-build` builds `dist/CopyTrading.app` (`app/scripts/build_desktop.py`; the packaged app
+  runs on the owner's data folder, `engine/data-root.ts`; updates in `update.ts`; see `docs/releases.md`).
 - Restarting a crashed engine: the footer says why it stopped.
