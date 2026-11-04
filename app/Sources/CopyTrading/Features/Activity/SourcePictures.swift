@@ -10,7 +10,8 @@ struct SourcePictures: Sendable {
     let directory: URL?
 
     @MainActor private static let cache = NSCache<NSString, NSImage>()
-    private static let maximumBytes = 1024 * 1024
+    /// The engine's cap for one captured file.
+    private static let maximumBytes = 4 * 1024 * 1024
 
     @MainActor
     func image(for attachment: SourceAttachmentEvidence) -> NSImage? {

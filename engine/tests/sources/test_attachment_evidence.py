@@ -12,6 +12,7 @@ import pytest
 
 from copytrading_engine.shared.raw_message import RawMessage
 from copytrading_engine.sources.application import AttachmentReference
+from copytrading_engine.sources.attachments import MAX_ATTACHMENT_BYTES
 from copytrading_engine.sources.sqlite import SQLiteSourceStore
 
 
@@ -135,7 +136,7 @@ async def test_missing_oversize_and_over_count_attachments_are_explicit_and_boun
         reference(
             "https://cdn.discordapp.com/attachments/1/large/chart.png",
             attachment_id="large",
-            declared_size=1024 * 1024 + 1,
+            declared_size=MAX_ATTACHMENT_BYTES + 1,
         ),
         *(reference("", attachment_id=f"extra-{index}") for index in range(12)),
     ]
