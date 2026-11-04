@@ -35,7 +35,7 @@ export function GuruPage({ guru, accounts, setUpAccountIds }: { guru: Guru; acco
   const holdings = accounts.status === "ready" ? guruHoldings(guru.id, accounts.data.items, setUpAccountIds) : null
 
   return (
-    <div className="flex max-w-4xl flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <h2 className="text-2xl font-semibold tracking-tight">{guru.name}</h2>
