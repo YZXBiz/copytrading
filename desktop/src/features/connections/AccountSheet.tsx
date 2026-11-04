@@ -58,6 +58,7 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
     <EditorSheet
       title={name || "New account"}
       description={account.environment === "live" ? "Live · real orders, real money" : "Paper · pretend money, real prices"}
+      showDescription={account.environment === "live"}
       onClose={onClose}
       footer={
         <>
@@ -109,7 +110,7 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
         <Alert variant="info">
           <CircleAlertIcon aria-hidden />
           <AlertTitle>Copying is running</AlertTitle>
-          <AlertDescription>Apply limits now changes only this account's limits, from the next order. Any other change is applied from the start bar, which restarts copying for a few seconds.</AlertDescription>
+          <AlertDescription>Apply limits now changes only this account’s limits, from the next order. Any other change is applied from the start bar, which restarts copying for a few seconds.</AlertDescription>
         </Alert>
       )}
       <FieldGroup>

@@ -1,7 +1,7 @@
 import { Fragment } from "react"
 import { MessageSquareIcon } from "lucide-react"
 import type { SourceActivityPage } from "../../../shared/contract"
-import { Frame, FrameDescription, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"
+import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"
 import { RegionError } from "@/components/region-error"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
@@ -23,7 +23,6 @@ export function RecentPosts({
     <Frame spacing="sm">
       <FrameHeader>
         <FrameTitle>Guru posts</FrameTitle>
-        <FrameDescription>What each one did here</FrameDescription>
       </FrameHeader>
       <FramePanel className="p-0">
         {posts.status === "loading" && (

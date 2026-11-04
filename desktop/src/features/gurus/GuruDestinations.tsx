@@ -1,27 +1,17 @@
-import { Fragment } from "react"
+import { Badge } from "@/components/reui/badge"
 import type { Guru } from "./model"
 
-/** Where a guru's calls go, from the saved routes: "Copies into primary (Paper) and ira (Live)". Only Live carries colour, since it is real money. */
+/** The accounts a guru's calls go to, from the saved routes. Only Live carries colour, since it is real money. */
 export function GuruDestinations({ guru }: { guru: Guru }) {
   if (guru.accounts.length === 0) return null
   return (
-    <p className="text-muted-foreground text-sm">
-      Copies into{" "}
-      {guru.accounts.map((account, index) => (
-        <Fragment key={account.id}>
-          {index > 0 && (index === guru.accounts.length - 1 ? " and " : ", ")}
-          {account.id}
-          {account.environment && (
-            <>
-              {" ("}
-              <span className={account.environment === "live" ? "text-warning-foreground font-medium" : undefined}>
-                {account.environment === "live" ? "Live" : "Paper"}
-              </span>
-              {")"}
-            </>
-          )}
-        </Fragment>
+    <ul aria-label="Copies into" className="flex flex-wrap items-center gap-1.5">
+      {guru.accounts.map((account) => (
+        <li key={account.id} className="flex items-center gap-1">
+          <Badge variant="outline">{account.id}</Badge>
+          {account.environment === "live" && <Badge variant="warning-light">Live</Badge>}
+        </li>
       ))}
-    </p>
+    </ul>
   )
 }

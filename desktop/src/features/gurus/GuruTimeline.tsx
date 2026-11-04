@@ -1,4 +1,5 @@
 import { CheckIcon, ClockIcon, CircleAlertIcon, MinusIcon, type LucideIcon } from "lucide-react"
+import { Meta } from "@/components/meta"
 import { Timeline, TimelineContent, TimelineHeader, TimelineIndicator, TimelineItem, TimelineSeparator, TimelineTitle } from "@/components/reui/timeline"
 import { PostPicture } from "@/features/activity/PostPicture"
 import { quoteOf } from "@/features/activity/PostListItem"
@@ -39,11 +40,13 @@ function GuruPostEntry({ entry, step, onOpen }: { entry: Entry; step: number; on
           className="hover:bg-muted focus-visible:ring-ring/50 -mx-2 flex w-[calc(100%+1rem)] flex-col gap-1.5 rounded-lg px-2 py-1.5 text-left outline-none transition-colors focus-visible:ring-3"
         >
           {picture ? <PostPicture attachment={picture} className="max-h-44" /> : <span className="line-clamp-4 text-base break-words">{quoteOf(post)}</span>}
-          <span className="text-muted-foreground line-clamp-2 text-xs">{entry.readAs}</span>
+          {/* A post that was only chat has nothing to add to its icon. */}
+          {post.decision !== "ignore" && <Meta className="text-muted-foreground text-xs" text={entry.readAs} />}
           {entry.accounts.map((account) => (
-            <span key={account.accountId} className="text-sm">
+            <span key={account.accountId} className="flex items-center gap-2 text-sm">
               <span className="font-medium">{account.accountId}</span>
-              <span className={cn("text-muted-foreground", account.kind === "traded" && "text-success-foreground")}> · {account.summary}</span>
+              <span aria-hidden className="bg-muted-foreground/40 size-1 shrink-0 rounded-full" />
+              <span className={cn("text-muted-foreground", account.kind === "traded" && "text-success-foreground dark:text-success")}>{account.summary}</span>
             </span>
           ))}
         </button>
@@ -58,7 +61,7 @@ export function GuruTimeline({ days, onOpen }: { days: Day[]; onOpen: (sequence:
     <div className="flex flex-col gap-6">
       {days.map((day) => (
         <section key={day.label} aria-label={day.label}>
-          <h3 className="text-muted-foreground mb-3 text-xs font-medium tracking-wide uppercase">{day.label}</h3>
+          <h3 className="mb-3 text-sm font-semibold tracking-tight">{day.label}</h3>
           <Timeline value={0}>
             {day.entries.map((entry, index) => (
               <GuruPostEntry key={entry.post.sequence} entry={entry} step={index + 1} onOpen={onOpen} />

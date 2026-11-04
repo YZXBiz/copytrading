@@ -7,7 +7,8 @@ import { DataGrid, type DataGridFeatures, dataGridFeatures } from "@/components/
 import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header"
 import { DataGridScrollArea } from "@/components/reui/data-grid/data-grid-scroll-area"
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table"
-import { Frame, FrameDescription, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"
+import { Meta } from "@/components/meta"
+import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -35,14 +36,14 @@ function SellCell({ position, onSell }: { position: Position; onSell: (position:
   if (lots.length === 0) return null
   if (lots.length === 1) {
     return (
-      <Button type="button" size="xs" variant="outline" aria-label={`Sell ${lotLabel(position, lots[0]!)}`} onClick={() => onSell(position, lots[0]!)}>
+      <Button type="button" size="xs" variant="ghost" aria-label={`Sell ${lotLabel(position, lots[0]!)}`} onClick={() => onSell(position, lots[0]!)}>
         Sell
       </Button>
     )
   }
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button type="button" size="xs" variant="outline" aria-label={`Sell ${position.symbol}: choose a buy`} />}>
+      <DropdownMenuTrigger render={<Button type="button" size="xs" variant="ghost" aria-label={`Sell ${position.symbol}: choose a buy`} />}>
         Sell <ChevronDownIcon aria-hidden />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-auto">
@@ -63,7 +64,7 @@ const columns = (onSell: (position: Position, lot: Lot) => void): ColumnDef<Data
     cell: ({ row }) => (
       <div className="flex flex-col">
         <span className="font-medium">{row.original.symbol}</span>
-        <span className="text-muted-foreground text-xs">{holdingNote(row.original)}</span>
+        <Meta className="text-muted-foreground text-xs" text={holdingNote(row.original) ?? ""} />
       </div>
     ),
   },
@@ -104,7 +105,6 @@ export function PositionsTable({
     <Frame spacing="sm">
       <FrameHeader>
         <FrameTitle>Positions</FrameTitle>
-        <FrameDescription>Bought by CopyTrading</FrameDescription>
       </FrameHeader>
       <FramePanel className="p-0">
         {data.length === 0 ? (
@@ -114,7 +114,7 @@ export function PositionsTable({
                 <PackageOpenIcon />
               </EmptyMedia>
               <EmptyTitle>No stocks bought yet</EmptyTitle>
-              <EmptyDescription>Shares CopyTrading buys for this account show up here.</EmptyDescription>
+              <EmptyDescription>Shares CopyTrading buys show up here.</EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
               <Button type="button" size="sm" variant="outline" onClick={onRefresh}>

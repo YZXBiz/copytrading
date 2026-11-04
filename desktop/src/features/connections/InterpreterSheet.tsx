@@ -20,7 +20,8 @@ export function InterpreterSheet({ onClose }: { onClose: () => void }) {
   return (
     <EditorSheet
       title="Interpreter"
-      description="The AI model that reads each post. A service uses your own key and bills you for what it reads; a model on this Mac costs nothing."
+      description="A service uses your own key and bills you for what it reads; a model on this Mac costs nothing."
+      showDescription
       onClose={onClose}
       footer={
         <>

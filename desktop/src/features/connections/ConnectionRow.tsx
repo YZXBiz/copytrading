@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react"
+import { Meta } from "@/components/meta"
 import { Button } from "@/components/ui/button"
 import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item"
 import { Spinner } from "@/components/ui/spinner"
@@ -20,7 +21,7 @@ export function ConnectionRow({
 }: {
   icon: LucideIcon
   title: string
-  detail: string
+  detail?: string
   status: Status
   /** Why the last check failed, in words. */
   problem?: string | null
@@ -33,13 +34,17 @@ export function ConnectionRow({
   label: string
 }) {
   return (
-    <Item variant="outline" size="xs" role="listitem">
+    <Item size="sm" role="listitem" className="rounded-none border-0">
       <ItemMedia variant="icon">
         <Icon aria-hidden />
       </ItemMedia>
       <ItemContent>
         <ItemTitle>{title}</ItemTitle>
-        <ItemDescription>{detail}</ItemDescription>
+        {detail && (
+          <ItemDescription>
+            <Meta text={detail} />
+          </ItemDescription>
+        )}
         {problem && <p className="text-destructive text-xs">{problem}</p>}
       </ItemContent>
       <ItemActions>

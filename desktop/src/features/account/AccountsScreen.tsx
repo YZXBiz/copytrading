@@ -32,7 +32,7 @@ export function AccountsScreen({
             <LandmarkIcon />
           </EmptyMedia>
           <EmptyTitle>No accounts yet</EmptyTitle>
-          <EmptyDescription>Connect a brokerage account and the guru you copy, and it shows up here.</EmptyDescription>
+          <EmptyDescription>Connect a broker account to begin.</EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
           <Button type="button" size="sm" onClick={onOpenConnections}>

@@ -68,7 +68,7 @@ export function GuruPage({ guru, accounts, setUpAccountIds }: { guru: Guru; acco
         <SheetContent className="flex flex-col gap-0 space-y-0 sm:max-w-xl">
           <SheetHeader>
             <SheetTitle>{guru.name}</SheetTitle>
-            <SheetDescription>The post in full, and what each account did.</SheetDescription>
+            <SheetDescription className="sr-only">The post in full, and what each account did.</SheetDescription>
           </SheetHeader>
           <ScrollArea className="min-h-0 flex-1">
             <div className="px-4 pb-6">{opened && <PostView post={opened} guruName={guru.name} now={now} />}</div>

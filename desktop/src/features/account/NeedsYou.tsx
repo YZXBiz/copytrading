@@ -1,4 +1,5 @@
 import { BellIcon } from "lucide-react"
+import { Meta } from "@/components/meta"
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/reui/alert"
 import { Badge } from "@/components/reui/badge"
 import { Button } from "@/components/ui/button"
@@ -40,9 +41,7 @@ function CallTicket({
       <BellIcon aria-hidden />
       <AlertTitle className="line-clamp-none">{title}</AlertTitle>
       <AlertDescription>
-        <p>
-          Waiting {waited(call.source.source_at, now)} · {deadlineText(endOfTradingDay(call.source.source_at), now)}
-        </p>
+        <Meta className="tabular-nums" items={[`Waiting ${waited(call.source.source_at, now)}`, deadlineText(endOfTradingDay(call.source.source_at), now)]} />
         {/* A sell held for its buy price has no buy to gain on: it says what came of that buy. */}
         {held ? (
           <p>{held}</p>
@@ -54,10 +53,15 @@ function CallTicket({
           )
         )}
         <div className="bg-background mt-1.5 w-full rounded-md border px-3 py-2">
-          <div className="text-xs">
-            <span className="text-foreground font-medium">{guruName ?? call.source.guru_id}</span>
-            <span className="tabular-nums"> · {sameDay ? timeOfDay(call.source.source_at) : dateTime(call.source.source_at)}</span>
-          </div>
+          <Meta
+            className="text-xs tabular-nums"
+            items={[
+              <span key="guru" className="text-foreground font-medium">
+                {guruName ?? call.source.guru_id}
+              </span>,
+              sameDay ? timeOfDay(call.source.source_at) : dateTime(call.source.source_at),
+            ]}
+          />
           {/* The post is untrusted Discord text: rendered as text, never as HTML. */}
           <p className="text-foreground line-clamp-3 text-sm">{call.source.text || "A post with no words"}</p>
         </div>

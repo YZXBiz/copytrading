@@ -65,7 +65,7 @@ export function LimitsPanel({
                 <GaugeIcon />
               </EmptyMedia>
               <EmptyTitle>No limits to show</EmptyTitle>
-              <EmptyDescription>This account has no saved limits yet. Save it in Connections and they appear here.</EmptyDescription>
+              <EmptyDescription>Save the account in Connections first.</EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
               <Button type="button" size="sm" variant="outline" onClick={onOpenConnections}>

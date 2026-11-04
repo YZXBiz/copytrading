@@ -145,7 +145,7 @@ export function GuruSheet({ uid, onClose }: { uid: string; onClose: () => void }
             ))}
           </dl>
         ) : (
-          guru.account_id && <p className="text-muted-foreground text-xs">Set the guru's full position, or this account's max per stock.</p>
+          guru.account_id && <p className="text-muted-foreground text-xs">Set the guru’s full position, or this account’s max per stock.</p>
         )}
         {(sized?.warning ?? sized?.note) && <p className="text-muted-foreground text-xs">{sized?.warning ?? sized?.note}</p>}
       </FieldSet>

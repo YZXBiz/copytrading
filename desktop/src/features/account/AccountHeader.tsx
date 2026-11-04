@@ -1,9 +1,11 @@
 import { useState } from "react"
-import { PauseIcon, PlayIcon } from "lucide-react"
+import { PauseIcon } from "lucide-react"
 import type { AccountOverview, TradingStatus } from "../../../shared/contract"
+import { Meta } from "@/components/meta"
 import { Badge } from "@/components/reui/badge"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
+import { CirclePlayIcon } from "@/reui/icons/animated/outline/circle-play"
 import type { Loaded } from "@/lib/use-result"
 import { COPYING_TITLE, accountCopying, badgeVariant, isWarning, resumeBlocked } from "./copying"
 
@@ -64,7 +66,7 @@ export function AccountHeader({
             </Button>
           ) : (
             <Button type="button" disabled={pending || blocked !== null || status.status !== "ready"} onClick={() => control("resume")} title="Copy the guru's buys and sells into this account.">
-              <PlayIcon aria-hidden /> Resume Copying
+              <CirclePlayIcon aria-hidden className="size-4" /> Resume Copying
             </Button>
           )}
         </div>
@@ -85,7 +87,7 @@ export function AccountHeader({
       )}
       {saved && (
         <Badge variant="success-light" className="self-start">
-          Saved · applies to the next order
+          <Meta items={["Saved", "applies to the next order"]} />
         </Badge>
       )}
     </div>

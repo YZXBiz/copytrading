@@ -93,11 +93,11 @@ export function AccountPage({
         onSkip={(call) => skipped.skip(call.source.source_id ?? String(call.source.sequence), call.source.text)}
         onUndo={skipped.undo}
       />
-      <StatsRow account={account} />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <BalanceChart accountId={id} />
+        <BalanceChart account={account} />
         <LimitsPanel account={account} limits={limits} onOpenConnections={onOpenConnections} onEdit={() => setEditingLimits(true)} />
       </div>
+      <StatsRow account={account} />
       <PositionsTable
         account={account}
         onRefresh={onRefresh}

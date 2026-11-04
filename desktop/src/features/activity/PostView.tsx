@@ -1,4 +1,5 @@
 import type { SourceActivity } from "../../../shared/contract"
+import { Meta } from "@/components/meta"
 import { Badge } from "@/components/reui/badge"
 import { Separator } from "@/components/ui/separator"
 import { AccountResults } from "./AccountResults"
@@ -17,7 +18,7 @@ export function PostView({ post, guruName, now, accountId = null }: { post: Sour
     <article className="flex flex-col gap-6">
       <header className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-muted-foreground text-sm tabular-nums">
-          {guruName} · {postTime(post.source_at)}
+          <Meta items={[guruName, postTime(post.source_at)]} />
         </p>
         <Badge variant={BADGE[outcome.tone]}>{outcome.title}</Badge>
       </header>

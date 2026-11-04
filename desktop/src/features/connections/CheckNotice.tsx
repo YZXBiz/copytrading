@@ -52,7 +52,7 @@ export function CheckNotice({
   return (
     <Alert variant="destructive">
       <CircleAlertIcon aria-hidden />
-      <AlertTitle>Couldn't connect</AlertTitle>
+      <AlertTitle>Couldn’t connect</AlertTitle>
       <AlertDescription>{error ?? connectionProblem(check, modelName)}</AlertDescription>
       {check.suggestion && useModel && (
         <AlertAction>

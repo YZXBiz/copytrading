@@ -1,4 +1,5 @@
 import type { SourceActivity } from "../../../shared/contract"
+import { Meta } from "@/components/meta"
 import { Badge } from "@/components/reui/badge"
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item"
 import { href } from "@/features/shell/route"
@@ -24,10 +25,11 @@ export function PostListItem({ post, guruName, now, selected }: { post: SourceAc
     >
       <ItemContent className="gap-0.5">
         <ItemDescription className="tabular-nums">
-          {guruName} · {feedTime(post.source_at, now)}
+          <Meta items={[guruName, feedTime(post.source_at, now)]} />
         </ItemDescription>
         <ItemTitle className="line-clamp-2 w-full font-normal break-words">{quoteOf(post)}</ItemTitle>
-        <ItemDescription className="line-clamp-1">{headline(post)}</ItemDescription>
+        {/* An ignored post has nothing more to say than its badge. */}
+        {outcome.tone !== "inactive" && <ItemDescription className="line-clamp-1">{headline(post)}</ItemDescription>}
       </ItemContent>
       <ItemActions>
         <Badge variant={BADGE[outcome.tone]}>{outcome.title}</Badge>

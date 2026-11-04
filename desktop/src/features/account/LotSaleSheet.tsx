@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { CircleAlertIcon, CircleCheckIcon, CircleDashedIcon } from "lucide-react"
+import { Meta } from "@/components/meta"
 import type { LotSalePreview, LotSaleResult, PositionLot, TradingEnvironment } from "../../../shared/contract"
 import { Alert, AlertDescription, AlertTitle } from "@/components/reui/alert"
 import { Badge } from "@/components/reui/badge"
@@ -100,7 +101,7 @@ export function LotSaleSheet({ target, onClose }: { target: LotSaleTarget; onClo
         <SheetHeader>
           <SheetTitle>Sell {symbol}</SheetTitle>
           <SheetDescription>
-            {accountId} · {target.environment === "live" ? "Live" : "Paper"}
+            <Meta items={[accountId, target.environment === "live" ? "Live" : "Paper"]} />
           </SheetDescription>
         </SheetHeader>
         <div className="flex-1 overflow-y-auto px-4">
@@ -143,7 +144,7 @@ export function LotSaleSheet({ target, onClose }: { target: LotSaleTarget; onClo
                 </Field>
               ) : (
                 <Field>
-                  <FieldLabel>This sale can't go out right now</FieldLabel>
+                  <FieldLabel>This sale can’t go out right now</FieldLabel>
                   <ul className="text-sm">
                     {phase.preview.reasons.map((reason) => (
                       <li key={reason}>{reasonText(reason)}</li>

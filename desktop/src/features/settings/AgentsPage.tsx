@@ -1,5 +1,6 @@
 import { useState } from "react"
 import type { AgentAuditEntry, AgentProposal, TradingConfiguration } from "../../../shared/contract"
+import { Meta } from "@/components/meta"
 import { RegionError } from "@/components/region-error"
 import { Badge } from "@/components/reui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -31,7 +32,9 @@ function ProposalRow({ proposal, setup, onDecided }: { proposal: AgentProposal; 
           {summary(proposal)}
           {accountOf(proposal) && isLive(proposal, setup) && <Badge variant="warning-light">Live</Badge>}
         </ItemTitle>
-        <ItemDescription className="line-clamp-none whitespace-pre-line">{lines.join("\n")}</ItemDescription>
+        <ItemDescription className="line-clamp-none">
+          <Meta text={lines.join("\n")} />
+        </ItemDescription>
       </ItemContent>
       <ItemActions>
         <ProposalActions proposal={proposal} onDecided={onDecided} />
@@ -60,7 +63,7 @@ function Waiting({ onDecided }: { onDecided: () => void }) {
       {outcome && <Note note={{ kind: outcome.startsWith("Done") ? "done" : "problem", text: outcome }} />}
       <SettingsSection title="Waiting for You" hint="Approve only if you asked for this. Agents read messages written by other people, so a request can come from text you have never seen.">
         {waiting.length === 0 ? (
-          <SettingsRow title="Nothing is waiting" description="When the assistant or an agent asks for something that could trade, it waits here for you." />
+          <SettingsRow title="Nothing is waiting" />
         ) : (
           waiting.map((proposal) => <ProposalRow key={proposal.proposal_id} proposal={proposal} setup={configuration} onDecided={decided} />)
         )}
@@ -87,7 +90,7 @@ function Recent({ version }: { version: number }) {
   return (
     <SettingsSection title="Recent Requests">
       {audit.data.length === 0 ? (
-        <SettingsRow title="No requests yet" description="What the assistant and agents ask for, and what you decide, is listed here." />
+        <SettingsRow title="No requests yet" />
       ) : (
         audit.data.slice(0, AUDIT_SHOWN).map((entry, index) => <AuditRow key={index} entry={entry} now={now} />)
       )}

@@ -1,7 +1,8 @@
-import { CircleAlertIcon, CircleCheckIcon, InfoIcon, PauseIcon, PlayIcon, RefreshCwIcon } from "lucide-react"
+import { CircleAlertIcon, CircleCheckIcon, InfoIcon, PauseIcon, RefreshCwIcon } from "lucide-react"
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/reui/alert"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
+import { CirclePlayIcon } from "@/reui/icons/animated/outline/circle-play"
 import { CheckResults } from "./CheckResults"
 import type { Derived } from "./derive"
 import { applyChanges, discard, reload, startCopying, type SetupState } from "./setup-store"
@@ -45,7 +46,7 @@ export function StartBar({ s, derived }: { s: SetupState; derived: Derived }) {
             </>
           ) : (
             <Button type="button" size="sm" disabled={!canStartCopying({ start: s.start, progress: derived.progress, trading })} onClick={() => void startCopying()}>
-              <PlayIcon aria-hidden /> Start copying
+              <CirclePlayIcon aria-hidden className="size-4" /> Start copying
             </Button>
           )}
         </AlertAction>

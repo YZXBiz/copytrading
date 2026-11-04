@@ -1,5 +1,6 @@
 import { useState } from "react"
 import type { BackupManifest, PendingRestoreCandidate, RestorePreview } from "../../../shared/contract"
+import { Meta } from "@/components/meta"
 import { Badge } from "@/components/reui/badge"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -140,17 +141,17 @@ export function BackupRestore({ pending, checking, onChanged }: { pending: Pendi
   return (
     <>
       <SettingsSection title="Backup & Restore" hint="Holds your records, setup, posts, and attachments. Keys and logs are left out.">
-        <SettingsRow title="Create Backup…" description="Copying waits a moment while it runs.">
+        <SettingsRow title="Create Backup…">
           <Button type="button" size="sm" variant="outline" disabled={busy} onClick={createBackup}>
             Create
           </Button>
         </SettingsRow>
-        <SettingsRow title="Restore from Backup…" description="Shows what a backup holds first. Nothing changes until you restore it.">
+        <SettingsRow title="Restore from Backup…">
           <Button type="button" size="sm" variant="outline" disabled={busy || checking || pending !== null} onClick={openBackup}>
             Choose
           </Button>
         </SettingsRow>
-        {manifest && <SettingsRow title="Last verified backup">{`${dateTime(manifest.created_at)} · ${count(manifest.members.length, "file")}`}</SettingsRow>}
+        {manifest && <SettingsRow title="Last verified backup">{<Meta items={[dateTime(manifest.created_at), count(manifest.members.length, "file")]} />}</SettingsRow>}
       </SettingsSection>
       {note && <Note note={note} />}
       {preview && pending === null && (

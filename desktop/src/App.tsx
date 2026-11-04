@@ -1,3 +1,4 @@
+import { MotionConfig } from "motion/react"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -16,6 +17,7 @@ export default function App() {
   const selectedAccountId = route.screen === "accounts" ? (route.id ?? (accounts.status === "ready" ? accounts.data.items[0]?.account_id : null) ?? null) : null
 
   return (
+    <MotionConfig reducedMotion="user">
     <TooltipProvider>
       <SidebarProvider>
         <AppSidebar route={route} accounts={accounts} selectedAccountId={selectedAccountId} engine={engine} />
@@ -40,5 +42,6 @@ export default function App() {
         </SidebarInset>
       </SidebarProvider>
     </TooltipProvider>
+    </MotionConfig>
   )
 }

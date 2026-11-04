@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { CircleIcon } from "lucide-react"
 import type { EngineState, TradingRunState, TradingStatus } from "../../../shared/contract"
+import { Meta } from "@/components/meta"
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar"
 import { ago } from "@/lib/format"
 
@@ -82,7 +83,7 @@ export function CopyingStatus({ engine }: { engine: EngineState }) {
         className={engine.state === "stopped" ? "h-auto items-start py-1.5 [&>span:last-child]:line-clamp-3 [&>span:last-child]:whitespace-normal" : undefined}
       >
         <CircleIcon aria-hidden="true" className={tone} />
-        <span>{text}</span>
+        {text.includes(" · ") ? <Meta text={text} className="flex-nowrap truncate" /> : <span>{text}</span>}
       </SidebarMenuButton>
     </SidebarMenuItem>
   )
