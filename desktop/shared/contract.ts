@@ -146,10 +146,12 @@ export interface SecretStatus {
   brokers: Record<string, boolean>
 }
 
-/** Keys the owner typed; `act.setSecrets` merges them into the encrypted store. */
+/** Keys the owner typed; `act.setSecrets` holds them in main's memory, and they reach the encrypted store only with a start that is staged. */
 export interface SecretUpdate {
   discord_token?: string
   provider_api_key?: string
+  /** The provider `provider_api_key` is for. Main sends the key only to a request that names this provider. */
+  provider_name?: ProviderName
   notification_token?: string
   brokers?: { account_id: string; key: string; secret: string }[]
 }
@@ -189,6 +191,13 @@ export interface CapabilityCheck {
 export interface TradingValidation {
   report: { configuration_revision: string; activatable: boolean; checks: CapabilityCheck[]; cost_notice: string }
   activation_token: string | null
+}
+
+/** How applying changes while copying ended. `applied: false` says why in `message` (and `report` holds the failed checks); the saved setup copies again. */
+export interface ApplyChangesResult {
+  applied: boolean
+  message: string | null
+  report: TradingValidation["report"] | null
 }
 
 // ── Accounts, positions, activity ──────────────────────────────────────────
@@ -891,6 +900,12 @@ export interface ActOperations {
   confirmLotSale: Op<{ sale: LotSaleConfirmation }, LotSaleResult>
   /** Starts the saved setup; `validate` first, then `saveSetup` with its revision. */
   startTrading: Op<{ activation_id: string; validation_token: string }, TradingStatus>
+  /**
+   * An edited setup while copying runs (AppModel.applyChangesWhileCopying): pauses copying, checks every connection, saves
+   * and starts the new setup; if a check fails or the start does not take, the saved setup is started again. One
+   * confirmation names it all. Refused, before anything pauses, if a key the new setup needs is missing.
+   */
+  applyChanges: Op<{ configuration: TradingConfiguration }, ApplyChangesResult>
   pauseTrading: Op<undefined, TradingStatus>
   controlAccount: Op<{ command: AccountControlCommand }, AccountControlResult>
   approveProposal: Op<{ proposal_id: string }, AgentProposal>
@@ -904,6 +919,8 @@ export interface ActOperations {
   /** Saves a validated setup; refused unless copying is paused. */
   saveSetup: Op<{ configuration: TradingConfiguration; revision: string }, null>
   setSecrets: Op<SecretUpdate, SecretStatus>
+  /** Drops the keys typed and not yet saved by a start; the encrypted store is what it was. */
+  discardSecrets: Op<undefined, SecretStatus>
   forgetBroker: Op<{ account_id: string }, SecretStatus>
   createBackup: Op<{ destination: string }, BackupManifest>
   previewRestore: Op<{ archive_path: string }, RestorePreview>
@@ -946,9 +963,9 @@ export const READS = [
 ] as const satisfies readonly ReadName[]
 
 export const ACTS = [
-  "confirmManualOrders", "confirmLotSale", "startTrading", "pauseTrading", "controlAccount", "approveProposal",
+  "confirmManualOrders", "confirmLotSale", "startTrading", "applyChanges", "pauseTrading", "controlAccount", "approveProposal",
   "deleteAccountRecord", "completeRestoreCandidate", "validateTrading", "checkConnection", "updateAccountLimits",
-  "saveSetup", "setSecrets", "forgetBroker", "createBackup", "previewRestore", "prepareRestoreCandidate",
+  "saveSetup", "setSecrets", "discardSecrets", "forgetBroker", "createBackup", "previewRestore", "prepareRestoreCandidate",
   "abortRestoreCandidate", "restorePreflight", "resolveOwnership", "saveManualCorrection", "rejectProposal",
   "completeProposal", "discardProposals", "learnGuruPlaybook", "evaluateHistoricalProfile", "assistantAsk",
   "assistantCancel", "assistantReset", "submitSelfTest",

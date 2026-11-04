@@ -47,7 +47,7 @@ if (!result.ok && result.cancelled) return // the owner pressed Cancel; show not
 ```
 
 These actions show a native dialog from the main process first, and send nothing to the engine on Cancel:
-`confirmManualOrders`, `confirmLotSale`, `startTrading`, `pauseTrading`, `controlAccount`, `approveProposal`,
+`confirmManualOrders`, `confirmLotSale`, `startTrading`, `applyChanges`, `pauseTrading`, `controlAccount`, `approveProposal`,
 `deleteAccountRecord`, `completeRestoreCandidate`, `updateAccountLimits` (it changes copying at once; the dialog
 lists each limit before and after). The page cannot skip or reword the dialog: main builds its text from what
 the engine said or the saved setup holds, not from the request.
@@ -71,12 +71,29 @@ wording in `confirmations.ts` and a case in `tests/api.test.ts`.
   `act.saveSetup({ configuration, revision: report.configuration_revision })` (only while paused), then
   `act.startTrading({ activation_id, validation_token })`. `act.updateAccountLimits` changes limits while copying
   (after a confirmation).
-- Keys (Discord token, model key, each account's Alpaca key and secret) live encrypted with Electron `safeStorage` in
+- A start is journaled in the setup file, as `TradingConfigurationStore.swift` does: `startTrading` stages the saved setup
+  as a pending start (with the setup before it), sends it, then looks at the engine's own record (`get_trading_activation`)
+  with `AppModel.reconcilePendingTradingActivation`'s rules: committed → finalized, stopped without committing → the setup
+  before it is saved again and the error names the account or service (`shared/start-failure.ts`), anything else stays
+  pending until the next `getSetup` or `getStatus` read settles it (the page polls `getSetup` while a start is pending). A
+  committed start also resumes each account the engine holds with buys off, as `turnOnEveryAccount` does: the start's
+  dialog named every account, so that asks nothing more. A Cancel in the dialog puts the setup before the save back.
+  The page's state for all of this, and the setup form, is `src/features/connections/setup-store.ts`.
+- `applyChanges` is the same start while copying runs (`AppModel.applyChangesWhileCopying`): one confirmation, then main
+  pauses, validates, saves and starts the new setup, and when a check fails or the start does not take it starts the saved
+  setup again (no second dialog) and gives back the buys of the accounts that were buying. A key the change lacks is
+  refused before anything pauses.
+- Keys the owner types are held by `act.setSecrets` in main's memory only. `SecretStore.stage()` writes them to disk with
+  the keys before them when a start is journaled, `settle()` drops the old ones once the engine commits, and `rollback()`,
+  a Cancel (`discard()`), a refused start, or `act.discardSecrets` ("Discard changes") leaves the file as it was; a crash
+  mid-start leaves both on disk for the next launch's reconcile.
+- Keys (Discord token, model key, each account's Alpaca key and secret, once a start has saved them) live encrypted with Electron `safeStorage` in
   `userData`. The renderer writes them with `act.setSecrets` and sees only `read.getSecretStatus()` (booleans).
   Main adds them to the engine request for `validateTrading`, `startTrading`, `checkConnection`,
   `learnGuruPlaybook`, `evaluateHistoricalProfile` and `assistantAsk`, overriding anything the page sent, and
   withholds any reply or error that contains a stored key (the engine's stopped-reason is redacted the same way).
-  Never log or render them.
+  Never log or render them. The model key is sent only to a request naming the provider it was typed for
+  (`SecretUpdate.provider_name`), and `validateTrading` / `startTrading` send only the accounts the setup has.
 
 ## Engine and safety
 
@@ -87,7 +104,9 @@ Never point an engine at it.
 
 ## Fixtures and capture
 
-`COPYTRADING_FIXTURES=1` serves the account captured on 2026-11-03 (`electron/main/fixtures/`, real engine shapes)
+`COPYTRADING_FIXTURES=1` serves the account captured on 2026-11-03 (`electron/main/fixtures/`, real engine shapes; the
+saved setup is `fixtures-setup.ts`, a first run with `COPYTRADING_FIXTURE_SETUP=none`, copying paused with
+`COPYTRADING_FIXTURE_TRADING=paused`)
 instead of an engine; operations without a fixture answer "is not in the captured fixtures". Add a read there by
 adding it to `READS` in `fixtures.ts`.
 
@@ -116,8 +135,7 @@ The page never supplies the size or hash. Use `<PostPicture attachment={...}>`; 
 
 - `stop`, `control`, `authorize_setup`, `attach_account_readers`, `detach_account_readers` stay main-only (lifecycle,
   the agent-socket relay, paused-account readers); no page may send them.
-- The start journal (`pendingActivation` stage, finalize, rollback) and the setup upgrade: `setup-file.ts` reads and
-  preserves a pending start but does not create one.
+- The setup upgrade from an earlier version: `setup-file.ts` refuses such a file and says so.
 - Moving the owner's Keychain items into the key store, a persistent data folder, and the packaged-app flag that
   allows the owner's folder: wave 3.
 - Restarting a crashed engine: the footer says why it stopped.
