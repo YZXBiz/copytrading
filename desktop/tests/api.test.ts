@@ -297,6 +297,26 @@ describe("confirmation gate", () => {
   })
 })
 
+describe("read-only market and performance asks", () => {
+  it("send each ask to the engine as it is and hand back the reply's own field, never asking the owner", async () => {
+    const h = harness(false)
+    h.replies.get_bars = () => ({ type: "bars", account_id: "zhap-account-2", bars: { SOXL: [{ at: "2026-11-04T14:30:00Z", open: "40.1", close: "40.2" }] } })
+    h.replies.get_guru_performance = () => ({ type: "guru_performance", performance: { realized_usd: "12.50", closed_trades: 2 } })
+
+    expect(await h.api.read("getBars", { account_id: "zhap-account-2", symbols: ["SOXL"] })).toEqual({
+      ok: true,
+      value: { SOXL: [{ at: "2026-11-04T14:30:00Z", open: "40.1", close: "40.2" }] },
+    })
+    expect(await h.api.read("getGuruPerformance", { account_id: "zhap-account-2", guru_id: "guru-1" })).toEqual({
+      ok: true,
+      value: { realized_usd: "12.50", closed_trades: 2 },
+    })
+    expect(h.sent("get_bars")[0]!.params).toEqual({ account_id: "zhap-account-2", symbols: ["SOXL"] })
+    expect(h.sent("get_guru_performance")[0]!.params).toEqual({ account_id: "zhap-account-2", guru_id: "guru-1" })
+    expect(h.asked).toEqual([])
+  })
+})
+
 describe("secrets", () => {
   function withKeys() {
     const h = harness(true)

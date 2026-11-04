@@ -4,7 +4,7 @@
 import { useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import { ArrowDownIcon, ArrowUpIcon, ChevronDownIcon, PackageOpenIcon } from "lucide-react"
-import type { AccountOverview } from "../../../shared/contract"
+import type { AccountOverview, Bar } from "../../../shared/contract"
 import { Badge } from "@/components/reui/badge"
 import { Frame, FramePanel } from "@/components/reui/frame"
 import { RollingNumber } from "@/components/rolling-number"
@@ -22,9 +22,11 @@ import { useLivePrices } from "@/features/live/use-live-prices"
 import { SPRING } from "@/lib/motion"
 import { money, monthDay, shares, signedMoney, signedPercent } from "@/lib/format"
 import { sharesText } from "@/lib/quantity"
+import { PositionSparkline } from "./PositionSparkline"
 import { parseDec } from "./decimal"
 import { heldPositions, holdingNote } from "./model"
 import { SORTS, type SortKey, sortPositions } from "./positions-sort"
+import { useBars } from "./use-bars"
 
 type Position = AccountOverview["positions"][number]
 type Lot = Position["lots"][number]
@@ -85,7 +87,7 @@ function Figure({ value, live, className }: { value: number | null; live: boolea
   )
 }
 
-function PositionRow({ position, livePrice, showSeparator, onSell }: { position: Position; livePrice: number | null; showSeparator: boolean; onSell: (position: Position, lot: Lot) => void }) {
+function PositionRow({ position, livePrice, bars, showSeparator, onSell }: { position: Position; livePrice: number | null; bars: Bar[] | undefined; showSeparator: boolean; onSell: (position: Position, lot: Lot) => void }) {
   const note = holdingNote(position)
   const row = liveRow(position, livePrice)
   const isLive = livePrice !== null
@@ -107,6 +109,8 @@ function PositionRow({ position, livePrice, showSeparator, onSell }: { position:
           </div>
         </div>
 
+        <PositionSparkline symbol={position.symbol} bars={bars} />
+
         <div className="flex shrink-0 flex-col gap-0 text-right">
           <p className="text-foreground text-base leading-5 font-medium tabular-nums">
             <RollingNumber value={row.value} format={USD_OPTIONS} />
@@ -125,6 +129,7 @@ export function PositionsList({ account, onRefresh, onSell }: { account: Account
   const [sort, setSort] = useState<SortKey>("value")
   const rows = sortPositions(heldPositions(account), sort)
   const prices = useLivePrices(account.account_id, rows.map((p) => p.symbol))
+  const bars = useBars(account.account_id, rows.map((p) => p.symbol))
   return (
     <Tabs value={sort} onValueChange={(next) => setSort(next as SortKey)} className="w-full">
       <Frame stacked className="@container w-full">
@@ -148,7 +153,7 @@ export function PositionsList({ account, onRefresh, onSell }: { account: Account
             <ul className="flex flex-col">
               <AnimatePresence initial={false}>
                 {rows.map((position, index) => (
-                  <PositionRow key={position.symbol} position={position} livePrice={prices[position.symbol] ?? null} showSeparator={index < rows.length - 1} onSell={onSell} />
+                  <PositionRow key={position.symbol} position={position} livePrice={prices[position.symbol] ?? null} bars={bars[position.symbol]} showSeparator={index < rows.length - 1} onSell={onSell} />
                 ))}
               </AnimatePresence>
             </ul>

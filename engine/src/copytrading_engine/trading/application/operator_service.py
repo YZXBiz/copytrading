@@ -11,7 +11,11 @@ from copytrading_engine.execution.application.manual_commands import (
     manual_command_page_from_snapshot,
 )
 from copytrading_engine.execution.application.ports import ACCOUNT_FAILURES
-from copytrading_engine.execution.domain.ledger_state import HELD_FOR_OWNER, EarlierLedgerVersion
+from copytrading_engine.execution.domain.ledger_state import (
+    HELD_FOR_OWNER,
+    EarlierLedgerVersion,
+    LedgerSnapshot,
+)
 from copytrading_engine.execution.domain.manual_commands import (
     ManualCommandPage,
     ManualCommandPageRequest,
@@ -334,6 +338,19 @@ class OperatorQueryService:
         and journal, unrealized from the open lots at the broker's price when it can be read."""
         database = self._access.retained_paths().get(account_id)
         if database is None:
+            # An account the setup lists has made nothing yet, which is not "not found".
+            configuration = self._access.configuration()
+            if self._reader.holds(account_id) or (
+                configuration is not None
+                and account_id in {item.id for item in configuration.accounts}
+            ):
+                return guru_performance(
+                    LedgerSnapshot(),
+                    (),
+                    guru_id=guru_id,
+                    account_id=account_id,
+                    unrealized_usd=Decimal(0),
+                )
             raise KeyError(account_id)
         snapshot, events = await asyncio.wait_for(
             asyncio.to_thread(self._access.evidence.retained_fills, database), timeout=5

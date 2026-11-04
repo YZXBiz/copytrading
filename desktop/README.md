@@ -190,6 +190,16 @@ tick. `COPYTRADING_CAPTURE_FRAMES=<n>` saves n frames in a row after the capture
   `features/live/`). The price rolls, the row's value and gain are recomputed from it, and the row flashes green or red
   for under 600 ms (`TickFlash`, opacity only; none with Reduce Motion). A quote older than two minutes is not live.
   `COPYTRADING_FIXTURE_TICK=1` in a tick build also moves the fixture quote (`node scripts/capture.mjs account-live-tick`).
+- **Sparklines.** Each Positions row shows a 1-day line (ReUI chart-25's sparkline) from `getBars`: the five-minute IEX
+  bars of the stock's latest session (Alpaca, through the account's read keys; the engine caches each symbol for 60 s),
+  asked once for all held stocks every minute while the window is visible (`features/account/use-bars.ts`). The line is
+  the gain color when the session closed at or above its first open, the loss color below it; a stock with no bars shows
+  no line. The fixtures serve real SOXL and SOXS bars of Nov 4 (`electron/main/fixtures/bars.json`).
+- **Guru performance.** A guru's page opens with what their copied sales made (`getGuruPerformance`, ReUI chart-3): the
+  cumulative realized line, realized, unrealized, win rate, best and worst call, or "No closed trades yet". The engine
+  reads it from the account's ledger and journal, replaying each sell through the ledger's own lot reduction; a sale it
+  cannot match to its buys is counted as unmatched and left out. The captured account has no sales, so
+  `COPYTRADING_FIXTURE_SCENE=performance` serves synthetic figures for the capture (`node scripts/capture.mjs guru-performance`).
 - **Fill toast.** The alert monitor's fill notes also go to the page as `engine:fill`; `FillToasts` shows a sonner toast.
   The macOS banner shows only when no window is focused.
 - **Logos.** `<SymbolLogo>` shows `ct-logo://<SYMBOL>` (`electron/main/logos.ts`): main fetches

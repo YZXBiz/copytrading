@@ -190,6 +190,8 @@ const READ_HANDLERS: Record<ReadName, Handler> = {
   getGuruDayStats: ask("get_guru_day_stats", value("stats")),
   getAccountFeed: ask("get_account_feed", value("feed")),
   getQuote: ask("get_quote", value("quote")),
+  getBars: ask("get_bars", value("bars")),
+  getGuruPerformance: ask("get_guru_performance", value("performance")),
   getManualCommand: ask("get_manual_command", value("command")),
   listManualCommands: ask("list_manual_commands", value("commands")),
   previewManualOrder: (params, ctx) => preview(ctx, "preview_manual_order", params),

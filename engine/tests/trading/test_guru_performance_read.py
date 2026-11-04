@@ -139,6 +139,23 @@ async def test_unrealized_is_the_open_shares_at_the_brokers_price(copied):
     assert performance.unrealized_usd == expected
 
 
+async def test_a_known_account_with_no_ledger_yet_has_made_nothing(tmp_path):
+    reader = PausedAccountReader(lambda _: PricedBroker())
+    operator = _operator(tmp_path, reader)
+    operator.attach_readers(
+        (
+            ReadKeys(
+                account_id="new", environment="paper", key=SecretStr("k"), secret=SecretStr("s")
+            ),
+        )
+    )
+
+    performance = await operator.guru_performance("new", GURU)
+
+    assert (performance.closed_trades, performance.realized_usd) == (0, 0)
+    assert performance.series == ()
+
+
 async def test_an_unknown_account_is_not_found(tmp_path):
     with pytest.raises(KeyError):
         await _operator(tmp_path).guru_performance("nobody", GURU)

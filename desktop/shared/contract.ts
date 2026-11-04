@@ -471,6 +471,38 @@ export interface AccountFeedPage {
   next_before_seq: number | null
 }
 
+/** One five-minute bar of a held stock's latest session. */
+export interface Bar {
+  at: string
+  open: Decimal
+  close: Decimal
+}
+
+/** What a guru's copied sales made in one account (ledger-replayed; `unmatched_sells` are in no figure). */
+export interface ClosedTrade {
+  symbol: string
+  profit_usd: Decimal
+  closed_on: string
+  source_id: string | null
+  excerpt: string | null
+  posted_at: string | null
+}
+
+export interface GuruPerformance {
+  guru_id: string
+  account_id: string
+  realized_usd: Decimal
+  /** Null when an open lot of the guru has no price to value it at. */
+  unrealized_usd: Decimal | null
+  closed_trades: number
+  winning_trades: number
+  unmatched_sells: number
+  best: ClosedTrade | null
+  worst: ClosedTrade | null
+  /** The realized total at the end of each day that closed a trade, oldest first. */
+  series: { day: string; cumulative_usd: Decimal }[]
+}
+
 export interface MarketQuote {
   feed: string
   bid: Decimal | null
@@ -896,6 +928,9 @@ export interface ReadOperations {
   getGuruDayStats: Op<{ day_start: string; day_end: string }, GuruDayStatsPage>
   getAccountFeed: Op<{ account_id: string; before_seq?: number; limit?: number }, AccountFeedPage>
   getQuote: Op<{ account_id: string; symbol: string }, MarketQuote | null>
+  /** Five-minute bars of each symbol's latest session, through the account's read keys; a symbol with none has an empty list. */
+  getBars: Op<{ account_id: string; symbols: string[] }, Record<string, Bar[]>>
+  getGuruPerformance: Op<{ account_id: string; guru_id: string }, GuruPerformance>
   getManualCommand: Op<{ account_id: string; command_id: string }, ManualCommandResult>
   listManualCommands: Op<{ account_id: string; source_id: string; before_command_id?: string; limit?: number }, ManualCommandPage>
   /** Plans an order and keeps what it planned; `confirmManualOrders` asks about that plan. */
@@ -996,7 +1031,7 @@ export type ActName = keyof ActOperations
 // The names the preload builds its methods from; `satisfies` keeps them equal to the keys above.
 export const READS = [
   "getStatus", "getEngineStatus", "getTradingActivation", "getWorkflow", "getAccounts", "getEquityHistory",
-  "getSourceActivity", "getGuruActivity", "getGuruDayStats", "getAccountFeed", "getQuote", "getManualCommand",
+  "getSourceActivity", "getGuruActivity", "getGuruDayStats", "getAccountFeed", "getQuote", "getBars", "getGuruPerformance", "getManualCommand",
   "listManualCommands", "previewManualOrder", "previewLotSale", "listProposals", "getAgentAudit",
   "getRestoreCandidate", "getAssistantTurn", "getAgentAccess", "getFillAlerts", "getTheme", "getMenuBar", "getSetup", "getLimits", "getSecretStatus",
   "readDiagnostics",
