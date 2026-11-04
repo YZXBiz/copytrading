@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { SourceActivity } from "../../../shared/contract"
+import { isOpenCall } from "@/features/activity/outcome"
 import { dayChange, postOutcome } from "./model"
-import { isWaiting, tradingDay } from "./waiting"
 
 const post = (over: Partial<SourceActivity>): SourceActivity => ({
   sequence: 1,
@@ -49,33 +49,28 @@ describe("what an order did", () => {
   const withOrder = (over: Record<string, unknown>) =>
     postOutcome(post({ destinations: [{ account_id: "a", status: "done", instruction_outcomes: ["order_linked"], orders: [order(over)] }] }), "a", NOW)
 
+  // The order wording is Activity's `orderOutcome` (tested there); the feed only maps it onto its labels.
   it("calls an order Copied only once it filled", () => {
-    expect(withOrder({})).toEqual({ label: "Copied", tone: "success-light", read: "Bought $199.82 of PM" })
-    expect(withOrder({ side: "sell" }).read).toBe("Sold $199.82 of PM")
-    expect(withOrder({ client_id: "manual-1" }).read).toBe("You bought $199.82 of PM")
+    expect(withOrder({})).toEqual({ label: "Copied", tone: "success-light", read: "Bought $199.82 of PM stock" })
+    expect(withOrder({ client_id: "manual-1" }).read).toMatch(/^You bought/)
   })
 
   it("says a cancelled, expired or released order was cancelled, never Copied", () => {
     for (const status of ["canceled", "expired", "done_for_day", "replaced", "released_unsubmitted", "aborted_before_submit"]) {
-      expect(withOrder({ status, filled_quantity: "0", average_fill_price: null })).toEqual({ label: "Cancelled", tone: "outline", read: "Order for $200 of PM was cancelled" })
+      expect(withOrder({ status, filled_quantity: "0", average_fill_price: null })).toMatchObject({ label: "Cancelled", tone: "outline", read: "Order for $200 of PM stock was cancelled" })
     }
   })
 
-  it("keeps what an order filled before it was cancelled", () => {
-    expect(withOrder({ status: "canceled", filled_quantity: "0.8", average_fill_price: "125" })).toEqual({ label: "Partly filled", tone: "warning-light", read: "Bought $100.00 of PM, rest cancelled" })
-  })
-
   it("says a rejected order failed, an unconfirmed one needs review, and an open one is working", () => {
-    expect(withOrder({ status: "rejected" })).toMatchObject({ label: "Failed", tone: "destructive-light", read: "The broker rejected the order for PM" })
+    expect(withOrder({ status: "rejected" })).toMatchObject({ label: "Failed", tone: "destructive-light" })
     expect(withOrder({ status: "uncertain" }).label).toBe("Needs review")
-    expect(withOrder({ status: "new", filled_quantity: "0" })).toMatchObject({ label: "Working", read: "Buying $200 of PM at up to $125.00" })
-    expect(withOrder({ status: "partially_filled" })).toMatchObject({ label: "Partly filled", read: "Partly bought: $199.82 of PM so far" })
+    expect(withOrder({ status: "new", filled_quantity: "0" }).label).toBe("Working")
+    expect(withOrder({ status: "partially_filled" }).label).toBe("Partly filled")
   })
 
-  it("sizes an order with no budget by its shares at its limit, and says several orders once", () => {
-    expect(withOrder({ status: "canceled", budget_usd: null, filled_quantity: "0", quantity: "2" }).read).toBe("Order for $250 of PM was cancelled")
+  it("says several orders once", () => {
     const two = postOutcome(post({ destinations: [{ account_id: "a", status: "done", instruction_outcomes: [], orders: [order({}), order({ client_id: "c2" })] }] }), "a", NOW)
-    expect(two.read).toBe("Bought $199.82 of PM and 1 more")
+    expect(two.read).toMatch(/and 1 more$/)
   })
 
   it("leaves out a lot the owner sold by hand", () => {
@@ -91,24 +86,24 @@ describe("dayChange", () => {
   })
 })
 
-describe("isWaiting", () => {
-  it("waits while an account holds the call and the trading day is open", () => {
-    expect(isWaiting(post({ destinations: held, source_at: "2026-11-03T18:00:00Z" }), NOW)).toBe(true)
-    expect(isWaiting(post({ destinations: delivered("approval_required") }), new Date("2026-11-02T22:00:00Z"))).toBe(true)
-  })
-  it("stops waiting once an account approved it or the day ended", () => {
-    expect(isWaiting(post({ destinations: delivered("approved_by_owner") }), NOW)).toBe(false)
-    expect(isWaiting(post({ destinations: held, source_at: "2026-11-02T18:00:00Z" }), NOW)).toBe(false)
+describe("whether a post waits is Activity's rule", () => {
+  const posts = [
+    post({ destinations: held, source_at: "2026-11-03T18:00:00Z" }),
+    post({ destinations: delivered("approval_required"), source_at: "2026-11-02T21:13:43Z" }),
+    post({ destinations: delivered("approved_by_owner") }),
+    post({ destinations: held, source_at: "2026-11-02T18:00:00Z" }),
+    post({ destinations: [{ ...held[0]!, orders: [{ client_id: "manual-1" } as never] }], source_at: "2026-11-03T18:00:00Z" }),
+  ]
+  it("shows Waits for you exactly when isOpenCall says the post is open", () => {
+    for (const p of posts) {
+      expect(postOutcome(p, "a", NOW).label === "Waits for you").toBe(isOpenCall(p, NOW))
+    }
+    expect(isOpenCall(posts[0]!, NOW)).toBe(true)
+    expect(isOpenCall(posts[2]!, NOW)).toBe(false)
+    expect(isOpenCall(posts[4]!, NOW)).toBe(false)
   })
   it("says a review whose day ended was not copied", () => {
     const old = post({ decision: "review", destinations: held, source_at: "2026-11-02T18:00:00Z" })
     expect(postOutcome(old, "a", NOW).label).toBe("Not copied")
-  })
-})
-
-describe("tradingDay", () => {
-  it("rolls to the next day from 20:00 New York", () => {
-    expect(tradingDay(new Date("2026-11-03T00:30:00Z"))).toBe("2026-11-02") // 19:30 Nov 2 in New York
-    expect(tradingDay(new Date("2026-11-03T01:30:00Z"))).toBe("2026-11-03") // 20:30 Nov 2 in New York
   })
 })

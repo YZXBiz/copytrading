@@ -1,9 +1,16 @@
-import { tradingDay } from "@/features/account/model"
-
 // When a waiting call can still be copied (WaitingCall.deadline, TradingDeadlineText.swift): 20:00 New York time
-// on its trading day, said in the owner's own time zone with the zone's short name.
+// on its trading day, said in the owner's own time zone with the zone's short name. The account page and the
+// Activity screen both decide from this one module.
 
 const NEW_YORK = "America/New_York"
+
+const newYorkParts = new Intl.DateTimeFormat("en-US", { timeZone: NEW_YORK, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" })
+
+/** The New York trading day an instant belongs to; from 20:00 it is the next day's, as the engine's `trade_date` counts it. */
+export function tradingDay(instant: Date): string {
+  const { year, month, day, hour } = Object.fromEntries(newYorkParts.formatToParts(instant).map((p) => [p.type, Number(p.value)])) as Record<"year" | "month" | "day" | "hour", number>
+  return new Date(Date.UTC(year, month - 1, day + (hour >= 20 ? 1 : 0))).toISOString().slice(0, 10)
+}
 
 const hourIn = (instant: Date, timeZone: string) =>
   Number(new Intl.DateTimeFormat("en-US", { timeZone, hour: "2-digit", hourCycle: "h23" }).format(instant))

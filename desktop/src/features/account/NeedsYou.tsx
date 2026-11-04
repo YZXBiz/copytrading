@@ -4,7 +4,8 @@ import { Badge } from "@/components/reui/badge"
 import { Button } from "@/components/ui/button"
 import { dateTime, timeOfDay } from "@/lib/format"
 import { deadlineText, endOfTradingDay } from "@/features/activity/deadline"
-import { type WaitingCall, callPhrase, gainLine, namedBuySentence, waited } from "./waiting"
+import { namedBuyNote } from "@/features/activity/outcome"
+import { type WaitingCall, callPhrase, gainLine, waited } from "./waiting"
 import type { Recent } from "./skipped-calls"
 
 /** The button's word: enter the trade yourself, approve what the account held, or copy what the post called. */
@@ -31,7 +32,7 @@ function CallTicket({
 }) {
   const first = call.calls[0]
   const title = first ? callPhrase(first) + (call.calls.length > 1 ? ` and ${call.calls.length - 1} more` : "") : "Enter the trade yourself"
-  const held = namedBuySentence(call.source)
+  const held = namedBuyNote(call.source)
   const gain = first ? gainLine(first) : null
   const sameDay = new Date(call.source.source_at).toDateString() === now.toDateString()
   return (

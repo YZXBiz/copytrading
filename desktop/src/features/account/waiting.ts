@@ -1,21 +1,9 @@
-import type { DestinationActivity, SourceActivity, SourceInstruction } from "../../../shared/contract"
-import { monthDay } from "@/lib/format"
-import { reasonText } from "./reasons"
+import type { SourceActivity, SourceInstruction } from "../../../shared/contract"
+import { HELD_FOR_OWNER, isOpenCall } from "@/features/activity/outcome"
 
-// A post that waits for the owner (ADR-0007), as WaitingCall.swift decides: an account holds its call, its
-// trading day is not over, and the owner has neither skipped it nor entered the trade by hand.
-
-/** A sell held because none of the account's buys is at the price it names (ADR-0010). The contract does not list it yet. */
-export interface NamedBuy {
-  part: number
-  posted_at: string | null
-  /** "sold", "not_filled", or the reason the buy was refused; null when it never reached the account. */
-  outcome: string | null
-}
-type Destination = DestinationActivity & { named_buys?: NamedBuy[] }
-
-/** Skips that hold a call back for the owner rather than refuse it: the engine's HELD_FOR_OWNER. */
-const HELD_FOR_OWNER = new Set(["approval_required", "named_buy_not_held"])
+// The call a post holds for the owner (WaitingCall.swift): what Copy places, and which answer it asks for. Whether a
+// post still waits, and until when, is decided once, in the Activity feature (`isOpenCall`, `endOfTradingDay`), so the
+// account page and the Activity screen can never disagree; the owner's own skip is the one thing only this page knows.
 
 export interface WaitingCall {
   source: SourceActivity
@@ -52,43 +40,9 @@ export function waitingCall(source: SourceActivity): WaitingCall | null {
   }
 }
 
-/** The owner placed a trade for this post by hand, so it no longer waits for them. */
-const enteredByOwner = (source: SourceActivity) =>
-  source.destinations.some((d) => d.orders?.some((o) => o.client_id.startsWith("manual-")))
-
-/** The call a post holds for the owner right now, or null: the one rule for whether a post waits. */
-export function openCall(source: SourceActivity, { skipped, now }: { skipped: boolean; now: Date }): WaitingCall | null {
-  const call = waitingCall(source)
-  return call && !skipped && !hasExpired(source, now) && !enteredByOwner(source) ? call : null
-}
-
-/** Whether a post waits, not counting the owner's own skips and hand-entered trades (which live in the app). */
-export const isWaiting = (post: SourceActivity, now: Date) => waitingCall(post) !== null && !hasExpired(post, now)
-
-const NEW_YORK = new Intl.DateTimeFormat("en-US", {
-  timeZone: "America/New_York",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  hourCycle: "h23",
-})
-
-function newYork(instant: Date) {
-  return Object.fromEntries(NEW_YORK.formatToParts(instant).map((part) => [part.type, Number(part.value)])) as Record<
-    "year" | "month" | "day" | "hour",
-    number
-  >
-}
-
-/** The New York trading day an instant belongs to; from 20:00 it is the next day's, as the engine's `trade_date` counts it. */
-export function tradingDay(instant: Date): string {
-  const { year, month, day, hour } = newYork(instant)
-  return new Date(Date.UTC(year, month - 1, day + (hour >= 20 ? 1 : 0))).toISOString().slice(0, 10)
-}
-
-/** Whether the post's trading day has ended, after which it can no longer be copied. */
-export const hasExpired = (source: SourceActivity, now: Date) => tradingDay(new Date(source.source_at)) !== tradingDay(now)
+/** The call a post holds for the owner right now, or null: still open by Activity's rule, and not skipped here. */
+export const openCall = (source: SourceActivity, { skipped, now }: { skipped: boolean; now: Date }): WaitingCall | null =>
+  skipped || !isOpenCall(source, now) ? null : waitingCall(source)
 
 /** "15h 20m": how long a post has waited. */
 export function waited(posted: string, now: Date): string {
@@ -131,28 +85,4 @@ export function gainLine(call: SourceInstruction): { change: number; line: strin
     change,
     line: `${sign}${Math.abs(change * 100).toFixed(1)}% from ${entry.toLocaleString("en-US", { style: "currency", currency: "USD" })}`,
   }
-}
-
-const sentence = (text: string) => (/[.!?]$/.test(text) ? text : `${text}.`)
-
-/** Why a sell naming a buy price has nothing to sell, from what came of the guru's buy at that price. */
-export function namedBuyText(named: NamedBuy, source: SourceActivity): string | null {
-  const price = Number(source.instructions[named.part]?.entry_price)
-  if (!source.instructions[named.part] || !(price > 0)) return null
-  const buy = price.toLocaleString("en-US", { style: "currency", currency: "USD" })
-  if (!named.posted_at || !named.outcome) return sentence(`The guru's ${buy} buy never reached this account`)
-  const day = monthDay(named.posted_at)
-  if (named.outcome === "sold") return sentence(`The ${buy} buy on ${day} is already sold`)
-  if (named.outcome === "not_filled") return sentence(`The ${buy} buy on ${day} never filled`)
-  return `${sentence(`The ${buy} buy on ${day} wasn't made`)} ${sentence(reasonText(named.outcome))}`
-}
-
-/** The first held sell's reason across the post's accounts, or null when no sell is held for its buy price. */
-export function namedBuySentence(source: SourceActivity): string | null {
-  for (const destination of source.destinations as Destination[]) {
-    const named = destination.named_buys?.[0]
-    const text = named && namedBuyText(named, source)
-    if (text) return text
-  }
-  return null
 }

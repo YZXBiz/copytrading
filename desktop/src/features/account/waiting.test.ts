@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest"
 import type { SourceActivity } from "../../../shared/contract"
+import { namedBuyNote } from "@/features/activity/outcome"
 import {
   callPhrase,
   gainLine,
-  namedBuySentence,
   openCall,
   waited,
   waitingCall,
@@ -95,23 +95,23 @@ describe("how a call reads", () => {
   })
 })
 
-describe("namedBuySentence", () => {
+describe("namedBuyNote (Activity's wording, shown on the ticket)", () => {
   const sell = (named: object) =>
     post({ instructions: [{ action: "close", symbol: "SOXS", price: "45", entry_price: "83.35" }], destinations: [{ ...dest("a", "delivered", ["named_buy_not_held"]), named_buys: [named] } as never] })
 
   it("says why the named buy was not made", () => {
-    expect(namedBuySentence(sell({ part: 0, posted_at: "2026-10-23T15:00:00Z", outcome: "daily_entry_cap" }))).toBe(
+    expect(namedBuyNote(sell({ part: 0, posted_at: "2026-10-23T15:00:00Z", outcome: "daily_entry_cap" }))).toBe(
       "The $83.35 buy on Oct 23 wasn't made. Your daily entry limit was reached.",
     )
   })
 
   it("says a sold or unfilled buy, and one that never arrived", () => {
-    expect(namedBuySentence(sell({ part: 0, posted_at: "2026-10-23T15:00:00Z", outcome: "sold" }))).toBe("The $83.35 buy on Oct 23 is already sold.")
-    expect(namedBuySentence(sell({ part: 0, posted_at: "2026-10-23T15:00:00Z", outcome: "not_filled" }))).toBe("The $83.35 buy on Oct 23 never filled.")
-    expect(namedBuySentence(sell({ part: 0, posted_at: null, outcome: null }))).toBe("The guru's $83.35 buy never reached this account.")
+    expect(namedBuyNote(sell({ part: 0, posted_at: "2026-10-23T15:00:00Z", outcome: "sold" }))).toBe("The $83.35 buy on Oct 23 is already sold.")
+    expect(namedBuyNote(sell({ part: 0, posted_at: "2026-10-23T15:00:00Z", outcome: "not_filled" }))).toBe("The $83.35 buy on Oct 23 never filled.")
+    expect(namedBuyNote(sell({ part: 0, posted_at: null, outcome: null }))).toBe("The guru's $83.35 buy never reached this account.")
   })
 
   it("is empty for a post with no held sell", () => {
-    expect(namedBuySentence(post())).toBeNull()
+    expect(namedBuyNote(post())).toBeNull()
   })
 })

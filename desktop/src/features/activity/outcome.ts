@@ -1,7 +1,6 @@
 import type { DestinationActivity, OrderActivity, SourceActivity } from "../../../shared/contract"
-import { tradingDay } from "@/features/account/model"
 import { money } from "@/lib/format"
-import { deadlineText, endOfTradingDay } from "./deadline"
+import { deadlineText, endOfTradingDay, tradingDay } from "./deadline"
 import { dollars, duration, filledAmount, num, orderDollars, plannedAmount, sharesOf, sharesOfOrder } from "./amounts"
 import { decisionTitle, enteredByOwner } from "./reading"
 import { reasonText, sentence } from "./reasons"
@@ -83,7 +82,7 @@ export function destinationOutcome(d: DestinationActivity): DestinationOutcome {
 // ── A call held for the owner ──
 
 /** Skips that hold a call back for the owner rather than refuse it (the engine's HELD_FOR_OWNER). */
-const HELD_FOR_OWNER = new Set(["approval_required", "named_buy_not_held"])
+export const HELD_FOR_OWNER = new Set(["approval_required", "named_buy_not_held"])
 /** Outcomes that are not a skip: an order went out, the part is still working, or the owner approved it. */
 const CARRIED_ON = new Set(["order_linked", "pending", "waiting_for_quote", "approved_by_owner"])
 
@@ -254,6 +253,16 @@ function namedBuySentence(named: NonNullable<DestinationActivity["named_buys"]>[
   if (named.outcome === "sold") return sentence(`The ${buy} buy on ${day} is already sold`)
   if (named.outcome === "not_filled") return sentence(`The ${buy} buy on ${day} never filled`)
   return `${sentence(`The ${buy} buy on ${day} wasn't made`)} ${sentence(reasonText(named.outcome))}`
+}
+
+/** The first held sell's reason across the post's accounts, or null when no sell is held for its buy price. */
+export function namedBuyNote(post: SourceActivity): string | null {
+  for (const d of post.destinations) {
+    const named = d.named_buys?.[0]
+    const text = named && namedBuySentence(named, post)
+    if (text) return text
+  }
+  return null
 }
 
 function waitingResult(d: DestinationActivity, post: SourceActivity, open: boolean, now: Date): Result {
