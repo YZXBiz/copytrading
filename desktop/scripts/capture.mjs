@@ -52,6 +52,16 @@ for (const [name, env] of [
   ["account-review", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2?open=review" }],
   ["account-sale", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2?open=sale" }],
   ["account-limits", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2?open=limits" }],
+  // The account page in a 1280×860 window, at the SwiftUI app's 980-wide minimum, and as one tall page ("full"):
+  // no waiting calls, the two the captured account has, and six.
+  ...["quiet", "", "calls"].flatMap((scene) => ["1280x860", "980x860", ""].map((size) => [scene, size])).map(([scene, size]) => [
+    `account-${scene || "default"}-${size || "full"}`,
+    { ...fixtures, COPYTRADING_FIXTURE_SCENE: scene, COPYTRADING_CAPTURE_SIZE: size, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2" },
+  ]),
+  // Copying paused: the primary action is Resume Copying.
+  ["account-paused", { ...fixtures, COPYTRADING_FIXTURE_TRADING: "paused", COPYTRADING_CAPTURE_SIZE: "1280x860", COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2" }],
+  // Pressing a waiting call's row (not its buttons) opens the same review as Copy.
+  ["account-row-review", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2", COPYTRADING_CAPTURE_CLICK: '[data-slot="item"]' }],
   ["account-attention", { ...fixtures, COPYTRADING_FIXTURE_SCENE: "attention", COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2" }],
   ["activity-timed-out", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/activity/5" }],
   ["activity-picture", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/activity/6" }],

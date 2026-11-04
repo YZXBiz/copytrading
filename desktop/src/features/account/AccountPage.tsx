@@ -5,7 +5,7 @@ import { readClock } from "@/lib/clock"
 import { useResult } from "@/lib/use-result"
 import { AccountHeader } from "./AccountHeader"
 import { AccountNotices } from "./AccountNotices"
-import { BalanceChart } from "./BalanceChart"
+import { BalancePanel } from "./balance-panel/chart"
 import { useDeepLink } from "./deep-link"
 import { LimitsPanel } from "./LimitsPanel"
 import { LimitsSheet } from "./LimitsSheet"
@@ -13,9 +13,8 @@ import { type LotSaleTarget, LotSaleSheet } from "./LotSaleSheet"
 import { ManualReviewSheet } from "./ManualReviewSheet"
 import { heldPositions } from "./model"
 import { NeedsYou } from "./NeedsYou"
-import { PositionsTable, sellable } from "./PositionsTable"
+import { PositionsList, sellable } from "./PositionsList"
 import { RecentPosts } from "./RecentPosts"
-import { StatsRow } from "./StatsRow"
 import { useSkippedCalls } from "./skipped-calls"
 import { type WaitingCall, openCall } from "./waiting"
 
@@ -84,6 +83,7 @@ export function AccountPage({
     <div className="flex flex-col gap-6">
       <AccountHeader account={account} status={status} saved={limitsSaved} onChanged={changed} />
       <AccountNotices account={account} status={copyingStatus} onResolved={changed} />
+      <BalancePanel account={account} onRefresh={changed} />
       <NeedsYou
         calls={calls}
         canCopy={copyingStatus?.state === "running" || copyingStatus?.state === "degraded"}
@@ -93,17 +93,11 @@ export function AccountPage({
         onSkip={(call) => skipped.skip(call.source.source_id ?? String(call.source.sequence), readableText(call.source))}
         onUndo={skipped.undo}
       />
+      <PositionsList account={account} onRefresh={onRefresh} onSell={(position, lot) => setSale(saleTarget(position, lot))} />
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <BalanceChart account={account} />
+        <RecentPosts accountId={id} posts={posts} now={now} />
         <LimitsPanel account={account} limits={limits} onOpenConnections={onOpenConnections} onEdit={() => setEditingLimits(true)} />
       </div>
-      <StatsRow account={account} />
-      <PositionsTable
-        account={account}
-        onRefresh={onRefresh}
-        onSell={(position, lot) => setSale(saleTarget(position, lot))}
-      />
-      <RecentPosts accountId={id} posts={posts} now={now} />
       {review && (
         <ManualReviewSheet
           source={review.source}

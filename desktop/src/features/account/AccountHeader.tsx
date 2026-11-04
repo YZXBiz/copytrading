@@ -1,10 +1,10 @@
 import { useState } from "react"
-import { PauseIcon } from "lucide-react"
 import type { AccountOverview, TradingStatus } from "../../../shared/contract"
 import { Badge } from "@/components/reui/badge"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
-import { CirclePlayIcon } from "@/reui/icons/animated/outline/circle-play"
+import { CirclePlayIcon } from "@/reui/icons/animated/duotone/circle-play"
+import { SquareInCircleIcon } from "@/reui/icons/animated/duotone/square-in-circle"
 import type { Loaded } from "@/lib/use-result"
 import { COPYING_TITLE, accountCopying, badgeVariant, isWarning, resumeBlocked } from "./copying"
 
@@ -45,11 +45,11 @@ export function AccountHeader({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1.5">
-          <h1 className="truncate text-2xl font-semibold tracking-tight">{account.account_id}</h1>
+          {/* The balance panel below names the account and its mode; the page keeps its heading for screen readers. */}
+          <h1 className="sr-only">{account.account_id}</h1>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline">{account.environment === "paper" ? "Paper" : "Live"}</Badge>
             <Badge variant={badgeVariant(state)}>{COPYING_TITLE[state.word]}</Badge>
             {state.detail && isWarning(state) && <span className="text-muted-foreground text-xs">{state.detail}</span>}
           </div>
@@ -58,7 +58,7 @@ export function AccountHeader({
           {pending && <Spinner aria-label="Saving account command" />}
           {copying ? (
             <Button type="button" variant="outline" disabled={pending} onClick={() => control("pause")} title="No new buys in this account. Sells of what it copied still follow the guru.">
-              <PauseIcon aria-hidden /> Stop Copying
+              <SquareInCircleIcon aria-hidden className="size-4" /> Stop Copying
             </Button>
           ) : (
             <Button type="button" disabled={pending || blocked !== null || status.status !== "ready"} onClick={() => control("resume")} title="Copy the guru's buys and sells into this account.">

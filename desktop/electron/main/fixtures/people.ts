@@ -12,6 +12,7 @@ import type {
   SetupView,
   SourceActivity,
   SourceActivityPage,
+  SourceInstruction,
 } from "../../../shared/contract"
 import activity from "./activity.json"
 
@@ -286,7 +287,37 @@ const crypto: Draft = {
   ],
 }
 
-const sorted = [...drafts, crypto].sort((a, b) => Date.parse(a.source_at) - Date.parse(b.source_at))
+// COPYTRADING_FIXTURE_SCENE=calls puts six calls in front of the owner, quiet none, for `npm run capture`.
+const scene = process.env.COPYTRADING_FIXTURE_SCENE
+
+const suggestion = (source_at: string, text: string, call: SourceInstruction): Draft => ({
+  source_at,
+  text,
+  decision: "review",
+  parser_reason: "suggestion",
+  reading: { kind: "suggestion", summary: text, calls: [] },
+  instructions: [call],
+  suggested: [call],
+  destinations: [destination("review_required", [])],
+})
+
+const extraCalls: Draft[] =
+  scene === "calls"
+    ? [
+        suggestion("2026-11-03T16:42:10Z", "AMD 168.2 进一成仓", { action: "buy", symbol: "AMD", price: "168.20" }),
+        suggestion("2026-11-03T15:58:30Z", "NVDA 188.5 出一半", { action: "reduce", symbol: "NVDA", price: "188.50", entry_price: "150.00", fraction: "0.5" }),
+        suggestion("2026-11-03T17:05:44Z", "SOFI 24.6 进", { action: "buy", symbol: "SOFI", price: "24.60" }),
+        suggestion(
+          "2026-11-03T18:30:19Z",
+          "今天先观察 TSLA，如果回踩 410 附近可以考虑少量进，注意仓位控制，不要一次打满，下午再看一次量能和大盘的方向再决定要不要加",
+          { action: "buy", symbol: "TSLA", price: "410.00" },
+        ),
+      ]
+    : []
+
+const sorted = [...drafts, ...extraCalls, crypto]
+  .filter((draft) => scene !== "quiet" || !draft.destinations?.some((d) => d.status === "review_required"))
+  .sort((a, b) => Date.parse(a.source_at) - Date.parse(b.source_at))
 
 export const posts: SourceActivity[] = sorted
   .map((draft, index) => ({

@@ -154,7 +154,8 @@ app can carry out (a setup change) cannot be approved yet: main refuses it, the 
 
 An account page opens its sheet from the route, so a capture can show one: `#/accounts/<id>?open=review|sale|limits`.
 `COPYTRADING_FIXTURE_SCENE=attention` serves the states the captured account never had (a stopped account, a holdings
-mismatch). Capture waits until no region is still loading before it saves.
+mismatch). `calls` puts six calls waiting for the owner on the page, `quiet` none. `COPYTRADING_CAPTURE_SIZE=1280x860` captures a window
+of that size instead of one tall page. Capture waits until no region is still loading before it saves.
 
 ## Pictures
 
