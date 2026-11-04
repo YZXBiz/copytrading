@@ -157,6 +157,15 @@ An account page opens its sheet from the route, so a capture can show one: `#/ac
 mismatch). `calls` puts six calls waiting for the owner on the page, `quiet` none. `COPYTRADING_CAPTURE_SIZE=1280x860` captures a window
 of that size instead of one tall page. Capture waits until no region is still loading before it saves.
 
+## Rolling numbers
+
+The balance, the stat strip, the sidebar's balances and the chart's hover readout are `<RollingNumber>`
+(`src/components/rolling-number.tsx`, NumberFlow): digits roll to a new value, in the direction it moved, and the first
+render and Reduce Motion show the number at once. It formats with the `*_OPTIONS` in `balance-panel/format.ts`, the same
+ones the text formatters use. To watch it, build with `npx electron-vite build --mode tick` and set
+`COPYTRADING_FIXTURE_TICK=1` (with `COPYTRADING_FIXTURES=1`): every accounts read moves the balance. A normal build has no
+tick. `COPYTRADING_CAPTURE_FRAMES=<n>` saves n frames in a row after the capture script (`node scripts/capture.mjs account-roll`).
+
 ## Pictures
 
 A post's captured pictures reach the page as `ct-picture://<evidence_id>` (`electron/main/pictures.ts`). Main notes each

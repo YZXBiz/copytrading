@@ -17,7 +17,8 @@ import {
   SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { money } from "@/lib/format"
+import { RollingNumber } from "@/components/rolling-number"
+import { USD_WHOLE_OPTIONS } from "@/features/account/balance-panel/format"
 import { cn } from "@/lib/utils"
 import { type Loaded } from "@/lib/use-result"
 import { type Route, type ScreenId, href } from "./route"
@@ -114,7 +115,11 @@ function Accounts({
           <SidebarMenuButton tooltip={account.account_id} isActive={account.account_id === selectedAccountId} render={<a href={href("accounts", account.account_id)} />}>
             <LandmarkIcon aria-hidden="true" />
             <span>{account.account_id}</span>
-            {account.balance && <SidebarMenuBadge className="tabular-nums">{money(account.balance.equity).replace(/\.\d+$/, "")}</SidebarMenuBadge>}
+            {account.balance && (
+              <SidebarMenuBadge className="tabular-nums">
+                <RollingNumber value={Number(account.balance.equity)} format={USD_WHOLE_OPTIONS} />
+              </SidebarMenuBadge>
+            )}
           </SidebarMenuButton>
         </SidebarMenuItem>
       ))}

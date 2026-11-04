@@ -65,6 +65,18 @@ function setupCaptures() {
 // Posts in the fixtures, oldest first: 3 a skipped sell, 5 a buy that timed out, 6 a picture, 8 a fill, 9 a post waiting for the owner.
 for (const [name, env] of [
   ["fixture", fixtures],
+  // The balance rolling to a new value: needs a build made with `electron-vite build --mode tick` (a normal build has no tick); COPYTRADING_FIXTURE_TICK moves it on every 5 s read, and the script waits for the figure to change.
+  [
+    "account-roll",
+    {
+      ...fixtures,
+      COPYTRADING_FIXTURE_TICK: "1",
+      COPYTRADING_CAPTURE_FRAMES: "3",
+      COPYTRADING_CAPTURE_SIZE: "1280x860",
+      COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2",
+      COPYTRADING_CAPTURE_SCRIPT: `(async () => { const read = () => document.querySelector("main number-flow-react").shadowRoot.textContent; const before = read(); for (let i = 0; i < 300 && read() === before; i++) await new Promise((r) => setTimeout(r, 40)) })()`,
+    },
+  ],
   ["account-review", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2?open=review" }],
   ["account-sale", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2?open=sale" }],
   ["account-limits", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2?open=limits" }],

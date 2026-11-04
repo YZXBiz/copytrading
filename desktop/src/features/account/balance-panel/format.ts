@@ -1,18 +1,14 @@
 import { getTimeZone } from "@/lib/time-zone"
 
-const USD = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-})
-const USD_SIGNED = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-  signDisplay: "exceptZero",
-})
+// The options are exported so the rolling numbers (components/rolling-number.tsx) format with exactly these.
+export const USD_OPTIONS = { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 } as const
+export const USD_SIGNED_OPTIONS = { ...USD_OPTIONS, signDisplay: "exceptZero" } as const
+/** The sidebar's "$2,700": cents cut off, never rounded up. */
+export const USD_WHOLE_OPTIONS = { style: "currency", currency: "USD", maximumFractionDigits: 0, roundingMode: "trunc" } as const
+export const PERCENT_SIGNED_OPTIONS = { style: "percent", minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "exceptZero" } as const
+
+const USD = new Intl.NumberFormat("en-US", USD_OPTIONS)
+const USD_SIGNED = new Intl.NumberFormat("en-US", USD_SIGNED_OPTIONS)
 const USD_AXIS = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -24,12 +20,7 @@ const PERCENT = new Intl.NumberFormat("en-US", {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 })
-const PERCENT_SIGNED = new Intl.NumberFormat("en-US", {
-  style: "percent",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-  signDisplay: "exceptZero",
-})
+const PERCENT_SIGNED = new Intl.NumberFormat("en-US", PERCENT_SIGNED_OPTIONS)
 
 /** "$24,847.83" */
 export const formatUsd = (value: number) => USD.format(value)

@@ -3,6 +3,7 @@ import { join } from "node:path"
 import { type BrowserWindow, app, nativeTheme } from "electron"
 
 const SETTLE_MS = 2500
+const FRAME_GAP_MS = 120
 
 /**
  * Saves the loaded window as light and dark PNGs with webContents.capturePage(), then quits.
@@ -26,6 +27,15 @@ export function captureWindow(window: BrowserWindow, dir: string, name: string, 
     if (process.env.COPYTRADING_CAPTURE_SCRIPT) {
       // A script that throws still gets its screenshot, and says why, instead of leaving the app open.
       await window.webContents.executeJavaScript(process.env.COPYTRADING_CAPTURE_SCRIPT).catch((error: unknown) => console.error("capture script failed:", error))
+      // COPYTRADING_CAPTURE_FRAMES=<n>: save n back-to-back frames right after the script (light only), for a motion that has not finished.
+      const frames = Number(process.env.COPYTRADING_CAPTURE_FRAMES)
+      if (frames > 0) {
+        for (let i = 1; i <= frames; i++) {
+          writeFileSync(join(dir, `${name}-frame-${i}.png`), (await window.webContents.capturePage()).toPNG())
+          await wait(FRAME_GAP_MS)
+        }
+        return app.quit()
+      }
       await new Promise((done) => setTimeout(done, SETTLE_MS))
     }
     for (const theme of ["light", "dark"] as const) {

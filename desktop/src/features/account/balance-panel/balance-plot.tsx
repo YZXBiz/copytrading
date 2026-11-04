@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from "react"
 import { Badge } from "@/components/reui/badge"
+import { RollingNumber } from "@/components/rolling-number"
 import { cn } from "cn"
 import {
   CartesianGrid,
@@ -37,10 +38,11 @@ import {
 import { balanceAxis } from "../balance-axis"
 import { CHART_CONFIG } from "./data"
 import {
+  PERCENT_SIGNED_OPTIONS,
+  USD_OPTIONS,
+  USD_SIGNED_OPTIONS,
   formatAxis,
   formatDay,
-  formatSignedPercent,
-  formatSignedUsd,
   formatUsd,
   formatWeekday,
 } from "./format"
@@ -294,10 +296,10 @@ function Change({ value, ratio }: { value: number; ratio: number }) {
           value >= 0 ? "text-success" : "text-destructive"
         )}
       >
-        {formatSignedUsd(value)}
+        <RollingNumber value={value} format={USD_SIGNED_OPTIONS} quick />
       </span>
       <span className={cn(CAP_BOX, "text-muted-foreground")}>
-        {formatSignedPercent(ratio)}
+        <RollingNumber value={ratio} format={PERCENT_SIGNED_OPTIONS} quick />
       </span>
     </span>
   )
@@ -355,7 +357,7 @@ function BalanceCard({
         <div className="flex flex-1 flex-col gap-1.5">
           <CardRow glyph={<SeriesKeyMark series="balance" />} label="Balance">
             <span className={cn(CAP_BOX, "font-medium tabular-nums")}>
-              {formatUsd(row.balance)}
+              <RollingNumber value={row.balance} format={USD_OPTIONS} quick />
             </span>
           </CardRow>
           <CardRow glyph={ROW_ICONS.since} label={`Since ${formatDay(opened)}`}>
