@@ -66,7 +66,7 @@ function AssistantBody({ onOpen, children }: { onOpen: () => void; children: Rea
       <AssistantPanel
         model={model}
         ready={ready}
-        provider={configuration?.provider.model ?? null}
+        provider={configuration?.provider ?? null}
         suggestions={suggestions(route.screen, guru, configuration !== null)}
         assistant={assistant}
         onAsk={ask}

@@ -23,7 +23,7 @@ interface Props {
 const ROOMY = 1280
 
 function Frame({ children, ...props }: Props) {
-  const { setOpen } = useSidebar()
+  const { setOpen, toggleSidebar } = useSidebar()
   const makeRoom = useCallback(() => {
     if (window.innerWidth < ROOMY) setOpen(false)
   }, [setOpen])
@@ -33,7 +33,7 @@ function Frame({ children, ...props }: Props) {
       <AppSidebar {...props} />
       <SidebarInset className="min-w-0 overflow-hidden">
         <AssistantFrame onOpen={makeRoom}>
-          <AppHeader route={props.route} selectedAccountId={props.selectedAccountId} />
+          <AppHeader route={props.route} selectedAccountId={props.selectedAccountId} onToggleNav={toggleSidebar} />
           <main className="min-h-0 flex-1 overflow-auto py-2 pr-4 pl-2">{children}</main>
         </AssistantFrame>
       </SidebarInset>

@@ -153,7 +153,6 @@ export function NavMain({ route, accounts, live, old, selectedAccountId }: Props
         </SidebarGroupContent>
       </SidebarGroup>
       <SidebarGroup>
-        <SidebarGroupLabel className="in-data-[state=collapsed]:hidden">Platform</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
             <LeafNavItem screen="gurus" route={route} />

@@ -16,8 +16,8 @@ const MUTED_ICON_BUTTON = "text-muted-foreground hover:text-foreground"
 interface Props {
   model: Loaded<unknown> & { retry: () => void }
   ready: boolean
-  /** The model that answers, by name. */
-  provider: string | null
+  /** The model that answers. */
+  provider: { name: string; model: string } | null
   suggestions: string[]
   assistant: ReturnType<typeof useAssistant>
   onAsk: (text: string) => void

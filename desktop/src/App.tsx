@@ -22,7 +22,7 @@ export default function App() {
     <MotionConfig reducedMotion="user">
       <TooltipProvider>
         <AppFrame route={route} accounts={accounts} live={live} old={old} setup={config} selectedAccountId={selectedAccountId} engine={engine}>
-          {SCREENS[route.screen].render({ route, accounts })}
+          {SCREENS[route.screen].render({ route: route.screen === "accounts" && !route.id ? { ...route, id: selectedAccountId } : route, accounts })}
         </AppFrame>
       </TooltipProvider>
     </MotionConfig>

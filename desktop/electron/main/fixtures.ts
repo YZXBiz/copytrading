@@ -91,7 +91,7 @@ const READS: Record<string, (params: Params) => Promise<Result<unknown>>> = {
       ? Promise.resolve<Result<never>>({ ok: false, error: "The engine did not answer the accounts request." })
       : accountsState === "accounts-loading"
         ? new Promise<Result<never>>((done) => setTimeout(() => done({ ok: false, error: "The engine did not answer the accounts request." }), 120_000))
-        : ok({ items: records ? [overview, ...oldRecords] : [overview], unavailable_accounts: [] }),
+        : ok({ items: records ? [...oldRecords, overview] : [overview], unavailable_accounts: [] }),
   getEquityHistory: (params) => {
     const key = HISTORY_KEY[params?.range as HistoryRange]
     const value: EquityHistory | null = key

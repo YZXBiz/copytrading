@@ -21,7 +21,7 @@ const SHORTCUTS: { keys: string[]; label: string }[] = [
  * ai-chat-8's composer: one box that grows with the text, Enter to send, and a quiet bar under it. The bar names the model that
  * answers on the left and lists the shortcuts on the right. While an answer is written the button stops it.
  */
-export function AssistantComposer({ open, answering, enabled, provider, onSend, onStop }: { open: boolean; answering: boolean; enabled: boolean; provider: string | null; onSend: (text: string) => void; onStop: () => void }) {
+export function AssistantComposer({ open, answering, enabled, provider, onSend, onStop }: { open: boolean; answering: boolean; enabled: boolean; provider: { name: string; model: string } | null; onSend: (text: string) => void; onStop: () => void }) {
   const [value, setValue] = useState("")
   const box = useRef<HTMLTextAreaElement>(null)
   const canSend = value.trim().length > 0
@@ -94,7 +94,17 @@ export function AssistantComposer({ open, answering, enabled, provider, onSend, 
       </form>
 
       <div className="flex items-center justify-between gap-2 px-1">
-        <span className="text-muted-foreground min-w-0 truncate text-xs">{provider ?? "No model chosen"}</span>
+        <span className="text-muted-foreground flex min-w-0 items-center gap-1.5 px-1 text-xs">
+          {provider ? (
+            <>
+              <span className="shrink-0">{provider.name}</span>
+              <span aria-hidden="true" className="bg-muted-foreground/40 size-1 shrink-0 rounded-full" />
+              <span className="min-w-0 truncate">{provider.model}</span>
+            </>
+          ) : (
+            "No model chosen"
+          )}
+        </span>
         <Popover>
           <PopoverTrigger render={<Button type="button" variant="ghost" size="sm" aria-label="Keyboard shortcuts" className="text-muted-foreground hover:text-foreground h-7 shrink-0 gap-1.5 px-2 font-normal" />}>
             <KeyRoundIcon className="size-3.5 shrink-0" aria-hidden="true" />
