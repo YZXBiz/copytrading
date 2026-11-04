@@ -124,7 +124,7 @@ describe("cardOutcome", () => {
     const open = cardOutcome(review, NOW)
     expect(open).toMatchObject({ title: "Waiting for you", tone: "caution" })
     expect(open.accounts[0]).toMatchObject({ waits: true })
-    expect(open.accounts[0]!.results[0]).toMatchObject({ headline: "Waiting for you: the guru gave a price range", facts: [{ label: "Copy by", value: expect.stringMatching(/^Deadline today: \d{1,2}:00 [AP]M \w+$/) }] })
+    expect(open.accounts[0]!.results[0]).toMatchObject({ headline: "Waiting for you: the guru gave a price range", facts: [{ label: "Copy by", value: expect.stringMatching(/^Deadline (today|tomorrow): \d{1,2}:00 [AP]M /) }] })
     const late = cardOutcome(review, new Date("2026-11-05T15:00:00Z"))
     expect(late.title).toBe("Expired")
     expect(late.accounts[0]!.results[0]!.note).toBe("Too late to copy: its trading day is over.")
@@ -147,6 +147,14 @@ describe("isOpenCall", () => {
     // 2026-11-04T00:59Z is 19:59 EST on Nov 3.
     expect(isOpenCall({ ...held, source_at: "2026-11-04T00:59:00Z" }, new Date("2026-11-04T00:59:30Z"))).toBe(true)
     expect(isOpenCall({ ...held, source_at: "2026-11-04T00:59:00Z" }, new Date("2026-11-04T01:00:30Z"))).toBe(false)
+  })
+
+  it("counts the trading day in New York whatever the machine's zone", () => {
+    // Posted 18:30 ET Nov 3. At 19:30 ET it is already Nov 4 in UTC, but the New York trading day is still Nov 3.
+    const at = { ...held, source_at: "2026-11-03T23:30:00Z" }
+    expect(isOpenCall(at, new Date("2026-11-04T00:30:00Z"))).toBe(true)
+    // At 20:30 ET the trading day is Nov 4, though it is still Nov 3 in Los Angeles.
+    expect(isOpenCall(at, new Date("2026-11-04T01:30:00Z"))).toBe(false)
   })
 
   it("is not open once the owner entered the trade by hand", () => {
