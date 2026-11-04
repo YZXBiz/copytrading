@@ -25,7 +25,7 @@ import { POST_FILTERS, type PostFilter, buildFeed, guruHoldings, guruStats, incl
 export function GuruPage({ guru, accounts, setUpAccountIds }: { guru: Guru; accounts: Loaded<AccountOverviewPage>; setUpAccountIds: Set<string> }) {
   const now = readClock()
   const window_ = dayWindow(now)
-  const day = useResult(() => window.copytrading.read.getGuruDayStats(window_), `day:${guru.id}:${window_.day_start}`)
+  const day = useResult(() => window.copytrading.read.getGuruDayStats(window_), `day:${guru.id}:${window_.day_start}`, 30_000)
   const posts = usePosts((before_seq, limit) => window.copytrading.read.getGuruActivity({ guru_id: guru.id, before_seq, limit }), `guru:${guru.id}`)
   const [filter, setFilter] = useState<PostFilter>("all")
   const [open, setOpen] = useState<number | null>(null)
