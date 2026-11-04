@@ -8,18 +8,15 @@ import type {
   RestorePreview,
   Result,
   SecretStatus,
-  SetupView,
 } from "../../../shared/contract"
-import saved from "../../../tests/fixtures/trading-configuration.json"
 
-// Settings and tools in the engine's wire shapes, for `COPYTRADING_FIXTURES=1`: the setup and keys of the captured account, a
+// Settings and tools in the engine's wire shapes, for `COPYTRADING_FIXTURES=1` (the saved setup is people.ts's): the keys, a
 // journal, two waiting requests, a few recorded ones, and a canned assistant answer. Times are on the fixture clock
 // (2026-11-03T21:00:00Z). COPYTRADING_FIXTURE_STATE=pending-restore shows a half-finished restore.
 
 type Params = Record<string, unknown> | undefined
 const ok = async <T>(value: T): Promise<Result<T>> => ({ ok: true, value })
 
-const setup: SetupView = { configuration: saved.configuration as never, revision: saved.revision, keys_present: true, pending_activation: null }
 const secrets: SecretStatus = { discord_token: true, provider_api_key: true, notification_token: false, brokers: { "zhap-account-2": true, "zhap-account-3": true } }
 const engine: EngineStatus = {
   instance_id: "fixture", state: "running", accepted: 14, pending: 0, completed: 14, telemetry_state: "healthy", telemetry_dropped: 0, telemetry_error_code: null,
@@ -86,7 +83,6 @@ const turn: AssistantTurnPage = {
 }
 
 export const settingsReads: Record<string, (params: Params) => Promise<Result<unknown>>> = {
-  getSetup: () => ok(setup),
   getSecretStatus: () => ok(secrets),
   getEngineStatus: () => ok(engine),
   readDiagnostics: () => ok({ entries: journal, bytes: 184_320 }),

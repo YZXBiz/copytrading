@@ -7,7 +7,7 @@ import { canApprove, resultMessage } from "./proposals"
  * Approve and Reject for one waiting request. Approving shows a native confirmation from main, which words it from what the
  * engine holds, so a Cancel there sends nothing. A request only the app can carry out (a setup change) can only be rejected.
  */
-export function ProposalActions({ proposal, onDecided }: { proposal: AgentProposal; onDecided: () => void }) {
+export function ProposalActions({ proposal, onDecided }: { proposal: AgentProposal; onDecided: (outcome: string | null) => void }) {
   const [working, setWorking] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -21,8 +21,8 @@ export function ProposalActions({ proposal, onDecided }: { proposal: AgentPropos
       if (!result.cancelled) setMessage(result.error)
       return
     }
-    if (approve) setMessage(resultMessage(result.value))
-    onDecided()
+    // Where the request ended up (done, failed, not confirmed yet) is told by the caller, whose list drops this row.
+    onDecided(approve ? resultMessage(result.value) : null)
   }
 
   return (

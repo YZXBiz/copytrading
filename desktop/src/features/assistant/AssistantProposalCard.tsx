@@ -33,7 +33,7 @@ export function AssistantProposalCard({ proposalId }: { proposalId: string }) {
         {statusLine(proposal)}
       </div>
       <p className="text-sm font-medium">{waiting ? `${summary(proposal)}?` : summary(proposal)}</p>
-      {waiting && <ProposalActions proposal={proposal} onDecided={proposals.retry} />}
+      {waiting && <ProposalActions proposal={proposal} onDecided={() => proposals.retry()} />}
     </div>
   )
 }
