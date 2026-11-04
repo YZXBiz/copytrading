@@ -224,9 +224,11 @@ function registerIpc(): void {
 }
 
 function createWindow(): BrowserWindow {
+  // A capture is one tall page unless COPYTRADING_CAPTURE_SIZE=<width>x<height> asks for a window's size.
+  const [sizeWidth, sizeHeight] = (process.env.COPYTRADING_CAPTURE_SIZE ?? "").split("x").map(Number)
   const window = new BrowserWindow({
-    width: 1280,
-    height: captureDir ? 1700 : 860,
+    width: sizeWidth || 1280,
+    height: sizeHeight || (captureDir ? 1700 : 860),
     show: !captureDir && !smoke,
     title: "CopyTrading",
     webPreferences: {

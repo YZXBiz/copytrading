@@ -2,7 +2,7 @@ import { CircleAlertIcon, CircleCheckIcon, InfoIcon, PauseIcon, RefreshCwIcon } 
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/reui/alert"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
-import { CirclePlayIcon } from "@/reui/icons/animated/outline/circle-play"
+import { CirclePlayIcon } from "@/reui/icons/animated/duotone/circle-play"
 import { CheckResults } from "./CheckResults"
 import type { Derived } from "./derive"
 import { applyChanges, discard, reload, startCopying, type SetupState } from "./setup-store"

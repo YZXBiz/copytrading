@@ -40,7 +40,7 @@ export function LimitsPanel({
 }) {
   const lossToday = Math.max(0, -Number(account.balance?.day_change_usd ?? 0))
   return (
-    <Frame spacing="sm">
+    <Frame spacing="default">
       <FrameHeader className="flex-row items-center justify-between">
         <FrameTitle>Limits</FrameTitle>
         {limits.status === "ready" && limits.data && (

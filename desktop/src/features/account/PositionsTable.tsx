@@ -1,10 +1,9 @@
 import { useMemo } from "react"
 import { type ColumnDef, useTable } from "@tanstack/react-table"
-import { ChevronDownIcon, PackageOpenIcon } from "lucide-react"
+import { ArrowDownIcon, ArrowUpIcon, ChevronDownIcon, PackageOpenIcon } from "lucide-react"
 import type { AccountOverview } from "../../../shared/contract"
 import { Badge } from "@/components/reui/badge"
 import { DataGrid, type DataGridFeatures, dataGridFeatures } from "@/components/reui/data-grid/data-grid"
-import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header"
 import { DataGridScrollArea } from "@/components/reui/data-grid/data-grid-scroll-area"
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table"
 import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"
@@ -13,7 +12,7 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTi
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { money, monthDay, shares, signedMoney, signedPercent } from "@/lib/format"
 import { parseDec } from "./decimal"
-import { heldPositions, holdingNote } from "./model"
+import { heldPositions } from "./model"
 import { sharesText } from "@/lib/quantity"
 
 type Position = AccountOverview["positions"][number]
@@ -59,33 +58,34 @@ function SellCell({ position, onSell }: { position: Position; onSell: (position:
 const columns = (onSell: (position: Position, lot: Lot) => void): ColumnDef<DataGridFeatures, Position>[] => [
   {
     accessorKey: "symbol",
-    header: ({ column }) => <DataGridColumnHeader title="Stock" column={column} />,
-    cell: ({ row }) => (
-      <div className="flex flex-col">
-        <span className="font-medium">{row.original.symbol}</span>
-        <span className="text-muted-foreground text-xs">{holdingNote(row.original)}</span>
-      </div>
-    ),
+    header: "Stock",
+    cell: ({ row }) => <span className="font-medium">{row.original.symbol}</span>,
+    enableSorting: false,
+    size: 80,
   },
-  { accessorKey: "owned_qty", header: ({ column }) => <DataGridColumnHeader title="Shares" column={column} />, cell: ({ row }) => shares(row.original.owned_qty), meta: RIGHT },
-  { accessorKey: "avg_entry_price", header: ({ column }) => <DataGridColumnHeader title="Avg cost" column={column} />, cell: ({ row }) => money(row.original.avg_entry_price), size: 110, meta: RIGHT },
-  { accessorKey: "current_price", header: ({ column }) => <DataGridColumnHeader title="Price" column={column} />, cell: ({ row }) => money(row.original.current_price), size: 110, meta: RIGHT },
-  { accessorKey: "market_value", header: ({ column }) => <DataGridColumnHeader title="Value" column={column} />, cell: ({ row }) => money(row.original.market_value), size: 110, meta: RIGHT },
+  { accessorKey: "owned_qty", header: "Shares", cell: ({ row }) => shares(row.original.owned_qty), enableSorting: false, size: 110, meta: RIGHT },
+  { accessorKey: "current_price", header: "Price", cell: ({ row }) => money(row.original.current_price), enableSorting: false, size: 90, meta: RIGHT },
+  { accessorKey: "market_value", header: "Value", cell: ({ row }) => <span className="font-medium">{money(row.original.market_value)}</span>, enableSorting: false, size: 100, meta: RIGHT },
   {
     accessorKey: "unrealized_pl",
-    header: ({ column }) => <DataGridColumnHeader title="Gain" column={column} />,
+    header: "Gain",
     cell: ({ row }) => {
       const pl = Number(row.original.unrealized_pl ?? 0)
       return (
         <div className="flex items-center justify-end gap-2">
-          <span>{signedMoney(pl)}</span>
-          <Badge variant={pl < 0 ? "destructive-light" : "success-light"}>{signedPercent(row.original.unrealized_plpc)}</Badge>
+          <span className="text-muted-foreground">{signedMoney(pl)}</span>
+          <Badge variant={pl < 0 ? "destructive-light" : "success-light"}>
+            {pl < 0 ? <ArrowDownIcon aria-hidden="true" /> : <ArrowUpIcon aria-hidden="true" />}
+            {signedPercent(row.original.unrealized_plpc)}
+          </Badge>
         </div>
       )
     },
+    enableSorting: false,
+    size: 170,
     meta: RIGHT,
   },
-  { id: "sell", header: () => <span className="sr-only">Sell</span>, cell: ({ row }) => <SellCell position={row.original} onSell={onSell} />, size: 90, meta: RIGHT },
+  { id: "sell", header: () => <span className="sr-only">Sell</span>, cell: ({ row }) => <SellCell position={row.original} onSell={onSell} />, size: 60, meta: RIGHT },
 ]
 
 export function PositionsTable({
@@ -101,7 +101,7 @@ export function PositionsTable({
   const cols = useMemo(() => columns(onSell), [onSell])
   const table = useTable({ features: dataGridFeatures, data, columns: cols, getRowId: (row) => row.symbol })
   return (
-    <Frame spacing="sm">
+    <Frame spacing="default">
       <FrameHeader>
         <FrameTitle>Positions</FrameTitle>
       </FrameHeader>
@@ -125,8 +125,8 @@ export function PositionsTable({
           <DataGrid
             table={table}
             recordCount={data.length}
-            tableLayout={{ dense: true, headerBackground: true }}
-            tableClassNames={{ base: "min-w-[720px]" }}
+            tableLayout={{ dense: true }}
+            tableClassNames={{ base: "min-w-[560px]" }}
           >
             <DataGridScrollArea>
               <DataGridTable />

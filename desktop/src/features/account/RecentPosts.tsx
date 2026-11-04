@@ -20,7 +20,7 @@ export function RecentPosts({
   now: Date
 }) {
   return (
-    <Frame spacing="sm">
+    <Frame spacing="default">
       <FrameHeader>
         <FrameTitle>Guru posts</FrameTitle>
       </FrameHeader>

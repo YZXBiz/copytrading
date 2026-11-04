@@ -1,10 +1,10 @@
 import { useState } from "react"
-import { PauseIcon } from "lucide-react"
 import type { AccountOverview, TradingStatus } from "../../../shared/contract"
 import { Badge } from "@/components/reui/badge"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
-import { CirclePlayIcon } from "@/reui/icons/animated/outline/circle-play"
+import { CirclePlayIcon } from "@/reui/icons/animated/duotone/circle-play"
+import { SquareInCircleIcon } from "@/reui/icons/animated/duotone/square-in-circle"
 import type { Loaded } from "@/lib/use-result"
 import { COPYING_TITLE, accountCopying, badgeVariant, isWarning, resumeBlocked } from "./copying"
 
@@ -58,7 +58,7 @@ export function AccountHeader({
           {pending && <Spinner aria-label="Saving account command" />}
           {copying ? (
             <Button type="button" variant="outline" disabled={pending} onClick={() => control("pause")} title="No new buys in this account. Sells of what it copied still follow the guru.">
-              <PauseIcon aria-hidden /> Stop Copying
+              <SquareInCircleIcon aria-hidden className="size-4" /> Stop Copying
             </Button>
           ) : (
             <Button type="button" disabled={pending || blocked !== null || status.status !== "ready"} onClick={() => control("resume")} title="Copy the guru's buys and sells into this account.">
