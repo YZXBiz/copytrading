@@ -3,6 +3,8 @@ import { ActivityIcon, LandmarkIcon, PlugIcon, RocketIcon, SettingsIcon, UsersIc
 import type { AccountOverviewPage } from "../../../shared/contract"
 import { AccountsScreen } from "@/features/account/AccountsScreen"
 import { ActivityScreen } from "@/features/activity/ActivityScreen"
+import { ConnectionsScreen } from "@/features/connections/ConnectionsScreen"
+import { GettingStartedScreen } from "@/features/getting-started/GettingStartedScreen"
 import { GurusScreen } from "@/features/gurus/GurusScreen"
 import { SettingsScreen } from "@/features/settings/SettingsScreen"
 import { type Loaded } from "@/lib/use-result"
@@ -45,7 +47,7 @@ export const SCREENS: Record<ScreenId, Screen> = {
     icon: ActivityIcon,
     render: ({ route, accounts }) => <ActivityScreen selectedSequence={route.id === null ? null : Number(route.id)} accounts={accounts} />,
   },
-  "getting-started": { title: "Getting Started", icon: RocketIcon, render: placeholder("Getting Started") },
-  connections: { title: "Connections", icon: PlugIcon, render: placeholder("Connections") },
+  "getting-started": { title: "Getting Started", icon: RocketIcon, render: () => <GettingStartedScreen /> },
+  connections: { title: "Connections", icon: PlugIcon, render: ({ route }) => <ConnectionsScreen routeId={route.id} /> },
   settings: { title: "Settings", icon: SettingsIcon, render: ({ route, accounts }) => <SettingsScreen page={route.id} accounts={accounts} /> },
 }

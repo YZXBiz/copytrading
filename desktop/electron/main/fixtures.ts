@@ -1,5 +1,6 @@
 import type { AccountOverview, EquityHistory, HistoryRange, Result } from "../../shared/contract"
 import type { Api } from "./api"
+import { setupReads } from "./fixtures-setup"
 import account from "./fixtures/account.json"
 import history from "./fixtures/history.json"
 import { peopleReads } from "./fixtures/people"
@@ -60,8 +61,7 @@ type Params = Record<string, unknown> | undefined
 
 // Only what the account page reads is captured; every other operation says so instead of inventing data.
 const READS: Record<string, (params: Params) => Promise<Result<unknown>>> = {
-  getStatus: () =>
-    ok({ state: "running", configured_accounts: 1, active_accounts: 1, source_connected: true, model_ready: true, error_code: null }),
+  ...setupReads,
   getAccounts: () => ok({ items: [overview], unavailable_accounts: [] }),
   getEquityHistory: (params) => {
     const key = HISTORY_KEY[params?.range as HistoryRange]

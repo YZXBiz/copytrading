@@ -81,6 +81,8 @@ export interface CheckResult {
   fingerprint: string
   /** Null while the check is still running. */
   check: CapabilityCheck | null
+  /** Why the check could not run at all, in the app's words; shown in place of the engine's reason. */
+  error?: string
 }
 export type Checks = Partial<Record<Subject, CheckResult>>
 
