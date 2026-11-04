@@ -101,13 +101,20 @@ export class SetupFile {
     const saved = this.read()
     if (!saved) throw new SetupFileError("There is no saved setup yet.")
     if (saved.pendingActivation) throw new SetupFileError("A start is waiting for the engine to confirm it.")
-    if (configuration.version !== CONFIGURATION_VERSION || !isRevision(revision)) {
-      throw new SetupFileError("The setup is invalid.")
-    }
+    if (!isRevision(revision)) throw new SetupFileError("The setup is invalid.")
+    this.assertLimitsOnly(configuration)
+    this.write({ ...saved, configuration, revision })
+  }
+
+  /** Throws unless `configuration` differs from the saved setup only in account limits. */
+  assertLimitsOnly(configuration: TradingConfiguration): void {
+    const saved = this.read()
+    if (!saved) throw new SetupFileError("There is no saved setup yet.")
+    if (saved.pendingActivation) throw new SetupFileError("A start is waiting for the engine to confirm it.")
+    if (configuration.version !== CONFIGURATION_VERSION) throw new SetupFileError("The setup is invalid.")
     if (!isDeepStrictEqual(withPoliciesOf(configuration, saved.configuration), saved.configuration)) {
       throw new SetupFileError("Only account limits can change while copying.")
     }
-    this.write({ ...saved, configuration, revision })
   }
 
   /** Same steps as AtomicTradingConfigurationWriter: temp file, fsync, rename, fsync the folder. */

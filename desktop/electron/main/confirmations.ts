@@ -1,5 +1,6 @@
 import type {
   AccountControlCommand,
+  AccountPolicy,
   AgentProposal,
   LotSaleConfirmation,
   LotSalePreview,
@@ -43,12 +44,60 @@ export function manualOrdersText(commands: ManualConfirmation[], seen: Map<strin
   return commands.length === 1 ? `${lines[0]}?` : `Place ${plural(lines.length, "order")}?\n\n${lines.join("\n")}`
 }
 
+const joinAnd = (items: string[]) => (items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`)
+
+/** One line per route, so a guru is never named against an account it does not copy into. */
 export function startText(configuration: TradingConfiguration): string {
-  const ids = [...new Set(configuration.routes.flatMap((r) => r.connections.map((c) => c.account_id)))]
-  const accounts = ids.map((id) => `${id} (${configuration.accounts.find((a) => a.id === id)?.environment ?? "unknown"})`)
-  const live = configuration.accounts.some((a) => ids.includes(a.id) && a.environment === "live")
-  const gurus = [...new Set(configuration.routes.map((r) => configuration.profiles.find((p) => p.guru_id === r.guru_id)?.display_name ?? r.guru_id))]
-  return `Start copying ${gurus.join(", ")} into ${accounts.join(", ")}?\n\n${live ? "This places real orders with real money." : "This places paper orders."}`
+  const environment = (id: string) => configuration.accounts.find((a) => a.id === id)?.environment ?? "unknown"
+  const lines = configuration.routes.map((route) => {
+    const guru = configuration.profiles.find((p) => p.guru_id === route.guru_id && p.profile_revision === route.profile_revision)
+    return `${guru?.display_name ?? route.guru_id} into ${joinAnd(route.connections.map((c) => `${c.account_id} (${environment(c.account_id)})`))}`
+  })
+  const live = configuration.routes.some((r) => r.connections.some((c) => environment(c.account_id) === "live"))
+  return `Start copying?\n\n${lines.join("\n")}\n\n${live ? "This places real orders with real money." : "This places paper orders."}`
+}
+
+type Show = (value: string | number | boolean) => string
+const USD: Show = (v) => `$${v}`
+const PCT: Show = (v) => `${v}%`
+const FLAG: Show = (v) => (v ? "on" : "off")
+const SECONDS: Show = (v) => `${v} seconds`
+// How the owner reads each account limit, as Settings words it, and how its value is written.
+// A limit missing here still shows, under its own name, so no change goes unnamed.
+const LIMITS: Partial<Record<keyof AccountPolicy, [label: string, show: Show]>> = {
+  max_order_usd: ["Each order", USD],
+  max_symbol_usd: ["Each stock", USD],
+  max_total_usd: ["Invested in total", USD],
+  daily_loss_cap_usd: ["Loss per day", USD],
+  max_entries_per_day: ["Buys per day", String],
+  max_signal_age_seconds: ["Oldest post to copy", SECONDS],
+  order_timeout_seconds: ["Order timeout", SECONDS],
+  poll_seconds: ["Check for orders every", SECONDS],
+  extended_hours: ["Extended hours", FLAG],
+  overnight: ["Overnight", FLAG],
+  copy_exits: ["Copy sells", FLAG],
+  approve_orders: ["Approve each order", FLAG],
+  max_above_signal_pct: ["Buy above the guru's price by up to", PCT],
+  max_below_signal_pct: ["Sell below the guru's price by up to", PCT],
+  recovery_preference: ["After a restart", (v) => (v === "automatic" ? "resume by itself" : "wait for you")],
+}
+
+/** What changing the saved limits to the requested ones does, account by account. */
+export function limitsText(saved: TradingConfiguration, requested: TradingConfiguration): string {
+  const lines = requested.accounts.flatMap((account) => {
+    const before = saved.accounts.find((a) => a.id === account.id)?.policy
+    if (!before) return []
+    const keys = new Set([...Object.keys(before), ...Object.keys(account.policy)]) as Set<keyof AccountPolicy>
+    const changes = [...keys]
+      .filter((key) => before[key] !== account.policy[key])
+      .map((key) => {
+        const [label, show] = LIMITS[key] ?? [key, String]
+        return `${label} ${show(before[key])} → ${show(account.policy[key])}`
+      })
+    return changes.length ? [`${account.id}: ${changes.join("; ")}`] : []
+  })
+  if (!lines.length) throw new Refusal("No limit is different from the saved one.")
+  return `Change copying limits now?\n\n${lines.join("\n")}\n\nCopying uses them from the next post.`
 }
 
 export const PAUSE_TEXT = "Pause copying? No new posts are copied until you start again."

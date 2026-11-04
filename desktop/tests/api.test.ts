@@ -3,7 +3,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
 import { type Engine, createApi } from "../electron/main/api"
-import { SecretStore } from "../electron/main/secrets"
+import { SecretStore, redactState } from "../electron/main/secrets"
 import { SETUP_FILE, SetupFile } from "../electron/main/setup-file"
 
 const FIXTURE = join(__dirname, "fixtures", SETUP_FILE)
@@ -26,10 +26,17 @@ const plan = (side: string, qty: string, symbol: string, limit: string | null) =
 
 const MUTATING = [
   "confirm_manual_orders", "confirm_lot_sale", "start_trading", "pause_trading", "control_account",
-  "approve_proposal", "delete_account_record", "complete_restore_candidate",
+  "approve_proposal", "delete_account_record", "complete_restore_candidate", "update_account_limits",
 ]
 
-function harness(answer = true) {
+/** The saved setup with the first account's limits changed. */
+function withLimits(changes: Record<string, unknown>) {
+  const config = structuredClone(saved.configuration)
+  Object.assign(config.accounts[0].policy, changes)
+  return config
+}
+
+function harness(answer = true, whileAsking: () => Promise<unknown> = async () => {}) {
   const requests: { op: string; params: Record<string, unknown> }[] = []
   const replies: Record<string, (params: Record<string, unknown>) => unknown> = {
     get_trading_status: () => ({ type: "trading_status", trading: { state: "paused" } }),
@@ -69,6 +76,7 @@ function harness(answer = true) {
     secrets,
     confirm: async (text) => {
       asked.push(text)
+      await whileAsking()
       return answer
     },
   })
@@ -99,7 +107,15 @@ const CONFIRMED: [string, string, (h: Harness) => Promise<unknown>, Record<strin
       h.secrets.merge({ discord_token: DISCORD })
     },
     { activation_id: "9d3f2c1a-0000-4000-8000-000000000001", validation_token: "t" },
-    "Start copying 赵哥, Standard stock alerts into zhap-account-2 (paper), zhap-account-3 (paper)?\n\nThis places paper orders.",
+    "Start copying?\n\n赵哥 into zhap-account-2 (paper)\nStandard stock alerts into zhap-account-2 (paper) and zhap-account-3 (paper)\n\nThis places paper orders.",
+  ],
+  [
+    "updateAccountLimits", "update_account_limits",
+    async (h) => {
+      h.replies.update_account_limits = () => ({ type: "account_limits", revision: "a".repeat(64) })
+    },
+    { configuration: withLimits({ max_order_usd: "250", approve_orders: true }) },
+    "Change copying limits now?\n\nzhap-account-2: Each order $100 → $250; Approve each order off → on\n\nCopying uses them from the next post.",
   ],
   ["pauseTrading", "pause_trading", async () => {}, undefined, "Pause copying? No new posts are copied until you start again."],
   [
@@ -170,6 +186,50 @@ describe("confirmation gate", () => {
     h.secrets.merge({ discord_token: DISCORD })
     await h.api.act("startTrading", { activation_id: "a", validation_token: "t", configuration: { version: 10, routes: [] } })
     expect(h.sent("start_trading")[0]!.params.configuration).toEqual(saved.configuration)
+  })
+
+  it("starts what the dialog described, even if the page saves another setup or key while it is open", async () => {
+    const during: unknown[] = []
+    let h: Harness
+    h = harness(true, async () => {
+      during.push(await h.api.act("saveSetup", { configuration: withLimits({ max_order_usd: "9999" }), revision: "f".repeat(64) }))
+      during.push(await h.api.act("setSecrets", { discord_token: "SENTINEL-swapped-token-9999" }))
+    })
+    h.secrets.setRevision(saved.secretRevision)
+    h.secrets.merge({ discord_token: DISCORD })
+    const result = await h.api.act("startTrading", { activation_id: "a", validation_token: "t" })
+    expect(during).toMatchObject([{ ok: true }, { ok: true }]) // the page really did change both mid-dialog
+    expect(result).toMatchObject({ ok: true })
+    const sent = h.sent("start_trading")[0]!.params as { configuration: unknown; secrets: { discord_token: string } }
+    expect(sent.configuration).toEqual(saved.configuration)
+    expect(sent.secrets.discord_token).toBe(DISCORD)
+  })
+
+  it("refuses to change limits if the saved setup changed while the dialog was open", async () => {
+    let h: Harness
+    h = harness(true, async () => {
+      await h.api.act("saveSetup", { configuration: withLimits({ max_symbol_usd: "700" }), revision: "f".repeat(64) })
+    })
+    h.replies.update_account_limits = () => ({ type: "account_limits", revision: "a".repeat(64) })
+    const result = await h.api.act("updateAccountLimits", { configuration: withLimits({ max_order_usd: "250" }) })
+    expect(result).toMatchObject({ ok: false, error: expect.stringContaining("changed while you were confirming") })
+    expect(h.sent("update_account_limits")).toEqual([])
+  })
+
+  it("refuses a limits change that touches anything but limits, before asking", async () => {
+    const h = harness(true)
+    const config = withLimits({ max_order_usd: "250" })
+    config.routes[0].connections[0].full_position_usd = "9999"
+    expect(await h.api.act("updateAccountLimits", { configuration: config })).toMatchObject({ ok: false, error: expect.stringContaining("Only account limits") })
+    expect(h.asked).toEqual([])
+  })
+
+  it("never plans two orders under one preview id", async () => {
+    const h = harness(true)
+    const preview = { preview_id: "pv-1", account_id: "zhap-account-2", lot_id: "lot-1", qty: "1" }
+    expect(await h.api.read("previewLotSale", { preview })).toMatchObject({ ok: true })
+    expect(await h.api.read("previewLotSale", { preview })).toMatchObject({ ok: false, error: "Each preview needs a new id." })
+    expect(h.sent("preview_lot_sale")).toHaveLength(1)
   })
 
   it("will not start a setup whose keys are not in this app", async () => {
@@ -267,6 +327,13 @@ describe("secrets", () => {
     const file = readFileSync(join(h.dir, "secrets.bin"))
     for (const secret of [DISCORD, PROVIDER, BROKER_KEY, BROKER_SECRET]) expect(file.includes(secret)).toBe(false)
     expect(new SecretStore(join(h.dir, "secrets.bin"), cipher).secrets.discord_token).toBe(DISCORD)
+  })
+
+  it("are removed from the engine's stopped-reason before the footer shows it", () => {
+    const reason = `Traceback ... token=${DISCORD} key=${PROVIDER}`
+    const shown = redactState({ state: "stopped", reason }, [DISCORD, PROVIDER])
+    expect(shown).toEqual({ state: "stopped", reason: "Traceback ... token=••• key=•••" })
+    expect(redactState({ state: "running" }, [DISCORD])).toEqual({ state: "running" })
   })
 
   it("name what is missing instead of sending a request that cannot work", async () => {

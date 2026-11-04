@@ -5,7 +5,7 @@ import { type Api, createApi } from "./api"
 import { captureWindow } from "./capture"
 import { EngineProcess, engineTarget } from "./engine/launch"
 import { fixtureApi } from "./fixtures"
-import { SecretStore } from "./secrets"
+import { SecretStore, redactState } from "./secrets"
 import { SetupFile } from "./setup-file"
 
 // COPYTRADING_CAPTURE_DIR + COPYTRADING_CAPTURE_NAME: save PNGs of the window and quit (npm run capture).
@@ -17,12 +17,26 @@ const devServer = process.env.ELECTRON_RENDERER_URL
 
 const engine = new EngineProcess()
 let api: Api
+let secrets: SecretStore | null = null
+
+/** The engine's state as the renderer may see it: a stopped engine's reason is the engine's own stderr. */
+const publicState = (): EngineState => redactState(fixtures ? { state: "running" } : engine.state, secrets?.values() ?? [])
 
 const windows = () => BrowserWindow.getAllWindows()
 
 /** A native yes/no that the page cannot reach, skip, or reword. Cancel is the default button. */
 async function confirm(text: string): Promise<boolean> {
-  const options: Electron.MessageBoxOptions = { type: "question", buttons: ["Cancel", "Confirm"], defaultId: 0, cancelId: 0, noLink: true, message: text }
+  // macOS shows `message` in bold and `detail` below it.
+  const [message = "", ...rest] = text.split("\n\n")
+  const options: Electron.MessageBoxOptions = {
+    type: "question",
+    buttons: ["Cancel", "Confirm"],
+    defaultId: 0,
+    cancelId: 0,
+    noLink: true,
+    message,
+    detail: rest.join("\n\n") || undefined,
+  }
   const parent = BrowserWindow.getFocusedWindow() ?? windows()[0]
   const { response } = parent ? await dialog.showMessageBox(parent, options) : await dialog.showMessageBox(options)
   return response === 1
@@ -46,7 +60,7 @@ function startServices(): Api {
   if (fixtures) return fixtureApi
   try {
     const target = engineTarget()
-    const secrets = new SecretStore(join(app.getPath("userData"), "secrets.bin"), cipher)
+    secrets = new SecretStore(join(app.getPath("userData"), "secrets.bin"), cipher)
     void engine.start(target).catch((error: unknown) => engine.fail(error instanceof Error ? error.message : String(error)))
     return createApi({ engine, setup: new SetupFile(target.dataDir), secrets, confirm })
   } catch (error) {
@@ -59,8 +73,8 @@ function startServices(): Api {
 function registerIpc(): void {
   ipcMain.handle(CHANNELS.read, (_event, name: unknown, params: unknown) => api.read(name, params))
   ipcMain.handle(CHANNELS.act, (_event, name: unknown, params: unknown) => api.act(name, params))
-  ipcMain.handle(CHANNELS.state, (): EngineState => (fixtures ? { state: "running" } : engine.state))
-  engine.onState((state) => windows().forEach((w) => w.webContents.send(CHANNELS.stateChanged, state)))
+  ipcMain.handle(CHANNELS.state, publicState)
+  engine.onState(() => windows().forEach((w) => w.webContents.send(CHANNELS.stateChanged, publicState())))
 }
 
 function createWindow(): BrowserWindow {

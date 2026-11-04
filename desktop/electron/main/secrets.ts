@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs"
-import type { SecretStatus, SecretUpdate } from "../../shared/contract"
+import type { EngineState, SecretStatus, SecretUpdate } from "../../shared/contract"
 
 /** The engine's TradingSecrets, as `validate_trading` and `start_trading` take them. */
 export interface Secrets {
@@ -14,6 +14,20 @@ export interface Cipher {
   encrypt: (text: string) => Buffer
   decrypt: (data: Buffer) => string
 }
+
+// A stored key shorter than this could match ordinary words, so it is not looked for in text.
+const MIN_CHECKED_LENGTH = 6
+
+/** `text` with every stored key (as is, and as JSON would escape it) replaced. The check on everything sent to the renderer. */
+export function redact(text: string, values: string[]): string {
+  return values
+    .filter((v) => v.length >= MIN_CHECKED_LENGTH)
+    .flatMap((v) => [v, JSON.stringify(v).slice(1, -1)])
+    .reduce((out, v) => out.split(v).join("•••"), text)
+}
+
+export const redactState = (state: EngineState, values: string[]): EngineState =>
+  state.state === "stopped" ? { ...state, reason: redact(state.reason, values) } : state
 
 interface Saved {
   /** The `secretRevision` of the setup file these keys belong to. */

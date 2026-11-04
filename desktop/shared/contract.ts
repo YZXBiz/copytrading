@@ -775,7 +775,8 @@ export interface ReadOperations {
 }
 
 export interface ActOperations {
-  // Each of these shows a native confirmation, built by main from its own data, before the engine hears of it.
+  // Each of these shows a native confirmation, built by main from its own data, before the engine hears of it
+  // (down to updateAccountLimits).
   confirmManualOrders: Op<{ commands: ManualConfirmation[] }, ManualCommandsOutcome>
   confirmLotSale: Op<{ sale: LotSaleConfirmation }, LotSaleResult>
   /** Starts the saved setup; `validate` first, then `saveSetup` with its revision. */
@@ -785,11 +786,11 @@ export interface ActOperations {
   approveProposal: Op<{ proposal_id: string }, AgentProposal>
   deleteAccountRecord: Op<{ account_id: string }, null>
   completeRestoreCandidate: Op<{ candidate_id: string; completion_token: string }, null>
-  // No confirmation: they place no order and do not change what copying does until a confirmed action runs.
+  /** Gives copying new account limits at once, and saves them in the setup file under the engine's revision. The dialog lists each change. */
+  updateAccountLimits: Op<{ configuration: TradingConfiguration }, { revision: string }>
+  // No confirmation below: none places an order or changes what copying does. A start still needs `startTrading`.
   validateTrading: Op<{ configuration: TradingConfiguration }, TradingValidation>
   checkConnection: Op<{ connection: ConnectionCheck }, CapabilityCheck>
-  /** Gives copying new account limits at once and saves them in the setup file under the engine's revision. */
-  updateAccountLimits: Op<{ configuration: TradingConfiguration }, { revision: string }>
   /** Saves a validated setup; refused unless copying is paused. */
   saveSetup: Op<{ configuration: TradingConfiguration; revision: string }, null>
   setSecrets: Op<SecretUpdate, SecretStatus>

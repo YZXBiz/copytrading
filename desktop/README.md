@@ -48,16 +48,18 @@ if (!result.ok && result.cancelled) return // the owner pressed Cancel; show not
 
 These actions show a native dialog from the main process first, and send nothing to the engine on Cancel:
 `confirmManualOrders`, `confirmLotSale`, `startTrading`, `pauseTrading`, `controlAccount`, `approveProposal`,
-`deleteAccountRecord`, `completeRestoreCandidate`. The page cannot skip or reword the dialog: main builds its text
-from what the engine said, not from the request.
+`deleteAccountRecord`, `completeRestoreCandidate`, `updateAccountLimits` (it changes copying at once; the dialog
+lists each limit before and after). The page cannot skip or reword the dialog: main builds its text from what
+the engine said or the saved setup holds, not from the request.
 
 - An order is confirmed after a preview in the same session: call `read.previewLotSale` / `read.previewManualOrder`
   first. Main keeps the plan the engine returned and words the dialog from it ("Sell 2.052463 SOXS at $40.45 or
   better from zhap-account-2?"). Confirming an order it never saw is refused.
 - `approveProposal` sends the digest the engine holds; the page's is ignored.
-- `startTrading` starts the **saved** setup, never one in the request.
+- A preview id is used once: previewing again needs a new id.
+- `startTrading` starts the **saved** setup and keys as main read them when the dialog opened, never ones in the request.
 
-Other actions (`validateTrading`, `checkConnection`, `saveSetup`, backups, …) place no order and need no dialog.
+Other actions (`validateTrading`, `checkConnection`, `saveSetup`, backups, …) place no order and change nothing copying does.
 A new action that moves money or changes copying must be added to `ACT_HANDLERS` through `confirmed(...)`, with its
 wording in `confirmations.ts` and a case in `tests/api.test.ts`.
 
@@ -67,12 +69,14 @@ wording in `confirmations.ts` and a case in `tests/api.test.ts`.
   (`electron/main/setup-file.ts`; `tests/fixtures/` has one). `read.getSetup()` returns it with the engine's
   `revision` and whether its keys are in this app. Starting is `act.validateTrading({ configuration })`, then
   `act.saveSetup({ configuration, revision: report.configuration_revision })` (only while paused), then
-  `act.startTrading({ activation_id, validation_token })`. `act.updateAccountLimits` changes limits while copying.
+  `act.startTrading({ activation_id, validation_token })`. `act.updateAccountLimits` changes limits while copying
+  (after a confirmation).
 - Keys (Discord token, model key, each account's Alpaca key and secret) live encrypted with Electron `safeStorage` in
   `userData`. The renderer writes them with `act.setSecrets` and sees only `read.getSecretStatus()` (booleans).
   Main adds them to the engine request for `validateTrading`, `startTrading`, `checkConnection`,
   `learnGuruPlaybook`, `evaluateHistoricalProfile` and `assistantAsk`, overriding anything the page sent, and
-  withholds any reply or error that contains a stored key. Never log or render them.
+  withholds any reply or error that contains a stored key (the engine's stopped-reason is redacted the same way).
+  Never log or render them.
 
 ## Engine and safety
 

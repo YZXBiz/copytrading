@@ -4,6 +4,7 @@ import {
   Refusal,
   controlText,
   deleteRecordText,
+  limitsText,
   lotSaleText,
   manualOrdersText,
   proposalText,
@@ -11,7 +12,7 @@ import {
   startText,
 } from "./confirmations"
 import { EngineError } from "./engine/bridge"
-import type { SecretStore, Secrets } from "./secrets"
+import { type SecretStore, type Secrets, redact } from "./secrets"
 import { SetupFile, SetupFileError } from "./setup-file"
 
 export interface Engine {
@@ -42,8 +43,6 @@ const ENGINE_WORDS: Record<string, string> = {
   identity_conflict: "The engine belongs to a different installation.",
 }
 
-// A stored key shorter than this could match ordinary words, so it is not checked for in replies.
-const MIN_CHECKED_LENGTH = 6
 const WITHHELD = "A reply held a saved key, so it was not shown."
 
 type Payload = Record<string, unknown>
@@ -123,8 +122,8 @@ const READ_HANDLERS: Record<ReadName, Handler> = {
   getQuote: ask("get_quote", value("quote")),
   getManualCommand: ask("get_manual_command", value("command")),
   listManualCommands: ask("list_manual_commands", value("commands")),
-  previewManualOrder: async (params, ctx) => remember(ctx, await ask("preview_manual_order", value("preview"))(params, ctx)),
-  previewLotSale: async (params, ctx) => remember(ctx, await ask("preview_lot_sale", value("preview"))(params, ctx)),
+  previewManualOrder: (params, ctx) => preview(ctx, "preview_manual_order", params),
+  previewLotSale: (params, ctx) => preview(ctx, "preview_lot_sale", params),
   listProposals: ask("list_proposals", value("proposals")),
   getAgentAudit: ask("agent_audit", value("entries")),
   getRestoreCandidate: ask("restore_candidate_status", value("candidate")),
@@ -155,9 +154,13 @@ const READ_HANDLERS: Record<ReadName, Handler> = {
   getSecretStatus: async (_params, { secrets }) => secrets.status(),
 }
 
-function remember(ctx: Ctx, preview: unknown): unknown {
-  ctx.seen.set((preview as { request: { preview_id: string } }).request.preview_id, preview)
-  return preview
+/** Asks the engine to plan an order and keeps the plan. An id used once is never reused, so a plan cannot change under a dialog. */
+async function preview(ctx: Ctx, operation: string, params: Params): Promise<unknown> {
+  const id = (params.preview as { preview_id?: string } | undefined)?.preview_id
+  if (typeof id !== "string" || ctx.seen.has(id)) throw new Refusal("Each preview needs a new id.")
+  const planned = value("preview")(await ctx.engine.request(operation, params))
+  ctx.seen.set(id, planned)
+  return planned
 }
 
 /** Runs `handler` only after the owner says yes to what `describe` says it will do. */
@@ -181,13 +184,16 @@ const ACT_HANDLERS: Record<ActName, Handler> = {
     ask("confirm_lot_sale", value("sale"), (p) => ({ sale: p.sale })),
   ),
   startTrading: confirmed(
-    (_p, ctx) => ({ text: startText(savedSetup(ctx).configuration) }),
-    ask("start_trading", value("trading"), (p, ctx) => ({
-      configuration: savedSetup(ctx).configuration,
-      secrets: ctx.secrets.secrets,
-      validation_token: p.validation_token,
-      activation_id: p.activation_id,
-    })),
+    // The setup and keys are read once, here: the request carries exactly what the dialog described,
+    // even if the page saves another setup or key while the dialog is open.
+    (p, ctx) => {
+      const { configuration } = savedSetup(ctx)
+      return {
+        text: startText(configuration),
+        send: { configuration, secrets: structuredClone(ctx.secrets.secrets), validation_token: p.validation_token, activation_id: p.activation_id },
+      }
+    },
+    ask("start_trading", value("trading")),
   ),
   pauseTrading: confirmed(() => ({ text: PAUSE_TEXT }), ask("pause_trading", value("trading"))),
   controlAccount: confirmed(
@@ -222,11 +228,24 @@ const ACT_HANDLERS: Record<ActName, Handler> = {
   checkConnection: ask("check_connection", value("check"), (p, ctx) => ({
     connection: connection(p.connection as Params, ctx.secrets.secrets),
   })),
-  updateAccountLimits: async (p, ctx) => {
-    const revision = value("revision")(await ctx.engine.request("update_account_limits", { configuration: p.configuration })) as string
-    ctx.setup.saveLimits(p.configuration as TradingConfiguration, revision)
-    return { revision }
-  },
+  // Copying takes new limits at once, so this asks too, wording the dialog from the difference to the saved setup.
+  updateAccountLimits: confirmed(
+    (p, { setup }) => {
+      const saved = setup.load()
+      if (!saved) throw new Refusal("There is no saved setup yet.")
+      setup.assertLimitsOnly(p.configuration as TradingConfiguration)
+      return { text: limitsText(saved.configuration, p.configuration as TradingConfiguration), send: { configuration: p.configuration, expect: saved.revision } }
+    },
+    async (p, ctx) => {
+      const configuration = p.configuration as TradingConfiguration
+      // Everything the file will check is checked before the engine hears of it, so the two cannot disagree.
+      if (ctx.setup.load()?.revision !== p.expect) throw new Refusal("The saved setup changed while you were confirming. Try again.")
+      ctx.setup.assertLimitsOnly(configuration)
+      const revision = value("revision")(await ctx.engine.request("update_account_limits", { configuration })) as string
+      ctx.setup.saveLimits(configuration, revision)
+      return { revision }
+    },
+  ),
   saveSetup: async (p, ctx) => {
     await pausedOrRefuse(ctx)
     ctx.secrets.setRevision(ctx.setup.save(p.configuration as TradingConfiguration, String(p.revision)))
@@ -272,8 +291,7 @@ function words(error: unknown): string {
 /** The one place a reply, or an error, leaves for the renderer. It never carries a stored key. */
 function reply(result: Result<unknown>, ctx: Ctx): Result<unknown> {
   const text = JSON.stringify(result)
-  const leaked = ctx.secrets.values().some((v) => v.length >= MIN_CHECKED_LENGTH && text.includes(JSON.stringify(v).slice(1, -1)))
-  return leaked ? { ok: false, error: WITHHELD } : result
+  return redact(text, ctx.secrets.values()) !== text ? { ok: false, error: WITHHELD } : result
 }
 
 export function createApi(deps: Deps) {
