@@ -1,5 +1,5 @@
-import { LandmarkIcon, PlugIcon, SettingsIcon, UsersIcon } from "lucide-react"
-import type { AccountOverviewPage } from "../../../shared/contract"
+import { LandmarkIcon } from "lucide-react"
+import type { AccountOverviewPage, EngineState } from "../../../shared/contract"
 import {
   Sidebar,
   SidebarContent,
@@ -18,18 +18,17 @@ import {
 import { money } from "@/lib/format"
 import { type Loaded } from "@/lib/use-result"
 import { CopyingStatus } from "./CopyingStatus"
-
-export type Screen = "accounts" | "gurus" | "connections" | "settings"
+import { type Route, type ScreenId, href } from "./route"
+import { SCREENS } from "./screens"
 
 interface Props {
-  screen: Screen
-  onScreen: (screen: Screen) => void
+  route: Route
   accounts: Loaded<AccountOverviewPage>
   selectedAccountId: string | null
-  onSelectAccount: (accountId: string) => void
+  engine: EngineState
 }
 
-function AccountList({ accounts, screen, selectedAccountId, onSelectAccount }: Omit<Props, "onScreen">) {
+function AccountList({ accounts, selectedAccountId }: Pick<Props, "accounts" | "selectedAccountId">) {
   if (accounts.status === "loading") {
     return (
       <SidebarMenu aria-label="Loading accounts">
@@ -44,10 +43,7 @@ function AccountList({ accounts, screen, selectedAccountId, onSelectAccount }: O
     <SidebarMenu>
       {accounts.data.items.map((account) => (
         <SidebarMenuItem key={account.account_id}>
-          <SidebarMenuButton
-            isActive={screen === "accounts" && account.account_id === selectedAccountId}
-            onClick={() => onSelectAccount(account.account_id)}
-          >
+          <SidebarMenuButton isActive={account.account_id === selectedAccountId} render={<a href={href("accounts", account.account_id)} />}>
             <LandmarkIcon aria-hidden="true" />
             <span>{account.account_id}</span>
           </SidebarMenuButton>
@@ -58,7 +54,19 @@ function AccountList({ accounts, screen, selectedAccountId, onSelectAccount }: O
   )
 }
 
-export function AppSidebar({ screen, onScreen, accounts, selectedAccountId, onSelectAccount }: Props) {
+function NavItem({ screen, route }: { screen: ScreenId; route: Route }) {
+  const { title, icon: Icon } = SCREENS[screen]
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton isActive={route.screen === screen} render={<a href={href(screen)} />}>
+        <Icon aria-hidden="true" />
+        <span>{title}</span>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  )
+}
+
+export function AppSidebar({ route, accounts, selectedAccountId, engine }: Props) {
   return (
     <Sidebar variant="inset">
       <SidebarHeader>
@@ -68,18 +76,14 @@ export function AppSidebar({ screen, onScreen, accounts, selectedAccountId, onSe
         <SidebarGroup>
           <SidebarGroupLabel>Accounts</SidebarGroupLabel>
           <SidebarGroupContent>
-            <AccountList accounts={accounts} screen={screen} selectedAccountId={selectedAccountId} onSelectAccount={onSelectAccount} />
+            <AccountList accounts={accounts} selectedAccountId={selectedAccountId} />
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton isActive={screen === "gurus"} onClick={() => onScreen("gurus")}>
-                  <UsersIcon aria-hidden="true" />
-                  <span>Gurus</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              <NavItem screen="gurus" route={route} />
+              <NavItem screen="activity" route={route} />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -87,19 +91,10 @@ export function AppSidebar({ screen, onScreen, accounts, selectedAccountId, onSe
       <SidebarFooter>
         <SidebarSeparator className="mx-0" />
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton isActive={screen === "connections"} onClick={() => onScreen("connections")}>
-              <PlugIcon aria-hidden="true" />
-              <span>Connections</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton isActive={screen === "settings"} onClick={() => onScreen("settings")}>
-              <SettingsIcon aria-hidden="true" />
-              <span>Settings</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <CopyingStatus />
+          <NavItem screen="getting-started" route={route} />
+          <NavItem screen="connections" route={route} />
+          <NavItem screen="settings" route={route} />
+          <CopyingStatus engine={engine} />
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>

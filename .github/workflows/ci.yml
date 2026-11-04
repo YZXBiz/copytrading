@@ -22,6 +22,7 @@ jobs:
       pull-requests: read
     outputs:
       desktop: ${{ steps.filter.outputs.desktop }}
+      react: ${{ steps.filter.outputs.react }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -37,6 +38,9 @@ jobs:
               - Makefile
               - app/**
               - engine/**
+            react:
+              - .github/workflows/ci.yml
+              - desktop/**
   pre-commit:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -92,6 +96,28 @@ jobs:
       # Builds the app, then runs the strict Swift build, every Swift suite (swift test) against
       # the built bundle, and the bundle verification.
       - run: make lint-swift desktop-tests
+  # The Electron + React app: its tests fake the engine, so this needs no Python or macOS.
+  desktop:
+    needs: changes
+    if: needs.changes.outputs.react == 'true' || github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
   zizmor:
     runs-on: ubuntu-latest
     timeout-minutes: 10

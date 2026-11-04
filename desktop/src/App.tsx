@@ -1,62 +1,42 @@
-import { useState } from "react"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { AccountsScreen } from "@/features/account/AccountsScreen"
-import { AppSidebar, type Screen } from "@/features/shell/AppSidebar"
-import { ScreenPlaceholder } from "@/features/shell/ScreenPlaceholder"
+import { AppSidebar } from "@/features/shell/AppSidebar"
+import { useEngineState } from "@/features/shell/engine-state"
+import { useRoute } from "@/features/shell/route"
+import { SCREENS } from "@/features/shell/screens"
 import { useResult } from "@/lib/use-result"
 
-const TITLES: Record<Screen, string> = { accounts: "Accounts", gurus: "Gurus", connections: "Connections", settings: "Settings" }
-
 export default function App() {
-  const [screen, setScreen] = useState<Screen>("accounts")
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const accounts = useResult(() => window.copytrading.getAccounts(), "accounts")
-  const shown = accounts.status === "ready" ? (accounts.data.items.find((a) => a.account_id === selectedId) ?? accounts.data.items[0]) : null
+  const route = useRoute()
+  const engine = useEngineState()
+  // Reads again when the engine finishes starting: until then every read answers that it is not ready.
+  const accounts = useResult(() => window.copytrading.read.getAccounts(), `accounts:${engine.state}`)
+  const screen = SCREENS[route.screen]
+  const selectedAccountId = route.screen === "accounts" ? (route.id ?? (accounts.status === "ready" ? accounts.data.items[0]?.account_id : null) ?? null) : null
 
   return (
     <TooltipProvider>
       <SidebarProvider>
-        <AppSidebar
-          screen={screen}
-          onScreen={setScreen}
-          accounts={accounts}
-          selectedAccountId={shown?.account_id ?? null}
-          onSelectAccount={(id) => {
-            setSelectedId(id)
-            setScreen("accounts")
-          }}
-        />
+        <AppSidebar route={route} accounts={accounts} selectedAccountId={selectedAccountId} engine={engine} />
         <SidebarInset className="min-w-0 overflow-hidden">
           <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
             <SidebarTrigger className="-ml-1" />
             <Breadcrumb className="min-w-0">
               <BreadcrumbList className="flex-nowrap">
-                {screen === "accounts" && shown && (
+                {selectedAccountId && (
                   <>
-                    <BreadcrumbItem>Accounts</BreadcrumbItem>
+                    <BreadcrumbItem>{screen.title}</BreadcrumbItem>
                     <BreadcrumbSeparator />
                   </>
                 )}
                 <BreadcrumbItem className="min-w-0">
-                  <BreadcrumbPage className="truncate">{screen === "accounts" ? (shown?.account_id ?? "Accounts") : TITLES[screen]}</BreadcrumbPage>
+                  <BreadcrumbPage className="truncate">{selectedAccountId ?? screen.title}</BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
           </header>
-          <main className="flex-1 overflow-auto p-6">
-            {screen === "accounts" ? (
-              <AccountsScreen
-                accounts={accounts}
-                selectedAccountId={shown?.account_id ?? null}
-                onRefresh={accounts.retry}
-                onOpenConnections={() => setScreen("connections")}
-              />
-            ) : (
-              <ScreenPlaceholder title={TITLES[screen]} onBack={() => setScreen("accounts")} />
-            )}
-          </main>
+          <main className="flex-1 overflow-auto p-6">{screen.render({ route, accounts })}</main>
         </SidebarInset>
       </SidebarProvider>
     </TooltipProvider>
