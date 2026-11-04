@@ -148,8 +148,8 @@ assistant panel and the time zone list open that way). Fixtures can also serve a
 ## Settings and the assistant
 
 `src/features/settings/` is Settings (`#/settings/general|agents|backups|logs`; the journal is read by main from the
-engine's log folder, newest 2000 records, `electron/main/journal.ts`). `src/features/assistant/` is the assistant panel,
-mounted once in the sidebar (⌘J). The time zone lives in `src/lib/time-zone.ts` and `format.ts` reads it. A request only the
+engine's log folder, newest 2000 records, `electron/main/journal.ts`). `src/features/assistant/` is the assistant, docked on the
+right of the page (ReUI's ai-chat-8) and opened by the header's Assistant button or ⌘J. The time zone lives in `src/lib/time-zone.ts` and `format.ts` reads it. A request only the
 app can carry out (a setup change) cannot be approved yet: main refuses it, the pages offer Reject only.
 
 An account page opens its sheet from the route, so a capture can show one: `#/accounts/<id>?open=review|sale|limits`.

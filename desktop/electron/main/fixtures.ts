@@ -54,6 +54,21 @@ const HISTORY_KEY: Record<HistoryRange, keyof typeof history | null> = {
   year: null,
 }
 
+// Records left from earlier runs: not in the saved setup, so the sidebar files them under "Old records".
+const oldRecords: AccountOverview[] = ["testing", "primary", "jean-testing"].map((id) => ({
+  account_id: id,
+  environment: "paper",
+  entry_permission: "enabled",
+  total_exposure_usd: null,
+  pending_orders: null,
+  balance: null,
+  positions: [],
+}))
+// COPYTRADING_FIXTURE_SCENE=records serves them beside the live account; COPYTRADING_FIXTURE_STATE=accounts-error
+// fails the accounts read, accounts-loading answers it after two minutes.
+const records = process.env.COPYTRADING_FIXTURE_SCENE === "records"
+const accountsState = process.env.COPYTRADING_FIXTURE_STATE
+
 const delay = <T>(value: T) => new Promise<T>((done) => setTimeout(() => done(value), 150))
 const ok = async <T>(value: T): Promise<Result<T>> => ({ ok: true, value: await delay(value) })
 
@@ -71,7 +86,12 @@ type Params = Record<string, unknown> | undefined
 
 // Only what the account page reads is captured; every other operation says so instead of inventing data.
 const READS: Record<string, (params: Params) => Promise<Result<unknown>>> = {
-  getAccounts: () => ok({ items: [overview], unavailable_accounts: [] }),
+  getAccounts: () =>
+    accountsState === "accounts-error"
+      ? Promise.resolve<Result<never>>({ ok: false, error: "The engine did not answer the accounts request." })
+      : accountsState === "accounts-loading"
+        ? new Promise<Result<never>>((done) => setTimeout(() => done({ ok: false, error: "The engine did not answer the accounts request." }), 120_000))
+        : ok({ items: records ? [...oldRecords, overview] : [overview], unavailable_accounts: [] }),
   getEquityHistory: (params) => {
     const key = HISTORY_KEY[params?.range as HistoryRange]
     const value: EquityHistory | null = key
@@ -94,7 +114,18 @@ const ACTS: Record<string, (params: Params) => Promise<Result<unknown>>> = { ...
 
 const notCaptured = async (name: string): Promise<Result<never>> => ({ ok: false, error: `${name} is not in the captured fixtures.` })
 
+// COPYTRADING_FIXTURE_STATE=reads-error makes every read fail, reads-loading makes every read wait forever, for the capture of those states.
+const readsState = process.env.COPYTRADING_FIXTURE_STATE
+const failing = async (): Promise<Result<never>> => ({ ok: false, error: "The engine did not answer in time. Check that it is running, then try again." })
+
 export const fixtureApi: Api = {
-  read: (name, params) => (typeof name === "string" && READS[name] ? READS[name](params as Params) : notCaptured(String(name))),
+  read: (name, params) =>
+    readsState === "reads-error"
+      ? failing()
+      : readsState === "reads-loading"
+        ? new Promise<never>((_, reject) => setTimeout(() => reject(new Error("never answered")), 10 * 60_000))
+        : typeof name === "string" && READS[name]
+          ? READS[name](params as Params)
+          : notCaptured(String(name)),
   act: (name, params) => (typeof name === "string" && ACTS[name] ? ACTS[name](params as Params) : notCaptured(String(name))),
 }

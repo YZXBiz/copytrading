@@ -1,11 +1,10 @@
 import { useState } from "react"
 import { RegionError } from "@/components/region-error"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { useResult } from "@/lib/use-result"
 import { Note, type NoteState } from "./Note"
 import { SettingsRow } from "./SettingsRow"
-import { SettingsSection } from "./SettingsSection"
+import { SectionSkeleton, SettingsSection } from "./SettingsSection"
 
 /** "Tell me when a trade fills": a macOS notification as each copied order goes out and fills. Accounts stopping is always announced. */
 export function FillAlerts() {
@@ -14,7 +13,7 @@ export function FillAlerts() {
   // What main said after the owner's last change; the read above is only the first answer.
   const [changed, setChanged] = useState<boolean | null>(null)
 
-  if (on.status === "loading") return <Skeleton className="h-16 w-full" />
+  if (on.status === "loading") return <SectionSkeleton />
   if (on.status === "error") return <RegionError title="Notification setting did not load" message={on.error} onRetry={on.retry} />
 
   async function change(next: boolean) {

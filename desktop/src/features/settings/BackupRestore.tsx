@@ -139,7 +139,7 @@ export function BackupRestore({ pending, checking, onChanged }: { pending: Pendi
 
   return (
     <>
-      <SettingsSection title="Backup & Restore" hint="Holds your records, setup, posts, and attachments. Keys and logs are left out.">
+      <SettingsSection title="Backup & Restore" hint="Records, setup, posts, attachments. No keys or logs.">
         <SettingsRow title="Create Backup…">
           <Button type="button" size="sm" variant="outline" disabled={busy} onClick={createBackup}>
             Create

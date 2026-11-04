@@ -1,11 +1,9 @@
 import { useEffect, useId, useState } from "react"
-import { CheckIcon, CircleDashedIcon } from "lucide-react"
 import { Badge } from "@/components/reui/badge"
-import { Frame, FramePanel } from "@/components/reui/frame"
-import { Stepper, StepperContent, StepperIndicator, StepperItem, StepperNav, StepperPanel, StepperTitle, StepperTrigger } from "@/components/reui/stepper"
+import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"
 import { RegionError } from "@/components/region-error"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
+import { Item, ItemContent, ItemGroup, ItemSeparator } from "@/components/ui/item"
 import { Skeleton } from "@/components/ui/skeleton"
 import { StartBar } from "@/features/connections/StartBar"
 import { derive } from "@/features/connections/derive"
@@ -13,21 +11,16 @@ import { refreshStatus, useSetup } from "@/features/connections/setup-store"
 import { STEPS } from "@/features/connections/state"
 import { navigate } from "@/features/shell/route"
 import { BEFORE_YOU_GO } from "./before-you-go"
+import { OnboardingStepper } from "./OnboardingStepper"
 
-// A done step is a check, the one selected a spinning ring that follows the selection, the rest a dashed circle (c-stepper-41).
-const completed = (
-  <span className="border-success bg-success/10 text-success flex size-3.5 items-center justify-center rounded-full border">
-    <CheckIcon strokeWidth={2.88} className="size-2.5 *:stroke-[2.88]" aria-hidden="true" />
-  </span>
-)
-const pending = <CircleDashedIcon className="text-ring/60 size-3.5" aria-hidden="true" />
-const loading = (
-  <svg viewBox="0 0 14 14" fill="none" strokeWidth={1.2} className="size-3.5" aria-hidden="true">
-    <circle cx="7" cy="7" r="6" pathLength={40} strokeDasharray="3 1" transform="rotate(-54 7 7)" className="stroke-ring/80" />
-    <circle cx="7" cy="7" r="6" pathLength={360} strokeDasharray="140 220" strokeDashoffset={118} className="stroke-primary origin-center motion-safe:animate-spin" />
-  </svg>
-)
-const indicators = { completed, inactive: pending, loading }
+// One short line under each step in the rail (onboarding-2 gives each step a few words); the full sentence is in the panel.
+const RAIL_LINES: Record<(typeof STEPS)[number]["id"], string> = {
+  discord: "Channels and token.",
+  interpreter: "The AI model.",
+  account: "Where orders go.",
+  guru: "Who to copy.",
+  start: "Test, save and begin.",
+}
 
 /** What is connected, what is left, and the one Start copying: the five setup steps as a status list, then what to know before copying. */
 export function GettingStartedScreen() {
@@ -43,92 +36,102 @@ export function GettingStartedScreen() {
   }, [])
 
   if (s.load.status === "error") return <RegionError title="Getting started did not load" message={s.load.error} onRetry={s.retry} />
-  if (!derived) {
-    return (
-      <div role="status" aria-label="Loading setup steps" className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-        <Skeleton className="h-8 w-56" />
-        <Skeleton className="h-48 w-full" />
-      </div>
-    )
-  }
+  if (!derived) return <GettingStartedSkeleton />
 
   const { progress } = derived
   const next = STEPS.findIndex((step) => step.id === progress.next) + 1
   const current = picked ?? (next || STEPS.length)
+  const selected = STEPS[current - 1]!
+  const selectedDone = progress.done.has(selected.id)
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
-      <header className="flex flex-col gap-1">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
+      <header className="flex flex-col gap-0.5">
         <h1 className="text-xl font-semibold tracking-tight">Getting Started</h1>
         {progress.next && <p className="text-muted-foreground text-sm">About 10 minutes. Have your Discord, AI provider, and Alpaca logins at hand.</p>}
       </header>
 
-      <Stepper value={current} onValueChange={setPicked} orientation="vertical" indicators={indicators} className="@container" aria-label="Setup steps">
-        <div className="flex flex-col gap-6 @md:flex-row @md:items-start">
-          <Frame variant="ghost" spacing="xs" className="w-52 shrink-0 bg-transparent p-0 [--frame-panel-py-base:--spacing(1.5)]">
-            <StepperNav className="gap-1.5">
-              {STEPS.map((step, index) => {
-                const number = index + 1
-                const done = progress.done.has(step.id)
-                return (
-                  <StepperItem key={step.id} step={number} completed={done} loading>
-                    <StepperTrigger
-                      id={`${id}-tab-${number}`}
-                      aria-controls={panelId}
-                      render={<FramePanel />}
-                      className="hover:bg-muted/50 data-[state=active]:bg-muted/50 w-full gap-2 rounded-[calc(var(--frame-panel-radius)-3px)] border-transparent bg-transparent px-[calc(var(--frame-panel-px)-1px)] shadow-none data-[state=active]:border-(--frame-panel-border-color)"
-                    >
-                      <StepperIndicator className="size-3.5 overflow-visible bg-transparent data-[state=active]:bg-transparent data-[state=completed]:bg-transparent" />
-                      <StepperTitle className="data-[state=inactive]:text-muted-foreground min-w-0 flex-1 truncate leading-5 data-[state=active]:text-foreground">{step.title}</StepperTitle>
-                      <span className="sr-only">, {done ? "done" : number === current ? "in progress" : "to do"}</span>
-                    </StepperTrigger>
-                  </StepperItem>
-                )
-              })}
-            </StepperNav>
-          </Frame>
-
-          <Separator aria-hidden="true" className="@md:hidden" />
-          <Separator aria-hidden="true" orientation="vertical" className="hidden @md:block" />
-          <div className="flex min-w-0 flex-1 flex-col gap-3 px-2 text-start @md:px-0">
-            <StepperPanel>
-              {STEPS.map((step, index) => (
-                <StepperContent key={step.id} value={index + 1}>
-                  <div id={panelId} className="flex flex-col items-start gap-2">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium">{step.title}</p>
-                      <Badge variant={progress.done.has(step.id) ? "success-light" : "outline"}>{progress.done.has(step.id) ? "Done" : step.id === "start" ? "Not started" : "To do"}</Badge>
-                    </div>
-                    <p className="text-muted-foreground text-sm text-pretty">{step.detail}</p>
-                  </div>
-                </StepperContent>
-              ))}
-            </StepperPanel>
-            {current < STEPS.length && (
-              <div className="flex justify-start">
-                <Button type="button" variant="outline" size="sm" onClick={() => navigate("connections")}>
-                  Open Connections
-                </Button>
+      <Frame>
+        <FramePanel className="grid min-w-0 gap-6 sm:grid-cols-[14rem_minmax(0,1fr)]">
+          <OnboardingStepper
+            currentStep={current}
+            onStepChange={setPicked}
+            panelId={panelId}
+            steps={STEPS.map((step, index) => ({ id: step.id, value: index + 1, label: step.title, description: RAIL_LINES[step.id], done: progress.done.has(step.id) }))}
+          />
+          <div id={panelId} className="flex min-w-0 flex-col items-start gap-3 sm:border-l sm:pl-6">
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <div className="flex min-w-0 items-center gap-2">
+                <h2 className="truncate text-sm font-semibold">{selected.title}</h2>
+                <Badge variant={selectedDone ? "success-light" : "outline"}>{selectedDone ? "Done" : selected.id === "start" ? "Not started" : "To do"}</Badge>
               </div>
+              <p className="text-muted-foreground text-sm text-pretty">{selected.detail}</p>
+            </div>
+            {current < STEPS.length && (
+              <Button type="button" variant="outline" size="sm" onClick={() => navigate("connections")}>
+                Open Connections
+              </Button>
             )}
           </div>
-        </div>
-      </Stepper>
+        </FramePanel>
+      </Frame>
 
       <StartBar s={s} derived={derived} />
 
-      <section aria-labelledby="before" className="flex flex-col gap-3">
-        <h2 id="before" className="text-sm font-medium">
-          Before you go
-        </h2>
-        <ul className="flex flex-col gap-2 text-sm">
-          {BEFORE_YOU_GO.map((note) => (
-            <li key={note.lead}>
-              <span className="font-medium">{note.lead}</span> <span className="text-muted-foreground">{note.rest}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <Frame>
+        <FrameHeader>
+          <FrameTitle>Before you go</FrameTitle>
+        </FrameHeader>
+        <FramePanel className="p-0!">
+          <ItemGroup className="gap-0">
+            {BEFORE_YOU_GO.map((note, index) => (
+              <div key={note.lead}>
+                {index > 0 && <ItemSeparator className="my-0" />}
+                <Item size="sm">
+                  <ItemContent>
+                    <p className="text-sm">
+                      <span className="font-medium">{note.lead}</span> <span className="text-muted-foreground">{note.rest}</span>
+                    </p>
+                  </ItemContent>
+                </Item>
+              </div>
+            ))}
+          </ItemGroup>
+        </FramePanel>
+      </Frame>
+    </div>
+  )
+}
+
+/** The rail, the step and the notes in their real layout while the setup is read. */
+function GettingStartedSkeleton() {
+  return (
+    <div role="status" aria-label="Loading setup steps" className="mx-auto flex w-full max-w-3xl flex-col gap-5">
+      <div className="flex flex-col gap-1.5">
+        <Skeleton className="h-7 w-44" />
+        <Skeleton className="h-4 w-80" />
+      </div>
+      <Frame>
+        <FramePanel className="grid gap-6 sm:grid-cols-[14rem_minmax(0,1fr)]">
+          <div className="flex flex-col gap-4">
+            {STEPS.map((step) => (
+              <div key={step.id} className="flex gap-2.5">
+                <Skeleton className="size-5 rounded-full" />
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3.5 w-24" />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-col gap-3 sm:border-l sm:pl-6">
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-8 w-36" />
+          </div>
+        </FramePanel>
+      </Frame>
+      <Skeleton className="h-16 w-full" />
     </div>
   )
 }

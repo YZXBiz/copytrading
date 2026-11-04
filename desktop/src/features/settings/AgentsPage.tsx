@@ -3,7 +3,6 @@ import type { AgentAuditEntry, AgentProposal, TradingConfiguration } from "../..
 import { Meta } from "@/components/meta"
 import { RegionError } from "@/components/region-error"
 import { Badge } from "@/components/reui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item"
 import { readClock } from "@/lib/clock"
 import { dateTime } from "@/lib/format"
@@ -12,7 +11,7 @@ import { AgentAccess } from "./AgentAccess"
 import { Note } from "./Note"
 import { ProposalActions } from "./ProposalActions"
 import { SettingsRow } from "./SettingsRow"
-import { SettingsSection } from "./SettingsSection"
+import { SectionSkeleton, SettingsSection } from "./SettingsSection"
 import { accountOf, auditWhen, auditWho, auditOutcome, callerName, canApprove, isLive, limitRows, summary } from "./proposals"
 import { humanCode } from "./words"
 
@@ -50,7 +49,7 @@ function Waiting({ onDecided }: { onDecided: () => void }) {
   const setup = useResult(() => window.copytrading.read.getSetup(), "setup")
   // What became of the last request the owner approved: the row leaves the list, so its outcome is kept here.
   const [outcome, setOutcome] = useState<string | null>(null)
-  if (proposals.status === "loading") return <Skeleton className="h-24 w-full" />
+  if (proposals.status === "loading") return <SectionSkeleton rows={2} />
   if (proposals.status === "error") return <RegionError title="Requests did not load" message={proposals.error} onRetry={proposals.retry} />
   const waiting = proposals.data.filter((p) => p.state === "pending")
   const configuration = setup.status === "ready" ? (setup.data?.configuration ?? null) : null
@@ -62,7 +61,7 @@ function Waiting({ onDecided }: { onDecided: () => void }) {
   return (
     <>
       {outcome && <Note note={{ kind: outcome.startsWith("Done") ? "done" : "problem", text: outcome }} />}
-      <SettingsSection title="Waiting for You" hint="Approve only if you asked for this. Agents read messages written by other people, so a request can come from text you have never seen.">
+      <SettingsSection title="Waiting for You" hint="Approve only what you asked for.">
         {waiting.length === 0 ? (
           <SettingsRow title="Nothing is waiting" />
         ) : (
@@ -86,7 +85,7 @@ function AuditRow({ entry, now }: { entry: AgentAuditEntry; now: Date }) {
 /** The newest recorded requests and owner decisions. */
 function Recent({ version }: { version: number }) {
   const audit = useResult(() => window.copytrading.read.getAgentAudit({ limit: 20 }), `agent-audit:${version}`)
-  if (audit.status === "loading") return <Skeleton className="h-24 w-full" />
+  if (audit.status === "loading") return <SectionSkeleton rows={2} />
   if (audit.status === "error") return <RegionError title="Recent requests did not load" message={audit.error} onRetry={audit.retry} />
   const now = readClock()
   return (
@@ -105,7 +104,7 @@ export function AgentsPage() {
   // A decision adds to the recent list, so it is read again after one.
   const [decisions, setDecisions] = useState(0)
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <AgentAccess />
       <Waiting onDecided={() => setDecisions((n) => n + 1)} />
       <Recent version={decisions} />

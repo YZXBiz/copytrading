@@ -11,11 +11,11 @@ import { LogsPage } from "./LogsPage"
 
 type Accounts = Loaded<AccountOverviewPage> & { retry: () => void }
 
-const PAGES: { id: string; title: string; icon: LucideIcon; render: (accounts: Accounts) => ReactNode }[] = [
-  { id: "general", title: "General", icon: ClockIcon, render: () => <GeneralPage /> },
-  { id: "agents", title: "Agent Access", icon: BotIcon, render: () => <AgentsPage /> },
-  { id: "backups", title: "Backups", icon: ArchiveIcon, render: (accounts) => <BackupsPage accounts={accounts} /> },
-  { id: "logs", title: "Logs", icon: ScrollTextIcon, render: () => <LogsPage /> },
+const PAGES: { id: string; title: string; subtitle: string; icon: LucideIcon; render: (accounts: Accounts) => ReactNode }[] = [
+  { id: "general", title: "General", subtitle: "How times show, and what tells you about trades.", icon: ClockIcon, render: () => <GeneralPage /> },
+  { id: "agents", title: "Agent Access", subtitle: "What agents may do, and what they asked for.", icon: BotIcon, render: () => <AgentsPage /> },
+  { id: "backups", title: "Backups", subtitle: "Back up your records, or restore from a backup.", icon: ArchiveIcon, render: (accounts) => <BackupsPage accounts={accounts} /> },
+  { id: "logs", title: "Logs", subtitle: "What the engine recorded on this Mac.", icon: ScrollTextIcon, render: () => <LogsPage /> },
 ]
 
 /** Settings: its pages listed on the left, the selected page (the route's second segment) on the right. */
@@ -38,7 +38,10 @@ export function SettingsScreen({ page, accounts }: { page: string | null; accoun
         </ItemGroup>
       </nav>
       <div key={current.id} className="min-w-0">
-        <h1 className="mb-4 text-lg font-semibold tracking-tight">{current.title}</h1>
+        <header className="mb-5 flex flex-col gap-0.5">
+          <h1 className="text-xl font-semibold tracking-tight">{current.title}</h1>
+          <p className="text-muted-foreground text-sm">{current.subtitle}</p>
+        </header>
         {current.render(accounts)}
       </div>
     </div>

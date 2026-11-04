@@ -6,7 +6,7 @@ import { LogHealth } from "./LogHealth"
 export function LogsPage() {
   const [journalBytes, setJournalBytes] = useState<number | null>(null)
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <LogHealth journalBytes={journalBytes} />
       <JournalView onBytes={setJournalBytes} />
     </div>

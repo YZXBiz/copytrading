@@ -1,5 +1,5 @@
 import { useId, useState } from "react"
-import { CircleAlertIcon, CircleCheckIcon, SparklesIcon } from "lucide-react"
+import { CircleAlertIcon, CircleCheckIcon, SparklesIcon, UserIcon } from "lucide-react"
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/reui/alert"
 import { Button } from "@/components/ui/button"
 import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field"
@@ -41,6 +41,7 @@ export function GuruSheet({ uid, onClose }: { uid: string; onClose: () => void }
 
   return (
     <EditorSheet
+      icon={UserIcon}
       title={guru.display_name.trim() || "New guru"}
       description={
         channel && guru.account_id

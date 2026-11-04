@@ -84,6 +84,17 @@ const turn: AssistantTurnPage = {
   ],
 }
 
+// COPYTRADING_FIXTURE_STATE=assistant-error ends the answer with a refused step and an error.
+const failedTurn: AssistantTurnPage = {
+  turn_id: "t-0123456789ac",
+  done: true,
+  events: [
+    { seq: 1, kind: "step", text: "Couldn't read zhap-account-2's history", link: null, proposal_id: null, code: null },
+    { seq: 2, kind: "error", text: "The model did not answer in time. Ask again in a moment.", link: null, proposal_id: null, code: null },
+    { seq: 3, kind: "done", text: null, link: null, proposal_id: null, code: null },
+  ],
+}
+
 // The agent socket and the fills switch change in fixture mode too, so a capture can show either choice.
 const agentsProblem = process.env.COPYTRADING_FIXTURE_STATE === "agents-problem"
 let agentAccess: AgentAccessState = {
@@ -102,7 +113,7 @@ export const settingsReads: Record<string, (params: Params) => Promise<Result<un
   listProposals: () => ok(proposals),
   getAgentAudit: () => ok(audit),
   getRestoreCandidate: () => ok(process.env.COPYTRADING_FIXTURE_STATE === "pending-restore" ? pendingRestore : null),
-  getAssistantTurn: () => ok(turn),
+  getAssistantTurn: () => ok(process.env.COPYTRADING_FIXTURE_STATE === "assistant-error" ? failedTurn : turn),
 }
 
 export const settingsActs: Record<string, (params: Params) => Promise<Result<unknown>>> = {

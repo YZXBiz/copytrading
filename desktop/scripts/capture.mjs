@@ -21,6 +21,9 @@ const settings = (page, extra = {}) => ({ ...fixtures, COPYTRADING_CAPTURE_HASH:
 const openTimeZones = `(() => { const t = document.querySelector('[data-slot="input-group-button"]'); for (const type of ["pointerdown", "mousedown", "pointerup", "mouseup", "click"]) t.dispatchEvent(new MouseEvent(type, { bubbles: true, button: 0 })) })()`
 const askAssistant = `(async () => { await ${click("button", "Assistant", 1500)}; const s = [...document.querySelectorAll("button")].find((e) => e.textContent.includes("What's in my paper account?")); s.click(); await new Promise((r) => setTimeout(r, 3000)) })()`
 
+// ⌘K opens the search dialog; its posts need a moment to load.
+const pressSearch = `window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true })); await new Promise((r) => setTimeout(r, 1500))`
+
 // Getting Started and Connections: a first run, a saved setup that is paused, one that is copying, and each editor sheet
 // (#/connections/<discord|interpreter|account:N|guru:N> opens it).
 function setupCaptures() {
@@ -30,12 +33,25 @@ function setupCaptures() {
     COPYTRADING_FIXTURE_SETUP: setup,
     COPYTRADING_FIXTURE_TRADING: trading,
   })
+  // Each screen at 1280×860 and at the SwiftUI app's 980-wide minimum, in each state the screen has.
+  const screens = [
+    ["getting-started", "#/getting-started", ["first-run:none:paused", "saved:saved:paused", "copying:saved:running"]],
+    ["connections", "#/connections", ["first-run:none:paused", "saved:saved:paused", "copying:saved:running"]],
+  ]
+  const sized = screens.flatMap(([screen, hash, states]) =>
+    states.flatMap((state) => {
+      const [label, setup, trading] = state.split(":")
+      return ["1280x860", "980x860"].map((size) => [`${screen}-${label}-${size}`, { ...fixture(hash, setup, trading), COPYTRADING_CAPTURE_SIZE: size }])
+    }),
+  )
+  const broken = ["getting-started", "connections"].flatMap((screen) =>
+    ["error", "loading"].flatMap((state) =>
+      ["1280x860", "980x860"].map((size) => [`${screen}-${state}-${size}`, { ...fixture(`#/${screen}`, "saved", "paused"), COPYTRADING_FIXTURE_STATE: `reads-${state}`, COPYTRADING_CAPTURE_SIZE: size }]),
+    ),
+  )
   return [
-    ["getting-started-first-run", fixture("#/getting-started", "none", "paused")],
-    ["getting-started-saved", fixture("#/getting-started", "saved", "paused")],
-    ["connections-first-run", fixture("#/connections", "none", "paused")],
-    ["connections-saved", fixture("#/connections", "saved", "paused")],
-    ["connections-copying", fixture("#/connections", "saved", "running")],
+    ...sized,
+    ...broken,
     ["sheet-discord", fixture("#/connections/discord", "saved", "paused")],
     ["sheet-interpreter", fixture("#/connections/interpreter", "saved", "paused")],
     ["sheet-account", fixture("#/connections/account:0", "saved", "paused")],
@@ -98,6 +114,33 @@ for (const [name, env] of [
   ["settings-backups-preview", settings("backups", { COPYTRADING_CAPTURE_SCRIPT: click("button", "Choose") })],
   ["settings-backups-pending-restore", settings("backups", { COPYTRADING_FIXTURE_STATE: "pending-restore" })],
   ["settings-logs", settings("logs")],
+  // Every Settings page at 1280×860 and at the 980-wide minimum, then with every read failing and every read waiting.
+  ...["general", "agents", "backups", "logs"].flatMap((page) =>
+    ["", "reads-error", "reads-loading"].flatMap((state) =>
+      ["1280x860", "980x860"].map((size) => [`settings-${page}-${state || "ready"}-${size}`, settings(page, { COPYTRADING_CAPTURE_SIZE: size, ...(state && { COPYTRADING_FIXTURE_STATE: state }) })]),
+    ),
+  ),
+  // The app frame and the Assistant at 1280×860 and the 980-wide minimum. "records" adds the leftover account records.
+  ...["1280x860", "980x860"].flatMap((size) => {
+    const win = { ...fixtures, COPYTRADING_CAPTURE_SIZE: size }
+    const account = { ...win, COPYTRADING_FIXTURE_SCENE: "records", COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2" }
+    const open = { COPYTRADING_CAPTURE_SCRIPT: click("button", "Assistant") }
+    return [
+      [`frame-${size}`, account],
+      [`frame-paused-${size}`, { ...account, COPYTRADING_FIXTURE_TRADING: "paused" }],
+      [`frame-accounts-error-${size}`, { ...account, COPYTRADING_FIXTURE_STATE: "accounts-error" }],
+      [`frame-accounts-loading-${size}`, { ...account, COPYTRADING_FIXTURE_STATE: "accounts-loading" }],
+      [`assistant-empty-${size}`, { ...account, ...open }],
+      [`assistant-answer-${size}`, { ...account, COPYTRADING_CAPTURE_SCRIPT: askAssistant }],
+      [`assistant-error-${size}`, { ...account, COPYTRADING_FIXTURE_STATE: "assistant-error", COPYTRADING_CAPTURE_SCRIPT: askAssistant }],
+      [`assistant-nomodel-${size}`, { ...account, COPYTRADING_FIXTURE_SETUP: "none", ...open }],
+      // The rail folded to icons, the old records opened, and ⌘K (empty, then with a query).
+      [`frame-collapsed-${size}`, { ...account, COPYTRADING_CAPTURE_SCRIPT: `(async () => { document.querySelector('[data-slot="sidebar-trigger"]').click(); await new Promise((r) => setTimeout(r, 600)) })()` }],
+      [`frame-records-open-${size}`, { ...account, COPYTRADING_CAPTURE_SCRIPT: click("button", "Old records", 600) }],
+      [`search-${size}`, { ...account, COPYTRADING_CAPTURE_SCRIPT: `(async () => { ${pressSearch} })()` }],
+      [`search-query-${size}`, { ...account, COPYTRADING_CAPTURE_SCRIPT: `(async () => { ${pressSearch}; const input = document.querySelector('[data-slot="command-input"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(input, "cifr"); input.dispatchEvent(new Event("input", { bubbles: true })); await new Promise((r) => setTimeout(r, 600)) })()` }],
+    ]
+  }),
   ["assistant-empty", { ...fixtures, COPYTRADING_CAPTURE_SCRIPT: click("button", "Assistant") }],
   ["assistant-answer", { ...fixtures, COPYTRADING_CAPTURE_SCRIPT: askAssistant }],
   // Getting Started and Connections
