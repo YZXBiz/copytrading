@@ -3,17 +3,20 @@ import type { ReactNode } from "react"
 import { ArrowDownIcon, ArrowUpIcon, MessageSquareIcon, TimerIcon, WalletIcon } from "lucide-react"
 import { Badge } from "@/components/reui/badge"
 import { Frame, FramePanel } from "@/components/reui/frame"
+import { RollingNumber } from "@/components/rolling-number"
 import { Item, ItemMedia } from "@/components/ui/item"
+import { USD_WHOLE_OPTIONS } from "@/features/account/balance-panel/format"
 import { duration } from "@/features/activity/amounts"
 import { money } from "@/lib/format"
-import { dollars } from "@/lib/quantity"
 import { cn } from "@/lib/utils"
 import type { Holdings, Stats } from "./model"
+
+const COUNT = { maximumFractionDigits: 0 } as const
 
 interface CardData {
   icon: ReactNode
   iconBg: string
-  value: string
+  value: ReactNode
   label: string
   info?: ReactNode
 }
@@ -28,7 +31,7 @@ export function GuruStats({ stats, holdings }: { stats: Stats; holdings: Holding
     {
       icon: <MessageSquareIcon aria-hidden="true" />,
       iconBg: "text-blue-600 dark:text-blue-400",
-      value: stats.postsToday === null ? "—" : stats.postsToday.toLocaleString("en-US"),
+      value: <RollingNumber value={stats.postsToday} format={COUNT} />,
       label: "Posts today",
       info: read && (
         <div className="flex flex-wrap gap-1.5">
@@ -49,7 +52,7 @@ export function GuruStats({ stats, holdings }: { stats: Stats; holdings: Holding
     cards.push({
       icon: <WalletIcon aria-hidden="true" />,
       iconBg: "text-amber-600 dark:text-amber-400",
-      value: dollars(String(Math.round(holdings.cost))),
+      value: <RollingNumber value={Math.round(holdings.cost)} format={USD_WHOLE_OPTIONS} />,
       label: `Held in ${holdings.stocks === 1 ? "1 stock" : `${holdings.stocks} stocks`}`,
       info: holdings.cost > 0 && (
         <Badge variant={up ? "success-light" : "destructive-light"}>
@@ -78,7 +81,8 @@ export function GuruStats({ stats, holdings }: { stats: Stats; holdings: Holding
               </Item>
 
               <div className="space-y-0.5">
-                <div className="text-foreground text-2xl leading-none font-bold tabular-nums">{card.value}</div>
+                {/* Fixed height: a rolling figure is taller than plain text, and the three cards must line up. */}
+                <div className="text-foreground flex h-6 items-center text-2xl leading-none font-bold tabular-nums">{card.value}</div>
                 <div className="text-muted-foreground text-sm font-medium">{card.label}</div>
               </div>
 

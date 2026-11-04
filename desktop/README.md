@@ -172,6 +172,20 @@ ones the text formatters use. To watch it, build with `npx electron-vite build -
 `COPYTRADING_FIXTURE_TICK=1` (with `COPYTRADING_FIXTURES=1`): every accounts read moves the balance. A normal build has no
 tick. `COPYTRADING_CAPTURE_FRAMES=<n>` saves n frames in a row after the capture script (`node scripts/capture.mjs account-roll`).
 
+## Live prices, the fill toast and logos
+
+- **Live prices.** The account page's Positions ask for each held stock's quote through the account's read keys
+  (`getQuote`) every 5 s while the window is visible, and stop while it is hidden (`src/lib/visible-interval.ts`,
+  `features/live/`). The price rolls, the row's value and gain are recomputed from it, and the row flashes green or red
+  for under 600 ms (`TickFlash`, opacity only; none with Reduce Motion). A quote older than two minutes is not live.
+  `COPYTRADING_FIXTURE_TICK=1` in a tick build also moves the fixture quote (`node scripts/capture.mjs account-live-tick`).
+- **Fill toast.** The alert monitor's fill notes also go to the page as `engine:fill`; `FillToasts` shows a sonner toast.
+  The macOS banner shows only when no window is focused.
+- **Logos.** `<SymbolLogo>` shows `ct-logo://<SYMBOL>` (`electron/main/logos.ts`): main fetches
+  `assets.parqet.com/logos/symbol/<SYMBOL>?format=png` once, keeps it in `<userData>/logos/`, and asks again for a ticker
+  Parqet lacks no sooner than a day later. Only the ticker is sent. A miss is a 404 and the page shows a letter tile;
+  fixture mode never reaches the network, so its captures show letter tiles.
+
 ## Pictures
 
 A post's captured pictures reach the page as `ct-picture://<evidence_id>` (`electron/main/pictures.ts`). Main notes each

@@ -32,7 +32,7 @@ function CallRow({ call, showSeparator, canCopy, now, onCopy, onSkip }: { call: 
         {first ? (
           <SymbolLogo symbol={first.symbol} />
         ) : (
-          <IconTile variant="frame" aria-hidden="true">
+          <IconTile variant="frame" size="sm" aria-hidden="true">
             <PencilLineIcon />
           </IconTile>
         )}

@@ -92,7 +92,7 @@ function PositionRow({ position, livePrice, showSeparator, onSell }: { position:
   return (
     // A new row fades in and the rows around it glide on the shared spring; the first paint animates nothing.
     <motion.li layout="position" transition={SPRING} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative">
-      <TickFlash price={row.price} />
+      <TickFlash price={livePrice} />
       <div className="relative flex items-center gap-2">
         <SymbolLogo symbol={position.symbol} />
         <div className="flex min-w-0 flex-1 flex-col gap-0">

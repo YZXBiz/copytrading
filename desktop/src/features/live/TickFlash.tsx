@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from "react"
 import { motion, useReducedMotion } from "motion/react"
 import { tickDirection } from "./live"
 
-/** How long a row's flash lasts, at most. */
+/** The most a row's flash lasts; it fades over the first 550 ms and is gone then. */
 export const FLASH_MS = 600
 
 /**
- * A faint green or red wash behind a row when its price ticks up or down, laid over the row's own box (the row is
+ * A faint green or red wash behind a row when its live price ticks up or down (the first live price, replacing the broker's, is not a tick), laid over the row's own box (the row is
  * `relative`). It fades in and out once, in opacity alone, and is gone by FLASH_MS; with Reduce motion it never shows.
  */
 export function TickFlash({ price }: { price: number | null }) {
@@ -18,7 +18,7 @@ export function TickFlash({ price }: { price: number | null }) {
     last.current = price
     if (!direction || reduced) return
     setFlash((f) => ({ direction, n: (f?.n ?? 0) + 1 }))
-    const done = setTimeout(() => setFlash(null), FLASH_MS)
+    const done = setTimeout(() => setFlash(null), FLASH_MS - 50)
     return () => clearTimeout(done)
   }, [price, reduced])
   if (!flash) return null

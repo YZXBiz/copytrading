@@ -51,6 +51,7 @@ const overview: AccountOverview = {
 // A normal build's mode is "production" or "development", so the bundler drops this and the table: the app never has it.
 const TICKS = import.meta.env.MODE === "tick" && process.env.COPYTRADING_FIXTURE_TICK === "1" ? [37.42, -112.9, 1204.5, -1500.25, 8.01] : []
 let ticked = 0
+let quoted = 0
 const shift = (value: string, by: number) => (Number(value) + by).toFixed(2)
 function accountsNow(): AccountOverview {
   if (TICKS.length === 0) return overview
@@ -121,7 +122,11 @@ const READS: Record<string, (params: Params) => Promise<Result<unknown>>> = {
   ...settingsReads,
   ...setupReads,
   // A quote from just before the pinned clock, so Market reads live.
-  getQuote: () => ok({ feed: "iex", bid: "40.40", ask: "40.45", timestamp: "2026-11-03T20:59:30Z" }),
+  // In a tick build the quote moves up and down on each ask, so a held row's live price can be watched.
+  getQuote: () => {
+    const by = TICKS.length ? [0.35, -0.5, 0.9][quoted++ % 3]! : 0
+    return ok({ feed: "iex", bid: (40.4 + by).toFixed(2), ask: (40.45 + by).toFixed(2), timestamp: "2026-11-03T20:59:30Z" })
+  },
 }
 
 const ACTS: Record<string, (params: Params) => Promise<Result<unknown>>> = { ...settingsActs }

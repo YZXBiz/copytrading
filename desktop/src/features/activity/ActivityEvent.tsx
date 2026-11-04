@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { ChevronRightIcon } from "lucide-react"
 import type { SourceActivity } from "../../../shared/contract"
+import { SymbolLogo } from "@/components/symbol-logo"
 import { Frame, FrameHeader, FramePanel } from "@/components/reui/frame"
 import { Timeline, TimelineContent, TimelineHeader, TimelineIndicator, TimelineItem, TimelineSeparator, TimelineTitle } from "@/components/reui/timeline"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -41,6 +42,7 @@ function ActivityEvent({
       <TimelineHeader className="flex min-w-0 items-center justify-between gap-2.5">
         <TimelineSeparator className="bg-border! group-data-[orientation=vertical]/timeline:-left-7 group-data-[orientation=vertical]/timeline:h-[calc(100%-1.5rem-0.5rem)] group-data-[orientation=vertical]/timeline:translate-y-7" />
         <div className="flex flex-wrap items-center gap-2">
+          {post.instructions[0] && <SymbolLogo symbol={post.instructions[0].symbol} size="sm" />}
           <TimelineTitle className="text-sm font-semibold">{headline(post)}</TimelineTitle>
           <OutcomeBadge title={outcome.title} tone={outcome.tone} />
           <span className="text-muted-foreground text-xs tabular-nums">{clockTime(post.source_at)}</span>
