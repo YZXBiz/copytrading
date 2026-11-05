@@ -1,9 +1,9 @@
-"""The pipe answers the bars and guru-performance reads, and refuses malformed asks."""
+"""The pipe answers the bars, daily-bars and guru-performance reads, and refuses malformed asks."""
 
 import datetime as dt
 from decimal import Decimal
 
-from copytrading_engine.execution.domain.market import Bar
+from copytrading_engine.execution.domain.market import Bar, DailyBar
 from copytrading_engine.execution.presentation.guru_performance import GuruPerformance
 from copytrading_engine.host.pipe.server import PipeServer
 from copytrading_engine.host.self_test.parser import SelfTestParser
@@ -25,6 +25,20 @@ class _Operator:
             else ()
             for symbol in symbols
         }
+
+    async def daily_bars(self, account_id, symbol, period):
+        if account_id != "paper":
+            raise KeyError(account_id)
+        return (
+            DailyBar(
+                at=dt.datetime(2026, 11, 3, 5, tzinfo=dt.UTC),
+                open=Decimal("40.10"),
+                high=Decimal("41.00"),
+                low=Decimal("39.90"),
+                close=Decimal("40.25"),
+                volume=1234,
+            ),
+        )
 
     async def guru_performance(self, account_id, guru_id):
         if account_id != "paper":
@@ -67,6 +81,32 @@ async def test_bars_answer_each_asked_symbol_with_its_series_or_none(store):
     }
 
 
+async def test_daily_bars_answer_the_symbols_candles_as_decimal_strings_with_the_range_asked(store):
+    reply = decode(
+        await _server(store).handle_line(
+            request_line(
+                "get_daily_bars", "daily", account_id="paper", symbol="SOXL", range="six_months"
+            )
+        )
+    )
+    assert reply["ok"] == {
+        "type": "daily_bars",
+        "account_id": "paper",
+        "symbol": "SOXL",
+        "range": "six_months",
+        "bars": [
+            {
+                "at": "2026-11-03T05:00:00Z",
+                "open": "40.10",
+                "high": "41.00",
+                "low": "39.90",
+                "close": "40.25",
+                "volume": 1234,
+            }
+        ],
+    }
+
+
 async def test_guru_performance_answers_the_figures_as_decimal_strings(store):
     reply = decode(
         await _server(store).handle_line(
@@ -82,10 +122,14 @@ async def test_an_account_without_read_keys_is_not_found_and_bad_asks_are_invali
     server = _server(store)
     for line in (
         request_line("get_bars", "x", account_id="other", symbols=["SOXL"]),
+        request_line("get_daily_bars", "x", account_id="other", symbol="SOXL", range="month"),
         request_line("get_guru_performance", "x", account_id="other", guru_id="guru-1"),
     ):
         assert decode(await server.handle_line(line))["error"] == {"code": "not_found"}
     for line in (
+        request_line("get_daily_bars", "x", account_id="paper", symbol="soxl", range="year"),
+        request_line("get_daily_bars", "x", account_id="paper", symbol="SOXL", range="day"),
+        request_line("get_daily_bars", "x", account_id="paper", symbol="SOXL"),
         request_line("get_bars", "x", account_id="paper", symbols=[]),
         request_line("get_bars", "x", account_id="paper", symbols=["soxl"]),
         request_line("get_bars", "x", account_id="paper", symbols=["SOXL", "SOXL"]),

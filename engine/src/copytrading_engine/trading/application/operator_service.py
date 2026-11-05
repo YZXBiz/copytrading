@@ -21,7 +21,14 @@ from copytrading_engine.execution.domain.manual_commands import (
     ManualCommandPageRequest,
     ManualRefusal,
 )
-from copytrading_engine.execution.domain.market import Bar, EquityHistory, HistoryWindow, Quote
+from copytrading_engine.execution.domain.market import (
+    Bar,
+    DailyBar,
+    DailyRange,
+    EquityHistory,
+    HistoryWindow,
+    Quote,
+)
 from copytrading_engine.execution.domain.sessions import ET, trade_date
 from copytrading_engine.execution.presentation.account_feed import AccountFeedPage
 from copytrading_engine.execution.presentation.guru_performance import (
@@ -332,6 +339,14 @@ class OperatorQueryService:
         if not self._reader.holds(account_id):
             raise KeyError(account_id)
         return await self._reader.bars(account_id, symbols)
+
+    async def daily_bars(
+        self, account_id: str, symbol: str, period: DailyRange
+    ) -> tuple[DailyBar, ...]:
+        """A stock's daily bars through the account's read keys, for its page."""
+        if not self._reader.holds(account_id):
+            raise KeyError(account_id)
+        return await self._reader.daily_bars(account_id, symbol, period)
 
     async def guru_performance(self, account_id: str, guru_id: str) -> GuruPerformance:
         """What one guru's copied calls made in one account: realized from its retained ledger

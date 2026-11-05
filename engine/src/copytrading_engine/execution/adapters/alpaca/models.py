@@ -17,6 +17,7 @@ from copytrading_engine.execution.domain.market import (
     Bar,
     BrokerOrder,
     CalendarDay,
+    DailyBar,
     EquityHistory,
     EquityPoint,
     HistoryWindow,
@@ -117,6 +118,26 @@ class AlpacaBar(AlpacaValue):
         return _exact_decimal(value)
 
 
+class AlpacaDailyBar(AlpacaValue):
+    t: dt.datetime
+    o: Quantity
+    h: Quantity
+    l: Quantity  # noqa: E741
+    c: Quantity
+    v: int
+
+    @field_validator("o", "h", "l", "c", mode="before")
+    @classmethod
+    def exact_price(cls, value: object) -> object:
+        return _exact_decimal(value)
+
+    @field_validator("v", mode="before")
+    @classmethod
+    def whole_volume(cls, value: object) -> object:
+        # A coin's volume is fractional; a daily bar's is read in whole shares.
+        return int(value) if isinstance(value, float) else value
+
+
 class AlpacaPortfolioHistory(AlpacaValue):
     timestamp: tuple[int, ...]
     equity: tuple[Money | None, ...]
@@ -169,6 +190,15 @@ def decode_bars(value: object) -> tuple[Bar, ...]:
     """The bars of one symbol: a stock's reply lists them, a coin's keys them by pair."""
     wire = TypeAdapter(tuple[AlpacaBar, ...]).validate_python(value)
     return tuple(Bar(at=bar.t, open=bar.o, close=bar.c) for bar in wire)
+
+
+def decode_daily_bars(value: object) -> tuple[DailyBar, ...]:
+    """The daily bars of one symbol, oldest first."""
+    wire = TypeAdapter(tuple[AlpacaDailyBar, ...]).validate_python(value)
+    return tuple(
+        DailyBar(at=bar.t, open=bar.o, high=bar.h, low=bar.l, close=bar.c, volume=bar.v)
+        for bar in wire
+    )
 
 
 def decode_portfolio_history(value: object, window: HistoryWindow) -> EquityHistory:

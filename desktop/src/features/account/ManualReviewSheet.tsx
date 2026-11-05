@@ -1,20 +1,18 @@
 import { useState } from "react"
-import { Meta } from "@/components/meta"
 import { Add01Icon } from "@/components/icons/Add01Icon"
 import type { AccountOverview, ManualCorrectionOutcome, ManualOrderPreview, SourceActivity } from "../../../shared/contract"
-import { Alert, AlertDescription } from "@/components/reui/alert"
-import { Badge } from "@/components/reui/badge"
-import { Button } from "@/components/ui/button"
-import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet, FieldTitle, FieldContent } from "@/components/ui/field"
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { Spinner } from "@/components/ui/spinner"
-import { Switch } from "@/components/ui/switch"
+import { Alert } from "@/components/arc/alert/alert"
+import { Badge } from "@/components/arc/badge/badge"
+import { Button } from "@/components/arc/button/button"
+import { Drawer, DrawerContent } from "@/components/arc/drawer/drawer"
+import { Switch } from "@/components/arc/switch/switch"
 import { dateTime } from "@/lib/format"
 import { type Draft, MODE_REASON, MODE_TITLE, draftFromCall, guessDraft, isValid, newDraft, reviewMode, toInstruction, withMarketPrice } from "./manual-draft"
 import { type Outcome, hasSent, isReady } from "./manual-preview"
 import { PreviewRow } from "./PreviewRow"
 import { holdings as heldBy, livePrice } from "./quote"
 import { refusalLine, refusalReason } from "@/lib/reasons"
+import styles from "./sheet.module.css"
 import { TradeFields } from "./TradeFields"
 import { useQuotes } from "./use-quotes"
 import type { WaitingCall } from "./waiting"
@@ -153,131 +151,118 @@ export function ManualReviewSheet({
   }
 
   const update = (id: string, draft: Draft) => setDrafts((all) => all.map((d) => (d.id === id ? draft : d)))
-  const lede = [`${guruName ?? source.guru_id}, ${dateTime(source.source_at)}`, { approve: "Waiting for your approval.", copy: "Waiting for you to copy it.", enter: guessed ? "Filled in from the post's words. Check it, then send." : "CopyTrading couldn't read a trade in this post." }[mode]]
-    .filter(Boolean)
+  const lede = [
+    `${guruName ?? source.guru_id}, ${dateTime(source.source_at)}`,
+    { approve: "Waiting for your approval.", copy: "Waiting for you to copy it.", enter: guessed ? "Filled in from the post's words. Check it, then send." : "CopyTrading couldn't read a trade in this post." }[mode],
+  ].join(". ")
 
   return (
-    <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="w-full sm:max-w-xl">
-        <SheetHeader>
-          <SheetTitle>{MODE_TITLE[mode]}</SheetTitle>
-          <SheetDescription>
-            <Meta items={lede} />
-          </SheetDescription>
-        </SheetHeader>
-        <div className="flex-1 overflow-y-auto px-4">
-          <FieldGroup className="gap-6">
-            <FieldSet>
-              <FieldLegend variant="label">Post</FieldLegend>
-              {/* The post is untrusted Discord text: rendered as text, never as HTML. */}
-              <p className="bg-muted/50 rounded-md border px-3 py-2 text-sm whitespace-pre-wrap select-text">{source.text || "A post with no words"}</p>
-            </FieldSet>
+    <Drawer open onOpenChange={(open) => !open && onClose()}>
+      <DrawerContent title={MODE_TITLE[mode]} description={lede} className={styles.sheet}>
+        <div className={styles.sections}>
+          <fieldset className={styles.group}>
+            <legend>Post</legend>
+            {/* The post is untrusted Discord text: rendered as text, never as HTML. */}
+            <p className={styles.post}>{source.text || "A post with no words"}</p>
+          </fieldset>
 
-            <fieldset disabled={locked} className="flex flex-col gap-6 disabled:opacity-60">
-              {drafts.map((draft, i) => {
-                const symbol = draft.symbol.trim().toUpperCase()
-                return (
-                  <FieldSet key={draft.id}>
-                    <div className="flex items-center justify-between">
-                      <FieldLegend variant="label">{drafts.length > 1 ? `Trade ${i + 1}` : "Trade"}</FieldLegend>
-                      {drafts.length > 1 && (
-                        <Button type="button" size="xs" variant="ghost" onClick={() => setDrafts((all) => all.filter((d) => d.id !== draft.id))}>
-                          Remove
-                        </Button>
-                      )}
-                    </div>
-                    <TradeFields draft={draft} onChange={(next) => update(draft.id, next)} holdings={held} quote={quotes[symbol] ?? null} quoting={asking.has(symbol)} onRefreshQuote={() => refresh(symbol)} now={now} />
-                  </FieldSet>
-                )
-              })}
-              {!locked && drafts.length < MAX_TRADES && (
-                <Button type="button" size="sm" variant="ghost" className="self-start" onClick={() => setDrafts((all) => [...all, newDraft()])}>
-                  <Add01Icon aria-hidden /> Add Trade
-                </Button>
-              )}
-
-              <FieldSet>
-                <FieldLegend variant="label">Accounts</FieldLegend>
-                {accounts.length === 0 && <FieldDescription>No account status is loaded.</FieldDescription>}
-                {accounts.map((account) => (
-                  <Field key={account.account_id} orientation="horizontal">
-                    <FieldContent>
-                      <FieldTitle>
-                        {account.account_id} {account.environment === "live" && <Badge variant="warning-light">Live</Badge>}
-                      </FieldTitle>
-                    </FieldContent>
-                    <Switch
-                      size="sm"
-                      aria-label={account.account_id}
-                      checked={selected.has(account.account_id)}
-                      onCheckedChange={(on) =>
-                        setSelected((s) => {
-                          const next = new Set(s)
-                          if (on) next.add(account.account_id)
-                          else next.delete(account.account_id)
-                          return next
-                        })
-                      }
-                    />
-                  </Field>
-                ))}
-              </FieldSet>
-            </fieldset>
-
-            {correctionId && (
-              <FieldSet>
-                <FieldLegend variant="label">Checked just now</FieldLegend>
-                {error && (
-                  <p role="alert" className="text-destructive text-sm">
-                    {error}
-                  </p>
-                )}
-                {saved?.accounts
-                  .filter((a) => a.status !== "recorded")
-                  .map((a) => (
-                    <Alert key={a.account_id} variant={a.status === "unavailable" ? "warning" : "destructive"}>
-                      <AlertDescription className="text-foreground">
-                        {a.account_id}: {refusalReason(a.reason ?? a.status)}
-                      </AlertDescription>
-                    </Alert>
-                  ))}
-                <ul className="divide-y">
-                  {checks.map((c) => (
-                    <PreviewRow key={c.previewId} accountId={c.accountId} index={c.index} preview={c.preview} error={c.error} outcome={outcomes[c.commandId]} />
-                  ))}
-                </ul>
-                {checking && (
-                  <p className="text-muted-foreground flex items-center gap-2 text-sm">
-                    <Spinner /> Checking current account and market state…
-                  </p>
-                )}
-              </FieldSet>
+          <fieldset disabled={locked} className={styles.group} data-locked={locked || undefined}>
+            {drafts.map((draft, i) => {
+              const symbol = draft.symbol.trim().toUpperCase()
+              return (
+                <div key={draft.id} className={styles.trade}>
+                  <div className={styles.tradeHead}>
+                    <span className={styles.groupTitle}>{drafts.length > 1 ? `Trade ${i + 1}` : "Trade"}</span>
+                    {drafts.length > 1 && (
+                      <Button type="button" size="sm" variant="ghost" onClick={() => setDrafts((all) => all.filter((d) => d.id !== draft.id))}>
+                        Remove trade
+                      </Button>
+                    )}
+                  </div>
+                  <TradeFields draft={draft} onChange={(next) => update(draft.id, next)} holdings={held} quote={quotes[symbol] ?? null} quoting={asking.has(symbol)} onRefreshQuote={() => refresh(symbol)} now={now} />
+                </div>
+              )
+            })}
+            {!locked && drafts.length < MAX_TRADES && (
+              <Button type="button" size="sm" variant="ghost" className={styles.addTrade} onClick={() => setDrafts((all) => [...all, newDraft()])}>
+                <Add01Icon width={16} height={16} aria-hidden="true" /> Add trade
+              </Button>
             )}
-          </FieldGroup>
+
+            <div className={styles.accounts}>
+              <span className={styles.groupTitle}>Accounts</span>
+              {accounts.length === 0 && <p className={styles.hint}>No account status is loaded.</p>}
+              {accounts.map((account) => (
+                <div key={account.account_id} className={styles.accountRow}>
+                  <span id={`review-${account.account_id}`} className={styles.accountName}>
+                    {account.account_id} {account.environment === "live" && <Badge tone="warning">Live</Badge>}
+                  </span>
+                  <Switch
+                    aria-labelledby={`review-${account.account_id}`}
+                    checked={selected.has(account.account_id)}
+                    onCheckedChange={(on) =>
+                      setSelected((s) => {
+                        const next = new Set(s)
+                        if (on) next.add(account.account_id)
+                        else next.delete(account.account_id)
+                        return next
+                      })
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          </fieldset>
+
+          {correctionId && (
+            <fieldset className={styles.group}>
+              <legend>Checked just now</legend>
+              {error && (
+                <p role="alert" className={styles.problem}>
+                  {error}
+                </p>
+              )}
+              {saved?.accounts
+                .filter((a) => a.status !== "recorded")
+                .map((a) => (
+                  <Alert key={a.account_id} tone={a.status === "unavailable" ? "warning" : "danger"} title={`${a.account_id}: ${refusalReason(a.reason ?? a.status)}`} />
+                ))}
+              <ul className={styles.previews}>
+                {checks.map((c) => (
+                  <PreviewRow key={c.previewId} accountId={c.accountId} index={c.index} preview={c.preview} error={c.error} outcome={outcomes[c.commandId]} />
+                ))}
+              </ul>
+              {checking && (
+                <p className={styles.hint} role="status">
+                  Checking current account and market state
+                </p>
+              )}
+            </fieldset>
+          )}
         </div>
-        <SheetFooter className="flex-row justify-end">
-          <Button size="sm" type="button" variant="outline" onClick={onClose}>
+        <div className={styles.footer}>
+          <Button type="button" variant="secondary" onClick={onClose}>
             {sent ? "Done" : "Close"}
           </Button>
           {!correctionId ? (
-            <Button size="sm" type="button" disabled={!canSave} onClick={check}>
-              Check Order
+            <Button type="button" disabled={!canSave} onClick={check}>
+              Check order
             </Button>
           ) : checking || sending ? (
-            <Button size="sm" type="button" disabled>
-              {sending ? "Placing…" : "Checking…"}
+            <Button type="button" loading>
+              {sending ? "Placing" : "Checking"}
             </Button>
           ) : ready.length > 0 ? (
-            <Button size="sm" type="button" onClick={place}>
-              Place {ready.length} {ready.length === 1 ? "Order" : "Orders"}…
+            <Button type="button" onClick={place}>
+              Place {ready.length} {ready.length === 1 ? "order" : "orders"}
             </Button>
           ) : !sent ? (
-            <Button size="sm" type="button" onClick={change}>
-              Change It
+            <Button type="button" onClick={change}>
+              Change it
             </Button>
           ) : null}
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </div>
+      </DrawerContent>
+    </Drawer>
   )
 }

@@ -307,6 +307,12 @@ describe("read-only market and performance asks", () => {
       ok: true,
       value: { SOXL: [{ at: "2026-11-04T14:30:00Z", open: "40.1", close: "40.2" }] },
     })
+    h.replies.get_daily_bars = () => ({ type: "daily_bars", account_id: "zhap-account-2", symbol: "SOXL", range: "month", bars: [{ at: "2026-11-03T05:00:00Z", open: "40.1", high: "41", low: "39.9", close: "40.2", volume: 1234 }] })
+    expect(await h.api.read("getDailyBars", { account_id: "zhap-account-2", symbol: "SOXL", range: "month" })).toEqual({
+      ok: true,
+      value: [{ at: "2026-11-03T05:00:00Z", open: "40.1", high: "41", low: "39.9", close: "40.2", volume: 1234 }],
+    })
+    expect(h.sent("get_daily_bars")[0]!.params).toEqual({ account_id: "zhap-account-2", symbol: "SOXL", range: "month" })
     expect(await h.api.read("getGuruPerformance", { account_id: "zhap-account-2", guru_id: "guru-1" })).toEqual({
       ok: true,
       value: { realized_usd: "12.50", closed_trades: 2 },

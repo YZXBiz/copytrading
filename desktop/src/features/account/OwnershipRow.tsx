@@ -1,9 +1,8 @@
 import { useState } from "react"
-import { AlertCircleIcon } from "@/components/icons/AlertCircleIcon"
 import type { OwnershipIncident, AccountOverview } from "../../../shared/contract"
-import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/reui/alert"
-import { Button } from "@/components/ui/button"
-import { Spinner } from "@/components/ui/spinner"
+import { Alert } from "@/components/arc/alert/alert"
+import { Button } from "@/components/arc/button/button"
+import styles from "./account.module.css"
 import { ownershipFix } from "./ownership"
 
 /**
@@ -37,42 +36,33 @@ export function OwnershipRow({
   }
 
   return (
-    <Alert variant="warning">
-      <AlertCircleIcon aria-hidden />
-      <AlertTitle>{fix.headline}</AlertTitle>
-      <AlertDescription>
-        <p>{fix.detail}</p>
-        {blocked ? (
-          <p>First, the open order in Alpaca has to fill or be cancelled.</p>
-        ) : confirming ? (
-          <>
-            <p className="text-foreground">{fix.confirmation}</p>
-            {error && (
-              <p role="alert" className="text-destructive">
-                {error}
-              </p>
-            )}
-          </>
-        ) : null}
-      </AlertDescription>
-      {!blocked && (
-        <AlertAction>
-          {confirming ? (
-            <>
-              {sending && <Spinner aria-label="Sending" />}
-              <Button type="button" size="xs" variant="outline" disabled={sending} onClick={() => setConfirming(false)}>
-                Not Now
-              </Button>
-              <Button type="button" size="xs" disabled={sending} onClick={settle}>
-                {fix.confirm}
-              </Button>
-            </>
-          ) : (
-            <Button type="button" size="xs" variant="outline" onClick={() => setConfirming(true)}>
-              {fix.action}
-            </Button>
+    <Alert tone="warning" title={fix.headline}>
+      <p className={styles.alertText}>{fix.detail}</p>
+      {blocked ? (
+        <p className={styles.alertText}>First, the open order in Alpaca has to fill or be cancelled.</p>
+      ) : confirming ? (
+        <>
+          <p className={styles.alertStrong}>{fix.confirmation}</p>
+          {error && (
+            <p role="alert" className={styles.noteDanger}>
+              {error}
+            </p>
           )}
-        </AlertAction>
+          <div className={styles.alertActions}>
+            <Button type="button" size="sm" variant="secondary" disabled={sending} onClick={() => setConfirming(false)}>
+              Not now
+            </Button>
+            <Button type="button" size="sm" variant="secondary" loading={sending} onClick={settle}>
+              {fix.confirm}
+            </Button>
+          </div>
+        </>
+      ) : (
+        <div className={styles.alertActions}>
+          <Button type="button" size="sm" variant="secondary" onClick={() => setConfirming(true)}>
+            {fix.action}
+          </Button>
+        </div>
       )}
     </Alert>
   )

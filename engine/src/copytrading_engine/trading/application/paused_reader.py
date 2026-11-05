@@ -19,6 +19,8 @@ from copytrading_engine.execution.application.ports import BrokerError
 from copytrading_engine.execution.domain.market import (
     Account,
     Bar,
+    DailyBar,
+    DailyRange,
     EquityHistory,
     HistoryWindow,
     Position,
@@ -34,6 +36,8 @@ HISTORY_REUSE = dt.timedelta(seconds=60)
 QUOTE_REUSE = dt.timedelta(seconds=2)
 # A held stock's day of bars barely changes between the app's reads.
 BARS_REUSE = dt.timedelta(seconds=60)
+# A stock's daily bars change once a day (and its last one as the session trades).
+DAILY_BARS_REUSE = dt.timedelta(minutes=5)
 
 
 class ReadOnlyBroker(Protocol):
@@ -44,6 +48,7 @@ class ReadOnlyBroker(Protocol):
     def equity_history(self, window: HistoryWindow) -> EquityHistory: ...
     def quote(self, symbol: str) -> Quote: ...
     def bars(self, symbol: str) -> tuple[Bar, ...]: ...
+    def daily_bars(self, symbol: str, period: DailyRange) -> tuple[DailyBar, ...]: ...
     def close(self) -> None: ...
 
 
@@ -77,6 +82,9 @@ class PausedAccountReader:
         self._histories: dict[tuple[str, HistoryWindow], tuple[dt.datetime, EquityHistory]] = {}
         self._quotes: dict[tuple[str, str], tuple[dt.datetime, Quote | None]] = {}
         self._bars: dict[tuple[str, str], tuple[dt.datetime, tuple[Bar, ...]]] = {}
+        self._daily_bars: dict[
+            tuple[str, str, DailyRange], tuple[dt.datetime, tuple[DailyBar, ...]]
+        ] = {}
 
     def attach(self, keys: Iterable[ReadKeys]) -> None:
         """Hold these accounts' read keys until `detach`, replacing any held before."""
@@ -96,6 +104,7 @@ class PausedAccountReader:
         self._histories.clear()
         self._quotes.clear()
         self._bars.clear()
+        self._daily_bars.clear()
 
     async def facts(self, account_id: str) -> LiveFacts | None:
         """The account and its positions as the broker reports them now, or None."""
@@ -178,3 +187,24 @@ class PausedAccountReader:
         return dict(
             zip(symbols, await asyncio.gather(*(one(symbol) for symbol in symbols)), strict=True)
         )
+
+    async def daily_bars(
+        self, account_id: str, symbol: str, period: DailyRange
+    ) -> tuple[DailyBar, ...]:
+        """A symbol's daily bars over the period through this account's keys, each read at most
+        once in five minutes. A symbol the broker cannot give bars for has none."""
+        broker = self._brokers.get(account_id)
+        if broker is None:
+            return ()
+        key = (account_id, symbol, period)
+        now = self._clock()
+        cached = self._daily_bars.get(key)
+        if cached is not None and now - cached[0] < DAILY_BARS_REUSE:
+            return cached[1]
+        try:
+            bars = await asyncio.to_thread(broker.daily_bars, symbol, period)
+        except BrokerError as exc:
+            log.warning("paused_daily_bars_failed id=%s status=%s", account_id, exc.status)
+            return cached[1] if cached is not None else ()
+        self._daily_bars[key] = (now, bars)
+        return bars

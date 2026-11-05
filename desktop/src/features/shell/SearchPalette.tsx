@@ -23,7 +23,7 @@ import { guruDirectory, guruName } from "@/features/gurus/model"
 import { readClock } from "@/lib/clock"
 import { ago } from "@/lib/format"
 import { useResult } from "@/lib/use-result"
-import { SCREEN_IDS, type ScreenId, href, navigate } from "./route"
+import { NAV_SCREEN_IDS, type ScreenId, href, navigate } from "./route"
 import { SCREENS } from "./screens"
 import styles from "./search-palette.module.css"
 
@@ -42,7 +42,7 @@ const THEME_ACTIONS = [
 ] as const satisfies { theme: Theme; label: string; icon: unknown }[]
 
 const SCREEN_ENTRIES: { title: string; icon: Icon; route: [ScreenId, string?] }[] = [
-  ...SCREEN_IDS.map((id) => ({ title: SCREENS[id].title, icon: SCREENS[id].icon, route: [id] as [ScreenId] })),
+  ...NAV_SCREEN_IDS.map((id) => ({ title: SCREENS[id].title, icon: SCREENS[id].icon, route: [id] as [ScreenId] })),
   { title: "Connections", icon: Plug01Icon, route: ["settings", "connections"] },
 ]
 

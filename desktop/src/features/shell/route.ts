@@ -3,7 +3,10 @@ import { useEffect, useState } from "react"
 // The route is `location.hash`: #/accounts/zhap-account-2, #/gurus, #/settings. No router library:
 // a screen is a hash segment, and a link is an <a href={href(...)}> or navigate().
 
-export const SCREEN_IDS = ["accounts", "gurus", "activity", "getting-started", "settings"] as const
+export const SCREEN_IDS = ["accounts", "gurus", "activity", "getting-started", "settings", "stock"] as const
+
+/** The screens the rail and ⌘K list: a stock's page is reached from a holding or a ticker, never from a menu. */
+export const NAV_SCREEN_IDS = SCREEN_IDS.filter((id) => id !== "stock")
 export type ScreenId = (typeof SCREEN_IDS)[number]
 
 export interface Route {

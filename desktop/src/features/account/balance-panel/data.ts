@@ -1,5 +1,4 @@
 import type { HistoryRange } from "../../../../shared/contract"
-import { type ChartConfig } from "@/components/ui/chart"
 
 /** The ranges the engine reads, with the name the header gives each one's change. */
 export const RANGES = [
@@ -15,8 +14,3 @@ export const RANGES = [
 }[]
 
 export const DEFAULT_RANGE: HistoryRange = "month"
-
-/** One accent, win or lose: the primary token (the change reads from its sign). */
-export const CHART_CONFIG = {
-  balance: { label: "Balance", color: "var(--primary)" },
-} satisfies ChartConfig

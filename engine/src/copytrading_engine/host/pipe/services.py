@@ -27,7 +27,14 @@ from copytrading_engine.execution.domain.manual_commands import (
     ManualOrderPreview,
     ManualPreviewRequest,
 )
-from copytrading_engine.execution.domain.market import Bar, EquityHistory, HistoryWindow, Quote
+from copytrading_engine.execution.domain.market import (
+    Bar,
+    DailyBar,
+    DailyRange,
+    EquityHistory,
+    HistoryWindow,
+    Quote,
+)
 from copytrading_engine.execution.domain.ownership import (
     OwnershipResolution,
     OwnershipResolutionRequest,
@@ -113,6 +120,10 @@ class OperatorReads(Protocol):
     async def bars(
         self, account_id: str, symbols: tuple[str, ...]
     ) -> dict[str, tuple[Bar, ...]]: ...
+
+    async def daily_bars(
+        self, account_id: str, symbol: str, period: DailyRange
+    ) -> tuple[DailyBar, ...]: ...
 
     async def guru_performance(self, account_id: str, guru_id: str) -> GuruPerformance: ...
 

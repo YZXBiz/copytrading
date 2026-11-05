@@ -34,8 +34,8 @@ export function sharesLine(shares: bigint, remaining: bigint, symbol: string): s
   return shares === remaining ? `All ${upToFour(remaining)} shares` : `${upToFour(shares)} of ${upToFour(remaining)} shares`
 }
 
-/** The button that checks the sale: "Sell 0.44 WMT…". */
-export const reviewLabel = (shares: bigint, symbol: string) => `Sell ${isCoin(symbol) ? decText(decRound(shares, 9)) : upToFour(shares)} ${symbol}…`
+/** The button that checks the sale: "Review 0.44 WMT". */
+export const reviewLabel = (shares: bigint, symbol: string) => `Review ${isCoin(symbol) ? decText(decRound(shares, 9)) : upToFour(shares)} ${symbol}`
 
 /** What the sale will do, in a sentence: the limit order, and what it comes to at today's bid. */
 export function saleSentence(plan: ManualOrderPlan, preview: LotSalePreview): string {

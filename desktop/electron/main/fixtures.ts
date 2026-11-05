@@ -1,8 +1,9 @@
-import type { AccountOverview, Bar, EquityHistory, GuruPerformance, HistoryRange, Result } from "../../shared/contract"
+import type { AccountOverview, Bar, DailyRange, EquityHistory, GuruPerformance, HistoryRange, Result } from "../../shared/contract"
 import type { Api } from "./api"
 import { setupReads } from "./fixtures-setup"
 import account from "./fixtures/account.json"
 import bars from "./fixtures/bars.json"
+import { dailyBars } from "./fixtures/daily-bars"
 import history from "./fixtures/history.json"
 import { peopleReads } from "./fixtures/people"
 import positions from "./fixtures/positions.json"
@@ -172,6 +173,7 @@ const READS: Record<string, (params: Params) => Promise<Result<unknown>>> = {
   ...settingsReads,
   ...setupReads,
   getBars: (params) => ok(Object.fromEntries(((params?.symbols as string[]) ?? []).map((symbol) => [symbol, barsBySymbol[symbol] ?? []]))),
+  getDailyBars: (params) => ok(dailyBars(String(params?.symbol), params?.range as DailyRange)),
   getGuruPerformance: (params) => ok(performance(String(params?.guru_id), String(params?.account_id))),
   // A quote from just before the pinned clock, so Market reads live.
   // In a tick build the quote moves up and down on each ask, so a held row's live price can be watched.

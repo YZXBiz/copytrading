@@ -124,7 +124,7 @@ export type ReviewMode = "approve" | "copy" | "enter"
 
 export const reviewMode = (call: WaitingCall | null): ReviewMode => (!call || call.calls.length === 0 ? "enter" : call.awaitsApproval ? "approve" : "copy")
 
-export const MODE_TITLE: Record<ReviewMode, string> = { approve: "Approve Trade", copy: "Copy Trade", enter: "Enter Trade" }
+export const MODE_TITLE: Record<ReviewMode, string> = { approve: "Approve trade", copy: "Copy trade", enter: "Enter trade" }
 
 /** What the correction records as its reason, in the owner's words. */
 export const MODE_REASON: Record<ReviewMode, string> = {

@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import type { Icon } from "@/lib/icon"
 import { Activity01Icon } from "@/components/icons/Activity01Icon"
 import { BankIcon } from "@/components/icons/BankIcon"
+import { ChartLineIcon } from "@/components/icons/ChartLineIcon"
 import { Rocket01Icon } from "@/components/icons/Rocket01Icon"
 import { Settings02Icon } from "@/components/icons/Settings02Icon"
 import { UserGroupIcon } from "@/components/icons/UserGroupIcon"
@@ -11,6 +12,7 @@ import { ActivityScreen } from "@/features/activity/ActivityScreen"
 import { GettingStartedScreen } from "@/features/getting-started/GettingStartedScreen"
 import { GurusScreen } from "@/features/gurus/GurusScreen"
 import { SettingsScreen } from "@/features/settings/SettingsScreen"
+import { StockScreen } from "@/features/stock/StockScreen"
 import { type Loaded } from "@/lib/use-result"
 import { ScreenPlaceholder } from "./ScreenPlaceholder"
 import { type Route, type ScreenId, navigate } from "./route"
@@ -45,6 +47,8 @@ export const SCREENS: Record<ScreenId, Screen> = {
       />
     ),
   },
+  // Reached from a holding or a ticker, so it is not in the rail or ⌘K (`NAV_SCREEN_IDS`).
+  stock: { title: "Stock", icon: ChartLineIcon, render: ({ route, accounts }) => <StockScreen symbol={route.id} accounts={accounts} onRefresh={accounts.retry} /> },
   gurus: { title: "Gurus", icon: UserGroupIcon, render: ({ route, accounts }) => <GurusScreen guruId={route.id} accounts={accounts} /> },
   activity: {
     title: "Activity",

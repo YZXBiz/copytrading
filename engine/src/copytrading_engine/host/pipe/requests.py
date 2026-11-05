@@ -25,7 +25,7 @@ from copytrading_engine.execution.domain.manual_commands import (
     ManualCorrectionRequest,
     ManualPreviewRequest,
 )
-from copytrading_engine.execution.domain.market import HistoryWindow
+from copytrading_engine.execution.domain.market import DailyRange, HistoryWindow
 from copytrading_engine.execution.domain.ownership import OwnershipResolutionRequest
 from copytrading_engine.execution.domain.sizing import RouteConnection
 from copytrading_engine.shared.symbols import SYMBOL_PATTERN
@@ -297,6 +297,15 @@ class GetBarsRequest(PipeRequest):
         return self
 
 
+class GetDailyBarsRequest(PipeRequest):
+    """A stock's daily bars over a range, for the chart on its page."""
+
+    operation: Literal["get_daily_bars"]
+    account_id: str = Field(min_length=1, max_length=64)
+    symbol: str = Field(pattern=SYMBOL_PATTERN)
+    range: DailyRange
+
+
 class GetGuruPerformanceRequest(PipeRequest):
     """What one guru's copied calls made in one account."""
 
@@ -448,6 +457,7 @@ RequestType = Annotated[
     | GetEquityHistoryRequest
     | GetQuoteRequest
     | GetBarsRequest
+    | GetDailyBarsRequest
     | GetGuruPerformanceRequest
     | AttachAccountReadersRequest
     | DetachAccountReadersRequest

@@ -16,6 +16,7 @@ from copytrading_engine.execution.adapters.alpaca.models import (
     decode_broker_order,
     decode_calendar,
     decode_crypto_quote,
+    decode_daily_bars,
     decode_orders,
     decode_portfolio_history,
     decode_positions,
@@ -34,6 +35,8 @@ from copytrading_engine.execution.domain.market import (
     Bar,
     BrokerOrder,
     CalendarDay,
+    DailyBar,
+    DailyRange,
     EquityHistory,
     HistoryRange,
     HistoryWindow,
@@ -56,6 +59,11 @@ _HISTORY_PARAMS: dict[HistoryRange, dict[str, str]] = {
     "year": {"period": "1A", "timeframe": "1D"},
 }
 _MAX_BAR_PAGES = 5
+# Calendar days a daily chart reaches back: the range, plus about fifty trading days before it
+# so the 20 and 50 day averages start filled.
+_WARM_UP_DAYS = 75
+_DAILY_DAYS: dict[DailyRange, int] = {"month": 31, "six_months": 183, "year": 366}
+_DAILY_PAGE_SIZE = 1000
 _ACTIVITIES_PAGE_SIZE = 100
 _MAX_RESTORE_ORDER_PAGES = 100
 _MAX_RESTORE_ACTIVITY_PAGES = 100
@@ -488,6 +496,44 @@ class AlpacaBroker:
             return ()
         session = bars[-1].at.astimezone(ET).date()
         return tuple(bar for bar in bars if bar.at.astimezone(ET).date() == session)
+
+    def daily_bars(self, symbol: str, period: DailyRange) -> tuple[DailyBar, ...]:
+        """Daily bars of the symbol over the period and the weeks before it, oldest first, with
+        splits folded in so a split is no gap in the chart. A stock's come from IEX, the feed
+        every account has, so its volumes are that feed's."""
+        start = dt.datetime.combine(
+            self.now().astimezone(ET).date()
+            - dt.timedelta(days=_DAILY_DAYS[period] + _WARM_UP_DAYS),
+            dt.time(),
+            ET,
+        )
+        params: dict[str, str | int] = {
+            "timeframe": "1Day",
+            "start": start.isoformat(),
+            "limit": _DAILY_PAGE_SIZE,
+            "sort": "asc",
+        }
+        if is_crypto(symbol):
+            url = "https://data.alpaca.markets/v1beta3/crypto/us/bars"
+            params["symbols"] = symbol
+        else:
+            url = f"https://data.alpaca.markets/v2/stocks/{symbol}/bars"
+            params["feed"] = "iex"
+            params["adjustment"] = "split"
+        bars: list[DailyBar] = []
+        for _ in range(_MAX_BAR_PAGES):
+            result = self.request("GET", url, params=params)
+            if not isinstance(result, dict):
+                raise BrokerResponseError()
+            listed = result.get("bars")
+            if is_crypto(symbol):
+                listed = listed.get(symbol) if isinstance(listed, dict) else None
+            bars.extend(self.decode_normalized(decode_daily_bars, listed or []))
+            token = result.get("next_page_token")
+            if not token:
+                break
+            params["page_token"] = token
+        return tuple(bars)
 
     def _quote(self, symbol: str, feed: QuoteFeed) -> Quote:
         result = self.request(

@@ -1,0 +1,38 @@
+/* The account's side sheets: copy a call, sell a lot, change limits. Fields in groups, one footer that stays in view. */
+.sheet { --drawer-size: min(34rem, calc(100% - var(--space-4))); }
+.sections { display: grid; gap: var(--space-6); }
+.group { display: grid; min-width: 0; gap: var(--space-4); margin: 0; padding: 0; border: 0; }
+.group legend, .groupTitle, .fieldLabel { padding: 0; color: var(--text-secondary); font-size: var(--text-sm); font-weight: 500; }
+.group[data-locked] { opacity: .6; }
+.field { display: grid; gap: var(--space-2); min-width: 0; }
+.fields { display: grid; gap: var(--space-5); }
+.priceRow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.detail { margin-left: var(--space-1); color: var(--text-muted); font-size: var(--text-xs); }
+.hint { margin: 0; color: var(--text-muted); font-size: var(--text-xs); line-height: var(--leading-body); }
+.muted { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.problem { margin: 0; color: var(--danger); font-size: var(--text-xs); line-height: var(--leading-body); }
+.alertText { margin: 0; font-size: var(--text-sm); line-height: var(--leading-body); }
+.line { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
+.sentence { margin: 0; font-size: var(--text-sm); line-height: var(--leading-body); }
+.reasons { margin: 0; padding-left: var(--space-5); font-size: var(--text-sm); }
+.post { margin: 0; padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface-muted); font-size: var(--text-sm); line-height: var(--leading-body); white-space: pre-wrap; user-select: text; }
+
+.trade { display: grid; gap: var(--space-4); padding-bottom: var(--space-5); border-bottom: 1px solid var(--border-subtle); }
+.tradeHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.addTrade { justify-self: start; }
+.accounts { display: grid; gap: var(--space-3); }
+.accountRow, .switchRow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
+.accountName { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); }
+.switchTitle { font-size: var(--text-sm); }
+
+.previews { display: grid; margin: 0; padding: 0; list-style: none; }
+.preview { display: grid; gap: var(--space-1); padding: var(--space-3) 0; border-top: 1px solid var(--border-subtle); }
+.preview:first-child { border-top: 0; }
+.previewHead { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
+.previewTitle { font-size: var(--text-sm); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+/* The footer rides at the bottom of the scrolling body, edge to edge. */
+.footer { position: sticky; bottom: calc(var(--space-6) * -1); display: flex; justify-content: flex-end; gap: var(--space-2); margin: var(--space-6) calc(var(--space-6) * -1) calc(var(--space-6) * -1); padding: var(--space-4) var(--space-6); border-top: 1px solid var(--border); background: var(--surface-raised); }
+@media (max-width: 40rem) {
+  .footer { bottom: calc(var(--space-5) * -1); margin: var(--space-5) calc(var(--space-5) * -1) calc(var(--space-5) * -1); padding: var(--space-4) var(--space-5); }
+}
