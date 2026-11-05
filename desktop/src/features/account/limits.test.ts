@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { AccountPolicy, TradingConfiguration } from "../../../shared/contract"
-import { draftFromPolicy, limitErrors, limitsChanged, policyFromDraft, setFlag, withLimits } from "./limits"
+import { draftFromPolicy, draftNumber, numberDraft, limitErrors, limitsChanged, policyFromDraft, setFlag, withLimits } from "./limits"
 
 const policy: AccountPolicy = {
   max_order_usd: "100",
@@ -78,5 +78,21 @@ describe("withLimits", () => {
     expect(next.accounts[0]!.policy.max_order_usd).toBe("100")
     expect(next.accounts[1]!.policy.max_order_usd).toBe("5")
     expect(config.accounts[1]!.policy.max_order_usd).toBe("100")
+  })
+})
+
+describe("stepper numbers", () => {
+  it("reads a draft as a number, and nothing as null", () => {
+    expect(draftNumber("250.50")).toBe(250.5)
+    expect(draftNumber("")).toBeNull()
+    expect(draftNumber("12abc")).toBeNull()
+  })
+  it("writes a step without float noise", () => {
+    expect(numberDraft(0.1 + 0.2)).toBe("0.3")
+    expect(numberDraft(260)).toBe("260")
+  })
+  it("writes a cleared field as empty, so the field's own check refuses it", () => {
+    expect(numberDraft(null)).toBe("")
+    expect(limitErrors({ ...draftFromPolicy(policy), max_order_usd: numberDraft(null) }).max_order_usd).toBeDefined()
   })
 })

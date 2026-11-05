@@ -4,15 +4,15 @@ import type { AccountPolicy, RecoveryPreference, SetupView } from "../../../shar
 import { RegionError } from "@/components/region-error"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
-import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldSeparator, FieldSet, FieldLegend, FieldTitle } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldSeparator, FieldSet, FieldLegend, FieldTitle } from "@/components/ui/field"
+import { NumberField, NumberFieldDecrement, NumberFieldGroup, NumberFieldIncrement, NumberFieldInput, NumberFieldScrubArea } from "@/components/reui/number-field"
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { Switch } from "@/components/ui/switch"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { useResult } from "@/lib/use-result"
-import { BEHAVIORS, POSITION_LIMITS, RECOVERY_HINT, RECOVERY_TITLE, TIMING_LIMITS, type LimitsDraft, draftFromPolicy, limitErrors, limitsChanged, policyFromDraft, setFlag, withLimits } from "./limits"
+import { BEHAVIORS, POSITION_LIMITS, RECOVERY_HINT, RECOVERY_TITLE, TIMING_LIMITS, type LimitsDraft, draftFromPolicy, draftNumber, limitErrors, limitsChanged, numberDraft, policyFromDraft, setFlag, withLimits } from "./limits"
 
 function Form({ setup, accountId, policy, onClose }: { setup: SetupView; accountId: string; policy: AccountPolicy; onClose: (saved: boolean) => void }) {
   const [draft, setDraft] = useState<LimitsDraft>(() => draftFromPolicy(policy))
@@ -20,7 +20,6 @@ function Form({ setup, accountId, policy, onClose }: { setup: SetupView; account
   const [error, setError] = useState<string | null>(null)
   const errors = limitErrors(draft)
   const changed = limitsChanged(draft, policy)
-  const set = (key: keyof LimitsDraft, value: string) => setDraft((d) => ({ ...d, [key]: value }))
 
   async function save() {
     setSaving(true)
@@ -32,10 +31,24 @@ function Form({ setup, accountId, policy, onClose }: { setup: SetupView; account
     else if (!result.cancelled) setError(`${accountId}: ${result.error}`)
   }
 
-  const field = (key: Extract<keyof LimitsDraft, keyof typeof errors>, title: string, hint: string) => (
+  // Steppers and scrubbing move a number; the draft stays the decimal text the checks and the save read, and a field that was not touched keeps its saved text.
+  const field = (key: Extract<keyof LimitsDraft, keyof typeof errors>, title: string, hint: string, step: number) => (
     <Field key={key} data-invalid={errors[key] ? true : undefined}>
-      <FieldLabel htmlFor={`limit-${key}`}>{title}</FieldLabel>
-      <Input id={`limit-${key}`} inputMode="decimal" className="tabular-nums" aria-invalid={errors[key] ? true : undefined} value={draft[key]} onChange={(e) => set(key, e.target.value)} />
+      <NumberField
+        id={`limit-${key}`}
+        min={0}
+        step={step}
+        format={{ useGrouping: false, maximumFractionDigits: 6 }}
+        value={draftNumber(draft[key])}
+        onValueChange={(value) => setDraft((d) => (draftNumber(d[key]) === value ? d : { ...d, [key]: numberDraft(value) }))}
+      >
+        <NumberFieldScrubArea label={title} />
+        <NumberFieldGroup aria-invalid={errors[key] ? true : undefined}>
+          <NumberFieldDecrement aria-label={`Lower ${title}`} />
+          <NumberFieldInput inputMode="decimal" />
+          <NumberFieldIncrement aria-label={`Raise ${title}`} />
+        </NumberFieldGroup>
+      </NumberField>
       {errors[key] ? <FieldError>{errors[key]}</FieldError> : <FieldDescription>{hint}</FieldDescription>}
     </Field>
   )
@@ -46,12 +59,12 @@ function Form({ setup, accountId, policy, onClose }: { setup: SetupView; account
         <FieldGroup className="gap-6">
           <FieldSet className="gap-4">
             <FieldLegend variant="label">Position limits (USD)</FieldLegend>
-            {POSITION_LIMITS.map((f) => field(f.key, f.title, f.hint))}
+            {POSITION_LIMITS.map((f) => field(f.key, f.title, f.hint, f.step))}
           </FieldSet>
           <FieldSeparator />
           <FieldSet className="gap-4">
             <FieldLegend variant="label">Timing</FieldLegend>
-            {TIMING_LIMITS.map((f) => field(f.key, f.title, f.hint))}
+            {TIMING_LIMITS.map((f) => field(f.key, f.title, f.hint, f.step))}
           </FieldSet>
           <FieldSeparator />
           <FieldSet className="gap-4">
