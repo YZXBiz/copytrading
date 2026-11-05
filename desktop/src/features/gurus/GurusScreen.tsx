@@ -1,4 +1,4 @@
-import { UserGroupIcon as UsersIcon } from "@/components/icons/UserGroupIcon"
+import { UserGroupIcon } from "@/components/icons/UserGroupIcon"
 import type { AccountOverviewPage } from "../../../shared/contract"
 import { RegionError } from "@/components/region-error"
 import { Frame, FramePanel } from "@/components/reui/frame"
