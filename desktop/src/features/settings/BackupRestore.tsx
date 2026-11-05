@@ -1,14 +1,15 @@
 import { useState } from "react"
 import type { BackupManifest, PendingRestoreCandidate, RestorePreview } from "../../../shared/contract"
-import { Badge } from "@/components/reui/badge"
-import { Button } from "@/components/ui/button"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Badge } from "@/components/arc/badge/badge"
+import { Button } from "@/components/arc/button/button"
+import { Tooltip } from "@/components/arc/tooltip/tooltip"
 import { dateTime } from "@/lib/format"
 import { Note, type NoteState } from "./Note"
 import { SettingsRow } from "./SettingsRow"
 import { SettingsSection } from "./SettingsSection"
 import { type RestoreOutcome, blockersText, restore } from "./restore-flow"
 import { count, joined } from "./words"
+import styles from "./settings.module.css"
 
 const acts = () => window.copytrading.act
 
@@ -27,23 +28,22 @@ function outcomeNote(outcome: RestoreOutcome): NoteState | null {
 
 function PreviewRows({ preview, busy, onRestore }: { preview: RestorePreview; busy: boolean; onRestore: () => void }) {
   return (
-    <SettingsSection title="Restore Preview">
+    <SettingsSection title="Restore preview">
       <SettingsRow title="Same installation">
-        <Badge variant={preview.matches_installation ? "success-light" : "destructive-light"}>{preview.matches_installation ? "Yes" : "No"}</Badge>
+        <Badge tone={preview.matches_installation ? "success" : "danger"}>{preview.matches_installation ? "Yes" : "No"}</Badge>
       </SettingsRow>
       <SettingsRow title="Accounts">{preview.account_ids.length ? joined(preview.account_ids) : "None"}</SettingsRow>
       <SettingsRow title="Environments">{preview.environment_ids.length ? joined(preview.environment_ids) : "None"}</SettingsRow>
       <SettingsRow title="Backup identity">
-        <Tooltip>
-          <TooltipTrigger type="button" className="cursor-help font-mono text-xs">
+        <Tooltip content={`Installation ${preview.installation_id}\nStaging ${preview.staging_id}`}>
+          <button type="button" className={`${styles.mono} ${styles.value}`} style={{ border: 0, background: "none", padding: 0, cursor: "help" }}>
             {preview.installation_id.slice(0, 12)}
-          </TooltipTrigger>
-          <TooltipContent>{`Installation ${preview.installation_id}\nStaging ${preview.staging_id}`}</TooltipContent>
+          </button>
         </Tooltip>
       </SettingsRow>
       <SettingsRow title="Nothing has changed yet" description="Restoring first checks the backup against your broker's account, orders, and holdings, and stops if they don't match.">
         <Button type="button" size="sm" disabled={busy || !preview.matches_installation} onClick={onRestore}>
-          Restore This Backup
+          Restore this backup
         </Button>
       </SettingsRow>
     </SettingsSection>
@@ -52,7 +52,7 @@ function PreviewRows({ preview, busy, onRestore }: { preview: RestorePreview; bu
 
 function PendingRows({ pending, busy, onResume, onRollBack }: { pending: PendingRestoreCandidate; busy: boolean; onResume: () => void; onRollBack: () => void }) {
   return (
-    <SettingsSection title="Restore in Progress">
+    <SettingsSection title="Restore in progress">
       <SettingsRow
         title="Restore candidate"
         description={
@@ -61,21 +61,20 @@ function PendingRows({ pending, busy, onResume, onRollBack }: { pending: Pending
             : "Roll back to the previous generation."
         }
       >
-        <Tooltip>
-          <TooltipTrigger type="button" className="cursor-help">
-            <Badge variant={pending.candidate_valid ? "warning-light" : "destructive-light"}>{pending.candidate_valid ? "Passed validation" : "Failed validation"}</Badge>
-          </TooltipTrigger>
-          <TooltipContent>{`Candidate ${pending.candidate_id}\nPrevious generation ${pending.previous_generation}\nActive generation ${pending.active_generation}`}</TooltipContent>
+        <Tooltip content={`Candidate ${pending.candidate_id}\nPrevious generation ${pending.previous_generation}\nActive generation ${pending.active_generation}`}>
+          <button type="button" style={{ border: 0, background: "none", padding: 0, cursor: "help" }}>
+            <Badge tone={pending.candidate_valid ? "warning" : "danger"}>{pending.candidate_valid ? "Passed validation" : "Failed validation"}</Badge>
+          </button>
         </Tooltip>
       </SettingsRow>
-      <SettingsRow title="Resume Restore">
+      <SettingsRow title="Resume restore">
         <Button type="button" size="sm" disabled={busy || !pending.candidate_valid} onClick={onResume}>
           Resume
         </Button>
       </SettingsRow>
-      <SettingsRow title="Roll Back Restore">
-        <Button type="button" size="sm" variant="destructive" disabled={busy} onClick={onRollBack}>
-          Roll Back
+      <SettingsRow title="Roll back restore">
+        <Button type="button" size="sm" variant="danger" disabled={busy} onClick={onRollBack}>
+          Roll back
         </Button>
       </SettingsRow>
     </SettingsSection>
@@ -139,21 +138,21 @@ export function BackupRestore({ pending, checking, onChanged }: { pending: Pendi
 
   return (
     <>
-      <SettingsSection title="Backup & Restore" hint="Records, setup, posts, attachments. No keys or logs.">
-        <SettingsRow title="Create Backup…">
-          <Button type="button" size="sm" variant="outline" disabled={busy} onClick={createBackup}>
+      <SettingsSection title="Backup and restore" hint="Records, setup, posts, attachments. No keys or logs.">
+        <SettingsRow title="Create backup">
+          <Button type="button" size="sm" variant="secondary" disabled={busy} onClick={createBackup}>
             Create
           </Button>
         </SettingsRow>
-        <SettingsRow title="Restore from Backup…">
-          <Button type="button" size="sm" variant="outline" disabled={busy || checking || pending !== null} onClick={openBackup}>
+        <SettingsRow title="Restore from backup">
+          <Button type="button" size="sm" variant="secondary" disabled={busy || checking || pending !== null} onClick={openBackup}>
             Choose
           </Button>
         </SettingsRow>
         {manifest && (
           <SettingsRow title="Last verified backup">
-            <span className="text-muted-foreground text-xs tabular-nums">{dateTime(manifest.created_at)}</span>
-            <Badge variant="outline">{count(manifest.members.length, "file")}</Badge>
+            <span className={styles.valueMuted}>{dateTime(manifest.created_at)}</span>
+            <Badge outline>{count(manifest.members.length, "file")}</Badge>
           </SettingsRow>
         )}
       </SettingsSection>

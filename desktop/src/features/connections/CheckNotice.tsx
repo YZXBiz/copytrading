@@ -1,8 +1,5 @@
-import { AlertCircleIcon } from "@/components/icons/AlertCircleIcon"
-import { CheckmarkCircle02Icon } from "@/components/icons/CheckmarkCircle02Icon"
-import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/reui/alert"
-import { Button } from "@/components/ui/button"
-import { Spinner } from "@/components/ui/spinner"
+import { Alert } from "@/components/arc/alert/alert"
+import { Button } from "@/components/arc/button/button"
 import { type CheckResult, type Subject } from "./state"
 import { checkDetail, connectionProblem } from "./words"
 
@@ -25,42 +22,31 @@ export function CheckNotice({
 }) {
   if (notice) {
     return (
-      <Alert variant="warning" data-subject={subject}>
-        <AlertCircleIcon aria-hidden />
-        <AlertTitle>Nothing to check yet</AlertTitle>
-        <AlertDescription>{notice}</AlertDescription>
+      <Alert tone="warning" title="Nothing to check yet" data-subject={subject}>
+        {notice}
       </Alert>
     )
   }
   if (!result) return null
   const { check, error } = result
-  if (!check) {
-    return (
-      <p className="text-muted-foreground flex items-center gap-2 text-sm">
-        <Spinner /> Checking…
-      </p>
-    )
-  }
+  if (!check) return <Alert tone="info" title="Checking" aria-busy="true" />
   if (check.state === "ready") {
+    const detail = checkDetail(check, modelName)
     return (
-      <Alert variant="success">
-        <CheckmarkCircle02Icon aria-hidden />
-        <AlertTitle>Connected</AlertTitle>
-        {checkDetail(check, modelName) && <AlertDescription>{checkDetail(check, modelName)}</AlertDescription>}
+      <Alert tone="info" title="Connected">
+        {detail || undefined}
       </Alert>
     )
   }
   return (
-    <Alert variant="destructive">
-      <AlertCircleIcon aria-hidden />
-      <AlertTitle>Couldn’t connect</AlertTitle>
-      <AlertDescription>{error ?? connectionProblem(check, modelName)}</AlertDescription>
+    <Alert tone="danger" title="Could not connect">
+      {error ?? connectionProblem(check, modelName)}
       {check.suggestion && useModel && (
-        <AlertAction>
-          <Button type="button" size="xs" variant="outline" onClick={() => useModel(check.suggestion!)}>
+        <div style={{ marginTop: 8 }}>
+          <Button type="button" size="sm" variant="secondary" onClick={() => useModel(check.suggestion!)}>
             Use {check.suggestion}
           </Button>
-        </AlertAction>
+        </div>
       )}
     </Alert>
   )

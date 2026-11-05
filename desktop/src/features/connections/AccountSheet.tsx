@@ -1,30 +1,29 @@
 import { useState } from "react"
-import { AlertCircleIcon } from "@/components/icons/AlertCircleIcon"
-import { BankIcon } from "@/components/icons/BankIcon"
-import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/reui/alert"
-import { Button } from "@/components/ui/button"
-import { FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field"
-import { Spinner } from "@/components/ui/spinner"
+import { Alert } from "@/components/arc/alert/alert"
+import { Button } from "@/components/arc/button/button"
 import type { AccountPolicy } from "../../../shared/contract"
 import { CheckNotice } from "./CheckNotice"
 import { ChoiceField } from "./ChoiceField"
 import { EditorSheet } from "./EditorSheet"
+import { MoneyField } from "./MoneyField"
+import { NumberInput } from "./NumberInput"
 import { SwitchField } from "./SwitchField"
 import { TextField } from "./TextField"
 import { accountNameProblem } from "./draft"
 import { applyLimits, connect, editAccount, editPolicy, isCopying, keysOf, removeAccount, useSetup } from "./setup-store"
 import { accountSubject, resultFor, same } from "./state"
+import styles from "./connections.module.css"
 
 type Text = { [K in keyof AccountPolicy]: AccountPolicy[K] extends string ? K : never }[keyof AccountPolicy]
 type Count = { [K in keyof AccountPolicy]: AccountPolicy[K] extends number ? K : never }[keyof AccountPolicy]
 
-const LIMITS: { key: Text; label: string; hint: string }[] = [
-  { key: "max_order_usd", label: "Largest single buy", hint: "The most one buy spends, and what a call with no size buys." },
-  { key: "max_symbol_usd", label: "Maximum per stock", hint: "Shares CopyTrading bought. Your own aren't counted." },
-  { key: "max_total_usd", label: "Maximum total exposure", hint: "Every stock CopyTrading bought. Your own aren't counted." },
-  { key: "daily_loss_cap_usd", label: "Daily loss cap", hint: "Stops buying for the day. Still sells." },
-  { key: "max_above_signal_pct", label: "Maximum above signal price (%)", hint: "0 means never more than the guru paid." },
-  { key: "max_below_signal_pct", label: "Lowest sell price (% under the guru's)", hint: "A sell waits at this price or better until it fills." },
+const LIMITS: { key: Text; label: string; hint: string; kind: "usd" | "pct" }[] = [
+  { key: "max_order_usd", label: "Largest single buy", hint: "The most one buy spends, and what a call with no size buys.", kind: "usd" },
+  { key: "max_symbol_usd", label: "Maximum per stock", hint: "Shares CopyTrading bought. Your own aren't counted.", kind: "usd" },
+  { key: "max_total_usd", label: "Maximum total exposure", hint: "Every stock CopyTrading bought. Your own aren't counted.", kind: "usd" },
+  { key: "daily_loss_cap_usd", label: "Daily loss cap", hint: "Stops buying for the day. Still sells.", kind: "usd" },
+  { key: "max_above_signal_pct", label: "Maximum above signal price (%)", hint: "0 means never more than the guru paid.", kind: "pct" },
+  { key: "max_below_signal_pct", label: "Lowest sell price (% under the guru's)", hint: "A sell waits at this price or better until it fills.", kind: "pct" },
 ]
 
 const TIMING: { key: Count; label: string; hint: string }[] = [
@@ -57,25 +56,22 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
 
   return (
     <EditorSheet
-      icon={BankIcon}
       title={name || "New account"}
       description={account.environment === "live" ? "Live: real orders, real money" : "Paper: pretend money, real prices"}
       onClose={onClose}
       footer={
         <>
-          <Button size="sm" type="button" variant="ghost" className="text-destructive" onClick={() => setConfirmsRemove(true)}>
-            Remove account
+          <Button size="sm" type="button" variant="ghost" onClick={() => setConfirmsRemove(true)}>
+            <span className={styles.dangerText}>Remove account</span>
           </Button>
-          <div className="flex gap-2">
+          <div className={styles.footerEnd}>
             {copying && (
-              <Button size="sm" type="button" variant="outline" disabled={applying || !savedPolicy || same(savedPolicy, account.policy)} onClick={() => void apply()}>
-                {applying && <Spinner />}
+              <Button size="sm" type="button" variant="secondary" loading={applying} disabled={!savedPolicy || same(savedPolicy, account.policy)} onClick={() => void apply()}>
                 Apply limits now
               </Button>
             )}
-            <Button size="sm" type="button" variant="outline" disabled={result?.check === null} onClick={() => void connect(subject)}>
-              {result?.check === null && <Spinner />}
-              Connect
+            <Button size="sm" type="button" variant="secondary" loading={result?.check === null} onClick={() => void connect(subject)}>
+              {result ? "Check again" : "Connect"}
             </Button>
             <Button size="sm" type="button" onClick={onClose}>
               Done
@@ -85,18 +81,16 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
       }
     >
       {confirmsRemove && (
-        <Alert variant="warning">
-          <AlertCircleIcon aria-hidden />
-          <AlertTitle>Remove {name || "this account"}?</AlertTitle>
-          <AlertDescription>Its guru stops being copied once you start copying with this change. Shares in it stay with Alpaca.</AlertDescription>
-          <AlertAction>
-            <Button type="button" size="xs" variant="outline" onClick={() => setConfirmsRemove(false)}>
+        <Alert tone="warning" title={`Remove ${name || "this account"}?`}>
+          Its guru stops being copied once you start copying with this change. Shares in it stay with Alpaca.
+          <div className={styles.footerEnd} style={{ marginTop: 8 }}>
+            <Button type="button" size="sm" variant="secondary" onClick={() => setConfirmsRemove(false)}>
               Keep
             </Button>
             <Button
               type="button"
-              size="xs"
-              variant="destructive"
+              size="sm"
+              variant="danger"
               onClick={() => {
                 onClose()
                 removeAccount(uid)
@@ -104,25 +98,16 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
             >
               Remove account
             </Button>
-          </AlertAction>
+          </div>
         </Alert>
       )}
       {copying && (
-        <Alert variant="info">
-          <AlertCircleIcon aria-hidden />
-          <AlertTitle>Copying is running</AlertTitle>
-          <AlertDescription>Apply limits now changes only this account’s limits, from the next order. Any other change is applied from the start bar, which restarts copying for a few seconds.</AlertDescription>
+        <Alert tone="info" title="Copying is running">
+          Apply limits now changes only this account’s limits, from the next order. Any other change is applied from the bar below, which restarts copying for a few seconds.
         </Alert>
       )}
-      <FieldGroup>
-        <TextField
-          label="Name"
-          hint="Letters, digits, “-” and “_”."
-          error={nameProblem}
-          value={account.name}
-          onChange={(value) => editAccount(uid, (a) => ({ ...a, name: value }))}
-          placeholder="e.g. primary"
-        />
+      <div className={styles.fields}>
+        <TextField label="Name" hint="Letters, digits, “-” and “_”." error={nameProblem} value={account.name} onChange={(value) => editAccount(uid, (a) => ({ ...a, name: value }))} placeholder="e.g. primary" />
         <ChoiceField
           label="Environment"
           value={account.environment}
@@ -132,105 +117,80 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
           ]}
           onChange={(environment) => editAccount(uid, (a) => ({ ...a, environment }))}
         />
-        {account.environment === "live" && (
-          <Alert variant="warning">
-            <AlertCircleIcon aria-hidden />
-            <AlertTitle>Live accounts place real orders with real money.</AlertTitle>
-          </Alert>
-        )}
-      </FieldGroup>
+        {account.environment === "live" && <Alert tone="warning" title="Live accounts place real orders with real money." />}
+      </div>
 
-      <FieldSet>
-        <FieldLegend>Alpaca keys</FieldLegend>
-        <FieldGroup>
-          <TextField
-            label="API key"
-            hint={savedKeys ? "Kept encrypted on this Mac. Leave blank to keep the saved keys." : "Kept encrypted on this Mac, never in the setup file."}
-            value={account.key}
-            onChange={(key) => editAccount(uid, (a) => ({ ...a, key }))}
-            type="password"
-            placeholder={savedKeys ? "Saved" : "Required"}          />
-          <TextField
-            label="API secret"
-            value={account.secret}
-            onChange={(secret) => editAccount(uid, (a) => ({ ...a, secret }))}
-            type="password"
-            placeholder={savedKeys ? "Saved" : "Required"}          />
-        </FieldGroup>
+      <fieldset className={styles.fieldset}>
+        <legend>Alpaca keys</legend>
+        <TextField
+          label="API key"
+          hint={savedKeys ? "Kept encrypted on this Mac. Leave blank to keep the saved keys." : "Kept encrypted on this Mac, never in the setup file."}
+          value={account.key}
+          onChange={(key) => editAccount(uid, (a) => ({ ...a, key }))}
+          type="password"
+          placeholder={savedKeys ? "Saved" : "Required"}
+        />
+        <TextField label="API secret" value={account.secret} onChange={(secret) => editAccount(uid, (a) => ({ ...a, secret }))} type="password" placeholder={savedKeys ? "Saved" : "Required"} />
         <CheckNotice subject={subject} result={result} notice={s.notices[subject]} />
-      </FieldSet>
+      </fieldset>
 
-      <FieldSet>
-        <FieldLegend>Position limits (USD)</FieldLegend>
-        <FieldGroup>
-          {LIMITS.map(({ key, label, hint }) => (
+      <fieldset className={styles.fieldset}>
+        <legend>Position limits</legend>
+        {LIMITS.map(({ key, label, hint, kind }) =>
+          kind === "usd" ? (
+            <MoneyField key={key} label={label} hint={hint} value={account.policy[key]} onChange={(value) => editPolicy(uid, { [key]: value })} />
+          ) : (
             <TextField key={key} label={label} hint={hint} value={account.policy[key]} onChange={(value) => editPolicy(uid, { [key]: value })} inputMode="decimal" />
-          ))}
-        </FieldGroup>
-      </FieldSet>
+          ),
+        )}
+      </fieldset>
 
-      <FieldSet>
-        <FieldLegend>Timing</FieldLegend>
-        <FieldGroup>
-          {TIMING.map(({ key, label, hint }) => (
-            <TextField
-              key={key}
-              label={label}
-              hint={hint}
-              value={String(account.policy[key])}
-              onChange={(value) => Number.isFinite(Number(value)) && editPolicy(uid, { [key]: Number(value) })}
-              inputMode="numeric"
-            />
-          ))}
-        </FieldGroup>
-      </FieldSet>
+      <fieldset className={styles.fieldset}>
+        <legend>Timing</legend>
+        {TIMING.map(({ key, label, hint }) => (
+          <NumberInput key={key} label={label} hint={hint} value={account.policy[key]} onChange={(value) => editPolicy(uid, { [key]: value })} />
+        ))}
+      </fieldset>
 
-      <FieldSet>
-        <FieldLegend>Behavior</FieldLegend>
-        <FieldGroup>
+      <fieldset className={styles.fieldset}>
+        <legend>Behavior</legend>
+        <div className={styles.switches}>
           <SwitchField
             title="Trade in extended hours"
-            hint="4:00–9:30 AM and 4:00–8:00 PM New York time, with limit orders."
+            hint="4:00 to 9:30 AM and 4:00 to 8:00 PM New York time, with limit orders."
             checked={account.policy.extended_hours}
             // Overnight runs only with extended hours, so turning those off ends it too.
             onChange={(on) => editPolicy(uid, on ? { extended_hours: true } : { extended_hours: false, overnight: false })}
           />
           <SwitchField
             title="Trade overnight"
-            hint="8:00 PM–4:00 AM New York time. Needs extended hours."
+            hint="8:00 PM to 4:00 AM New York time. Needs extended hours."
             checked={account.policy.overnight}
             onChange={(on) => editPolicy(uid, on ? { overnight: true, extended_hours: true } : { overnight: false })}
           />
-          <SwitchField
-            title="Copy exits"
-            hint="Off means you sell copied shares yourself."
-            checked={account.policy.copy_exits}
-            onChange={(copy_exits) => editPolicy(uid, { copy_exits })}
-          />
+          <SwitchField title="Copy exits" hint="Off means you sell copied shares yourself." checked={account.policy.copy_exits} onChange={(copy_exits) => editPolicy(uid, { copy_exits })} />
           <SwitchField
             title="Ask me before sending orders"
             hint="No order goes out by itself: each waits for you to approve it from its post in Activity."
             checked={account.policy.approve_orders}
             onChange={(approve_orders) => editPolicy(uid, { approve_orders })}
           />
-          <ChoiceField
-            label="After a restart"
-            hint={account.policy.recovery_preference === "automatic" ? "Buys again once its checks pass." : "Buys wait for your Start copying."}
-            value={account.policy.recovery_preference}
-            choices={[
-              { value: "manual", label: "Wait for me" },
-              { value: "automatic", label: "Resume" },
-            ]}
-            onChange={(recovery_preference) => editPolicy(uid, { recovery_preference })}
-          />
-        </FieldGroup>
-        <p className="text-muted-foreground text-xs">Only shares CopyTrading bought are ever sold. Your own shares are never touched.</p>
-      </FieldSet>
+        </div>
+        <ChoiceField
+          label="After a restart"
+          hint={account.policy.recovery_preference === "automatic" ? "Buys again once its checks pass." : "Buys wait for your Start copying."}
+          value={account.policy.recovery_preference}
+          choices={[
+            { value: "manual", label: "Wait for me" },
+            { value: "automatic", label: "Resume" },
+          ]}
+          onChange={(recovery_preference) => editPolicy(uid, { recovery_preference })}
+        />
+        <p className={styles.note}>Only shares CopyTrading bought are ever sold. Your own shares are never touched.</p>
+      </fieldset>
       {applyError && (
-        <Alert variant="destructive">
-          <AlertCircleIcon aria-hidden />
-          <AlertTitle>Limits not applied</AlertTitle>
-          <AlertDescription>{applyError}</AlertDescription>
+        <Alert tone="danger" title="Limits not applied">
+          {applyError}
         </Alert>
       )}
     </EditorSheet>

@@ -1,0 +1,17 @@
+.connect, .connect *, .connect *::before, .connect *::after { box-sizing: border-box; }
+.connect { position: relative; z-index: 1; display: inline-flex; height: 32px; flex: none; align-items: center; border: 1px solid var(--border); border-radius: var(--radius-pill); padding: 0 12px 0 10px; background: var(--surface); color: var(--foreground); font-size: 13px; font-weight: 500; line-height: 1; white-space: nowrap; transition: background-color var(--duration-standard) var(--ease-standard), border-color var(--duration-standard) var(--ease-standard), color var(--duration-fast) var(--ease-standard); }
+.connect[data-status="connecting"] { color: var(--text-secondary); }
+.connect[data-status="connected"] { border-color: color-mix(in oklab, var(--accent) 30%, var(--border)); background: color-mix(in oklab, var(--accent) 8%, var(--surface)); }
+.connect[data-status="idle"]:active { background: var(--surface-muted); }
+.connectSlot { position: relative; display: inline-flex; align-items: center; clip-path: inset(-50% -12px -50% -10px); }
+.connectContent { display: inline-flex; flex: none; align-items: center; }
+.connectPhase { display: inline-flex; align-items: center; gap: 6px; }
+.phaseIcon { display: grid; width: 16px; height: 16px; flex: none; place-items: center; }
+.connect[data-status="connected"] .phaseIcon { color: var(--accent); }
+.spinner { width: 13px; height: 13px; border: 1.5px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: integrations-spin .7s linear infinite; }
+.connectHit { position: absolute; inset: -1px; border: 0; border-radius: inherit; padding: 0; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.connectHit[aria-busy="true"] { cursor: progress; }
+.connect:has(.connectHit:focus-visible) { border-color: var(--border-strong); }
+@keyframes integrations-spin { to { transform: rotate(360deg); } }
+  .spinner { animation: none; }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } .connect { transition: none; } }

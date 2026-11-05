@@ -1,21 +1,24 @@
 import { useState } from "react"
 import type { AgentAuditEntry, AgentProposal, TradingConfiguration } from "../../../shared/contract"
 import { Meta } from "@/components/meta"
-import { RegionError } from "@/components/region-error"
-import { Badge } from "@/components/reui/badge"
-import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item"
+import { Badge } from "@/components/arc/badge/badge"
 import { readClock } from "@/lib/clock"
 import { dateTime } from "@/lib/format"
 import { useResult } from "@/lib/use-result"
 import { AgentAccess } from "./AgentAccess"
 import { Note } from "./Note"
+import { SectionError } from "./SectionError"
 import { ProposalActions } from "./ProposalActions"
 import { SettingsRow } from "./SettingsRow"
+import styles from "./settings.module.css"
 import { SectionSkeleton, SettingsSection } from "./SettingsSection"
 import { accountOf, auditWhen, auditWho, auditOutcome, callerName, canApprove, isLive, limitRows, summary } from "./proposals"
 import { humanCode } from "./words"
 
 const AUDIT_SHOWN = 10
+
+/** The audit list names tones in the old badge words; these are the new badge's. */
+const outcomeTone = (tone: string) => (tone === "success" ? "info" : tone === "warning" ? "warning" : tone === "destructive" ? "danger" : "neutral")
 
 function ProposalRow({ proposal, setup, onDecided }: { proposal: AgentProposal; setup: TradingConfiguration | null; onDecided: (outcome: string | null) => void }) {
   const rows = limitRows(proposal, setup)
@@ -26,20 +29,18 @@ function ProposalRow({ proposal, setup, onDecided }: { proposal: AgentProposal; 
     ...(canApprove(proposal) ? [] : ["This changes the saved setup, which this version cannot apply yet. You can reject it."]),
   ]
   return (
-    <Item size="sm" className="rounded-none border-0">
-      <ItemContent>
-        <ItemTitle>
+    <div className={styles.proposal}>
+      <div className={styles.rowText}>
+        <h4>
           {summary(proposal)}
-          {accountOf(proposal) && isLive(proposal, setup) && <Badge variant="warning-light">Live</Badge>}
-        </ItemTitle>
-        <ItemDescription className="line-clamp-none">
+          {accountOf(proposal) && isLive(proposal, setup) && <Badge tone="warning">Live</Badge>}
+        </h4>
+        <div className={styles.rowDescription}>
           <Meta text={lines.join("\n")} />
-        </ItemDescription>
-      </ItemContent>
-      <ItemActions>
-        <ProposalActions proposal={proposal} onDecided={onDecided} />
-      </ItemActions>
-    </Item>
+        </div>
+      </div>
+      <ProposalActions proposal={proposal} onDecided={onDecided} />
+    </div>
   )
 }
 
@@ -49,8 +50,8 @@ function Waiting({ onDecided }: { onDecided: () => void }) {
   const setup = useResult(() => window.copytrading.read.getSetup(), "setup")
   // What became of the last request the owner approved: the row leaves the list, so its outcome is kept here.
   const [outcome, setOutcome] = useState<string | null>(null)
-  if (proposals.status === "loading") return <SectionSkeleton rows={2} />
-  if (proposals.status === "error") return <RegionError title="Requests did not load" message={proposals.error} onRetry={proposals.retry} />
+  if (proposals.status === "loading") return <SectionSkeleton rows={2} label="Loading" />
+  if (proposals.status === "error") return <SectionError title="Requests did not load" message={proposals.error} onRetry={proposals.retry} />
   const waiting = proposals.data.filter((p) => p.state === "pending")
   const configuration = setup.status === "ready" ? (setup.data?.configuration ?? null) : null
   const decided = (result: string | null) => {
@@ -61,7 +62,7 @@ function Waiting({ onDecided }: { onDecided: () => void }) {
   return (
     <>
       {outcome && <Note note={{ kind: outcome.startsWith("Done") ? "done" : "problem", text: outcome }} />}
-      <SettingsSection title="Waiting for You" hint="Approve only what you asked for.">
+      <SettingsSection title="Waiting for you" hint="Approve only what you asked for.">
         {waiting.length === 0 ? (
           <SettingsRow title="Nothing is waiting" />
         ) : (
@@ -76,8 +77,8 @@ function AuditRow({ entry, now }: { entry: AgentAuditEntry; now: Date }) {
   const outcome = auditOutcome(entry)
   return (
     <SettingsRow title={humanCode(entry.operation)} description={auditWho(entry)}>
-      <span className="text-muted-foreground text-xs tabular-nums">{auditWhen(entry, now)}</span>
-      <Badge variant={outcome.tone === "outline" ? "outline" : outcome.tone === "secondary" ? "secondary" : `${outcome.tone}-light`}>{outcome.text}</Badge>
+      <span className={styles.valueMuted}>{auditWhen(entry, now)}</span>
+      <Badge tone={outcomeTone(outcome.tone)}>{outcome.text}</Badge>
     </SettingsRow>
   )
 }
@@ -85,11 +86,11 @@ function AuditRow({ entry, now }: { entry: AgentAuditEntry; now: Date }) {
 /** The newest recorded requests and owner decisions. */
 function Recent({ version }: { version: number }) {
   const audit = useResult(() => window.copytrading.read.getAgentAudit({ limit: 20 }), `agent-audit:${version}`)
-  if (audit.status === "loading") return <SectionSkeleton rows={2} />
-  if (audit.status === "error") return <RegionError title="Recent requests did not load" message={audit.error} onRetry={audit.retry} />
+  if (audit.status === "loading") return <SectionSkeleton rows={2} label="Loading" />
+  if (audit.status === "error") return <SectionError title="Recent requests did not load" message={audit.error} onRetry={audit.retry} />
   const now = readClock()
   return (
-    <SettingsSection title="Recent Requests">
+    <SettingsSection title="Recent requests">
       {audit.data.length === 0 ? (
         <SettingsRow title="No requests yet" />
       ) : (
@@ -104,7 +105,7 @@ export function AgentsPage() {
   // A decision adds to the recent list, so it is read again after one.
   const [decisions, setDecisions] = useState(0)
   return (
-    <div className="flex flex-col gap-5">
+    <div className={styles.page}>
       <AgentAccess />
       <Waiting onDecided={() => setDecisions((n) => n + 1)} />
       <Recent version={decisions} />

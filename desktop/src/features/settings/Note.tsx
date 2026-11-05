@@ -1,7 +1,4 @@
-import { CircleCheckIcon } from "@/components/icons/CircleCheckIcon"
-import { TriangleAlertIcon } from "@/components/icons/TriangleAlertIcon"
-import { Alert, AlertDescription } from "@/components/reui/alert"
-import { Spinner } from "@/components/ui/spinner"
+import { Alert } from "@/components/arc/alert/alert"
 
 /** The latest word from a long action: progress, an outcome, or a problem. */
 export interface NoteState {
@@ -11,10 +8,5 @@ export interface NoteState {
 
 export function Note({ note }: { note: NoteState }) {
   const { kind, text } = note
-  return (
-    <Alert variant={kind === "working" ? "info" : kind === "done" ? "success" : "warning"} role={kind === "problem" ? "alert" : "status"}>
-      {kind === "working" ? <Spinner /> : kind === "done" ? <CircleCheckIcon aria-hidden /> : <TriangleAlertIcon aria-hidden />}
-      <AlertDescription>{text}</AlertDescription>
-    </Alert>
-  )
+  return <Alert tone={kind === "working" ? "info" : kind === "done" ? "success" : "warning"} title={text} />
 }

@@ -1,0 +1,62 @@
+.page { display: grid; gap: 24px; }
+.page > * { min-width: 0; }
+
+.group { display: grid; gap: 4px; }
+.group h3 { margin: 0; color: var(--text-secondary); font-size: var(--text-sm); font-weight: 500; line-height: var(--leading-body); }
+.hint { margin: 0; color: var(--text-muted); font-size: var(--text-xs); }
+.rows { display: grid; }
+.rows > * + * { border-top: 1px solid var(--border-subtle); }
+
+.row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 24px; min-height: 52px; padding: 12px 0; }
+.row[data-stacked] { grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: start; }
+.rowText { display: grid; min-width: 0; gap: 2px; }
+.rowTitle { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: var(--text-sm); font-weight: 500; line-height: 20px; }
+.rowDescription { display: grid; gap: 2px; color: var(--text-muted); font-size: var(--text-xs); line-height: var(--leading-body); }
+.rowDescription[data-tone="caution"] { color: var(--warning); }
+.rowControl { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }
+.row[data-stacked] .rowControl { justify-content: flex-start; }
+.value { color: var(--text-secondary); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
+.valueMuted { color: var(--text-muted); font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
+.mono { font-family: var(--font-mono, ui-monospace, monospace); font-size: var(--text-xs); }
+
+.field { width: min(100%, 288px); }
+.problems { display: grid; gap: 16px; }
+
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.toolbarEnd { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.search { width: 192px; }
+
+.journal { display: grid; grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); align-items: start; gap: 16px; }
+.journalList { display: grid; max-height: 512px; margin: 0; padding: 0; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-panel); list-style: none; }
+.journalItem { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 8px; padding: 10px 12px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; content-visibility: auto; contain-intrinsic-size: auto 52px; transition: background-color var(--duration-fast) var(--ease-standard); }
+.journalItem + .journalItem { border-top: 1px solid var(--border-subtle); }
+.journalItem[aria-selected="true"] { background: var(--surface-muted); }
+@media (hover: hover) and (pointer: fine) { .journalItem:hover { background: var(--surface-muted); } }
+.journalItem svg { margin-top: 2px; color: var(--text-muted); }
+.journalItem[data-problem] svg { color: var(--warning); }
+.journalTop { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; font-size: var(--text-sm); font-weight: 500; }
+.journalTop span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.journalTop span:last-child { color: var(--text-muted); font-size: var(--text-xs); font-weight: 400; font-variant-numeric: tabular-nums; }
+.journalSub { color: var(--text-muted); font-size: var(--text-xs); }
+.detail { display: grid; gap: 12px; min-width: 0; }
+.detailHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.detailHead h3 { margin: 0; font-size: var(--text-sm); font-weight: 500; }
+.payload { max-height: 384px; margin: 4px 0 0; overflow: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-panel); padding: 12px; font-family: var(--font-mono, ui-monospace, monospace); font-size: var(--text-xs); overflow-wrap: anywhere; white-space: pre-wrap; }
+.breakAll { max-width: 288px; overflow-wrap: anywhere; text-align: right; }
+
+.proposal { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: start; padding: 14px 0; }
+.proposal h4 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: var(--text-sm); font-weight: 500; }
+.proposalActions { display: grid; justify-items: end; gap: 6px; }
+.proposalButtons { display: flex; gap: 8px; }
+.proposalMessage { margin: 0; max-width: 256px; color: var(--text-muted); font-size: var(--text-xs); text-align: right; }
+.gate { display: grid; gap: 6px; }
+.gate .proposalButtons > * { flex: 1; }
+.gate .proposalMessage { max-width: none; text-align: left; }
+
+@container (max-width: 640px) {
+  .journal { grid-template-columns: minmax(0, 1fr); }
+  .row { gap: 16px; }
+  .proposal { grid-template-columns: minmax(0, 1fr); }
+  .proposalActions { justify-items: start; }
+}
+@media (prefers-reduced-motion: reduce) { .journalItem { transition: none; } }

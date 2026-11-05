@@ -1,137 +1,93 @@
-import { useEffect, useId, useState } from "react"
-import { Badge } from "@/components/reui/badge"
-import { Frame, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"
-import { RegionError } from "@/components/region-error"
-import { Button } from "@/components/ui/button"
-import { Item, ItemContent, ItemGroup, ItemSeparator } from "@/components/ui/item"
-import { Skeleton } from "@/components/ui/skeleton"
-import { StartBar } from "@/features/connections/StartBar"
+import { useEffect } from "react"
+import { Tick02Icon } from "@/components/icons/Tick02Icon"
+import { Button } from "@/components/arc/button/button"
+import { Skeleton } from "@/components/arc/skeleton/skeleton"
+import { StartControls } from "@/features/connections/StartBar"
 import { derive } from "@/features/connections/derive"
 import { refreshStatus, useSetup } from "@/features/connections/setup-store"
 import { STEPS } from "@/features/connections/state"
+import { SectionError } from "@/features/settings/SectionError"
 import { navigate } from "@/features/shell/route"
 import { BEFORE_YOU_GO } from "./before-you-go"
-import { OnboardingStepper } from "./OnboardingStepper"
+import styles from "./getting-started.module.css"
 
-// One short line under each step in the rail (onboarding-2 gives each step a few words); the full sentence is in the panel.
-const RAIL_LINES: Record<(typeof STEPS)[number]["id"], string> = {
-  discord: "Channels and token.",
-  interpreter: "The AI model.",
-  account: "Where orders go.",
-  guru: "Who to copy.",
-  start: "Test, save and begin.",
-}
-
-/** What is connected, what is left, and the one Start copying: the five setup steps as a status list, then what to know before copying. */
+/** What is connected, what is left, and the one Start copying: the five setup steps as a checklist, then what to know before copying. */
 export function GettingStartedScreen() {
   const s = useSetup()
   const derived = derive(s)
-  const id = useId()
-  const panelId = `${id}-panel`
-  const [picked, setPicked] = useState<number | null>(null)
 
   useEffect(() => {
     const timer = setInterval(() => void refreshStatus(), 5000)
     return () => clearInterval(timer)
   }, [])
 
-  if (s.load.status === "error") return <RegionError title="Getting started did not load" message={s.load.error} onRetry={s.retry} />
-  if (!derived) return <GettingStartedSkeleton />
+  if (s.load.status === "error") return <SectionError title="Getting started did not load" message={s.load.error} onRetry={s.retry} />
+  if (!derived) return <div className={styles.page}><Skeleton label="Loading setup steps" lines={5} /></div>
 
   const { progress } = derived
-  const next = STEPS.findIndex((step) => step.id === progress.next) + 1
-  const current = picked ?? (next || STEPS.length)
-  const selected = STEPS[current - 1]!
-  const selectedDone = progress.done.has(selected.id)
+  const done = STEPS.filter((step) => progress.done.has(step.id)).length
+  const left = STEPS.length - done
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
-      <header className="flex flex-col gap-0.5">
-        <h1 className="text-xl font-semibold tracking-tight">Getting Started</h1>
-        {progress.next && <p className="text-muted-foreground text-sm">About 10 minutes. Have your Discord, AI provider, and Alpaca logins at hand.</p>}
-      </header>
+    <div className={styles.page}>
+      <section className={styles.release} aria-labelledby="setup-title">
+        <header className={styles.header}>
+          <h2 id="setup-title">Set up copying</h2>
+          {progress.next && <p>About 10 minutes. Have your Discord, AI provider, and Alpaca logins at hand.</p>}
+        </header>
 
-      <Frame>
-        <FramePanel className="grid min-w-0 gap-6 sm:grid-cols-[14rem_minmax(0,1fr)]">
-          <OnboardingStepper
-            currentStep={current}
-            onStepChange={setPicked}
-            panelId={panelId}
-            steps={STEPS.map((step, index) => ({ id: step.id, value: index + 1, label: step.title, description: RAIL_LINES[step.id], done: progress.done.has(step.id) }))}
-          />
-          <div id={panelId} className="flex min-w-0 flex-col items-start gap-3 sm:border-l sm:pl-6">
-            <div className="flex min-w-0 flex-col gap-1.5">
-              <div className="flex min-w-0 items-center gap-2">
-                <h2 className="truncate text-sm font-semibold">{selected.title}</h2>
-                <Badge variant={selectedDone ? "success-light" : "outline"}>{selectedDone ? "Done" : selected.id === "start" ? "Not started" : "To do"}</Badge>
-              </div>
-              <p className="text-muted-foreground text-sm text-pretty">{selected.detail}</p>
-            </div>
-            {current < STEPS.length && (
-              <Button type="button" variant="outline" size="sm" onClick={() => navigate("settings", "connections")}>
-                Open Connections
-              </Button>
-            )}
+        <div className={styles.progress}>
+          <div className={styles.progressMeta}>
+            <span aria-live="polite">{left ? `${left} ${left === 1 ? "step" : "steps"} left` : "Ready to copy"}</span>
+            <span className={styles.count}>
+              {done} of {STEPS.length}
+            </span>
           </div>
-        </FramePanel>
-      </Frame>
+          <div className={styles.track} role="progressbar" aria-label="Setup progress" aria-valuemin={0} aria-valuemax={STEPS.length} aria-valuenow={done}>
+            <span className={styles.fill} style={{ transform: `translateX(${(done / STEPS.length - 1) * 100}%)` }} />
+          </div>
+        </div>
 
-      <StartBar s={s} derived={derived} />
-
-      <Frame>
-        <FrameHeader>
-          <FrameTitle>Before you go</FrameTitle>
-        </FrameHeader>
-        <FramePanel className="p-0!">
-          <ItemGroup className="gap-0">
-            {BEFORE_YOU_GO.map((note, index) => (
-              <div key={note.lead}>
-                {index > 0 && <ItemSeparator className="my-0" />}
-                <Item size="sm">
-                  <ItemContent>
-                    <p className="text-sm">
-                      <span className="font-medium">{note.lead}</span> <span className="text-muted-foreground">{note.rest}</span>
-                    </p>
-                  </ItemContent>
-                </Item>
-              </div>
-            ))}
-          </ItemGroup>
-        </FramePanel>
-      </Frame>
-    </div>
-  )
-}
-
-/** The rail, the step and the notes in their real layout while the setup is read. */
-function GettingStartedSkeleton() {
-  return (
-    <div role="status" aria-label="Loading setup steps" className="mx-auto flex w-full max-w-3xl flex-col gap-5">
-      <div className="flex flex-col gap-1.5">
-        <Skeleton className="h-7 w-44" />
-        <Skeleton className="h-4 w-80" />
-      </div>
-      <Frame>
-        <FramePanel className="grid gap-6 sm:grid-cols-[14rem_minmax(0,1fr)]">
-          <div className="flex flex-col gap-4">
-            {STEPS.map((step) => (
-              <div key={step.id} className="flex gap-2.5">
-                <Skeleton className="size-5 rounded-full" />
-                <div className="flex flex-1 flex-col gap-1.5">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-3.5 w-24" />
+        <ol className={styles.tasks} aria-label="Setup steps" style={{ margin: 0, padding: 0, listStyle: "none" }}>
+          {STEPS.map((step) => {
+            const isDone = progress.done.has(step.id)
+            return (
+              <li key={step.id} className={styles.task} data-done={isDone || undefined}>
+                <span className={styles.mark} aria-hidden="true">
+                  {isDone && <Tick02Icon width={12} height={12} />}
+                </span>
+                <div className={styles.taskCopy}>
+                  <span className={styles.taskLabel}>
+                    {step.title}
+                    <span className={styles.srOnly}>{isDone ? ", done" : ", to do"}</span>
+                  </span>
+                  <span className={styles.taskDetail}>{step.detail}</span>
                 </div>
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-col gap-3 sm:border-l sm:pl-6">
-            <Skeleton className="h-4 w-48" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-8 w-36" />
-          </div>
-        </FramePanel>
-      </Frame>
-      <Skeleton className="h-16 w-full" />
+                {!isDone && step.id !== "start" && (
+                  <Button type="button" variant="secondary" size="sm" onClick={() => navigate("settings", "connections")}>
+                    Open Connections
+                  </Button>
+                )}
+              </li>
+            )
+          })}
+        </ol>
+
+        <footer className={styles.footer}>
+          <StartControls s={s} derived={derived} />
+        </footer>
+      </section>
+
+      <section className={styles.notes} aria-labelledby="before-you-go">
+        <h3 id="before-you-go">Before you go</h3>
+        <ul>
+          {BEFORE_YOU_GO.map((note) => (
+            <li key={note.lead}>
+              <strong style={{ fontWeight: 500 }}>{note.lead}</strong> <span>{note.rest}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   )
 }

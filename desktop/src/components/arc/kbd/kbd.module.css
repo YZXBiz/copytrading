@@ -1,0 +1,47 @@
+/* A combination is a row of caps; a single key is one cap. Everything sizes from --kbd-h so caps sit inline with text. */
+.kbd { --kbd-h: 22px; --kbd-pad: 6px; --kbd-radius: 6px; --kbd-gap: 3px; --kbd-ledge: 1px; display: inline-flex; align-items: center; gap: var(--kbd-gap); margin: 0; padding: 0 0 var(--kbd-ledge); font: inherit; font-family: var(--font-body); font-size: var(--text-xs); font-weight: 500; letter-spacing: 0; line-height: 1; vertical-align: middle; white-space: nowrap; }
+.sm { --kbd-h: 18px; --kbd-pad: 4px; --kbd-radius: 5px; --kbd-gap: 2px; font-size: 11px; }
+.md { --kbd-h: 22px; }
+.lg { --kbd-h: 28px; --kbd-pad: 8px; --kbd-radius: 8px; --kbd-gap: 4px; --kbd-ledge: 2px; font-size: 13px; }
+.slot { display: inline-flex; }
+
+/* The cap rests on a hairline ledge. Pressing drops it onto the ledge fast; letting go springs it back up. */
+.key {
+  --kbd-face: var(--surface);
+  --kbd-edge: color-mix(in oklab, var(--foreground) 13%, var(--surface));
+  --kbd-under: color-mix(in oklab, var(--foreground) 17%, var(--surface));
+  display: inline-flex;
+  box-sizing: border-box;
+  min-width: var(--kbd-h);
+  height: var(--kbd-h);
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--kbd-pad);
+  border: 1px solid var(--kbd-edge);
+  border-radius: var(--kbd-radius);
+  background: var(--kbd-face);
+  box-shadow: 0 var(--kbd-ledge) 0 var(--kbd-under);
+  color: var(--text-secondary);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  transition: transform var(--duration-spring) var(--ease-spring), box-shadow var(--duration-standard) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
+}
+.key[data-pressed] {
+  transform: translateY(var(--kbd-ledge));
+  box-shadow: 0 0 0 var(--kbd-under);
+  background: color-mix(in oklab, var(--foreground) 4%, var(--kbd-face));
+  color: var(--foreground);
+  transition-duration: 50ms;
+  transition-timing-function: var(--ease-standard);
+}
+:global(:root[data-theme="dark"]) .key {
+  --kbd-face: var(--surface-raised);
+  --kbd-edge: color-mix(in oklab, var(--foreground) 14%, var(--surface-raised));
+  --kbd-under: oklch(0% 0 0 / .5);
+}
+.glyph { display: inline-flex; align-items: center; }
+.hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .key, .key[data-pressed] { transform: none; transition: background-color var(--duration-instant) var(--ease-standard), color var(--duration-instant) var(--ease-standard), box-shadow var(--duration-instant) var(--ease-standard); }
+}

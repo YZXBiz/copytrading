@@ -1,50 +1,30 @@
 import { useMemo } from "react"
-import { Globe02Icon } from "@/components/icons/Globe02Icon"
-import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "@/components/ui/combobox"
-import { Field } from "@/components/ui/field"
-import { InputGroupAddon } from "@/components/ui/input-group"
+import { Combobox } from "@/components/arc/combobox/combobox"
 import { NEW_YORK, allTimeZones, setTimeZone, useTimeZone, zoneLabel } from "@/lib/time-zone"
+import styles from "./settings.module.css"
 
-interface Choice {
-  /** The IANA name, or undefined for the Mac's own zone. */
-  zone: string | undefined
-  label: string
-}
+const AUTOMATIC = "automatic"
 
 /** Automatic, New York's market time, then every zone by city and name. Typing narrows the list. */
 export function TimeZoneField() {
   const zone = useTimeZone()
-  const choices = useMemo<Choice[]>(() => {
+  const options = useMemo(() => {
     const at = new Date()
     const rest = allTimeZones().filter((z) => z !== NEW_YORK)
-    return [undefined, NEW_YORK, ...rest].map((z) => ({ zone: z, label: zoneLabel(z, at) }))
+    return [AUTOMATIC, NEW_YORK, ...rest].map((z) => ({ value: z, label: zoneLabel(z === AUTOMATIC ? undefined : z, at) }))
   }, [])
-  const selected = choices.find((c) => c.zone === zone) ?? { zone, label: zoneLabel(zone) }
+  const value = zone ?? AUTOMATIC
+  const known = options.some((option) => option.value === value)
   return (
-    <Field className="w-72">
+    <div className={styles.field}>
       <Combobox
-        items={choices}
-        value={selected}
-        onValueChange={(choice: Choice | null) => choice && setTimeZone(choice.zone)}
-        isItemEqualToValue={(a: Choice, b: Choice) => a.zone === b.zone}
-        itemToStringLabel={(choice: Choice) => choice.label}
-      >
-        <ComboboxInput aria-label="Show times in" placeholder="City or time zone">
-          <InputGroupAddon>
-            <Globe02Icon className="text-muted-foreground size-4" aria-hidden />
-          </InputGroupAddon>
-        </ComboboxInput>
-        <ComboboxContent>
-          <ComboboxEmpty>No time zone matches.</ComboboxEmpty>
-          <ComboboxList>
-            {(choice: Choice) => (
-              <ComboboxItem key={choice.zone ?? "auto"} value={choice}>
-                {choice.label}
-              </ComboboxItem>
-            )}
-          </ComboboxList>
-        </ComboboxContent>
-      </Combobox>
-    </Field>
+        label="Show times in"
+        options={known ? options : [{ value, label: zoneLabel(zone) }, ...options]}
+        value={value}
+        onValueChange={(next) => setTimeZone(next === AUTOMATIC ? undefined : next)}
+        placeholder="City or time zone"
+        emptyMessage="No time zone matches."
+      />
+    </div>
   )
 }

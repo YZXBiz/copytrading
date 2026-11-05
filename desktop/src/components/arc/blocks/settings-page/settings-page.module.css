@@ -1,0 +1,66 @@
+.root { container-type: inline-size; height: 100%; width: min(100%, 980px); min-width: 0; margin-inline: auto; color: var(--foreground); font-family: var(--font-body); letter-spacing: var(--tracking-body); }
+/* Settings density: every shared control inside drops from 44px to 36px. */
+.settings { --control-height-md: var(--control-height-sm); position: relative; display: grid; grid-template-columns: 216px minmax(0, 1fr); height: 100%; min-height: 540px; overflow: hidden; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+
+/* Sidebar: a quiet tinted column. The selected section is the only raised thing in it. */
+.sidebar { display: flex; min-width: 0; min-height: 0; flex-direction: column; gap: 16px; border-right: 1px solid var(--border); padding: 16px 8px 8px; background: color-mix(in oklab, var(--surface-muted) 50%, var(--surface)); }
+.navList { display: flex; flex-direction: column; gap: 1px; margin: 0; padding: 0; list-style: none; }
+.navItem { position: relative; isolation: isolate; display: flex; width: 100%; min-height: 32px; align-items: center; gap: 10px; border: 0; border-radius: 8px; padding: 0 12px; background: transparent; color: var(--text-secondary); font: inherit; font-size: var(--text-sm); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard); }
+.navItem > svg { flex: none; color: var(--text-muted); transition: color var(--duration-fast) var(--ease-standard); }
+.navItem[aria-current="page"], .navItem[aria-current="page"] > svg { color: var(--foreground); }
+@media (hover: hover) and (pointer: fine) {
+  .navItem:hover, .navItem:hover > svg { color: var(--foreground); }
+  .navItem:not([aria-current]):hover { background: color-mix(in oklab, var(--surface-muted) 70%, transparent); }
+}
+.navItem:not([aria-current]):focus-visible { background: color-mix(in oklab, var(--surface-muted) 70%, transparent); color: var(--foreground); }
+.highlight { position: absolute; z-index: -1; inset: 0; border: 1px solid var(--border); border-radius: inherit; background: var(--surface); box-shadow: var(--shadow-resting); }
+.navLabel { flex: 1; min-width: 0; white-space: nowrap; }
+.navDot { flex: none; width: 6px; height: 6px; border-radius: var(--radius-pill); background: var(--accent); }
+
+/* Content: its own scroll area, so the floating bar always sits over the fields it describes. */
+.main { position: relative; min-width: 0; min-height: 0; }
+.scroller { height: 100%; overflow-y: auto; overscroll-behavior: contain; padding: 24px 32px 112px; scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+.pane { max-width: 600px; }
+.paneHead { margin-bottom: 24px; }
+.paneHead h3 { margin: 0; font-family: var(--font-body); font-size: var(--text-base); font-weight: 500; letter-spacing: var(--tracking-body); line-height: var(--leading-body); outline: none; }
+.paneHead p { margin: 2px 0 0; color: var(--text-secondary); font-size: var(--text-sm); line-height: var(--leading-body); }
+
+
+
+
+
+/* Counters take on the size of the copy around them. */
+.inherit > span { color: inherit; font: inherit; letter-spacing: inherit; }
+
+/* Discard: reverted text surfaces out of a soft blur. Two identical keyframes let the next discard restart it. */
+
+/* Floating unsaved-changes bar. */
+.dock { position: absolute; z-index: 5; right: 0; bottom: 20px; left: 0; display: flex; justify-content: center; padding-inline: 16px; pointer-events: none; }
+.bar { display: flex; max-width: 100%; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--surface-raised); box-shadow: var(--shadow-floating); pointer-events: auto; }
+.barContent { position: relative; display: flex; flex: none; align-items: center; }
+.barEdit { display: flex; align-items: center; gap: 2px; padding: 4px 4px 4px 16px; white-space: nowrap; }
+
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+@container (max-width: 719px) {
+  .settings { height: 680px; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .sidebar { gap: 8px; border-right: 0; border-bottom: 1px solid var(--border); padding: 14px 0 8px; }
+  .navList { flex-direction: row; gap: 2px; overflow-x: auto; padding: 2px 8px; scrollbar-width: none; }
+  .navList::-webkit-scrollbar { display: none; }
+  .navList > li { flex: none; }
+  .navItem { min-height: 32px; gap: 6px; padding: 0 12px; }
+  .navItem > svg { display: none; }
+  .scroller { padding: 20px 20px 104px; }
+  .paneHead { margin-bottom: 20px; }
+}
+@container (max-width: 460px) {
+  .barEdit { padding-left: 16px; }
+  .dock { bottom: 14px; padding-inline: 12px; }
+}
+@container (max-width: 360px) {
+  .scroller { padding-inline: 16px; }
+  .navList { padding-inline: 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .navItem, .navItem > svg { transition: none; }
+}

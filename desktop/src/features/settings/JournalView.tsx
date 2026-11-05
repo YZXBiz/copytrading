@@ -4,16 +4,14 @@ import { Search01Icon } from "@/components/icons/Search01Icon"
 import { Tick02Icon } from "@/components/icons/Tick02Icon"
 import { TriangleAlertIcon } from "@/components/icons/TriangleAlertIcon"
 import type { DiagnosticsPage } from "../../../shared/contract"
-import { RegionError } from "@/components/region-error"
-import { Button } from "@/components/ui/button"
-import { Frame, FramePanel } from "@/components/reui/frame"
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group"
-import { Item, ItemContent, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button } from "@/components/arc/button/button"
+import { EmptyState } from "@/components/arc/empty-state/empty-state"
+import { SearchField } from "@/components/arc/search-field/search-field"
+import SegmentedControl from "@/components/arc/segmented-control/segmented-control"
 import { timeOfDay } from "@/lib/format"
-import { cn } from "cn"
+import { SectionError } from "./SectionError"
+import { SectionSkeleton } from "./SettingsSection"
+import styles from "./settings.module.css"
 import { JournalDetail } from "./JournalDetail"
 import { FILTERS, FILTER_EMPTY, FILTER_TITLE, type Filter, includes, isProblem, outcomeTitle, searchText, title } from "./journal"
 
@@ -46,37 +44,7 @@ function useJournal(onBytes: (bytes: number) => void) {
 }
 
 function EmptyLog({ text }: { text: string }) {
-  return (
-    <Frame>
-      <FramePanel>
-        <Empty className="min-h-40">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <Search01Icon />
-            </EmptyMedia>
-            <EmptyTitle>{text}</EmptyTitle>
-            <EmptyDescription>The log fills in as the engine works.</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      </FramePanel>
-    </Frame>
-  )
-}
-
-/** The filters and the two panes in their real layout while the log is read. */
-function JournalSkeleton() {
-  return (
-    <div role="status" aria-label="Loading the log" className="flex flex-col gap-3">
-      <div className="flex items-center gap-3">
-        <Skeleton className="h-8 w-72" />
-        <Skeleton className="ml-auto h-8 w-48" />
-      </div>
-      <div className="grid grid-cols-[minmax(16rem,20rem)_1fr] gap-4">
-        <Skeleton className="h-72 w-full" />
-        <Skeleton className="h-72 w-full" />
-      </div>
-    </div>
-  )
+  return <EmptyState title={text} description="The log fills in as the engine works." icon={<Search01Icon width={24} height={24} aria-hidden="true" />} />
 }
 
 /** The engine's local log, read straight from disk: searchable, filterable, and readable while the engine is stopped. */
@@ -90,64 +58,47 @@ export function JournalView({ onBytes }: { onBytes: (bytes: number) => void }) {
   const visible = useMemo(() => entries.filter((e) => includes(filter, e) && (!needle || searchText(e).includes(needle))), [entries, filter, needle])
   const entry = visible.find((e) => e.id === selected) ?? visible[0]
 
-  if (state.status === "loading") return <JournalSkeleton />
-  if (state.status === "error") return <RegionError title="The log did not load" message={state.error} onRetry={refresh} />
+  if (state.status === "loading") return <SectionSkeleton rows={4} label="Loading the log" />
+  if (state.status === "error") return <SectionError title="The log did not load" message={state.error} onRetry={refresh} />
   if (entries.length === 0) return <EmptyLog text="Nothing logged yet" />
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <Tabs value={filter} onValueChange={(value) => setFilter(value as Filter)}>
-          <TabsList variant="line">
-            {FILTERS.map((name) => (
-              <TabsTrigger key={name} value={name}>
-                {FILTER_TITLE[name]} <span className="text-muted-foreground tabular-nums">{entries.filter((e) => includes(name, e)).length}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-        <InputGroup className="ml-auto w-48">
-          <InputGroupAddon>
-            <Search01Icon aria-hidden />
-          </InputGroupAddon>
-          <InputGroupInput aria-label="Search the log" placeholder="Search" value={query} onChange={(event) => setQuery(event.target.value)} />
-        </InputGroup>
-        <Button type="button" variant="ghost" size="icon" aria-label="Read the log again" onClick={refresh}>
-          <RefreshIcon />
-        </Button>
+    <div className={styles.page}>
+      <div className={styles.toolbar}>
+        <SegmentedControl
+          label="Filter the log"
+          options={FILTERS.map((name) => ({ value: name, label: FILTER_TITLE[name], accessory: <span className={styles.valueMuted}>{entries.filter((e) => includes(name, e)).length}</span> }))}
+          value={filter}
+          onValueChange={(value) => setFilter(value as Filter)}
+        />
+        <div className={styles.toolbarEnd}>
+          <div className={styles.search}>
+            <SearchField label="Search the log" placeholder="Search" value={query} onValueChange={setQuery} />
+          </div>
+          <Button type="button" variant="ghost" size="sm" aria-label="Read the log again" onClick={refresh}>
+            <RefreshIcon width={16} height={16} aria-hidden="true" />
+          </Button>
+        </div>
       </div>
       {visible.length === 0 ? (
         <EmptyLog text={needle ? `No records match “${query.trim()}”.` : FILTER_EMPTY[filter]} />
       ) : (
-        <div className="grid min-h-0 grid-cols-[minmax(16rem,20rem)_1fr] items-start gap-4">
-          <Frame dense spacing="sm" className="min-w-0">
-            <FramePanel className="p-0!">
-              <ItemGroup className="max-h-[32rem] gap-0 overflow-y-auto" role="listbox" aria-label="Log records">
+        <div className={styles.journal}>
+          <ul className={styles.journalList} role="listbox" aria-label="Log records">
             {visible.map((row) => (
-              <Item
-                key={row.id}
-                size="xs"
-                role="option"
-                aria-selected={row.id === entry?.id}
-                tabIndex={0}
-                className={cn("cursor-pointer rounded-none border-0 [content-visibility:auto] [contain-intrinsic-size:auto_44px]", row.id === entry?.id && "bg-muted")}
-                onClick={() => setSelected(row.id)}
-                onKeyDown={(event) => (event.key === "Enter" || event.key === " ") && (event.preventDefault(), setSelected(row.id))}
-              >
-                <ItemMedia variant="icon">
-                  {isProblem(row) ? <TriangleAlertIcon className="text-warning-foreground dark:text-warning" aria-hidden /> : <Tick02Icon className="text-muted-foreground" aria-hidden />}
-                </ItemMedia>
-                <ItemContent>
-                  <ItemTitle className="w-full justify-between">
-                    <span className="truncate">{title(row)}</span>
-                    <span className="text-muted-foreground text-xs font-normal tabular-nums">{timeOfDay(row.at)}</span>
-                  </ItemTitle>
-                  <span className="text-muted-foreground text-xs">{outcomeTitle(row)}</span>
-                </ItemContent>
-              </Item>
+              <li key={row.id} role="presentation">
+                <button type="button" role="option" aria-selected={row.id === entry?.id} className={styles.journalItem} style={{ width: "100%" }} data-problem={isProblem(row) || undefined} onClick={() => setSelected(row.id)}>
+                  {isProblem(row) ? <TriangleAlertIcon width={16} height={16} aria-hidden="true" /> : <Tick02Icon width={16} height={16} aria-hidden="true" />}
+                  <span style={{ display: "grid", minWidth: 0 }}>
+                    <span className={styles.journalTop}>
+                      <span>{title(row)}</span>
+                      <span>{timeOfDay(row.at)}</span>
+                    </span>
+                    <span className={styles.journalSub}>{outcomeTitle(row)}</span>
+                  </span>
+                </button>
+              </li>
             ))}
-              </ItemGroup>
-            </FramePanel>
-          </Frame>
+          </ul>
           {entry && <JournalDetail entry={entry} />}
         </div>
       )}
