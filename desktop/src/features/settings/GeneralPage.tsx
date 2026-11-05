@@ -1,4 +1,6 @@
 import type { MenuBarMode, Theme } from "../../../shared/contract"
+import { Button } from "@/components/ui/button"
+import { href } from "@/features/shell/route"
 import { ChoiceField } from "./ChoiceField"
 import { FillAlerts } from "./FillAlerts"
 import { SettingsRow } from "./SettingsRow"
@@ -25,6 +27,13 @@ export function GeneralPage() {
         <ChoiceField title="Menu bar" items={MENU_BAR} read={() => window.copytrading.read.getMenuBar()} write={(mode) => window.copytrading.act.setMenuBar({ mode })} />
         <SettingsRow title="Show times in">
           <TimeZoneField />
+        </SettingsRow>
+      </SettingsSection>
+      <SettingsSection title="Setup">
+        <SettingsRow title="Getting Started">
+          <Button variant="outline" size="sm" render={<a href={href("getting-started")} />}>
+            Open
+          </Button>
         </SettingsRow>
       </SettingsSection>
       <FillAlerts />

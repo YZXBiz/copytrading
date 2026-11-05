@@ -82,7 +82,7 @@ export function GuruPage({ guru, accounts, setUpAccountIds }: { guru: Guru; acco
             icon={filter === "all" ? MessageSquareIcon : FilterIcon}
             title={filter === "all" ? "No posts yet" : "No posts match"}
             description={more ? "Show older to look further back." : "Posts from this guru appear here as they arrive."}
-            action={more ? undefined : filter === "all" ? { label: "Open Connections", onClick: () => navigate("connections") } : { label: "Clear filter", onClick: () => setFilter("all") }}
+            action={more ? undefined : filter === "all" ? { label: "Open Connections", onClick: () => navigate("settings", "connections") } : { label: "Clear filter", onClick: () => setFilter("all") }}
           />
         )}
         {days.length > 0 && <GuruTimeline days={days} guruName={guru.name} now={now} onOpen={setOpen} />}

@@ -42,7 +42,7 @@ export function GurusScreen({ guruId, accounts }: { guruId: string | null; accou
             icon={UsersIcon}
             title={guruId ? "This guru is not in your setup" : "No gurus yet"}
             description="Gurus you copy appear here once they are set up in Connections."
-            action={{ label: "Open Connections", onClick: () => navigate("connections") }}
+            action={{ label: "Open Connections", onClick: () => navigate("settings", "connections") }}
           />
         )}
         {setup.status === "ready" && gurus.length > 0 && (

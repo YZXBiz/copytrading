@@ -9,7 +9,6 @@ const SCREEN: Record<ScreenId, AssistantAskContext["screen"]> = {
   gurus: "people",
   activity: "activity",
   "getting-started": "gettingStarted",
-  connections: "connections",
   settings: "settings",
 }
 
@@ -28,7 +27,7 @@ export function assistantGurus(setup: TradingConfiguration | null): { id: string
 
 export function assistantContext(route: Route, setup: TradingConfiguration | null): AssistantAskContext {
   return {
-    screen: SCREEN[route.screen],
+    screen: route.screen === "settings" && (route.id ?? "connections") === "connections" ? "connections" : SCREEN[route.screen],
     selected_account_id: route.screen === "accounts" ? route.id : null,
     selected_guru_id: route.screen === "gurus" ? route.id : null,
     language: "en",

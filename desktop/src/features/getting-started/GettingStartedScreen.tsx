@@ -68,7 +68,7 @@ export function GettingStartedScreen() {
               <p className="text-muted-foreground text-sm text-pretty">{selected.detail}</p>
             </div>
             {current < STEPS.length && (
-              <Button type="button" variant="outline" size="sm" onClick={() => navigate("connections")}>
+              <Button type="button" variant="outline" size="sm" onClick={() => navigate("settings", "connections")}>
                 Open Connections
               </Button>
             )}

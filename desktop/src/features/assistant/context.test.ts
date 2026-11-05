@@ -23,9 +23,12 @@ describe("assistantGurus", () => {
 
 describe("assistantContext", () => {
   it("names the screen the way the engine does, and the selected account or guru", () => {
-    expect(assistantContext({ screen: "gurus", id: "zhao" }, null)).toEqual({ screen: "people", selected_account_id: null, selected_guru_id: "zhao", language: "en", gurus: [] })
-    expect(assistantContext({ screen: "accounts", id: "a1" }, null)).toMatchObject({ screen: "accounts", selected_account_id: "a1", selected_guru_id: null })
-    expect(assistantContext({ screen: "getting-started", id: null }, null).screen).toBe("gettingStarted")
+    expect(assistantContext({ screen: "gurus", id: "zhao", sub: null }, null)).toEqual({ screen: "people", selected_account_id: null, selected_guru_id: "zhao", language: "en", gurus: [] })
+    expect(assistantContext({ screen: "accounts", id: "a1", sub: null }, null)).toMatchObject({ screen: "accounts", selected_account_id: "a1", selected_guru_id: null })
+    expect(assistantContext({ screen: "getting-started", id: null, sub: null }, null).screen).toBe("gettingStarted")
+    expect(assistantContext({ screen: "settings", id: "connections", sub: null }, null).screen).toBe("connections")
+    expect(assistantContext({ screen: "settings", id: null, sub: null }, null).screen).toBe("connections")
+    expect(assistantContext({ screen: "settings", id: "logs", sub: null }, null).screen).toBe("settings")
   })
 })
 

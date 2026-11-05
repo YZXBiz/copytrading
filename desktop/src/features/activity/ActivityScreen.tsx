@@ -108,7 +108,7 @@ export function ActivityScreen({ selectedSequence, accounts }: { selectedSequenc
                 }
               : posts.hasOlder
                 ? undefined
-                : { label: "Open Connections", onClick: () => navigate("connections") }
+                : { label: "Open Connections", onClick: () => navigate("settings", "connections") }
           }
         />
       )}

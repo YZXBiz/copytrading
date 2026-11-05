@@ -81,7 +81,7 @@ function AssistantBody({ onOpen, wide, onWide, children }: { onOpen: () => void;
         wide={wide}
         onWide={onWide}
         onAsk={ask}
-        onOpenConnections={() => (setOpen(false), navigate("connections"))}
+        onOpenConnections={() => (setOpen(false), navigate("settings", "connections"))}
       />
     </>
   )
