@@ -22,7 +22,8 @@ export function useResult<T>(load: () => Promise<Result<T>>, key: string, everyM
       load().then(
         (result) => {
           if (!current) return
-          if (result.ok) setState({ status: "ready", data: result.value })
+          // An identical re-read keeps the shown object, so charts and lists do not redraw or animate again.
+          if (result.ok) setState((shown) => (shown.status === "ready" && JSON.stringify(shown.data) === JSON.stringify(result.value) ? shown : { status: "ready", data: result.value }))
           else setState((shown) => (quiet && shown.status === "ready" ? shown : { status: "error", error: result.error }))
         },
         (error: unknown) => {

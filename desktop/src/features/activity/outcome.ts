@@ -356,6 +356,13 @@ export function cardOutcome(post: SourceActivity, now: Date): CardOutcome {
 /** Fresh posts replace stale copies of the same post, and the list stays newest first. */
 export function mergePosts(current: SourceActivity[], fresh: SourceActivity[]): SourceActivity[] {
   const bySequence = new Map(current.map((p) => [p.sequence, p]))
-  for (const post of fresh) bySequence.set(post.sequence, post)
-  return [...bySequence.values()].sort((a, b) => b.sequence - a.sequence)
+  let changed = false
+  for (const post of fresh) {
+    const had = bySequence.get(post.sequence)
+    // A refresh that brings nothing new keeps the same array, so nothing on screen redraws.
+    if (had && JSON.stringify(had) === JSON.stringify(post)) continue
+    bySequence.set(post.sequence, post)
+    changed = true
+  }
+  return changed ? [...bySequence.values()].sort((a, b) => b.sequence - a.sequence) : current
 }
