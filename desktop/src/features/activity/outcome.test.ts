@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { DestinationActivity, OrderActivity, SourceActivity } from "../../../shared/contract"
-import { cardOutcome, destinationOutcome, includes, isOpenCall, mergePosts, orderOutcome, reachedAccount } from "./outcome"
+import { cardOutcome, destinationOutcome, isOpenCall, mergePosts, orderOutcome } from "./outcome"
 
 const NOW = new Date("2026-11-03T21:00:00Z")
 
@@ -163,23 +163,9 @@ describe("isOpenCall", () => {
   })
 })
 
-describe("filters and merging", () => {
+describe("merging", () => {
   const traded = post({ sequence: 2 })
   const chat = post({ sequence: 1, decision: "ignore" })
-
-  it("lists the traded posts and the ones waiting", () => {
-    expect(includes("traded", traded, NOW)).toBe(true)
-    expect(includes("traded", chat, NOW)).toBe(false)
-    expect(includes("waiting", traded, NOW)).toBe(false)
-    expect(includes("all", chat, NOW)).toBe(true)
-  })
-
-  it("keeps a post for an account only when it reached it", () => {
-    const reached = post({ destinations: [dest("delivered", [])] })
-    expect(reachedAccount(reached, "primary")).toBe(true)
-    expect(reachedAccount(reached, "other")).toBe(false)
-    expect(reachedAccount(reached, null)).toBe(true)
-  })
 
   it("replaces a stale copy with the fresh one and keeps newest first", () => {
     const merged = mergePosts([chat, traded], [{ ...chat, text: "edited" }, post({ sequence: 3 })])

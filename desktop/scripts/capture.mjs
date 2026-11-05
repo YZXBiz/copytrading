@@ -118,11 +118,15 @@ for (const [name, env] of [
     const name = `${scene || "day"}-${size}`
     return [
       [`activity-${name}`, { ...env, COPYTRADING_CAPTURE_HASH: "#/activity" }],
-      [`guru-${name}`, { ...env, COPYTRADING_CAPTURE_HASH: `#/gurus/${zhao}` }],
+      ...(size === "1440x900" ? [] : [[`guru-${name}`, { ...env, COPYTRADING_CAPTURE_HASH: `#/gurus/${zhao}` }]]),
     ]
   }),
   // A guru's page with figures: the empty performance is the default (guru-day-*); this scene serves synthetic figures with a line, a best and a worst call.
   ...["1280x860", "1440x900", "980x860", ""].map((size) => [`guru-performance-${size || "full"}`, { ...fixtures, COPYTRADING_FIXTURE_SCENE: "performance", COPYTRADING_CAPTURE_SIZE: size, COPYTRADING_CAPTURE_HASH: `#/gurus/${zhao}` }]),
+  // A guru's performance card: the empty state is the default (guru-day-*); this scene serves synthetic figures with a line, a best and a worst call.
+  ...["1280x860", "980x860"].map((size) => [`guru-performance-${size}`, { ...fixtures, COPYTRADING_FIXTURE_SCENE: "performance", COPYTRADING_CAPTURE_SIZE: size, COPYTRADING_CAPTURE_HASH: `#/gurus/${zhao}` }]),
+  // The whole page, down to the table.
+  ...["", "busy"].map((scene) => [`activity-full-${scene || "day"}`, { ...fixtures, COPYTRADING_FIXTURE_SCENE: scene, COPYTRADING_CAPTURE_SIZE: "1280x1500", COPYTRADING_CAPTURE_HASH: "#/activity" }]),
   ["activity-post-1280x860", { ...fixtures, COPYTRADING_CAPTURE_SIZE: "1280x860", COPYTRADING_CAPTURE_HASH: "#/activity/5" }],
   ["activity-post-980x860", { ...fixtures, COPYTRADING_CAPTURE_SIZE: "980x860", COPYTRADING_CAPTURE_HASH: "#/activity/5" }],
   ["guru-sheet-1280x860", { ...fixtures, COPYTRADING_CAPTURE_SIZE: "1280x860", COPYTRADING_CAPTURE_HASH: `#/gurus/${zhao}`, COPYTRADING_CAPTURE_CLICK: 'button[data-sequence="5"]' }],

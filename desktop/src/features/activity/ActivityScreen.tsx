@@ -1,138 +1,97 @@
-// ReUI's Audit Log (solution-users-6), installed as shipped and wired to the guru posts: the header with its subtitle and
-// select, the line tabs, a heading and a timeline per day, and its empty state. The block's Export CSV has nothing behind it here.
-import { useState } from "react"
-import { FilterIcon, LandmarkIcon, MessageSquareIcon } from "lucide-react"
+// ReUI's dashboard-7 (Retail Revenue) as one page: its header with a date picker, four KPI cards with a sparkline each, the
+// stacked area chart beside the bar chart, and the order queue's DataGrid, filled with the guru posts. A row opens the post.
+import { useEffect, useMemo, useState } from "react"
+import { MessageSquareIcon } from "lucide-react"
 import type { AccountOverviewPage } from "../../../shared/contract"
-import { RegionError } from "@/components/region-error"
-import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/empty-state"
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Spinner } from "@/components/ui/spinner"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { navigate } from "@/features/shell/route"
+import { RegionError } from "@/components/region-error"
+import { GuruPostSheet } from "@/features/gurus/GuruPostSheet"
 import { guruName } from "@/features/gurus/model"
 import { useGurus } from "@/features/gurus/use-gurus"
+import { navigate } from "@/features/shell/route"
 import { readClock } from "@/lib/clock"
+import { getTimeZone } from "@/lib/time-zone"
 import { type Loaded } from "@/lib/use-result"
-import { ActivityDay } from "./ActivityEvent"
-import { PostsSkeleton } from "./PostsSkeleton"
-import { type ActivityFilter, FILTERS, includes, reachedAccount } from "./outcome"
-import { groupByDay } from "./time"
+import { ActivityHeader } from "./ActivityHeader"
+import { ActivityMetrics } from "./ActivityMetrics"
+import { ActivitySkeleton } from "./ActivitySkeleton"
+import { ActivityTable, type PostFilter } from "./ActivityTable"
+import { type Mix, MixChart } from "./MixChart"
+import { PostsChart } from "./PostsChart"
+import { activityRows } from "./activity-rows"
+import { dayCounts, dayKey, dayRows, guruMix, shiftDay, skipReasons } from "./post-bucket"
 import { usePosts } from "./use-posts"
 
-const EMPTY: Record<ActivityFilter, { title: string; hint: string }> = {
-  all: { title: "No posts yet", hint: "Posts from the gurus you copy appear here as they arrive." },
-  waiting: { title: "Nothing needs you", hint: "A post that waits for you shows here until its trading day ends." },
-  traded: { title: "Nothing traded in these posts", hint: "Posts an account bought or sold on show here." },
-}
+/** The charts look back this many days; posts are read a page at a time until they reach that far. */
+const DAYS = 30
+/** A guard on that reading: enough pages for a very busy month, no more. */
+const MAX_POSTS = 2000
 
-/** Every post newest first, a timeline for each day, with each account's outcome; the chosen post opens in place. */
+/** Every post newest first as a table under the day's counts and the month's charts, with each account's outcome; the chosen post opens beside it. */
 export function ActivityScreen({ selectedSequence, accounts }: { selectedSequence: number | null; accounts: Loaded<AccountOverviewPage> }) {
-  const [filter, setFilter] = useState<ActivityFilter>("all")
+  const [filter, setFilter] = useState<PostFilter>("all")
   const [accountId, setAccountId] = useState<string | null>(null)
   const posts = usePosts((before_seq, limit) => window.copytrading.read.getSourceActivity({ before_seq, limit }), "activity")
   const { gurus } = useGurus()
   const now = readClock()
+  const zone = getTimeZone()
+  const today = dayKey(now, zone)
+  const [chosen, setDay] = useState<string | null>(null)
+  const day = chosen ?? today
   const accountIds = accounts.status === "ready" ? accounts.data.items.map((a) => a.account_id) : []
-  const choices = [{ value: "all", label: "All accounts" }, ...accountIds.map((id) => ({ value: id, label: id }))]
+  const nameOf = (id: string | null) => guruName(gurus, id)
 
-  const shown = posts.status === "ready" ? posts.items.filter((p) => reachedAccount(p, accountId) && includes(filter, p, now)) : []
-  // The chosen post, or the newest one that shows: a post filtered away is never left open.
-  const openSequence = (shown.find((p) => p.sequence === selectedSequence) ?? shown[0])?.sequence
-  const filtered = filter !== "all" || accountId !== null
+  const items = posts.status === "ready" ? posts.items : null
+  const oldest = items?.at(-1)
+  const [readBack, readAll] = [posts.status === "ready" && posts.hasOlder && posts.older === "idle", oldest !== undefined && dayKey(new Date(oldest.source_at), zone) > shiftDay(today, 1 - DAYS)]
+  // The charts need the whole month: keep reading older pages until the oldest post is past it.
+  useEffect(() => {
+    if (posts.status === "ready" && readBack && readAll && posts.items.length < MAX_POSTS) posts.showOlder()
+  }, [posts, readBack, readAll])
+
+  const month = useMemo(() => (items ?? []).filter((p) => dayKey(new Date(p.source_at), zone) >= shiftDay(today, 1 - DAYS)), [items, zone, today])
+  const rows = useMemo(() => activityRows(items ?? [], now, nameOf, accountId), [items, accountId, gurus]) // eslint-disable-line react-hooks/exhaustive-deps
+  const counts = dayCounts(items ?? [], day, zone, now)
+  const before = dayCounts(items ?? [], shiftDay(day, -1), zone, now)
+  const mix: Mix = gurus.length > 1 ? { kind: "gurus", rows: guruMix(month, now, nameOf) } : { kind: "reasons", rows: skipReasons(month, now) }
+
+  const open = items?.find((p) => p.sequence === selectedSequence)
+  const waiting = counts.total.waiting
+  const status = waiting > 0 ? `${waiting} waiting for you` : "Nothing needs you"
+
+  if (posts.status === "loading") return <ActivitySkeleton />
+  if (posts.status === "error") return <RegionError title="Posts did not load" message={posts.error} onRetry={posts.retry} />
+  if (posts.items.length === 0) {
+    return (
+      <div className="mx-auto w-full max-w-7xl">
+        <EmptyState
+          icon={MessageSquareIcon}
+          title="No posts yet"
+          description="Posts from the gurus you copy appear here as they arrive."
+          action={{ label: "Open Connections", onClick: () => navigate("settings", "connections") }}
+        />
+      </div>
+    )
+  }
 
   return (
-    <section className="w-full" aria-labelledby="activity-title">
-      {/* Content header (title + account + filter tabs) */}
-      <div className="mb-6 flex flex-col gap-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div className="min-w-0 space-y-1">
-            <h1 id="activity-title" className="text-xl font-semibold tracking-tight">
-              Guru posts
-            </h1>
-            {posts.status === "ready" && (
-              <p className="text-muted-foreground text-sm leading-5">
-                {posts.items.length}
-                {posts.hasOlder ? "+" : ""} {posts.items.length === 1 ? "post" : "posts"} from the gurus you copy
-              </p>
-            )}
-          </div>
-
-          {accountIds.length > 1 && (
-            <div className="flex shrink-0 items-center gap-2">
-              <Select items={choices} value={accountId ?? "all"} onValueChange={(next) => next && setAccountId(next === "all" ? null : next)}>
-                <SelectTrigger size="sm" className="w-44" aria-label="Account">
-                  <LandmarkIcon className="text-muted-foreground size-4" aria-hidden="true" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent align="end" alignItemWithTrigger={false}>
-                  <SelectGroup>
-                    {choices.map((choice) => (
-                      <SelectItem key={choice.value} value={choice.value}>
-                        {choice.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-        </div>
-
-        <Tabs value={filter} onValueChange={(value) => value && setFilter(value as ActivityFilter)}>
-          <TabsList variant="line" aria-label="Filter posts" className="h-10! w-full justify-start gap-6 overflow-x-auto border-b pb-0">
-            {FILTERS.map(({ id, label }) => (
-              <TabsTrigger key={id} value={id} className="px-1 text-sm after:-bottom-px!">
-                {label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+    <section className="mx-auto flex w-full max-w-7xl flex-col gap-4" aria-labelledby="activity-title">
+      <ActivityHeader day={day} today={today} status={status} onDayChange={setDay} />
+      <ActivityMetrics today={counts} before={before} />
+      <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]">
+        <PostsChart rows={dayRows(items!, today, zone, now, DAYS)} />
+        <MixChart mix={mix} />
       </div>
-
-      {posts.status === "loading" && <PostsSkeleton />}
-      {posts.status === "error" && <RegionError title="Posts did not load" message={posts.error} onRetry={posts.retry} />}
-      {posts.status === "ready" && shown.length === 0 && (
-        <EmptyState
-          icon={filtered ? FilterIcon : MessageSquareIcon}
-          title={EMPTY[filter].title}
-          description={posts.hasOlder ? "Show older to look further back." : EMPTY[filter].hint}
-          action={
-            filtered
-              ? {
-                  label: "Clear filter",
-                  onClick: () => {
-                    setFilter("all")
-                    setAccountId(null)
-                  },
-                }
-              : posts.hasOlder
-                ? undefined
-                : { label: "Open Connections", onClick: () => navigate("settings", "connections") }
-          }
-        />
-      )}
-      {shown.length > 0 && (
-        <div className="space-y-8">
-          {groupByDay(shown, (post) => post.source_at, now).map(({ label, items }) => (
-            <div key={label} className="space-y-4">
-              <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{label}</h2>
-              <ActivityDay posts={items} openSequence={openSequence} guruName={(id) => guruName(gurus, id)} now={now} accountId={accountId} />
-            </div>
-          ))}
-        </div>
-      )}
-      {posts.status === "ready" && posts.hasOlder && (
-        <div className="mt-8 flex flex-col items-center gap-2">
-          {typeof posts.older === "object" && <RegionError title="Older posts did not load" message={posts.older.error} onRetry={posts.showOlder} />}
-          {typeof posts.older !== "object" && (
-            <Button type="button" size="sm" variant="outline" onClick={posts.showOlder} disabled={posts.older === "loading"}>
-              {posts.older === "loading" && <Spinner data-icon="inline-start" />}
-              Show older
-            </Button>
-          )}
-        </div>
-      )}
+      <ActivityTable
+        rows={rows}
+        accountIds={accountIds}
+        accountId={accountId}
+        onAccountChange={setAccountId}
+        filter={filter}
+        onFilterChange={setFilter}
+        older={posts.hasOlder && !(readBack && readAll) ? { loading: posts.older === "loading", show: posts.showOlder } : null}
+      />
+      <GuruPostSheet post={open} guruName={open ? nameOf(open.guru_id) : ""} now={now} onClose={() => navigate("activity")} />
     </section>
   )
 }

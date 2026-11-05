@@ -86,7 +86,7 @@ export function destinationOutcome(d: DestinationActivity): DestinationOutcome {
 /** Skips that hold a call back for the owner rather than refuse it (the engine's HELD_FOR_OWNER). */
 export const HELD_FOR_OWNER = new Set(["approval_required", "named_buy_not_held"])
 /** Outcomes that are not a skip: an order went out, the part is still working, or the owner approved it. */
-const CARRIED_ON = new Set(["order_linked", "pending", "waiting_for_quote", "approved_by_owner"])
+export const CARRIED_ON = new Set(["order_linked", "pending", "waiting_for_quote", "approved_by_owner"])
 
 const WAITING_REASONS: Record<string, string> = {
   repeats_an_earlier_call: "repeats an earlier call",
@@ -352,25 +352,6 @@ export function cardOutcome(post: SourceActivity, now: Date): CardOutcome {
   else [title, tone] = [decisionTitle(post), "neutral"]
   return { title, tone, accounts }
 }
-
-// ── Filters ──
-
-export type ActivityFilter = "all" | "waiting" | "traded"
-
-export const FILTERS: { id: ActivityFilter; label: string }[] = [
-  { id: "all", label: "All posts" },
-  { id: "waiting", label: "Needs you" },
-  { id: "traded", label: "Traded" },
-]
-
-export function includes(filter: ActivityFilter, post: SourceActivity, now: Date): boolean {
-  if (filter === "waiting") return isOpenCall(post, now)
-  return filter === "all" || post.decision === "trade"
-}
-
-/** A post belongs to the chosen account when it reached it; with every account chosen, all posts show. */
-export const reachedAccount = (post: SourceActivity, accountId: string | null) =>
-  accountId === null || post.destinations.some((d) => d.account_id === accountId)
 
 /** Fresh posts replace stale copies of the same post, and the list stays newest first. */
 export function mergePosts(current: SourceActivity[], fresh: SourceActivity[]): SourceActivity[] {

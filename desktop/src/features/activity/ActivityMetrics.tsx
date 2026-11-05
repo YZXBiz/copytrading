@@ -1,0 +1,74 @@
+import type { ReactNode } from "react"
+import { ArrowLeftRightIcon, ClockIcon, MessageSquareIcon, SkipForwardIcon, TrendingDown, TrendingUp } from "lucide-react"
+import { Badge, type BadgeProps } from "@/components/reui/badge"
+import { Frame, FramePanel } from "@/components/reui/frame"
+import { RollingNumber } from "@/components/rolling-number"
+import { Item, ItemMedia } from "@/components/ui/item"
+import { type DayCounts, type Metric } from "./post-bucket"
+
+const CARDS: { id: Metric; title: string; detail: string; icon: ReactNode; badge: BadgeProps["variant"]; bar: string }[] = [
+  { id: "posts", title: "Posts", detail: "From your gurus", icon: <MessageSquareIcon />, badge: "info-light", bar: "bg-info/30" },
+  { id: "traded", title: "Traded", detail: "Orders placed", icon: <ArrowLeftRightIcon />, badge: "primary-light", bar: "bg-primary/30" },
+  { id: "waiting", title: "Waiting", detail: "Need your call", icon: <ClockIcon />, badge: "warning-light", bar: "bg-warning/30" },
+  { id: "skipped", title: "Skipped", detail: "Not copied", icon: <SkipForwardIcon />, badge: "outline", bar: "bg-muted-foreground/30" },
+]
+
+const WHOLE = { maximumFractionDigits: 0 }
+
+/** dashboard-7's raised icon tile, as shipped. */
+function IconContainer({ icon }: { icon: ReactNode }) {
+  return (
+    <Item className="border-background bg-muted [&_svg]:text-accent-foreground flex size-9 shrink-0 items-center justify-center border-2 p-0 shadow-[0_1px_3px_0_rgba(0,0,0,0.14)] dark:border [&_svg]:size-4">
+      <ItemMedia variant="icon" className="size-auto">
+        {icon}
+      </ItemMedia>
+    </Item>
+  )
+}
+
+const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "0")
+
+/** dashboard-7's four KPI panels: the day's count, its change from the day before, and the count for each hour. */
+export function ActivityMetrics({ today, before }: { today: DayCounts; before: DayCounts }) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:gap-3">
+      {CARDS.map((card) => {
+        const hours = today.hours[card.id]
+        const max = Math.max(...hours, 1)
+        const change = today.total[card.id] - before.total[card.id]
+        return (
+          <Frame key={card.id}>
+            <FramePanel className="flex min-h-28 flex-col justify-between gap-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 items-start gap-3">
+                  <IconContainer icon={card.icon} />
+                  <div className="min-w-0 pt-0.5">
+                    <span className="block truncate text-sm font-medium">{card.title}</span>
+                    <span className="text-muted-foreground block truncate text-xs">{card.detail}</span>
+                  </div>
+                </div>
+                <Badge variant={card.badge} aria-label={`${signed(change)} from the day before`}>
+                  {change < 0 ? <TrendingDown className="size-3" aria-hidden="true" /> : <TrendingUp className="size-3" aria-hidden="true" />}
+                  {signed(change)}
+                </Badge>
+              </div>
+              <div className="grid grid-cols-[1fr_auto] items-end gap-2">
+                <div className="min-w-0">
+                  <div className="text-xl font-semibold tracking-tight tabular-nums">
+                    <RollingNumber value={today.total[card.id]} format={WHOLE} />
+                  </div>
+                </div>
+                {/* One bar for each hour of the day. */}
+                <div className="flex h-10 items-end gap-px" aria-hidden="true">
+                  {hours.map((count, hour) => (
+                    <span key={hour} className={`${card.bar} w-[3px] rounded-full`} style={{ height: `${count === 0 ? 8 : Math.max((count / max) * 100, 16)}%` }} />
+                  ))}
+                </div>
+              </div>
+            </FramePanel>
+          </Frame>
+        )
+      })}
+    </div>
+  )
+}
