@@ -110,7 +110,7 @@ for (const [name, env] of [
   ["activity-filled", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/activity/8" }],
   ["activity-waiting", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/activity/9" }],
   ["activity-skipped", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/activity/3" }],
-  ["activity-needs-you", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/activity", COPYTRADING_CAPTURE_CLICK: '[data-slot="toggle-group-item"]:nth-child(2)' }],
+  ["activity-needs-you", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/activity", COPYTRADING_CAPTURE_CLICK: '[aria-label="Filter posts"] button:nth-child(3)' }],
   // Activity and a guru's page in a 1280×860 window and at the 980-wide minimum, on a day of the captured posts,
   // a busy day (a dozen more) and an empty one. "post" opens a post, in the pane beside the list or the sheet.
   ...["", "busy", "empty"].flatMap((scene) => ["1280x860", "1440x900", "980x860"].map((size) => [scene, size])).flatMap(([scene, size]) => {
@@ -127,6 +127,7 @@ for (const [name, env] of [
   ...["1280x860", "980x860"].map((size) => [`guru-performance-${size}`, { ...fixtures, COPYTRADING_FIXTURE_SCENE: "performance", COPYTRADING_CAPTURE_SIZE: size, COPYTRADING_CAPTURE_HASH: `#/gurus/${zhao}` }]),
   // The whole page, down to the table.
   ...["", "busy"].map((scene) => [`activity-full-${scene || "day"}`, { ...fixtures, COPYTRADING_FIXTURE_SCENE: scene, COPYTRADING_CAPTURE_SIZE: "1280x1500", COPYTRADING_CAPTURE_HASH: "#/activity" }]),
+  ["activity-full-980", { ...fixtures, COPYTRADING_CAPTURE_SIZE: "980x1500", COPYTRADING_CAPTURE_HASH: "#/activity" }],
   ["activity-post-1280x860", { ...fixtures, COPYTRADING_CAPTURE_SIZE: "1280x860", COPYTRADING_CAPTURE_HASH: "#/activity/5" }],
   ["activity-post-980x860", { ...fixtures, COPYTRADING_CAPTURE_SIZE: "980x860", COPYTRADING_CAPTURE_HASH: "#/activity/5" }],
   ["guru-sheet-1280x860", { ...fixtures, COPYTRADING_CAPTURE_SIZE: "1280x860", COPYTRADING_CAPTURE_HASH: `#/gurus/${zhao}`, COPYTRADING_CAPTURE_CLICK: 'button[data-sequence="5"]' }],

@@ -12,6 +12,7 @@ import { Frame, FrameDescription, FrameFooter, FrameHeader, FramePanel, FrameTit
 import { Button } from "@/components/ui/button"
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { SlidingToggle } from "@/components/sliding-toggle"
 import { Spinner } from "@/components/ui/spinner"
 import { navigate } from "@/features/shell/route"
 import { type ActivityRow, matches } from "./activity-rows"
@@ -112,31 +113,15 @@ export function ActivityTable({
                 </InputGroupAddon>
               )}
             </InputGroup>
-            <Select
-              items={FILTERS}
+            <SlidingToggle
+              label="Filter posts"
               value={filter}
-              onValueChange={(value) => {
-                const next = FILTERS.find((option) => option.value === value)?.value
-                if (next) {
-                  onFilterChange(next)
-                  resetPagination()
-                }
+              onValueChange={(next) => {
+                onFilterChange(next)
+                resetPagination()
               }}
-            >
-              <SelectTrigger size="sm" className="w-full sm:w-36" aria-label="Filter posts">
-                <FilterIcon className="text-muted-foreground size-4" aria-hidden="true" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent align="end" alignItemWithTrigger={false}>
-                <SelectGroup>
-                  {FILTERS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+              options={FILTERS}
+            />
             {accountIds.length > 1 && (
               <Select
                 items={choices}

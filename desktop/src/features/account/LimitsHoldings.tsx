@@ -1,5 +1,6 @@
 // dashboard-8's Release Room panel (a Frame with a progress meter, one outline button and a divided list), wired to
 // the account: the loss and invested meters against the limits, Edit Limits, and a row per holding.
+import { useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
 import { ArrowDown02Icon } from "@/components/icons/ArrowDown02Icon"
 import { ArrowUp02Icon } from "@/components/icons/ArrowUp02Icon"
@@ -13,6 +14,7 @@ import { EmptyState } from "@/components/empty-state"
 import { Frame, FrameDescription, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"
 import { RegionError } from "@/components/region-error"
 import { RollingNumber } from "@/components/rolling-number"
+import { SlidingToggle } from "@/components/sliding-toggle"
 import { SymbolLogo } from "@/components/symbol-logo"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
@@ -28,6 +30,7 @@ import { sharesText } from "@/lib/quantity"
 import { type Loaded } from "@/lib/use-result"
 import { USD_OPTIONS } from "./balance-panel/format"
 import { parseDec } from "./decimal"
+import { HOLDINGS_SORTS, type HoldingsSort, sortHoldings } from "./holdings-sort"
 import { heldPositions } from "./model"
 import { PositionSparkline } from "./PositionSparkline"
 import { useBars } from "./use-bars"
@@ -152,7 +155,8 @@ export function LimitsHoldings({
   onEditLimits: () => void
   onSell: (position: Position, lot: Lot) => void
 }) {
-  const held = heldPositions(account).sort((a, b) => Number(b.market_value ?? 0) - Number(a.market_value ?? 0))
+  const [sort, setSort] = useState<HoldingsSort>("value")
+  const held = sortHoldings(heldPositions(account), sort)
   const prices = useLivePrices(account.account_id, held.map((p) => p.symbol))
   const bars = useBars(account.account_id, held.map((p) => p.symbol))
   const lossToday = Math.max(0, -Number(account.balance?.day_change_usd ?? 0))
@@ -164,6 +168,7 @@ export function LimitsHoldings({
           <FrameTitle>Limits and holdings</FrameTitle>
           <FrameDescription>{held.length === 1 ? "1 stock held" : `${held.length} stocks held`}</FrameDescription>
         </div>
+        {held.length > 1 && <SlidingToggle label="Sort holdings" value={sort} onValueChange={setSort} options={HOLDINGS_SORTS} />}
       </FrameHeader>
 
       <FramePanel className="@container flex flex-1 flex-col gap-5">
