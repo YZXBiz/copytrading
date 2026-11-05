@@ -54,6 +54,8 @@
 .mark { display: grid; width: 32px; height: 32px; flex: none; place-items: center; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface); color: var(--text-muted); font-size: var(--text-xs); font-weight: 500; }
 .mark img { width: 18px; height: 18px; object-fit: contain; }
 .mark svg { width: 16px; height: 16px; }
+.postText { display: grid; min-width: 0; gap: 2px; }
+.tickers { display: flex; flex-wrap: wrap; gap: 0 10px; color: var(--text-secondary); font-size: var(--text-xs); }
 .open { min-width: 0; max-width: 28ch; overflow: hidden; border: 0; padding: 0; background: transparent; color: var(--foreground); font: inherit; text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
 @media (hover: hover) and (pointer: fine) { .open:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; } }
 .clamp { display: block; max-width: 24ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

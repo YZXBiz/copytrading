@@ -2,6 +2,7 @@ import type { DataColumn } from "@/components/arc/sortable-data-table/sortable-d
 import { monthDay, timeOfDay } from "@/lib/format"
 import { OutcomeBadge } from "./OutcomeBadge"
 import { PostMark } from "./PostMark"
+import { PostTickers, postTickers } from "./PostTickers"
 import { type ActivityRow } from "./activity-rows"
 import styles from "./activity.module.css"
 
@@ -69,9 +70,16 @@ export function activityColumns({ onOpen }: { onOpen: (row: ActivityRow) => void
           <span className={styles.mark} aria-hidden="true">
             <PostMark symbol={row.symbol} />
           </span>
-          <button type="button" className={styles.open} aria-haspopup="dialog" data-sequence={row.post.sequence} onClick={() => onOpen(row)}>
-            {row.said}
-          </button>
+          <div className={styles.postText}>
+            <button type="button" className={styles.open} aria-haspopup="dialog" data-sequence={row.post.sequence} onClick={() => onOpen(row)}>
+              {row.said}
+            </button>
+            {postTickers(row.post).length > 0 && (
+              <span className={styles.tickers}>
+                <PostTickers post={row.post} />
+              </span>
+            )}
+          </div>
         </div>
       ),
     },

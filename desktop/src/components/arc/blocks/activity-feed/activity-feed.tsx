@@ -34,6 +34,8 @@ export interface FeedItem {
   lines?: ReactNode[];
   /** The small mark on the avatar: a company logo or a glyph. */
   mark?: ReactNode;
+  /** Links to the stocks the post names. They sit beside the row's button, never inside it. */
+  tickers?: ReactNode;
   time: string;
   datetime: string;
 }
@@ -79,6 +81,7 @@ function Row({ item, onOpen }: { item: FeedItem; onOpen: (id: string) => void })
         </span>
         <span className={styles.side}><time className={styles.time} dateTime={item.datetime}>{item.time}</time></span>
       </button>
+      {item.tickers && <div className={styles.tickers}>{item.tickers}</div>}
     </div>
   </li>;
 }

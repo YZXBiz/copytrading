@@ -1,4 +1,5 @@
 import type { SourceActivity } from "../../../shared/contract"
+import { TickerLink } from "@/features/stock/TickerLink"
 import { reasonText } from "@/lib/reasons"
 import { callHeadline, callNote, callsOf, enteredByOwner, headline, isRepost, kindText, noCallLine } from "./reading"
 import styles from "./post-detail.module.css"
@@ -25,6 +26,9 @@ export function ReadAs({ post }: { post: SourceActivity }) {
         return (
           <div key={index}>
             <p className={styles.headline}>{title}</p>
+            <p className={styles.stock}>
+              <TickerLink symbol={call.stock.ticker} />
+            </p>
             <div className={styles.facts}>
               {parts.map((part, i) => (
                 <span key={i}>{capitalize(part)}</span>

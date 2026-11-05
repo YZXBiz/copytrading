@@ -5,6 +5,7 @@ import { postSymbol, type GuruAccountOutcome } from "@/features/gurus/model"
 import { OutcomeBadge } from "./OutcomeBadge"
 import { PostImage } from "./PostImage"
 import { PostMark } from "./PostMark"
+import { PostTickers, postTickers } from "./PostTickers"
 import { cardOutcome } from "./outcome"
 import { pictureOf, readableText } from "./reading"
 import { clockTime, dayLabel } from "./time"
@@ -51,6 +52,7 @@ function feedItem({ post, guru, readAs, accounts, kinds }: PostFeedEntry, now: D
       </>
     )),
     mark: <PostMark symbol={postSymbol(post)} />,
+    tickers: postTickers(post).length > 0 ? <PostTickers post={post} /> : undefined,
     time: clockTime(post.source_at),
     datetime: post.source_at,
   }

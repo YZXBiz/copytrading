@@ -16,6 +16,7 @@
 .section { display: grid; gap: 4px; border-top: 1px solid var(--border-subtle); padding-top: 12px; }
 .section p { margin: 0; }
 .headline { font-weight: 500; font-variant-numeric: tabular-nums; }
+.stock { color: var(--text-secondary); font-size: var(--text-xs); }
 .facts { display: grid; gap: 2px; color: var(--text-secondary); }
 .kind { display: grid; gap: 2px; margin-top: 4px; color: var(--text-secondary); font-size: var(--text-xs); }
 

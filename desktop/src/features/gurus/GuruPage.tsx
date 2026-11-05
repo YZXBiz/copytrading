@@ -83,7 +83,7 @@ export function GuruPage({ guru, accounts, setUpAccountIds }: { guru: Guru; acco
       <div className={styles.columns}>
         {/* The posts run long; the breakdown stays in view beside them instead of leaving an empty column. */}
         <div className={styles.sticky}>
-          <GuruBreakdown performance={performed} error={performance.status === "error" ? performance.error : null} onRetry={performance.retry} />
+          <GuruBreakdown performance={performed} accountId={accountId} error={performance.status === "error" ? performance.error : null} onRetry={performance.retry} />
         </div>
         <GuruActivity guruName={guru.name} now={now} entries={entries} more={more} posts={posts} filter={filter} onFilterChange={setFilter} onOpen={setOpen} />
       </div>

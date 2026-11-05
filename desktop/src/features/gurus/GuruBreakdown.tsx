@@ -2,6 +2,7 @@ import type { GuruPerformance } from "../../../shared/contract"
 import { Badge } from "@/components/arc/badge/badge"
 import { Skeleton } from "@/components/arc/skeleton/skeleton"
 import { RegionAlert } from "@/features/activity/RegionAlert"
+import { TickerLink } from "@/features/stock/TickerLink"
 import { monthDay, signedMoney } from "@/lib/format"
 import styles from "./gurus.module.css"
 
@@ -19,7 +20,7 @@ const tone = (n: number | null) => (n === null || n === 0 ? undefined : n > 0 ? 
 const unmatchedNote = (n: number) => `${n === 1 ? "1 sale" : `${n} sales`} could not be matched to the buys it closed, so ${n === 1 ? "it is" : "they are"} left out.`
 
 /** The guru's best and worst call, what is still open, and the sales that could not be matched to a buy. */
-export function GuruBreakdown({ performance, error, onRetry }: { performance: GuruPerformance | null; error: string | null; onRetry: () => void }) {
+export function GuruBreakdown({ performance, accountId, error, onRetry }: { performance: GuruPerformance | null; accountId: string; error: string | null; onRetry: () => void }) {
   const rows: Row[] = performance
     ? [
         ...(performance.best ? [{ name: "Best call", code: performance.best.symbol, note: monthDay(`${performance.best.closed_on}T12:00:00Z`), title: performance.best.excerpt ?? undefined, amount: Number(performance.best.profit_usd) }] : []),
@@ -42,7 +43,11 @@ export function GuruBreakdown({ performance, error, onRetry }: { performance: Gu
               <span className={styles.rowName}>
                 <span>
                   {row.name}
-                  {row.code && <Badge tone="neutral">{row.code}</Badge>}
+                  {row.code && (
+                    <Badge tone="neutral">
+                      <TickerLink symbol={row.code} accountId={accountId} />
+                    </Badge>
+                  )}
                 </span>
                 {row.note && <small>{row.note}</small>}
               </span>
