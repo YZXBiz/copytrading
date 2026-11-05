@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { AccountOverview, DestinationActivity, GuruDayStats, OrderActivity, SourceActivity, TradingConfiguration } from "../../../shared/contract"
-import { buildFeed, guruAccountOutcomes, guruDirectory, guruHoldings, guruStats, includesEntry, postSymbol, trendAxis, trendRows } from "./model"
+import { buildFeed, guruAccountOutcomes, guruDirectory, guruHoldings, guruStats, includesEntry, postSymbol, rankGurus, trendAxis, trendRows, winRate } from "./model"
 
 const NOW = new Date("2026-11-03T21:00:00Z")
 
@@ -172,5 +172,22 @@ describe("trendAxis", () => {
     expect(trendAxis([{ day: "a", value: 0 }, { day: "b", value: 67.2 }])).toEqual({ domain: [0, 80], ticks: [0, 20, 40, 60, 80] })
     expect(trendAxis([{ day: "a", value: -12 }, { day: "b", value: 30 }])).toEqual({ domain: [-20, 40], ticks: [-20, 0, 20, 40] })
     expect(trendAxis([{ day: "a", value: 0 }])).toMatchObject({ domain: [0, 0.5] })
+  })
+})
+
+describe("rankGurus", () => {
+  const row = (name: string, realized: number | null, winRate: number | null = null, posts: number | null = null) => ({ name, realized, winRate, posts })
+  it("puts the highest first, unread figures last, and ties in name order", () => {
+    const rows = [row("B", 10), row("A", 10), row("C", null), row("D", 50), row("E", -5)]
+    expect(rankGurus(rows, "realized").map((r) => r.name)).toEqual(["D", "A", "B", "E", "C"])
+  })
+  it("ranks by win rate and by posts today", () => {
+    const rows = [row("A", 0, 0.5, 2), row("B", 0, 0.8, 1), row("C", 0, null, null)]
+    expect(rankGurus(rows, "winRate").map((r) => r.name)).toEqual(["B", "A", "C"])
+    expect(rankGurus(rows, "posts").map((r) => r.name)).toEqual(["A", "B", "C"])
+  })
+  it("has no win rate before a trade closed", () => {
+    expect(winRate({ winning_trades: 0, closed_trades: 0 })).toBeNull()
+    expect(winRate({ winning_trades: 4, closed_trades: 5 })).toBe(0.8)
   })
 })

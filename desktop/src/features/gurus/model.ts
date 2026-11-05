@@ -202,3 +202,34 @@ export function trendAxis(rows: TrendRow[]): { domain: [number, number]; ticks: 
   const to = Math.max(Math.ceil(high / step) * step, from + step)
   return { domain: [from, to], ticks: Array.from({ length: Math.round((to - from) / step) + 1 }, (_, i) => from + i * step) }
 }
+
+// ── The comparison: one row per guru ──
+
+export type CompareSort = "realized" | "winRate" | "posts"
+
+export const COMPARE_SORTS: { id: CompareSort; label: string }[] = [
+  { id: "realized", label: "Realized P&L" },
+  { id: "winRate", label: "Win rate" },
+  { id: "posts", label: "Posts today" },
+]
+
+/** The figures a row is ranked by; null while unread or when there is nothing to rank (no closed trades). */
+export interface Rankable {
+  name: string
+  realized: number | null
+  winRate: number | null
+  posts: number | null
+}
+
+/** Highest first; a guru with no figure goes last, and ties keep name order. */
+export function rankGurus<T extends Rankable>(rows: T[], by: CompareSort): T[] {
+  const key = (r: T) => r[by]
+  return [...rows].sort((a, b) => {
+    const [x, y] = [key(a), key(b)]
+    if (x === null || y === null) return x === y ? a.name.localeCompare(b.name, "en", { numeric: true }) : x === null ? 1 : -1
+    return y - x || a.name.localeCompare(b.name, "en", { numeric: true })
+  })
+}
+
+/** Win rate as a fraction; null with no closed trade, since 0 of 0 is not a rate. */
+export const winRate = (p: Pick<GuruPerformance, "winning_trades" | "closed_trades">) => (p.closed_trades > 0 ? p.winning_trades / p.closed_trades : null)
