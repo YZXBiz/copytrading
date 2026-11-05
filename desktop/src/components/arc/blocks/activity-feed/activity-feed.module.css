@@ -1,0 +1,78 @@
+.root { container-type: inline-size; width: 100%; min-width: 0; color: var(--foreground); font-family: var(--font-inter); font-size: var(--text-sm); letter-spacing: var(--tracking-body); }
+.frame { display: grid; grid-template-columns: minmax(0, 1fr); overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-surface); background: var(--surface); }
+
+/* Header */
+.header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px 14px 24px; }
+.titleRow { display: flex; min-width: 0; align-items: baseline; gap: 10px; }
+.titleRow h2 { margin: 0; font-size: var(--text-base); font-weight: 500; letter-spacing: var(--tracking-body); line-height: 1.4; }
+.total { display: inline-flex; align-items: baseline; color: var(--text-muted); font-size: var(--text-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.inherit > span { color: inherit; font: inherit; letter-spacing: inherit; }
+.tools { display: flex; flex: none; align-items: center; gap: 8px; }
+
+/* One type filter */
+.filters { display: flex; align-items: center; border-bottom: 1px solid var(--border-subtle); padding: 0 24px 14px; }
+.segment { display: flex; min-width: 0; max-width: 100%; }
+.count { color: var(--text-muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+
+/* New posts wait in their own row above the list, so nothing moves while someone reads. */
+.incoming { overflow: hidden; }
+.incomingInner { display: flex; justify-content: center; padding: 12px 24px 0; }
+.pill { display: inline-flex; height: var(--control-height-sm); align-items: center; gap: 8px; border: 0; border-radius: var(--radius-pill); padding: 0 14px 0 6px; background: var(--accent); color: var(--accent-foreground); font: inherit; font-size: var(--text-sm); font-weight: 500; white-space: nowrap; cursor: pointer; font-variant-numeric: tabular-nums; -webkit-tap-highlight-color: transparent; transition: background-color var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard); }
+.pill:active { transform: scale(.97); }
+@media (hover: hover) and (pointer: fine) { .pill:hover { background: var(--accent-strong); } }
+.pillText { display: inline-flex; align-items: baseline; }
+.stack { display: inline-flex; flex: none; align-items: center; }
+.stackItem { display: grid; width: 22px; height: 22px; flex: none; place-items: center; overflow: hidden; border-radius: 50%; background: var(--accent-subtle); color: var(--accent-foreground); font-size: var(--text-xs); font-weight: 500; box-shadow: 0 0 0 2px var(--accent); }
+.stack > * + * { margin-left: -6px; }
+
+/* Feed */
+.list { position: relative; padding: 4px 0 16px; }
+.group { position: relative; }
+.day { display: flex; align-items: baseline; gap: 8px; margin: 0; padding: 16px 24px 6px; color: var(--text-secondary); font-size: var(--text-xs); font-weight: 500; }
+.dayDate { color: var(--text-muted); font-weight: 400; }
+.items { position: relative; isolation: isolate; margin: 0; padding: 0 12px; list-style: none; }
+
+.item { position: relative; display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 0 12px; border-radius: var(--radius-panel); padding: 10px 12px; transition: background-color var(--duration-fast) var(--ease-standard); }
+/* A quiet rail joins the avatars of one day. */
+.item::after { content: ""; position: absolute; z-index: -1; top: 48px; bottom: -6px; left: 28px; width: 1px; background: var(--border-subtle); }
+.item:last-child::after { display: none; }
+@media (hover: hover) and (pointer: fine) { .item:has(> .body > button.head:hover) { background: color-mix(in oklab, var(--surface-muted) 70%, transparent); } }
+
+.avatar { position: relative; display: grid; width: 32px; height: 32px; align-self: start; place-items: center; border-radius: 50%; background: var(--surface-muted); color: var(--text-secondary); font-size: var(--text-sm); font-weight: 500; box-shadow: 0 0 0 1px color-mix(in oklab, var(--foreground) 8%, transparent); }
+.avatar { overflow: hidden; }
+.avatar img { display: block; width: 18px; height: 18px; object-fit: contain; }
+.avatar svg { width: 16px; height: 16px; }
+
+.body { min-width: 0; }
+.head { display: grid; width: 100%; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 12px; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; text-align: left; }
+button.head { cursor: pointer; -webkit-tap-highlight-color: transparent; --focus-outline-offset: 4px; border-radius: 6px; }
+.headText { display: grid; min-width: 0; gap: 6px; }
+.sentence { color: var(--text-secondary); font-size: var(--text-sm); line-height: 1.45; }
+.sentence strong { color: var(--foreground); font-weight: 500; }
+.quote { margin: 0; display: -webkit-box; max-width: 62ch; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; color: var(--foreground); font-size: var(--text-sm); line-height: 1.5; overflow-wrap: anywhere; }
+.thumb { display: block; max-width: 100%; }
+.meta { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: 4px 8px; color: var(--text-muted); font-size: var(--text-xs); line-height: 1.5; }
+.lines { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; color: var(--text-secondary); font-size: var(--text-xs); line-height: 1.5; }
+.lines strong { color: var(--foreground); font-weight: 500; }
+.side { display: inline-flex; align-items: center; padding-top: 2px; }
+.time { color: var(--text-muted); font-size: var(--text-xs); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.empty { display: grid; justify-items: center; gap: 12px; padding: 56px 20px; color: var(--text-muted); text-align: center; }
+.empty p { margin: 0; }
+.more { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 4px 24px 20px; }
+
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+@container (max-width: 520px) {
+  .count { display: none; }
+}
+@container (max-width: 440px) {
+  .header { padding-left: 16px; padding-right: 12px; }
+  .filters { padding-inline: 16px; }
+  .day { padding-inline: 16px; }
+  .items { padding-inline: 4px; }
+  .time { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .item, .pill { transition-duration: 0ms; }
+}

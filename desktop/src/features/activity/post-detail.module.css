@@ -1,0 +1,33 @@
+.sheet { display: grid; gap: 16px; }
+.outcome { display: flex; }
+.detail { display: grid; gap: 16px; color: var(--foreground); font-size: var(--text-sm); line-height: 1.5; }
+.detail > * { min-width: 0; }
+
+.quote { display: grid; gap: 16px; }
+.words { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
+.muted { margin: 0; color: var(--text-secondary); }
+.embed { display: grid; gap: 6px; border-left: 2px solid var(--border); padding-left: 12px; overflow-wrap: anywhere; }
+.embed strong { font-weight: 500; }
+.embed p { margin: 0; white-space: pre-wrap; }
+.field span { display: block; color: var(--text-secondary); font-size: var(--text-xs); }
+.pictures { display: grid; gap: 8px; }
+.note { margin: 0; color: var(--text-secondary); font-size: var(--text-xs); }
+
+.section { display: grid; gap: 4px; border-top: 1px solid var(--border-subtle); padding-top: 12px; }
+.section p { margin: 0; }
+.headline { font-weight: 500; font-variant-numeric: tabular-nums; }
+.facts { display: grid; gap: 2px; color: var(--text-secondary); }
+.kind { display: grid; gap: 2px; margin-top: 4px; color: var(--text-secondary); font-size: var(--text-xs); }
+
+.account { display: grid; gap: 12px; border-top: 1px solid var(--border-subtle); padding-top: 12px; }
+.accountHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.accountHead strong { min-width: 0; overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.result { display: grid; gap: 12px; }
+.takeaway { display: flex; align-items: flex-start; gap: 8px; margin: 0; font-weight: 500; font-variant-numeric: tabular-nums; line-height: 1.4; }
+.takeaway svg { flex: none; width: 16px; height: 16px; margin-top: 2px; }
+.rows { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 0; }
+.rows div { display: grid; gap: 2px; min-width: 0; }
+.rows dt { color: var(--text-secondary); font-size: var(--text-xs); }
+.rows dd { margin: 0; font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.nobody { display: flex; align-items: center; gap: 8px; margin: 0; border-top: 1px solid var(--border-subtle); padding-top: 12px; color: var(--text-secondary); font-size: var(--text-xs); }
+.nobody svg { flex: none; width: 16px; height: 16px; }

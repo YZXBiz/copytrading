@@ -1,128 +1,82 @@
-import { type ColumnDef } from "@tanstack/react-table"
-import { type DataGridFeatures } from "@/components/reui/data-grid/data-grid"
-import { DataGridColumnHeader } from "@/components/reui/data-grid/data-grid-column-header"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import type { DataColumn } from "@/components/arc/sortable-data-table/sortable-data-table"
 import { monthDay, timeOfDay } from "@/lib/format"
 import { OutcomeBadge } from "./OutcomeBadge"
-import { PostTile } from "./PostTile"
+import { PostMark } from "./PostMark"
 import { type ActivityRow } from "./activity-rows"
+import styles from "./activity.module.css"
 
-type OpenPost = (row: ActivityRow, origin: HTMLElement) => void
+/** One table row: the values the columns sort by, and the row they are read from. */
+export interface PostTableRow extends Record<string, unknown> {
+  id: string
+  /** The post's sequence, padded so the columns sort it as a number. */
+  time: string
+  guru: string
+  status: string
+  row: ActivityRow
+}
 
+export const tableRow = (row: ActivityRow): PostTableRow => ({ id: String(row.post.sequence), time: String(row.post.sequence).padStart(12, "0"), guru: row.guru, status: row.label, row })
 
 /** What each account did with the post: a line each, two at most. */
 function AccountsCell({ row }: { row: ActivityRow }) {
-  if (row.accounts.length === 0) return <span className="text-muted-foreground text-sm">—</span>
+  if (row.accounts.length === 0) return <span className={styles.none}>None</span>
   const shown = row.accounts.slice(0, 2)
   return (
-    <div className="min-w-0">
+    <div className={styles.accounts}>
       {shown.map((a) => (
-        <div key={a.accountId} className="flex min-w-0 items-baseline gap-1.5 text-xs">
-          {row.accounts.length > 1 && <span className="text-muted-foreground max-w-24 shrink-0 truncate">{a.accountId}</span>}
-          <span className="truncate font-medium">{a.summary || "—"}</span>
-        </div>
+        <span key={a.accountId}>
+          {row.accounts.length > 1 && <b>{a.accountId}</b>}
+          <i>{a.summary || "Nothing yet"}</i>
+        </span>
       ))}
-      {row.accounts.length > shown.length && <div className="text-muted-foreground text-xs">+{row.accounts.length - shown.length} more</div>}
+      {row.accounts.length > shown.length && <small>+{row.accounts.length - shown.length} more</small>}
     </div>
   )
 }
 
-export function activityColumns({ onOpen }: { onOpen: OpenPost }): ColumnDef<DataGridFeatures, ActivityRow>[] {
+export function activityColumns({ onOpen }: { onOpen: (row: ActivityRow) => void }): DataColumn<PostTableRow>[] {
   return [
     {
-      id: "time",
-      accessorFn: (row) => row.post.sequence,
-      header: ({ column }) => <DataGridColumnHeader column={column} visibility={true} />,
-      cell: ({ row }) => (
-        <div className="min-w-0">
-          <div className="text-sm font-medium tabular-nums">{timeOfDay(row.original.post.source_at)}</div>
-          <div className="text-muted-foreground text-xs tabular-nums">{monthDay(row.original.post.source_at)}</div>
+      key: "time",
+      label: "Time",
+      sortable: true,
+      width: 112,
+      render: (_, { row }) => (
+        <div className={styles.when}>
+          <span>{timeOfDay(row.post.source_at)}</span>
+          <span>{monthDay(row.post.source_at)}</span>
         </div>
       ),
-      size: 96,
-      enableSorting: true,
-      enableHiding: false,
-      enableResizing: true,
-      meta: { headerTitle: "Time", cellClassName: "ps-4!", headerClassName: "ps-4!" },
     },
     {
-      id: "guru",
-      accessorFn: (row) => row.guru,
-      header: ({ column }) => <DataGridColumnHeader column={column} visibility={true} />,
-      cell: ({ row }) => (
-        <div className="flex min-w-0 items-center gap-2">
-          <Avatar size="sm" aria-hidden="true">
-            <AvatarFallback className="text-xs">{Array.from(row.original.guru)[0]}</AvatarFallback>
-          </Avatar>
-          <span className="truncate text-sm font-medium">{row.original.guru}</span>
+      key: "guru",
+      label: "Guru",
+      sortable: true,
+      width: 140,
+      render: (_, { row }) => (
+        <div className={styles.who}>
+          <span aria-hidden="true">{[...row.guru][0]}</span>
+          <span>{row.guru}</span>
         </div>
       ),
-      size: 120,
-      minSize: 100,
-      enableSorting: true,
-      enableHiding: false,
-      enableResizing: true,
-      meta: { headerTitle: "Guru" },
     },
     {
-      id: "post",
-      header: ({ column }) => <DataGridColumnHeader column={column} visibility={true} />,
-      cell: ({ row }) => (
-        <div className="flex min-w-0 items-center gap-2.5">
-          <PostTile symbol={row.original.symbol} />
-          <button
-            type="button"
-            className="hover:text-primary block min-w-0 truncate text-left text-sm font-medium underline-offset-2 transition-colors hover:underline"
-            aria-label={`Open the post by ${row.original.guru}`}
-            aria-haspopup="dialog"
-            onClick={(event) => {
-              event.stopPropagation()
-              onOpen(row.original, event.currentTarget)
-            }}
-          >
-            {row.original.said}
+      key: "post",
+      label: "Post",
+      width: 260,
+      render: (_, { row }) => (
+        <div className={styles.postCell}>
+          <span className={styles.mark} aria-hidden="true">
+            <PostMark symbol={row.symbol} />
+          </span>
+          <button type="button" className={styles.open} aria-haspopup="dialog" data-sequence={row.post.sequence} onClick={() => onOpen(row)}>
+            {row.said}
           </button>
         </div>
       ),
-      size: 220,
-      minSize: 180,
-      enableSorting: false,
-      enableHiding: false,
-      enableResizing: true,
-      meta: { headerTitle: "Post", autoSize: true },
     },
-    {
-      id: "meaning",
-      header: ({ column }) => <DataGridColumnHeader column={column} visibility={true} />,
-      cell: ({ row }) => <div className="truncate text-sm">{row.original.meaning}</div>,
-      size: 196,
-      minSize: 140,
-      enableSorting: false,
-      enableHiding: false,
-      enableResizing: true,
-      meta: { headerTitle: "What it means" },
-    },
-    {
-      id: "status",
-      accessorFn: (row) => row.label,
-      header: ({ column }) => <DataGridColumnHeader column={column} visibility={true} />,
-      cell: ({ row }) => <OutcomeBadge title={row.original.label} tone={row.original.tone} />,
-      size: 128,
-      enableSorting: true,
-      enableHiding: false,
-      enableResizing: true,
-      meta: { headerTitle: "Status" },
-    },
-    {
-      id: "accounts",
-      header: ({ column }) => <DataGridColumnHeader column={column} visibility={true} />,
-      cell: ({ row }) => <AccountsCell row={row.original} />,
-      size: 210,
-      minSize: 170,
-      enableSorting: false,
-      enableHiding: false,
-      enableResizing: true,
-      meta: { headerTitle: "In each account", cellClassName: "pe-4!", headerClassName: "pe-4!" },
-    },
+    { key: "meaning", label: "What it means", width: 200, render: (_, { row }) => <span className={styles.clamp}>{row.meaning}</span> },
+    { key: "status", label: "Status", sortable: true, width: 140, render: (_, { row }) => <OutcomeBadge title={row.label} tone={row.tone} /> },
+    { key: "accounts", label: "In each account", width: 220, render: (_, { row }) => <AccountsCell row={row} /> },
   ]
 }

@@ -1,7 +1,7 @@
 import type { SourceActivity } from "../../../shared/contract"
-import { Meta } from "@/components/meta"
 import { reasonText } from "@/lib/reasons"
 import { callHeadline, callNote, callsOf, enteredByOwner, headline, isRepost, kindText, noCallLine } from "./reading"
+import styles from "./post-detail.module.css"
 
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
 
@@ -10,29 +10,40 @@ export function ReadAs({ post }: { post: SourceActivity }) {
   const reading = post.reading
   const calls = reading ? callsOf(reading) : []
   const by = post.interpreted_by ? `read by ${post.interpreted_by}` : null
+  const kind = reading ? ([kindText(reading), by].filter(Boolean) as string[]).map(capitalize) : []
   return (
-    <section aria-label="Read as" className="flex flex-col gap-1 border-t pt-2.5">
+    <section aria-label="Read as" className={styles.section}>
       {reading && calls.length === 0 && (
         <>
-          <p className="font-medium">{noCallLine(reading)}</p>
-          {enteredByOwner(post) && <p className="text-muted-foreground text-sm">You entered the trade yourself.</p>}
+          <p className={styles.headline}>{noCallLine(reading)}</p>
+          {enteredByOwner(post) && <p className={styles.muted}>You entered the trade yourself.</p>}
         </>
       )}
       {calls.map((call, index) => {
         const { title, detail } = callHeadline(call)
         const parts = [detail, callNote(call), isRepost(call) ? "a re-post of an earlier call" : null].filter(Boolean) as string[]
         return (
-          <div key={index} className={index === 0 ? undefined : "mt-2"}>
-            <p className="font-medium tabular-nums">{title}</p>
-            {parts.length > 0 && <Meta className="text-muted-foreground text-sm" items={parts.map(capitalize)} />}
+          <div key={index}>
+            <p className={styles.headline}>{title}</p>
+            <div className={styles.facts}>
+              {parts.map((part, i) => (
+                <span key={i}>{capitalize(part)}</span>
+              ))}
+            </div>
           </div>
         )
       })}
-      {reading && <Meta className="text-muted-foreground mt-1 text-xs" items={([kindText(reading), by].filter(Boolean) as string[]).map(capitalize)} />}
+      {kind.length > 0 && (
+        <div className={styles.kind}>
+          {kind.map((part, i) => (
+            <span key={i}>{part}</span>
+          ))}
+        </div>
+      )}
       {!reading && (
         <>
-          <p className="font-medium">{headline(post)}</p>
-          {post.parser_reason && <p className="text-muted-foreground text-sm">{reasonText(post.parser_reason)}</p>}
+          <p className={styles.headline}>{headline(post)}</p>
+          {post.parser_reason && <p className={styles.muted}>{reasonText(post.parser_reason)}</p>}
         </>
       )}
     </section>
