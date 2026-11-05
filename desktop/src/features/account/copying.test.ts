@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { AccountOverview, TradingStatus } from "../../../shared/contract"
-import { accountCopying, badgeTone, badgeVariant, isWarning, resumeBlocked } from "./copying"
+import { accountCopying, badgeTone, isWarning, resumeBlocked } from "./copying"
 
 const account = (over: Partial<AccountOverview> = {}): AccountOverview => ({
   account_id: "a",
@@ -64,7 +64,6 @@ describe("accountCopying", () => {
     expect(isWarning(quiet)).toBe(false)
     const warn = accountCopying(account({ readiness: "recovery_pending" }), status("running"))
     expect(isWarning(warn)).toBe(true)
-    expect(badgeVariant(warn)).toBe("warning-light")
     expect(badgeTone(warn)).toBe("warning")
     expect(badgeTone(quiet)).toBe("success")
     expect(badgeTone(accountCopying(account({ active_configuration: false }), status("running")))).toBe("neutral")

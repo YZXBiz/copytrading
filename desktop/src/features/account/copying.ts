@@ -1,5 +1,4 @@
 import type { AccountOverview, TradingStatus } from "../../../shared/contract"
-import type { BadgeProps } from "@/components/reui/badge"
 import { reasonText } from "@/lib/reasons"
 
 // Whether CopyTrading copies into one account, in the five words the owner sees (CopyingState.swift), with the
@@ -63,9 +62,6 @@ export function accountCopying(account: AccountOverview, status: TradingStatus |
 
 /** Whether something is wrong, so the line under the word is shown. */
 export const isWarning = ({ word, detail, warns }: CopyingState) => word === "sellsOnly" || word === "stopped" || (word === "copying" && detail !== null && warns)
-
-export const badgeVariant = (s: CopyingState): BadgeProps["variant"] =>
-  s.word === "stopped" ? "destructive-light" : isWarning(s) ? "warning-light" : s.word === "copying" ? "success-light" : "outline"
 
 /** The badge tone of the copying word: green only while it copies cleanly, amber for what needs a look, red when it stopped. */
 export const badgeTone = (s: CopyingState): "neutral" | "success" | "warning" | "danger" =>

@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react"
 import type { AccountOverviewPage } from "../../../shared/contract"
-import type { BadgeTone } from "@/components/arc/badge/badge"
 import { RegionAlert } from "@/features/activity/RegionAlert"
-import { accountCopying, badgeVariant, COPYING_TITLE } from "@/features/account/copying"
+import { accountCopying, badgeTone, COPYING_TITLE } from "@/features/account/copying"
 import { usePosts } from "@/features/activity/use-posts"
 import { dayWindow } from "@/features/activity/time"
 import { readClock } from "@/lib/clock"
@@ -15,9 +14,6 @@ import { GuruPostSheet } from "./GuruPostSheet"
 import { GuruTrendChart } from "./GuruTrendChart"
 import { type Guru, type PostFilter, TREND_RANGES, type TrendRange, buildFeed, guruHoldings, guruStats, trendRows } from "./model"
 import styles from "./gurus.module.css"
-
-/** How the account's copying state reads as a badge: a stopped account is a loss, one needing a look a warning, one copying a success. */
-const toneOf = (variant: string | null | undefined): BadgeTone => (variant === "destructive-light" ? "danger" : variant === "warning-light" ? "warning" : variant === "success-light" ? "success" : "neutral")
 
 /**
  * One guru's page: header, four figures, the profit line against break-even, the breakdown beside the posts.
@@ -50,7 +46,7 @@ export function GuruPage({ guru, accounts, setUpAccountIds }: { guru: Guru; acco
 
   const account = accounts.status === "ready" ? accounts.data.items.find((a) => a.account_id === accountId) : undefined
   const state = account ? accountCopying(account, status.status === "ready" ? status.data : null) : null
-  const copying = state && { title: COPYING_TITLE[state.word], tone: toneOf(badgeVariant(state)), detail: state.detail }
+  const copying = state && { title: COPYING_TITLE[state.word], tone: badgeTone(state), detail: state.detail }
 
   const performed = performance.status === "ready" ? performance.data : null
   const days_ = TREND_RANGES.find((r) => r.value === range)!.days
