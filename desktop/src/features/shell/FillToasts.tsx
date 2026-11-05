@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion } from "motion/react"
-import { CircleCheckIcon, XIcon } from "lucide-react"
+import { CircleCheckIcon } from "@/components/icons/CircleCheckIcon"
+import { Cancel01Icon as XIcon } from "@/components/icons/Cancel01Icon"
 import type { FillAlert } from "../../../shared/contract"
 import { Button } from "@/components/ui/button"
 import { MAX_VISIBLE, TOAST_GAP, TOAST_HEIGHT, stackPose } from "./toast-stack"

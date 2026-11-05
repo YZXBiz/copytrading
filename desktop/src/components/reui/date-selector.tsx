@@ -26,7 +26,11 @@ import { Calendar, CalendarDayButton } from "@/components/ui/calendar"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ChevronLeftIcon, ChevronRightIcon, CornerUpLeftIcon, CornerUpRightIcon, XIcon } from "lucide-react"
+import { ArrowLeft01Icon as ChevronLeftIcon } from "@/components/icons/ArrowLeft01Icon"
+import { ArrowRight01Icon as ChevronRightIcon } from "@/components/icons/ArrowRight01Icon"
+import { ArrowLeft02Icon as CornerUpLeftIcon } from "@/components/icons/ArrowLeft02Icon"
+import { ArrowRight02Icon as CornerUpRightIcon } from "@/components/icons/ArrowRight02Icon"
+import { Cancel01Icon as XIcon } from "@/components/icons/Cancel01Icon"
 
 export interface DateSelectorI18nConfig {
   // Labels

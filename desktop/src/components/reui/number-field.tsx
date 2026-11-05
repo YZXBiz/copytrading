@@ -8,7 +8,8 @@ import { cva } from "class-variance-authority"
 
 import { cn } from "cn"
 import { Label } from "@/components/ui/label"
-import { MinusIcon, PlusIcon } from "lucide-react"
+import { MinusSignIcon as MinusIcon } from "@/components/icons/MinusSignIcon"
+import { Add01Icon as PlusIcon } from "@/components/icons/Add01Icon"
 
 const NumberFieldContext = createContext<{
   fieldId: string
