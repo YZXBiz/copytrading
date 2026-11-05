@@ -1,5 +1,8 @@
 import { useCallback, useMemo, useState } from "react"
-import { FilterIcon, LandmarkIcon, SearchIcon, XIcon } from "lucide-react"
+import { BankIcon } from "@/components/icons/BankIcon"
+import { Cancel01Icon } from "@/components/icons/Cancel01Icon"
+import { FilterIcon } from "@/components/icons/FilterIcon"
+import { Search01Icon } from "@/components/icons/Search01Icon"
 import { type PaginationState, type SortingState, useTable } from "@tanstack/react-table"
 import { DataGrid, dataGridFeatures } from "@/components/reui/data-grid/data-grid"
 import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination"
@@ -83,7 +86,7 @@ export function ActivityTable({
           <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
             <InputGroup className="w-full sm:min-w-56 lg:w-64">
               <InputGroupAddon>
-                <SearchIcon aria-hidden="true" />
+                <Search01Icon aria-hidden="true" />
               </InputGroupAddon>
               <InputGroupInput
                 value={query}
@@ -104,7 +107,7 @@ export function ActivityTable({
                       resetPagination()
                     }}
                   >
-                    <XIcon aria-hidden="true" />
+                    <Cancel01Icon aria-hidden="true" />
                   </InputGroupButton>
                 </InputGroupAddon>
               )}
@@ -146,7 +149,7 @@ export function ActivityTable({
                 }}
               >
                 <SelectTrigger size="sm" className="w-full sm:w-40" aria-label="Account">
-                  <LandmarkIcon className="text-muted-foreground size-4" aria-hidden="true" />
+                  <BankIcon className="text-muted-foreground size-4" aria-hidden="true" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent align="end" alignItemWithTrigger={false}>

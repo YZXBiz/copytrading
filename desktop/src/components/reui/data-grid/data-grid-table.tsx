@@ -38,7 +38,7 @@ import { cn } from "cn"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Spinner } from "@/components/ui/spinner"
-import { PlusIcon } from "lucide-react"
+import { Add01Icon } from "@/components/icons/Add01Icon"
 
 // Static spacing lookups; called once per cell, so they stay plain string
 // picks instead of runtime variant machinery.
@@ -1000,7 +1000,7 @@ function DataGridTableAddRow() {
             }, 0)
           }}
         >
-          <PlusIcon className="size-4" aria-hidden="true" />
+          <Add01Icon className="size-4" aria-hidden="true" />
           {props.rowCreateLabel ?? i18n.labels.rowCreate}
         </Button>
       </td>

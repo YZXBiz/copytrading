@@ -1,4 +1,4 @@
-import { LandmarkIcon } from "lucide-react"
+import { BankIcon } from "@/components/icons/BankIcon"
 import type { AccountOverviewPage } from "../../../shared/contract"
 import { RegionError } from "@/components/region-error"
 import { Button } from "@/components/ui/button"
@@ -29,7 +29,7 @@ export function AccountsScreen({
       <Empty className="min-h-[60vh]">
         <EmptyHeader>
           <EmptyMedia variant="icon">
-            <LandmarkIcon />
+            <BankIcon />
           </EmptyMedia>
           <EmptyTitle>No accounts yet</EmptyTitle>
           <EmptyDescription>Connect a broker account to begin.</EmptyDescription>

@@ -1,4 +1,5 @@
-import { CheckCircle2Icon, TriangleAlertIcon } from "lucide-react"
+import { CircleCheckIcon } from "@/components/icons/CircleCheckIcon"
+import { TriangleAlertIcon } from "@/components/icons/TriangleAlertIcon"
 import { Alert, AlertDescription } from "@/components/reui/alert"
 import { Spinner } from "@/components/ui/spinner"
 
@@ -12,7 +13,7 @@ export function Note({ note }: { note: NoteState }) {
   const { kind, text } = note
   return (
     <Alert variant={kind === "working" ? "info" : kind === "done" ? "success" : "warning"} role={kind === "problem" ? "alert" : "status"}>
-      {kind === "working" ? <Spinner /> : kind === "done" ? <CheckCircle2Icon aria-hidden /> : <TriangleAlertIcon aria-hidden />}
+      {kind === "working" ? <Spinner /> : kind === "done" ? <CircleCheckIcon aria-hidden /> : <TriangleAlertIcon aria-hidden />}
       <AlertDescription>{text}</AlertDescription>
     </Alert>
   )

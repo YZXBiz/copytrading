@@ -1,5 +1,8 @@
 import { type KeyboardEvent } from "react"
-import { ChevronsLeftRightIcon, SparklesIcon, SquarePenIcon, XIcon } from "lucide-react"
+import { Cancel01Icon } from "@/components/icons/Cancel01Icon"
+import { ChevronsLeftRightIcon } from "@/components/icons/ChevronsLeftRightIcon"
+import { SparklesIcon } from "@/components/icons/SparklesIcon"
+import { SquarePenIcon } from "@/components/icons/SquarePenIcon"
 import { RegionError } from "@/components/region-error"
 import { Button } from "@/components/ui/button"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, useSidebar } from "@/components/ui/sidebar"
@@ -71,7 +74,7 @@ export function AssistantPanel({ model, ready, provider, suggestions, assistant,
             )}
             <Tooltip>
               <TooltipTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label="Hide assistant" onClick={toggleSidebar} className={MUTED_ICON_BUTTON} />}>
-                <XIcon aria-hidden="true" />
+                <Cancel01Icon aria-hidden="true" />
               </TooltipTrigger>
               <TooltipContent>Hide</TooltipContent>
             </Tooltip>

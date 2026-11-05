@@ -1,4 +1,4 @@
-import { MessageSquareIcon } from "lucide-react"
+import { Message01Icon } from "@/components/icons/Message01Icon"
 import { Button } from "@/components/ui/button"
 import { FieldGroup } from "@/components/ui/field"
 import { Spinner } from "@/components/ui/spinner"
@@ -16,7 +16,7 @@ export function DiscordSheet({ onClose }: { onClose: () => void }) {
   const result = resultFor(s.checks, draft, "discord")
   return (
     <EditorSheet
-      icon={MessageSquareIcon}
+      icon={Message01Icon}
       title="Discord"
       description="Where your gurus post their calls. CopyTrading reads the channels as you."
       onClose={onClose}

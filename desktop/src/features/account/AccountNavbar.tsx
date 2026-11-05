@@ -1,4 +1,8 @@
-import { ActivityIcon, EllipsisIcon, LinkIcon, RefreshCwIcon, ShieldCheckIcon } from "lucide-react"
+import { Activity01Icon } from "@/components/icons/Activity01Icon"
+import { Link01Icon } from "@/components/icons/Link01Icon"
+import { MoreHorizontalIcon } from "@/components/icons/MoreHorizontalIcon"
+import { RefreshIcon } from "@/components/icons/RefreshIcon"
+import { ShieldCheckIcon } from "@/components/icons/ShieldCheckIcon"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -34,7 +38,7 @@ export function AccountNavbar({
       <div className="flex shrink-0 items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button type="button" variant="outline" size="icon-sm" aria-label="Account actions" />}>
-            <EllipsisIcon aria-hidden="true" />
+            <MoreHorizontalIcon aria-hidden="true" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuGroup>
@@ -43,15 +47,15 @@ export function AccountNavbar({
                 Edit Limits
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onRefresh}>
-                <RefreshCwIcon aria-hidden="true" />
+                <RefreshIcon aria-hidden="true" />
                 Refresh
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate("activity")}>
-                <ActivityIcon aria-hidden="true" />
+                <Activity01Icon aria-hidden="true" />
                 View in Activity
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onOpenConnections}>
-                <LinkIcon aria-hidden="true" />
+                <Link01Icon aria-hidden="true" />
                 Open Connections
               </DropdownMenuItem>
             </DropdownMenuGroup>

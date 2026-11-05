@@ -1,7 +1,7 @@
 // solution-analytics-8's trend chart (MetricTrendChart), as shipped: a Frame with a title and description, a ComposedChart of an
 // area gradient under a line with dots, and a dashed reference line for the target. Changed from the block: the data (the
 // guru's cumulative realized profit by day), the target is break-even, and there is no alert-rule footer.
-import { ChartLineIcon } from "lucide-react"
+import { ChartLineIcon } from "@/components/icons/ChartLineIcon"
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, XAxis, YAxis } from "recharts"
 import { RegionError } from "@/components/region-error"
 import { Frame, FrameDescription, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"

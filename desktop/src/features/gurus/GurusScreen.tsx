@@ -1,4 +1,4 @@
-import { UsersIcon } from "lucide-react"
+import { UserGroupIcon as UsersIcon } from "@/components/icons/UserGroupIcon"
 import type { AccountOverviewPage } from "../../../shared/contract"
 import { RegionError } from "@/components/region-error"
 import { Frame, FramePanel } from "@/components/reui/frame"
@@ -41,7 +41,7 @@ export function GurusScreen({ guruId, accounts }: { guruId: string | null; accou
         )}
         {setup.status === "ready" && gurus.length === 0 && (
           <EmptyState
-            icon={UsersIcon}
+            icon={UserGroupIcon}
             title={guruId ? "This guru is not in your setup" : "No gurus yet"}
             description="Gurus you copy appear here once they are set up in Connections."
             action={{ label: "Open Connections", onClick: () => navigate("settings", "connections") }}

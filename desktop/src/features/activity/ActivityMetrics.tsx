@@ -1,5 +1,10 @@
 import type { ReactNode } from "react"
-import { ArrowLeftRightIcon, ClockIcon, MessageSquareIcon, SkipForwardIcon, TrendingDown, TrendingUp } from "lucide-react"
+import { ArrowLeftRightIcon } from "@/components/icons/ArrowLeftRightIcon"
+import { Clock01Icon } from "@/components/icons/Clock01Icon"
+import { Message01Icon } from "@/components/icons/Message01Icon"
+import { SkipForwardIcon } from "@/components/icons/SkipForwardIcon"
+import { TrendingDownIcon } from "@/components/icons/TrendingDownIcon"
+import { TrendingUpIcon } from "@/components/icons/TrendingUpIcon"
 import { Badge, type BadgeProps } from "@/components/reui/badge"
 import { Frame, FramePanel } from "@/components/reui/frame"
 import { RollingNumber } from "@/components/rolling-number"
@@ -7,9 +12,9 @@ import { Item, ItemMedia } from "@/components/ui/item"
 import { type DayCounts, type Metric } from "./post-bucket"
 
 const CARDS: { id: Metric; title: string; detail: string; icon: ReactNode; badge: BadgeProps["variant"]; bar: string }[] = [
-  { id: "posts", title: "Posts", detail: "From your gurus", icon: <MessageSquareIcon />, badge: "info-light", bar: "bg-info/30" },
+  { id: "posts", title: "Posts", detail: "From your gurus", icon: <Message01Icon />, badge: "info-light", bar: "bg-info/30" },
   { id: "traded", title: "Traded", detail: "Orders placed", icon: <ArrowLeftRightIcon />, badge: "primary-light", bar: "bg-primary/30" },
-  { id: "waiting", title: "Waiting", detail: "Need your call", icon: <ClockIcon />, badge: "warning-light", bar: "bg-warning/30" },
+  { id: "waiting", title: "Waiting", detail: "Need your call", icon: <Clock01Icon />, badge: "warning-light", bar: "bg-warning/30" },
   { id: "skipped", title: "Skipped", detail: "Not copied", icon: <SkipForwardIcon />, badge: "outline", bar: "bg-muted-foreground/30" },
 ]
 
@@ -48,7 +53,7 @@ export function ActivityMetrics({ today, before }: { today: DayCounts; before: D
                   </div>
                 </div>
                 <Badge variant={card.badge} aria-label={`${signed(change)} from the day before`}>
-                  {change < 0 ? <TrendingDown className="size-3" aria-hidden="true" /> : <TrendingUp className="size-3" aria-hidden="true" />}
+                  {change < 0 ? <TrendingDownIcon className="size-3" aria-hidden="true" /> : <TrendingUpIcon className="size-3" aria-hidden="true" />}
                   {signed(change)}
                 </Badge>
               </div>

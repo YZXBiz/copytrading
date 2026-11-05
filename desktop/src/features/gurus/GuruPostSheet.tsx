@@ -1,6 +1,6 @@
 // ReUI's Finance Activity Sheet (timeline-9), installed as shipped: the inset right sheet, its header with the title and a
 // badge, the close button and the scrolling body. The body is the post in full instead of the block's feed.
-import { XIcon } from "lucide-react"
+import { Cancel01Icon } from "@/components/icons/Cancel01Icon"
 import type { SourceActivity } from "../../../shared/contract"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -34,7 +34,7 @@ export function GuruPostSheet({ post, guruName, now, onClose }: { post: SourceAc
             <SheetClose
               render={
                 <Button type="button" variant="ghost" size="icon-sm" aria-label="Close the post" className="shrink-0">
-                  <XIcon aria-hidden="true" />
+                  <Cancel01Icon aria-hidden="true" />
                 </Button>
               }
             />

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { SlidersHorizontalIcon } from "lucide-react"
+import { SlidersHorizontalIcon } from "@/components/icons/SlidersHorizontalIcon"
 import type { AccountPolicy, RecoveryPreference, SetupView } from "../../../shared/contract"
 import { RegionError } from "@/components/region-error"
 import { Button } from "@/components/ui/button"

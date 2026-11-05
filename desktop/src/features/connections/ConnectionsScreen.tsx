@@ -1,5 +1,10 @@
 import { Children, Fragment, type ReactNode, useEffect, useRef, useState } from "react"
-import { LandmarkIcon, MessageSquareIcon, PlusIcon, SparklesIcon, UserIcon, UsersIcon } from "lucide-react"
+import { Add01Icon } from "@/components/icons/Add01Icon"
+import { BankIcon } from "@/components/icons/BankIcon"
+import { Message01Icon } from "@/components/icons/Message01Icon"
+import { SparklesIcon } from "@/components/icons/SparklesIcon"
+import { UserGroupIcon } from "@/components/icons/UserGroupIcon"
+import { UserIcon } from "@/components/icons/UserIcon"
 import { RegionError } from "@/components/region-error"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
@@ -78,7 +83,7 @@ export function ConnectionsScreen({ sheet }: { sheet: string | null }) {
       <Section id="services" title="Services" description="Where the calls come from, and the AI that reads them.">
         <Rows title="Services">
           <ConnectionRow
-            icon={MessageSquareIcon}
+            icon={Message01Icon}
             label="Discord"
             title="Discord"
             detail={channels.length ? `${plural(channels.length, "channel")}, ${authors.length ? plural(authors.length, "author") : "anyone who posts"}` : undefined}
@@ -104,7 +109,7 @@ export function ConnectionsScreen({ sheet }: { sheet: string | null }) {
         description="Where orders go."
         action={
           <Button type="button" size="sm" variant="outline" onClick={() => setOpen({ kind: "account", uid: addAccount() })}>
-            <PlusIcon aria-hidden /> Add account
+            <Add01Icon aria-hidden /> Add account
           </Button>
         }
       >
@@ -116,7 +121,7 @@ export function ConnectionsScreen({ sheet }: { sheet: string | null }) {
               return (
                 <ConnectionRow
                   key={account.uid}
-                  icon={LandmarkIcon}
+                  icon={BankIcon}
                   label={name || "new account"}
                   title={name || "New account"}
                   detail={account.environment === "live" ? "Live" : "Paper"}
@@ -128,7 +133,7 @@ export function ConnectionsScreen({ sheet }: { sheet: string | null }) {
             })}
           </Rows>
         ) : (
-          <EmptyRegion icon={LandmarkIcon} title="No broker accounts yet" description="Add an Alpaca paper account to start." />
+          <EmptyRegion icon={BankIcon} title="No broker accounts yet" description="Add an Alpaca paper account to start." />
         )}
       </Section>
 
@@ -138,7 +143,7 @@ export function ConnectionsScreen({ sheet }: { sheet: string | null }) {
         description="Each guru is one Discord channel."
         action={
           <Button type="button" size="sm" variant="outline" onClick={() => setOpen({ kind: "guru", uid: addGuru() })}>
-            <PlusIcon aria-hidden /> Add guru
+            <Add01Icon aria-hidden /> Add guru
           </Button>
         }
       >
@@ -160,7 +165,7 @@ export function ConnectionsScreen({ sheet }: { sheet: string | null }) {
             })}
           </Rows>
         ) : (
-          <EmptyRegion icon={UsersIcon} title="No gurus yet" description="Add one to copy their calls." />
+          <EmptyRegion icon={UserGroupIcon} title="No gurus yet" description="Add one to copy their calls." />
         )}
       </Section>
 
@@ -215,7 +220,7 @@ function Rows({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
-function EmptyRegion({ icon: Icon, title, description }: { icon: typeof UsersIcon; title: string; description: string }) {
+function EmptyRegion({ icon: Icon, title, description }: { icon: typeof UserGroupIcon; title: string; description: string }) {
   return (
     <Frame>
       <FramePanel>

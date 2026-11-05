@@ -1,4 +1,6 @@
-import { RotateCwIcon, TrendingDownIcon, TrendingUpIcon } from "lucide-react"
+import { RotateClockwiseIcon } from "@/components/icons/RotateClockwiseIcon"
+import { TrendingDownIcon } from "@/components/icons/TrendingDownIcon"
+import { TrendingUpIcon } from "@/components/icons/TrendingUpIcon"
 import type { MarketQuote } from "../../../shared/contract"
 import { Button } from "@/components/ui/button"
 import { ButtonGroup } from "@/components/ui/button-group"
@@ -140,7 +142,7 @@ export function TradeFields({
           />
           {canQuote(symbol) && (
             <Button type="button" size="icon-sm" variant="ghost" aria-label="Get the latest price" disabled={quoting} onClick={onRefreshQuote}>
-              {quoting ? <Spinner /> : <RotateCwIcon aria-hidden />}
+              {quoting ? <Spinner /> : <RotateClockwiseIcon aria-hidden />}
             </Button>
           )}
           {draft.priceChoice === "limit" && (

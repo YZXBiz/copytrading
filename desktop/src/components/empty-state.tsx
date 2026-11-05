@@ -1,10 +1,10 @@
-import type { LucideIcon } from "lucide-react"
+import type { Icon } from "@/lib/icon"
 import { IconStack } from "@/components/reui/icon-stack"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 
 /** An empty list, as ReUI draws one: the icon-stack with one glyph, a title, a line that adds a fact, and at most one action. */
-export function EmptyState({ icon: Icon, title, description, action, className }: { icon: LucideIcon; title: string; description?: string; action?: { label: string; onClick: () => void }; className?: string }) {
+export function EmptyState({ icon: Icon, title, description, action, className }: { icon: Icon; title: string; description?: string; action?: { label: string; onClick: () => void }; className?: string }) {
   return (
     <Empty className={className}>
       <EmptyHeader>

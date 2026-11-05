@@ -16,7 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
+import { ArrowLeft01Icon } from "@/components/icons/ArrowLeft01Icon"
+import { ArrowRight01Icon } from "@/components/icons/ArrowRight01Icon"
 
 interface DataGridPaginationProps {
   sizes?: number[]
@@ -240,7 +241,7 @@ function DataGridPagination(props: DataGridPaginationProps): JSX.Element {
                   <span className="sr-only">
                     {mergedProps.previousPageLabel}
                   </span>
-                  <ChevronLeftIcon className="size-4" />
+                  <ArrowLeft01Icon className="size-4" />
                 </Button>
 
                 {paginationItems.map((item) =>
@@ -295,7 +296,7 @@ function DataGridPagination(props: DataGridPaginationProps): JSX.Element {
                   disabled={!table.getCanNextPage()}
                 >
                   <span className="sr-only">{mergedProps.nextPageLabel}</span>
-                  <ChevronRightIcon className="size-4" />
+                  <ArrowRight01Icon className="size-4" />
                 </Button>
               </div>
             )}

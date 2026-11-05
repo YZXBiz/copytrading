@@ -65,7 +65,7 @@ import { flexRender } from "@tanstack/react-table"
 import type { Cell, Header, Row } from "@tanstack/react-table"
 
 import { Button } from "@/components/ui/button"
-import { GripVerticalIcon } from "lucide-react"
+import { GripVerticalIcon } from "@/components/icons/GripVerticalIcon"
 
 function DataGridTableDndHeader<TData extends object>({
   header,

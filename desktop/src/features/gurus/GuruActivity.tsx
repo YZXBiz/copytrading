@@ -2,7 +2,8 @@
 // Timeline, each row a node on the rail, a title with its time, a detail line and a footer. Changed from the block: the rows are
 // the guru's posts with their status badge and time, grouped by day, under the All/Traded/Waiting/Not traded filter. Every node is
 // the same bordered tile, holding the stock's logo inset or a neutral icon, centred on one unbroken rail.
-import { FilterIcon, MessageSquareIcon } from "lucide-react"
+import { FilterIcon } from "@/components/icons/FilterIcon"
+import { Message01Icon } from "@/components/icons/Message01Icon"
 import { RegionError } from "@/components/region-error"
 import { EmptyState } from "@/components/empty-state"
 import { Frame, FrameDescription, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"
@@ -35,7 +36,7 @@ function Node({ symbol }: { symbol: string | null }) {
           <AvatarFallback className="bg-transparent text-[10px] font-medium">{ticker.charAt(0)}</AvatarFallback>
         </Avatar>
       ) : (
-        <MessageSquareIcon />
+        <Message01Icon />
       )}
     </TimelineIndicator>
   )
@@ -132,7 +133,7 @@ export function GuruActivity({
         {posts.status === "error" && <RegionError title="Posts did not load" message={posts.error} onRetry={posts.retry} />}
         {posts.status === "ready" && days.length === 0 && (
           <EmptyState
-            icon={filter === "all" ? MessageSquareIcon : FilterIcon}
+            icon={filter === "all" ? Message01Icon : FilterIcon}
             title={filter === "all" ? "No posts yet" : "No posts match"}
             description={more ? "Show older to look further back." : "Posts from this guru appear here as they arrive."}
             action={more ? undefined : filter === "all" ? { label: "Open Connections", onClick: () => navigate("settings", "connections") } : { label: "Clear filter", onClick: () => onFilterChange("all") }}

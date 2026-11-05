@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
-import { CheckIcon, RefreshCwIcon, SearchIcon, TriangleAlertIcon } from "lucide-react"
+import { RefreshIcon } from "@/components/icons/RefreshIcon"
+import { Search01Icon } from "@/components/icons/Search01Icon"
+import { Tick02Icon } from "@/components/icons/Tick02Icon"
+import { TriangleAlertIcon } from "@/components/icons/TriangleAlertIcon"
 import type { DiagnosticsPage } from "../../../shared/contract"
 import { RegionError } from "@/components/region-error"
 import { Button } from "@/components/ui/button"
@@ -49,7 +52,7 @@ function EmptyLog({ text }: { text: string }) {
         <Empty className="min-h-40">
           <EmptyHeader>
             <EmptyMedia variant="icon">
-              <SearchIcon />
+              <Search01Icon />
             </EmptyMedia>
             <EmptyTitle>{text}</EmptyTitle>
             <EmptyDescription>The log fills in as the engine works.</EmptyDescription>
@@ -104,12 +107,12 @@ export function JournalView({ onBytes }: { onBytes: (bytes: number) => void }) {
         </Tabs>
         <InputGroup className="ml-auto w-48">
           <InputGroupAddon>
-            <SearchIcon aria-hidden />
+            <Search01Icon aria-hidden />
           </InputGroupAddon>
           <InputGroupInput aria-label="Search the log" placeholder="Search" value={query} onChange={(event) => setQuery(event.target.value)} />
         </InputGroup>
         <Button type="button" variant="ghost" size="icon" aria-label="Read the log again" onClick={refresh}>
-          <RefreshCwIcon />
+          <RefreshIcon />
         </Button>
       </div>
       {visible.length === 0 ? (
@@ -131,7 +134,7 @@ export function JournalView({ onBytes }: { onBytes: (bytes: number) => void }) {
                 onKeyDown={(event) => (event.key === "Enter" || event.key === " ") && (event.preventDefault(), setSelected(row.id))}
               >
                 <ItemMedia variant="icon">
-                  {isProblem(row) ? <TriangleAlertIcon className="text-warning-foreground dark:text-warning" aria-hidden /> : <CheckIcon className="text-muted-foreground" aria-hidden />}
+                  {isProblem(row) ? <TriangleAlertIcon className="text-warning-foreground dark:text-warning" aria-hidden /> : <Tick02Icon className="text-muted-foreground" aria-hidden />}
                 </ItemMedia>
                 <ItemContent>
                   <ItemTitle className="w-full justify-between">

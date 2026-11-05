@@ -1,4 +1,4 @@
-import { CheckIcon } from "lucide-react"
+import { Tick02Icon } from "@/components/icons/Tick02Icon"
 import { Stepper, StepperDescription, StepperIndicator, StepperItem, StepperNav, StepperSeparator, StepperTitle, StepperTrigger } from "@/components/reui/stepper"
 
 // The vertical rail of ReUI's onboarding-2 (Sidebar Stepper Wizard), classes as shipped. Its compact rail for phones is
@@ -9,7 +9,7 @@ const INDICATOR_CLASSNAME =
 const SEPARATOR_COLOR_CLASSNAME =
   "bg-muted-foreground/12 group-data-[state=active]/step:bg-muted-foreground/12 group-data-[state=inactive]/step:bg-muted-foreground/12 group-data-[state=completed]/step:bg-success dark:bg-muted-foreground/18 dark:group-data-[state=active]/step:bg-muted-foreground/18 dark:group-data-[state=inactive]/step:bg-muted-foreground/18"
 
-const COMPLETED_INDICATOR = <CheckIcon className="size-3" aria-hidden="true" />
+const COMPLETED_INDICATOR = <Tick02Icon className="size-3" aria-hidden="true" />
 
 /** One setup step. A step is done when its own work is, so steps need not finish in order. */
 export interface OnboardingStep {

@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Meta } from "@/components/meta"
-import { PlusIcon } from "lucide-react"
+import { Add01Icon } from "@/components/icons/Add01Icon"
 import type { AccountOverview, ManualCorrectionOutcome, ManualOrderPreview, SourceActivity } from "../../../shared/contract"
 import { Alert, AlertDescription } from "@/components/reui/alert"
 import { Badge } from "@/components/reui/badge"
@@ -192,7 +192,7 @@ export function ManualReviewSheet({
               })}
               {!locked && drafts.length < MAX_TRADES && (
                 <Button type="button" size="sm" variant="ghost" className="self-start" onClick={() => setDrafts((all) => [...all, newDraft()])}>
-                  <PlusIcon aria-hidden /> Add Trade
+                  <Add01Icon aria-hidden /> Add Trade
                 </Button>
               )}
 

@@ -1,4 +1,5 @@
-import { CircleAlertIcon, OctagonXIcon } from "lucide-react"
+import { AlertCircleIcon } from "@/components/icons/AlertCircleIcon"
+import { CancelCircleIcon } from "@/components/icons/CancelCircleIcon"
 import type { AccountOverview, TradingStatus } from "../../../shared/contract"
 import { Alert, AlertDescription, AlertTitle } from "@/components/reui/alert"
 import { STOPPED_BODY, accountCopying, stoppedTitle } from "./copying"
@@ -29,7 +30,7 @@ export function AccountNotices({
     <>
       {state.word === "stopped" && (
         <Alert variant="destructive">
-          <OctagonXIcon aria-hidden />
+          <CancelCircleIcon aria-hidden />
           <AlertTitle>{stoppedTitle(account.account_id)}</AlertTitle>
           <AlertDescription>
             {state.detail && <p className="text-foreground">{state.detail}.</p>}
@@ -39,13 +40,13 @@ export function AccountNotices({
       )}
       {risk && (
         <Alert variant="warning">
-          <CircleAlertIcon aria-hidden />
+          <AlertCircleIcon aria-hidden />
           <AlertTitle>Risk valuation: {reasonText(risk)}</AlertTitle>
         </Alert>
       )}
       {activity && (
         <Alert variant="warning">
-          <CircleAlertIcon aria-hidden />
+          <AlertCircleIcon aria-hidden />
           <AlertTitle>
             {activity === "unresolved_account_order" ? "An order in Alpaca that CopyTrading didn't place is still open" : reasonText(activity)}
           </AlertTitle>
@@ -61,7 +62,7 @@ export function AccountNotices({
       ))}
       {unlisted.length > 0 && (
         <Alert variant="destructive">
-          <CircleAlertIcon aria-hidden />
+          <AlertCircleIcon aria-hidden />
           <AlertTitle>Unresolved incidents: {unlisted.join(", ")}</AlertTitle>
         </Alert>
       )}

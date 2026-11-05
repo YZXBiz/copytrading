@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { LandmarkIcon } from "lucide-react"
+import { BankIcon } from "@/components/icons/BankIcon"
 import type { AccountOverview, AccountOverviewPage } from "../../../shared/contract"
 import { Button } from "@/components/ui/button"
 import {
@@ -51,7 +51,7 @@ function Accounts({
       {live.map((account) => (
         <SidebarMenuItem key={account.account_id}>
           <SidebarMenuButton tooltip={account.account_id} isActive={account.account_id === selectedAccountId} render={<a href={href("accounts", account.account_id)} />}>
-            <LandmarkIcon aria-hidden="true" />
+            <BankIcon aria-hidden="true" />
             <span>{account.account_id}</span>
             {account.balance && (
               <SidebarMenuBadge className="tabular-nums">

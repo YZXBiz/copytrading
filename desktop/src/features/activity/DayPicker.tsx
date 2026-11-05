@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { CalendarIcon } from "lucide-react"
+import { Calendar01Icon } from "@/components/icons/Calendar01Icon"
 import { format, parseISO } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -19,7 +19,7 @@ export function DayPicker({ value, today, onChange }: { value: string; today: st
         render={
           <Button type="button" size="sm" variant="outline" aria-label="Choose the day" className="group/pick-date w-44 max-w-full justify-between leading-none font-normal tabular-nums">
             <span className="truncate">{format(parseISO(value), "MMM d, yyyy")}</span>
-            <CalendarIcon className="text-muted-foreground/80 group-hover/pick-date:text-foreground shrink-0 transition-colors" aria-hidden="true" />
+            <Calendar01Icon className="text-muted-foreground/80 group-hover/pick-date:text-foreground shrink-0 transition-colors" aria-hidden="true" />
           </Button>
         }
       />

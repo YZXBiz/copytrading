@@ -1,4 +1,6 @@
-import { CheckIcon, CircleAlertIcon, MinusIcon } from "lucide-react"
+import { AlertCircleIcon } from "@/components/icons/AlertCircleIcon"
+import { MinusSignIcon } from "@/components/icons/MinusSignIcon"
+import { Tick02Icon } from "@/components/icons/Tick02Icon"
 import { Badge } from "@/components/reui/badge"
 import { Bubble, BubbleContent } from "@/components/ui/bubble"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -40,7 +42,7 @@ export function AssistantProposalCard({ proposalId }: { proposalId: string }) {
         <ProposalActions proposal={proposal} gate onDecided={() => proposals.retry()} />
       ) : (
         <Badge variant={done ? "success-light" : failed ? "destructive-light" : "outline"} className="w-fit gap-1">
-          {done ? <CheckIcon aria-hidden="true" /> : failed ? <CircleAlertIcon aria-hidden="true" /> : <MinusIcon aria-hidden="true" />}
+          {done ? <Tick02Icon aria-hidden="true" /> : failed ? <AlertCircleIcon aria-hidden="true" /> : <MinusSignIcon aria-hidden="true" />}
           {statusLine(proposal)}
         </Badge>
       )}

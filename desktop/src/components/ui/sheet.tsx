@@ -3,7 +3,7 @@ import { Dialog as SheetPrimitive } from "@base-ui/react/dialog"
 import { cn } from "cn"
 
 import { Button } from "@/components/ui/button"
-import { XIcon } from "lucide-react"
+import { Cancel01Icon } from "@/components/icons/Cancel01Icon"
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
@@ -68,7 +68,7 @@ function SheetContent({
               />
             }
           >
-            <XIcon
+            <Cancel01Icon
             />
             <span className="sr-only">Close</span>
           </SheetPrimitive.Close>

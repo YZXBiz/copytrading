@@ -1,7 +1,7 @@
 // ReUI's dashboard-7 (Retail Revenue) as one page: its header with a date picker, four KPI cards with a sparkline each, the
 // stacked area chart beside the bar chart, and the order queue's DataGrid, filled with the guru posts. A row opens the post.
 import { useEffect, useMemo, useState } from "react"
-import { MessageSquareIcon } from "lucide-react"
+import { Message01Icon } from "@/components/icons/Message01Icon"
 import type { AccountOverviewPage } from "../../../shared/contract"
 import { EmptyState } from "@/components/empty-state"
 import { RegionError } from "@/components/region-error"
@@ -71,7 +71,7 @@ export function ActivityScreen({ selectedSequence, accounts }: { selectedSequenc
     return (
       <div className="mx-auto w-full max-w-7xl">
         <EmptyState
-          icon={MessageSquareIcon}
+          icon={Message01Icon}
           title="No posts yet"
           description="Posts from the gurus you copy appear here as they arrive."
           action={{ label: "Open Connections", onClick: () => navigate("settings", "connections") }}

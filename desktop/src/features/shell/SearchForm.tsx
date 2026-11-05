@@ -1,5 +1,17 @@
 import { useEffect, useState } from "react"
-import { FileTextIcon, LandmarkIcon, MonitorIcon, MoonIcon, PauseIcon, PlayIcon, PlugIcon, SearchIcon, SparklesIcon, SkipForwardIcon, SunIcon, UsersIcon, type LucideIcon } from "lucide-react"
+import type { Icon } from "@/lib/icon"
+import { BankIcon } from "@/components/icons/BankIcon"
+import { File01Icon } from "@/components/icons/File01Icon"
+import { MonitorIcon } from "@/components/icons/MonitorIcon"
+import { Moon02Icon } from "@/components/icons/Moon02Icon"
+import { PauseIcon } from "@/components/icons/PauseIcon"
+import { PlayIcon } from "@/components/icons/PlayIcon"
+import { Plug01Icon } from "@/components/icons/Plug01Icon"
+import { Search01Icon } from "@/components/icons/Search01Icon"
+import { SkipForwardIcon } from "@/components/icons/SkipForwardIcon"
+import { SparklesIcon } from "@/components/icons/SparklesIcon"
+import { Sun01Icon } from "@/components/icons/Sun01Icon"
+import { UserGroupIcon } from "@/components/icons/UserGroupIcon"
 import type { AccountOverview, Theme, TradingConfiguration } from "../../../shared/contract"
 import { ASSISTANT_EVENT, ASSISTANT_SHORTCUT, shortcutOf } from "../../../shared/shortcuts"
 import { Button } from "@/components/ui/button"
@@ -26,14 +38,14 @@ interface Props {
 const POSTS = 20
 
 const THEME_ACTIONS = [
-  { theme: "dark", label: "Dark", icon: MoonIcon },
-  { theme: "light", label: "Light", icon: SunIcon },
+  { theme: "dark", label: "Dark", icon: Moon02Icon },
+  { theme: "light", label: "Light", icon: Sun01Icon },
   { theme: "system", label: "System", icon: MonitorIcon },
 ] as const satisfies { theme: Theme; label: string; icon: unknown }[]
 
-const SCREEN_ENTRIES: { title: string; icon: LucideIcon; route: [ScreenId, string?] }[] = [
+const SCREEN_ENTRIES: { title: string; icon: Icon; route: [ScreenId, string?] }[] = [
   ...SCREEN_IDS.map((id) => ({ title: SCREENS[id].title, icon: SCREENS[id].icon, route: [id] as [ScreenId] })),
-  { title: "Connections", icon: PlugIcon, route: ["settings", "connections"] },
+  { title: "Connections", icon: Plug01Icon, route: ["settings", "connections"] },
 ]
 
 /** app-shell-2's search: a button in the sidebar and ⌘K open a dialog. It finds screens, accounts, gurus and the latest posts. */
@@ -65,7 +77,7 @@ export function SearchForm({ live, old, setup }: Props) {
           >
             Search...
           </Button>
-          <SearchIcon aria-hidden="true" className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 opacity-50 select-none" />
+          <Search01Icon aria-hidden="true" className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 opacity-50 select-none" />
           <Kbd className="absolute top-1/2 right-2 -translate-y-1/2 in-data-[state=collapsed]:hidden">⌘K</Kbd>
         </SidebarGroupContent>
       </SidebarGroup>
@@ -156,7 +168,7 @@ function SearchResults({ open, live, old, setup, close }: Props & { open: boolea
           <CommandGroup heading="Accounts">
             {[...live, ...old.map((a) => ({ ...a, old: true }))].map((a) => (
               <CommandItem key={a.account_id} value={`account ${a.account_id}`} onSelect={go("accounts", a.account_id)}>
-                <LandmarkIcon aria-hidden="true" />
+                <BankIcon aria-hidden="true" />
                 {a.account_id}
                 {"old" in a && <CommandShortcut className="tracking-normal">Old record</CommandShortcut>}
               </CommandItem>
@@ -167,7 +179,7 @@ function SearchResults({ open, live, old, setup, close }: Props & { open: boolea
           <CommandGroup heading="Gurus">
             {gurus.map((g) => (
               <CommandItem key={g.id} value={`guru ${g.name}`} onSelect={go("gurus", g.id)}>
-                <UsersIcon aria-hidden="true" />
+                <UserGroupIcon aria-hidden="true" />
                 {g.name}
               </CommandItem>
             ))}
@@ -189,7 +201,7 @@ function SearchResults({ open, live, old, setup, close }: Props & { open: boolea
           ) : (
             posts.data.items.slice(0, POSTS).map((post) => (
               <CommandItem key={post.sequence} value={`post ${post.sequence} ${guruName(gurus, post.guru_id)} ${quoteOf(post)}`} onSelect={go("activity", String(post.sequence))}>
-                <FileTextIcon aria-hidden="true" />
+                <File01Icon aria-hidden="true" />
                 <span className="min-w-0 flex-1 truncate">{quoteOf(post)}</span>
                 <CommandShortcut className="tracking-normal tabular-nums">
                   {guruName(gurus, post.guru_id)} · {ago(post.source_at, now)}

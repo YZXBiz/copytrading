@@ -1,4 +1,5 @@
-import { CircleAlertIcon, CircleCheckIcon } from "lucide-react"
+import { AlertCircleIcon } from "@/components/icons/AlertCircleIcon"
+import { CheckmarkCircle02Icon } from "@/components/icons/CheckmarkCircle02Icon"
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/reui/alert"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
@@ -25,7 +26,7 @@ export function CheckNotice({
   if (notice) {
     return (
       <Alert variant="warning" data-subject={subject}>
-        <CircleAlertIcon aria-hidden />
+        <AlertCircleIcon aria-hidden />
         <AlertTitle>Nothing to check yet</AlertTitle>
         <AlertDescription>{notice}</AlertDescription>
       </Alert>
@@ -43,7 +44,7 @@ export function CheckNotice({
   if (check.state === "ready") {
     return (
       <Alert variant="success">
-        <CircleCheckIcon aria-hidden />
+        <CheckmarkCircle02Icon aria-hidden />
         <AlertTitle>Connected</AlertTitle>
         {checkDetail(check, modelName) && <AlertDescription>{checkDetail(check, modelName)}</AlertDescription>}
       </Alert>
@@ -51,7 +52,7 @@ export function CheckNotice({
   }
   return (
     <Alert variant="destructive">
-      <CircleAlertIcon aria-hidden />
+      <AlertCircleIcon aria-hidden />
       <AlertTitle>Couldn’t connect</AlertTitle>
       <AlertDescription>{error ?? connectionProblem(check, modelName)}</AlertDescription>
       {check.suggestion && useModel && (

@@ -1,6 +1,10 @@
 // solution-analytics-8's header (MetricHeader), as shipped: a breadcrumb over a title row with its badge, a meta line, and the
 // range select and the more menu on the right. Changed from the block: the data, and only the controls with a real action stay.
-import { ActivityIcon, EllipsisIcon, LinkIcon, RefreshCwIcon, UsersIcon } from "lucide-react"
+import { Activity01Icon } from "@/components/icons/Activity01Icon"
+import { Link01Icon } from "@/components/icons/Link01Icon"
+import { MoreHorizontalIcon } from "@/components/icons/MoreHorizontalIcon"
+import { RefreshIcon } from "@/components/icons/RefreshIcon"
+import { UserGroupIcon } from "@/components/icons/UserGroupIcon"
 import { Badge, type BadgeProps } from "@/components/reui/badge"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
@@ -42,7 +46,7 @@ export function GuruHeader({
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink href={href("gurus")} className="flex items-center gap-1">
-              <UsersIcon className="text-muted-foreground size-3.5" aria-hidden="true" />
+              <UserGroupIcon className="text-muted-foreground size-3.5" aria-hidden="true" />
               Gurus
             </BreadcrumbLink>
           </BreadcrumbItem>
@@ -109,20 +113,20 @@ export function GuruHeader({
 
           <DropdownMenu>
             <DropdownMenuTrigger render={<Button variant="ghost" size="icon" aria-label="More actions" />}>
-              <EllipsisIcon aria-hidden="true" />
+              <MoreHorizontalIcon aria-hidden="true" />
             </DropdownMenuTrigger>
             <DropdownMenuContent sideOffset={9} align="end" className="w-44">
               <DropdownMenuGroup>
                 <DropdownMenuItem onClick={onRefresh}>
-                  <RefreshCwIcon className="size-4 opacity-60" aria-hidden="true" />
+                  <RefreshIcon className="size-4 opacity-60" aria-hidden="true" />
                   Refresh
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("activity")}>
-                  <ActivityIcon className="size-4 opacity-60" aria-hidden="true" />
+                  <Activity01Icon className="size-4 opacity-60" aria-hidden="true" />
                   View in Activity
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("settings", "connections")}>
-                  <LinkIcon className="size-4 opacity-60" aria-hidden="true" />
+                  <Link01Icon className="size-4 opacity-60" aria-hidden="true" />
                   Open Connections
                 </DropdownMenuItem>
               </DropdownMenuGroup>

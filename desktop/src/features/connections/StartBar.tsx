@@ -1,8 +1,12 @@
-import { CircleAlertIcon, CircleCheckIcon, InfoIcon, PauseIcon, RefreshCwIcon } from "lucide-react"
+import { AlertCircleIcon } from "@/components/icons/AlertCircleIcon"
+import { CheckmarkCircle02Icon } from "@/components/icons/CheckmarkCircle02Icon"
+import { InformationCircleIcon } from "@/components/icons/InformationCircleIcon"
+import { RefreshIcon } from "@/components/icons/RefreshIcon"
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/reui/alert"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { CirclePlayIcon } from "@/reui/icons/animated/duotone/circle-play"
+import { SquareInCircleIcon } from "@/reui/icons/animated/duotone/square-in-circle"
 import { CheckResults } from "./CheckResults"
 import type { Derived } from "./derive"
 import { applyChanges, discard, reload, startCopying, type SetupState } from "./setup-store"
@@ -16,7 +20,7 @@ export function StartBar({ s, derived }: { s: SetupState; derived: Derived }) {
   const status = startStatus({ start: s.start, progress: derived.progress, trading, isCopying: derived.copying, hasSaved: derived.hasSaved, hasUnsaved: derived.hasUnsaved })
   const busy = status.tone === "working" && s.start.phase !== "idle"
   const canDiscard = derived.hasSaved && derived.hasUnsaved && !busy
-  const Icon = status.tone === "positive" ? CircleCheckIcon : status.tone === "caution" ? CircleAlertIcon : InfoIcon
+  const Icon = status.tone === "positive" ? CheckmarkCircle02Icon : status.tone === "caution" ? AlertCircleIcon : InformationCircleIcon
   return (
     <div className="flex flex-col gap-4">
       <Alert variant={VARIANT[status.tone]} aria-live="polite">
@@ -38,10 +42,10 @@ export function StartBar({ s, derived }: { s: SetupState; derived: Derived }) {
                 disabled={busy}
                 onClick={() => void window.copytrading.act.pauseTrading().then(() => reload({ keepDraft: true }))}
               >
-                <PauseIcon aria-hidden /> Pause copying
+                <SquareInCircleIcon aria-hidden className="size-4" /> Pause copying
               </Button>
               <Button type="button" size="sm" disabled={!canApplyChanges({ start: s.start, progress: derived.progress, isCopying: true, hasUnsaved: derived.hasUnsaved })} onClick={() => void applyChanges()}>
-                <RefreshCwIcon aria-hidden /> Apply changes
+                <RefreshIcon aria-hidden /> Apply changes
               </Button>
             </>
           ) : (

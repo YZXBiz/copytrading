@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { GlobeIcon } from "lucide-react"
+import { Globe02Icon } from "@/components/icons/Globe02Icon"
 import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "@/components/ui/combobox"
 import { Field } from "@/components/ui/field"
 import { InputGroupAddon } from "@/components/ui/input-group"
@@ -31,7 +31,7 @@ export function TimeZoneField() {
       >
         <ComboboxInput aria-label="Show times in" placeholder="City or time zone">
           <InputGroupAddon>
-            <GlobeIcon className="text-muted-foreground size-4" aria-hidden />
+            <Globe02Icon className="text-muted-foreground size-4" aria-hidden />
           </InputGroupAddon>
         </ComboboxInput>
         <ComboboxContent>

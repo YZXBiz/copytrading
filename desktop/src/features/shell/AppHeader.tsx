@@ -1,4 +1,4 @@
-import { PanelLeftIcon } from "lucide-react"
+import { PanelLeftIcon } from "@/components/icons/PanelLeftIcon"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { AssistantToggle } from "@/features/assistant/AssistantToggle"

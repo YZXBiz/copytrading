@@ -1,5 +1,11 @@
 import type { ReactNode } from "react"
-import { ArchiveIcon, BotIcon, ClockIcon, HistoryIcon, PlugIcon, ScrollTextIcon, type LucideIcon } from "lucide-react"
+import type { Icon } from "@/lib/icon"
+import { ArchiveIcon } from "@/components/icons/ArchiveIcon"
+import { BotIcon } from "@/components/icons/BotIcon"
+import { Clock01Icon } from "@/components/icons/Clock01Icon"
+import { HistoryIcon } from "@/components/icons/HistoryIcon"
+import { Plug01Icon } from "@/components/icons/Plug01Icon"
+import { ScrollTextIcon } from "@/components/icons/ScrollTextIcon"
 import type { AccountOverviewPage } from "../../../shared/contract"
 import { Item, ItemContent, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item"
 import { href } from "@/features/shell/route"
@@ -13,9 +19,9 @@ import { OldRecordsPage } from "./OldRecordsPage"
 
 type Accounts = Loaded<AccountOverviewPage> & { retry: () => void }
 
-const PAGES: { id: string; title: string; subtitle: string; icon: LucideIcon; render: (accounts: Accounts, sheet: string | null) => ReactNode }[] = [
-  { id: "connections", title: "Connections", subtitle: "Each Connect checks its service before anything is saved.", icon: PlugIcon, render: (_, sheet) => <ConnectionsScreen sheet={sheet} /> },
-  { id: "general", title: "General", subtitle: "How times show, and what tells you about trades.", icon: ClockIcon, render: () => <GeneralPage /> },
+const PAGES: { id: string; title: string; subtitle: string; icon: Icon; render: (accounts: Accounts, sheet: string | null) => ReactNode }[] = [
+  { id: "connections", title: "Connections", subtitle: "Each Connect checks its service before anything is saved.", icon: Plug01Icon, render: (_, sheet) => <ConnectionsScreen sheet={sheet} /> },
+  { id: "general", title: "General", subtitle: "How times show, and what tells you about trades.", icon: Clock01Icon, render: () => <GeneralPage /> },
   { id: "agents", title: "Agent Access", subtitle: "What agents may do, and what they asked for.", icon: BotIcon, render: () => <AgentsPage /> },
   { id: "backups", title: "Backups", subtitle: "Back up your records, or restore from a backup.", icon: ArchiveIcon, render: () => <BackupsPage /> },
   { id: "logs", title: "Logs", subtitle: "What the engine recorded on this Mac.", icon: ScrollTextIcon, render: () => <LogsPage /> },

@@ -1,4 +1,4 @@
-import { CircleAlertIcon } from "lucide-react"
+import { AlertCircleIcon } from "@/components/icons/AlertCircleIcon"
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/reui/alert"
 import { Button } from "@/components/ui/button"
 
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 export function RegionError({ title, message, onRetry }: { title: string; message: string; onRetry: () => void }) {
   return (
     <Alert variant="destructive">
-      <CircleAlertIcon aria-hidden />
+      <AlertCircleIcon aria-hidden />
       <AlertTitle>{title}</AlertTitle>
       <AlertDescription>{message}</AlertDescription>
       <AlertAction>

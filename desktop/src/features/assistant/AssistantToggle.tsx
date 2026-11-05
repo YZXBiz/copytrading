@@ -1,8 +1,8 @@
-import { SparklesIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Kbd } from "@/components/ui/kbd"
 import { useSidebar } from "@/components/ui/sidebar"
+import { CloudSpeechIcon } from "@/reui/icons/animated/duotone/cloud-speech"
 
 /** The header's one control for the Assistant: shows the panel, and presses in while it is open. */
 export function AssistantToggle() {
@@ -12,7 +12,7 @@ export function AssistantToggle() {
       <TooltipTrigger
         render={
           <Button variant={open ? "secondary" : "default"} size="sm" aria-pressed={open} onClick={toggleSidebar} className="gap-1.5">
-            <SparklesIcon aria-hidden="true" />
+            <CloudSpeechIcon aria-hidden="true" className="size-4" />
             Assistant
           </Button>
         }

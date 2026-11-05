@@ -29,7 +29,16 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ArrowDownIcon, ArrowUpIcon, ChevronsUpDownIcon, CheckIcon, ArrowLeftToLineIcon, ArrowRightToLineIcon, ArrowLeftIcon, ArrowRightIcon, Settings2Icon, PinOffIcon } from "lucide-react"
+import { ArrowDown02Icon } from "@/components/icons/ArrowDown02Icon"
+import { ArrowLeft02Icon } from "@/components/icons/ArrowLeft02Icon"
+import { ArrowLeftToLineIcon } from "@/components/icons/ArrowLeftToLineIcon"
+import { ArrowRight02Icon } from "@/components/icons/ArrowRight02Icon"
+import { ArrowRightToLineIcon } from "@/components/icons/ArrowRightToLineIcon"
+import { ArrowUp02Icon } from "@/components/icons/ArrowUp02Icon"
+import { PinOffIcon } from "@/components/icons/PinOffIcon"
+import { SlidersHorizontalIcon } from "@/components/icons/SlidersHorizontalIcon"
+import { Tick02Icon } from "@/components/icons/Tick02Icon"
+import { UnfoldMoreIcon } from "@/components/icons/UnfoldMoreIcon"
 
 interface DataGridColumnHeaderProps<
   TData extends object,
@@ -180,11 +189,11 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
   const sortIcon =
     canSort &&
     (isSorted === "desc" ? (
-      <ArrowDownIcon className="size-3.25" aria-hidden="true" />
+      <ArrowDown02Icon className="size-3.25" aria-hidden="true" />
     ) : isSorted === "asc" ? (
-      <ArrowUpIcon className="size-3.25" aria-hidden="true" />
+      <ArrowUp02Icon className="size-3.25" aria-hidden="true" />
     ) : (
-      <ChevronsUpDownIcon className="mt-px size-3.25" aria-hidden="true" />
+      <UnfoldMoreIcon className="mt-px size-3.25" aria-hidden="true" />
     ))
 
   // A start-pinned column's resize handle covers the last 20px of its cell
@@ -240,10 +249,10 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
           }}
           disabled={!canSort}
         >
-          <ArrowUpIcon className="size-3.5!" />
+          <ArrowUp02Icon className="size-3.5!" />
           <span className="grow">{i18n.labels.sortAscending}</span>
           {isSorted === "asc" && (
-            <CheckIcon className="text-primary size-4 opacity-100!" />
+            <Tick02Icon className="text-primary size-4 opacity-100!" />
           )}
         </DropdownMenuItem>,
         <DropdownMenuItem
@@ -257,10 +266,10 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
           }}
           disabled={!canSort}
         >
-          <ArrowDownIcon className="size-3.5!" />
+          <ArrowDown02Icon className="size-3.5!" />
           <span className="grow">{i18n.labels.sortDescending}</span>
           {isSorted === "desc" && (
-            <CheckIcon className="text-primary size-4 opacity-100!" />
+            <Tick02Icon className="text-primary size-4 opacity-100!" />
           )}
         </DropdownMenuItem>
       )
@@ -280,7 +289,7 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
           <ArrowLeftToLineIcon className="size-3.5!" aria-hidden="true" />
           <span className="grow">{i18n.labels.pinColumnStart}</span>
           {isPinned === "start" && (
-            <CheckIcon className="text-primary size-4 opacity-100!" />
+            <Tick02Icon className="text-primary size-4 opacity-100!" />
           )}
         </DropdownMenuItem>,
         <DropdownMenuItem
@@ -290,7 +299,7 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
           <ArrowRightToLineIcon className="size-3.5!" aria-hidden="true" />
           <span className="grow">{i18n.labels.pinColumnEnd}</span>
           {isPinned === "end" && (
-            <CheckIcon className="text-primary size-4 opacity-100!" />
+            <Tick02Icon className="text-primary size-4 opacity-100!" />
           )}
         </DropdownMenuItem>
       )
@@ -310,7 +319,7 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
           }}
           disabled={!canMoveLeft || isPinned !== false}
         >
-          <ArrowLeftIcon className="size-3.5!" aria-hidden="true" />
+          <ArrowLeft02Icon className="size-3.5!" aria-hidden="true" />
           <span>{i18n.labels.moveColumnStart}</span>
         </DropdownMenuItem>,
         <DropdownMenuItem
@@ -320,7 +329,7 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
           }}
           disabled={!canMoveRight || isPinned !== false}
         >
-          <ArrowRightIcon className="size-3.5!" aria-hidden="true" />
+          <ArrowRight02Icon className="size-3.5!" aria-hidden="true" />
           <span>{i18n.labels.moveColumnEnd}</span>
         </DropdownMenuItem>
       )
@@ -335,7 +344,7 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
       items.push(
         <DropdownMenuSub key="visibility">
           <DropdownMenuSubTrigger>
-            <Settings2Icon className="size-3.5!" />
+            <SlidersHorizontalIcon className="size-3.5!" />
             <span>{i18n.labels.columnsMenu}</span>
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent side="right">

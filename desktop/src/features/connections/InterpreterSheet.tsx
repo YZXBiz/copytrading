@@ -1,4 +1,4 @@
-import { SparklesIcon } from "lucide-react"
+import { SparklesIcon } from "@/components/icons/SparklesIcon"
 import { Button } from "@/components/ui/button"
 import { FieldGroup } from "@/components/ui/field"
 import { Spinner } from "@/components/ui/spinner"
