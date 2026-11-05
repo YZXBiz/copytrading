@@ -1,10 +1,9 @@
-// ReUI's dashboard-7 (Retail Revenue) as one page: its header with a date picker, four KPI cards with a sparkline each, the
-// stacked area chart beside the bar chart, and the order queue's DataGrid, filled with the guru posts. A row opens the post.
 import { useEffect, useMemo, useState } from "react"
 import { Message01Icon } from "@/components/icons/Message01Icon"
 import type { AccountOverviewPage } from "../../../shared/contract"
-import { EmptyState } from "@/components/empty-state"
-import { RegionError } from "@/components/region-error"
+import { Button } from "@/components/arc/button/button"
+import { EmptyState } from "@/components/arc/empty-state/empty-state"
+import { Skeleton } from "@/components/arc/skeleton/skeleton"
 import { GuruPostSheet } from "@/features/gurus/GuruPostSheet"
 import { guruName } from "@/features/gurus/model"
 import { useGurus } from "@/features/gurus/use-gurus"
@@ -14,21 +13,22 @@ import { getTimeZone } from "@/lib/time-zone"
 import { type Loaded } from "@/lib/use-result"
 import { ActivityHeader } from "./ActivityHeader"
 import { ActivityMetrics } from "./ActivityMetrics"
-import { Skeleton } from "@/components/ui/skeleton"
 import { ActivitySkeleton } from "./ActivitySkeleton"
-import { ActivityTable, type PostFilter } from "./ActivityTable"
+import { ActivityPosts, type PostFilter } from "./ActivityTable"
 import { type Mix, MixChart } from "./MixChart"
 import { PostsChart } from "./PostsChart"
+import { RegionAlert } from "./RegionAlert"
 import { activityRows } from "./activity-rows"
 import { dayCounts, dayKey, dayRows, guruMix, shiftDay, skipReasons } from "./post-bucket"
 import { usePosts } from "./use-posts"
+import styles from "./activity.module.css"
 
 /** The charts look back this many days; posts are read a page at a time until they reach that far. */
 const DAYS = 30
 /** A guard on that reading: enough pages for a very busy month, no more. */
 const MAX_POSTS = 2000
 
-/** Every post newest first as a table under the day's counts and the month's charts, with each account's outcome; the chosen post opens beside it. */
+/** The day's counts and the month's charts over every post newest first, each with its accounts' outcome; the chosen post opens beside them. */
 export function ActivityScreen({ selectedSequence, accounts }: { selectedSequence: number | null; accounts: Loaded<AccountOverviewPage> }) {
   const [filter, setFilter] = useState<PostFilter>("all")
   const [accountId, setAccountId] = useState<string | null>(null)
@@ -66,30 +66,35 @@ export function ActivityScreen({ selectedSequence, accounts }: { selectedSequenc
   const status = waiting > 0 ? `${waiting} waiting for you` : "Nothing needs you"
 
   if (posts.status === "loading") return <ActivitySkeleton />
-  if (posts.status === "error") return <RegionError title="Posts did not load" message={posts.error} onRetry={posts.retry} />
+  if (posts.status === "error") return <RegionAlert title="Posts did not load" message={posts.error} onRetry={posts.retry} />
   if (posts.items.length === 0) {
     return (
-      <div className="mx-auto w-full max-w-7xl">
+      <div className={styles.page}>
         <EmptyState
-          icon={Message01Icon}
+          icon={<Message01Icon width={24} height={24} aria-hidden="true" />}
           title="No posts yet"
           description="Posts from the gurus you copy appear here as they arrive."
-          action={{ label: "Open Connections", onClick: () => navigate("settings", "connections") }}
+          action={
+            <Button variant="secondary" size="sm" onClick={() => navigate("settings", "connections")}>
+              Open Connections
+            </Button>
+          }
         />
       </div>
     )
   }
 
   return (
-    <section className="mx-auto flex w-full max-w-7xl flex-col gap-4" aria-labelledby="activity-title">
+    <section className={styles.page} aria-labelledby="activity-title">
       <ActivityHeader day={day} today={today} status={status} onDayChange={setDay} />
       <ActivityMetrics today={counts} before={before} />
-      <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]">
-        {monthLoaded ? <PostsChart rows={postsPerDay} /> : <Skeleton className="h-full min-h-72" />}
-        {monthLoaded ? <MixChart mix={mix} /> : <Skeleton className="h-full min-h-72" />}
+      <div className={styles.charts}>
+        {monthLoaded ? <PostsChart rows={postsPerDay} /> : <Skeleton label="Reading the month" lines={5} className={styles.tall} />}
+        {monthLoaded ? <MixChart mix={mix} /> : <Skeleton label="Reading the month" lines={5} className={styles.tall} />}
       </div>
-      <ActivityTable
+      <ActivityPosts
         rows={rows}
+        now={now}
         accountIds={accountIds}
         accountId={accountId}
         onAccountChange={setAccountId}

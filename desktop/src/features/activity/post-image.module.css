@@ -1,0 +1,5 @@
+.picture { display: block; max-width: 100%; max-height: 320px; width: auto; align-self: start; border: 1px solid var(--border); border-radius: var(--radius-panel); }
+.compact { composes: picture; max-height: 128px; }
+.missing { display: inline-flex; align-items: center; gap: 12px; align-self: start; border: 1px solid var(--border); border-radius: var(--radius-panel); padding: 10px 14px; color: var(--text-secondary); font-size: var(--text-sm); }
+.missing > span { display: grid; gap: 2px; min-width: 0; }
+.missing strong { color: var(--foreground); font-weight: 500; overflow-wrap: anywhere; }

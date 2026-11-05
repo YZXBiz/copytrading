@@ -1,11 +1,11 @@
-import type { ChartConfig } from "@/components/ui/chart"
+import { BUCKETS, BUCKET_LABEL, type Bucket } from "./post-bucket"
 
-/** The four outcomes in the accent's family, traded first; waiting is the app's one warm colour, and red and green stay for gain and loss. */
-export const OUTCOME_CONFIG = {
-  traded: { label: "Traded", color: "var(--chart-1)" },
-  waiting: { label: "Waiting", color: "var(--warning)" },
-  skipped: { label: "Skipped", color: "var(--chart-4)" },
-  ignored: { label: "Ignored", color: "var(--muted-foreground)" },
-} satisfies ChartConfig
+/** One colour per way a post can end: the accent for the data that matters, the status colour for a call that waits, quiet steps for the rest. */
+export const OUTCOME_COLOR: Record<Bucket, string> = {
+  traded: "var(--accent)",
+  waiting: "var(--warning)",
+  skipped: "var(--series-3)",
+  ignored: "var(--text-muted)",
+}
 
-export const COUNT_CONFIG = { count: { label: "Posts", color: "var(--chart-4)" } } satisfies ChartConfig
+export const OUTCOME_SERIES = BUCKETS.map((bucket) => ({ key: bucket, label: BUCKET_LABEL[bucket], color: OUTCOME_COLOR[bucket], area: false }))

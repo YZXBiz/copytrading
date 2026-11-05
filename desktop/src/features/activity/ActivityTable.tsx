@@ -1,30 +1,30 @@
-import { useCallback, useMemo, useState } from "react"
-import { BankIcon } from "@/components/icons/BankIcon"
-import { Cancel01Icon } from "@/components/icons/Cancel01Icon"
-import { FilterIcon } from "@/components/icons/FilterIcon"
-import { Search01Icon } from "@/components/icons/Search01Icon"
-import { type PaginationState, type SortingState, useTable } from "@tanstack/react-table"
-import { DataGrid, dataGridFeatures } from "@/components/reui/data-grid/data-grid"
-import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination"
-import { DataGridScrollArea } from "@/components/reui/data-grid/data-grid-scroll-area"
-import { DataGridTable } from "@/components/reui/data-grid/data-grid-table"
-import { Frame, FrameDescription, FrameFooter, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"
-import { Button } from "@/components/ui/button"
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group"
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { SlidingToggle } from "@/components/sliding-toggle"
-import { Spinner } from "@/components/ui/spinner"
+import { useMemo, useState } from "react"
+import { Button } from "@/components/arc/button/button"
+import { EmptyState } from "@/components/arc/empty-state/empty-state"
+import { SearchField } from "@/components/arc/search-field/search-field"
+import SegmentedControl from "@/components/arc/segmented-control/segmented-control"
+import { Select } from "@/components/arc/select/select"
+import { SortableDataTable, type SortState } from "@/components/arc/sortable-data-table/sortable-data-table"
 import { navigate } from "@/features/shell/route"
 import { type ActivityRow, matches } from "./activity-rows"
-import { activityColumns } from "./activity-columns"
+import { activityColumns, tableRow } from "./activity-columns"
+import { PostFeed, type PostFeedEntry } from "./PostFeed"
 import { BUCKETS, BUCKET_LABEL, type Bucket } from "./post-bucket"
+import styles from "./activity.module.css"
 
 export type PostFilter = "all" | Bucket
 const FILTERS: { value: PostFilter; label: string }[] = [{ value: "all", label: "All posts" }, ...BUCKETS.map((b) => ({ value: b, label: BUCKET_LABEL[b] }))]
+const VIEWS = [
+  { value: "feed", label: "Feed" },
+  { value: "table", label: "Table" },
+]
+/** Table rows drawn at first and per press of "Show more". */
+const STEP = 30
 
-/** dashboard-7's Order Queue: a Frame with a search, a filter and a DataGrid with pagination, wired to the guru posts. A row opens the post. */
-export function ActivityTable({
+/** Guru posts newest first, as a feed by day or as a table to sort and search; a post opens beside them. */
+export function ActivityPosts({
   rows,
+  now,
   accountIds,
   accountId,
   onAccountChange,
@@ -33,6 +33,7 @@ export function ActivityTable({
   older,
 }: {
   rows: ActivityRow[]
+  now: Date
   accountIds: string[]
   accountId: string | null
   onAccountChange: (id: string | null) => void
@@ -41,130 +42,113 @@ export function ActivityTable({
   /** Reads posts older than the ones loaded, when there are some. */
   older: { loading: boolean; show: () => void } | null
 }) {
+  const [view, setView] = useState("feed")
   const [query, setQuery] = useState("")
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 })
-  const [sorting, setSorting] = useState<SortingState>([{ id: "time", desc: true }])
-  const resetPagination = () => setPagination((current) => (current.pageIndex === 0 ? current : { ...current, pageIndex: 0 }))
+  const [count, setCount] = useState(STEP)
+  const [sort, setSort] = useState<SortState>({ key: "time", direction: "desc" })
+  const open = (sequence: number) => navigate("activity", String(sequence))
 
-  const shown = useMemo(() => rows.filter((row) => (accountId === null || row.accounts.length > 0) && (filter === "all" || row.bucket === filter) && matches(row, query)), [rows, filter, query, accountId])
-  const open = useCallback((row: ActivityRow) => navigate("activity", String(row.post.sequence)), [])
-  const columns = useMemo(() => activityColumns({ onOpen: open }), [open])
-
-  const pageCount = Math.max(Math.ceil(shown.length / pagination.pageSize), 1)
-  const pageIndex = Math.min(pagination.pageIndex, pageCount - 1)
-
-  const table = useTable({
-    features: dataGridFeatures,
-    data: shown,
-    columns,
-    pageCount,
-    state: { pagination: { ...pagination, pageIndex }, sorting },
-    getRowId: (row) => String(row.post.sequence),
-    onPaginationChange: setPagination,
-    onSortingChange: setSorting,
-  })
-
+  const shown = useMemo(() => rows.filter((row) => (accountId === null || row.accounts.length > 0) && matches(row, query)), [rows, accountId, query])
+  const entries = useMemo<PostFeedEntry[]>(() => shown.map((row) => ({ post: row.post, guru: row.guru, readAs: row.meaning, accounts: row.accounts, kinds: row.bucket ? [row.bucket] : [] })), [shown])
+  const kept = useMemo(() => shown.filter((row) => filter === "all" || row.bucket === filter), [shown, filter])
+  const columns = useMemo(() => activityColumns({ onOpen: (row) => open(row.post.sequence) }), [])
+  // A header sorts every post that passes the filters, then the first rows of that order are drawn.
+  const tableRows = useMemo(() => {
+    const collator = new Intl.Collator("en", { numeric: true, sensitivity: "base" })
+    const sign = sort.direction === "asc" ? 1 : -1
+    return kept
+      .map(tableRow)
+      .sort((a, b) => sign * collator.compare(String(a[sort.key]), String(b[sort.key])))
+      .slice(0, count)
+  }, [kept, count, sort])
   const choices = [{ value: "all", label: "All accounts" }, ...accountIds.map((id) => ({ value: id, label: id }))]
 
+  const clear = (
+    <EmptyState
+      title="No posts match"
+      description="Try another word, filter or account."
+      action={
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            setQuery("")
+            onFilterChange("all")
+            onAccountChange(null)
+          }}
+        >
+          Clear filters
+        </Button>
+      }
+    />
+  )
+
   return (
-    <DataGrid
-      table={table}
-      recordCount={shown.length}
-      emptyMessage="No posts match the current view."
-      onRowClick={open}
-      tableLayout={{ dense: true, rowBorder: true, headerSticky: false, columnsVisibility: false, columnsResizable: true, columnsMovable: false, width: "fixed" }}
-      tableClassNames={{ bodyRow: "[&>td]:h-16" }}
-    >
-      <Frame className="min-w-0">
-        <FrameHeader className="flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-col gap-px">
-            <FrameTitle>Guru posts</FrameTitle>
-            <FrameDescription>
-              {shown.length} {shown.length === 1 ? "post" : "posts"}
-              {older ? " so far" : ""}
-            </FrameDescription>
-          </div>
-          <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
-            <InputGroup className="w-full sm:min-w-56 lg:w-64">
-              <InputGroupAddon>
-                <Search01Icon aria-hidden="true" />
-              </InputGroupAddon>
-              <InputGroupInput
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value)
-                  resetPagination()
-                }}
-                placeholder="Search posts"
-                aria-label="Search posts"
-              />
-              {query.length > 0 && (
-                <InputGroupAddon align="inline-end">
-                  <InputGroupButton
-                    size="icon-xs"
-                    aria-label="Clear search"
-                    onClick={() => {
-                      setQuery("")
-                      resetPagination()
-                    }}
-                  >
-                    <Cancel01Icon aria-hidden="true" />
-                  </InputGroupButton>
-                </InputGroupAddon>
-              )}
-            </InputGroup>
-            <SlidingToggle
-              label="Filter posts"
-              value={filter}
-              onValueChange={(next) => {
-                onFilterChange(next)
-                resetPagination()
-              }}
-              options={FILTERS}
+    <section className={styles.posts} aria-label="Guru posts">
+      <div className={styles.toolbar}>
+        <div className={styles.search}>
+          <SearchField label="Search posts" placeholder="Search posts" value={query} onValueChange={setQuery} />
+        </div>
+        {accountIds.length > 1 && (
+          <Select
+            className={styles.account}
+            label="Account"
+            value={accountId ?? "all"}
+            onValueChange={(next) => onAccountChange(next === "all" ? null : next)}
+            options={choices}
+          />
+        )}
+        <span className={styles.spacer} />
+        <SegmentedControl label="View" options={VIEWS} value={view} onValueChange={setView} />
+      </div>
+      {view === "feed" ? (
+        <PostFeed
+          entries={entries}
+          now={now}
+          filters={FILTERS}
+          filter={filter}
+          onFilterChange={(value) => onFilterChange(value as PostFilter)}
+          onOpen={open}
+          resetKey="activity"
+          older={older}
+          empty={clear}
+          title="Guru posts"
+        />
+      ) : (
+        <div className={styles.tablePanel}>
+          <header>
+            <h2>Guru posts</h2>
+            <SegmentedControl label="Filter posts" options={FILTERS} value={filter} onValueChange={(value) => onFilterChange(value as PostFilter)} />
+          </header>
+          <div className={styles.tableScroll}>
+            <SortableDataTable
+              rows={tableRows}
+              columns={columns}
+              rowKey="id"
+              caption="Guru posts"
+              emptyMessage="No posts match the current view."
+              defaultSort={sort}
+              onSortChange={setSort}
+              itemName={{ one: "post", other: "posts" }}
             />
-            {accountIds.length > 1 && (
-              <Select
-                items={choices}
-                value={accountId ?? "all"}
-                onValueChange={(next) => {
-                  if (next) {
-                    onAccountChange(next === "all" ? null : next)
-                    resetPagination()
-                  }
-                }}
-              >
-                <SelectTrigger size="sm" className="w-full sm:w-40" aria-label="Account">
-                  <BankIcon className="text-muted-foreground size-4" aria-hidden="true" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent align="end" alignItemWithTrigger={false}>
-                  <SelectGroup>
-                    {choices.map((choice) => (
-                      <SelectItem key={choice.value} value={choice.value}>
-                        {choice.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            )}
-            {older && (
-              <Button type="button" variant="outline" size="sm" onClick={older.show} disabled={older.loading}>
-                {older.loading && <Spinner data-icon="inline-start" />}
-                Show older
-              </Button>
-            )}
           </div>
-        </FrameHeader>
-        <FramePanel className="p-0!">
-          <DataGridScrollArea>
-            <DataGridTable />
-          </DataGridScrollArea>
-        </FramePanel>
-        <FrameFooter>
-          <DataGridPagination sizes={[5, 10, 20]} info="{from} - {to} of {count} posts" className="py-0" />
-        </FrameFooter>
-      </Frame>
-    </DataGrid>
+          {(kept.length > count || older) && (
+            <div className={styles.more}>
+              {kept.length > count ? (
+                <Button variant="secondary" size="sm" onClick={() => setCount(count + STEP)}>
+                  Show more
+                </Button>
+              ) : (
+                older && (
+                  <Button variant="secondary" size="sm" loading={older.loading} onClick={older.show}>
+                    Show older
+                  </Button>
+                )
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </section>
   )
 }

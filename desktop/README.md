@@ -205,7 +205,7 @@ tick. `COPYTRADING_CAPTURE_FRAMES=<n>` saves n frames in a row after the capture
   asked once for all held stocks every minute while the window is visible (`features/account/use-bars.ts`). The line is
   the gain color when the session closed at or above its first open, the loss color below it; a stock with no bars shows
   no line. The fixtures serve real SOXL and SOXS bars of Nov 4 (`electron/main/fixtures/bars.json`).
-- **Guru performance.** A guru's page opens with what their copied sales made (`getGuruPerformance`, ReUI chart-3): the
+- **Guru performance.** A guru's page opens with what their copied sales made (`getGuruPerformance`): the
   cumulative realized line, realized, unrealized, win rate, best and worst call, or "No closed trades yet". The engine
   reads it from the account's ledger and journal, replaying each sell through the ledger's own lot reduction; a sale it
   cannot match to its buys is counted as unmatched and left out. The captured account has no sales, so
