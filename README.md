@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-beta.8/CopyTrading-0.1.0-beta.8.dmg"><img src="https://img.shields.io/badge/Download_for_macOS-0.1.0--beta.8-1d1d1f?style=for-the-badge&logo=apple&logoColor=white" alt="Download CopyTrading for macOS" height="36"></a>
+  <a href="https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-beta.9/CopyTrading-0.1.0-beta.9.dmg"><img src="https://img.shields.io/badge/Download_for_macOS-0.1.0--beta.9-1d1d1f?style=for-the-badge&logo=apple&logoColor=white" alt="Download CopyTrading for macOS" height="36"></a>
 </p>
 
 <p align="center">
@@ -40,13 +40,19 @@ CopyTrading is a macOS app that reads the stock calls traders post on Discord, t
 <br>
 <table>
   <tr>
-    <td width="33%"><a href="docs/assets/guru.png"><img src="docs/assets/guru.png" alt="A guru's page: posts today, win rate, realized and open profit, the realized profit by day against break-even, the best and worst call, and every post on one timeline"></a></td>
-    <td width="33%"><a href="docs/assets/activity.png"><img src="docs/assets/activity.png" alt="Activity: the day's posts, trades, waiting calls and skips with hourly trends, posts per day by outcome, and every post in a searchable table with what came of it in each account"></a></td>
-    <td width="33%"><a href="docs/assets/connections.png"><img src="docs/assets/connections.png" alt="Connections: Discord, the model that reads posts, a paper broker account and a guru, all saved"></a></td>
+    <td width="50%"><a href="docs/assets/guru.png"><img src="docs/assets/guru.png" alt="A guru's page: posts today, win rate, realized and open profit, the realized profit by day against break-even, the best and worst call, and every post on one timeline"></a></td>
+    <td width="50%"><a href="docs/assets/activity.png"><img src="docs/assets/activity.png" alt="Activity: the day's posts, trades, waiting calls and skips with hourly trends, posts per day by outcome, and every post in a searchable table with what came of it in each account"></a></td>
   </tr>
   <tr>
     <td align="center"><sub><b>A guru</b>: what copying them has made</sub></td>
     <td align="center"><sub><b>Activity</b>: every post and what came of it</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="docs/assets/gurus.png"><img src="docs/assets/gurus.png" alt="Gurus compared side by side: posts today, win rate, realized profit with its trend, and open profit"></a></td>
+    <td width="50%"><a href="docs/assets/connections.png"><img src="docs/assets/connections.png" alt="Connections: Discord, the model that reads posts, a paper broker account and a guru, all saved"></a></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Gurus</b>: compared side by side</sub></td>
     <td align="center"><sub><b>Connections</b>: set up top to bottom</sub></td>
   </tr>
 </table>
@@ -58,10 +64,10 @@ CopyTrading is a macOS app that reads the stock calls traders post on Discord, t
 - **Your limits, per account.** Daily loss, per-order, per-symbol, and total exposure limits are checked before every copied buy. Each account has its own **Start Copying** and **Stop Copying**.
 - **Many traders, many accounts.** Each account follows one guru and sizes its calls from that guru's full position, so several gurus copy side by side into their own accounts, paper and live together.
 - **Every position traces to its post.** Each copied buy is kept as a lot that names the post behind it, and you can sell any lot on its own. Shares you trade yourself in Alpaca are counted as yours on the next sync.
-- **See how a guru is doing.** Each guru's page shows the realized profit of the trades copied from them, their win rate, and their best and worst call.
+- **See how a guru is doing.** Each guru's page shows the realized profit of the trades copied from them, their win rate, and their best and worst call; with several gurus, Gurus compares them side by side.
 - **Always live.** Balances, positions, and the balance chart are read from your broker even while copying is paused, held prices update every few seconds, and a fill arrives as a notice in the app. The menu bar shows your balance and today's change.
 - **Calls that need you, in one place.** A call the app should not place on its own (a suggestion, a conditional order, a sell of a buy it never made) waits on the account page with **Copy** and **Skip**, or **Skip all**.
-- **Fast to get around.** ⌘K finds any page, account, guru, post, or action; ⌘1 to ⌘4 open Accounts, Gurus, Activity, and Connections; ⌘, opens Settings. Dark and light themes.
+- **Fast to get around.** ⌘K finds any page, account, guru, post, or action; ⌘1 to ⌘4 open Accounts, Gurus, Activity, and Connections; ⌘, opens Settings. Dark and light themes, one consistent icon set, and motion that settles quickly: figures roll to new values, selections slide, and charts draw in once.
 - **An assistant that cannot trade on its own.** ⌘J answers from your real posts and accounts. Anything that could place an order waits for your approval in the app.
 - **Private by design.** Keys are encrypted on your Mac with a key kept in your login Keychain and never shown on screen. The app talks to Discord, your model provider, your broker, GitHub when it checks for updates, and a logo service that is sent only the tickers you hold.
 
@@ -71,13 +77,13 @@ Works with a dozen hosted model services, local models through Ollama, or any Op
 
 You need an Apple silicon Mac running macOS 26 or later.
 
-1. **[Download CopyTrading for macOS](https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-beta.8/CopyTrading-0.1.0-beta.8.dmg)**.
+1. **[Download CopyTrading for macOS](https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-beta.9/CopyTrading-0.1.0-beta.9.dmg)**.
 2. Open the DMG and drag **CopyTrading** into **Applications**.
 3. Open CopyTrading. Preview builds are not yet notarized by Apple, so the first time macOS blocks it: go to **System Settings → Privacy & Security** and choose **Open Anyway**. You only do this once.
 
 Every release lists SHA-256 checksums, and [releases](docs/releases.md) explains how to verify a download.
 
-**Coming from an earlier version?** 0.1.0-beta.7 offers this version as an update. On its first launch the new app copies your saved keys from the old app once, so macOS asks whether CopyTrading may read them; choose **Always Allow**. Your setup, accounts, and history carry over unchanged, and copying picks up where it was.
+**Coming from an earlier version?** 0.1.0-beta.7 offers the new app as an update. On its first launch the new app copies your saved keys from the old app once, so macOS asks whether CopyTrading may read them; choose **Always Allow**. Your setup, accounts, and history carry over unchanged, and copying picks up where it was.
 
 **Updates.** The app checks GitHub for a new version after launch and every six hours, and **Check for Updates…** in the app menu checks at once. Preview builds are not signed with a lasting identity, so macOS will not let an installed copy replace itself: the app tells you when a version is out and opens its release page, and the new DMG replaces the app in Applications.
 
