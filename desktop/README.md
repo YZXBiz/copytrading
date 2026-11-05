@@ -1,6 +1,6 @@
 # CopyTrading desktop (Electron + React)
 
-The new UI for the Python engine in `../engine`. React on ReUI/shadcn, English only, no unlock gate. The
+The new UI for the Python engine in `../engine`. React, English only, no unlock gate. The
 engine is unchanged; the app talks to it over the same JSON-lines pipe the SwiftUI app uses.
 
 ```
@@ -8,7 +8,7 @@ shared/contract.ts      every operation, with request and reply types: the one f
 electron/main/          main process: engine lifecycle, the setup file, the key store, confirmations
 electron/preload/       exposes window.copytrading (read.*, act.*, engine.*) and nothing else
 src/features/<name>/    one folder per screen; src/features/shell/ is the frame
-src/components/         ui/ (shadcn) and reui/ (ReUI): reuse, don't restyle
+src/components/         arc/ (the component set) and icons/: reuse, don't restyle
 tests/                  vitest; a fake engine process in tests/fake-engine.cjs
 ```
 
@@ -155,7 +155,7 @@ assistant panel and the time zone list open that way). Fixtures can also serve a
 
 `src/features/settings/` is Settings (`#/settings/general|agents|backups|logs`; the journal is read by main from the
 engine's log folder, newest 2000 records, `electron/main/journal.ts`). `src/features/assistant/` is the assistant, docked on the
-right of the page (ReUI's ai-chat-8) and opened by the header's Assistant button or ⌘J. The time zone lives in `src/lib/time-zone.ts` and `format.ts` reads it. A request only the
+right of the page and opened by the header's Assistant button or ⌘J. The time zone lives in `src/lib/time-zone.ts` and `format.ts` reads it. A request only the
 app can carry out (a setup change) cannot be approved yet: main refuses it, the pages offer Reject only.
 
 An account page opens its sheet from the route, so a capture can show one: `#/accounts/<id>?open=review|sale|limits`.
@@ -200,7 +200,7 @@ tick. `COPYTRADING_CAPTURE_FRAMES=<n>` saves n frames in a row after the capture
   `features/live/`). The price rolls, the row's value and gain are recomputed from it, and the row flashes green or red
   for under 600 ms (`TickFlash`, opacity only; none with Reduce Motion). A quote older than two minutes is not live.
   `COPYTRADING_FIXTURE_TICK=1` in a tick build also moves the fixture quote (`node scripts/capture.mjs account-live-tick`).
-- **Sparklines.** Each Positions row shows a 1-day line (ReUI chart-25's sparkline) from `getBars`: the five-minute IEX
+- **Sparklines.** Each Positions row shows a 1-day line from `getBars`: the five-minute IEX
   bars of the stock's latest session (Alpaca, through the account's read keys; the engine caches each symbol for 60 s),
   asked once for all held stocks every minute while the window is visible (`features/account/use-bars.ts`). The line is
   the gain color when the session closed at or above its first open, the loss color below it; a stock with no bars shows

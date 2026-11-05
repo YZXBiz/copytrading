@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/arc/skeleton/skeleton"
 import Sparkline from "@/components/arc/sparkline/sparkline"
 import { SortableDataTable, type DataColumn } from "@/components/arc/sortable-data-table/sortable-data-table"
 import { RegionAlert } from "@/features/activity/RegionAlert"
-import { accountCopying, badgeVariant, COPYING_TITLE } from "@/features/account/copying"
+import { accountCopying, badgeTone, COPYING_TITLE } from "@/features/account/copying"
 import { isOpenCall } from "@/features/activity/outcome"
 import { dayWindow } from "@/features/activity/time"
 import { href } from "@/features/shell/route"
@@ -26,7 +26,6 @@ const loading = <T,>(): Figure<T> => ({ status: "loading" })
 const fromLoaded = <T, U>(state: Loaded<T>, pick: (data: T) => U): Figure<U> =>
   state.status === "ready" ? { status: "ready", value: pick(state.data) } : state.status === "error" ? state : loading()
 
-const copyingTone = (variant: string | null | undefined): BadgeTone => (variant === "destructive-light" ? "danger" : variant === "warning-light" ? "warning" : variant === "success-light" ? "success" : "neutral")
 const gainTone = (n: number | null) => (n === null || n === 0 ? undefined : n > 0 ? "gain" : "loss")
 
 /** One figure: a bar while it loads, "Not loaded" (the reason on hover) when it failed, otherwise what `show` makes of it. */
@@ -102,7 +101,7 @@ export function GuruLeaderboard({ gurus, accounts, setUpAccountIds }: { gurus: G
     const copying = fromLoaded(accounts, (data) => {
       const states = guru.accounts.flatMap((a) => data.items.find((o: AccountOverview) => o.account_id === a.id) ?? []).map((o) => accountCopying(o, status.status === "ready" ? status.data : null))
       const state = states.find((s) => s.word !== "copying") ?? states[0]
-      return state ? { title: COPYING_TITLE[state.word], tone: copyingTone(badgeVariant(state)) } : null
+      return state ? { title: COPYING_TITLE[state.word], tone: badgeTone(state) } : null
     })
     const perf = performance.status === "ready" ? performance.value : null
     return {

@@ -14,7 +14,6 @@ import { GurusScreen } from "@/features/gurus/GurusScreen"
 import { SettingsScreen } from "@/features/settings/SettingsScreen"
 import { StockScreen } from "@/features/stock/StockScreen"
 import { type Loaded } from "@/lib/use-result"
-import { ScreenPlaceholder } from "./ScreenPlaceholder"
 import { type Route, type ScreenId, navigate } from "./route"
 
 export interface ScreenProps {
@@ -27,8 +26,6 @@ interface Screen {
   icon: Icon
   render: (props: ScreenProps) => ReactNode
 }
-
-const placeholder = (title: string) => () => <ScreenPlaceholder title={title} />
 
 /**
  * Every screen, in one table. To port one, replace its `render` with the real component (see README.md);

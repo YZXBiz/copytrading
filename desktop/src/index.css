@@ -1,7 +1,4 @@
-/* Hallmark · checked: 2026-11-03 · genre: modern-minimal (inferred) · shape: app screen
- * floor: 0 FAIL in feature code · waived: installed ReUI and shadcn parts (ReUI outranks Hallmark), the .dark token block
- * built: the project · redesign: polish · v2.0.0 */
-/* The foundation sits in its own layer below Tailwind's, so the screens still on the old kit keep their own sizes and tokens until they move. */
+/* The foundation sits in its own layer below Tailwind's, so utility classes still override it. */
 @layer arc, theme, base, components, utilities;
 @import "tailwindcss";
 @import "tw-animate-css";
