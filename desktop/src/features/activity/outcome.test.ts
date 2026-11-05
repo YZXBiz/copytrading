@@ -173,3 +173,15 @@ describe("merging", () => {
     expect(merged[2]!.text).toBe("edited")
   })
 })
+
+describe("mergePosts keeps the same array when a refresh brings nothing new", () => {
+  it("returns the current array for identical posts, and a new one for a changed post", () => {
+    const a = { sequence: 2, source_at: "2026-11-04T14:00:00Z" } as unknown as SourceActivity
+    const b = { sequence: 1, source_at: "2026-11-04T13:00:00Z" } as unknown as SourceActivity
+    const current = mergePosts([], [a, b])
+    expect(mergePosts(current, [{ ...a }, { ...b }])).toBe(current)
+    const changed = mergePosts(current, [{ ...a, source_at: "2026-11-04T14:00:01Z" } as SourceActivity])
+    expect(changed).not.toBe(current)
+    expect(changed[0]?.source_at).toBe("2026-11-04T14:00:01Z")
+  })
+})
