@@ -1,5 +1,4 @@
-import type { Format } from "@number-flow/react"
-import { createElement } from "react"
+import { type ComponentProps, createElement } from "react"
 import { renderToString } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 import { RollingNumber } from "@/components/rolling-number"
@@ -7,8 +6,8 @@ import { PERCENT_SIGNED_OPTIONS, USD_OPTIONS, USD_SIGNED_OPTIONS, USD_WHOLE_OPTI
 
 const text = (value: number, options: Intl.NumberFormatOptions) => new Intl.NumberFormat("en-US", options).format(value)
 
-// NumberFlow's first render (what the page and the server draw) names its text in aria-label: the formatter's own string.
-const label = (value: number | null, format: Format) =>
+// The first render (what the page and the server draw) names its text in aria-label: the formatter's own string.
+const label = (value: number | null, format: ComponentProps<typeof RollingNumber>["format"]) =>
   renderToString(createElement(RollingNumber, { value, format })).match(/aria-label="([^"]*)"/)?.[1]
 
 describe("the options the rolling figures format with", () => {
