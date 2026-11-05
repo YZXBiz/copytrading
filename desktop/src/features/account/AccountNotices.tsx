@@ -1,10 +1,9 @@
-import { AlertCircleIcon } from "@/components/icons/AlertCircleIcon"
-import { CancelCircleIcon } from "@/components/icons/CancelCircleIcon"
 import type { AccountOverview, TradingStatus } from "../../../shared/contract"
-import { Alert, AlertDescription, AlertTitle } from "@/components/reui/alert"
+import { Alert } from "@/components/arc/alert/alert"
 import { STOPPED_BODY, accountCopying, stoppedTitle } from "./copying"
 import { OwnershipRow } from "./OwnershipRow"
 import { reasonText } from "@/lib/reasons"
+import styles from "./account.module.css"
 
 /** A check that simply hasn't run yet, as while copying is off, is not a warning and stays out of sight. */
 const shown = (reason: string | null | undefined) => (reason && reason !== "not_checked" ? reason : null)
@@ -29,43 +28,23 @@ export function AccountNotices({
   return (
     <>
       {state.word === "stopped" && (
-        <Alert variant="destructive">
-          <CancelCircleIcon aria-hidden />
-          <AlertTitle>{stoppedTitle(account.account_id)}</AlertTitle>
-          <AlertDescription>
-            {state.detail && <p className="text-foreground">{state.detail}.</p>}
-            <p>{STOPPED_BODY}</p>
-          </AlertDescription>
+        <Alert tone="danger" title={stoppedTitle(account.account_id)}>
+          {state.detail && <p className={styles.alertText}>{state.detail}.</p>}
+          <p className={styles.alertText}>{STOPPED_BODY}</p>
         </Alert>
       )}
-      {risk && (
-        <Alert variant="warning">
-          <AlertCircleIcon aria-hidden />
-          <AlertTitle>Risk valuation: {reasonText(risk)}</AlertTitle>
-        </Alert>
-      )}
+      {risk && <Alert tone="warning" title={`Risk valuation: ${reasonText(risk)}`} />}
       {activity && (
-        <Alert variant="warning">
-          <AlertCircleIcon aria-hidden />
-          <AlertTitle>
-            {activity === "unresolved_account_order" ? "An order in Alpaca that CopyTrading didn't place is still open" : reasonText(activity)}
-          </AlertTitle>
-          <AlertDescription>
-            {activity === "unresolved_account_order"
-              ? "Let it fill or cancel it in Alpaca. Until it's gone, CopyTrading can't settle holdings."
-              : "CopyTrading checks again on the next sync."}
-          </AlertDescription>
+        <Alert tone="warning" title={activity === "unresolved_account_order" ? "An order in Alpaca that CopyTrading didn't place is still open" : reasonText(activity)}>
+          <p className={styles.alertText}>
+            {activity === "unresolved_account_order" ? "Let it fill or cancel it in Alpaca. Until it's gone, CopyTrading can't settle holdings." : "CopyTrading checks again on the next sync."}
+          </p>
         </Alert>
       )}
       {incidents.map((incident) => (
         <OwnershipRow key={incident.incident_id} incident={incident} account={account} blocked={activity !== null} onResolved={onResolved} />
       ))}
-      {unlisted.length > 0 && (
-        <Alert variant="destructive">
-          <AlertCircleIcon aria-hidden />
-          <AlertTitle>Unresolved incidents: {unlisted.join(", ")}</AlertTitle>
-        </Alert>
-      )}
+      {unlisted.length > 0 && <Alert tone="danger" title={`Unresolved incidents: ${unlisted.join(", ")}`} />}
     </>
   )
 }

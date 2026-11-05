@@ -1,20 +1,16 @@
 import { useState } from "react"
-import { AlertCircleIcon } from "@/components/icons/AlertCircleIcon"
-import { CheckmarkCircle02Icon } from "@/components/icons/CheckmarkCircle02Icon"
-import { CircleDashedIcon } from "@/components/icons/CircleDashedIcon"
 import type { LotSalePreview, LotSaleResult, PositionLot, TradingEnvironment } from "../../../shared/contract"
-import { Alert, AlertDescription, AlertTitle } from "@/components/reui/alert"
-import { Badge } from "@/components/reui/badge"
-import { Button } from "@/components/ui/button"
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { Spinner } from "@/components/ui/spinner"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { Alert } from "@/components/arc/alert/alert"
+import { Badge } from "@/components/arc/badge/badge"
+import { Button } from "@/components/arc/button/button"
+import { Drawer, DrawerContent } from "@/components/arc/drawer/drawer"
+import SegmentedControl from "@/components/arc/segmented-control/segmented-control"
 import { dateTime, signedMoney } from "@/lib/format"
 import { decMul, decText, parseDec } from "./decimal"
 import { reviewLabel, saleChoices, saleOutcome, saleSentence, sharesLine } from "./lot-sale"
 import { usd } from "@/lib/quantity"
 import { reasonText } from "@/lib/reasons"
+import styles from "./sheet.module.css"
 
 /** The lot a Sell sheet is open for, in the account it belongs to. */
 export interface LotSaleTarget {
@@ -35,8 +31,7 @@ type Phase =
   | { name: "selling"; preview: LotSalePreview }
   | { name: "finished"; result: LotSaleResult }
 
-const TONE = { success: "success", neutral: "info", warning: "warning", destructive: "destructive" } as const
-const ICON = { success: CheckmarkCircle02Icon, neutral: CircleDashedIcon, warning: AlertCircleIcon, destructive: AlertCircleIcon } as const
+const TONE = { success: "success", neutral: "info", warning: "warning", destructive: "danger" } as const
 
 /**
  * Selling shares from one lot: choose how much of it, review a fresh preview, confirm once (the main process asks
@@ -94,114 +89,100 @@ export function LotSaleSheet({ target, onClose }: { target: LotSaleTarget; onClo
   const origin = `${target.guruName ? `From ${target.guruName}'s post` : "From a post"}${buys ? `, ${dateTime(buys)}` : ""}`
   const busy = phase.name === "checking" || phase.name === "selling"
   const outcome = phase.name === "finished" ? saleOutcome(phase.result, symbol) : null
-  const OutcomeIcon = outcome ? ICON[outcome.tone] : null
 
   return (
-    <Sheet open onOpenChange={(open) => !open && !busy && onClose()}>
-      <SheetContent className="w-full sm:max-w-md">
-        <SheetHeader>
-          <SheetTitle>Sell {symbol}</SheetTitle>
-          <SheetDescription className="flex items-center gap-2">
-            {accountId}
-            <Badge variant={target.environment === "live" ? "warning-light" : "outline"}>{target.environment === "live" ? "Live" : "Paper"}</Badge>
-          </SheetDescription>
-        </SheetHeader>
-        <div className="flex-1 overflow-y-auto px-4">
-          <FieldGroup className="gap-6">
-            <Field>
-              <FieldLabel>Lot</FieldLabel>
-              <div className="flex items-baseline justify-between gap-3 text-sm">
-                <span>{origin}</span>
-                {bought !== null && <span className="text-muted-foreground tabular-nums">Bought at {usd(lot.average_price)}</span>}
+    <Drawer open onOpenChange={(open) => !open && !busy && onClose()}>
+      <DrawerContent title={`Sell ${symbol}`} description={`${accountId}, ${target.environment === "live" ? "live" : "paper"}`} className={styles.sheet}>
+        <div className={styles.sections}>
+          <div className={styles.group}>
+            <span className={styles.groupTitle}>Lot</span>
+            <div className={styles.line}>
+              <span>{origin}</span>
+              {bought !== null && <span className={styles.muted}>Bought at {usd(lot.average_price)}</span>}
+            </div>
+          </div>
+
+          {(phase.name === "choosing" || phase.name === "checking") && (
+            <fieldset className={styles.group} disabled={phase.name === "checking"}>
+              <legend>Amount</legend>
+              <SegmentedControl
+                label="Sell"
+                value={chosen?.title ?? ""}
+                onValueChange={(next) => {
+                  const c = choices.find((x) => x.title === next)
+                  if (c) setShares(c.amount)
+                }}
+                options={choices.map((c) => ({ value: c.title, label: c.title }))}
+              />
+              <div className={styles.line}>
+                <span>{sharesLine(shares, remaining, symbol)}</span>
+                {price !== null && bought !== null && <Badge tone={price >= bought ? "success" : "danger"}>{signedMoney(decText(decMul(shares, price - bought)))}</Badge>}
               </div>
-            </Field>
+              {price !== null && (
+                <p className={styles.hint}>
+                  About {usd(decText(decMul(shares, price)))} at {usd(target.currentPrice)}
+                </p>
+              )}
+              <p className={styles.hint}>The price, market session, and account are checked before anything is sent.</p>
+            </fieldset>
+          )}
 
-            {(phase.name === "choosing" || phase.name === "checking") && (
-              <Field>
-                <FieldLabel>Amount</FieldLabel>
-                <ToggleGroup aria-label="Sell" variant="outline" size="sm" value={chosen ? [chosen.title] : []} disabled={phase.name === "checking"} onValueChange={(next) => { const c = choices.find((x) => x.title === next[0]); if (c) setShares(c.amount) }}>
-                  {choices.map((c) => (
-                    <ToggleGroupItem key={c.title} value={c.title}>
-                      {c.title}
-                    </ToggleGroupItem>
+          {(phase.name === "reviewing" || phase.name === "selling") &&
+            (phase.preview.plan ? (
+              <div className={styles.group}>
+                <span className={styles.groupTitle}>Review</span>
+                <p className={styles.sentence}>{saleSentence(phase.preview.plan, phase.preview)}</p>
+                <p className={styles.hint}>Prices are checked again the moment you press Sell. If anything changed, nothing is sent.</p>
+              </div>
+            ) : (
+              <div className={styles.group}>
+                <span className={styles.groupTitle}>This sale can’t go out right now</span>
+                <ul className={styles.reasons}>
+                  {phase.preview.reasons.map((reason) => (
+                    <li key={reason}>{reasonText(reason)}</li>
                   ))}
-                </ToggleGroup>
-                <div className="flex items-baseline justify-between gap-3 text-sm tabular-nums">
-                  <span>{sharesLine(shares, remaining, symbol)}</span>
-                  {price !== null && bought !== null && (
-                    <Badge variant={price >= bought ? "success-light" : "destructive-light"}>{signedMoney(decText(decMul(shares, price - bought)))}</Badge>
-                  )}
-                </div>
-                {price !== null && <FieldDescription>About {usd(decText(decMul(shares, price)))} at {usd(target.currentPrice)}</FieldDescription>}
-                <FieldDescription>The price, market session, and account are checked before anything is sent.</FieldDescription>
-              </Field>
-            )}
+                </ul>
+              </div>
+            ))}
 
-            {(phase.name === "reviewing" || phase.name === "selling") &&
-              (phase.preview.plan ? (
-                <Field>
-                  <FieldLabel>Review</FieldLabel>
-                  <p className="text-sm">{saleSentence(phase.preview.plan, phase.preview)}</p>
-                  <FieldDescription>Prices are checked again the moment you press Sell. If anything changed, nothing is sent.</FieldDescription>
-                </Field>
-              ) : (
-                <Field>
-                  <FieldLabel>This sale can’t go out right now</FieldLabel>
-                  <ul className="text-sm">
-                    {phase.preview.reasons.map((reason) => (
-                      <li key={reason}>{reasonText(reason)}</li>
-                    ))}
-                  </ul>
-                </Field>
-              ))}
-
-            {outcome && OutcomeIcon && (
-              <Alert variant={TONE[outcome.tone]} aria-label="Result">
-                <OutcomeIcon aria-hidden />
-                <AlertTitle>{outcome.title}</AlertTitle>
-                <AlertDescription>{outcome.detail}</AlertDescription>
-              </Alert>
-            )}
-            {problem && (
-              <Alert variant="warning">
-                <AlertCircleIcon aria-hidden />
-                <AlertTitle>{problem}</AlertTitle>
-              </Alert>
-            )}
-          </FieldGroup>
+          {outcome && (
+            <Alert tone={TONE[outcome.tone]} title={outcome.title}>
+              <p className={styles.alertText}>{outcome.detail}</p>
+            </Alert>
+          )}
+          {problem && <Alert tone="warning" title={problem} />}
         </div>
-        <SheetFooter className="flex-row items-center justify-end">
-          {busy && <Spinner aria-label={phase.name === "selling" ? "Sending" : "Checking"} />}
+        <div className={styles.footer}>
           {phase.name === "finished" ? (
             <>
               {phase.result.status === "rejected" && (
-                <Button size="sm" type="button" variant="outline" onClick={startOver}>
-                  Review Again
+                <Button type="button" variant="secondary" onClick={startOver}>
+                  Review again
                 </Button>
               )}
-              <Button size="sm" type="button" onClick={onClose}>
+              <Button type="button" onClick={onClose}>
                 Done
               </Button>
             </>
           ) : (
             <>
-              <Button size="sm" type="button" variant="outline" disabled={busy} onClick={phase.name === "reviewing" ? startOver : onClose}>
+              <Button type="button" variant="secondary" disabled={busy} onClick={phase.name === "reviewing" ? startOver : onClose}>
                 {phase.name === "reviewing" ? "Back" : "Cancel"}
               </Button>
               {(phase.name === "choosing" || phase.name === "checking") && (
-                <Button size="sm" type="button" disabled={busy || !(shares > 0n && shares <= remaining)} onClick={review}>
-                  {phase.name === "checking" ? "Checking…" : reviewLabel(shares, symbol)}
+                <Button type="button" loading={phase.name === "checking"} disabled={!(shares > 0n && shares <= remaining)} onClick={review}>
+                  {reviewLabel(shares, symbol)}
                 </Button>
               )}
-              {phase.name === "reviewing" && phase.preview.plan && (
-                <Button size="sm" type="button" onClick={() => sell(phase.preview)}>
+              {(phase.name === "reviewing" || phase.name === "selling") && phase.preview.plan && (
+                <Button type="button" loading={phase.name === "selling"} onClick={() => sell(phase.preview)}>
                   Sell {decText(parseDec(phase.preview.plan.qty) ?? shares)} {symbol}
                 </Button>
               )}
             </>
           )}
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </div>
+      </DrawerContent>
+    </Drawer>
   )
 }

@@ -1,28 +1,22 @@
 import { RotateClockwiseIcon } from "@/components/icons/RotateClockwiseIcon"
-import { TrendingDownIcon } from "@/components/icons/TrendingDownIcon"
-import { TrendingUpIcon } from "@/components/icons/TrendingUpIcon"
 import type { MarketQuote } from "../../../shared/contract"
-import { Button } from "@/components/ui/button"
-import { ButtonGroup } from "@/components/ui/button-group"
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Spinner } from "@/components/ui/spinner"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { Button } from "@/components/arc/button/button"
+import { Input } from "@/components/arc/input/input"
+import SegmentedControl from "@/components/arc/segmented-control/segmented-control"
 import { BUY_SIZES, type Draft, type PriceChoice, SELL_SHARES, defaultChoice, sameShare, shareTitle } from "./manual-draft"
 import { dollars, sharesText, usd } from "@/lib/quantity"
 import { type Holding, canQuote, livePrice, quoteDetail, quoteProblem } from "./quote"
+import styles from "./sheet.module.css"
 
-/** One choice among a few, as a row of toggles. */
+/** One choice among a few, as a row of options; a detail rides after its title. */
 function Choices({ label, value, options, onPick }: { label: string; value: string | null; options: { value: string; title: string; detail?: string | null }[]; onPick: (value: string) => void }) {
   return (
-    <ToggleGroup aria-label={label} variant="outline" size="sm" value={value === null ? [] : [value]} onValueChange={(next) => next[0] !== undefined && onPick(next[0])} className="flex-wrap">
-      {options.map((o) => (
-        <ToggleGroupItem key={o.value} value={o.value} aria-label={o.detail ? `${o.title}, ${o.detail}` : o.title}>
-          {o.title}
-          {o.detail && <span className="text-muted-foreground text-xs font-normal">{o.detail}</span>}
-        </ToggleGroupItem>
-      ))}
-    </ToggleGroup>
+    <SegmentedControl
+      label={label}
+      value={value ?? ""}
+      onValueChange={onPick}
+      options={options.map((o) => ({ value: o.value, label: o.title, accessory: o.detail ? <span className={styles.detail}>{o.detail}</span> : undefined }))}
+    />
   )
 }
 
@@ -70,7 +64,7 @@ export function TradeFields({
 
   const sizes = draft.isSell ? SELL_SHARES : BUY_SIZES
   const usual = sizes.some((s) => sameShare(s, draft.fraction))
-  // A buy with no size is the empty string, which a toggle cannot hold as its value.
+  // A buy with no size is the empty string, which an option cannot hold as its value.
   const NONE = "none"
   const sizeOptions = [
     ...sizes.map((s) => ({ value: s || NONE, title: shareTitle(s, draft.isSell) })),
@@ -85,75 +79,69 @@ export function TradeFields({
     { value: "market", title: "Market", detail: marketDetail },
     { value: "limit", title: "Limit" },
   ]
+  const problem = canQuote(symbol) ? quoteProblem(symbol, quote, draft.isSell, now) : null
 
   return (
-    <FieldGroup className="gap-4">
-      <Field>
-        <FieldLabel>Side</FieldLabel>
-        <ButtonGroup aria-label="Side">
-          <Button size="sm" type="button" variant={!draft.isSell ? "default" : "outline"} aria-pressed={!draft.isSell} onClick={() => setSell(false)}>
-            <TrendingUpIcon aria-hidden /> Buy
-          </Button>
-          <Button size="sm" type="button" variant={draft.isSell ? "default" : "outline"} aria-pressed={draft.isSell} onClick={() => setSell(true)}>
-            <TrendingDownIcon aria-hidden /> Sell
-          </Button>
-        </ButtonGroup>
-      </Field>
+    <div className={styles.fields}>
+      <div className={styles.field}>
+        <span className={styles.fieldLabel}>Side</span>
+        <SegmentedControl
+          label="Side"
+          value={draft.isSell ? "sell" : "buy"}
+          onValueChange={(next) => setSell(next === "sell")}
+          options={[
+            { value: "buy", label: "Buy" },
+            { value: "sell", label: "Sell" },
+          ]}
+        />
+      </div>
 
-      <Field>
-        <FieldLabel htmlFor={`stock-${draft.id}`}>Stock</FieldLabel>
+      <div className={styles.field}>
         {draft.isSell ? (
-          holdings.length === 0 && !named ? (
-            <FieldDescription>Nothing CopyTrading bought is held in these accounts.</FieldDescription>
-          ) : (
-            <Choices
-              label="Stock"
-              value={symbol || null}
-              options={[...holdings.map((h) => ({ value: h.symbol, title: h.symbol })), ...(named ? [{ value: symbol, title: symbol, detail: "Not held" }] : [])]}
-              onPick={(next) => set({ symbol: next, entryPrice: "" })}
-            />
-          )
+          <>
+            <span className={styles.fieldLabel}>Stock</span>
+            {holdings.length === 0 && !named ? (
+              <p className={styles.hint}>Nothing CopyTrading bought is held in these accounts.</p>
+            ) : (
+              <Choices
+                label="Stock"
+                value={symbol || null}
+                options={[...holdings.map((h) => ({ value: h.symbol, title: h.symbol })), ...(named ? [{ value: symbol, title: symbol, detail: "Not held" }] : [])]}
+                onPick={(next) => set({ symbol: next, entryPrice: "" })}
+              />
+            )}
+          </>
         ) : (
-          <Input id={`stock-${draft.id}`} className="w-40" placeholder="Type a ticker" value={draft.symbol} onChange={(e) => set({ symbol: e.target.value })} autoCapitalize="characters" />
+          <Input label="Stock" placeholder="Type a ticker" value={draft.symbol} onChange={(e) => set({ symbol: e.target.value })} autoCapitalize="characters" />
         )}
         {draft.isSell && holding && (
-          <FieldDescription>
+          <p className={styles.hint}>
             You hold {sharesText(holding.shares, holding.symbol)}
             {holding.price ? ` at ${usd(holding.price)} each` : ""}
-          </FieldDescription>
+          </p>
         )}
-        {draft.isSell && draft.entryPrice.trim() !== "" && <FieldDescription>Sells from the buy at {dollars(draft.entryPrice)}.</FieldDescription>}
-      </Field>
+        {draft.isSell && draft.entryPrice.trim() !== "" && <p className={styles.hint}>Sells from the buy at {dollars(draft.entryPrice)}.</p>}
+      </div>
 
-      <Field>
-        <FieldLabel>How much</FieldLabel>
+      <div className={styles.field}>
+        <span className={styles.fieldLabel}>How much</span>
         <Choices label="How much" value={sizeValue} options={sizeOptions} onPick={(next) => set({ fraction: next === NONE ? "" : next, usdAmount: "" })} />
-        {!draft.isSell && draft.usdAmount !== "" && <FieldDescription>The post named {dollars(draft.usdAmount)}.</FieldDescription>}
-      </Field>
+        {!draft.isSell && draft.usdAmount !== "" && <p className={styles.hint}>The post named {dollars(draft.usdAmount)}.</p>}
+      </div>
 
-      <Field>
-        <FieldLabel>Price</FieldLabel>
-        <div className="flex flex-wrap items-center gap-2">
-          <Choices
-            label="Price"
-            value={draft.priceChoice}
-            options={priceOptions}
-            onPick={(next) => choosePrice(next as PriceChoice)}
-          />
+      <div className={styles.field}>
+        <span className={styles.fieldLabel}>Price</span>
+        <div className={styles.priceRow}>
+          <Choices label="Price" value={draft.priceChoice} options={priceOptions} onPick={(next) => choosePrice(next as PriceChoice)} />
           {canQuote(symbol) && (
-            <Button type="button" size="icon-sm" variant="ghost" aria-label="Get the latest price" disabled={quoting} onClick={onRefreshQuote}>
-              {quoting ? <Spinner /> : <RotateClockwiseIcon aria-hidden />}
+            <Button type="button" size="sm" variant="ghost" aria-label="Get the latest price" loading={quoting} onClick={onRefreshQuote}>
+              <RotateClockwiseIcon width={16} height={16} aria-hidden="true" />
             </Button>
           )}
-          {draft.priceChoice === "limit" && (
-            <div className="flex items-center gap-1">
-              <span className="text-muted-foreground text-sm">$</span>
-              <Input aria-label="Limit price" inputMode="decimal" className="w-24 tabular-nums" value={draft.price} onChange={(e) => set({ price: e.target.value })} />
-            </div>
-          )}
         </div>
-        {canQuote(symbol) && quoteProblem(symbol, quote, draft.isSell, now) && <FieldDescription>{quoteProblem(symbol, quote, draft.isSell, now)}</FieldDescription>}
-      </Field>
-    </FieldGroup>
+        {draft.priceChoice === "limit" && <Input label="Limit price" inputMode="decimal" value={draft.price} onChange={(e) => set({ price: e.target.value })} />}
+        {problem && <p className={styles.hint}>{problem}</p>}
+      </div>
+    </div>
   )
 }

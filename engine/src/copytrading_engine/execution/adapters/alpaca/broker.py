@@ -59,8 +59,8 @@ _HISTORY_PARAMS: dict[HistoryRange, dict[str, str]] = {
     "year": {"period": "1A", "timeframe": "1D"},
 }
 _MAX_BAR_PAGES = 5
-# Calendar days a daily chart reaches back: the range, plus about fifty trading days before it so the
-# 20 and 50 day averages start filled.
+# Calendar days a daily chart reaches back: the range, plus about fifty trading days before it
+# so the 20 and 50 day averages start filled.
 _WARM_UP_DAYS = 75
 _DAILY_DAYS: dict[DailyRange, int] = {"month": 31, "six_months": 183, "year": 366}
 _DAILY_PAGE_SIZE = 1000
@@ -502,7 +502,8 @@ class AlpacaBroker:
         splits folded in so a split is no gap in the chart. A stock's come from IEX, the feed
         every account has, so its volumes are that feed's."""
         start = dt.datetime.combine(
-            self.now().astimezone(ET).date() - dt.timedelta(days=_DAILY_DAYS[period] + _WARM_UP_DAYS),
+            self.now().astimezone(ET).date()
+            - dt.timedelta(days=_DAILY_DAYS[period] + _WARM_UP_DAYS),
             dt.time(),
             ET,
         )

@@ -1,11 +1,11 @@
-import { BankIcon } from "@/components/icons/BankIcon"
 import type { AccountOverviewPage } from "../../../shared/contract"
-import { RegionError } from "@/components/region-error"
-import { Button } from "@/components/ui/button"
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { Button } from "@/components/arc/button/button"
+import { EmptyState } from "@/components/arc/empty-state/empty-state"
 import { type Loaded } from "@/lib/use-result"
+import styles from "./account.module.css"
 import { AccountPage } from "./AccountPage"
 import { AccountPageSkeleton } from "./AccountPageSkeleton"
+import { RegionNote } from "./RegionNote"
 
 /** The Accounts screen: loading, error, no accounts, or the selected account's page. */
 export function AccountsScreen({
@@ -21,25 +21,26 @@ export function AccountsScreen({
 }) {
   if (accounts.status === "loading") return <AccountPageSkeleton />
   if (accounts.status === "error") {
-    return <RegionError title="Accounts did not load" message={accounts.error} onRetry={onRefresh} />
+    return (
+      <div className={styles.page}>
+        <RegionNote title="Accounts did not load" message={accounts.error} onRetry={onRefresh} />
+      </div>
+    )
   }
   const account = accounts.data.items.find((a) => a.account_id === selectedAccountId) ?? accounts.data.items[0]
   if (!account) {
     return (
-      <Empty className="min-h-[60vh]">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <BankIcon />
-          </EmptyMedia>
-          <EmptyTitle>No accounts yet</EmptyTitle>
-          <EmptyDescription>Connect a broker account to begin.</EmptyDescription>
-        </EmptyHeader>
-        <EmptyContent>
-          <Button type="button" size="sm" onClick={onOpenConnections}>
-            Open Connections
-          </Button>
-        </EmptyContent>
-      </Empty>
+      <div className={styles.page}>
+        <EmptyState
+          title="No accounts yet"
+          description="Connect a broker account to begin."
+          action={
+            <Button type="button" onClick={onOpenConnections}>
+              Open Connections
+            </Button>
+          }
+        />
+      </div>
     )
   }
   return <AccountPage key={account.account_id} account={account} accounts={accounts.data.items} onRefresh={onRefresh} onOpenConnections={onOpenConnections} />

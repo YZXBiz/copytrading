@@ -134,7 +134,7 @@ interface BarProps {
 }
 
 /** Threshold slider drawn on the spend bar: spend and forecast fill the track, the thumb sets the alert line, and spend past the line turns to warning. */
-function ThresholdBar({ value, onChange, spendPct, forecastPct, markers, labelId, valueText, disabled, over }: BarProps) {
+export function ThresholdBar({ value, onChange, spendPct, forecastPct, markers, labelId, valueText, disabled, over }: BarProps) {
   const reduced = useReducedMotion();
   const railRef = useRef<HTMLDivElement>(null);
   const thumbRef = useRef<HTMLDivElement>(null);

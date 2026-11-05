@@ -142,7 +142,8 @@ class ChartEngine {
 
   setLive(live: number) {
     this.live = live;
-    if (this.reduced) this.shown = live;
+    // A read of the price is a data refresh, so the line jumps to it instead of easing.
+    this.shown = live;
     this.recompute();
     this.invalidate();
   }
@@ -489,7 +490,7 @@ interface PriceChartProps {
   zoomRef: React.RefObject<{ zoom: (factor: number) => void; reset: () => void } | null>;
 }
 
-function PriceChart({ bars, seriesId, range, symbol, live, averages, limit, reduced, zoomRef }: PriceChartProps) {
+export function PriceChart({ bars, seriesId, range, symbol, live, averages, limit, reduced, zoomRef }: PriceChartProps) {
   const surface = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const probe = useRef<HTMLSpanElement>(null);

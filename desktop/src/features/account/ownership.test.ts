@@ -26,8 +26,8 @@ describe("ownershipFix", () => {
   it("counts shares the app did not buy as the owner's", () => {
     const fix = ownershipFix(incident, position("38.011", ["l1", "10"]), "acct")
     expect(fix.headline).toBe("28.011 shares of NIO that CopyTrading didn't buy")
-    expect(fix.action).toBe("They're Mine")
-    expect(fix.confirm).toBe("Count as Mine")
+    expect(fix.action).toBe("They're mine")
+    expect(fix.confirm).toBe("Count as mine")
     expect(fix.request).toEqual({
       resolution_id: "owner-inc-1",
       incident_id: "inc-1",

@@ -32,7 +32,7 @@ describe("sharesLine", () => {
     expect(sharesLine(d("0.44"), d("0.885"), "WMT")).toBe("0.44 of 0.885 shares")
     expect(sharesLine(d("0.885"), d("0.885"), "WMT")).toBe("All 0.885 shares")
     expect(sharesLine(d("0.0005"), d("0.001231481"), "BTC/USD")).toBe("0.0005 of 0.001231481 units of BTC")
-    expect(reviewLabel(d("0.44"), "WMT")).toBe("Sell 0.44 WMT…")
+    expect(reviewLabel(d("0.44"), "WMT")).toBe("Review 0.44 WMT")
   })
 })
 

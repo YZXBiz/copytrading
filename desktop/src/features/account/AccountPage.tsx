@@ -3,13 +3,15 @@ import type { AccountOverview, Position } from "../../../shared/contract"
 import { readableText } from "@/features/activity/reading"
 import { readClock } from "@/lib/clock"
 import { useResult } from "@/lib/use-result"
-import { AccountBand } from "./AccountBand"
+import styles from "./account.module.css"
+import { AccountHeader } from "./AccountHeader"
 import { ControlNotes, useAccountControl } from "./AccountControl"
-import { AccountNavbar } from "./AccountNavbar"
 import { AccountNotices } from "./AccountNotices"
-import { BalancePanel } from "./balance-panel/BalancePanel"
+import { BalanceHero } from "./balance-panel/BalanceHero"
 import { useDeepLink } from "./deep-link"
-import { LimitsHoldings, sellable } from "./LimitsHoldings"
+import { Figures } from "./Figures"
+import { Holdings, sellable } from "./Holdings"
+import { LimitMeters } from "./LimitMeters"
 import { LimitsSheet } from "./LimitsSheet"
 import { type LotSaleTarget, LotSaleSheet } from "./LotSaleSheet"
 import { ManualReviewSheet } from "./ManualReviewSheet"
@@ -19,7 +21,7 @@ import { PostsTable } from "./PostsTable"
 import { useSkippedCalls } from "./skipped-calls"
 import { type WaitingCall, openCall } from "./waiting"
 
-/** The account page, ReUI's dashboard-8 filled with this account: navbar, command band, chart beside limits and holdings, then the posts. */
+/** The account page: its state and the one action (Stop or Start copying), the balance, the figures, limits beside holdings, then the posts. */
 export function AccountPage({
   account,
   accounts,
@@ -88,33 +90,30 @@ export function AccountPage({
   })
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
-      <AccountNavbar accountId={id} canEditLimits={canEditLimits} onEditLimits={() => setEditingLimits(true)} onRefresh={changed} onOpenConnections={onOpenConnections} />
-      <ControlNotes control={control} saved={limitsSaved} />
-      <AccountNotices account={account} status={copyingStatus} onResolved={changed} />
-      <AccountBand
+    <div className={styles.page}>
+      <AccountHeader
         account={account}
         guru={guru}
-        now={now}
-        waiting={calls.length}
         control={control}
         canEditLimits={canEditLimits}
         onEditLimits={() => setEditingLimits(true)}
+        onRefresh={changed}
+        onOpenConnections={onOpenConnections}
+      />
+      <ControlNotes control={control} saved={limitsSaved} />
+      <AccountNotices account={account} status={copyingStatus} onResolved={changed} />
+      <BalanceHero account={account} version={version} onRefresh={changed} />
+      <Figures
+        account={account}
+        waiting={calls.length}
         onShowWaiting={() => {
           setFilter("waiting")
           table.current?.scrollIntoView({ behavior: "smooth", block: "start" })
         }}
       />
-      <div className="grid min-w-0 items-stretch gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)]">
-        <BalancePanel accountId={id} version={version} onRefresh={changed} />
-        <LimitsHoldings
-          account={account}
-          limits={limits}
-          onRefresh={onRefresh}
-          onOpenConnections={onOpenConnections}
-          onEditLimits={() => setEditingLimits(true)}
-          onSell={(position, lot) => setSale(saleTarget(position, lot))}
-        />
+      <div className={styles.split}>
+        <LimitMeters account={account} limits={limits} onOpenConnections={onOpenConnections} />
+        <Holdings account={account} onRefresh={onRefresh} onSell={(position, lot) => setSale(saleTarget(position, lot))} />
       </div>
       <div ref={table}>
         <PostsTable

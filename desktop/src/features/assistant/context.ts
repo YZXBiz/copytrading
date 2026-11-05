@@ -10,6 +10,7 @@ const SCREEN: Record<ScreenId, AssistantAskContext["screen"]> = {
   activity: "activity",
   "getting-started": "gettingStarted",
   settings: "settings",
+  stock: "accounts",
 }
 
 /** Ids as the engine reads them: letters, digits, `_` and `-`, up to 64; a name has up to 100 characters. */

@@ -67,6 +67,10 @@ export const isWarning = ({ word, detail, warns }: CopyingState) => word === "se
 export const badgeVariant = (s: CopyingState): BadgeProps["variant"] =>
   s.word === "stopped" ? "destructive-light" : isWarning(s) ? "warning-light" : s.word === "copying" ? "success-light" : "outline"
 
+/** The badge tone of the copying word: green only while it copies cleanly, amber for what needs a look, red when it stopped. */
+export const badgeTone = (s: CopyingState): "neutral" | "success" | "warning" | "danger" =>
+  s.word === "stopped" ? "danger" : isWarning(s) ? "warning" : s.word === "copying" ? "success" : "neutral"
+
 /** What the owner is told when an account stops on its own: which account, and what to do. */
 export const stoppedTitle = (accountId: string) => `Copying into ${accountId} stopped`
 export const STOPPED_BODY = "CopyTrading hit a problem it couldn't fix. Stop copying everywhere, then start again to reopen it."

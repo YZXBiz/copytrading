@@ -1,18 +1,16 @@
 import { useState } from "react"
-import { SlidersHorizontalIcon } from "@/components/icons/SlidersHorizontalIcon"
 import type { AccountPolicy, RecoveryPreference, SetupView } from "../../../shared/contract"
-import { RegionError } from "@/components/region-error"
-import { Button } from "@/components/ui/button"
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
-import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldSeparator, FieldSet, FieldLegend, FieldTitle } from "@/components/ui/field"
-import { NumberField, NumberFieldDecrement, NumberFieldGroup, NumberFieldIncrement, NumberFieldInput, NumberFieldScrubArea } from "@/components/reui/number-field"
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Spinner } from "@/components/ui/spinner"
-import { Switch } from "@/components/ui/switch"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { Button } from "@/components/arc/button/button"
+import { Drawer, DrawerContent } from "@/components/arc/drawer/drawer"
+import { EmptyState } from "@/components/arc/empty-state/empty-state"
+import { NumberField } from "@/components/arc/number-field/number-field"
+import SegmentedControl from "@/components/arc/segmented-control/segmented-control"
+import { Skeleton } from "@/components/arc/skeleton/skeleton"
+import { Switch } from "@/components/arc/switch/switch"
 import { useResult } from "@/lib/use-result"
 import { BEHAVIORS, POSITION_LIMITS, RECOVERY_HINT, RECOVERY_TITLE, TIMING_LIMITS, type LimitsDraft, draftFromPolicy, draftNumber, limitErrors, limitsChanged, numberDraft, policyFromDraft, setFlag, withLimits } from "./limits"
+import { RegionNote } from "./RegionNote"
+import styles from "./sheet.module.css"
 
 function Form({ setup, accountId, policy, onClose }: { setup: SetupView; accountId: string; policy: AccountPolicy; onClose: (saved: boolean) => void }) {
   const [draft, setDraft] = useState<LimitsDraft>(() => draftFromPolicy(policy))
@@ -33,82 +31,80 @@ function Form({ setup, accountId, policy, onClose }: { setup: SetupView; account
 
   // Steppers and scrubbing move a number; the draft stays the decimal text the checks and the save read, and a field that was not touched keeps its saved text.
   const field = (key: Extract<keyof LimitsDraft, keyof typeof errors>, title: string, hint: string, step: number) => (
-    <Field key={key} data-invalid={errors[key] ? true : undefined}>
+    <div key={key} className={styles.field}>
       <NumberField
         id={`limit-${key}`}
+        label={title}
         min={0}
         step={step}
-        format={{ useGrouping: false, maximumFractionDigits: 6 }}
-        value={draftNumber(draft[key])}
+        prefix={key.endsWith("_usd") ? "$" : undefined}
+        suffix={key.endsWith("_pct") ? "%" : undefined}
+        scrub
+        formatOptions={{ useGrouping: false, maximumFractionDigits: 6 }}
+        value={draftNumber(draft[key]) ?? undefined}
+        description={errors[key] ? undefined : hint}
         onValueChange={(value) => setDraft((d) => (draftNumber(d[key]) === value ? d : { ...d, [key]: numberDraft(value) }))}
-      >
-        <NumberFieldScrubArea label={title} />
-        <NumberFieldGroup aria-invalid={errors[key] ? true : undefined}>
-          <NumberFieldDecrement aria-label={`Lower ${title}`} />
-          <NumberFieldInput inputMode="decimal" />
-          <NumberFieldIncrement aria-label={`Raise ${title}`} />
-        </NumberFieldGroup>
-      </NumberField>
-      {errors[key] ? <FieldError>{errors[key]}</FieldError> : <FieldDescription>{hint}</FieldDescription>}
-    </Field>
+      />
+      {errors[key] && (
+        <p role="alert" className={styles.problem}>
+          {errors[key]}
+        </p>
+      )}
+    </div>
   )
 
   return (
     <>
-      <div className="flex-1 overflow-y-auto px-4">
-        <FieldGroup className="gap-6">
-          <FieldSet className="gap-4">
-            <FieldLegend variant="label">Position limits (USD)</FieldLegend>
-            {POSITION_LIMITS.map((f) => field(f.key, f.title, f.hint, f.step))}
-          </FieldSet>
-          <FieldSeparator />
-          <FieldSet className="gap-4">
-            <FieldLegend variant="label">Timing</FieldLegend>
-            {TIMING_LIMITS.map((f) => field(f.key, f.title, f.hint, f.step))}
-          </FieldSet>
-          <FieldSeparator />
-          <FieldSet className="gap-4">
-            <FieldLegend variant="label">Behavior</FieldLegend>
-            {BEHAVIORS.map((f) => (
-              <Field key={f.key} orientation="horizontal">
-                <FieldContent>
-                  <FieldTitle>{f.title}</FieldTitle>
-                  <FieldDescription>{f.hint}</FieldDescription>
-                </FieldContent>
-                <Switch size="sm" aria-label={f.title} checked={draft[f.key]} onCheckedChange={(on) => setDraft((d) => setFlag(d, f.key, on))} />
-              </Field>
-            ))}
-            <Field orientation="horizontal">
-              <FieldContent>
-                <FieldTitle>After a restart</FieldTitle>
-                <FieldDescription>{RECOVERY_HINT[draft.recovery_preference]}</FieldDescription>
-              </FieldContent>
-              <ToggleGroup aria-label="After a restart" variant="outline" size="sm" value={[draft.recovery_preference]} onValueChange={(next) => next[0] && setDraft((d) => ({ ...d, recovery_preference: next[0] as RecoveryPreference }))}>
-                {(["manual", "automatic"] as const).map((p) => (
-                  <ToggleGroupItem key={p} value={p}>
-                    {RECOVERY_TITLE[p]}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-            </Field>
-            <FieldDescription>Only shares CopyTrading bought are ever sold. Your own shares are never touched.</FieldDescription>
-          </FieldSet>
-          {error && (
-            <p role="alert" className="text-destructive text-sm">
-              {error}
-            </p>
-          )}
-        </FieldGroup>
+      <div className={styles.sections}>
+        <fieldset className={styles.group}>
+          <legend>Position limits</legend>
+          {POSITION_LIMITS.map((f) => field(f.key, f.title, f.hint, f.step))}
+        </fieldset>
+        <fieldset className={styles.group}>
+          <legend>Timing</legend>
+          {TIMING_LIMITS.map((f) => field(f.key, f.title, f.hint, f.step))}
+        </fieldset>
+        <fieldset className={styles.group}>
+          <legend>Behavior</legend>
+          {BEHAVIORS.map((f) => (
+            <div key={f.key} className={styles.switchRow}>
+              <div>
+                <span id={`behavior-${f.key}`} className={styles.switchTitle}>
+                  {f.title}
+                </span>
+                <p id={`behavior-${f.key}-hint`} className={styles.hint}>
+                  {f.hint}
+                </p>
+              </div>
+              <Switch aria-labelledby={`behavior-${f.key}`} aria-describedby={`behavior-${f.key}-hint`} checked={draft[f.key]} onCheckedChange={(on) => setDraft((d) => setFlag(d, f.key, on))} />
+            </div>
+          ))}
+          <div className={styles.field}>
+            <span className={styles.fieldLabel}>After a restart</span>
+            <SegmentedControl
+              label="After a restart"
+              value={draft.recovery_preference}
+              onValueChange={(next) => setDraft((d) => ({ ...d, recovery_preference: next as RecoveryPreference }))}
+              options={(["manual", "automatic"] as const).map((p) => ({ value: p, label: RECOVERY_TITLE[p] }))}
+            />
+            <p className={styles.hint}>{RECOVERY_HINT[draft.recovery_preference]}</p>
+          </div>
+          <p className={styles.hint}>Only shares CopyTrading bought are ever sold. Your own shares are never touched.</p>
+        </fieldset>
+        {error && (
+          <p role="alert" className={styles.problem}>
+            {error}
+          </p>
+        )}
       </div>
-      <SheetFooter className="flex-row items-center justify-end">
-        {saving && <Spinner aria-label="Saving" />}
-        <Button size="sm" type="button" variant="outline" disabled={saving} onClick={() => onClose(false)}>
+      <div className={styles.footer}>
+        <Button type="button" variant="secondary" disabled={saving} onClick={() => onClose(false)}>
           Cancel
         </Button>
-        <Button size="sm" type="button" disabled={saving || !changed || Object.keys(errors).length > 0} onClick={save}>
-          Save Limits
+        <Button type="button" loading={saving} disabled={!changed || Object.keys(errors).length > 0} onClick={save}>
+          Save limits
         </Button>
-      </SheetFooter>
+      </div>
     </>
   )
 }
@@ -121,37 +117,13 @@ export function LimitsSheet({ accountId, onClose }: { accountId: string; onClose
   const setup = useResult(() => window.copytrading.read.getSetup(), accountId)
   const policy = setup.status === "ready" ? setup.data?.configuration.accounts.find((a) => a.id === accountId)?.policy : undefined
   return (
-    <Sheet open onOpenChange={(open) => !open && onClose(false)}>
-      <SheetContent className="w-full sm:max-w-md">
-        <SheetHeader>
-          <SheetTitle>Limits for {accountId}</SheetTitle>
-          <SheetDescription>Changes apply from the next order.</SheetDescription>
-        </SheetHeader>
-        {setup.status === "loading" && (
-          <div role="status" aria-label="Loading limits" className="flex flex-col gap-4 px-4">
-            {Array.from({ length: 6 }, (_, i) => (
-              <Skeleton key={i} className="h-9 w-full" />
-            ))}
-          </div>
-        )}
-        {setup.status === "error" && (
-          <div className="px-4">
-            <RegionError title="The saved setup did not load" message={setup.error} onRetry={setup.retry} />
-          </div>
-        )}
-        {setup.status === "ready" && !policy && (
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <SlidersHorizontalIcon />
-              </EmptyMedia>
-              <EmptyTitle>No saved limits for this account</EmptyTitle>
-              <EmptyDescription>Save the account in Connections first.</EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        )}
+    <Drawer open onOpenChange={(open) => !open && onClose(false)}>
+      <DrawerContent title={`Limits for ${accountId}`} description="Changes apply from the next order." className={styles.sheet}>
+        {setup.status === "loading" && <Skeleton label="Loading limits" lines={6} />}
+        {setup.status === "error" && <RegionNote title="The saved setup did not load" message={setup.error} onRetry={setup.retry} />}
+        {setup.status === "ready" && !policy && <EmptyState title="No saved limits for this account" description="Save the account in Connections first." />}
         {setup.status === "ready" && setup.data && policy && <Form setup={setup.data} accountId={accountId} policy={policy} onClose={onClose} />}
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   )
 }

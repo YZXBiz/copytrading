@@ -1,10 +1,6 @@
-// ReUI's Order Metrics (chart-25) sparkline, installed as shipped (MetricSparkline: a line over a faded grid, no tooltip)
-// and wired to a held stock's five-minute bars. Changed from the block: its data and colors come from the bars, and the
-// y-axis fits the bars (the block's fixed ±4 padding would flatten a price that moves by cents).
-import { Line, LineChart, XAxis, YAxis } from "recharts"
 import type { Bar } from "../../../shared/contract"
-import { type ChartConfig, ChartContainer } from "@/components/ui/chart"
 import { parseDec } from "./decimal"
+import styles from "./account.module.css"
 
 /** The day's direction: the session's last close against its first open. Null when there is nothing to compare. */
 export function dayDirection(bars: Bar[]): "up" | "down" | null {
@@ -14,31 +10,26 @@ export function dayDirection(bars: Bar[]): "up" | "down" | null {
   return last >= first ? "up" : "down"
 }
 
-/** A 1-day line for a held stock, in the gain color or the loss color; nothing at all when it has no bars. */
-export function PositionSparkline({ symbol, bars }: { symbol: string; bars: Bar[] | undefined }) {
-  const direction = bars && bars.length >= 2 ? dayDirection(bars) : null
-  if (!bars || direction === null) return null
-  const chartConfig = {
-    value: {
-      label: symbol,
-      color: direction === "up" ? "var(--success)" : "var(--destructive)",
-    },
-  } satisfies ChartConfig
-  const data = bars.map((bar) => ({ period: bar.at, value: Number(bar.close) }))
+const W = 64
+const H = 28
 
+/** A one-day line for a held stock against its open, in the gain color or the loss color; nothing at all when it has no bars. */
+export function PositionSparkline({ bars }: { bars: Bar[] | undefined }) {
+  const direction = bars && bars.length >= 2 ? dayDirection(bars) : null
+  // Holds its column, so the figures beside it line up row to row.
+  if (!bars || direction === null) return <span className={styles.spark} aria-hidden="true" />
+
+  const points = bars.map((bar) => Number(bar.close))
+  const base = Number(bars[0]!.open)
+  const lo = Math.min(base, ...points)
+  const hi = Math.max(base, ...points)
+  const span = hi - lo || 1
+  const toY = (value: number) => (H - 3 - ((value - lo) / span) * (H - 6)).toFixed(2)
+  const path = points.map((value, index) => `${index ? "L" : "M"}${((index / Math.max(1, points.length - 1)) * W).toFixed(2)} ${toY(value)}`).join("")
   return (
-    <div className="relative hidden h-8 w-16 shrink-0 @sm:block">
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 [background-image:linear-gradient(to_right,var(--color-border)_1px,transparent_1px),linear-gradient(to_bottom,var(--color-border)_1px,transparent_1px)] [mask-image:linear-gradient(to_right,transparent,black_14%,black_86%,transparent)] [background-size:12px_12px] opacity-30"
-      />
-      <ChartContainer config={chartConfig} className="relative z-10 aspect-auto! h-8 w-full" initialDimension={{ width: 64, height: 32 }}>
-        <LineChart accessibilityLayer data={data} margin={{ top: 4, right: 0, bottom: 4, left: 0 }}>
-          <XAxis dataKey="period" hide />
-          <YAxis hide domain={["dataMin", "dataMax"]} />
-          <Line dataKey="value" dot={false} isAnimationActive={false} stroke="var(--color-value)" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.25} type="linear" />
-        </LineChart>
-      </ChartContainer>
-    </div>
+    <svg className={styles.spark} data-direction={direction} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
+      <line className={styles.sparkBase} x1="0" x2={W} y1={toY(base)} y2={toY(base)} vectorEffect="non-scaling-stroke" />
+      <path className={styles.sparkLine} d={path} vectorEffect="non-scaling-stroke" />
+    </svg>
   )
 }

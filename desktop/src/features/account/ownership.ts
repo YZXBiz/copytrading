@@ -39,16 +39,16 @@ export function ownershipFix(incident: OwnershipIncident, position: Position | u
         ? {
             headline: `CopyTrading's count of ${symbol} is out of date`,
             detail: `It counted ${sharesText(parseDec(incident.expected_qty) ?? 0n, symbol)}; the broker holds ${sharesText(broker, symbol)}. ${symbol} calls wait until you update it.`,
-            action: "Update the Count",
+            action: "Update the count",
             confirmation: "CopyTrading will use the broker's count. Nothing is bought or sold.",
-            confirm: "Update the Count",
+            confirm: "Update the count",
           }
         : {
             headline: `${sharesOf(external, symbol)} of ${symbol} that CopyTrading didn't buy`,
             detail: `${symbol} calls wait until you say whose they are.`,
-            action: "They're Mine",
+            action: "They're mine",
             confirmation: `CopyTrading will leave these shares alone and copy ${symbol} calls again. Nothing is bought or sold.`,
-            confirm: "Count as Mine",
+            confirm: "Count as mine",
           }
   } else {
     let missing = copied - broker
@@ -61,9 +61,9 @@ export function ownershipFix(incident: OwnershipIncident, position: Position | u
     words = {
       headline: isCoin(symbol) ? `Less ${symbol.split("/")[0]} at the broker than CopyTrading copied` : `Fewer ${symbol} shares at the broker than CopyTrading copied`,
       detail: `${sharesText(copied - broker, symbol)} are missing, likely sold outside CopyTrading. ${symbol} calls wait until you confirm.`,
-      action: "They Were Sold",
+      action: "They were sold",
       confirmation: `CopyTrading will count its oldest copied shares as sold first and copy ${symbol} calls again. Nothing is bought or sold.`,
-      confirm: "Count as Sold",
+      confirm: "Count as sold",
     }
   }
 

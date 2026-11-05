@@ -259,7 +259,7 @@ async def test_a_failed_bars_read_keeps_the_last_answer_or_has_none():
     assert await reader.bars("primary", ("ABC",)) == first
 
 
-async def test_daily_bars_are_read_once_in_five_minutes_per_symbol_and_range_and_forgotten_when_locked():
+async def test_daily_bars_are_read_once_in_five_minutes_per_symbol_and_range_then_forgotten():
     broker, clock = WithDailyBars(), [NOW]
     reader = _reader(broker, clock)
     first = await reader.daily_bars("primary", "ABC", "six_months")

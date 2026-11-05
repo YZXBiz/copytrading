@@ -1,17 +1,16 @@
 import { useState } from "react"
 import type { AccountOverview, TradingStatus } from "../../../shared/contract"
-import { Badge } from "@/components/reui/badge"
-import { Button } from "@/components/ui/button"
-import { Spinner } from "@/components/ui/spinner"
-import { CirclePlayIcon } from "@/reui/icons/animated/duotone/circle-play"
-import { SquareInCircleIcon } from "@/reui/icons/animated/duotone/square-in-circle"
+import { Badge } from "@/components/arc/badge/badge"
+import { Button } from "@/components/arc/button/button"
+import { Tooltip } from "@/components/arc/tooltip/tooltip"
 import type { Loaded } from "@/lib/use-result"
+import styles from "./account.module.css"
 import { accountCopying, resumeBlocked } from "./copying"
 
 type Status = Loaded<TradingStatus> & { retry: () => void }
 
 /**
- * Whether CopyTrading copies into this account, and its one Stop or Start Copying. Starting here only turns this
+ * Whether CopyTrading copies into this account, and its one Stop or Start copying. Starting here only turns this
  * account's buys back on (`control_account`); starting copying itself is the setup's Start.
  */
 export function useAccountControl(account: AccountOverview, status: Status, onChanged: () => void) {
@@ -39,17 +38,21 @@ export function useAccountControl(account: AccountOverview, status: Status, onCh
 
 export type AccountControl = ReturnType<typeof useAccountControl>
 
-/** Stop Copying while copying, else Start Copying (primary unless `variant` says otherwise). */
-export function ControlButton({ control, variant }: { control: AccountControl; variant?: "outline" }) {
+/** The page's one primary action: Stop copying while copying, else Start copying. */
+export function ControlButton({ control }: { control: AccountControl }) {
   const { copying, pending, blocked, status } = control
   return copying ? (
-    <Button size="sm" type="button" variant="outline" disabled={pending} onClick={() => control.control("pause")} title="No new buys in this account. Sells of what it copied still follow the guru.">
-      {pending ? <Spinner aria-label="Saving account command" /> : <SquareInCircleIcon aria-hidden className="size-4" />} Stop Copying
-    </Button>
+    <Tooltip content="No new buys in this account. Sells of what it copied still follow the guru." side="bottom">
+      <Button type="button" loading={pending} onClick={() => control.control("pause")}>
+        Stop copying
+      </Button>
+    </Tooltip>
   ) : (
-    <Button size="sm" type="button" variant={variant} disabled={pending || blocked !== null || status.status !== "ready"} onClick={() => control.control("resume")} title="Copy the guru's buys and sells into this account.">
-      {pending ? <Spinner aria-label="Saving account command" /> : <CirclePlayIcon aria-hidden className="size-4" />} Start Copying
-    </Button>
+    <Tooltip content="Copy the guru's buys and sells into this account." side="bottom">
+      <Button type="button" loading={pending} disabled={blocked !== null || status.status !== "ready"} onClick={() => control.control("resume")}>
+        Start copying
+      </Button>
+    </Tooltip>
   )
 }
 
@@ -58,25 +61,25 @@ export function ControlNotes({ control, saved }: { control: AccountControl; save
   const { blocked, error, status } = control
   if (!blocked && !error && !saved && status.status !== "error") return null
   return (
-    <div className="flex flex-col gap-2">
-      {blocked && <p className="text-muted-foreground text-xs">{blocked}</p>}
+    <div className={styles.notes}>
+      {blocked && <p className={styles.note}>{blocked}</p>}
       {status.status === "error" && (
-        <p role="alert" className="text-destructive flex items-center gap-2 text-xs">
+        <p role="alert" className={styles.noteDanger}>
           Whether copying runs did not load: {status.error}
-          <Button type="button" size="xs" variant="outline" onClick={status.retry}>
+          <Button type="button" size="sm" variant="secondary" onClick={status.retry}>
             Retry
           </Button>
         </p>
       )}
       {error && (
-        <p role="alert" className="text-destructive text-xs">
+        <p role="alert" className={styles.noteDanger}>
           {error}
         </p>
       )}
       {saved && (
-        <Badge variant="success-light" className="self-start">
-          Saved for the next order
-        </Badge>
+        <span role="status">
+          <Badge tone="success">Saved for the next order</Badge>
+        </span>
       )}
     </div>
   )
