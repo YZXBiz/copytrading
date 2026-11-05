@@ -16,7 +16,8 @@ import { useGurus } from "./use-gurus"
 /** The gurus the saved setup copies; one of them opens as their page. */
 export function GurusScreen({ guruId, accounts }: { guruId: string | null; accounts: Loaded<AccountOverviewPage> }) {
   const { gurus, config, setup } = useGurus()
-  const guru = guruId ? gurus.find((g) => g.id === guruId) : undefined
+  // With one guru there is nothing to choose between: Gurus opens their page.
+  const guru = guruId ? gurus.find((g) => g.id === guruId) : gurus.length === 1 ? gurus[0] : undefined
   if (guru) return <GuruPage guru={guru} accounts={accounts} setUpAccountIds={new Set(config?.accounts.map((a) => a.id))} />
 
   return (
