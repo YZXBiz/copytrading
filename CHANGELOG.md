@@ -2,7 +2,24 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
-## Unreleased
+## 0.1.0-beta.8 — developer preview
+
+**A new CopyTrading.** The app is rebuilt from the ground up: the same engine, trading rules, setup, and history, in a faster, clearer desktop app with a dark trading-desk look. Your setup, accounts, and records carry over; on first launch it copies your saved keys from the old app once, so macOS asks whether CopyTrading may read them (choose **Always Allow**).
+
+- **An account page that reads at a glance.** Balance and today's change, cash, buying power, what CopyTrading invested, and the calls waiting for you sit in one band; the balance chart sits beside the account's limits and holdings, and the guru's posts and waiting calls are one searchable table below. Held prices update every few seconds and each figure rolls to its new value.
+- **Each guru's results.** A guru's page shows posts today, the win rate of the trades copied from them, realized and open profit, realized profit by day against break-even, and their best and worst call. With one guru, **Gurus** opens their page directly.
+- **Activity at a glance.** The day's posts, trades, waiting calls, and skips with hourly trends, posts per day by outcome, outcome mix, and every post in one table you can search and filter, with what came of it in each account.
+- **Calls that need you, handled in one place.** Copy or Skip each waiting call, or **Skip all** with one Undo.
+- **Company logos and price trends.** Holdings, waiting calls, and posts show the company's logo, and each holding a one-day price line.
+- **A native window.** No title bar, the window controls inside a translucent sidebar, dark by default with Light and System in Settings, and a new app icon.
+- **A menu bar readout.** Your balance and today's change with a status dot; its menu shows the last copied trade and the calls waiting, and pauses or starts copying.
+- **Fewer places to look.** The sidebar keeps to your accounts, your gurus, and Activity. Connections and old account records live in Settings; Getting Started steps aside once setup is done. ⌘K finds pages, accounts, gurus, posts, and actions; ⌘1 to ⌘4 and ⌘, open screens.
+- **Every action says what it will do.** Placing an order, selling a lot, or starting copying asks in a native dialog that names the exact order, for example "Sell 2.052463 SOXS at $40.45 or better from zhap-account-2?".
+- **No unlock step.** The app no longer asks for Touch ID; agent proposals are approved in the app.
+- **English only.** The Chinese interface is removed.
+- **Fixed:** the guru page no longer opens blank; Activity no longer redraws every few seconds; balance history and live prices load for an account that is paused; a status with a problem names the account and what to do.
+
+Also in this release:
 
 Setting up again finds what you had: an account by the Alpaca account its keys open, a guru by their channel.
 
@@ -16,8 +33,6 @@ Setting up again finds what you had: an account by the Alpaca account its keys o
 - **A sell naming a buy the account doesn't hold no longer sells every share.** When a post such as "92.05出掉84.99的soxl" named a buy price none of the open buys had, the reader was asked to read the post again, and DeepSeek then dropped "84.99" on 7 of 12 tries. A sell naming no buy sells all of that stock, so on a live paper run it sold every SOXL share. The reader is no longer asked: the post's own buy price stands, and the sell waits for you, saying what came of that buy.
 - **A sell the reader marks as a re-post of a buy is copied as the sell it is.** On live paper runs DeepSeek read "Sold all F at 11.65" as repeating the earlier "Bought F at 11.75" on both of its tries, and the sell waited for the owner. A sell is never a re-post of a buy, so that mark is now dropped without asking the reader again.
 - **A sell held for its buy price says what came of that buy.** "86.2出掉83.35的soxl" waited with only "no buy at the guru's price". Its card now says why there is none: "The $83.35 buy on Oct 23 wasn't made. Your daily entry limit was reached.", or that the buy is already sold, never filled, or never reached this account.
-- **The gap under a price reads naturally in Chinese.** "0.5%低于你的最低卖价" now reads "比你的最低卖价低 0.5%", and the same for limits. The Logs page keeps its "Left out" explanation in a tooltip instead of a line.
-- **Settings → Backups lists records of accounts no longer in your setup:** each with its Alpaca account, the buys CopyTrading still holds there, and when it last changed. Delete… asks first; the shares stay at Alpaca.
 
 The limits, the guru's size, and late posts now work the way you'd expect. Found by asking, rule by rule, what an owner would assume after setting up again.
 
