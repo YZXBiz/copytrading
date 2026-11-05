@@ -21,7 +21,7 @@ const settings = (page, extra = {}) => ({ ...fixtures, COPYTRADING_CAPTURE_HASH:
 const openTimeZones = `(() => { const t = document.querySelector('[data-slot="input-group-button"]'); for (const type of ["pointerdown", "mousedown", "pointerup", "mouseup", "click"]) t.dispatchEvent(new MouseEvent(type, { bubbles: true, button: 0 })) })()`
 const askAssistant = `(async () => { await ${click("button", "Assistant", 1500)}; const s = [...document.querySelectorAll("button")].find((e) => e.textContent.includes("What's in my paper account?")); s.click(); await new Promise((r) => setTimeout(r, 3000)) })()`
 
-// ⌘K opens the search dialog; its posts need a moment to load.
+// ⌘K opens the search; its posts need a moment to load.
 const pressSearch = `window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true })); await new Promise((r) => setTimeout(r, 1500))`
 
 // Getting Started and Connections: a first run, a saved setup that is paused, one that is copying, and each editor sheet
@@ -184,9 +184,11 @@ for (const [name, env] of [
       [`assistant-nomodel-${size}`, { ...account, COPYTRADING_FIXTURE_SETUP: "none", ...open }],
       // The rail of a first run (Getting Started listed above Settings), folded to icons, and ⌘K (empty, then with a query).
       [`frame-first-run-${size}`, { ...account, COPYTRADING_FIXTURE_SETUP: "none" }],
-      [`frame-collapsed-${size}`, { ...account, COPYTRADING_CAPTURE_SCRIPT: `(async () => { document.querySelector('[data-slot="sidebar-trigger"]').click(); await new Promise((r) => setTimeout(r, 600)) })()` }],
+      [`frame-collapsed-${size}`, { ...account, COPYTRADING_CAPTURE_SCRIPT: `(async () => { document.querySelector('button[aria-label="Collapse sidebar"]').click(); await new Promise((r) => setTimeout(r, 600)) })()` }],
+      // Three fills arriving together stack as notices; the pointer is not over them, so they rest tucked.
+      [`fills-${size}`, { ...account, COPYTRADING_CAPTURE_FILLS: "3", COPYTRADING_CAPTURE_SCRIPT: "new Promise((r) => setTimeout(r, 300))" }],
       [`search-${size}`, { ...account, COPYTRADING_CAPTURE_SCRIPT: `(async () => { ${pressSearch} })()` }],
-      [`search-query-${size}`, { ...account, COPYTRADING_CAPTURE_SCRIPT: `(async () => { ${pressSearch}; const input = document.querySelector('[data-slot="command-input"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(input, "cifr"); input.dispatchEvent(new Event("input", { bubbles: true })); await new Promise((r) => setTimeout(r, 600)) })()` }],
+      [`search-query-${size}`, { ...account, COPYTRADING_CAPTURE_SCRIPT: `(async () => { ${pressSearch}; const input = document.querySelector('input[role="combobox"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(input, "cifr"); input.dispatchEvent(new Event("input", { bubbles: true })); await new Promise((r) => setTimeout(r, 600)) })()` }],
     ]
   }),
   ["assistant-empty", { ...fixtures, COPYTRADING_CAPTURE_SCRIPT: click("button", "Assistant") }],

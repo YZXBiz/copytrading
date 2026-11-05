@@ -1,6 +1,7 @@
 import { useEffect } from "react"
 import { MotionConfig } from "motion/react"
 import { announceSkipped } from "@/features/account/skipped-calls"
+import { ToastStackProvider } from "@/components/arc/toast-stack/toast-stack"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { AppFrame } from "@/features/shell/AppFrame"
 import { FillToasts } from "@/features/shell/FillToasts"
@@ -25,10 +26,12 @@ export default function App() {
   return (
     <MotionConfig reducedMotion="user">
       <TooltipProvider>
+        <ToastStackProvider duration={6000}>
         <AppFrame route={route} accounts={accounts} live={live} old={old} setup={config} selectedAccountId={selectedAccountId} engine={engine}>
           {SCREENS[route.screen].render({ route: route.screen === "accounts" && !route.id ? { ...route, id: selectedAccountId } : route, accounts })}
         </AppFrame>
         <FillToasts />
+        </ToastStackProvider>
       </TooltipProvider>
     </MotionConfig>
   )

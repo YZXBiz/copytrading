@@ -1,10 +1,14 @@
 /* Hallmark · checked: 2026-11-03 · genre: modern-minimal (inferred) · shape: app screen
  * floor: 0 FAIL in feature code · waived: installed ReUI and shadcn parts (ReUI outranks Hallmark), the .dark token block
  * built: the project · redesign: polish · v2.0.0 */
+/* The foundation sits in its own layer below Tailwind's, so the screens still on the old kit keep their own sizes and tokens until they move. */
+@layer arc, theme, base, components, utilities;
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
+@import "@fontsource-variable/inter";
+@import "./components/arc/foundation.css" layer(arc);
 
 @utility drag-region {
   -webkit-app-region: drag;
@@ -33,8 +37,8 @@
     --color-input: var(--input);
     --color-border: var(--border);
     --color-destructive: var(--destructive);
-    --color-accent-foreground: var(--accent-foreground);
-    --color-accent: var(--accent);
+    --color-accent-foreground: var(--ui-accent-foreground);
+    --color-accent: var(--ui-accent);
     --color-muted-foreground: var(--muted-foreground);
     --color-muted: var(--muted);
     --color-secondary-foreground: var(--secondary-foreground);
@@ -80,8 +84,8 @@
     --secondary-foreground: oklch(0.22 0.02 275);
     --muted: oklch(0.965 0.006 275);
     --muted-foreground: oklch(0.5 0.016 275);
-    --accent: oklch(0.955 0.012 275);
-    --accent-foreground: oklch(0.22 0.02 275);
+    --ui-accent: oklch(0.955 0.012 275);
+    --ui-accent-foreground: oklch(0.22 0.02 275);
     --destructive: oklch(0.577 0.245 27.325);
     --border: oklch(0.915 0.008 275);
     --input: oklch(0.9 0.01 275);
@@ -109,6 +113,27 @@
     --warning-foreground: var(--color-yellow-900);
     --invert: var(--color-zinc-900);
     --invert-foreground: var(--color-zinc-50);
+    /* Arc's semantic names, on the same desk: the accent is the indigo, status colours are the old kit's. */
+    --surface: var(--card);
+    --surface-raised: var(--popover);
+    --surface-muted: var(--muted);
+    --text-secondary: var(--muted-foreground);
+    --text-muted: oklch(0.58 0.014 275);
+    --border-subtle: oklch(0 0 0 / 5%);
+    --border-strong: var(--input);
+    --accent: var(--primary);
+    --accent-strong: oklch(0.43 0.21 277);
+    --accent-subtle: oklch(0.511 0.23 277 / 0.1);
+    --accent-foreground: var(--primary-foreground);
+    --danger: var(--destructive);
+    --control-on: var(--primary);
+    --control-glyph: oklch(1 0 0);
+    --control-thumb-on: oklch(1 0 0);
+    --control-fill: var(--primary);
+    --control-track: oklch(0.9 0.01 275);
+    --control-track-hover: oklch(0.86 0.012 275);
+    --font-geist: "Geist Variable";
+    --font-inter: "Inter Variable";
 }
 
 .dark {
@@ -126,8 +151,8 @@
     --secondary-foreground: oklch(0.97 0.004 275);
     --muted: oklch(0.24 0.012 275);
     --muted-foreground: oklch(0.72 0.014 275);
-    --accent: oklch(0.275 0.02 275);
-    --accent-foreground: oklch(0.97 0.004 275);
+    --ui-accent: oklch(0.275 0.02 275);
+    --ui-accent-foreground: oklch(0.97 0.004 275);
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 9%);
     --input: oklch(1 0 0 / 17%);
@@ -154,6 +179,31 @@
     --warning-foreground: var(--color-yellow-600);
     --invert: var(--color-zinc-700);
     --invert-foreground: var(--color-zinc-50);
+    --surface: var(--card);
+    --surface-raised: var(--popover);
+    --surface-muted: var(--muted);
+    --text-secondary: var(--muted-foreground);
+    --text-muted: oklch(0.62 0.014 275);
+    --border-subtle: oklch(1 0 0 / 6%);
+    --border-strong: var(--input);
+    --accent: var(--primary);
+    --accent-strong: oklch(0.72 0.16 277);
+    --accent-subtle: oklch(0.585 0.215 277 / 0.2);
+    --accent-foreground: var(--primary-foreground);
+    --danger: var(--destructive);
+    --control-on: var(--primary);
+    --control-glyph: oklch(1 0 0);
+    --control-thumb-on: oklch(1 0 0);
+    --control-fill: var(--primary);
+    --control-track: oklch(0.33 0.014 275);
+    --control-track-hover: oklch(0.37 0.016 275);
+}
+
+/* The screens still on the older components draw their own focus rings; the shared keyboard outline would double them. Each screen drops out of this as it moves. */
+main,
+[data-slot$="-content"],
+[data-slot^="sidebar"] {
+    --focus-outline: transparent;
 }
 
 @layer base {

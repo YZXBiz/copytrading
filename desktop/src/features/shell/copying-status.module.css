@@ -1,0 +1,9 @@
+.dot { position: relative; width: 6px; height: 6px; border-radius: var(--radius-pill); background: var(--text-muted); }
+.dot[data-tone="success"] { background: var(--success); }
+.dot[data-tone="warning"] { background: var(--warning); }
+.dot[data-tone="destructive"] { background: var(--danger); }
+/* The one loop in the app: it shows that copying is live, and stops with it. */
+.dot[data-live]::before, .dot[data-live]::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--success); animation: ping 1.5s var(--ease-standard) infinite; }
+.dot[data-live]::after { animation-delay: .5s; opacity: .4; }
+@keyframes ping { 75%, 100% { transform: scale(2.5); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .dot[data-live]::before, .dot[data-live]::after { animation: none; display: none; } }
