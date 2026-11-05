@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { FileTextIcon, LandmarkIcon, MonitorIcon, MoonIcon, PauseIcon, PlayIcon, SearchIcon, SparklesIcon, SkipForwardIcon, SunIcon, UsersIcon } from "lucide-react"
+import { FileTextIcon, LandmarkIcon, MonitorIcon, MoonIcon, PauseIcon, PlayIcon, PlugIcon, SearchIcon, SparklesIcon, SkipForwardIcon, SunIcon, UsersIcon, type LucideIcon } from "lucide-react"
 import type { AccountOverview, Theme, TradingConfiguration } from "../../../shared/contract"
 import { ASSISTANT_EVENT, ASSISTANT_SHORTCUT, shortcutOf } from "../../../shared/shortcuts"
 import { Button } from "@/components/ui/button"
@@ -14,7 +14,7 @@ import { guruDirectory, guruName } from "@/features/gurus/model"
 import { readClock } from "@/lib/clock"
 import { ago } from "@/lib/format"
 import { useResult } from "@/lib/use-result"
-import { SCREEN_IDS, navigate } from "./route"
+import { SCREEN_IDS, type ScreenId, href, navigate } from "./route"
 import { SCREENS } from "./screens"
 
 interface Props {
@@ -30,6 +30,11 @@ const THEME_ACTIONS = [
   { theme: "light", label: "Light", icon: SunIcon },
   { theme: "system", label: "System", icon: MonitorIcon },
 ] as const satisfies { theme: Theme; label: string; icon: unknown }[]
+
+const SCREEN_ENTRIES: { title: string; icon: LucideIcon; route: [ScreenId, string?] }[] = [
+  ...SCREEN_IDS.map((id) => ({ title: SCREENS[id].title, icon: SCREENS[id].icon, route: [id] as [ScreenId] })),
+  { title: "Connections", icon: PlugIcon, route: ["settings", "connections"] },
+]
 
 /** app-shell-2's search: a button in the sidebar and ⌘K open a dialog. It finds screens, accounts, gurus and the latest posts. */
 export function SearchForm({ live, old, setup }: Props) {
@@ -135,11 +140,11 @@ function SearchResults({ open, live, old, setup, close }: Props & { open: boolea
             Assistant
             <CommandShortcut className="tracking-normal">⌘{ASSISTANT_SHORTCUT.toUpperCase()}</CommandShortcut>
           </CommandItem>
-          {SCREEN_IDS.map((id) => {
-            const { title, icon: Icon } = SCREENS[id]
-            const keys = shortcutOf(id)
+          {/* Getting Started stays here after the sidebar drops it, and Connections is Settings' first page. */}
+          {SCREEN_ENTRIES.map(({ title, icon: Icon, route }) => {
+            const keys = shortcutOf(href(...route))
             return (
-              <CommandItem key={id} value={`screen ${title}`} onSelect={go(id)}>
+              <CommandItem key={title} value={`screen ${title}`} onSelect={go(...route)}>
                 <Icon aria-hidden="true" />
                 {title}
                 {keys && <CommandShortcut className="tracking-normal">{keys}</CommandShortcut>}

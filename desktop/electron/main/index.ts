@@ -326,7 +326,7 @@ function buildAppMenu(checkForUpdates?: () => void): void {
       {
         label: "Go",
         submenu: [
-          ...SCREEN_SHORTCUTS.filter((s) => s.screen !== "settings").map((s) => ({ label: s.title, accelerator: `Command+${s.key}`, click: () => openWindow(`#/${s.screen}`) })),
+          ...SCREEN_SHORTCUTS.filter((s) => s.key !== ",").map((s) => ({ label: s.title, accelerator: `Command+${s.key}`, click: () => openWindow(s.hash) })),
           { type: "separator" },
           { label: "Assistant", accelerator: `Command+${ASSISTANT_SHORTCUT.toUpperCase()}`, click: assistant },
         ],

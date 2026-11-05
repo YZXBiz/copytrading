@@ -70,7 +70,7 @@ const HISTORY_KEY: Record<HistoryRange, keyof typeof history | null> = {
   year: null,
 }
 
-// Records left from earlier runs: not in the saved setup, so the sidebar files them under "Old records".
+// Records left from earlier runs: not in the saved setup, so Settings lists them under "Old records".
 const oldRecords: AccountOverview[] = ["testing", "primary", "jean-testing"].map((id) => ({
   account_id: id,
   environment: "paper",

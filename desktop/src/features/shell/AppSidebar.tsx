@@ -37,7 +37,7 @@ export function AppSidebar({ route, accounts, live, old, setup, selectedAccountI
         <div className="py-2 pt-2">
           <SearchForm live={live} old={old} setup={setup} />
         </div>
-        <NavMain route={route} accounts={accounts} live={live} old={old} selectedAccountId={selectedAccountId} />
+        <NavMain route={route} accounts={accounts} live={live} selectedAccountId={selectedAccountId} />
         <div className="mt-auto">
           <NavSecondary route={route} />
         </div>

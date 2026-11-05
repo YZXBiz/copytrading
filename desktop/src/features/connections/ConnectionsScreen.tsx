@@ -24,21 +24,21 @@ type Open = { kind: "discord" } | { kind: "interpreter" } | { kind: "account"; u
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`
 
 /** Connections: Discord, the interpreter, each broker account and each guru, and the one Start copying. */
-export function ConnectionsScreen({ routeId }: { routeId: string | null }) {
+export function ConnectionsScreen({ sheet }: { sheet: string | null }) {
   const s = useSetup()
   const derived = derive(s)
   const [open, setOpen] = useState<Open | null>(null)
   const opened = useRef(false)
 
-  // A route such as #/connections/account:0 opens that editor (how capture reaches each sheet).
+  // A route such as #/settings/connections/account:0 opens that editor (how capture reaches each sheet).
   useEffect(() => {
-    if (opened.current || !derived || !routeId) return
+    if (opened.current || !derived || !sheet) return
     opened.current = true
-    const [kind, index] = routeId.split(":")
+    const [kind, index] = sheet.split(":")
     if (kind === "discord" || kind === "interpreter") setOpen({ kind })
     const target = kind === "account" ? s.draft.accounts[Number(index)] : kind === "guru" ? s.draft.gurus[Number(index)] : undefined
     if (target) setOpen({ kind: kind as "account" | "guru", uid: target.uid })
-  }, [derived, routeId, s.draft])
+  }, [derived, sheet, s.draft])
 
   // The engine's reading decides whether the form can change, so keep it fresh while the owner is here.
   useEffect(() => {
@@ -74,12 +74,7 @@ export function ConnectionsScreen({ routeId }: { routeId: string | null }) {
     (model ? draftStatus(!requiresApiKey(draft.provider) || Boolean(draft.provider_api_key) || facts.keys.providerKey, "Needs an API key") : { text: "Not set up", tone: "caution" })
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
-      <header className="flex flex-col gap-0.5">
-        <h1 className="text-xl font-semibold tracking-tight">Connections</h1>
-        <p className="text-muted-foreground text-sm">Each Connect checks its service before anything is saved.</p>
-      </header>
-
+    <div className="flex w-full flex-col gap-5">
       <Section id="services" title="Services" description="Where the calls come from, and the AI that reads them.">
         <Rows title="Services">
           <ConnectionRow
@@ -241,11 +236,7 @@ function EmptyRegion({ icon: Icon, title, description }: { icon: typeof UsersIco
 /** Three sections of rows in the real layout while the setup is read. */
 function ConnectionsSkeleton() {
   return (
-    <div role="status" aria-label="Loading connections" className="mx-auto flex w-full max-w-3xl flex-col gap-5">
-      <div className="flex flex-col gap-1.5">
-        <Skeleton className="h-7 w-40" />
-        <Skeleton className="h-4 w-72" />
-      </div>
+    <div role="status" aria-label="Loading connections" className="flex w-full flex-col gap-5">
       {[2, 1, 1].map((rows, i) => (
         <div key={i} className="flex flex-col gap-3">
           <div className="flex flex-col gap-1.5">

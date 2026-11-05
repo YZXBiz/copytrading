@@ -25,7 +25,7 @@ const askAssistant = `(async () => { await ${click("button", "Assistant", 1500)}
 const pressSearch = `window.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true })); await new Promise((r) => setTimeout(r, 1500))`
 
 // Getting Started and Connections: a first run, a saved setup that is paused, one that is copying, and each editor sheet
-// (#/connections/<discord|interpreter|account:N|guru:N> opens it).
+// (#/settings/connections/<discord|interpreter|account:N|guru:N> opens it).
 function setupCaptures() {
   const fixture = (hash, setup, trading) => ({
     ...fixtures,
@@ -36,7 +36,7 @@ function setupCaptures() {
   // Each screen at 1280×860 and at the SwiftUI app's 980-wide minimum, in each state the screen has.
   const screens = [
     ["getting-started", "#/getting-started", ["first-run:none:paused", "saved:saved:paused", "copying:saved:running"]],
-    ["connections", "#/connections", ["first-run:none:paused", "saved:saved:paused", "copying:saved:running"]],
+    ["connections", "#/settings/connections", ["first-run:none:paused", "saved:saved:paused", "copying:saved:running"]],
   ]
   const sized = screens.flatMap(([screen, hash, states]) =>
     states.flatMap((state) => {
@@ -44,22 +44,22 @@ function setupCaptures() {
       return ["1280x860", "980x860"].map((size) => [`${screen}-${label}-${size}`, { ...fixture(hash, setup, trading), COPYTRADING_CAPTURE_SIZE: size }])
     }),
   )
-  const broken = ["getting-started", "connections"].flatMap((screen) =>
+  const broken = [["getting-started", "#/getting-started"], ["connections", "#/settings/connections"]].flatMap(([screen, hash]) =>
     ["error", "loading"].flatMap((state) =>
-      ["1280x860", "980x860"].map((size) => [`${screen}-${state}-${size}`, { ...fixture(`#/${screen}`, "saved", "paused"), COPYTRADING_FIXTURE_STATE: `reads-${state}`, COPYTRADING_CAPTURE_SIZE: size }]),
+      ["1280x860", "980x860"].map((size) => [`${screen}-${state}-${size}`, { ...fixture(hash, "saved", "paused"), COPYTRADING_FIXTURE_STATE: `reads-${state}`, COPYTRADING_CAPTURE_SIZE: size }]),
     ),
   )
   return [
     ...sized,
     ...broken,
     ["footer-degraded", fixture("#/accounts/zhap-account-2", "saved", "degraded")],
-    ["sheet-discord", fixture("#/connections/discord", "saved", "paused")],
-    ["sheet-interpreter", fixture("#/connections/interpreter", "saved", "paused")],
-    ["sheet-account", fixture("#/connections/account:0", "saved", "paused")],
-    ["sheet-account-copying", fixture("#/connections/account:0", "saved", "running")],
-    ["sheet-guru", fixture("#/connections/guru:0", "saved", "paused")],
+    ["sheet-discord", fixture("#/settings/connections/discord", "saved", "paused")],
+    ["sheet-interpreter", fixture("#/settings/connections/interpreter", "saved", "paused")],
+    ["sheet-account", fixture("#/settings/connections/account:0", "saved", "paused")],
+    ["sheet-account-copying", fixture("#/settings/connections/account:0", "saved", "running")],
+    ["sheet-guru", fixture("#/settings/connections/guru:0", "saved", "paused")],
     // The real engine on a throwaway data folder: a first run reads its status and the (absent) setup.
-    ["live-connections", { COPYTRADING_CAPTURE_HASH: "#/connections" }],
+    ["live-connections", { COPYTRADING_CAPTURE_HASH: "#/settings/connections" }],
   ]
 }
 
@@ -148,8 +148,12 @@ for (const [name, env] of [
   ["settings-backups-preview", settings("backups", { COPYTRADING_CAPTURE_SCRIPT: click("button", "Choose") })],
   ["settings-backups-pending-restore", settings("backups", { COPYTRADING_FIXTURE_STATE: "pending-restore" })],
   ["settings-logs", settings("logs")],
+  // The records the setup no longer has (the "records" scene adds them), each with Open and Delete.
+  ["settings-old-records", settings("old-records", { COPYTRADING_FIXTURE_SCENE: "records" })],
+  // The old Connections route lands on its new path with the sheet open.
+  ["settings-connections-old-route", settings("", { COPYTRADING_CAPTURE_HASH: "#/connections/discord" })],
   // Every Settings page at 1280×860 and at the 980-wide minimum, then with every read failing and every read waiting.
-  ...["general", "agents", "backups", "logs"].flatMap((page) =>
+  ...["connections", "general", "agents", "backups", "logs", "old-records"].flatMap((page) =>
     ["", "reads-error", "reads-loading"].flatMap((state) =>
       ["1280x860", "980x860"].map((size) => [`settings-${page}-${state || "ready"}-${size}`, settings(page, { COPYTRADING_CAPTURE_SIZE: size, ...(state && { COPYTRADING_FIXTURE_STATE: state }) })]),
     ),
@@ -168,9 +172,9 @@ for (const [name, env] of [
       [`assistant-answer-${size}`, { ...account, COPYTRADING_CAPTURE_SCRIPT: askAssistant }],
       [`assistant-error-${size}`, { ...account, COPYTRADING_FIXTURE_STATE: "assistant-error", COPYTRADING_CAPTURE_SCRIPT: askAssistant }],
       [`assistant-nomodel-${size}`, { ...account, COPYTRADING_FIXTURE_SETUP: "none", ...open }],
-      // The rail folded to icons, the old records opened, and ⌘K (empty, then with a query).
+      // The rail of a first run (Getting Started listed above Settings), folded to icons, and ⌘K (empty, then with a query).
+      [`frame-first-run-${size}`, { ...account, COPYTRADING_FIXTURE_SETUP: "none" }],
       [`frame-collapsed-${size}`, { ...account, COPYTRADING_CAPTURE_SCRIPT: `(async () => { document.querySelector('[data-slot="sidebar-trigger"]').click(); await new Promise((r) => setTimeout(r, 600)) })()` }],
-      [`frame-records-open-${size}`, { ...account, COPYTRADING_CAPTURE_SCRIPT: click("button", "Old records", 600) }],
       [`search-${size}`, { ...account, COPYTRADING_CAPTURE_SCRIPT: `(async () => { ${pressSearch} })()` }],
       [`search-query-${size}`, { ...account, COPYTRADING_CAPTURE_SCRIPT: `(async () => { ${pressSearch}; const input = document.querySelector('[data-slot="command-input"]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(input, "cifr"); input.dispatchEvent(new Event("input", { bubbles: true })); await new Promise((r) => setTimeout(r, 600)) })()` }],
     ]

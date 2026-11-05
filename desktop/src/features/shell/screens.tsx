@@ -1,9 +1,8 @@
 import type { ReactNode } from "react"
-import { ActivityIcon, LandmarkIcon, PlugIcon, RocketIcon, SettingsIcon, UsersIcon, type LucideIcon } from "lucide-react"
+import { ActivityIcon, LandmarkIcon, RocketIcon, SettingsIcon, UsersIcon, type LucideIcon } from "lucide-react"
 import type { AccountOverviewPage } from "../../../shared/contract"
 import { AccountsScreen } from "@/features/account/AccountsScreen"
 import { ActivityScreen } from "@/features/activity/ActivityScreen"
-import { ConnectionsScreen } from "@/features/connections/ConnectionsScreen"
 import { GettingStartedScreen } from "@/features/getting-started/GettingStartedScreen"
 import { GurusScreen } from "@/features/gurus/GurusScreen"
 import { SettingsScreen } from "@/features/settings/SettingsScreen"
@@ -37,7 +36,7 @@ export const SCREENS: Record<ScreenId, Screen> = {
         accounts={accounts}
         selectedAccountId={route.id}
         onRefresh={accounts.retry}
-        onOpenConnections={() => navigate("connections")}
+        onOpenConnections={() => navigate("settings", "connections")}
       />
     ),
   },
@@ -48,6 +47,5 @@ export const SCREENS: Record<ScreenId, Screen> = {
     render: ({ route, accounts }) => <ActivityScreen selectedSequence={route.id === null ? null : Number(route.id)} accounts={accounts} />,
   },
   "getting-started": { title: "Getting Started", icon: RocketIcon, render: () => <GettingStartedScreen /> },
-  connections: { title: "Connections", icon: PlugIcon, render: ({ route }) => <ConnectionsScreen routeId={route.id} /> },
-  settings: { title: "Settings", icon: SettingsIcon, render: ({ route, accounts }) => <SettingsScreen page={route.id} accounts={accounts} /> },
+  settings: { title: "Settings", icon: SettingsIcon, render: ({ route, accounts }) => <SettingsScreen page={route.id} sheet={route.sub} accounts={accounts} /> },
 }
