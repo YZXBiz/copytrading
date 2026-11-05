@@ -131,7 +131,12 @@ for (const [name, env] of [
   ["activity-post-980x860", { ...fixtures, COPYTRADING_CAPTURE_SIZE: "980x860", COPYTRADING_CAPTURE_HASH: "#/activity/5" }],
   ["guru-sheet-1280x860", { ...fixtures, COPYTRADING_CAPTURE_SIZE: "1280x860", COPYTRADING_CAPTURE_HASH: `#/gurus/${zhao}`, COPYTRADING_CAPTURE_CLICK: 'button[data-sequence="5"]' }],
   ["guru-sheet-980x860", { ...fixtures, COPYTRADING_CAPTURE_SIZE: "980x860", COPYTRADING_CAPTURE_HASH: `#/gurus/${zhao}`, COPYTRADING_CAPTURE_CLICK: 'button[data-sequence="5"]' }],
-  ["gurus", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/gurus" }],
+  // The Gurus list for two or more gurus (the fixtures have two), in each size and state it has. "performance" serves distinct figures per guru.
+  ...["1280x860", "980x860"].flatMap((size) => [
+    [`gurus-${size}`, { ...fixtures, COPYTRADING_FIXTURE_SCENE: "performance", COPYTRADING_CAPTURE_SIZE: size, COPYTRADING_CAPTURE_HASH: "#/gurus" }],
+    [`gurus-error-${size}`, { ...fixtures, COPYTRADING_FIXTURE_SCENE: "performance", COPYTRADING_FIXTURE_STATE: "figures-error", COPYTRADING_CAPTURE_SIZE: size, COPYTRADING_CAPTURE_HASH: "#/gurus" }],
+    [`gurus-loading-${size}`, { ...fixtures, COPYTRADING_FIXTURE_SCENE: "performance", COPYTRADING_FIXTURE_STATE: "figures-loading", COPYTRADING_CAPTURE_SIZE: size, COPYTRADING_CAPTURE_HASH: "#/gurus" }],
+  ]),
   // Every empty list: no holdings, nothing waiting, no posts (the account page and Activity), and a setup with no gurus.
   ...["1280x860", "980x860", "1280x1500"].flatMap((size) => [
     [`empty-account-${size}`, { ...fixtures, COPYTRADING_FIXTURE_SCENE: "empty", COPYTRADING_CAPTURE_SIZE: size, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2" }],

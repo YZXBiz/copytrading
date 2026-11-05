@@ -92,8 +92,28 @@ const barsBySymbol = bars as Record<string, Bar[]>
 // (not captured: the captured account has no replayed sales) so the card can be captured with a line, a best and a worst call.
 const performanceScene = process.env.COPYTRADING_FIXTURE_SCENE === "performance"
 const closed = (symbol: string, profit: string, day: string, excerpt: string) => ({ symbol, profit_usd: profit, closed_on: day, source_id: `discord:1100000000000000001:${symbol}`, excerpt, posted_at: `${day}T15:00:00Z` })
+// The second guru (赵哥-加密) is down, so the Gurus list has a leader and a laggard to rank.
 const performance = (guru_id: string, account_id: string): GuruPerformance =>
-  performanceScene
+  performanceScene && guru_id === "赵哥-加密"
+    ? {
+        guru_id,
+        account_id,
+        realized_usd: "-41.15",
+        unrealized_usd: "-6.80",
+        closed_trades: 5,
+        winning_trades: 2,
+        unmatched_sells: 0,
+        best: closed("BTCU", "12.40", "2026-10-29", "BTCU 加 25"),
+        worst: closed("ETHU", "-38.90", "2026-11-02", "ETHU 减 10"),
+        series: [
+          { day: "2026-10-27", cumulative_usd: "-4.10" },
+          { day: "2026-10-29", cumulative_usd: "8.30" },
+          { day: "2026-10-31", cumulative_usd: "-12.60" },
+          { day: "2026-11-02", cumulative_usd: "-50.30" },
+          { day: "2026-11-03", cumulative_usd: "-41.15" },
+        ],
+      }
+    : performanceScene
     ? {
         guru_id,
         account_id,
@@ -169,9 +189,17 @@ const notCaptured = async (name: string): Promise<Result<never>> => ({ ok: false
 const readsState = process.env.COPYTRADING_FIXTURE_STATE
 const failing = async (): Promise<Result<never>> => ({ ok: false, error: "The engine did not answer in time. Check that it is running, then try again." })
 
+// COPYTRADING_FIXTURE_STATE=figures-error / figures-loading fail or hold only today's counts and the performance, so a list of gurus shows its figures failed or loading.
+const FIGURES = ["getGuruDayStats", "getGuruPerformance"]
+const figuresState = readsState === "figures-error" || readsState === "figures-loading" ? readsState : null
+
 export const fixtureApi: Api = {
   read: (name, params) =>
-    readsState === "reads-error"
+    figuresState && FIGURES.includes(String(name))
+      ? figuresState === "figures-error"
+        ? failing()
+        : new Promise<never>((_, reject) => setTimeout(() => reject(new Error("never answered")), 10 * 60_000))
+      : readsState === "reads-error"
       ? failing()
       : readsState === "reads-loading"
         ? new Promise<never>((_, reject) => setTimeout(() => reject(new Error("never answered")), 10 * 60_000))
