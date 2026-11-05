@@ -58,8 +58,9 @@ export function ActivityScreen({ selectedSequence, accounts }: { selectedSequenc
   const before = useMemo(() => dayCounts(items ?? [], shiftDay(day, -1), zone, now), [items, day, zone]) // eslint-disable-line react-hooks/exhaustive-deps
   const mix: Mix = useMemo(() => (gurus.length > 1 ? { kind: "gurus", rows: guruMix(month, now, nameOf) } : { kind: "reasons", rows: skipReasons(month, now) }), [month, gurus]) // eslint-disable-line react-hooks/exhaustive-deps
   const postsPerDay = useMemo(() => (items ? dayRows(items, today, zone, now, DAYS) : []), [items, today, zone]) // eslint-disable-line react-hooks/exhaustive-deps
-  // While older pages are still being read for the month, the charts would jump with each page: wait for all of them.
-  const monthLoaded = !(readBack && readAll && (items?.length ?? 0) < MAX_POSTS)
+  // While older pages are still being read for the month, the charts would jump with each page: wait for all of them,
+  // including while one is in flight (`readBack` is false then, which made the charts flash between pages).
+  const monthLoaded = !(posts.status === "ready" && posts.hasOlder && readAll && posts.items.length < MAX_POSTS)
 
   const open = items?.find((p) => p.sequence === selectedSequence)
   const waiting = counts.total.waiting
