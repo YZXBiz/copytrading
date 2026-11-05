@@ -21,7 +21,7 @@ tests/                  vitest; a fake engine process in tests/fake-engine.cjs
 1. Add its id to `SCREEN_IDS` in `src/features/shell/route.ts` (skip if it already has one; every screen in the
    sidebar does). The route is `location.hash`: `#/gurus`, `#/accounts/<id>`.
 2. In `src/features/shell/screens.tsx` replace its `render` with your component. Title and icon come from the same
-   entry; the sidebar and breadcrumb read them. `route.id` is the second segment.
+   entry; the sidebar and the top bar's title read them. `route.id` is the second segment.
 3. Put the screen in `src/features/<name>/`, named per component (`GuruPage.tsx`). Link with
    `<a href={href("gurus", id)}>` or `navigate("gurus", id)`.
 
@@ -169,14 +169,24 @@ The desk opens dark. Settings > General has Dark, Light and System (`getTheme` /
 Main sets `nativeTheme.themeSource` from it before the window exists, so the page's `prefers-color-scheme` and macOS
 vibrancy are right at first paint; `src/main.tsx` only follows that media query. The window has a hidden title bar
 (`hiddenInset`, traffic lights inset in the sidebar), a `sidebar` vibrancy material and a transparent background: `body`
-is transparent so the sidebar and its gutter show the desktop, and the page paints `--background` itself. A capture
-renders offscreen, where there is no desktop, so it paints `--window` instead. The header and the strip above the
-sidebar logo carry `drag-region`; anything pressable inside is `no-drag` (one rule in `index.css`). The window is at
+is transparent so the sidebar shows the desktop through its `--sidebar` fill, and the page paints `--background` itself. A capture
+renders offscreen, where there is no desktop, so it paints `--window` instead. The top bar and the strip above the
+sidebar logo are drag areas; anything pressable inside is `no-drag` (one rule in `index.css`). The window is at
 least 980×640.
+
+## Design foundation
+
+`src/components/arc/` holds the shared foundation (`foundation.css`, motion presets) and the pieces built on it: the sidebar
+frame, the ⌘K search, the notice stack and the dialog. `foundation.css` is imported once, in `src/index.css`, inside a
+layer that sits below Tailwind's, so the screens that still use the older components keep their own tokens and sizes
+until they move. `index.css` maps the foundation's semantic names (`--surface`, `--text-secondary`, `--accent`, `--danger`,
+the control tokens) onto the desk's own colours, in dark (the default) and light, with the indigo accent in both; the older
+hover fill that was called `--accent` is `--ui-accent` now. `main.tsx` sets both the `dark` class and `data-theme`. Fonts are
+Geist (`--font-geist`) and Inter (`--font-inter`), bundled with fontsource; the new pieces set Inter on their own roots.
 
 ## Rolling numbers
 
-The balance, the stat strip, the sidebar's balances and the chart's hover readout are `<RollingNumber>`
+The balance, the stat strip and the chart's hover readout are `<RollingNumber>`
 (`src/components/rolling-number.tsx`, NumberFlow): digits roll to a new value, in the direction it moved, and the first
 render and Reduce Motion show the number at once. It formats with the `*_OPTIONS` in `balance-panel/format.ts`, the same
 ones the text formatters use. To watch it, build with `npx electron-vite build --mode tick` and set
@@ -200,7 +210,7 @@ tick. `COPYTRADING_CAPTURE_FRAMES=<n>` saves n frames in a row after the capture
   reads it from the account's ledger and journal, replaying each sell through the ledger's own lot reduction; a sale it
   cannot match to its buys is counted as unmatched and left out. The captured account has no sales, so
   `COPYTRADING_FIXTURE_SCENE=performance` serves synthetic figures for the capture (`node scripts/capture.mjs guru-performance`).
-- **Fill toast.** The alert monitor's fill notes also go to the page as `engine:fill`; `FillToasts` shows a sonner toast.
+- **Fill toast.** The alert monitor's fill notes also go to the page as `engine:fill`; `FillToasts` shows a stacked notice (newest in front, spread open under the pointer, View opens the account).
   The macOS banner shows only when no window is focused.
 - **Logos.** `<SymbolLogo>` shows `ct-logo://<SYMBOL>` (`electron/main/logos.ts`): main fetches
   `assets.parqet.com/logos/symbol/<SYMBOL>?format=png` once, keeps it in `<userData>/logos/`, and asks again for a ticker

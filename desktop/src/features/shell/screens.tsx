@@ -30,7 +30,7 @@ const placeholder = (title: string) => () => <ScreenPlaceholder title={title} />
 
 /**
  * Every screen, in one table. To port one, replace its `render` with the real component (see README.md);
- * nothing else in the shell changes. The sidebar and the breadcrumb read `title` and `icon` from here.
+ * nothing else in the shell changes. The sidebar, the top bar and ⌘K read `title` and `icon` from here.
  */
 export const SCREENS: Record<ScreenId, Screen> = {
   accounts: {

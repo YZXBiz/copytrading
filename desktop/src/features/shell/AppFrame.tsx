@@ -1,12 +1,20 @@
-import { type ReactNode, useCallback } from "react"
+import { type ReactNode, useCallback, useState } from "react"
+import { BankIcon } from "@/components/icons/BankIcon"
+import { Search01Icon } from "@/components/icons/Search01Icon"
+import { TrendingUpIcon } from "@/components/icons/TrendingUpIcon"
 import type { AccountOverview, AccountOverviewPage, EngineState, TradingConfiguration } from "../../../shared/contract"
-import { SidebarInset, SidebarProvider, useSidebar } from "@/components/ui/sidebar"
+import { SidebarRail, useSidebarRail, type RailEntry, type RailSection } from "@/components/arc/blocks/sidebar-rail/sidebar-rail"
+import { USD_WHOLE_OPTIONS } from "@/features/account/balance-panel/format"
 import { AssistantFrame } from "@/features/assistant/AssistantFrame"
+import { derive } from "@/features/connections/derive"
+import { useSetup } from "@/features/connections/setup-store"
+import { Skeleton } from "@/components/arc/skeleton/skeleton"
 import { type Loaded } from "@/lib/use-result"
-import { cn } from "@/lib/utils"
 import { AppHeader } from "./AppHeader"
-import { AppSidebar } from "./AppSidebar"
-import type { Route } from "./route"
+import { type Route, type ScreenId, href } from "./route"
+import { SearchPalette, useSearchShortcut } from "./SearchPalette"
+import { SCREENS } from "./screens"
+import { useCopyingStatus } from "./use-copying-status"
 
 interface Props {
   route: Route
@@ -19,53 +27,91 @@ interface Props {
   children: ReactNode
 }
 
-/** Below this width the floating sidebar folds to icons when the Assistant opens, so the page keeps its room. */
+/** Below this width the rail folds to icons when the Assistant opens, so the page keeps its room. */
 const ROOMY = 1280
 
-function Frame({ children, ...props }: Props) {
-  const { setOpen, toggleSidebar } = useSidebar()
-  const makeRoom = useCallback(() => {
-    if (window.innerWidth < ROOMY) setOpen(false)
-  }, [setOpen])
+const USD_WHOLE = new Intl.NumberFormat("en-US", USD_WHOLE_OPTIONS)
 
+const screenEntry = (id: ScreenId): RailEntry => ({ id, label: SCREENS[id].title, href: href(id), icon: SCREENS[id].icon })
+
+/** The live accounts with their balances, in place of the list while it loads, fails or is empty. */
+function accountsSection(accounts: Props["accounts"], live: AccountOverview[]): RailSection {
+  const section: RailSection = { id: "accounts", heading: "Accounts", items: [] }
+  if (accounts.status === "loading") return { ...section, note: <Skeleton label="Loading accounts" /> }
+  if (accounts.status === "error") {
+    return {
+      ...section,
+      note: (
+        <span title={accounts.error}>
+          Accounts did not load.{" "}
+          <button type="button" onClick={accounts.retry}>
+            Retry
+          </button>
+        </span>
+      ),
+    }
+  }
+  if (live.length === 0) return { ...section, note: "No accounts yet." }
+  return {
+    ...section,
+    items: live.map((account) => ({
+      id: `account:${account.account_id}`,
+      label: account.account_id,
+      href: href("accounts", account.account_id),
+      icon: BankIcon,
+      value: account.balance ? USD_WHOLE.format(Number(account.balance.equity)) : undefined,
+    })),
+  }
+}
+
+function Frame({ route, selectedAccountId, children }: Pick<Props, "route" | "selectedAccountId" | "children">) {
+  const { fold } = useSidebarRail()
+  const makeRoom = useCallback(() => {
+    if (window.innerWidth < ROOMY) fold()
+  }, [fold])
   return (
-    <>
-      <AppSidebar {...props} />
-      <SidebarInset className="min-w-0 overflow-hidden">
-        <AssistantFrame onOpen={makeRoom}>
-          <AppHeader route={props.route} selectedAccountId={props.selectedAccountId} onToggleNav={toggleSidebar} />
-          <main className="min-h-0 flex-1 overflow-auto py-2 pr-4 pl-2">{children}</main>
-        </AssistantFrame>
-      </SidebarInset>
-    </>
+    <AssistantFrame onOpen={makeRoom}>
+      <AppHeader route={route} selectedAccountId={selectedAccountId} />
+      <main className="min-h-0 flex-1 overflow-auto px-4 pb-4">{children}</main>
+    </AssistantFrame>
   )
 }
 
-/** app-shell-2: a floating sidebar that collapses to icons beside the page, whose provider carries the block's own sidebar classes. */
-export function AppFrame(props: Props) {
+/** The app's frame: a rail that folds to icons beside the page, with search above the nav and the copying status below it. */
+export function AppFrame({ children, ...props }: Props) {
+  const { route, accounts, live, old, setup, selectedAccountId, engine } = props
+  const [searching, setSearching] = useState(false)
+  useSearchShortcut(useCallback(() => setSearching(true), []))
+  const status = useCopyingStatus(engine)
+
+  // Settings, with Getting Started above it until setup is complete: every step of its checklist done, which includes
+  // copying started once (the setup saved). It stays while its own page is open, and #/getting-started and ⌘K reach it after.
+  const progress = derive(useSetup())
+  const settingUp = progress !== null && progress.progress.next !== null
+  const footer = (settingUp || route.screen === "getting-started" ? (["getting-started", "settings"] as const) : (["settings"] as const)).map(screenEntry)
+
+  const sections: RailSection[] = [
+    { id: "search", items: [{ id: "search", label: "Search", icon: Search01Icon, value: "⌘K", onSelect: () => setSearching(true) }] },
+    accountsSection(accounts, live),
+    { id: "screens", items: [screenEntry("gurus"), screenEntry("activity")] },
+  ]
+  const active = route.screen === "accounts" ? (selectedAccountId ? `account:${selectedAccountId}` : null) : route.screen
+
   return (
-    <SidebarProvider
-      className={cn(
-        "h-svh [--sidebar-width:260px]",
-        "[--sidebar-border:transparent]",
-        "[&_[data-slot=sidebar-inner]]:border-border/80 [&_[data-slot=sidebar-inner]]:border",
-        "[&_[data-slot=sidebar-inner]]:shadow-xs [&_[data-slot=sidebar-inner]]:shadow-black/5",
-        "[&_[data-slot=sidebar-menu-button][data-active]]:border-border/60! [&_[data-slot=sidebar-menu-button][data-active]]:border",
-        "[&_[data-slot=sidebar-menu-button][data-active]]:shadow-xs! [&_[data-slot=sidebar-menu-button][data-active]]:shadow-black/5!",
-        "[&_[data-slot=sidebar-menu-button][data-active]]:bg-background! [&_[data-slot=sidebar-menu-button][data-active]]:hover:bg-background! **:data-[slot=sidebar-menu-button]:hover:bg-transparent!",
-        "[&_[data-slot=sidebar-menu-button][data-active]]:text-foreground [&_[data-slot=sidebar-menu-button][data-active]>svg]:text-primary [&_[data-slot=sidebar-menu-button][data-active]>svg]:opacity-100",
-        "**:data-[slot=sidebar-menu-button]:text-accent-foreground/80 **:data-[slot=sidebar-menu-button]:hover:text-foreground",
-        "[&_[data-collapsible=icon]_[data-slot=sidebar-menu-button][data-active]>svg]:-ml-px",
-        "[&_[data-slot=sidebar-menu-button]:hover>svg]:opacity-100 [&_[data-slot=sidebar-menu-button]>svg]:opacity-60",
-        "[&_[data-slot=sidebar-menu-sub-button][data-active]]:border-border/60! [&_[data-slot=sidebar-menu-sub-button][data-active]]:border",
-        "[&_[data-slot=sidebar-menu-sub-button][data-active]]:shadow-xs! [&_[data-slot=sidebar-menu-sub-button][data-active]]:shadow-black/5!",
-        "[&_[data-slot=sidebar-menu-sub-button][data-active]]:bg-background! [&_[data-slot=sidebar-menu-sub-button][data-active]]:hover:bg-background! **:data-[slot=sidebar-menu-sub-button]:hover:bg-transparent!",
-        "[&_[data-slot=sidebar-menu-sub-button][data-active]]:text-foreground [&_[data-slot=sidebar-menu-sub-button][data-active]>svg]:text-primary [&_[data-slot=sidebar-menu-sub-button][data-active]>svg]:opacity-100",
-        "**:data-[slot=sidebar-menu-sub-button]:text-accent-foreground/80 **:data-[slot=sidebar-menu-sub-button]:hover:text-foreground",
-        "[&_[data-slot=sidebar-menu-sub-button]:hover>svg]:opacity-100 [&_[data-slot=sidebar-menu-sub-button]>svg]:opacity-60",
-      )}
-    >
-      <Frame {...props} />
-    </SidebarProvider>
+    <>
+      <SidebarRail
+        label="Main"
+        brand={{ name: "CopyTrading", mark: <TrendingUpIcon width={16} height={16} /> }}
+        sections={sections}
+        footer={footer}
+        active={active}
+        status={status}
+      >
+        <Frame route={route} selectedAccountId={selectedAccountId}>
+          {children}
+        </Frame>
+      </SidebarRail>
+      <SearchPalette open={searching} onOpenChange={setSearching} live={live} old={old} setup={setup} />
+    </>
   )
 }
