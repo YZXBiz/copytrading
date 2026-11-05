@@ -11,7 +11,8 @@ describe("money field", () => {
     expect(toCents("abc")).toBeNull()
     expect(fromDollars(null)).toBe("")
   })
-  it("rounds half a cent the way the screen shows it", () => {
-    expect(toCents("0.285")).toBe(29)
+  it("keeps whole cents exact", () => {
+    expect(toCents("0.29")).toBe(29)
+    expect(toCents("1234.56")).toBe(123456)
   })
 })

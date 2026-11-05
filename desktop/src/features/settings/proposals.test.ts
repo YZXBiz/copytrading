@@ -43,7 +43,7 @@ describe("who and what", () => {
     expect(rows).toEqual([
       { title: "Largest single buy", now: "$500", after: "$750" },
       { title: "Ask me before sending orders", now: "Off", after: "On" },
-      { title: "Check for posts every (seconds)", now: "—", after: "5" },
+      { title: "Check for posts every (seconds)", now: "Not set", after: "5" },
     ])
   })
   it("names a caller by its program, never its path", () => {

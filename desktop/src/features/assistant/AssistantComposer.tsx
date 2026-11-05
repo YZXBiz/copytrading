@@ -1,12 +1,11 @@
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react"
 import { ArrowUp02Icon } from "@/components/icons/ArrowUp02Icon"
 import { Key01Icon } from "@/components/icons/Key01Icon"
-import { Button } from "@/components/ui/button"
-import { Field, FieldLabel } from "@/components/ui/field"
-import { InputGroup, InputGroupAddon, InputGroupTextarea } from "@/components/ui/input-group"
-import { Kbd } from "@/components/ui/kbd"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { Button } from "@/components/arc/button/button"
+import { Kbd } from "@/components/arc/kbd/kbd"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/arc/popover/popover"
+import { Tooltip } from "@/components/arc/tooltip/tooltip"
+import styles from "./assistant.module.css"
 
 const COMPOSER_ID = "assistant-composer"
 
@@ -19,8 +18,8 @@ const SHORTCUTS: { keys: string[]; label: string }[] = [
 ]
 
 /**
- * ai-chat-8's composer: one box that grows with the text, Enter to send, and a quiet bar under it. The bar names the model that
- * answers on the left and lists the shortcuts on the right. While an answer is written the button stops it.
+ * One box that grows with the text, Enter to send, and a quiet bar under it. The bar names the model that answers on the
+ * left and lists the shortcuts on the right. While an answer is written the button stops it.
  */
 export function AssistantComposer({ open, answering, enabled, provider, onSend, onStop }: { open: boolean; answering: boolean; enabled: boolean; provider: { name: string; model: string } | null; onSend: (text: string) => void; onStop: () => void }) {
   const [value, setValue] = useState("")
@@ -54,71 +53,74 @@ export function AssistantComposer({ open, answering, enabled, provider, onSend, 
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className={styles.composerArea}>
       <form onSubmit={submit}>
-        <Field>
-          <FieldLabel htmlFor={COMPOSER_ID} className="sr-only">
-            Ask the assistant
-          </FieldLabel>
-          <InputGroup className="min-h-10">
-            <InputGroupTextarea
-              id={COMPOSER_ID}
-              ref={box}
-              value={value}
-              disabled={!enabled}
-              maxLength={2000}
-              onChange={(event) => setValue(event.target.value)}
-              onKeyDown={onKeyDown}
-              placeholder="Ask about your trading"
-              // Starts one line and grows with the text, capped so the transcript never loses the panel.
-              className="field-sizing-content max-h-32 min-h-9"
-            />
-            <InputGroupAddon align="inline-end" className="self-end pb-1">
-              {answering ? (
-                <Button type="button" size="sm" variant="outline" onClick={onStop}>
-                  Stop
-                </Button>
-              ) : (
-                <Tooltip>
-                  <TooltipTrigger render={<Button type="submit" size="icon-sm" aria-label="Send message" disabled={!enabled || !canSend} className="rounded-full" />}>
-                    <ArrowUp02Icon className="size-4" aria-hidden="true" />
-                  </TooltipTrigger>
-                  <TooltipContent className="flex items-center gap-1.5">
-                    Send
-                    <Kbd>Enter</Kbd>
-                  </TooltipContent>
-                </Tooltip>
-              )}
-            </InputGroupAddon>
-          </InputGroup>
-        </Field>
+        <label htmlFor={COMPOSER_ID} style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clipPath: "inset(50%)" }}>
+          Ask the assistant
+        </label>
+        <div className={styles.composer} data-disabled={!enabled || undefined}>
+          <textarea
+            id={COMPOSER_ID}
+            ref={box}
+            className={styles.input}
+            rows={1}
+            value={value}
+            disabled={!enabled}
+            maxLength={2000}
+            onChange={(event) => setValue(event.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder="Ask about your trading"
+          />
+          {answering ? (
+            <Button type="button" size="sm" variant="secondary" onClick={onStop}>
+              Stop
+            </Button>
+          ) : (
+            <Tooltip
+              content={
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  Send
+                  <Kbd size="sm">Enter</Kbd>
+                </span>
+              }
+            >
+              <button type="submit" className={styles.send} aria-label="Send message" disabled={!enabled || !canSend}>
+                <ArrowUp02Icon width={16} height={16} aria-hidden="true" />
+              </button>
+            </Tooltip>
+          )}
+        </div>
       </form>
 
-      <div className="flex items-center justify-between gap-2 px-1">
-        <span className="text-muted-foreground flex min-w-0 items-center gap-1.5 px-1 text-xs">
+      <div className={styles.meta}>
+        <span className={styles.model}>
           {provider ? (
             <>
-              <span className="shrink-0">{provider.name}</span>
-              <span aria-hidden="true" className="bg-muted-foreground/40 size-1 shrink-0 rounded-full" />
-              <span className="min-w-0 truncate">{provider.model}</span>
+              <span>{provider.name}</span>
+              <span aria-hidden="true" className={styles.dot} />
+              <span>{provider.model}</span>
             </>
           ) : (
             "No model chosen"
           )}
         </span>
         <Popover>
-          <PopoverTrigger render={<Button type="button" variant="ghost" size="sm" aria-label="Keyboard shortcuts" className="text-muted-foreground hover:text-foreground h-7 shrink-0 gap-1.5 px-2 font-normal" />}>
-            <Key01Icon className="size-3.5 shrink-0" aria-hidden="true" />
-            <span className="text-xs">Shortcuts</span>
+          <PopoverTrigger asChild>
+            <Button type="button" variant="ghost" size="sm" aria-label="Keyboard shortcuts">
+              <Key01Icon width={16} height={16} aria-hidden="true" />
+              Shortcuts
+            </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-64 p-2">
-            <div className="flex flex-col gap-2">
+          <PopoverContent align="end">
+            <div className={styles.shortcuts}>
               {SHORTCUTS.map((shortcut) => (
-                <div key={shortcut.label} className="flex items-center justify-between gap-3">
-                  <span className="text-sm">{shortcut.label}</span>
-                  <span className="flex shrink-0 items-center gap-1">
+                <div key={shortcut.label}>
+                  <span>{shortcut.label}</span>
+                  <span>
                     {shortcut.keys.map((key) => (
-                      <Kbd key={key}>{key}</Kbd>
+                      <Kbd key={key} size="sm">
+                        {key}
+                      </Kbd>
                     ))}
                   </span>
                 </div>
