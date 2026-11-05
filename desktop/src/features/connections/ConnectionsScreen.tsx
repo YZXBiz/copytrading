@@ -1,28 +1,27 @@
-import { Children, Fragment, type ReactNode, useEffect, useRef, useState } from "react"
+import { type ReactNode, useEffect, useRef, useState } from "react"
 import { Add01Icon } from "@/components/icons/Add01Icon"
 import { BankIcon } from "@/components/icons/BankIcon"
 import { Message01Icon } from "@/components/icons/Message01Icon"
 import { SparklesIcon } from "@/components/icons/SparklesIcon"
 import { UserGroupIcon } from "@/components/icons/UserGroupIcon"
 import { UserIcon } from "@/components/icons/UserIcon"
-import { RegionError } from "@/components/region-error"
-import { Button } from "@/components/ui/button"
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
-import { Frame, FrameDescription, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"
-import { ItemGroup, ItemSeparator } from "@/components/ui/item"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Button } from "@/components/arc/button/button"
+import { EmptyState } from "@/components/arc/empty-state/empty-state"
+import { Skeleton } from "@/components/arc/skeleton/skeleton"
+import { SectionError } from "@/features/settings/SectionError"
 import { providerShortTitle, requiresApiKey } from "../../../shared/providers"
 import { AccountSheet } from "./AccountSheet"
+import { CheckResults } from "./CheckResults"
 import { ConnectionRow } from "./ConnectionRow"
 import { DiscordSheet } from "./DiscordSheet"
 import { GuruSheet } from "./GuruSheet"
 import { InterpreterSheet } from "./InterpreterSheet"
-import { StartBar } from "./StartBar"
 import { derive } from "./derive"
 import { split } from "./draft"
 import { addAccount, addGuru, connect, refreshStatus, useSetup } from "./setup-store"
 import { type Status, type Subject, accountStatus, accountSubject, discordStatus, draftStatus, guruStatus, interpreterStatus, resultFor } from "./state"
 import { connectionProblem } from "./words"
+import styles from "./connections.module.css"
 
 type Open = { kind: "discord" } | { kind: "interpreter" } | { kind: "account"; uid: string } | { kind: "guru"; uid: string }
 
@@ -52,7 +51,7 @@ export function ConnectionsScreen({ sheet }: { sheet: string | null }) {
   }, [])
 
   if (s.load.status === "loading" || (s.load.status === "ready" && !derived)) return <ConnectionsSkeleton />
-  if (s.load.status === "error") return <RegionError title="Connections did not load" message={s.load.error} onRetry={s.retry} />
+  if (s.load.status === "error") return <SectionError title="Connections did not load" message={s.load.error} onRetry={s.retry} />
   if (!derived) return null
 
   const { draft } = s
@@ -66,7 +65,8 @@ export function ConnectionsScreen({ sheet }: { sheet: string | null }) {
   }
   const connectProps = (subject: Subject) => {
     const result = resultFor(s.checks, draft, subject)
-    return { onConnect: () => void connect(subject), connectLabel: result ? "Check" : "Connect", checking: result?.check === null, problem: problemOf(subject) }
+    const connection = result?.check === null ? "connecting" : result?.check?.state === "ready" ? "connected" : "idle"
+    return { onConnect: () => void connect(subject), connectLabel: result ? "Check" : "Connect", connection: connection as "idle" | "connecting" | "connected", problem: problemOf(subject) }
   }
 
   const channels = split(draft.channels)
@@ -79,9 +79,9 @@ export function ConnectionsScreen({ sheet }: { sheet: string | null }) {
     (model ? draftStatus(!requiresApiKey(draft.provider) || Boolean(draft.provider_api_key) || facts.keys.providerKey, "Needs an API key") : { text: "Not set up", tone: "caution" })
 
   return (
-    <div className="flex w-full flex-col gap-5">
+    <div className={styles.page}>
       <Section id="services" title="Services" description="Where the calls come from, and the AI that reads them.">
-        <Rows title="Services">
+        <Rows>
           <ConnectionRow
             icon={Message01Icon}
             label="Discord"
@@ -108,13 +108,14 @@ export function ConnectionsScreen({ sheet }: { sheet: string | null }) {
         title="Broker accounts"
         description="Where orders go."
         action={
-          <Button type="button" size="sm" variant="outline" onClick={() => setOpen({ kind: "account", uid: addAccount() })}>
-            <Add01Icon aria-hidden /> Add account
+          <Button type="button" size="sm" variant="secondary" onClick={() => setOpen({ kind: "account", uid: addAccount() })}>
+            <Add01Icon width={16} height={16} aria-hidden="true" />
+            Add account
           </Button>
         }
       >
         {draft.accounts.length ? (
-          <Rows title="Broker accounts">
+          <Rows>
             {draft.accounts.map((account) => {
               const name = account.name.trim()
               const subject = accountSubject(name)
@@ -133,7 +134,7 @@ export function ConnectionsScreen({ sheet }: { sheet: string | null }) {
             })}
           </Rows>
         ) : (
-          <EmptyRegion icon={BankIcon} title="No broker accounts yet" description="Add an Alpaca paper account to start." />
+          <EmptyState title="No broker accounts yet" description="Add an Alpaca paper account to start." icon={<BankIcon width={24} height={24} aria-hidden="true" />} />
         )}
       </Section>
 
@@ -142,13 +143,14 @@ export function ConnectionsScreen({ sheet }: { sheet: string | null }) {
         title="Gurus"
         description="Each guru is one Discord channel."
         action={
-          <Button type="button" size="sm" variant="outline" onClick={() => setOpen({ kind: "guru", uid: addGuru() })}>
-            <Add01Icon aria-hidden /> Add guru
+          <Button type="button" size="sm" variant="secondary" onClick={() => setOpen({ kind: "guru", uid: addGuru() })}>
+            <Add01Icon width={16} height={16} aria-hidden="true" />
+            Add guru
           </Button>
         }
       >
         {draft.gurus.length ? (
-          <Rows title="Gurus">
+          <Rows>
             {draft.gurus.map((guru) => {
               const channel = guru.channel_id.trim() || channels[0] || ""
               return (
@@ -165,11 +167,11 @@ export function ConnectionsScreen({ sheet }: { sheet: string | null }) {
             })}
           </Rows>
         ) : (
-          <EmptyRegion icon={UserGroupIcon} title="No gurus yet" description="Add one to copy their calls." />
+          <EmptyState title="No gurus yet" description="Add one to copy their calls." icon={<UserGroupIcon width={24} height={24} aria-hidden="true" />} />
         )}
       </Section>
 
-      <StartBar s={s} derived={derived} />
+      {s.start.phase === "failed" && s.start.report && <CheckResults report={s.start.report} modelName={s.draft.model} />}
 
       {open?.kind === "discord" && <DiscordSheet onClose={close} />}
       {open?.kind === "interpreter" && <InterpreterSheet onClose={close} />}
@@ -179,16 +181,14 @@ export function ConnectionsScreen({ sheet }: { sheet: string | null }) {
   )
 }
 
-/** A section's heading: the title with a line under it and, when the section can grow, its Add button at the right (settings-16). */
+/** A section's heading, with its Add button at the right when the section can grow. */
 function Section({ id, title, description, action, children }: { id: string; title: string; description: string; action?: ReactNode; children: ReactNode }) {
   return (
-    <section aria-labelledby={id} className="flex flex-col gap-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h2 id={id} className="text-sm font-semibold">
-            {title}
-          </h2>
-          <p className="text-muted-foreground text-sm">{description}</p>
+    <section aria-labelledby={id} className={styles.section}>
+      <div className={styles.sectionHead}>
+        <div>
+          <h3 id={id}>{title}</h3>
+          <p>{description}</p>
         </div>
         {action}
       </div>
@@ -197,73 +197,16 @@ function Section({ id, title, description, action, children }: { id: string; tit
   )
 }
 
-/** One section's connections in a single Frame, a hairline between rows (settings-16's Frame, with its title kept for screen readers). */
-function Rows({ title, children }: { title: string; children: ReactNode }) {
-  const rows = Children.toArray(children)
-  return (
-    <Frame>
-      <FrameHeader className="sr-only">
-        <FrameTitle>{title}</FrameTitle>
-        <FrameDescription>Status and actions for each connection.</FrameDescription>
-      </FrameHeader>
-      <FramePanel className="p-0!">
-        <ItemGroup className="gap-0">
-          {rows.map((row, index) => (
-            <Fragment key={index}>
-              {index > 0 && <ItemSeparator className="my-0" />}
-              {row}
-            </Fragment>
-          ))}
-        </ItemGroup>
-      </FramePanel>
-    </Frame>
-  )
+/** One section's connections as a divided list. */
+function Rows({ children }: { children: ReactNode }) {
+  return <ul className={styles.list}>{children}</ul>
 }
 
-function EmptyRegion({ icon: Icon, title, description }: { icon: typeof UserGroupIcon; title: string; description: string }) {
-  return (
-    <Frame>
-      <FramePanel>
-        <Empty className="py-6">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <Icon />
-            </EmptyMedia>
-            <EmptyTitle>{title}</EmptyTitle>
-            <EmptyDescription>{description}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      </FramePanel>
-    </Frame>
-  )
-}
-
-/** Three sections of rows in the real layout while the setup is read. */
+/** Three sections in the real layout while the setup is read. */
 function ConnectionsSkeleton() {
   return (
-    <div role="status" aria-label="Loading connections" className="flex w-full flex-col gap-5">
-      {[2, 1, 1].map((rows, i) => (
-        <div key={i} className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-4 w-56" />
-          </div>
-          <Frame>
-            <FramePanel className="flex flex-col gap-3 p-4!">
-              {Array.from({ length: rows }, (_, j) => (
-                <div key={j} className="flex items-center gap-3">
-                  <Skeleton className="size-10 rounded-md" />
-                  <div className="flex flex-1 flex-col gap-1.5">
-                    <Skeleton className="h-4 w-40" />
-                    <Skeleton className="h-3.5 w-28" />
-                  </div>
-                  <Skeleton className="h-8 w-20" />
-                </div>
-              ))}
-            </FramePanel>
-          </Frame>
-        </div>
-      ))}
+    <div className={styles.skeletons}>
+      <Skeleton label="Loading connections" lines={3} />
     </div>
   )
 }

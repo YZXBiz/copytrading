@@ -1,61 +1,58 @@
-import { AlertCircleIcon } from "@/components/icons/AlertCircleIcon"
-import { CheckmarkCircle02Icon } from "@/components/icons/CheckmarkCircle02Icon"
-import { InformationCircleIcon } from "@/components/icons/InformationCircleIcon"
+import { PauseIcon } from "@/components/icons/PauseIcon"
+import { PlayIcon } from "@/components/icons/PlayIcon"
 import { RefreshIcon } from "@/components/icons/RefreshIcon"
-import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/reui/alert"
-import { Button } from "@/components/ui/button"
-import { Spinner } from "@/components/ui/spinner"
-import { CirclePlayIcon } from "@/reui/icons/animated/duotone/circle-play"
-import { SquareInCircleIcon } from "@/reui/icons/animated/duotone/square-in-circle"
-import { CheckResults } from "./CheckResults"
+import { Button } from "@/components/arc/button/button"
+import { SaveBar } from "@/components/arc/blocks/settings-page/settings-page"
 import type { Derived } from "./derive"
 import { applyChanges, discard, reload, startCopying, type SetupState } from "./setup-store"
 import { canApplyChanges, canStartCopying, startStatus } from "./start-status"
+import styles from "./connections.module.css"
 
-const VARIANT = { working: "default", positive: "success", caution: "warning", neutral: "default" } as const
-
-/** The foot of Connections: how far the setup has come and the one button that checks every connection and starts, or applies a change while copying. */
-export function StartBar({ s, derived }: { s: SetupState; derived: Derived }) {
+/** How far the setup has come and the one button that checks every connection and starts, or applies a change while copying. */
+export function StartControls({ s, derived }: { s: SetupState; derived: Derived }) {
   const trading = s.load.status === "ready" ? s.load.data.trading : null
   const status = startStatus({ start: s.start, progress: derived.progress, trading, isCopying: derived.copying, hasSaved: derived.hasSaved, hasUnsaved: derived.hasUnsaved })
   const busy = status.tone === "working" && s.start.phase !== "idle"
   const canDiscard = derived.hasSaved && derived.hasUnsaved && !busy
-  const Icon = status.tone === "positive" ? CheckmarkCircle02Icon : status.tone === "caution" ? AlertCircleIcon : InformationCircleIcon
   return (
-    <div className="flex flex-col gap-4">
-      <Alert variant={VARIANT[status.tone]} aria-live="polite">
-        {status.tone === "working" ? <Spinner aria-hidden /> : <Icon aria-hidden />}
-        <AlertTitle>{status.text}</AlertTitle>
-        {status.detail && <AlertDescription>{status.detail}</AlertDescription>}
-        <AlertAction>
-          {canDiscard && (
-            <Button type="button" size="sm" variant="ghost" onClick={() => void discard()}>
-              Discard changes
+    <>
+      <div className={styles.barText} aria-live="polite">
+        <strong>{status.text}</strong>
+        {status.detail && <span>{status.detail}</span>}
+      </div>
+      <div className={styles.barButtons}>
+        {canDiscard && (
+          <Button type="button" size="sm" variant="ghost" onClick={() => void discard()}>
+            Discard changes
+          </Button>
+        )}
+        {derived.copying ? (
+          <>
+            <Button type="button" size="sm" variant="secondary" disabled={busy} onClick={() => void window.copytrading.act.pauseTrading().then(() => reload({ keepDraft: true }))}>
+              <PauseIcon width={16} height={16} aria-hidden="true" />
+              Pause copying
             </Button>
-          )}
-          {derived.copying ? (
-            <>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={busy}
-                onClick={() => void window.copytrading.act.pauseTrading().then(() => reload({ keepDraft: true }))}
-              >
-                <SquareInCircleIcon aria-hidden className="size-4" /> Pause copying
-              </Button>
-              <Button type="button" size="sm" disabled={!canApplyChanges({ start: s.start, progress: derived.progress, isCopying: true, hasUnsaved: derived.hasUnsaved })} onClick={() => void applyChanges()}>
-                <RefreshIcon aria-hidden /> Apply changes
-              </Button>
-            </>
-          ) : (
-            <Button type="button" size="sm" disabled={!canStartCopying({ start: s.start, progress: derived.progress, trading })} onClick={() => void startCopying()}>
-              <CirclePlayIcon aria-hidden className="size-4" /> Start copying
+            <Button type="button" size="sm" loading={busy} disabled={!canApplyChanges({ start: s.start, progress: derived.progress, isCopying: true, hasUnsaved: derived.hasUnsaved })} onClick={() => void applyChanges()}>
+              <RefreshIcon width={16} height={16} aria-hidden="true" />
+              Apply changes
             </Button>
-          )}
-        </AlertAction>
-      </Alert>
-      {s.start.phase === "failed" && s.start.report && <CheckResults report={s.start.report} modelName={s.draft.model} />}
-    </div>
+          </>
+        ) : (
+          <Button type="button" size="sm" loading={busy} disabled={!canStartCopying({ start: s.start, progress: derived.progress, trading })} onClick={() => void startCopying()}>
+            <PlayIcon width={16} height={16} aria-hidden="true" />
+            Start copying
+          </Button>
+        )}
+      </div>
+    </>
+  )
+}
+
+/** The same controls, floating over the Settings page while there is something to save or start. */
+export function ConnectionsBar({ s, derived }: { s: SetupState; derived: Derived }) {
+  return (
+    <SaveBar label="Setup changes">
+      <StartControls s={s} derived={derived} />
+    </SaveBar>
   )
 }

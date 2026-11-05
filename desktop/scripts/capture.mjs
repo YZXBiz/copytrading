@@ -52,6 +52,15 @@ function setupCaptures() {
   return [
     ...sized,
     ...broken,
+    // Scrolled to the end: the last section must clear the floating setup bar.
+    ...["1280x860", "980x860"].map((size) => [
+      `connections-first-run-end-${size}`,
+      {
+        ...fixture("#/settings/connections", "none", "paused"),
+        COPYTRADING_CAPTURE_SIZE: size,
+        COPYTRADING_CAPTURE_SCRIPT: `(async () => { const r = document.querySelector('[role="region"]'); r.scrollTop = r.scrollHeight; await new Promise((x) => setTimeout(x, 700)) })()`,
+      },
+    ]),
     ["footer-degraded", fixture("#/accounts/zhap-account-2", "saved", "degraded")],
     ["sheet-discord", fixture("#/settings/connections/discord", "saved", "paused")],
     ["sheet-interpreter", fixture("#/settings/connections/interpreter", "saved", "paused")],

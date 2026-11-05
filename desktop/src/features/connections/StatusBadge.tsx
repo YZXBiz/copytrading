@@ -1,9 +1,14 @@
-import { Badge } from "@/components/reui/badge"
+import { Badge } from "@/components/arc/badge/badge"
 import type { Status } from "./state"
 
-const VARIANT = { positive: "success-light", caution: "warning-light", inactive: "outline", neutral: "secondary" } as const
+// A good state reads in the accent: green belongs to gains, so it is never used for a connection.
+const TONE = { positive: "info", caution: "warning", inactive: "neutral", neutral: "neutral" } as const
 
-/** A connection's state as a word and a tone (the Badge's own variants; no colors chosen here). */
+/** A connection's state as a word and a tone. */
 export function StatusBadge({ status }: { status: Status }) {
-  return <Badge variant={VARIANT[status.tone]}>{status.text}</Badge>
+  return (
+    <Badge tone={TONE[status.tone]} outline={status.tone === "inactive"} size="sm">
+      {status.text}
+    </Badge>
+  )
 }

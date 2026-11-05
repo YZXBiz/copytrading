@@ -37,7 +37,7 @@ export function limitRows(proposal: AgentProposal, setup: TradingConfiguration |
   const policy = setup?.accounts.find((a) => a.id === s.account_id)?.policy as unknown as Record<string, unknown> | undefined
   return s.changes.map((c) => ({
     title: limitTitle(c.field),
-    now: policy && c.field in policy ? limitValue(c.field, String(policy[c.field])) : "—",
+    now: policy && c.field in policy ? limitValue(c.field, String(policy[c.field])) : "Not set",
     after: limitValue(c.field, c.value),
   }))
 }

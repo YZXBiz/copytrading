@@ -1,8 +1,8 @@
 import { useState } from "react"
-import { RegionError } from "@/components/region-error"
-import { Switch } from "@/components/ui/switch"
+import { Switch } from "@/components/arc/switch/switch"
 import { useResult } from "@/lib/use-result"
 import { Note, type NoteState } from "./Note"
+import { SectionError } from "./SectionError"
 import { SettingsRow } from "./SettingsRow"
 import { SectionSkeleton, SettingsSection } from "./SettingsSection"
 
@@ -13,8 +13,8 @@ export function FillAlerts() {
   // What main said after the owner's last change; the read above is only the first answer.
   const [changed, setChanged] = useState<boolean | null>(null)
 
-  if (on.status === "loading") return <SectionSkeleton />
-  if (on.status === "error") return <RegionError title="Notification setting did not load" message={on.error} onRetry={on.retry} />
+  if (on.status === "loading") return <SectionSkeleton label="Loading notifications" />
+  if (on.status === "error") return <SectionError title="Notification setting did not load" message={on.error} onRetry={on.retry} />
 
   async function change(next: boolean) {
     const result = await window.copytrading.act.setFillAlerts({ on: next })
@@ -25,9 +25,9 @@ export function FillAlerts() {
   return (
     <>
       {note && <Note note={note} />}
-      <SettingsSection title="While Copying">
+      <SettingsSection title="While copying">
         <SettingsRow title="Tell me when a trade fills">
-          <Switch size="sm" aria-label="Tell me when a trade fills" checked={changed ?? on.data} onCheckedChange={(next) => void change(next)} />
+          <Switch aria-label="Tell me when a trade fills" checked={changed ?? on.data} onCheckedChange={(next) => void change(next)} />
         </SettingsRow>
       </SettingsSection>
     </>

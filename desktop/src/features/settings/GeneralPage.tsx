@@ -1,13 +1,14 @@
 import type { MenuBarMode, Theme } from "../../../shared/contract"
-import { Button } from "@/components/ui/button"
-import { href } from "@/features/shell/route"
+import { Button } from "@/components/arc/button/button"
+import { navigate } from "@/features/shell/route"
 import { ChoiceField } from "./ChoiceField"
 import { FillAlerts } from "./FillAlerts"
 import { SettingsRow } from "./SettingsRow"
 import { SettingsSection } from "./SettingsSection"
 import { TimeZoneField } from "./TimeZoneField"
+import styles from "./settings.module.css"
 
-/** The time zone the app shows times in, and whether trades are announced. The other General rows of the SwiftUI app are listed in the PR as not ported. */
+/** The time zone the app shows times in, and whether trades are announced. */
 const THEMES: { value: Theme; label: string }[] = [
   { value: "dark", label: "Dark" },
   { value: "light", label: "Light" },
@@ -21,17 +22,17 @@ const MENU_BAR: { value: MenuBarMode; label: string }[] = [
 
 export function GeneralPage() {
   return (
-    <div className="flex flex-col gap-5">
+    <div className={styles.page}>
       <SettingsSection title="Display">
         <ChoiceField title="Theme" items={THEMES} read={() => window.copytrading.read.getTheme()} write={(theme) => window.copytrading.act.setTheme({ theme })} />
         <ChoiceField title="Menu bar" items={MENU_BAR} read={() => window.copytrading.read.getMenuBar()} write={(mode) => window.copytrading.act.setMenuBar({ mode })} />
-        <SettingsRow title="Show times in">
+        <div className={styles.row} data-stacked>
           <TimeZoneField />
-        </SettingsRow>
+        </div>
       </SettingsSection>
       <SettingsSection title="Setup">
-        <SettingsRow title="Getting Started">
-          <Button variant="outline" size="sm" render={<a href={href("getting-started")} />}>
+        <SettingsRow title="Getting started">
+          <Button type="button" variant="secondary" size="sm" onClick={() => navigate("getting-started")}>
             Open
           </Button>
         </SettingsRow>

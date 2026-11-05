@@ -1,8 +1,7 @@
-import { useId, type ComponentProps } from "react"
-import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+import type { ComponentProps } from "react"
+import { Input } from "@/components/arc/input/input"
 
-/** A labelled input with its one-line hint, and an error that replaces the hint (the Field pattern of c-field-7). */
+/** A labelled input with its one-line hint; an error replaces the hint. Secrets use `type="password"` and are never shown back. */
 export function TextField({
   label,
   hint,
@@ -16,13 +15,6 @@ export function TextField({
   error?: string | null
   value: string
   onChange: (value: string) => void
-} & Omit<ComponentProps<typeof Input>, "value" | "onChange">) {
-  const id = useId()
-  return (
-    <Field data-invalid={error ? true : undefined}>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <Input id={id} value={value} onChange={(event) => onChange(event.target.value)} aria-invalid={error ? true : undefined} autoComplete="off" spellCheck={false} {...input} />
-      {error ? <FieldError>{error}</FieldError> : hint ? <FieldDescription>{hint}</FieldDescription> : null}
-    </Field>
-  )
+} & Omit<ComponentProps<typeof Input>, "value" | "onChange" | "label" | "description" | "error">) {
+  return <Input label={label} description={hint} error={error ?? undefined} value={value} onChange={(event) => onChange(event.target.value)} autoComplete="off" spellCheck={false} {...input} />
 }

@@ -1,13 +1,12 @@
 import { useState } from "react"
 import { HistoryIcon } from "@/components/icons/HistoryIcon"
 import type { AccountOverview, AccountOverviewPage } from "../../../shared/contract"
-import { Frame, FramePanel } from "@/components/reui/frame"
-import { RegionError } from "@/components/region-error"
-import { Button } from "@/components/ui/button"
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
-import { href } from "@/features/shell/route"
+import { Button } from "@/components/arc/button/button"
+import { EmptyState } from "@/components/arc/empty-state/empty-state"
+import { navigate } from "@/features/shell/route"
 import { type Loaded, useResult } from "@/lib/use-result"
 import { earlierAccounts, recordSummary } from "./records"
+import { SectionError } from "./SectionError"
 import { SettingsRow } from "./SettingsRow"
 import { SectionSkeleton, SettingsSection } from "./SettingsSection"
 
@@ -29,11 +28,11 @@ function Row({ account, onDeleted }: { account: AccountOverview; onDeleted: () =
       description={problem ? `${recordSummary(account)}\n${problem}` : recordSummary(account)}
       tone={problem ? "caution" : undefined}
     >
-      <Button variant="outline" size="sm" render={<a href={href("accounts", account.account_id)} />} aria-label={`Open the record of ${account.account_id}`}>
+      <Button type="button" variant="secondary" size="sm" onClick={() => navigate("accounts", account.account_id)} aria-label={`Open the record of ${account.account_id}`}>
         Open
       </Button>
-      <Button type="button" variant="destructive" size="sm" disabled={working} onClick={remove} aria-label={`Delete the record of ${account.account_id}`}>
-        Delete…
+      <Button type="button" variant="danger" size="sm" disabled={working} onClick={remove} aria-label={`Delete the record of ${account.account_id}`}>
+        Delete
       </Button>
     </SettingsRow>
   )
@@ -45,26 +44,12 @@ function Row({ account, onDeleted }: { account: AccountOverview; onDeleted: () =
  */
 export function OldRecordsPage({ accounts }: { accounts: Loaded<AccountOverviewPage> & { retry: () => void } }) {
   const setup = useResult(() => window.copytrading.read.getSetup(), "setup")
-  if (accounts.status === "loading" || setup.status === "loading") return <SectionSkeleton />
-  if (accounts.status === "error") return <RegionError title="Account records did not load" message={accounts.error} onRetry={accounts.retry} />
-  if (setup.status === "error") return <RegionError title="The saved setup did not load" message={setup.error} onRetry={setup.retry} />
+  if (accounts.status === "loading" || setup.status === "loading") return <SectionSkeleton label="Loading old records" />
+  if (accounts.status === "error") return <SectionError title="Account records did not load" message={accounts.error} onRetry={accounts.retry} />
+  if (setup.status === "error") return <SectionError title="The saved setup did not load" message={setup.error} onRetry={setup.retry} />
   const old = earlierAccounts(accounts.data.items, setup.data?.configuration.accounts.map((a) => a.id) ?? [])
   if (old.length === 0) {
-    return (
-      <Frame>
-        <FramePanel>
-          <Empty className="py-6">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <HistoryIcon />
-              </EmptyMedia>
-              <EmptyTitle>No old records</EmptyTitle>
-              <EmptyDescription>Every record belongs to an account in your setup.</EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        </FramePanel>
-      </Frame>
-    )
+    return <EmptyState title="No old records" description="Every record belongs to an account in your setup." icon={<HistoryIcon width={24} height={24} aria-hidden="true" />} />
   }
   return (
     <SettingsSection>
