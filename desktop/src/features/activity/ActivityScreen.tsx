@@ -14,6 +14,7 @@ import { getTimeZone } from "@/lib/time-zone"
 import { type Loaded } from "@/lib/use-result"
 import { ActivityHeader } from "./ActivityHeader"
 import { ActivityMetrics } from "./ActivityMetrics"
+import { Skeleton } from "@/components/ui/skeleton"
 import { ActivitySkeleton } from "./ActivitySkeleton"
 import { ActivityTable, type PostFilter } from "./ActivityTable"
 import { type Mix, MixChart } from "./MixChart"
@@ -51,9 +52,14 @@ export function ActivityScreen({ selectedSequence, accounts }: { selectedSequenc
 
   const month = useMemo(() => (items ?? []).filter((p) => dayKey(new Date(p.source_at), zone) >= shiftDay(today, 1 - DAYS)), [items, zone, today])
   const rows = useMemo(() => activityRows(items ?? [], now, nameOf, accountId), [items, accountId, gurus]) // eslint-disable-line react-hooks/exhaustive-deps
-  const counts = dayCounts(items ?? [], day, zone, now)
-  const before = dayCounts(items ?? [], shiftDay(day, -1), zone, now)
-  const mix: Mix = gurus.length > 1 ? { kind: "gurus", rows: guruMix(month, now, nameOf) } : { kind: "reasons", rows: skipReasons(month, now) }
+  // Chart and card data change only with the posts, the day or the zone: the screen re-renders every few seconds
+  // (the accounts refresh), and a fresh array would make every chart animate again.
+  const counts = useMemo(() => dayCounts(items ?? [], day, zone, now), [items, day, zone]) // eslint-disable-line react-hooks/exhaustive-deps
+  const before = useMemo(() => dayCounts(items ?? [], shiftDay(day, -1), zone, now), [items, day, zone]) // eslint-disable-line react-hooks/exhaustive-deps
+  const mix: Mix = useMemo(() => (gurus.length > 1 ? { kind: "gurus", rows: guruMix(month, now, nameOf) } : { kind: "reasons", rows: skipReasons(month, now) }), [month, gurus]) // eslint-disable-line react-hooks/exhaustive-deps
+  const postsPerDay = useMemo(() => (items ? dayRows(items, today, zone, now, DAYS) : []), [items, today, zone]) // eslint-disable-line react-hooks/exhaustive-deps
+  // While older pages are still being read for the month, the charts would jump with each page: wait for all of them.
+  const monthLoaded = !(readBack && readAll && (items?.length ?? 0) < MAX_POSTS)
 
   const open = items?.find((p) => p.sequence === selectedSequence)
   const waiting = counts.total.waiting
@@ -79,8 +85,8 @@ export function ActivityScreen({ selectedSequence, accounts }: { selectedSequenc
       <ActivityHeader day={day} today={today} status={status} onDayChange={setDay} />
       <ActivityMetrics today={counts} before={before} />
       <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]">
-        <PostsChart rows={dayRows(items!, today, zone, now, DAYS)} />
-        <MixChart mix={mix} />
+        {monthLoaded ? <PostsChart rows={postsPerDay} /> : <Skeleton className="h-full min-h-72" />}
+        {monthLoaded ? <MixChart mix={mix} /> : <Skeleton className="h-full min-h-72" />}
       </div>
       <ActivityTable
         rows={rows}
