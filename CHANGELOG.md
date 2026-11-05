@@ -2,6 +2,19 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
+## 0.1.0-beta.9 — developer preview
+
+Polish on the new app: one icon set, motion that settles quickly, a calendar and steppers where you type, and gurus compared side by side.
+
+- **Gurus compared side by side.** With two or more gurus, Gurus is a table: the accounts each copies into, whether it's copying, posts today with traded and waiting counts, win rate, realized profit with its trend, and open profit, sorted by realized profit. With one guru, Gurus still opens their page.
+- **One icon set across the app.** Every icon now comes from one duotone set; Start and Stop Copying and the Assistant button animate on hover.
+- **Figures roll to new values.** Balances, stats and prices roll digit by digit on a short spring; a screen opens with its figures in place, and Reduce Motion shows them at once.
+- **Selections slide.** The balance range, the Activity and guru filters, and a new Positions sort (Value, Gain, A–Z) move one highlight between options.
+- **Fills stack.** Several fills at once stack as notices that spread when you hover and wait while you read.
+- **Stat cards draw their line once.** Activity and guru cards draw their trend when the screen opens and stay still after that.
+- **A calendar for Activity's day.** Pick any past day; a future day becomes today.
+- **Steppers in Edit Limits.** Dollar, percent and count fields step up and down or drag to adjust; saving still asks first.
+
 ## 0.1.0-beta.8 — developer preview
 
 **A new CopyTrading.** The app is rebuilt from the ground up: the same engine, trading rules, setup, and history, in a faster, clearer desktop app with a dark trading-desk look. Your setup, accounts, and records carry over; on first launch it copies your saved keys from the old app once, so macOS asks whether CopyTrading may read them (choose **Always Allow**).
