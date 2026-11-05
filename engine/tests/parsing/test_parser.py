@@ -474,6 +474,18 @@ def test_conditional_or_past_words_cannot_be_read_as_a_trade(post):
     assert failure(post, trade(buy("ABC", "25"))).issue.code == "noncurrent_trade"
 
 
+def test_near_a_reference_level_does_not_undo_a_buy_already_made():
+    post = "54.1 是qqq 660附近也加了6分之一常规仓  tqqq"
+
+    check(post, trade(buy("TQQQ", "54.1", fraction=SIXTH, fraction_said="6分之一")))
+
+
+def test_near_a_price_with_nothing_done_is_still_a_plan():
+    reading = trade(buy("TQQQ", "61.6", said="加"))
+
+    assert failure("61.6附近加tqqq", reading).issue.code == "noncurrent_trade"
+
+
 def test_a_condition_must_be_the_posts_words():
     reading = Conditional(summary="Buy if below 20", condition="如果跌破20", calls=(SCO,))
 
