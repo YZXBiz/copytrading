@@ -38,7 +38,7 @@
 .dock { position: absolute; z-index: 5; right: 0; bottom: 20px; left: 0; display: flex; justify-content: center; padding-inline: 16px; pointer-events: none; }
 .bar { display: flex; max-width: 100%; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--surface-raised); box-shadow: var(--shadow-floating); pointer-events: auto; }
 .barContent { position: relative; display: flex; flex: none; align-items: center; }
-.barEdit { display: flex; align-items: center; gap: 2px; padding: 4px 4px 4px 16px; white-space: nowrap; }
+.barEdit { display: flex; align-items: center; gap: 2px; width: max-content; max-width: min(640px, calc(100cqw - 34px)); padding: 6px 6px 6px 18px; }
 
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 

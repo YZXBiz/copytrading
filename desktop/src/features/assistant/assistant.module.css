@@ -21,7 +21,7 @@
 .suggestion { display: inline-flex; min-height: 32px; align-items: center; padding: 4px 12px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--surface); color: var(--text-secondary); font: inherit; font-size: var(--text-xs); text-align: left; cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard); }
 @media (hover: hover) and (pointer: fine) { .suggestion:hover { background: var(--surface-muted); color: var(--foreground); } }
 
-.turns { display: flex; margin: 0; padding: 0; flex-direction: column; gap: 18px; list-style: none; }
+.turns { display: flex; margin: 0; flex-direction: column; gap: 18px; list-style: none; }
 .turn { display: flex; min-width: 0; flex-direction: column; gap: 10px; }
 .ask { display: flex; flex-direction: column; align-items: flex-end; }
 .askBubble { max-width: 86%; margin: 0; padding: 7px 12px; border-radius: 14px; background: var(--surface-muted); font-size: var(--text-sm); white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -43,7 +43,8 @@
 .turnActions { display: flex; opacity: 0; transition: opacity var(--duration-fast) var(--ease-standard); }
 .turn:hover .turnActions, .turnActions:focus-within { opacity: 1; }
 
-.proposal { display: grid; gap: 10px; }
+.proposal { display: grid; min-width: 0; gap: 10px; }
+.proposal > * { min-width: 0; }
 .proposalCard { display: grid; gap: 4px; padding: 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
 .proposalCard p { margin: 0; }
 .proposalHint { color: var(--text-muted); font-size: var(--text-xs); }

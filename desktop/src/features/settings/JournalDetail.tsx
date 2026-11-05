@@ -12,7 +12,7 @@ export function JournalDetail({ entry }: { entry: DiagnosticsEntry }) {
     <section className={styles.detail} aria-label="Selected record">
       <div className={styles.detailHead}>
         <h3>{title(entry)}</h3>
-        <Badge tone={isProblem(entry) ? "warning" : "success"}>{outcomeTitle(entry)}</Badge>
+        <Badge tone={isProblem(entry) ? "warning" : "info"}>{outcomeTitle(entry)}</Badge>
       </div>
       <div className={styles.rows}>
         <SettingsRow title="When">

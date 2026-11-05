@@ -45,7 +45,7 @@ export function AgentAccess() {
           <SegmentedControl label="Agent access" options={CHOICES.map(({ value, label }) => ({ value, label }))} value={access} onValueChange={(next) => !busy && next !== access && void choose(next as Access)} />
         </SettingsRow>
         <SettingsRow title="Status" description={problem ?? undefined} tone={problem ? "caution" : undefined}>
-          <Badge tone={listening ? "success" : problem ? "warning" : "neutral"}>{listening ? "Listening" : problem ? "Not listening" : access === "off" ? "Off" : "Starts with the engine"}</Badge>
+          <Badge tone={listening ? "info" : problem ? "warning" : "neutral"}>{listening ? "Listening" : problem ? "Not listening" : access === "off" ? "Off" : "Starts with the engine"}</Badge>
         </SettingsRow>
       </SettingsSection>
     </>

@@ -8,5 +8,5 @@ export interface NoteState {
 
 export function Note({ note }: { note: NoteState }) {
   const { kind, text } = note
-  return <Alert tone={kind === "working" ? "info" : kind === "done" ? "success" : "warning"} title={text} />
+  return <Alert tone={kind === "working" ? "info" : kind === "done" ? "info" : "warning"} title={text} />
 }

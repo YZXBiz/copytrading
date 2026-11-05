@@ -17,7 +17,7 @@ export function LogHealth({ journalBytes }: { journalBytes: number | null }) {
   return (
     <SettingsSection title="Log health" hint="Stages, posts and trades, in a private file here.">
       <SettingsRow title="Logging">
-        <Badge tone={engine.telemetry_state === "healthy" ? "success" : "warning"}>{engine.telemetry_state === "healthy" ? "Healthy" : "Degraded"}</Badge>
+        <Badge tone={engine.telemetry_state === "healthy" ? "info" : "warning"}>{engine.telemetry_state === "healthy" ? "Healthy" : "Degraded"}</Badge>
       </SettingsRow>
       {engine.telemetry_error_code && <SettingsRow title="Last problem" description={humanCode(engine.telemetry_error_code)} tone="caution" />}
       <SettingsRow title="Records dropped"><span className={styles.value}>{engine.telemetry_dropped.toLocaleString("en-US")}</span></SettingsRow>

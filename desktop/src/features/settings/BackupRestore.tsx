@@ -30,7 +30,7 @@ function PreviewRows({ preview, busy, onRestore }: { preview: RestorePreview; bu
   return (
     <SettingsSection title="Restore preview">
       <SettingsRow title="Same installation">
-        <Badge tone={preview.matches_installation ? "success" : "danger"}>{preview.matches_installation ? "Yes" : "No"}</Badge>
+        <Badge tone={preview.matches_installation ? "info" : "danger"}>{preview.matches_installation ? "Yes" : "No"}</Badge>
       </SettingsRow>
       <SettingsRow title="Accounts">{preview.account_ids.length ? joined(preview.account_ids) : "None"}</SettingsRow>
       <SettingsRow title="Environments">{preview.environment_ids.length ? joined(preview.environment_ids) : "None"}</SettingsRow>

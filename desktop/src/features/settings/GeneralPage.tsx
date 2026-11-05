@@ -26,9 +26,9 @@ export function GeneralPage() {
       <SettingsSection title="Display">
         <ChoiceField title="Theme" items={THEMES} read={() => window.copytrading.read.getTheme()} write={(theme) => window.copytrading.act.setTheme({ theme })} />
         <ChoiceField title="Menu bar" items={MENU_BAR} read={() => window.copytrading.read.getMenuBar()} write={(mode) => window.copytrading.act.setMenuBar({ mode })} />
-        <SettingsRow title="Show times in">
+        <div className={styles.row} data-stacked>
           <TimeZoneField />
-        </SettingsRow>
+        </div>
       </SettingsSection>
       <SettingsSection title="Setup">
         <SettingsRow title="Getting started">
