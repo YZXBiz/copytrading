@@ -480,6 +480,19 @@ export interface Bar {
   close: Decimal
 }
 
+/** One trading day of a stock: its open, high, low and close, and the shares traded (on the feed every account has). */
+export interface DailyBar {
+  at: string
+  open: Decimal
+  high: Decimal
+  low: Decimal
+  close: Decimal
+  volume: number
+}
+
+/** How far back a stock's daily chart reads: one, six or twelve months. */
+export type DailyRange = "month" | "six_months" | "year"
+
 /** What a guru's copied sales made in one account (ledger-replayed; `unmatched_sells` are in no figure). */
 export interface ClosedTrade {
   symbol: string
@@ -932,6 +945,8 @@ export interface ReadOperations {
   getQuote: Op<{ account_id: string; symbol: string }, MarketQuote | null>
   /** Five-minute bars of each symbol's latest session, through the account's read keys; a symbol with none has an empty list. */
   getBars: Op<{ account_id: string; symbols: string[] }, Record<string, Bar[]>>
+  /** A stock's daily bars over the range and the weeks before it (so its 20 and 50 day averages start filled), oldest first, through the account's read keys; none when the broker has none. */
+  getDailyBars: Op<{ account_id: string; symbol: string; range: DailyRange }, DailyBar[]>
   getGuruPerformance: Op<{ account_id: string; guru_id: string }, GuruPerformance>
   getManualCommand: Op<{ account_id: string; command_id: string }, ManualCommandResult>
   listManualCommands: Op<{ account_id: string; source_id: string; before_command_id?: string; limit?: number }, ManualCommandPage>
@@ -1033,7 +1048,7 @@ export type ActName = keyof ActOperations
 // The names the preload builds its methods from; `satisfies` keeps them equal to the keys above.
 export const READS = [
   "getStatus", "getEngineStatus", "getTradingActivation", "getWorkflow", "getAccounts", "getEquityHistory",
-  "getSourceActivity", "getGuruActivity", "getGuruDayStats", "getAccountFeed", "getQuote", "getBars", "getGuruPerformance", "getManualCommand",
+  "getSourceActivity", "getGuruActivity", "getGuruDayStats", "getAccountFeed", "getQuote", "getBars", "getDailyBars", "getGuruPerformance", "getManualCommand",
   "listManualCommands", "previewManualOrder", "previewLotSale", "listProposals", "getAgentAudit",
   "getRestoreCandidate", "getAssistantTurn", "getAgentAccess", "getFillAlerts", "getTheme", "getMenuBar", "getSetup", "getLimits", "getSecretStatus",
   "readDiagnostics",

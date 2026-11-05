@@ -8,6 +8,7 @@ from copytrading_engine.host.pipe.requests import (
     GetAccountFeedRequest,
     GetAccountsRequest,
     GetBarsRequest,
+    GetDailyBarsRequest,
     GetEquityHistoryRequest,
     GetGuruActivityRequest,
     GetGuruDayStatsRequest,
@@ -41,6 +42,7 @@ class AccountHandlers:
             GetEquityHistoryRequest: self._on_get_equity_history,
             GetQuoteRequest: self._on_get_quote,
             GetBarsRequest: self._on_get_bars,
+            GetDailyBarsRequest: self._on_get_daily_bars,
             GetGuruPerformanceRequest: self._on_get_guru_performance,
             AttachAccountReadersRequest: self._on_attach_account_readers,
             DetachAccountReadersRequest: self._on_detach_account_readers,
@@ -78,6 +80,25 @@ class AccountHandlers:
                     symbol: [bar.model_dump(mode="json") for bar in series]
                     for symbol, series in bars.items()
                 },
+            },
+        )
+
+    async def _on_get_daily_bars(self, request: GetDailyBarsRequest) -> bytes:
+        """Daily bars are read-only market data, asked through the account's read keys."""
+        if self._trading is None:
+            return reply(request.version, request.request_id, error="unavailable")
+        bars = await self._trading.operator.daily_bars(
+            request.account_id, request.symbol, request.range
+        )
+        return reply(
+            request.version,
+            request.request_id,
+            ok={
+                "type": "daily_bars",
+                "account_id": request.account_id,
+                "symbol": request.symbol,
+                "range": request.range,
+                "bars": [bar.model_dump(mode="json") for bar in bars],
             },
         )
 

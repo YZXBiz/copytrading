@@ -7,7 +7,14 @@ import pytest
 from pydantic import SecretStr
 
 from copytrading_engine.execution.application.ports import BrokerError
-from copytrading_engine.execution.domain.market import Bar, HistoryWindow, Position, Quote
+from copytrading_engine.execution.domain.market import (
+    Bar,
+    DailyBar,
+    DailyRange,
+    HistoryWindow,
+    Position,
+    Quote,
+)
 from copytrading_engine.execution.presentation.operator_views import (
     AccountOverview,
     PositionView,
@@ -65,6 +72,28 @@ class WithBars(ReadOnly):
         if self.bar_failing:
             raise BrokerError(503)
         return (Bar(at=NOW, open=Decimal("40"), close=Decimal("41")),)
+
+
+class WithDailyBars(ReadOnly):
+    def __init__(self) -> None:
+        super().__init__()
+        self.asked: list[tuple[str, DailyRange]] = []
+        self.failing_daily = False
+
+    def daily_bars(self, symbol: str, period: DailyRange) -> tuple[DailyBar, ...]:
+        self.asked.append((symbol, period))
+        if self.failing_daily:
+            raise BrokerError(503)
+        return (
+            DailyBar(
+                at=NOW,
+                open=Decimal("40"),
+                high=Decimal("42"),
+                low=Decimal("39.5"),
+                close=Decimal("41"),
+                volume=1200,
+            ),
+        )
 
 
 def _reader(broker: ReadOnly, clock: list[dt.datetime]) -> PausedAccountReader:
@@ -228,3 +257,33 @@ async def test_a_failed_bars_read_keeps_the_last_answer_or_has_none():
     broker.bar_failing = True
     clock[0] = NOW + dt.timedelta(seconds=120)
     assert await reader.bars("primary", ("ABC",)) == first
+
+
+async def test_daily_bars_are_read_once_in_five_minutes_per_symbol_and_range_and_forgotten_when_locked():
+    broker, clock = WithDailyBars(), [NOW]
+    reader = _reader(broker, clock)
+    first = await reader.daily_bars("primary", "ABC", "six_months")
+    assert first[0].close == Decimal("41")
+    clock[0] = NOW + dt.timedelta(seconds=299)
+    assert await reader.daily_bars("primary", "ABC", "six_months") == first
+    await reader.daily_bars("primary", "ABC", "year")
+    await reader.daily_bars("primary", "DEF", "six_months")
+    assert broker.asked == [("ABC", "six_months"), ("ABC", "year"), ("DEF", "six_months")]
+    clock[0] = NOW + dt.timedelta(seconds=301)
+    await reader.daily_bars("primary", "ABC", "six_months")
+    assert broker.asked[-1] == ("ABC", "six_months")
+    assert len(broker.asked) == 4
+    reader.detach()
+    assert await reader.daily_bars("primary", "ABC", "six_months") == ()
+
+
+async def test_a_failed_daily_bars_read_keeps_the_last_answer_or_has_none():
+    broker, clock = WithDailyBars(), [NOW]
+    reader = _reader(broker, clock)
+    broker.failing_daily = True
+    assert await reader.daily_bars("primary", "ABC", "month") == ()
+    broker.failing_daily = False
+    first = await reader.daily_bars("primary", "ABC", "month")
+    broker.failing_daily = True
+    clock[0] = NOW + dt.timedelta(minutes=10)
+    assert await reader.daily_bars("primary", "ABC", "month") == first

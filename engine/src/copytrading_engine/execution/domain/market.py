@@ -1,7 +1,7 @@
 import datetime as dt
-from typing import ClassVar, Literal, Self
+from typing import Annotated, ClassVar, Literal, Self
 
-from pydantic import AwareDatetime, model_validator
+from pydantic import AwareDatetime, Field, model_validator
 
 from copytrading_engine.execution.domain.values import (
     BrokerAccountId,
@@ -128,6 +128,20 @@ class Bar(Value):
     at: AwareDatetime
     open: Quantity
     close: Quantity
+
+
+class DailyBar(Value):
+    """One trading day of a symbol: its open, high, low and close, and the shares traded."""
+
+    at: AwareDatetime
+    open: Quantity
+    high: Quantity
+    low: Quantity
+    close: Quantity
+    volume: Annotated[int, Field(ge=0)]
+
+
+type DailyRange = Literal["month", "six_months", "year"]
 
 
 class EquityPoint(Value):

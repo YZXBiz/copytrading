@@ -191,6 +191,7 @@ const READ_HANDLERS: Record<ReadName, Handler> = {
   getAccountFeed: ask("get_account_feed", value("feed")),
   getQuote: ask("get_quote", value("quote")),
   getBars: ask("get_bars", value("bars")),
+  getDailyBars: ask("get_daily_bars", value("bars")),
   getGuruPerformance: ask("get_guru_performance", value("performance")),
   getManualCommand: ask("get_manual_command", value("command")),
   listManualCommands: ask("list_manual_commands", value("commands")),

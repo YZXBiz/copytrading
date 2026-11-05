@@ -101,6 +101,9 @@ class FakeBroker:
     def bars(self, symbol):
         return ()
 
+    def daily_bars(self, symbol, period):
+        return ()
+
     def positions(self):
         # Alpaca lists a coin held without its pair's slash (BTCUSD), as the adapter decodes it.
         return decode_positions(
