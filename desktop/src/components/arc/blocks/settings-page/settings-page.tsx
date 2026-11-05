@@ -67,7 +67,8 @@ export function SettingsFrame({ sections, section, onSectionChange, bar, status,
   const navButtons = useRef<(HTMLButtonElement | null)[]>([]);
   const scroller = useRef<HTMLDivElement>(null);
   const shown = useRef(section);
-  const current = sections.find(item => item.id === section) ?? sections[0];
+  const dock = useRef<HTMLDivElement>(null);
+  const current =sections.find(item => item.id === section) ?? sections[0];
   const custom: Shift = { ...shift, reduce: !!reduce };
 
   // The page moves along the nav's own axis, whichever way the section changed (a link, a shortcut or a key press).
@@ -77,6 +78,17 @@ export function SettingsFrame({ sections, section, onSectionChange, bar, status,
     setShift({ direction: to > from ? 1 : -1, axis: SHIFT_AXIS(navList.current) });
     shown.current = section;
   }, [section, sections]);
+
+  // The floating bar covers the bottom of the page, so the page reserves its height (plus the gap under and above it) and the last section scrolls clear at any width.
+  useLayoutEffect(() => {
+    const node = dock.current, page = scroller.current;
+    if (!node || !page || typeof ResizeObserver === "undefined") return;
+    const reserve = () => page.style.setProperty("--dock-space", node.offsetHeight ? `${node.offsetHeight + parseFloat(getComputedStyle(node).bottom) + 16}px` : "0px");
+    reserve();
+    const observer = new ResizeObserver(reserve);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   function onNavKey(event: KeyboardEvent<HTMLButtonElement>, index: number) {
     const steps: Record<string, number> = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 };
@@ -123,7 +135,7 @@ export function SettingsFrame({ sections, section, onSectionChange, bar, status,
               </motion.div>
             </AnimatePresence>
           </div>
-          <div className={styles.dock}>
+          <div ref={dock} className={styles.dock}>
             <AnimatePresence>{bar}</AnimatePresence>
           </div>
           <p className={styles.srOnly} role="status" aria-live="polite">{status}</p>
