@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve CopyTrading. The project has two code roots: `app/` for the SwiftUI desktop app and `engine/` for its bundled local Python engine. The [PRD](docs/PRD.md) describes product intent; [architecture](docs/architecture.md) describes the current boundaries.
+Thanks for helping improve CopyTrading. The project has two code roots: `desktop/` for the desktop app and `engine/` for its bundled local Python engine (`app/` holds the build scripts and the previous SwiftUI app, which is being retired). The [PRD](docs/PRD.md) describes product intent; [architecture](docs/architecture.md) describes the current boundaries.
 
 ## Set up and check
 
@@ -19,11 +19,11 @@ make desktop-check
 make desktop-smoke
 ```
 
-`make check` runs the engine suite with line and branch coverage (it fails under 80% and writes `dist/coverage/`), Ruff, Ty, and the app packaging-script tests. `make desktop-check` also builds and verifies the app bundle and runs the Swift and native contract checks. CI runs pre-commit, the engine checks, every Swift suite, and zizmor on each change, and publishes releases from tags ([releases](docs/releases.md)); it never uses real credentials.
+`make check` runs the engine suite with line and branch coverage (it fails under 80% and writes `dist/coverage/`), Ruff, Ty, and the app packaging-script tests. In `desktop/`, `npm run typecheck`, `npm test`, and `npm run build` check the app; `make desktop-build` builds the bundle. CI runs pre-commit, the engine checks, every Swift suite, and zizmor on each change, and publishes releases from tags ([releases](docs/releases.md)); it never uses real credentials.
 
 ## Changes and reports
 
-The app speaks English and 简体中文. When you add or change user-visible text, add the English source to `app/Sources/AppLocalizationCore/Resources/en.lproj/Localizable.strings` and its translation to `zh-Hans.lproj` (the catalog test fails if they drift), and look at the screen in both languages. Guru is **信号源**, not 达人 or 老师. The README has a Chinese twin, [README.zh-CN.md](README.zh-CN.md); keep them in step.
+The app is English only. Show engine codes in words and money and times in the formats the desktop app already uses; never show a raw code or an ISO timestamp ([desktop/README.md](desktop/README.md)).
 
 Keep policy in `engine/src/copytrading_engine` domain and application modules; adapters own source, model, broker, SQLite, and notification effects. Preserve short SQLite transactions and durable delivery confirmation. Never call a model or broker from inside a database transaction. Test failure, restart, and cancellation paths when changing persistence or delivery.
 
