@@ -2,6 +2,17 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
+## 0.1.0-beta.10 — developer preview
+
+Every screen redrawn on one calmer design, a page for each stock, and Activity no longer flashes while it loads.
+
+- **One design across the app.** Accounts, Activity, gurus, Settings, Connections, Getting Started and the Assistant share the same type, spacing, cards and controls, in dark (the default) and light.
+- **A page for each stock.** Press any ticker, in a holding, a post, a guru's best or worst call, or a post's details, to open its page: daily candles with volume and 20- and 50-day averages for 1M, 6M or 1Y, your lots in that stock, and the guru's calls on it. Sell works from there with the same confirmation as before.
+- **A new sidebar and ⌘K.** The sidebar collapses to a rail (⌘B) and keeps your accounts with their balances, Gurus, Activity, Settings and the copying status. ⌘K searches pages, accounts, gurus, posts and actions.
+- **Edit Limits and the other account sheets** open in a side drawer with the same checks and the same confirmation before saving.
+- **Settings at narrow widths.** The setup bar fits its content and no longer covers the last section.
+- **Fixed:** Activity's charts flashed between a loading state and partial data while older posts loaded, and the donut and lines redrew each time. They now wait for the whole month and draw once.
+
 ## 0.1.0-beta.9 — developer preview
 
 Polish on the new app: one icon set, motion that settles quickly, a calendar and steppers where you type, and gurus compared side by side.

@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-beta.9/CopyTrading-0.1.0-beta.9.dmg"><img src="https://img.shields.io/badge/Download_for_macOS-0.1.0--beta.9-1d1d1f?style=for-the-badge&logo=apple&logoColor=white" alt="Download CopyTrading for macOS" height="36"></a>
+  <a href="https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-beta.10/CopyTrading-0.1.0-beta.10.dmg"><img src="https://img.shields.io/badge/Download_for_macOS-0.1.0--beta.10-1d1d1f?style=for-the-badge&logo=apple&logoColor=white" alt="Download CopyTrading for macOS" height="36"></a>
 </p>
 
 <p align="center">
@@ -65,6 +65,7 @@ CopyTrading is a macOS app that reads the stock calls traders post on Discord, t
 - **Many traders, many accounts.** Each account follows one guru and sizes its calls from that guru's full position, so several gurus copy side by side into their own accounts, paper and live together.
 - **Every position traces to its post.** Each copied buy is kept as a lot that names the post behind it, and you can sell any lot on its own. Shares you trade yourself in Alpaca are counted as yours on the next sync.
 - **See how a guru is doing.** Each guru's page shows the realized profit of the trades copied from them, their win rate, and their best and worst call; with several gurus, Gurus compares them side by side.
+- **A page for each stock.** Press any ticker to see its daily candles with volume and moving averages, your lots in it, and the guru's calls on it, and sell from there.
 - **Always live.** Balances, positions, and the balance chart are read from your broker even while copying is paused, held prices update every few seconds, and a fill arrives as a notice in the app. The menu bar shows your balance and today's change.
 - **Calls that need you, in one place.** A call the app should not place on its own (a suggestion, a conditional order, a sell of a buy it never made) waits on the account page with **Copy** and **Skip**, or **Skip all**.
 - **Fast to get around.** ⌘K finds any page, account, guru, post, or action; ⌘1 to ⌘4 open Accounts, Gurus, Activity, and Connections; ⌘, opens Settings. Dark and light themes, one consistent icon set, and motion that settles quickly: figures roll to new values, selections slide, and charts draw in once.
@@ -77,7 +78,7 @@ Works with a dozen hosted model services, local models through Ollama, or any Op
 
 You need an Apple silicon Mac running macOS 26 or later.
 
-1. **[Download CopyTrading for macOS](https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-beta.9/CopyTrading-0.1.0-beta.9.dmg)**.
+1. **[Download CopyTrading for macOS](https://github.com/YZXBiz/copytrading/releases/download/v0.1.0-beta.10/CopyTrading-0.1.0-beta.10.dmg)**.
 2. Open the DMG and drag **CopyTrading** into **Applications**.
 3. Open CopyTrading. Preview builds are not yet notarized by Apple, so the first time macOS blocks it: go to **System Settings → Privacy & Security** and choose **Open Anyway**. You only do this once.
 
