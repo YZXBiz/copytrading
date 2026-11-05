@@ -1,4 +1,4 @@
-import type { AccountOverview, GuruDayStats, SourceActivity, TradingConfiguration, TradingEnvironment } from "../../../shared/contract"
+import type { AccountOverview, GuruDayStats, GuruPerformance, SourceActivity, TradingConfiguration, TradingEnvironment } from "../../../shared/contract"
 import { num } from "../activity/amounts"
 import { isOpenCall, orderOutcome, isOwnerSale, cardOutcome } from "../activity/outcome"
 import { readAsLine } from "../activity/reading"
@@ -122,15 +122,12 @@ export interface Stats {
   postsToday: number | null
   tradedToday: number | null
   waiting: number
-  /** How long the reader took per post today, on average. */
-  averageRead: number | null
 }
 
 export const guruStats = (day: GuruDayStats | undefined, waiting: number, isRead: boolean): Stats => ({
   postsToday: isRead ? (day?.posts ?? 0) : null,
   tradedToday: isRead ? (day?.traded ?? 0) : null,
   waiting,
-  averageRead: day?.read_seconds ?? null,
 })
 
 export interface Holdings {
@@ -150,4 +147,58 @@ export function guruHoldings(guruId: string, accounts: AccountOverview[], setUpI
     gain: lots.reduce((sum, { lot }) => sum + (num(lot.unrealized_pl) ?? 0), 0),
     stocks: new Set(lots.map((l) => l.symbol)).size,
   }
+}
+
+// ── The performance chart ──
+
+export type TrendRange = "7d" | "30d" | "90d" | "all"
+
+export const TREND_RANGES: { value: TrendRange; label: string; days: number | null }[] = [
+  { value: "7d", label: "Last 7 days", days: 7 },
+  { value: "30d", label: "Last 30 days", days: 30 },
+  { value: "90d", label: "Last 90 days", days: 90 },
+  { value: "all", label: "All time", days: null },
+]
+
+export interface TrendRow {
+  day: string
+  value: number
+}
+
+const DAY = 86_400_000
+const isoDay = (ms: number) => new Date(ms).toISOString().slice(0, 10)
+const dayBefore = (day: string) => isoDay(Date.parse(`${day}T12:00:00Z`) - DAY)
+
+/**
+ * The cumulative realized profit by day inside a window, starting from what stood the day before it began (nothing, for all
+ * time), so the line has somewhere to start. Empty when no sale closed inside the window.
+ * shortcut: the window edge is a UTC day, not the Settings zone's, fine for a chart, never used for money.
+ */
+export function trendRows(series: GuruPerformance["series"], days: number | null, now: Date): TrendRow[] {
+  const points = series.map((p) => ({ day: p.day, value: Number(p.cumulative_usd) }))
+  const cutoff = days === null ? null : isoDay(now.getTime() - days * DAY)
+  const inside = cutoff === null ? points : points.filter((p) => p.day >= cutoff)
+  const first = inside[0]
+  if (!first) return []
+  const start = cutoff === null ? 0 : (points.filter((p) => p.day < cutoff).at(-1)?.value ?? 0)
+  return [{ day: dayBefore(cutoff ?? first.day), value: start }, ...inside]
+}
+
+// ── The ticker a post is about ──
+
+/** The first stock a post named or traded, for its logo; none for chat. */
+export function postSymbol(post: SourceActivity): string | null {
+  return post.instructions[0]?.symbol ?? post.destinations.flatMap((d) => d.orders ?? [])[0]?.symbol ?? null
+}
+
+/** Round ticks from the lowest value (or zero) to the highest (or zero), so break-even is always on the chart and the labels read cleanly. */
+export function trendAxis(rows: TrendRow[]): { domain: [number, number]; ticks: number[] } {
+  const low = Math.min(0, ...rows.map((r) => r.value))
+  const high = Math.max(0, ...rows.map((r) => r.value))
+  const rough = (high - low || 1) / 4
+  const magnitude = 10 ** Math.floor(Math.log10(rough))
+  const step = ([1, 2, 5, 10].find((m) => m * magnitude >= rough) ?? 10) * magnitude
+  const from = Math.floor(low / step) * step
+  const to = Math.max(Math.ceil(high / step) * step, from + step)
+  return { domain: [from, to], ticks: Array.from({ length: Math.round((to - from) / step) + 1 }, (_, i) => from + i * step) }
 }
