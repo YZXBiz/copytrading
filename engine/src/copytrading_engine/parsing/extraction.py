@@ -315,9 +315,12 @@ class GroundingError(ValueError):
 
 
 # Words that make a trade conditional or historical. A reading that calls such a post a trade
-# made or an instruction goes back to the model.
+# made or an instruction goes back to the model. 附近 ("near") is a plan only when its clause
+# reports nothing done: "61.6附近加" waits, "qqq 660附近也加了" is a buy already made.
 NONCURRENT = re.compile(
-    r"如果|假如|计划|附近|突破.*再|昨天.*加了|\b(if|would|might|yesterday)\b", re.I
+    r"如果|假如|计划|附近(?![^\uff0c。,\uff1b;\s]*了)|突破.*再|昨天.*加了"
+    r"|\b(if|would|might|yesterday)\b",
+    re.I,
 )
 
 # An amount as written: 1,500, 200, 2.5, 两百, 一千五.
