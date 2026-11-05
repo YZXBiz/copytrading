@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { AccountOverview, DestinationActivity, GuruDayStats, OrderActivity, SourceActivity, TradingConfiguration } from "../../../shared/contract"
-import { buildFeed, guruAccountOutcomes, guruDirectory, guruHoldings, guruStats, includesEntry } from "./model"
+import { buildFeed, guruAccountOutcomes, guruDirectory, guruHoldings, guruStats, includesEntry, postSymbol, trendAxis, trendRows } from "./model"
 
 const NOW = new Date("2026-11-03T21:00:00Z")
 
@@ -116,7 +116,7 @@ describe("buildFeed", () => {
 
 describe("guruStats", () => {
   it("shows no counts before the day is read, never a zero it has not counted", () => {
-    expect(guruStats(undefined, 0, false)).toEqual({ postsToday: null, tradedToday: null, waiting: 0, averageRead: null })
+    expect(guruStats(undefined, 0, false)).toEqual({ postsToday: null, tradedToday: null, waiting: 0 })
     expect(guruStats(undefined, 0, true)).toMatchObject({ postsToday: 0, tradedToday: 0 })
   })
 })
@@ -139,5 +139,38 @@ describe("guruHoldings", () => {
 
   it("is nothing while nothing from the guru is held", () => {
     expect(guruHoldings("nobody", [account("paper-1")], new Set(["paper-1"]))).toBeNull()
+  })
+})
+
+describe("trendRows", () => {
+  const series = [
+    { day: "2026-10-01", cumulative_usd: "10" },
+    { day: "2026-10-20", cumulative_usd: "-5" },
+    { day: "2026-11-02", cumulative_usd: "7.5" },
+  ]
+  it("starts all time from nothing the day before the first sale", () => {
+    expect(trendRows(series, null, NOW)).toEqual([{ day: "2026-09-30", value: 0 }, { day: "2026-10-01", value: 10 }, { day: "2026-10-20", value: -5 }, { day: "2026-11-02", value: 7.5 }])
+  })
+  it("starts a window from what stood before it, and is empty when nothing closed inside it", () => {
+    expect(trendRows(series, 30, NOW)).toEqual([{ day: "2026-10-03", value: 10 }, { day: "2026-10-20", value: -5 }, { day: "2026-11-02", value: 7.5 }])
+    expect(trendRows(series, 7, new Date("2026-11-20T00:00:00Z"))).toEqual([])
+    expect(trendRows([], null, NOW)).toEqual([])
+  })
+})
+
+describe("postSymbol", () => {
+  const base = { instructions: [], destinations: [] } as unknown as SourceActivity
+  it("is the first instruction's stock, else an order's, else none", () => {
+    expect(postSymbol({ ...base, instructions: [{ symbol: "NVDA" }] } as unknown as SourceActivity)).toBe("NVDA")
+    expect(postSymbol({ ...base, destinations: [{ orders: [{ symbol: "F" }] }] } as unknown as SourceActivity)).toBe("F")
+    expect(postSymbol(base)).toBeNull()
+  })
+})
+
+describe("trendAxis", () => {
+  it("rounds the ends outward and always holds zero", () => {
+    expect(trendAxis([{ day: "a", value: 0 }, { day: "b", value: 67.2 }])).toEqual({ domain: [0, 80], ticks: [0, 20, 40, 60, 80] })
+    expect(trendAxis([{ day: "a", value: -12 }, { day: "b", value: 30 }])).toEqual({ domain: [-20, 40], ticks: [-20, 0, 20, 40] })
+    expect(trendAxis([{ day: "a", value: 0 }])).toMatchObject({ domain: [0, 0.5] })
   })
 })
