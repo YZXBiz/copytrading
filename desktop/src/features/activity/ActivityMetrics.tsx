@@ -7,15 +7,16 @@ import { TrendingDownIcon } from "@/components/icons/TrendingDownIcon"
 import { TrendingUpIcon } from "@/components/icons/TrendingUpIcon"
 import { Badge, type BadgeProps } from "@/components/reui/badge"
 import { Frame, FramePanel } from "@/components/reui/frame"
+import { KpiSparkline } from "@/components/kpi-sparkline"
 import { RollingNumber } from "@/components/rolling-number"
 import { Item, ItemMedia } from "@/components/ui/item"
 import { type DayCounts, type Metric } from "./post-bucket"
 
-const CARDS: { id: Metric; title: string; detail: string; icon: ReactNode; badge: BadgeProps["variant"]; bar: string }[] = [
-  { id: "posts", title: "Posts", detail: "From your gurus", icon: <Message01Icon />, badge: "info-light", bar: "bg-info/30" },
-  { id: "traded", title: "Traded", detail: "Orders placed", icon: <ArrowLeftRightIcon />, badge: "primary-light", bar: "bg-primary/30" },
-  { id: "waiting", title: "Waiting", detail: "Need your call", icon: <Clock01Icon />, badge: "warning-light", bar: "bg-warning/30" },
-  { id: "skipped", title: "Skipped", detail: "Not copied", icon: <SkipForwardIcon />, badge: "outline", bar: "bg-muted-foreground/30" },
+const CARDS: { id: Metric; title: string; detail: string; icon: ReactNode; badge: BadgeProps["variant"]; line: string }[] = [
+  { id: "posts", title: "Posts", detail: "From your gurus", icon: <Message01Icon />, badge: "info-light", line: "text-info" },
+  { id: "traded", title: "Traded", detail: "Orders placed", icon: <ArrowLeftRightIcon />, badge: "primary-light", line: "text-primary" },
+  { id: "waiting", title: "Waiting", detail: "Need your call", icon: <Clock01Icon />, badge: "warning-light", line: "text-warning" },
+  { id: "skipped", title: "Skipped", detail: "Not copied", icon: <SkipForwardIcon />, badge: "outline", line: "text-muted-foreground" },
 ]
 
 const WHOLE = { maximumFractionDigits: 0 }
@@ -39,7 +40,6 @@ export function ActivityMetrics({ today, before }: { today: DayCounts; before: D
     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:gap-3">
       {CARDS.map((card) => {
         const hours = today.hours[card.id]
-        const max = Math.max(...hours, 1)
         const change = today.total[card.id] - before.total[card.id]
         return (
           <Frame key={card.id}>
@@ -63,12 +63,8 @@ export function ActivityMetrics({ today, before }: { today: DayCounts; before: D
                     <RollingNumber value={today.total[card.id]} format={WHOLE} />
                   </div>
                 </div>
-                {/* One bar for each hour of the day. */}
-                <div className="flex h-10 items-end gap-px" aria-hidden="true">
-                  {hours.map((count, hour) => (
-                    <span key={hour} className={`${card.bar} w-[3px] rounded-full`} style={{ height: `${count === 0 ? 8 : Math.max((count / max) * 100, 16)}%` }} />
-                  ))}
-                </div>
+                {/* The count for each hour of the day, as one line. */}
+                <KpiSparkline values={hours} className={card.line} />
               </div>
             </FramePanel>
           </Frame>

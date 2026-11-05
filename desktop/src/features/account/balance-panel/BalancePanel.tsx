@@ -7,11 +7,11 @@ import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import type { HistoryRange } from "../../../../shared/contract"
 import { Frame, FrameDescription, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"
 import { RegionError } from "@/components/region-error"
+import { SlidingToggle } from "@/components/sliding-toggle"
 import { Button } from "@/components/ui/button"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { monthDay, timeOfDay } from "@/lib/format"
 import { useResult } from "@/lib/use-result"
 import { balanceAxis } from "../balance-axis"
@@ -73,25 +73,7 @@ export function BalancePanel({
           <FrameTitle>Balance</FrameTitle>
           <FrameDescription className="tabular-nums">{stats ? `${formatSignedUsd(stats.change)} (${formatSignedPercent(stats.changeRatio)}) ${range.name}` : "Account equity"}</FrameDescription>
         </div>
-        {/* Re-clicking the pressed item sends an empty array; the guard keeps a range selected. */}
-        <ToggleGroup
-          multiple={false}
-          value={[selected]}
-          onValueChange={(value) => {
-            const next = RANGES.find((r) => r.value === value[0])
-            if (next) setSelected(next.value)
-          }}
-          variant="outline"
-          size="sm"
-          spacing={0}
-          aria-label="Range"
-        >
-          {RANGES.map((r) => (
-            <ToggleGroupItem key={r.value} value={r.value} className="text-muted-foreground data-pressed:bg-card dark:data-pressed:bg-muted data-pressed:text-foreground">
-              {r.label}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+        <SlidingToggle label="Range" value={selected} onValueChange={setSelected} options={RANGES.map((r) => ({ value: r.value, label: r.label }))} />
       </FrameHeader>
       <FramePanel className="flex flex-1 flex-col gap-4">
         {pending && !switching && <Skeleton className="h-80 w-full" role="status" aria-label="Loading balance history" />}

@@ -6,12 +6,12 @@ import { FilterIcon } from "@/components/icons/FilterIcon"
 import { Message01Icon } from "@/components/icons/Message01Icon"
 import { RegionError } from "@/components/region-error"
 import { EmptyState } from "@/components/empty-state"
+import { SlidingToggle } from "@/components/sliding-toggle"
 import { Frame, FrameDescription, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"
 import { Timeline, TimelineContent, TimelineHeader, TimelineIndicator, TimelineItem, TimelineSeparator, TimelineTitle } from "@/components/reui/timeline"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { OutcomeBadge } from "@/features/activity/OutcomeBadge"
 import { PostPicture } from "@/features/activity/PostPicture"
 import { PostsSkeleton } from "@/features/activity/PostsSkeleton"
@@ -118,15 +118,7 @@ export function GuruActivity({
             {posts.status === "ready" ? `${loaded}${more ? "+" : ""} ${loaded === 1 ? "post" : "posts"}, newest first` : "Every post this guru made"}
           </FrameDescription>
         </div>
-        <Tabs value={filter} onValueChange={(value) => value && onFilterChange(value as PostFilter)}>
-          <TabsList aria-label="Filter posts">
-            {POST_FILTERS.map(({ id, label }) => (
-              <TabsTrigger key={id} value={id}>
-                {label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        <SlidingToggle label="Filter posts" value={filter} onValueChange={onFilterChange} options={POST_FILTERS.map(({ id, label }) => ({ value: id, label }))} />
       </FrameHeader>
       <FramePanel>
         {posts.status === "loading" && <PostsSkeleton />}

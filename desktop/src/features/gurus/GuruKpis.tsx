@@ -1,11 +1,12 @@
 // solution-analytics-8's KPI rail (MetricKpis), as shipped: a Frame tile per figure with its value, a badge, a separator and a
-// footer line. Changed from the block: the data, and the figures roll.
+// footer line. Changed from the block: the data, the figures roll, and a tile with a history draws it as a line.
 import type { ReactNode } from "react"
 import { ArrowDown02Icon } from "@/components/icons/ArrowDown02Icon"
 import { ArrowUp02Icon } from "@/components/icons/ArrowUp02Icon"
 import type { GuruPerformance } from "../../../shared/contract"
 import { Badge } from "@/components/reui/badge"
 import { Frame, FramePanel } from "@/components/reui/frame"
+import { KpiSparkline } from "@/components/kpi-sparkline"
 import { RollingNumber } from "@/components/rolling-number"
 import { Separator } from "@/components/ui/separator"
 import { USD_OPTIONS, USD_SIGNED_OPTIONS } from "@/features/account/balance-panel/format"
@@ -24,6 +25,8 @@ interface Tile {
   value: ReactNode
   valueClass?: string
   badge?: ReactNode
+  /** The tile's own history, drawn as a line beside the figure. */
+  spark?: number[]
   footer: ReactNode
 }
 
@@ -53,6 +56,7 @@ export function GuruKpis({ stats, performance, holdings }: { stats: Stats; perfo
       title: "Realized P&L",
       value: <RollingNumber value={realized} format={USD_SIGNED_OPTIONS} />,
       valueClass: realized === null ? undefined : tone(realized),
+      spark: performance?.series.map((point) => Number(point.cumulative_usd)),
       footer: first ? <>since {strong(monthDay(`${first.day}T12:00:00Z`))}</> : performance ? "No sales closed yet" : "Reading trades",
     },
     {
@@ -78,6 +82,7 @@ export function GuruKpis({ stats, performance, holdings }: { stats: Stats; perfo
               <div className="flex flex-wrap items-center gap-2.5">
                 <span className={cn("text-foreground inline-flex h-9 items-center text-2xl font-medium tracking-tight tabular-nums", tile.valueClass)}>{tile.value}</span>
                 {tile.badge}
+                {tile.spark && <KpiSparkline values={tile.spark} className={cn("ml-auto h-9 w-20", tone(tile.spark.at(-1)! - tile.spark[0]!) ?? "text-muted-foreground")} />}
               </div>
               <Separator />
               <div className="text-muted-foreground text-xs">{tile.footer}</div>

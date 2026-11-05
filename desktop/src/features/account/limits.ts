@@ -15,11 +15,14 @@ export interface TextField {
   hint: string
   /** A dollar amount or percent, kept as the decimal string the engine takes. */
   min: "positive" | "zero"
+  /** What one press of a stepper adds. */
+  step: number
 }
 export interface CountField {
   key: CountKey
   title: string
   hint: string
+  step: number
 }
 export interface FlagField {
   key: FlagKey
@@ -28,18 +31,18 @@ export interface FlagField {
 }
 
 export const POSITION_LIMITS: TextField[] = [
-  { key: "max_order_usd", title: "Largest single buy", hint: "The most one buy spends, and what a call with no size buys.", min: "positive" },
-  { key: "max_symbol_usd", title: "Maximum per stock", hint: "Shares CopyTrading bought. Your own aren't counted.", min: "positive" },
-  { key: "max_total_usd", title: "Maximum total exposure", hint: "Every stock CopyTrading bought. Your own aren't counted.", min: "positive" },
-  { key: "daily_loss_cap_usd", title: "Daily loss cap", hint: "Stops buying for the day. Still sells.", min: "positive" },
-  { key: "max_above_signal_pct", title: "Maximum above signal price (%)", hint: "0 means never more than the guru paid.", min: "zero" },
-  { key: "max_below_signal_pct", title: "Lowest sell price (% under the guru's)", hint: "A sell waits at this price or better until it fills.", min: "zero" },
+  { key: "max_order_usd", title: "Largest single buy", hint: "The most one buy spends, and what a call with no size buys.", min: "positive", step: 10 },
+  { key: "max_symbol_usd", title: "Maximum per stock", hint: "Shares CopyTrading bought. Your own aren't counted.", min: "positive", step: 10 },
+  { key: "max_total_usd", title: "Maximum total exposure", hint: "Every stock CopyTrading bought. Your own aren't counted.", min: "positive", step: 10 },
+  { key: "daily_loss_cap_usd", title: "Daily loss cap", hint: "Stops buying for the day. Still sells.", min: "positive", step: 10 },
+  { key: "max_above_signal_pct", title: "Maximum above signal price (%)", hint: "0 means never more than the guru paid.", min: "zero", step: 0.5 },
+  { key: "max_below_signal_pct", title: "Lowest sell price (% under the guru's)", hint: "A sell waits at this price or better until it fills.", min: "zero", step: 0.5 },
 ]
 
 export const TIMING_LIMITS: CountField[] = [
-  { key: "max_entries_per_day", title: "Entries per day", hint: "Sells don't count." },
-  { key: "max_signal_age_seconds", title: "Maximum signal age (seconds)", hint: "Older buys aren't copied. A sell always is." },
-  { key: "order_timeout_seconds", title: "Order timeout (seconds)", hint: "An unfilled buy is cancelled. A sell keeps waiting." },
+  { key: "max_entries_per_day", title: "Entries per day", hint: "Sells don't count.", step: 1 },
+  { key: "max_signal_age_seconds", title: "Maximum signal age (seconds)", hint: "Older buys aren't copied. A sell always is.", step: 5 },
+  { key: "order_timeout_seconds", title: "Order timeout (seconds)", hint: "An unfilled buy is cancelled. A sell keeps waiting.", step: 5 },
 ]
 
 export const BEHAVIORS: FlagField[] = [
@@ -118,3 +121,9 @@ export function limitsChanged(draft: LimitsDraft, saved: AccountPolicy): boolean
     return typeof a === "string" && typeof b === "string" ? (parseDec(a) ?? a) !== (parseDec(b) ?? b) : a !== b
   })
 }
+
+/** A draft field as the number a stepper shows; null when it is empty or not a plain number. */
+export const draftNumber = (text: string): number | null => (parseDec(text) === null ? null : Number(text))
+
+/** A stepper's number back as the decimal the draft holds, rounded to six places so a step never leaves 0.30000000000000004; cleared is empty, which the field's own check then refuses. */
+export const numberDraft = (value: number | null): string => (value === null || !Number.isFinite(value) ? "" : String(+value.toFixed(6)))
