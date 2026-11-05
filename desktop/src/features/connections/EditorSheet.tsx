@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import type { LucideIcon } from "lucide-react"
+import type { Icon } from "@/lib/icon"
 import { IconTile } from "@/components/reui/icon-tile"
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 
@@ -15,7 +15,7 @@ export function EditorSheet({
   footer,
   children,
 }: {
-  icon: LucideIcon
+  icon: Icon
   title: string
   description: string
   onClose: () => void

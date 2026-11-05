@@ -1,7 +1,12 @@
 // dashboard-8's Release Room panel (a Frame with a progress meter, one outline button and a divided list), wired to
 // the account: the loss and invested meters against the limits, Edit Limits, and a row per holding.
 import { AnimatePresence, motion } from "motion/react"
-import { ArrowDownIcon, ArrowUpIcon, EllipsisIcon, GaugeIcon, PackageOpenIcon, ShieldCheckIcon } from "lucide-react"
+import { ArrowDown02Icon } from "@/components/icons/ArrowDown02Icon"
+import { ArrowUp02Icon } from "@/components/icons/ArrowUp02Icon"
+import { DashboardSpeed01Icon } from "@/components/icons/DashboardSpeed01Icon"
+import { MoreHorizontalIcon } from "@/components/icons/MoreHorizontalIcon"
+import { PackageOpenIcon } from "@/components/icons/PackageOpenIcon"
+import { ShieldCheckIcon } from "@/components/icons/ShieldCheckIcon"
 import type { AccountLimits, AccountOverview, Bar } from "../../../shared/contract"
 import { Badge } from "@/components/reui/badge"
 import { EmptyState } from "@/components/empty-state"
@@ -74,7 +79,7 @@ function SellMenu({ position, onSell }: { position: Position; onSell: (position:
           />
         }
       >
-        <EllipsisIcon aria-hidden="true" />
+        <MoreHorizontalIcon aria-hidden="true" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-auto">
         {lots.map((lot) => (
@@ -91,7 +96,7 @@ function Gain({ gain, fraction }: { gain: number | null; fraction: number | null
   const down = (gain ?? 0) < 0
   return (
     <Badge variant={down ? "destructive-light" : "success-light"}>
-      {down ? <ArrowDownIcon aria-hidden="true" /> : <ArrowUpIcon aria-hidden="true" />}
+      {down ? <ArrowDown02Icon aria-hidden="true" /> : <ArrowUp02Icon aria-hidden="true" />}
       {signedPercent(fraction)}
     </Badge>
   )
@@ -174,7 +179,7 @@ export function LimitsHoldings({
           <Empty>
             <EmptyHeader>
               <EmptyMedia variant="icon">
-                <GaugeIcon />
+                <DashboardSpeed01Icon />
               </EmptyMedia>
               <EmptyTitle>No limits to show</EmptyTitle>
               <EmptyDescription>Save the account in Connections first.</EmptyDescription>

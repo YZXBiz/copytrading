@@ -1,4 +1,4 @@
-import { TrendingUpIcon } from "lucide-react"
+import { TrendingUpIcon } from "@/components/icons/TrendingUpIcon"
 import { cn } from "@/lib/utils"
 import { Item, ItemMedia } from "@/components/ui/item"
 

@@ -75,7 +75,7 @@ import { cn } from "cn"
 import { createPortal } from "react-dom"
 
 import { Button } from "@/components/ui/button"
-import { GripHorizontalIcon } from "lucide-react"
+import { GripHorizontalIcon } from "@/components/icons/GripHorizontalIcon"
 
 // Context to share sortable listeners from row to handle
 type SortableContextValue = ReturnType<typeof useSortable>

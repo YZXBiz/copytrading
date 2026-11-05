@@ -3,7 +3,9 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { CheckIcon, EllipsisIcon, MessageSquareIcon } from "lucide-react"
+import { Message01Icon } from "@/components/icons/Message01Icon"
+import { MoreHorizontalIcon } from "@/components/icons/MoreHorizontalIcon"
+import { Tick02Icon } from "@/components/icons/Tick02Icon"
 import { type ColumnDef, type PaginationState, useTable } from "@tanstack/react-table"
 import type { SourceActivityPage } from "../../../shared/contract"
 import { Badge } from "@/components/reui/badge"
@@ -170,7 +172,7 @@ export function PostsTable({
               )}
               <DropdownMenu>
                 <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label={`Actions for post ${row.original.post.sequence}`} />}>
-                  <EllipsisIcon aria-hidden="true" />
+                  <MoreHorizontalIcon aria-hidden="true" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-44">
                   <DropdownMenuItem onClick={() => navigate("activity", String(row.original.post.sequence))}>View in Activity</DropdownMenuItem>
@@ -202,7 +204,7 @@ export function PostsTable({
 
   const empty =
     filter === "waiting" && query.trim() === "" ? (
-      <EmptyState icon={CheckIcon} title="Nothing is waiting for you" action={{ label: "See Activity", onClick: () => navigate("activity") }} />
+      <EmptyState icon={Tick02Icon} title="Nothing is waiting for you" action={{ label: "See Activity", onClick: () => navigate("activity") }} />
     ) : (
       "No posts match."
     )
@@ -274,7 +276,7 @@ export function PostsTable({
               </div>
             )}
             {posts.status === "ready" && rows.length === 0 && (
-              <EmptyState icon={MessageSquareIcon} title="No posts yet" description="Posts from the gurus you copy appear here as they arrive." action={{ label: "Refresh", onClick: posts.retry }} className="p-5" />
+              <EmptyState icon={Message01Icon} title="No posts yet" description="Posts from the gurus you copy appear here as they arrive." action={{ label: "Refresh", onClick: posts.retry }} className="p-5" />
             )}
             {posts.status === "ready" && rows.length > 0 && (
               <>

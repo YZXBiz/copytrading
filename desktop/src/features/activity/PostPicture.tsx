@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { PaperclipIcon } from "lucide-react"
+import { AttachmentIcon } from "@/components/icons/AttachmentIcon"
 import type { SourceAttachmentEvidence } from "../../../shared/contract"
 import { Attachment, AttachmentContent, AttachmentDescription, AttachmentMedia, AttachmentTitle } from "@/components/ui/attachment"
 import { codeWords } from "@/lib/reasons"
@@ -28,7 +28,7 @@ export function PostPicture({ attachment, className }: { attachment: SourceAttac
   return (
     <Attachment size="sm" className="self-start">
       <AttachmentMedia>
-        <PaperclipIcon aria-hidden />
+        <AttachmentIcon aria-hidden />
       </AttachmentMedia>
       <AttachmentContent>
         {attachment.filename && <AttachmentTitle>{attachment.filename}</AttachmentTitle>}

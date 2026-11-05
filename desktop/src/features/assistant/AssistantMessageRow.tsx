@@ -1,4 +1,8 @@
-import { CheckIcon, CopyIcon, FileTextIcon, TriangleAlertIcon, XIcon } from "lucide-react"
+import { Cancel01Icon } from "@/components/icons/Cancel01Icon"
+import { Copy01Icon } from "@/components/icons/Copy01Icon"
+import { File01Icon } from "@/components/icons/File01Icon"
+import { Tick02Icon } from "@/components/icons/Tick02Icon"
+import { TriangleAlertIcon } from "@/components/icons/TriangleAlertIcon"
 import { Alert, AlertTitle } from "@/components/reui/alert"
 import { Attachment, AttachmentContent, AttachmentDescription, AttachmentGroup, AttachmentTitle } from "@/components/ui/attachment"
 import { Bubble, BubbleContent } from "@/components/ui/bubble"
@@ -51,7 +55,7 @@ export function AssistantMessageRow({ message, writing }: { message: Turn; writi
                 {message.steps.map((step, i) => (
                   <Marker key={i} className="items-start">
                     <MarkerIcon className={isRefusal(step) ? "text-warning-foreground dark:text-warning" : "text-success"}>
-                      {isRefusal(step) ? <XIcon className="size-3.5" aria-hidden="true" /> : <CheckIcon className="size-3.5" aria-hidden="true" />}
+                      {isRefusal(step) ? <Cancel01Icon className="size-3.5" aria-hidden="true" /> : <Tick02Icon className="size-3.5" aria-hidden="true" />}
                     </MarkerIcon>
                     <MarkerContent className="text-foreground">{step}</MarkerContent>
                   </Marker>
@@ -81,7 +85,7 @@ export function AssistantMessageRow({ message, writing }: { message: Turn; writi
             <Attachment key={`${link.kind}:${link.id}`} size="xs" className="max-w-56 gap-2">
               <button type="button" onClick={() => open(link)} className="flex min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
                 <span className="text-muted-foreground">
-                  <FileTextIcon className="size-3.5 shrink-0" aria-hidden="true" />
+                  <File01Icon className="size-3.5 shrink-0" aria-hidden="true" />
                 </span>
                 <AttachmentContent>
                   <AttachmentTitle>{link.title}</AttachmentTitle>
@@ -113,7 +117,7 @@ export function AssistantMessageRow({ message, writing }: { message: Turn; writi
                 />
               }
             >
-              <CopyIcon className="size-3.5" aria-hidden="true" />
+              <Copy01Icon className="size-3.5" aria-hidden="true" />
             </TooltipTrigger>
             <TooltipContent>Copy</TooltipContent>
           </Tooltip>

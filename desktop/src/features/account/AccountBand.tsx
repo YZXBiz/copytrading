@@ -1,5 +1,9 @@
 import type { ReactNode } from "react"
-import { BanknoteIcon, BellIcon, ChartNoAxesColumnIcon, ShieldCheckIcon, WalletIcon } from "lucide-react"
+import { BanknoteIcon } from "@/components/icons/BanknoteIcon"
+import { ChartColumnIcon } from "@/components/icons/ChartColumnIcon"
+import { Notification01Icon } from "@/components/icons/Notification01Icon"
+import { ShieldCheckIcon } from "@/components/icons/ShieldCheckIcon"
+import { Wallet01Icon } from "@/components/icons/Wallet01Icon"
 import type { AccountOverview } from "../../../shared/contract"
 import { Badge } from "@/components/reui/badge"
 import { Frame, FramePanel } from "@/components/reui/frame"
@@ -104,15 +108,15 @@ export function AccountBand({
         </div>
 
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1.4fr_1fr]">
-          <SummaryTile icon={<WalletIcon aria-hidden="true" />} label="Cash" detail={share(balance?.cash)} value={<RollingNumber value={Number(balance?.cash)} format={USD_OPTIONS} />} />
+          <SummaryTile icon={<Wallet01Icon aria-hidden="true" />} label="Cash" detail={share(balance?.cash)} value={<RollingNumber value={Number(balance?.cash)} format={USD_OPTIONS} />} />
           <SummaryTile icon={<BanknoteIcon aria-hidden="true" />} label="Buying power" detail="to spend" value={<RollingNumber value={Number(balance?.buying_power)} format={USD_OPTIONS} />} />
           <SummaryTile
-            icon={<ChartNoAxesColumnIcon aria-hidden="true" />}
+            icon={<ChartColumnIcon aria-hidden="true" />}
             label="Invested by CopyTrading"
             detail={account.pending_orders ? `${account.pending_orders} orders waiting` : share(account.total_exposure_usd)}
             value={<RollingNumber value={Number(account.total_exposure_usd ?? 0)} format={USD_OPTIONS} />}
           />
-          <SummaryTile icon={<BellIcon aria-hidden="true" />} label="Waiting for you" detail={waiting === 0 ? "all answered" : "to answer"} value={waiting} onClick={onShowWaiting} />
+          <SummaryTile icon={<Notification01Icon aria-hidden="true" />} label="Waiting for you" detail={waiting === 0 ? "all answered" : "to answer"} value={waiting} onClick={onShowWaiting} />
         </div>
       </FramePanel>
     </Frame>

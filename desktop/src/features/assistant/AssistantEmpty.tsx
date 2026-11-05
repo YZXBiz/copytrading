@@ -1,4 +1,4 @@
-import { SparklesIcon } from "lucide-react"
+import { SparklesIcon } from "@/components/icons/SparklesIcon"
 import { IconStack } from "@/components/reui/icon-stack"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
@@ -13,7 +13,7 @@ export function AssistantEmpty({ hasModel, suggestions, onAsk, onOpenConnections
           <EmptyHeader>
             <EmptyMedia className="mb-0">
               <IconStack aria-hidden="true" className="h-16 w-14">
-                <SparklesIcon strokeWidth="1.9" className="size-3.5" aria-hidden="true" />
+                <SparklesIcon className="size-3.5" aria-hidden="true" />
               </IconStack>
             </EmptyMedia>
             <EmptyTitle>Ask about your trading</EmptyTitle>

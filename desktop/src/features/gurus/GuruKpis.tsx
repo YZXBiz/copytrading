@@ -1,7 +1,8 @@
 // solution-analytics-8's KPI rail (MetricKpis), as shipped: a Frame tile per figure with its value, a badge, a separator and a
 // footer line. Changed from the block: the data, and the figures roll.
 import type { ReactNode } from "react"
-import { ArrowDownIcon, ArrowUpIcon } from "lucide-react"
+import { ArrowDown02Icon } from "@/components/icons/ArrowDown02Icon"
+import { ArrowUp02Icon } from "@/components/icons/ArrowUp02Icon"
 import type { GuruPerformance } from "../../../shared/contract"
 import { Badge } from "@/components/reui/badge"
 import { Frame, FramePanel } from "@/components/reui/frame"
@@ -60,7 +61,7 @@ export function GuruKpis({ stats, performance, holdings }: { stats: Stats; perfo
       badge:
         holdings && holdings.cost > 0 ? (
           <Badge variant={up ? "success-light" : "destructive-light"}>
-            {up ? <ArrowUpIcon aria-hidden="true" /> : <ArrowDownIcon aria-hidden="true" />}
+            {up ? <ArrowUp02Icon aria-hidden="true" /> : <ArrowDown02Icon aria-hidden="true" />}
             {Math.abs((holdings.gain / holdings.cost) * 100).toFixed(1)}%
           </Badge>
         ) : null,

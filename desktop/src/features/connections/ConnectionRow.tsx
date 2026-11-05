@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react"
+import type { Icon } from "@/lib/icon"
 import { Button } from "@/components/ui/button"
 import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item"
 import { Spinner } from "@/components/ui/spinner"
@@ -18,7 +18,7 @@ export function ConnectionRow({
   checking = false,
   label,
 }: {
-  icon: LucideIcon
+  icon: Icon
   title: string
   detail?: string
   status: Status

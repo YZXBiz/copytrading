@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { HistoryIcon } from "lucide-react"
+import { HistoryIcon } from "@/components/icons/HistoryIcon"
 import type { AccountOverview, AccountOverviewPage } from "../../../shared/contract"
 import { Frame, FramePanel } from "@/components/reui/frame"
 import { RegionError } from "@/components/region-error"

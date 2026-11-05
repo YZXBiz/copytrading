@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { CircleAlertIcon, LandmarkIcon } from "lucide-react"
+import { AlertCircleIcon } from "@/components/icons/AlertCircleIcon"
+import { BankIcon } from "@/components/icons/BankIcon"
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/reui/alert"
 import { Button } from "@/components/ui/button"
 import { FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field"
@@ -56,7 +57,7 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
 
   return (
     <EditorSheet
-      icon={LandmarkIcon}
+      icon={BankIcon}
       title={name || "New account"}
       description={account.environment === "live" ? "Live: real orders, real money" : "Paper: pretend money, real prices"}
       onClose={onClose}
@@ -85,7 +86,7 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
     >
       {confirmsRemove && (
         <Alert variant="warning">
-          <CircleAlertIcon aria-hidden />
+          <AlertCircleIcon aria-hidden />
           <AlertTitle>Remove {name || "this account"}?</AlertTitle>
           <AlertDescription>Its guru stops being copied once you start copying with this change. Shares in it stay with Alpaca.</AlertDescription>
           <AlertAction>
@@ -108,7 +109,7 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
       )}
       {copying && (
         <Alert variant="info">
-          <CircleAlertIcon aria-hidden />
+          <AlertCircleIcon aria-hidden />
           <AlertTitle>Copying is running</AlertTitle>
           <AlertDescription>Apply limits now changes only this account’s limits, from the next order. Any other change is applied from the start bar, which restarts copying for a few seconds.</AlertDescription>
         </Alert>
@@ -133,7 +134,7 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
         />
         {account.environment === "live" && (
           <Alert variant="warning">
-            <CircleAlertIcon aria-hidden />
+            <AlertCircleIcon aria-hidden />
             <AlertTitle>Live accounts place real orders with real money.</AlertTitle>
           </Alert>
         )}
@@ -227,7 +228,7 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
       </FieldSet>
       {applyError && (
         <Alert variant="destructive">
-          <CircleAlertIcon aria-hidden />
+          <AlertCircleIcon aria-hidden />
           <AlertTitle>Limits not applied</AlertTitle>
           <AlertDescription>{applyError}</AlertDescription>
         </Alert>

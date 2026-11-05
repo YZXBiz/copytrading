@@ -2,7 +2,9 @@
 // figures with an arrow and a gain or loss colour), filled with the gurus the setup copies. Changed from the block: the
 // data, the columns, the rows open a guru's page, headers sort, and the figures roll. The title and search are left out:
 // the page already says "Gurus", and a handful of rows needs no search.
-import { ArrowDownIcon, TrendingDownIcon, TrendingUpIcon } from "lucide-react"
+import { ArrowDown01Icon as ArrowDownIcon } from "@/components/icons/ArrowDown01Icon"
+import { TrendingDownIcon } from "@/components/icons/TrendingDownIcon"
+import { TrendingUpIcon } from "@/components/icons/TrendingUpIcon"
 import { useState, type ReactNode } from "react"
 import type { AccountOverview, AccountOverviewPage, GuruDayStatsPage, GuruPerformance } from "../../../shared/contract"
 import { Badge } from "@/components/reui/badge"

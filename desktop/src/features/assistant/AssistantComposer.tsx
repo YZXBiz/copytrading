@@ -1,5 +1,6 @@
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react"
-import { ArrowUpIcon, KeyRoundIcon } from "lucide-react"
+import { ArrowUp02Icon } from "@/components/icons/ArrowUp02Icon"
+import { Key01Icon } from "@/components/icons/Key01Icon"
 import { Button } from "@/components/ui/button"
 import { Field, FieldLabel } from "@/components/ui/field"
 import { InputGroup, InputGroupAddon, InputGroupTextarea } from "@/components/ui/input-group"
@@ -80,7 +81,7 @@ export function AssistantComposer({ open, answering, enabled, provider, onSend, 
               ) : (
                 <Tooltip>
                   <TooltipTrigger render={<Button type="submit" size="icon-sm" aria-label="Send message" disabled={!enabled || !canSend} className="rounded-full" />}>
-                    <ArrowUpIcon className="size-4" aria-hidden="true" />
+                    <ArrowUp02Icon className="size-4" aria-hidden="true" />
                   </TooltipTrigger>
                   <TooltipContent className="flex items-center gap-1.5">
                     Send
@@ -107,7 +108,7 @@ export function AssistantComposer({ open, answering, enabled, provider, onSend, 
         </span>
         <Popover>
           <PopoverTrigger render={<Button type="button" variant="ghost" size="sm" aria-label="Keyboard shortcuts" className="text-muted-foreground hover:text-foreground h-7 shrink-0 gap-1.5 px-2 font-normal" />}>
-            <KeyRoundIcon className="size-3.5 shrink-0" aria-hidden="true" />
+            <Key01Icon className="size-3.5 shrink-0" aria-hidden="true" />
             <span className="text-xs">Shortcuts</span>
           </PopoverTrigger>
           <PopoverContent align="end" className="w-64 p-2">

@@ -2,7 +2,7 @@
 // with the crosshatch pattern), wired to the account's balance history: one series in the accent, the range toggle in the header.
 import { useMemo, useRef, useState } from "react"
 import { useReducedMotion } from "motion/react"
-import { ChartLineIcon } from "lucide-react"
+import { ChartLineIcon } from "@/components/icons/ChartLineIcon"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import type { HistoryRange } from "../../../../shared/contract"
 import { Frame, FrameDescription, FrameHeader, FramePanel, FrameTitle } from "@/components/reui/frame"

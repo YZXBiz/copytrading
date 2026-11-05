@@ -1,5 +1,10 @@
 import type { ReactNode } from "react"
-import { ActivityIcon, LandmarkIcon, RocketIcon, SettingsIcon, UsersIcon, type LucideIcon } from "lucide-react"
+import type { Icon } from "@/lib/icon"
+import { Activity01Icon } from "@/components/icons/Activity01Icon"
+import { BankIcon } from "@/components/icons/BankIcon"
+import { Rocket01Icon } from "@/components/icons/Rocket01Icon"
+import { Settings02Icon } from "@/components/icons/Settings02Icon"
+import { UserGroupIcon } from "@/components/icons/UserGroupIcon"
 import type { AccountOverviewPage } from "../../../shared/contract"
 import { AccountsScreen } from "@/features/account/AccountsScreen"
 import { ActivityScreen } from "@/features/activity/ActivityScreen"
@@ -17,7 +22,7 @@ export interface ScreenProps {
 
 interface Screen {
   title: string
-  icon: LucideIcon
+  icon: Icon
   render: (props: ScreenProps) => ReactNode
 }
 
@@ -30,7 +35,7 @@ const placeholder = (title: string) => () => <ScreenPlaceholder title={title} />
 export const SCREENS: Record<ScreenId, Screen> = {
   accounts: {
     title: "Accounts",
-    icon: LandmarkIcon,
+    icon: BankIcon,
     render: ({ route, accounts }) => (
       <AccountsScreen
         accounts={accounts}
@@ -40,12 +45,12 @@ export const SCREENS: Record<ScreenId, Screen> = {
       />
     ),
   },
-  gurus: { title: "Gurus", icon: UsersIcon, render: ({ route, accounts }) => <GurusScreen guruId={route.id} accounts={accounts} /> },
+  gurus: { title: "Gurus", icon: UserGroupIcon, render: ({ route, accounts }) => <GurusScreen guruId={route.id} accounts={accounts} /> },
   activity: {
     title: "Activity",
-    icon: ActivityIcon,
+    icon: Activity01Icon,
     render: ({ route, accounts }) => <ActivityScreen selectedSequence={route.id === null ? null : Number(route.id)} accounts={accounts} />,
   },
-  "getting-started": { title: "Getting Started", icon: RocketIcon, render: () => <GettingStartedScreen /> },
-  settings: { title: "Settings", icon: SettingsIcon, render: ({ route, accounts }) => <SettingsScreen page={route.id} sheet={route.sub} accounts={accounts} /> },
+  "getting-started": { title: "Getting Started", icon: Rocket01Icon, render: () => <GettingStartedScreen /> },
+  settings: { title: "Settings", icon: Settings02Icon, render: ({ route, accounts }) => <SettingsScreen page={route.id} sheet={route.sub} accounts={accounts} /> },
 }

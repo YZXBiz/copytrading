@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { MessageSquareIcon } from "lucide-react"
+import { Message01Icon } from "@/components/icons/Message01Icon"
 
 /** Tickers the logo cache can fetch; anything else gets the letter. */
 const HAS_LOGO = /^[A-Z][A-Z0-9.]{0,9}$/
@@ -14,7 +14,7 @@ export function PostTile({ symbol }: { symbol: string | null }) {
   return (
     <span aria-hidden="true" className="bg-background text-muted-foreground flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md border p-1.5 text-xs font-medium">
       {ticker === null ? (
-        <MessageSquareIcon className="size-4" />
+        <Message01Icon className="size-4" />
       ) : HAS_LOGO.test(ticker) && !missing ? (
         <img src={`ct-logo://${ticker}`} alt="" className="size-full object-contain" onError={() => setMissing(true)} />
       ) : (

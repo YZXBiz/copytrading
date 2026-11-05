@@ -1,5 +1,7 @@
 import { useState } from "react"
-import { CircleAlertIcon, CircleCheckIcon, CircleDashedIcon } from "lucide-react"
+import { AlertCircleIcon } from "@/components/icons/AlertCircleIcon"
+import { CheckmarkCircle02Icon } from "@/components/icons/CheckmarkCircle02Icon"
+import { CircleDashedIcon } from "@/components/icons/CircleDashedIcon"
 import type { LotSalePreview, LotSaleResult, PositionLot, TradingEnvironment } from "../../../shared/contract"
 import { Alert, AlertDescription, AlertTitle } from "@/components/reui/alert"
 import { Badge } from "@/components/reui/badge"
@@ -34,7 +36,7 @@ type Phase =
   | { name: "finished"; result: LotSaleResult }
 
 const TONE = { success: "success", neutral: "info", warning: "warning", destructive: "destructive" } as const
-const ICON = { success: CircleCheckIcon, neutral: CircleDashedIcon, warning: CircleAlertIcon, destructive: CircleAlertIcon } as const
+const ICON = { success: CheckmarkCircle02Icon, neutral: CircleDashedIcon, warning: AlertCircleIcon, destructive: AlertCircleIcon } as const
 
 /**
  * Selling shares from one lot: choose how much of it, review a fresh preview, confirm once (the main process asks
@@ -162,7 +164,7 @@ export function LotSaleSheet({ target, onClose }: { target: LotSaleTarget; onClo
             )}
             {problem && (
               <Alert variant="warning">
-                <CircleAlertIcon aria-hidden />
+                <AlertCircleIcon aria-hidden />
                 <AlertTitle>{problem}</AlertTitle>
               </Alert>
             )}

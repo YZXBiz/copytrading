@@ -1,5 +1,8 @@
 import { useId, useState } from "react"
-import { CircleAlertIcon, CircleCheckIcon, SparklesIcon, UserIcon } from "lucide-react"
+import { AlertCircleIcon } from "@/components/icons/AlertCircleIcon"
+import { CheckmarkCircle02Icon } from "@/components/icons/CheckmarkCircle02Icon"
+import { SparklesIcon } from "@/components/icons/SparklesIcon"
+import { UserIcon } from "@/components/icons/UserIcon"
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/reui/alert"
 import { Button } from "@/components/ui/button"
 import { Field, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field"
@@ -62,7 +65,7 @@ export function GuruSheet({ uid, onClose }: { uid: string; onClose: () => void }
     >
       {confirmsRemove && (
         <Alert variant="warning">
-          <CircleAlertIcon aria-hidden />
+          <AlertCircleIcon aria-hidden />
           <AlertTitle>Remove {guru.display_name.trim() || "this guru"}?</AlertTitle>
           <AlertDescription>Their calls stop being copied once you start copying with this change. Shares they bought stay in the account.</AlertDescription>
           <AlertAction>
@@ -171,7 +174,7 @@ export function GuruSheet({ uid, onClose }: { uid: string; onClose: () => void }
         </Field>
         {learned && (
           <Alert variant={learned.ok ? "success" : "destructive"}>
-            {learned.ok ? <CircleCheckIcon aria-hidden /> : <CircleAlertIcon aria-hidden />}
+            {learned.ok ? <CheckmarkCircle02Icon aria-hidden /> : <AlertCircleIcon aria-hidden />}
             <AlertTitle>{learned.ok ? "Playbook drafted" : "Couldn't learn"}</AlertTitle>
             <AlertDescription>{learned.text}</AlertDescription>
           </Alert>

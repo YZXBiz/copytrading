@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { CircleAlertIcon } from "lucide-react"
+import { AlertCircleIcon } from "@/components/icons/AlertCircleIcon"
 import type { OwnershipIncident, AccountOverview } from "../../../shared/contract"
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/reui/alert"
 import { Button } from "@/components/ui/button"
@@ -38,7 +38,7 @@ export function OwnershipRow({
 
   return (
     <Alert variant="warning">
-      <CircleAlertIcon aria-hidden />
+      <AlertCircleIcon aria-hidden />
       <AlertTitle>{fix.headline}</AlertTitle>
       <AlertDescription>
         <p>{fix.detail}</p>

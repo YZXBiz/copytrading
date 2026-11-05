@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { CircleDashedIcon } from "lucide-react"
+import { CircleDashedIcon } from "@/components/icons/CircleDashedIcon"
 import type { SourceActivity } from "../../../shared/contract"
 import { Badge } from "@/components/reui/badge"
 import { cn } from "@/lib/utils"

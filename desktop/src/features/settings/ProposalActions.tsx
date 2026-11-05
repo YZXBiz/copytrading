@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { CheckIcon, XIcon } from "lucide-react"
+import { Cancel01Icon } from "@/components/icons/Cancel01Icon"
+import { Tick02Icon } from "@/components/icons/Tick02Icon"
 import type { AgentProposal } from "../../../shared/contract"
 import { Button } from "@/components/ui/button"
 import { canApprove, resultMessage } from "./proposals"
@@ -31,12 +32,12 @@ export function ProposalActions({ proposal, onDecided, gate = false }: { proposa
       {/* The assistant's approval gate: equal-width buttons, Approve the only primary one (ai-chat-8's plan turn). */}
       <div className={gate ? "flex gap-2 *:flex-1" : "flex gap-2"}>
         <Button type="button" size={gate ? "default" : "sm"} variant="outline" className={gate ? "gap-1.5" : undefined} disabled={working} onClick={() => decide(false)}>
-          {gate && <XIcon aria-hidden="true" />}
+          {gate && <Cancel01Icon aria-hidden="true" />}
           Reject
         </Button>
         {canApprove(proposal) && (
           <Button type="button" size={gate ? "default" : "sm"} className={gate ? "gap-1.5" : undefined} disabled={working} onClick={() => decide(true)}>
-            {gate && <CheckIcon aria-hidden="true" />}
+            {gate && <Tick02Icon aria-hidden="true" />}
             Approve…
           </Button>
         )}

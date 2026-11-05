@@ -1,4 +1,4 @@
-import { HammerIcon } from "lucide-react"
+import { HammerIcon } from "@/components/icons/HammerIcon"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 
 /** What a screen shows until the worker who ports it replaces its entry in screens.tsx. */
