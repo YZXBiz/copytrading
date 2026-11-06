@@ -1,5 +1,5 @@
 /* The account page: one container, regions 24px apart, every card on a hairline and no shadow. */
-.page { display: grid; width: 100%; max-width: 1200px; margin-inline: auto; padding: var(--space-2) 0 var(--space-6); gap: var(--space-6); color: var(--foreground); font-family: var(--font-body); }
+.page { display: grid; width: 100%; max-width: 1200px; margin-inline: auto; padding: var(--space-2) 0 var(--space-6); gap: var(--space-6); color: var(--foreground); font-family: var(--font-body); container: page / inline-size; }
 .page > * { min-width: 0; }
 .muted { color: var(--text-muted); }
 
@@ -99,13 +99,14 @@ button.figure { cursor: pointer; transition: background-color var(--duration-fas
 .undoText { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .skeletonHeader { min-height: 64px; }
 
-@media (max-width: 1100px) {
+/* Breakpoints follow the page's own width, so the docked Assistant and the sidebar narrow it like a smaller window. */
+@container page (max-width: 820px) {
   .figures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-@media (max-width: 1000px) {
+@container page (max-width: 720px) {
   .split { grid-template-columns: minmax(0, 1fr); }
 }
-@media (max-width: 760px) {
+@container page (max-width: 480px) {
   .holding { grid-template-columns: 32px minmax(0, 1fr) auto 96px; }
   .holding .spark { display: none; }
 }
