@@ -1,6 +1,5 @@
 import { useRef, useState } from "react"
 import type { AccountOverview, Position } from "../../../shared/contract"
-import { readableText } from "@/features/activity/reading"
 import { readClock } from "@/lib/clock"
 import { useResult } from "@/lib/use-result"
 import styles from "./account.module.css"
@@ -107,7 +106,8 @@ export function AccountPage({
         account={account}
         waiting={calls.length}
         onShowWaiting={() => {
-          setFilter("waiting")
+          // The calls are in the queue; with none, the Waiting filter says so.
+          if (calls.length === 0) setFilter("waiting")
           table.current?.scrollIntoView({ behavior: "smooth", block: "start" })
         }}
       />
@@ -122,14 +122,10 @@ export function AccountPage({
           calls={calls}
           canCopy={copyingStatus?.state === "running" || copyingStatus?.state === "degraded"}
           now={now}
-          recent={skipped.recent}
           skipped={skipped.has}
           filter={filter}
           onFilterChange={setFilter}
           onCopy={setReview}
-          onSkip={(call) => skipped.skip(sourceKey(call.source), readableText(call.source))}
-          onSkipAll={() => skipped.skipAll(calls.map((call) => ({ sourceId: sourceKey(call.source), text: readableText(call.source) })))}
-          onUndo={skipped.undo}
         />
       </div>
       {review && (

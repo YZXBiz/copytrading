@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import type { SourceActivityPage } from "../../../shared/contract"
 import { Badge } from "@/components/arc/badge/badge"
 import { Button } from "@/components/arc/button/button"
@@ -10,8 +10,8 @@ import { SearchField } from "@/components/arc/search-field/search-field"
 import SegmentedControl from "@/components/arc/segmented-control/segmented-control"
 import { Skeleton } from "@/components/arc/skeleton/skeleton"
 import SortableDataTable from "@/components/arc/sortable-data-table/sortable-data-table"
+import type { UndoToastHandle } from "@/components/arc/undo-toast/undo-toast"
 import { endOfTradingDay, untilText } from "@/features/activity/deadline"
-import { namedBuyNote } from "@/features/activity/outcome"
 import { PostPicture } from "@/features/activity/PostPicture"
 import { pictureOf, readableText } from "@/features/activity/reading"
 import { navigate } from "@/features/shell/route"
@@ -19,10 +19,10 @@ import { dateTime } from "@/lib/format"
 import { type Loaded } from "@/lib/use-result"
 import styles from "./account.module.css"
 import { type OutcomeTone } from "./model"
-import type { Recent } from "./skipped-calls"
-import { type PostFilter, type PostTableRow, POST_FILTERS, postRows } from "./post-rows"
+import { type PostFilter, type PostTableRow, POST_FILTERS, postRows, sourceKey } from "./post-rows"
 import { RegionNote } from "./RegionNote"
-import { type WaitingCall, gainLine } from "./waiting"
+import { type WaitingCall, callGain } from "./waiting"
+import { WaitingQueue } from "./WaitingQueue"
 
 const PAGE_SIZE = 8
 
@@ -35,9 +35,6 @@ const TONE: Record<OutcomeTone, "neutral" | "success" | "warning" | "danger" | "
   outline: "neutral",
 }
 
-/** The button's word: enter the trade yourself, approve what the account held, or copy what the post called. */
-const copyLabel = (call: WaitingCall) => (call.calls.length === 0 ? "Enter trade" : call.awaitsApproval ? "Approve" : "Copy")
-
 type Row = { id: string; post: string; meaning: string; status: string; time: string; row: PostTableRow }
 
 export function PostsTable({
@@ -46,36 +43,30 @@ export function PostsTable({
   calls,
   canCopy,
   now,
-  recent,
   skipped,
   filter,
   onFilterChange,
   onCopy,
-  onSkip,
-  onSkipAll,
-  onUndo,
 }: {
   accountId: string
   posts: Loaded<SourceActivityPage> & { retry: () => void }
   calls: WaitingCall[]
   canCopy: boolean
   now: Date
-  recent: Recent | null
   skipped: (sourceId: string) => boolean
   filter: PostFilter
   onFilterChange: (filter: PostFilter) => void
   onCopy: (call: WaitingCall) => void
-  onSkip: (call: WaitingCall) => void
-  onSkipAll: () => void
-  onUndo: () => void
 }) {
   const [query, setQuery] = useState("")
   const [page, setPage] = useState(1)
+  const queue = useRef<UndoToastHandle>(null)
 
   const rows = useMemo(() => (posts.status === "ready" ? postRows(posts.data.items, calls, accountId, now, skipped) : []), [posts, calls, accountId, now, skipped])
+  // The waiting calls are answered in the queue above, so All and the other filters list the rest; Waiting still lists them.
   const shown = useMemo(() => {
     const needle = query.trim().toLowerCase()
-    return rows.filter((row) => (filter === "all" || row.filter === filter) && (needle === "" || [readableText(row.post), row.meaning, row.label].join(" ").toLowerCase().includes(needle)))
+    return rows.filter((row) => (filter === "all" ? !row.call : row.filter === filter) && (needle === "" || [readableText(row.post), row.meaning, row.label].join(" ").toLowerCase().includes(needle)))
   }, [rows, filter, query])
   const pageCount = Math.max(1, Math.ceil(shown.length / PAGE_SIZE))
   const current = Math.min(page, pageCount)
@@ -115,14 +106,11 @@ export function PostsTable({
       width: 230,
       render: (_: unknown, { row }: Row) => {
         if (!row.meaning) return <span className={styles.muted}>None</span>
-        const first = row.call?.calls[0]
-        const gain = first ? gainLine(first) : null
-        // A sell held for its buy price has no buy to gain on: it says what came of that buy.
-        const held = row.call ? namedBuyNote(row.call.source) : null
+        const gain = row.call ? callGain(row.call) : null
         return (
           <span className={styles.meaning}>
             <span className={styles.meaningText}>{row.meaning}</span>
-            {held ? <span className={styles.muted}>{held}</span> : gain && <Badge tone={gain.change < 0 ? "danger" : "success"}>{gain.line}</Badge>}
+            {gain && <Badge tone={gain.change < 0 ? "danger" : "success"}>{gain.line}</Badge>}
           </span>
         )
       },
@@ -150,23 +138,6 @@ export function PostsTable({
         </span>
       ),
     },
-    {
-      key: "actions",
-      label: "Actions",
-      sortable: false,
-      width: 190,
-      render: (_: unknown, { row }: Row) =>
-        row.call ? (
-          <span className={styles.rowActions}>
-            <Button type="button" size="sm" variant="ghost" onClick={() => onSkip(row.call!)}>
-              Skip
-            </Button>
-            <Button type="button" size="sm" variant="secondary" disabled={!canCopy} onClick={() => onCopy(row.call!)} title={canCopy ? undefined : "Copying is off, so nothing can be placed yet."}>
-              {copyLabel(row.call)}
-            </Button>
-          </span>
-        ) : null,
-    },
   ]
 
   return (
@@ -176,14 +147,16 @@ export function PostsTable({
           <h2 id="posts-title" className={styles.panelTitle}>
             Guru posts
           </h2>
-          <p className={styles.panelMeta}>{calls.length === 0 ? "Nothing is waiting for you" : calls.length === 1 ? "1 waiting for you" : `${calls.length} waiting for you`}</p>
+          <div className={styles.metaRow}>
+            <p className={styles.panelMeta}>{calls.length === 0 ? "Nothing is waiting for you" : calls.length === 1 ? "1 waiting for you" : `${calls.length} waiting for you`}</p>
+            {calls.length > 1 && (
+              <Button type="button" size="sm" variant="ghost" onClick={() => calls.forEach((call) => queue.current?.remove(sourceKey(call.source), "skip"))}>
+                Skip all
+              </Button>
+            )}
+          </div>
         </div>
         <div className={styles.tools}>
-          {calls.length > 1 && (
-            <Button type="button" size="sm" variant="ghost" onClick={onSkipAll}>
-              Skip all
-            </Button>
-          )}
           <SearchField
             label="Search posts"
             value={query}
@@ -208,6 +181,8 @@ export function PostsTable({
         </div>
       </header>
 
+      <WaitingQueue calls={calls} accountId={accountId} canCopy={canCopy} now={now} onCopy={onCopy} handle={queue} />
+
       {posts.status === "loading" && <Skeleton label="Loading posts" lines={4} />}
       {posts.status === "error" && <RegionNote title="Guru posts did not load" message={posts.error} onRetry={posts.retry} />}
       {posts.status === "ready" && rows.length === 0 && (
@@ -221,7 +196,8 @@ export function PostsTable({
           }
         />
       )}
-      {posts.status === "ready" && rows.length > 0 && shown.length === 0 && (
+      {/* All with nothing else to list means every post is a waiting call, and the queue above is showing them. */}
+      {posts.status === "ready" && rows.length > 0 && shown.length === 0 && !(filter === "all" && query.trim() === "") && (
         <EmptyState
           title={filter === "waiting" && query.trim() === "" ? "Nothing is waiting for you" : "No posts match"}
           description={filter === "waiting" && query.trim() === "" ? "Calls that need an answer appear here." : "Try another word or filter."}
@@ -243,14 +219,6 @@ export function PostsTable({
             </div>
           )}
         </>
-      )}
-      {recent && (
-        <div className={styles.undo} role="status">
-          <span className={styles.undoText}>{recent.text ? `Skipped “${recent.text}”` : recent.sourceIds.length > 1 ? `Skipped ${recent.sourceIds.length} calls` : "Skipped"}</span>
-          <Button type="button" size="sm" variant="ghost" onClick={onUndo}>
-            Undo
-          </Button>
-        </div>
       )}
     </section>
   )

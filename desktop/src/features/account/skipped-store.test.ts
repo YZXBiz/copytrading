@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 // The store keeps its state in the module, so each test loads a fresh one against stand-in storage.
 async function load() {
@@ -10,33 +10,25 @@ async function load() {
   return { ...(await import("./skipped-calls")), told, data }
 }
 
-beforeEach(() => vi.useFakeTimers())
-afterEach(() => {
-  vi.useRealTimers()
-  vi.unstubAllGlobals()
-})
+afterEach(() => vi.unstubAllGlobals())
 
-describe("skipping several calls", () => {
-  it("skips them together, tells main, and one Undo brings every one back", async () => {
+describe("skipping calls", () => {
+  it("skips several together and tells main", async () => {
     const store = await load()
-    store.skipCalls([{ sourceId: "a", text: "x" }, { sourceId: "b", text: "y" }])
+    store.skipCalls(["a", "b"])
     expect(JSON.parse(store.data.get("skippedWaitingCalls")!)).toHaveProperty("a")
     expect(store.told.at(-1)).toEqual(["a", "b"])
-    store.undoSkip()
-    expect(store.told.at(-1)).toEqual([])
-    expect(JSON.parse(store.data.get("skippedWaitingCalls")!)).toEqual({})
   })
 
-  it("undoes only the last skip, and not after its time is up", async () => {
+  it("brings back exactly the calls named, however many skips came after", async () => {
     const store = await load()
-    store.skipCalls([{ sourceId: "a", text: "x" }])
-    store.skipCalls([{ sourceId: "b", text: "y" }])
-    store.undoSkip()
-    expect(store.told.at(-1)).toEqual(["a"])
-    store.skipCalls([{ sourceId: "c", text: "z" }])
-    vi.advanceTimersByTime(store.UNDO_MS + 1)
-    store.undoSkip()
-    expect(store.told.at(-1)).toEqual(["a", "c"])
+    store.skipCalls(["a"])
+    store.skipCalls(["b"])
+    store.skipCalls(["c"])
+    store.unskipCalls(["a", "b"])
+    expect(store.told.at(-1)).toEqual(["c"])
+    store.unskipCalls(["c"])
+    expect(JSON.parse(store.data.get("skippedWaitingCalls")!)).toEqual({})
   })
 
   it("does nothing for an empty list", async () => {

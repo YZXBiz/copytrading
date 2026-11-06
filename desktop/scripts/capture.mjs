@@ -5,8 +5,10 @@
 // for a panel that needs more than one press. Never shows a window or takes focus.
 // `node scripts/capture.mjs settings logs` captures only the entries whose name contains one of the words.
 import { spawnSync } from "node:child_process"
+import { mkdtempSync, rmSync } from "node:fs"
 import { createRequire } from "node:module"
-import { resolve } from "node:path"
+import { tmpdir } from "node:os"
+import { join, resolve } from "node:path"
 
 const electron = createRequire(import.meta.url)("electron")
 const out = resolve("dist/capture")
@@ -131,8 +133,31 @@ for (const [name, env] of [
   ...["1280x860", "980x860", ""].map((size) => [`stock-${size || "full"}`, { ...fixtures, COPYTRADING_CAPTURE_SIZE: size, COPYTRADING_CAPTURE_HASH: "#/stock/SOXL?account=zhap-account-2" }]),
   // Copying paused: the primary action is Start Copying.
   ["account-paused", { ...fixtures, COPYTRADING_FIXTURE_TRADING: "paused", COPYTRADING_CAPTURE_SIZE: "1280x860", COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2" }],
-  // Pressing a waiting call's row (not its buttons) opens the same review as Copy.
-  ["account-row-review", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2", COPYTRADING_CAPTURE_CLICK: "tbody tr" }],
+  // Pressing Copy on the open waiting call opens the review.
+  ["account-row-review", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2", COPYTRADING_CAPTURE_CLICK: '[id$="-detail"] button' }],
+  // The queue of waiting calls on the account page, in the "reasons" scene (a suggestion, an unclear post, a named buy that never filled,
+  // one that never reached the account, a condition, an approval): the queue, a reason opened, J/K moving, S skipping one, Skip all, and nothing waiting.
+  ...["1280x860", "980x860"].flatMap((size) => {
+    const win = { ...fixtures, COPYTRADING_FIXTURE_SCENE: "reasons", COPYTRADING_CAPTURE_SIZE: size, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2" }
+    const pause = (ms) => `await new Promise((r) => setTimeout(r, ${ms}))`
+    const keydown = (key, target = "document.activeElement") => `${target}.dispatchEvent(new KeyboardEvent("keydown", { key: ${JSON.stringify(key)}, bubbles: true }))`
+    const first = `document.querySelector("[data-trigger]")`
+    // The card sits below the first screen: bring it to the top of the window before anything else.
+    const card = `document.querySelector('[aria-labelledby="posts-title"]').scrollIntoView({ block: "start" }); ${pause(300)}`
+    const script = (steps) => ({ ...win, COPYTRADING_CAPTURE_SCRIPT: `(async () => { ${card}; ${steps} })()` })
+    return [
+      [`triage-queue-${size}`, script(pause(300))],
+      [
+        `triage-reason-${size}`,
+        script(`[...document.querySelectorAll("[data-trigger]")].find((e) => e.textContent.includes("AEHR")).click(); ${pause(700)}; document.querySelector('[id$="-detail"] button[aria-expanded]').click(); ${pause(700)}`),
+      ],
+      [`triage-keys-${size}`, script(`${first}.focus(); ${keydown("j")}; ${pause(500)}; ${keydown("j")}; ${pause(700)}`)],
+      [`triage-skip-${size}`, script(`${first}.focus(); ${keydown("s")}; ${pause(900)}`)],
+      [`triage-undo-${size}`, script(`${first}.focus(); ${keydown("s")}; ${pause(600)}; ${keydown("s", "document.querySelector('[data-trigger]')")}; ${pause(600)}; [...document.querySelectorAll("button")].find((e) => e.textContent.startsWith("Undo")).click(); ${pause(900)}`)],
+      [`triage-skipall-${size}`, script(`[...document.querySelectorAll("button")].find((e) => e.textContent.trim() === "Skip all").click(); ${pause(900)}`)],
+      [`triage-none-${size}`, { ...win, COPYTRADING_FIXTURE_SCENE: "quiet", COPYTRADING_CAPTURE_SCRIPT: `(async () => { ${card} })()` }],
+    ]
+  }),
   ["account-attention", { ...fixtures, COPYTRADING_FIXTURE_SCENE: "attention", COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2" }],
   ["activity-timed-out", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/activity/5" }],
   ["activity-picture", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/activity/6" }],
@@ -275,10 +300,13 @@ for (const [name, env] of [
 ]) {
   const only = process.argv.slice(2)
   if (only.length && !only.some((word) => name.includes(word))) continue
-  const run = spawnSync(electron, ["."], {
+  // Each run gets its own storage: a call skipped in one capture must not stay skipped in the next.
+  const userData = mkdtempSync(join(tmpdir(), "copytrading-capture-"))
+  const run = spawnSync(electron, [".", `--user-data-dir=${userData}`], {
     stdio: "inherit",
     env: { ...process.env, ...env, COPYTRADING_CAPTURE_DIR: out, COPYTRADING_CAPTURE_NAME: name },
   })
+  rmSync(userData, { recursive: true, force: true })
   if (run.status !== 0) process.exit(run.status ?? 1)
 }
 console.log(`Saved PNGs to ${out}`)

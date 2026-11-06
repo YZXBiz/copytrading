@@ -1,7 +1,7 @@
 import type { SourceActivity } from "../../../shared/contract"
 import { isOpenCall } from "@/features/activity/outcome"
 import { type OutcomeTone, postOutcome } from "./model"
-import { type WaitingCall, callPhrase } from "./waiting"
+import { type WaitingCall, meaningOf } from "./waiting"
 
 /** The filter the posts table offers; "other" posts (failed, needing review) show under All only. */
 export type PostFilter = "all" | "waiting" | "traded" | "ignored"
@@ -36,7 +36,7 @@ export function postRows(posts: SourceActivity[], calls: WaitingCall[], accountI
   const rows = posts.map((post): PostTableRow => {
     const call = waiting.get(post.sequence) ?? null
     const outcome = postOutcome(post, accountId, now)
-    if (call) return { post, call, label: "Waiting", tone: "warning-light", meaning: call.calls[0] ? callPhrase(call.calls[0]) + (call.calls.length > 1 ? ` and ${call.calls.length - 1} more` : "") : "Enter the trade yourself", filter: "waiting" }
+    if (call) return { post, call, label: "Waiting", tone: "warning-light", meaning: meaningOf(call), filter: "waiting" }
     if (isOpenCall(post, now) && skipped(sourceKey(post))) return { post, call, label: "Skipped", tone: "outline", meaning: "You skipped it", filter: "ignored" }
     const filter = outcome.tone === "outline" ? "ignored" : post.decision === "trade" && (outcome.tone === "success-light" || outcome.tone === "info-light") ? "traded" : "other"
     // Chat, and a call still waiting for the owner, have nothing to add to their badge.

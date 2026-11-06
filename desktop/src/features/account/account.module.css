@@ -93,10 +93,15 @@ button.figure { cursor: pointer; transition: background-color var(--duration-fas
 .meaningText { min-width: 0; }
 .time { display: grid; gap: 2px; font-variant-numeric: tabular-nums; }
 .time .muted { font-size: var(--text-xs); }
-.rowActions { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-1); }
 .pager { display: flex; justify-content: center; }
-.undo { display: flex; align-items: center; gap: var(--space-3); color: var(--text-secondary); font-size: var(--text-sm); }
-.undoText { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* A waiting call opened in the queue: the post, what it means with why it waits, and when. */
+.callDetail { display: grid; gap: var(--space-3); max-width: 640px; }
+.callPost { margin: 0; color: var(--foreground); line-height: 1.6; overflow-wrap: anywhere; }
+.callFact { display: grid; gap: var(--space-1); }
+.callLabel { margin: 0; color: var(--text-secondary); font-size: var(--text-sm); font-weight: 500; }
+.callMeaning { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: 0; font-weight: 500; }
+.callWhen { margin: 0; color: var(--text-muted); font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
 .skeletonHeader { min-height: 64px; }
 
 /* Breakpoints follow the page's own width, so the docked Assistant and the sidebar narrow it like a smaller window. */
@@ -112,4 +117,11 @@ button.figure { cursor: pointer; transition: background-color var(--duration-fas
 }
 @media (prefers-reduced-motion: reduce) {
   .holding, button.figure { transition: none; }
+}
+
+/* The waiting count with Skip all beside it, so the action stays with what it acts on at every width. */
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
