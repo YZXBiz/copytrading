@@ -1,5 +1,5 @@
 import type { SourceActivity, SourceInstruction } from "../../../shared/contract"
-import { HELD_FOR_OWNER, isOpenCall } from "@/features/activity/outcome"
+import { HELD_FOR_OWNER, isOpenCall, namedBuyNote, waitingWhy } from "@/features/activity/outcome"
 
 // The call a post holds for the owner (WaitingCall.swift): what Copy places, and which answer it asks for. Whether a
 // post still waits, and until when, is decided once, in the Activity feature (`isOpenCall`, `endOfTradingDay`), so the
@@ -40,6 +40,12 @@ export function waitingCall(source: SourceActivity): WaitingCall | null {
   }
 }
 
+/** Why the call waits at this account, in Activity's words: the line, and the sentence under it when there is one. */
+export function whyWaits(call: WaitingCall, accountId: string): { headline: string; note?: string } | null {
+  const destination = call.source.destinations.find((d) => d.account_id === accountId)
+  return destination ? waitingWhy(destination, call.source) : null
+}
+
 /** The call a post holds for the owner right now, or null: still open by Activity's rule, and not skipped here. */
 export const openCall = (source: SourceActivity, { skipped, now }: { skipped: boolean; now: Date }): WaitingCall | null =>
   skipped || !isOpenCall(source, now) ? null : waitingCall(source)
@@ -67,6 +73,16 @@ export function callPhrase(call: SourceInstruction): string {
   if (call.action === "close" || Number(call.fraction) === 1) return `Sell all ${call.symbol}${price}`
   return `Sell ${call.fraction ? `${shareGlyph(call.fraction)} of ` : ""}${call.symbol}${price}`
 }
+
+/** What a waiting call asks for, in one line: its first call and how many more follow, or that the owner enters the trade. */
+export const meaningOf = (call: WaitingCall): string =>
+  call.calls[0] ? callPhrase(call.calls[0]) + (call.calls.length > 1 ? ` and ${call.calls.length - 1} more` : "") : "Enter the trade yourself"
+
+/** The first call's gain against the buy it names. A sell held for its buy price has no buy to gain on, so it shows none. */
+export const callGain = (call: WaitingCall): ReturnType<typeof gainLine> => (call.calls[0] && !namedBuyNote(call.source) ? gainLine(call.calls[0]) : null)
+
+/** The button's word: enter the trade yourself, approve what the account held, or copy what the post called. */
+export const copyLabel = (call: WaitingCall): string => (call.calls.length === 0 ? "Enter trade" : call.awaitsApproval ? "Approve" : "Copy")
 
 /** A sell's gain against the buy it names, "+25.0% from $64,603.77", or null when it is not a priced sell. */
 export function gainLine(call: SourceInstruction): { change: number; line: string } | null {

@@ -317,6 +317,42 @@ const extraCalls: Draft[] =
       ]
     : []
 
+// COPYTRADING_FIXTURE_SCENE=reasons adds one call for each reason a call waits for besides a suggestion: a sell whose named buy never
+// filled, a sell whose named buy never reached the account, a condition, and an account that approves each order.
+const heldSell = (source_at: string, text: string, symbol: string, price: string, entry_price: string, named: { posted_at: string | null; outcome: string | null }): Draft => ({
+  source_at,
+  text,
+  decision: "trade",
+  reading: { kind: "trade_made", summary: text, calls: [] },
+  instructions: [{ action: "close", symbol, price, entry_price }],
+  destinations: [{ ...destination("delivered", ["named_buy_not_held"]), named_buys: [{ part: 0, ...named }] }],
+})
+
+const reasonCalls: Draft[] =
+  scene === "reasons"
+    ? [
+        heldSell("2026-11-03T16:10:00Z", "NVDA 188.5 出 150进的", "NVDA", "188.50", "150.00", { posted_at: "2026-11-03T14:10:00Z", outcome: "not_filled" }),
+        heldSell("2026-11-03T15:30:00Z", "AEHR 61.5 出 44.1进的", "AEHR", "61.50", "44.10", { posted_at: null, outcome: null }),
+        {
+          source_at: "2026-11-03T17:35:00Z",
+          text: "如果 TSLA 站上 420 就进",
+          decision: "review",
+          parser_reason: "conditional",
+          reading: { kind: "conditional", summary: "Would buy TSLA if it holds above $420", condition: "TSLA holds above $420", calls: [] },
+          instructions: [{ action: "buy", symbol: "TSLA", price: "420.00" }],
+          destinations: [destination("review_required", [])],
+        },
+        {
+          source_at: "2026-11-03T18:00:00Z",
+          text: "AMD 168.2 进",
+          decision: "trade",
+          reading: { kind: "trade_made", summary: "Bought AMD at $168.20", calls: [] },
+          instructions: [{ action: "buy", symbol: "AMD", price: "168.20" }],
+          destinations: [destination("delivered", ["approval_required"])],
+        },
+      ]
+    : []
+
 // COPYTRADING_FIXTURE_SCENE=busy adds a day of fills and chat to Nov 3; empty has no posts at all.
 const filled = (source_at: string, text: string, symbol: string, price: string, quantity: string): Draft => ({
   source_at,
@@ -394,7 +430,7 @@ const stopDrafts: Draft[] =
       ? [stopPost("2026-11-03T18:20:41Z", "剩下一半49.5的tqqq 设置下 跌破50.95出剩下的保护", "TQQQ", "50.95", "49.5", "follow_stops_off", [])]
       : []
 
-const sorted = (scene === "empty" ? [] : [...drafts, ...extraCalls, ...busyDay, ...stopDrafts, crypto])
+const sorted = (scene === "empty" ? [] : [...drafts, ...extraCalls, ...reasonCalls, ...busyDay, ...stopDrafts, crypto])
   .filter((draft) => scene !== "quiet" || !draft.destinations?.some((d) => d.status === "review_required"))
   .sort((a, b) => Date.parse(a.source_at) - Date.parse(b.source_at))
 

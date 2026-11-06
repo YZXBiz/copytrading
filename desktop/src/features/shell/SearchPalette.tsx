@@ -16,9 +16,11 @@ import { ASSISTANT_EVENT, ASSISTANT_SHORTCUT, shortcutOf } from "../../../shared
 import { CommandPalette, type CommandItem } from "@/components/arc/command-palette/command-palette"
 import { Dialog, DialogContent } from "@/components/arc/dialog/dialog"
 import { Skeleton } from "@/components/arc/skeleton/skeleton"
-import { skipCalls, useSkippedCalls } from "@/features/account/skipped-calls"
+import { useToastStack } from "@/components/arc/toast-stack/toast-stack"
+import { sourceKey } from "@/features/account/post-rows"
+import { UNDO_MS, skipCalls, unskipCalls, useSkippedCalls } from "@/features/account/skipped-calls"
 import { openCall } from "@/features/account/waiting"
-import { quoteOf, readableText } from "@/features/activity/reading"
+import { quoteOf } from "@/features/activity/reading"
 import { guruDirectory, guruName } from "@/features/gurus/model"
 import { readClock } from "@/lib/clock"
 import { ago } from "@/lib/format"
@@ -82,8 +84,9 @@ function SearchResults({ live, old, setup, close }: Props & { close: () => void 
   const posts = useResult(() => window.copytrading.read.getSourceActivity(), "search")
   const status = useResult(() => window.copytrading.read.getStatus(), "search-status")
   const skipped = useSkippedCalls()
+  const { toast } = useToastStack()
   const now = readClock()
-  const waiting = posts.status === "ready" ? posts.data.items.flatMap((post) => openCall(post, { skipped: skipped.has(post.source_id ?? String(post.sequence)), now }) ?? []) : []
+  const waiting = posts.status === "ready" ? posts.data.items.flatMap((post) => openCall(post, { skipped: skipped.has(sourceKey(post)), now }) ?? []) : []
   const state = status.status === "ready" ? status.data.state : null
   const copying = state === "running" || state === "degraded"
 
@@ -99,7 +102,11 @@ function SearchResults({ live, old, setup, close }: Props & { close: () => void 
   if (waiting.length > 0)
     entries.push({
       item: { id: "action:skip", group: "Actions", label: "Skip all waiting calls", description: `${waiting.length} waiting`, icon: icon(SkipForwardIcon) },
-      run: () => skipCalls(waiting.map((call) => ({ sourceId: call.source.source_id ?? String(call.source.sequence), text: readableText(call.source) }))),
+      run: () => {
+        const ids = waiting.map((call) => sourceKey(call.source))
+        skipCalls(ids)
+        toast({ type: "info", title: ids.length === 1 ? "Call skipped" : `${ids.length} calls skipped`, duration: UNDO_MS, action: { label: "Undo", onClick: () => unskipCalls(ids) } })
+      },
     })
   for (const { theme, label, icon: Glyph } of THEME_ACTIONS) entries.push({ item: { id: `action:theme:${theme}`, group: "Actions", label: `${label} theme`, icon: icon(Glyph) }, run: () => setTheme(theme) })
 

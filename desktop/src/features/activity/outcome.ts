@@ -300,9 +300,20 @@ export function namedBuyNote(post: SourceActivity): string | null {
   return null
 }
 
-function waitingResult(d: DestinationActivity, post: SourceActivity, open: boolean, now: Date): Result {
+/** Why a call waits for the owner at this account: the line the card leads with, and the sentence under it when there is one. */
+export function waitingWhy(d: DestinationActivity, post: SourceActivity): { headline: string; note?: string } {
   const code = post.decision === "review" ? post.parser_reason : d.instruction_outcomes.find((o) => HELD_FOR_OWNER.has(o))
   // An account that asked to approve every order is asked to approve, not to copy.
+  const approving = d.instruction_outcomes.includes("approval_required") && post.decision !== "review"
+  const short = approving || !code ? undefined : WAITING_REASONS[code]
+  const named = code === "named_buy_not_held" ? d.named_buys?.[0] : undefined
+  return {
+    headline: approving ? "Waiting for your approval" : short ? `Waiting for you: ${short}` : "Waiting for you",
+    note: (named && namedBuySentence(named, post)) || (short === undefined && code ? sentence(reasonText(code)) : undefined),
+  }
+}
+
+function waitingResult(d: DestinationActivity, post: SourceActivity, open: boolean, now: Date): Result {
   const approving = d.instruction_outcomes.includes("approval_required") && post.decision !== "review"
   if (!open) {
     return {
@@ -312,13 +323,10 @@ function waitingResult(d: DestinationActivity, post: SourceActivity, open: boole
       note: approving ? "Too late to approve: its trading day is over." : "Too late to copy: its trading day is over.",
     }
   }
-  const short = approving || !code ? undefined : WAITING_REASONS[code]
-  const named = code === "named_buy_not_held" ? d.named_buys?.[0] : undefined
   return {
     tone: "caution",
-    headline: approving ? "Waiting for your approval" : short ? `Waiting for you: ${short}` : "Waiting for you",
+    ...waitingWhy(d, post),
     facts: [{ label: approving ? "Approve by" : "Copy by", value: deadlineText(endOfTradingDay(post.source_at), now) }],
-    note: (named && namedBuySentence(named, post)) || (short === undefined && code ? sentence(reasonText(code)) : undefined),
   }
 }
 

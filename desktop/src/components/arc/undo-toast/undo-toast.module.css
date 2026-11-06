@@ -1,0 +1,178 @@
+/* The list and its toast. The toast floats over the bottom of the list, so nothing below the component moves when it appears. */
+.root {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  color: var(--foreground);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-body);
+  line-height: var(--leading-body);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.list { display: grid; min-width: 0; margin: 0; padding: 0; list-style: none; }
+
+/* Each row clips while its height springs, so the gap closes around it instead of the content spilling. */
+.row { position: relative; min-width: 0; overflow: clip; }
+.rowInner { position: relative; min-width: 0; transform-origin: 50% 50%; will-change: transform, opacity; }
+
+/* A restored row glows once in the accent, then settles, so the eye finds where it went back. */
+.flash {
+  position: absolute;
+  inset: 1px 0;
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--accent) 11%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  animation: undo-toast-flash 1.8s var(--ease-standard) .12s both;
+}
+@keyframes undo-toast-flash { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
+
+.empty { display: grid; min-width: 0; }
+
+/* ─── Toast ─── */
+
+.toastLayer {
+  position: absolute;
+  z-index: 3;
+  right: 0;
+  bottom: 12px;
+  left: 0;
+  display: flex;
+  justify-content: center;
+  padding-inline: 12px;
+  pointer-events: none;
+  container-type: inline-size;
+}
+.toastLayer[data-placement="viewport"] { position: fixed; z-index: 60; bottom: max(20px, env(safe-area-inset-bottom)); }
+
+.toastShell { width: min(100%, 372px); pointer-events: auto; transform-origin: 50% 100%; will-change: transform, opacity; }
+
+.toast {
+  position: relative;
+  display: flex;
+  /* Border, padding and the 36px Undo button, so the toast keeps its height when the button leaves. */
+  min-height: 54px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-floating);
+  transform-origin: 50% 100%;
+}
+
+.lead { position: relative; display: grid; width: 24px; height: 24px; flex: none; place-items: center; }
+.leadFace { display: grid; grid-area: 1 / 1; width: 24px; height: 24px; place-items: center; }
+.leadFace[data-lead="done"] { color: var(--success); }
+.leadFace[data-lead="error"] { color: var(--danger); }
+
+.countdown { position: relative; display: grid; width: 24px; height: 24px; place-items: center; }
+.ring { position: absolute; inset: 0; width: 100%; height: 100%; rotate: -90deg; overflow: visible; }
+.ringTrack { fill: none; stroke: var(--border); stroke-width: 2; }
+.ringFill { fill: none; stroke: var(--accent); stroke-linecap: round; stroke-width: 2; }
+.seconds { position: relative; font-size: var(--text-xs); font-variant-numeric: tabular-nums; font-weight: 500; line-height: 1; }
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border);
+  border-top-color: var(--foreground);
+  border-radius: 50%;
+  animation: undo-toast-spin .7s linear infinite;
+}
+@keyframes undo-toast-spin { to { rotate: 360deg; } }
+
+.message { position: relative; display: grid; min-width: 0; flex: 1; overflow: hidden; }
+.messageFace { grid-area: 1 / 1; min-width: 0; overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+
+.roll { position: relative; display: inline-grid; vertical-align: bottom; font-variant-numeric: tabular-nums; }
+.rollDigit { display: inline-block; grid-area: 1 / 1; }
+
+.undo {
+  display: inline-flex;
+  height: 36px;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 0 14px;
+  border: 0;
+  /* Concentric with the toast: its 20px corner minus the 8px inset. */
+  border-radius: 12px;
+  background: var(--surface-muted);
+  color: var(--foreground);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 500;
+  transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
+}
+.undo:hover { background: color-mix(in oklab, var(--foreground) 9%, var(--surface-muted)); }
+.undo:focus-visible { background: color-mix(in oklab, var(--foreground) 12%, var(--surface-muted)); }
+.undo:active { background: color-mix(in oklab, var(--foreground) 14%, var(--surface-muted)); }
+.undo:disabled { color: var(--text-muted); cursor: default; }
+
+.kbd { color: var(--text-muted); font: inherit; font-size: var(--text-xs); font-weight: 400; letter-spacing: 0; }
+@media (hover: none) { .kbd { display: none; } }
+/* On a narrow toast the message needs the room more than the shortcut hint. */
+@container (max-width: 360px) { .kbd { display: none; } }
+
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* ─── Row ─── */
+
+.item {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 10px 12px;
+  border-radius: 14px;
+  cursor: default;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+.item:hover, .item:focus-visible, .item:focus-within { background: var(--surface-muted); }
+
+.leading { display: grid; flex: none; place-items: center; }
+.body { display: grid; min-width: 0; gap: 1px; }
+.title, .description { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.title { color: var(--foreground); }
+.description { color: var(--text-secondary); }
+.item[data-unread] .title { font-weight: 500; }
+
+/* Metadata and actions share one cell: the time gives way to the buttons, so the row never reflows. */
+.trailing { display: grid; align-items: center; justify-items: end; }
+.meta, .actions { grid-area: 1 / 1; }
+.meta { pointer-events: none; color: var(--text-muted); font-size: var(--text-xs); font-variant-numeric: tabular-nums; white-space: nowrap; transition: opacity var(--duration-fast) var(--ease-standard); }
+.actions { position: relative; z-index: 1; display: flex; gap: 2px; opacity: 0; transform: translateX(6px); pointer-events: none; transition: opacity var(--duration-fast) var(--ease-standard), transform var(--duration-standard) var(--ease-standard); }
+.item:is(:hover, :focus-within) .actions { opacity: 1; transform: none; pointer-events: auto; }
+.item:is(:hover, :focus-within) .meta { opacity: 0; }
+@media (hover: none) {
+  .actions { opacity: 1; transform: none; pointer-events: auto; }
+  .meta { opacity: 0; }
+}
+
+.rowAction {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
+}
+.rowAction:hover, .rowAction:focus-visible { background: color-mix(in oklab, var(--foreground) 7%, transparent); color: var(--foreground); }
+.rowAction:active { background: color-mix(in oklab, var(--foreground) 11%, transparent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .flash { animation-duration: .9s; }
+  .spinner { animation-duration: 1.4s; }
+  .actions { transform: none; }
+}
