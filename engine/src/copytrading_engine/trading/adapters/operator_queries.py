@@ -1,6 +1,7 @@
 """Project committed source, parser and account evidence for the private UI."""
 
 import datetime as dt
+import functools
 import json
 import sqlite3
 from contextlib import closing
@@ -69,10 +70,12 @@ def source_page(
     destinations: dict[str, tuple[DestinationView, ...]],
     source_ids: tuple[str, ...] | None = None,
     channel: tuple[str, str] | None = None,
+    channels: tuple[tuple[str, str], ...] | None = None,
 ) -> SourceActivityPage:
     """A page of posts, newest first; given `channel` (source, channel ID), only the posts read
-    for that channel's guru, with no rejected posts; or, given `source_ids`, exactly those posts
-    however old, with no page and no rejected posts."""
+    for that channel's guru, with no rejected posts; given `channels`, only the posts of those
+    channels; or, given `source_ids`, exactly those posts however old, with no page and no
+    rejected posts."""
     if source_ids is None:
         if not 1 <= limit <= 100 or (before_seq is not None and before_seq < 1):
             raise ValueError("Invalid source activity page")
@@ -85,6 +88,14 @@ def source_page(
             )
             prefix = f"{channel[0]}:{channel[1]}:"
             bound = (*bound, len(prefix), prefix)
+        if channels is not None:
+            # Only the channels the setup follows: a page of other channels' posts is read for
+            # nothing and makes a month of Activity many pages long.
+            prefixes = tuple(f"{source}:{channel_id}:" for source, channel_id in channels)
+            where += (
+                " AND (" + (" OR ".join("substr(capture.id,1,?)=?" for _ in prefixes) or "0") + ")"
+            )
+            bound = (*bound, *(value for prefix in prefixes for value in (len(prefix), prefix)))
     else:
         limit = max(1, len(source_ids))
         where = f"capture.id IN ({','.join('?' for _ in source_ids)})"
@@ -438,6 +449,14 @@ def historical_source_message(database: Path, source_id: str) -> RawMessage:
     return source
 
 
+@functools.lru_cache(maxsize=8)
+def _decoded_snapshot(raw: str) -> LedgerSnapshot:
+    """A ledger row decoded once per content: every screen reads the same few accounts every few
+    seconds, and decoding a busy account's row costs far more than reading it (the snapshot is
+    frozen, so sharing it is safe)."""
+    return decode_ledger_snapshot(raw)
+
+
 def _retained_snapshot(db: sqlite3.Connection) -> LedgerSnapshot:
     revision = db.execute(
         "SELECT revision FROM copytrading_engine_schema_revisions WHERE component='execution'"
@@ -450,7 +469,7 @@ def _retained_snapshot(db: sqlite3.Connection) -> LedgerSnapshot:
     row = db.execute("SELECT data FROM snapshot WHERE singleton=1").fetchone()
     if identity is None or row is None:
         raise RuntimeError("Retained account evidence is incomplete")
-    snapshot = decode_ledger_snapshot(row[0])
+    snapshot = _decoded_snapshot(row[0])
     if (snapshot.environment, snapshot.account_id) != identity:
         raise RuntimeError("Retained account identity mismatch")
     return snapshot
@@ -521,6 +540,7 @@ class SQLiteOperatorEvidence:
         destinations: dict[str, tuple[DestinationView, ...]],
         source_ids: tuple[str, ...] | None = None,
         channel: tuple[str, str] | None = None,
+        channels: tuple[tuple[str, str], ...] | None = None,
     ) -> SourceActivityPage:
         return source_page(
             database,
@@ -529,6 +549,7 @@ class SQLiteOperatorEvidence:
             destinations=destinations,
             source_ids=source_ids,
             channel=channel,
+            channels=channels,
         )
 
     def guru_posts(self, database: Path, *, since: dt.datetime) -> tuple[GuruPost, ...]:
