@@ -18,7 +18,7 @@ import { ActivityPosts, type PostFilter } from "./ActivityTable"
 import { type Mix, MixChart } from "./MixChart"
 import { PostsChart } from "./PostsChart"
 import { RegionAlert } from "./RegionAlert"
-import { activityRows } from "./activity-rows"
+import { activityRows, followedPosts } from "./activity-rows"
 import { dayCounts, dayKey, dayRows, guruMix, shiftDay, skipReasons } from "./post-bucket"
 import { usePosts } from "./use-posts"
 import styles from "./activity.module.css"
@@ -33,7 +33,7 @@ export function ActivityScreen({ selectedSequence, accounts }: { selectedSequenc
   const [filter, setFilter] = useState<PostFilter>("all")
   const [accountId, setAccountId] = useState<string | null>(null)
   const posts = usePosts((before_seq, limit) => window.copytrading.read.getSourceActivity({ before_seq, limit }), "activity")
-  const { gurus } = useGurus()
+  const { gurus, config } = useGurus()
   const now = readClock()
   const zone = getTimeZone()
   const today = dayKey(now, zone)
@@ -42,8 +42,9 @@ export function ActivityScreen({ selectedSequence, accounts }: { selectedSequenc
   const accountIds = accounts.status === "ready" ? accounts.data.items.map((a) => a.account_id) : []
   const nameOf = (id: string | null) => guruName(gurus, id)
 
-  const items = posts.status === "ready" ? posts.items : null
-  const oldest = items?.at(-1)
+  const all = posts.status === "ready" ? posts.items : null
+  const oldest = all?.at(-1)
+  const items = useMemo(() => (all ? followedPosts(all, config) : null), [all, config])
   const [readBack, readAll] = [posts.status === "ready" && posts.hasOlder && posts.older === "idle", oldest !== undefined && dayKey(new Date(oldest.source_at), zone) > shiftDay(today, 1 - DAYS)]
   // The charts need the whole month: keep reading older pages until the oldest post is past it.
   useEffect(() => {
@@ -68,7 +69,7 @@ export function ActivityScreen({ selectedSequence, accounts }: { selectedSequenc
 
   if (posts.status === "loading") return <ActivitySkeleton />
   if (posts.status === "error") return <RegionAlert title="Posts did not load" message={posts.error} onRetry={posts.retry} />
-  if (posts.items.length === 0) {
+  if (items!.length === 0) {
     return (
       <div className={styles.page}>
         <EmptyState
