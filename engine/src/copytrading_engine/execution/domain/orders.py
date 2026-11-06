@@ -115,7 +115,7 @@ def copy_client_id(message_key: str, part: int, attempt: int = 1) -> str:
 # A stop order is cancelled to match its shares, as a later copied sell or a newer stop changes
 # what it protects, or to leave its shares to a sell that needs them (ADR-0015).
 type CancelReason = Literal[
-    "timeout", "replaced_by_sell", "copying_stopped", "stop_resized", "made_room_for_sell"
+    "timeout", "replaced_by_sell", "copying_stopped", "stop_resized", "made_room_for_order"
 ]
 # Statuses that say Alpaca has the order live on the market; an order's timeout runs from the first
 # of them, not from when it was sent, since Alpaca can hold an order before it goes out.

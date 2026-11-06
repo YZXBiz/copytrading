@@ -172,7 +172,7 @@ SELL_WAITS = frozenset(
 )
 # After Alpaca refuses a stop, it is tried again this often, not every cycle.
 STOP_RETRY_SECONDS = 300
-# A sell cancels the stock's stops and waits for Alpaca to confirm, polling this many times.
+# A copied order cancels the stock's stops and waits for Alpaca to confirm, polling this often.
 STOP_CLEAR_POLLS = 8
 STOP_CLEAR_POLL_SECONDS = 0.5
 # A waiting sell is planned again at most this often: each plan is five Alpaca requests, and the
@@ -962,16 +962,13 @@ class CopyEngine:
             now,
         )
 
-    def _sell_in_flight(self, symbol: str) -> bool:
-        """A sell of the stock is working or about to go out, and needs its shares."""
-        return any(
-            order.side == "sell" and order.type != "stop" for order in self.pending(symbol)
-        ) or any(
+    def _order_in_flight(self, symbol: str) -> bool:
+        """A copied order of the stock is working or about to go out: a sell needs the shares a
+        stop would hold, and Alpaca refuses a stop beside a buy as a possible wash trade."""
+        return any(order.type != "stop" for order in self.pending(symbol)) or any(
             message.status == "queued"
             and any(
-                isinstance(part, Pending)
-                and instruction.action != "buy"
-                and instruction.symbol == symbol
+                isinstance(part, Pending) and instruction.symbol == symbol
                 for instruction, part in zip(message.instructions, message.parts, strict=True)
             )
             for message in self.ledger.state.messages.values()
@@ -1025,7 +1022,7 @@ class CopyEngine:
         if (
             now < self._stop_retry_at.get(rule.key, dt.datetime.min.replace(tzinfo=dt.UTC))
             or self.market_session(now, rule.symbol) != Session.REGULAR
-            or self._sell_in_flight(rule.symbol)
+            or self._order_in_flight(rule.symbol)
             # An older stop order still holds some of these shares: wait for its cancel to confirm.
             or any(
                 order.type == "stop"
@@ -1078,11 +1075,11 @@ class CopyEngine:
         return order.qty <= held
 
     def _clear_stops(self, symbol: str, now: dt.datetime) -> bool:
-        """Cancel the stock's stop orders, which hold shares a sell needs, and wait for Alpaca to
-        confirm. The sync places each again for what is left once the sell is done."""
+        """Cancel the stock's stop orders, which a copied order cannot go out beside, and wait for
+        Alpaca to confirm. The sync places each again for what is left once the order is done."""
         stops = [order for order in self.pending(symbol) if order.type == "stop"]
         for order in stops:
-            self.cancel(order, now, "made_room_for_sell")
+            self.cancel(order, now, "made_room_for_order")
         for attempt in range(STOP_CLEAR_POLLS):
             for order in stops:
                 if (update := self.broker.lookup(order.client_id)) is not None:
@@ -1228,12 +1225,14 @@ class CopyEngine:
         try:
             with self.observer.span("order_submission", message_key):
                 blocked, current = guard.check(order)
-                if blocked is None and order.side == "sell" and order.type != "stop":
-                    # A stop holds the shares a sell needs: Alpaca would refuse the sell. It is
-                    # cancelled first, and the sync places it again for what is left.
+                if blocked is None and order.type != "stop":
+                    # Alpaca refuses a sell of the shares a stop holds, and a buy beside a resting
+                    # stop as a possible wash trade. The stop is cancelled first, and the sync
+                    # places it again for what is left once the order is done.
                     blocked = (
                         None
-                        if self._clear_stops(order.symbol, current) and self._still_held(order)
+                        if self._clear_stops(order.symbol, current)
+                        and (order.side == "buy" or self._still_held(order))
                         else "stop_still_open"
                     )
                 if blocked is not None:

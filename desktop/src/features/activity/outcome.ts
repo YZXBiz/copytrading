@@ -188,7 +188,7 @@ function cancelReason(order: OrderActivity): string {
     case "replaced_by_sell": return "the guru sold it first"
     case "copying_stopped": return "copying stopped"
     case "stop_resized": return "the stop was resized after a sell"
-    case "made_room_for_sell": return "the stop made room for a sell"
+    case "made_room_for_order": return "the stop made room for a copied order"
     case "cancelled_at_broker": return "cancelled at Alpaca"
     case "rejected": return "Alpaca rejected it"
     default: return order.status === "expired" ? "the trading day ended" : "cancelled before it filled"

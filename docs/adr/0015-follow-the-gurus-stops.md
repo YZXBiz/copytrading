@@ -40,9 +40,9 @@ What Alpaca does with a stop, from its documentation and from paper checks on 32
    the protected buy that CopyTrading still holds ([ADR-0010](0010-the-reader-reads-rules-pick-shares.md)'s
    per-buy `entry_remaining`), never more, never the owner's own shares, never for a buy that did
    not fill. A stop beside a buy waits for the buy's fill to settle.
-4. **Every copied sell goes through the stops.** Alpaca reserves the shares, so before a copied sell
-   is submitted the engine cancels the stock's stops and waits for each cancel to confirm; if one
-   will not clear, the sell is aborted and tried again (`stop_still_open`). When the sell fills, the
+4. **Every copied order goes through the stops.** Alpaca reserves a sell's shares and refuses a buy
+   beside a resting stop, so before a copied sell or buy is submitted the engine cancels the stock's stops and waits for each cancel to confirm; if one
+   will not clear, the order is aborted (`stop_still_open`; a sell tries again). When it is done, the
    stop is placed again for what is left, or ended when nothing is. A new stop for the same buy
    replaces the old one. Sells and stops are never trimmed or blocked by caps.
 5. **A stop fill is a sell from that buy**, recorded with the stop's post as its source, so lots,
@@ -54,9 +54,9 @@ What Alpaca does with a stop, from its documentation and from paper checks on 32
    stop type in this design.
 8. **Closing the engine leaves stops working.** `close()` cancels the engine's working orders but
    not stops: they keep guarding at Alpaca, and recovery reads them back from the rule.
-9. **A buy beside a resting stop** is refused by Alpaca as a wash trade. The engine does not
-   work around it: it counts a stop as not crossing a buy, and the refused buy is reported with
-   Alpaca's own reason like any other refusal.
+9. **A buy beside a resting stop** would be refused by Alpaca as a wash trade, so it cancels the
+   stop first (point 4). The stop is off while the buy works (up to the buy's timeout) and comes back
+   for the buys it protects; a stop does not grow to cover a later buy unless the guru posts one.
 
 ## Not covered
 * **No protection outside regular hours.** The stop does not trigger before 9:30 or after 4:00 New

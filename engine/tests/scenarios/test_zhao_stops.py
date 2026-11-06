@@ -124,6 +124,10 @@ async def test_a_stop_that_fills_closes_the_buy_and_is_recorded_as_a_sell(tmp_pa
 
         [sale] = await rig.until(recorded, "the stop fill to reach the ledger")
         assert (sale.order_type, sale.stop_price) == ("stop", Decimal("38.4"))
-        overview = await rig.overview("paper")
-        [position] = overview.positions
-        assert (position.owned_qty, position.stops, position.lots) == (0, (), ())
+
+        async def closed():
+            [position] = (await rig.overview("paper")).positions
+            return (position.owned_qty, position.stops, position.lots) == (0, (), ())
+
+        # The stop rule ends on the cycle after the fill lands, so wait for it, not one read.
+        await rig.until(closed, "the stopped-out buy to close")

@@ -169,6 +169,23 @@ def test_a_copied_sell_is_not_blocked_by_the_stop_that_holds_its_shares():
     )
 
 
+def test_a_copied_buy_beside_a_resting_stop_goes_out_and_the_stop_comes_back():
+    """Alpaca refuses a buy while a sell stop of the stock rests (a possible wash trade), so the
+    stop is cancelled first and placed again for the buys it protects once the buy is done."""
+    engine, broker = engine_for()
+    buy_at(engine, "1", "49.5")
+    first_qty = engine.ledger.owned("ABC")
+    deliver(engine, stop_post("2", "44"))
+    [first] = live_stops(engine)
+    deliver(engine, event("3", price="48"))
+    engine.process(NOW)
+    assert engine.ledger.owned("ABC") > first_qty
+    assert broker.orders[first.client_id]["status"] == "canceled"
+    [again] = live_stops(engine)
+    assert again.client_id != first.client_id
+    assert (again.qty, again.stop_price) == (first_qty, Decimal("44"))
+
+
 def test_a_new_stop_for_the_same_buy_replaces_the_old_one():
     engine, broker = engine_for()
     buy_at(engine, "1", "49.5")

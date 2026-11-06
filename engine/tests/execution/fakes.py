@@ -154,6 +154,15 @@ class FakeBroker:
         cid = request["client_order_id"]
         if self.refuse_stops and request["type"] == "stop":
             raise BrokerError(422)
+        # Alpaca refuses a buy while a sell stop of the stock rests, as a possible wash trade.
+        if request["side"] == "buy" and any(
+            o["symbol"] == request["symbol"]
+            and o["side"] == "sell"
+            and o["type"] == "stop"
+            and o["status"] not in {"canceled", "filled", "expired", "rejected"}
+            for o in self.orders.values()
+        ):
+            raise BrokerError(403)
         self.orders[cid] = {
             **request,
             "id": f"broker-{self.calls}",
