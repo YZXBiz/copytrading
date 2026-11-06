@@ -2,6 +2,15 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
+## 0.1.0-beta.11 — developer preview
+
+Follow the guru's stops if you choose to, Activity totals you can trust, and a missed buy caught.
+
+- **Follow the guru's stops (off by default).** Turn on **Follow the guru's stops** in an account's limits, and when the guru posts a stop ("跌破50.95出剩下的保护", "止损放38.4"), CopyTrading places a stop order at Alpaca for the shares it bought on that buy, never your own. A copied sell shrinks the stop or ends it, a newer stop replaces it, and a stop that fills is recorded as a sell from that buy. Alpaca triggers stops in regular hours only, so there is no protection overnight or on weekends. With the setting off, a stop post is skipped as "Following the guru's stops is off" instead of waiting for a Copy that would have sold at once.
+- **Stops on the screen.** An active stop shows as "Stop $44.50" on the holding and the stock page; a stop post reads "Stop TQQQ at $50.95" in Activity and on the account page.
+- **Activity counts only the channels you follow.** Posts from channels outside your setup no longer inflate Posts and Traded, and reopening Activity keeps what it already read instead of counting again.
+- **Fixed:** a buy reported as already done near a reference price ("在…附近加了") was read as a plan and not copied. It is now copied as a trade.
+
 ## 0.1.0-beta.10 — developer preview
 
 Every screen redrawn on one calmer design, a page for each stock, and Activity no longer flashes while it loads.
