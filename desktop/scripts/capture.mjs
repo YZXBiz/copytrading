@@ -222,6 +222,48 @@ for (const [name, env] of [
   }),
   ["assistant-empty", { ...fixtures, COPYTRADING_CAPTURE_SCRIPT: click("button", "Assistant") }],
   ["assistant-answer", { ...fixtures, COPYTRADING_CAPTURE_SCRIPT: askAssistant }],
+  // Agent access: requests waiting (one the app can approve, one it can only show), the recent log open, nothing waiting, and an
+  // approval the app could not finish (the fixtures do not carry approvals, so Approve ends in its error).
+  ...["1280x860", "980x860"].flatMap((size) => {
+    const win = { COPYTRADING_CAPTURE_SIZE: size }
+    return [
+      [`agents-requests-${size}`, settings("agents", win)],
+      [`agents-log-${size}`, settings("agents", { ...win, COPYTRADING_CAPTURE_SCRIPT: click("button", "Recent requests") })],
+      [`agents-empty-${size}`, settings("agents", { ...win, COPYTRADING_FIXTURE_STATE: "agents-empty" })],
+      [`agents-approve-error-${size}`, settings("agents", { ...win, COPYTRADING_CAPTURE_SCRIPT: click("button", "Approve", 1200) })],
+    ]
+  }),
+  // Connect in each editor sheet: the check running, failed with the service's reason, and answered. Then the same from a row on the page.
+  ...["1280x860", "980x860"].flatMap((size) => {
+    const sheet = (kind, state, press = "Connect") => ({
+      ...fixtures,
+      COPYTRADING_CAPTURE_HASH: `#/settings/connections/${kind}`,
+      COPYTRADING_FIXTURE_SETUP: "saved",
+      COPYTRADING_FIXTURE_TRADING: "paused",
+      COPYTRADING_FIXTURE_STATE: state,
+      COPYTRADING_CAPTURE_SIZE: size,
+      COPYTRADING_CAPTURE_SCRIPT: click('[role="dialog"] button', press, 1200),
+    })
+    return [
+      [`connect-discord-running-${size}`, sheet("discord", "check-running")],
+      [`connect-discord-failed-${size}`, sheet("discord", "check-failed")],
+      [`connect-discord-connected-${size}`, sheet("discord", "check-ready")],
+      [`connect-interpreter-failed-${size}`, sheet("interpreter", "check-failed")],
+      [`connect-account-connected-${size}`, sheet("account:0", "check-ready")],
+      [`connect-row-failed-${size}`, { ...fixtures, COPYTRADING_FIXTURE_SETUP: "saved", COPYTRADING_FIXTURE_TRADING: "paused", COPYTRADING_FIXTURE_STATE: "check-failed", COPYTRADING_CAPTURE_SIZE: size, COPYTRADING_CAPTURE_HASH: "#/settings/connections", COPYTRADING_CAPTURE_SCRIPT: `(async () => { document.querySelector('button[aria-label="Connect Discord"]').click(); await new Promise((r) => setTimeout(r, 1200)) })()` }],
+    ]
+  }),
+  // The rail's highlight and labels: the highlight gliding from Accounts to Settings (frames while it moves), the folded rail with the
+  // pointer over its Settings icon (its tip), and the rail while it folds.
+  ...["1280x860", "980x860"].flatMap((size) => {
+    const win = { ...fixtures, COPYTRADING_CAPTURE_SIZE: size, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2" }
+    const collapse = `document.querySelector('button[aria-label="Collapse sidebar"]').click()`
+    return [
+      [`rail-glide-${size}`, { ...win, COPYTRADING_CAPTURE_FRAMES: "4", COPYTRADING_CAPTURE_GAP: "70", COPYTRADING_CAPTURE_SCRIPT: `(async () => { await ${click("a", "Settings", 0)} })()` }],
+      [`rail-collapsed-tip-${size}`, { ...win, COPYTRADING_CAPTURE_HOVER: "32,783@2", COPYTRADING_CAPTURE_FRAMES: "4", COPYTRADING_CAPTURE_GAP: "300", COPYTRADING_CAPTURE_SCRIPT: `(async () => { ${collapse}; await new Promise((r) => setTimeout(r, 600)) })()` }],
+      [`rail-folding-${size}`, { ...win, COPYTRADING_CAPTURE_FRAMES: "4", COPYTRADING_CAPTURE_GAP: "60", COPYTRADING_CAPTURE_SCRIPT: `(async () => { ${collapse} })()` }],
+    ]
+  }),
   // Getting Started and Connections
   ...setupCaptures(),
   ["live", {}],

@@ -115,8 +115,9 @@ export const settingsReads: Record<string, (params: Params) => Promise<Result<un
   getSecretStatus: () => ok(secrets),
   getEngineStatus: () => ok(engine),
   readDiagnostics: () => ok({ entries: journal, bytes: 184_320 }),
-  listProposals: () => ok(proposals),
-  getAgentAudit: () => ok(audit),
+  // COPYTRADING_FIXTURE_STATE=agents-empty: nothing waiting and nothing recorded.
+  listProposals: () => ok(process.env.COPYTRADING_FIXTURE_STATE === "agents-empty" ? [] : proposals),
+  getAgentAudit: () => ok(process.env.COPYTRADING_FIXTURE_STATE === "agents-empty" ? [] : audit),
   getRestoreCandidate: () => ok(process.env.COPYTRADING_FIXTURE_STATE === "pending-restore" ? pendingRestore : null),
   getAssistantTurn: () => ok(process.env.COPYTRADING_FIXTURE_STATE === "assistant-error" ? failedTurn : turn),
 }
