@@ -109,6 +109,8 @@ export interface AccountPolicy {
   overnight: boolean
   copy_exits: boolean
   approve_orders: boolean
+  /** Place a stop order when the guru posts one (ADR-0015); a saved setup without it reads as off. */
+  follow_stops: boolean
   max_above_signal_pct: string
   max_below_signal_pct: string
   recovery_preference: RecoveryPreference
@@ -232,12 +234,21 @@ export interface PositionLot {
   unrealized_pl?: Decimal | null
 }
 
+/** A stop guarding some of a stock's shares: the guru's price, the shares it covers, and whether its order is open at Alpaca now. */
+export interface PositionStop {
+  stop_price: Decimal
+  quantity: Decimal
+  working: boolean
+  source_id: string
+}
+
 export interface Position {
   symbol: string
   owned_qty: Decimal
   external_qty?: Decimal
   broker_qty?: Decimal | null
   lots: PositionLot[]
+  stops?: PositionStop[]
   avg_entry_price: Decimal | null
   current_price: Decimal | null
   market_value: Decimal | null
@@ -299,6 +310,15 @@ export interface SourceInstruction {
   exit_basis?: string | null
 }
 
+/** A stop the post sets, as the engine read it; placed only for an account that follows the guru's stops. */
+export interface SourceStop {
+  symbol: string
+  stop_price: Decimal
+  /** The buy it protects, by the price the post names; or `buy_part`, the post's own buy; or neither, every share CopyTrading holds of the stock. */
+  entry_price?: Decimal | null
+  buy_part?: number | null
+}
+
 export interface OrderActivity {
   client_id: string
   symbol: string
@@ -307,6 +327,7 @@ export interface OrderActivity {
   quantity: Decimal
   filled_quantity: Decimal
   limit_price: Decimal | null
+  stop_price?: Decimal | null
   average_fill_price: Decimal | null
   broker_id: string | null
   created_at: string
@@ -329,6 +350,8 @@ export interface DestinationActivity {
   account_id: string
   status: string
   instruction_outcomes: string[]
+  /** How each stop the post set went: the same words as `instruction_outcomes`. */
+  stop_outcomes?: string[]
   environment?: string
   /** A buy skipped for want of room under a limit: the call (`part`), which limit, and its numbers. */
   limits_hit?: { part: number; scope: "symbol" | "total"; current: Decimal; proposed: Decimal; limit: Decimal }[]
@@ -387,6 +410,7 @@ export type ReadSize =
   | { kind: "not_given" }
 export type ReadShare = { kind: "fraction"; value: Decimal; words: string } | { kind: "all"; words: string } | { kind: "not_given" }
 export type ReadSellFrom = { kind: "lot"; buy_price: Decimal; words: string } | { kind: "not_said" }
+export type ReadProtects = ReadSellFrom | { kind: "alongside"; call: number }
 export type ReadCall =
   | { action: "buy"; action_words: string; stock: { ticker: string; words: string }; price: ReadPrice; size: ReadSize; repeats?: string | null }
   | {
@@ -398,6 +422,7 @@ export type ReadCall =
       sell_from: ReadSellFrom
       repeats?: string | null
     }
+  | { action: "stop"; action_words: string; stock: { ticker: string; words: string }; price: ReadPrice; protects: ReadProtects }
 export type PostReading =
   | { kind: "trade_made" | "instruction" | "suggestion"; summary: string; calls: ReadCall[] }
   | { kind: "conditional"; summary: string; condition: string; calls: ReadCall[] }
@@ -412,6 +437,7 @@ export interface SourceActivity {
   decision: "trade" | "review" | "ignore" | null
   guru_id: string | null
   instructions: SourceInstruction[]
+  stops?: SourceStop[]
   destinations: DestinationActivity[]
   source_id?: string
   author_id?: string | null

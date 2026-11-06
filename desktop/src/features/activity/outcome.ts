@@ -5,7 +5,7 @@ import { dollars, partOfText, sharesOf } from "@/lib/quantity"
 import { reasonText, sentence } from "@/lib/reasons"
 import { deadlineText, endOfTradingDay, tradingDay } from "./deadline"
 import { duration, filledAmount, num, orderDollars, plannedAmount } from "./amounts"
-import { decisionTitle, enteredByOwner } from "./reading"
+import { decisionTitle, enteredByOwner, stopPhrase } from "./reading"
 
 // What each account did with a post, in plain words (DestinationOutcome.swift, ActivityCardOutcome.swift).
 
@@ -20,7 +20,7 @@ export const BADGE = {
   inactive: "outline",
 } as const satisfies Record<Tone, string>
 
-export type OrderKind = "filled" | "partly" | "working" | "cancelled" | "failed" | "review"
+export type OrderKind = "filled" | "partly" | "working" | "stop" | "cancelled" | "failed" | "review"
 
 export interface OrderOutcome {
   kind: OrderKind
@@ -35,8 +35,33 @@ export const isOwnerEntry = (o: OrderActivity) => o.client_id.startsWith("manual
 
 const ENDED_UNFILLED = ["canceled", "expired", "done_for_day", "replaced", "released_unsubmitted", "aborted_before_submit"]
 
+/**
+ * A stop order that ended without selling anything: the engine cancels it to make room for a copied sell, shrinks it,
+ * and places it again each session, because Alpaca keeps a stop for one day. It is the same stop, not a failure.
+ */
+const isSupersededStop = (o: OrderActivity) => o.order_type === "stop" && ENDED_UNFILLED.includes(o.status) && (num(o.filled_quantity) ?? 0) === 0
+
+/** The orders of one account's post that the post's card tells about. */
+export const shownOrders = (d: DestinationActivity): OrderActivity[] => (d.orders ?? []).filter((o) => !isSupersededStop(o))
+
+/** Every part of a post an account decided: its buys and sells, then its stops. */
+export const partOutcomes = (d: DestinationActivity): string[] => [...d.instruction_outcomes, ...(d.stop_outcomes ?? [])]
+
+/** A stop order: resting at Alpaca counts as traded, and its fill is a sale. */
+function stopOrderOutcome(order: OrderActivity): OrderOutcome {
+  const as = (kind: OrderKind, title: string, tone: Tone, detail: string): OrderOutcome => ({ kind, title, tone, detail })
+  // The post names its stop the same way whatever became of it: "Stop TQQQ at $50.95", then the state.
+  const phrase = stopPhrase(order.symbol, num(order.stop_price) === null ? null : order.stop_price!)
+  if (order.status === "filled") return as("filled", "Filled", "positive", `${phrase} filled`)
+  if (order.status === "partially_filled" || (num(order.filled_quantity) ?? 0) > 0) return as("partly", "Partly filled", "neutral", `${phrase} partly filled`)
+  if (order.status === "rejected") return as("failed", "Failed", "critical", `Alpaca rejected the stop for ${order.symbol}`)
+  if (order.status === "uncertain" || order.status === "unrecognized") return as("review", "Needs review", "caution", `The broker has not confirmed the stop for ${order.symbol}`)
+  return as("stop", "Stop placed", "positive", phrase)
+}
+
 /** One order in a phrase, dollar first: "Bought $199.82 of PM stock", "Order for $200 of PM stock was cancelled". */
 export function orderOutcome(order: OrderActivity, count = 1): OrderOutcome {
+  if (order.order_type === "stop") return stopOrderOutcome(order)
   const selling = order.side === "sell"
   const filled = num(order.filled_quantity) ?? 0
   const planned = plannedAmount(order) ?? order.symbol
@@ -70,7 +95,7 @@ export interface DestinationOutcome {
 
 /** What one account did with one post, in the order a trader cares about. */
 export function destinationOutcome(d: DestinationActivity): DestinationOutcome {
-  const copied = (d.orders ?? []).filter((o) => !isOwnerSale(o))
+  const copied = shownOrders(d).filter((o) => !isOwnerSale(o))
   if (copied[0]) return orderOutcome(copied[0], copied.length)
   if (d.status === "review_required") {
     const why = d.instruction_outcomes.find((o) => o !== "review_required" && o !== "pending")
@@ -162,6 +187,8 @@ function cancelReason(order: OrderActivity): string {
     }
     case "replaced_by_sell": return "the guru sold it first"
     case "copying_stopped": return "copying stopped"
+    case "stop_resized": return "the stop was resized after a sell"
+    case "made_room_for_sell": return "the stop made room for a sell"
     case "cancelled_at_broker": return "cancelled at Alpaca"
     case "rejected": return "Alpaca rejected it"
     default: return order.status === "expired" ? "the trading day ended" : "cancelled before it filled"
@@ -184,8 +211,13 @@ function orderResult(order: OrderActivity, postedAt: number): Result {
   const planned = plannedAmount(order) ?? order.symbol
   let headline: string
   switch (outcome.kind) {
+    case "stop":
+      headline = outcome.detail
+      facts.push({ label: "Stop price", value: money(order.stop_price) })
+      facts.push({ label: "Shares", value: sharesOf(parseDec(order.quantity) ?? 0n, order.symbol) })
+      break
     case "filled":
-      headline = `${isOwnerSale(order) || (isOwnerEntry(order) && !buying) ? "You sold" : isOwnerEntry(order) ? "You bought" : buying ? "Bought" : "Sold"} ${filledAmount(order) ?? planned}`
+      headline = order.order_type === "stop" ? outcome.detail : `${isOwnerSale(order) || (isOwnerEntry(order) && !buying) ? "You sold" : isOwnerEntry(order) ? "You bought" : buying ? "Bought" : "Sold"} ${filledAmount(order) ?? planned}`
       facts.push({ label: "Price", value: money(order.average_fill_price) })
       facts.push({ label: "Shares", value: sharesOf(parseDec(order.filled_quantity) ?? 0n, order.symbol) })
       break
@@ -298,7 +330,7 @@ function staleNote(post: SourceActivity): string {
 
 function resultsFor(d: DestinationActivity, post: SourceActivity, waits: boolean, open: boolean, now: Date): Result[] {
   const postedAt = Date.parse(post.source_at)
-  const results = (d.orders ?? []).map((o) => orderResult(o, postedAt))
+  const results = shownOrders(d).map((o) => orderResult(o, postedAt))
   d.instruction_outcomes.forEach((outcome, part) => {
     if (CARRIED_ON.has(outcome) || HELD_FOR_OWNER.has(outcome) || (waits && outcome === "review_required")) return
     const instruction = post.instructions[part]
@@ -314,6 +346,13 @@ function resultsFor(d: DestinationActivity, post: SourceActivity, waits: boolean
         facts: [],
       })
     } else results.push({ tone: "inactive", headline: selling ? "Not sold" : "Not bought", facts: [], note: reasonText(outcome) })
+  })
+  // A stop the account did not place says why: mostly that it does not follow the guru's stops.
+  const stopOutcomes = d.stop_outcomes ?? []
+  stopOutcomes.forEach((outcome, part) => {
+    if (CARRIED_ON.has(outcome) || HELD_FOR_OWNER.has(outcome)) return
+    const stop = post.stops?.[part]
+    results.push({ tone: "inactive", headline: stop ? `${stopPhrase(stop.symbol, stop.stop_price)} not placed` : "Stop not placed", facts: [], note: reasonText(outcome) })
   })
   // A sell with no fresh bid yet keeps waiting, and asks Alpaca again every 30 seconds.
   if (d.instruction_outcomes.includes("waiting_for_quote")) results.push({ tone: "neutral", headline: reasonText("waiting_for_quote"), facts: [] })
@@ -334,10 +373,10 @@ export function cardOutcome(post: SourceActivity, now: Date): CardOutcome {
     return { id: d.account_id, environment: d.environment ?? "paper", results: resultsFor(d, post, waits, open, now), waits: waits && open }
   })
   // The owner's own sales are theirs, not the post's: they never decide how the post did.
-  const orders = post.destinations.flatMap((d) => d.orders ?? []).filter((o) => !isOwnerSale(o))
+  const orders = post.destinations.flatMap(shownOrders).filter((o) => !isOwnerSale(o))
   const outcomes = orders.map((o) => orderOutcome(o))
   const unsettled = outcomes.find((o) => o.tone !== "positive")
-  const skipped = post.destinations.some((d) => d.instruction_outcomes.some((o) => !CARRIED_ON.has(o)) || ["stale", "out_of_order"].includes(d.status))
+  const skipped = post.destinations.some((d) => partOutcomes(d).some((o) => !CARRIED_ON.has(o)) || ["stale", "out_of_order"].includes(d.status))
   let title: string
   let tone: Tone
   if (post.decision === "ignore") [title, tone] = ["Ignored", "inactive"]

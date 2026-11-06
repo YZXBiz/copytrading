@@ -7,7 +7,7 @@ import { parseDec } from "./decimal"
 
 type MoneyKey = "max_order_usd" | "max_symbol_usd" | "max_total_usd" | "daily_loss_cap_usd" | "max_above_signal_pct" | "max_below_signal_pct"
 type CountKey = "max_entries_per_day" | "max_signal_age_seconds" | "order_timeout_seconds"
-type FlagKey = "extended_hours" | "overnight" | "copy_exits" | "approve_orders"
+type FlagKey = "extended_hours" | "overnight" | "copy_exits" | "approve_orders" | "follow_stops"
 
 export interface TextField {
   key: MoneyKey
@@ -45,11 +45,15 @@ export const TIMING_LIMITS: CountField[] = [
   { key: "order_timeout_seconds", title: "Order timeout (seconds)", hint: "An unfilled buy is cancelled. A sell keeps waiting.", step: 5 },
 ]
 
+export const FOLLOW_STOPS_TITLE = "Follow the guru's stops"
+export const FOLLOW_STOPS_HINT = "Places a stop order when the guru posts one. Regular hours only."
+
 export const BEHAVIORS: FlagField[] = [
   { key: "extended_hours", title: "Trade in extended hours", hint: "4:00 AM–9:30 AM and 4:00 PM–8:00 PM New York time, with limit orders." },
   { key: "overnight", title: "Trade overnight", hint: "8:00 PM–4:00 AM New York time. Needs extended hours." },
   { key: "copy_exits", title: "Copy exits", hint: "Off means you sell copied shares yourself." },
   { key: "approve_orders", title: "Ask me before sending orders", hint: "Each order waits for your approval." },
+  { key: "follow_stops", title: FOLLOW_STOPS_TITLE, hint: FOLLOW_STOPS_HINT },
 ]
 
 export const RECOVERY_HINT: Record<RecoveryPreference, string> = {
@@ -69,7 +73,8 @@ export function draftFromPolicy(policy: AccountPolicy): LimitsDraft {
   return {
     ...Object.fromEntries(MONEY_KEYS.map((k) => [k, policy[k]])),
     ...Object.fromEntries(COUNT_KEYS.map((k) => [k, String(policy[k])])),
-    ...Object.fromEntries(FLAG_KEYS.map((k) => [k, policy[k]])),
+    // A setup saved before a switch existed has no value for it, which reads as off.
+    ...Object.fromEntries(FLAG_KEYS.map((k) => [k, policy[k] === true])),
     recovery_preference: policy.recovery_preference,
   } as LimitsDraft
 }

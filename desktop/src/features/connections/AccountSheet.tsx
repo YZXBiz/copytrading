@@ -9,6 +9,7 @@ import { MoneyField } from "./MoneyField"
 import { NumberInput } from "./NumberInput"
 import { SwitchField } from "./SwitchField"
 import { TextField } from "./TextField"
+import { FOLLOW_STOPS_HINT, FOLLOW_STOPS_TITLE } from "@/features/account/limits"
 import { accountNameProblem } from "./draft"
 import { applyLimits, connect, editAccount, editPolicy, isCopying, keysOf, removeAccount, useSetup } from "./setup-store"
 import { accountSubject, resultFor, same } from "./state"
@@ -175,6 +176,7 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
             checked={account.policy.approve_orders}
             onChange={(approve_orders) => editPolicy(uid, { approve_orders })}
           />
+          <SwitchField title={FOLLOW_STOPS_TITLE} hint={FOLLOW_STOPS_HINT} checked={account.policy.follow_stops === true}onChange={(follow_stops) => editPolicy(uid, { follow_stops })} />
         </div>
         <ChoiceField
           label="After a restart"

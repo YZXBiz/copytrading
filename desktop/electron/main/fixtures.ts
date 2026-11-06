@@ -40,6 +40,8 @@ const overview: AccountOverview = {
     lots: lots[p.symbol]
       ? [{ lot_id: `lot-${p.symbol}`, guru_id: lots[p.symbol]!.guru, posted_at: POSTED[p.symbol] ?? null, remaining_qty: p.qty, average_price: p.avg_entry_price, bought_at: POSTED[p.symbol] ?? null, unrealized_pl: p.unrealized_pl }]
       : [],
+    // COPYTRADING_FIXTURE_SCENE=stops: an account that follows the guru's stops, with one resting on its SOXL.
+    stops: process.env.COPYTRADING_FIXTURE_SCENE === "stops" && p.symbol === "SOXL" ? [{ stop_price: "44.5", quantity: p.qty, working: true, source_id: "discord:1100000000000000001:1" }] : [],
     avg_entry_price: p.avg_entry_price,
     current_price: p.current_price,
     market_value: p.market_value,

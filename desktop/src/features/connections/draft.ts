@@ -25,6 +25,7 @@ export const DEFAULT_POLICY: AccountPolicy = {
   overnight: false,
   copy_exits: true,
   approve_orders: false,
+  follow_stops: false,
   max_above_signal_pct: "0",
   max_below_signal_pct: "1",
   recovery_preference: "manual",

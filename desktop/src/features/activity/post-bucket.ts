@@ -1,6 +1,6 @@
 import type { SourceActivity } from "../../../shared/contract"
 import { reasonText } from "@/lib/reasons"
-import { CARRIED_ON, HELD_FOR_OWNER, isOpenCall, isOwnerSale, orderOutcome } from "./outcome"
+import { CARRIED_ON, HELD_FOR_OWNER, isOpenCall, isOwnerSale, orderOutcome, partOutcomes, shownOrders } from "./outcome"
 
 // How a post ended, in the four words the page counts by, and the counts the page's cards and charts draw.
 
@@ -13,8 +13,9 @@ export function bucketOf(post: SourceActivity, now: Date): Bucket | null {
   if (post.decision === "ignore") return "ignored"
   if (isOpenCall(post, now)) return "waiting"
   if (post.decision === null) return null
-  const orders = post.destinations.flatMap((d) => d.orders ?? []).filter((o) => !isOwnerSale(o))
-  return orders.some((o) => ["filled", "partly", "working"].includes(orderOutcome(o).kind)) ? "traded" : "skipped"
+  const orders = post.destinations.flatMap(shownOrders).filter((o) => !isOwnerSale(o))
+  // A stop resting at Alpaca counts as traded; a stop skipped because the account does not follow stops counts as skipped.
+  return orders.some((o) => ["filled", "partly", "working", "stop"].includes(orderOutcome(o).kind)) ? "traded" : "skipped"
 }
 
 // ── Days, in the zone the app shows times in ──
@@ -125,7 +126,7 @@ export function skipReasons(posts: SourceActivity[], now: Date, top = 5): { reas
     if (bucketOf(post, now) !== "skipped") continue
     const reasons = new Set<string>()
     for (const d of post.destinations) {
-      for (const o of d.instruction_outcomes) if (!CARRIED_ON.has(o) && !HELD_FOR_OWNER.has(o)) reasons.add(reasonText(o))
+      for (const o of partOutcomes(d)) if (!CARRIED_ON.has(o) && !HELD_FOR_OWNER.has(o)) reasons.add(reasonText(o))
       if (["stale", "out_of_order"].includes(d.status)) reasons.add(reasonText(d.status))
     }
     for (const reason of reasons.size > 0 ? reasons : new Set(["Not copied"])) counts.set(reason, (counts.get(reason) ?? 0) + 1)

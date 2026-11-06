@@ -1,6 +1,6 @@
 import type { AccountOverview, GuruDayStats, GuruPerformance, SourceActivity, TradingConfiguration, TradingEnvironment } from "../../../shared/contract"
 import { num } from "../activity/amounts"
-import { isOpenCall, orderOutcome, isOwnerSale, cardOutcome } from "../activity/outcome"
+import { isOpenCall, orderOutcome, isOwnerSale, cardOutcome, partOutcomes, shownOrders } from "../activity/outcome"
 import { readAsLine } from "../activity/reading"
 import { groupByDay } from "../activity/time"
 
@@ -50,12 +50,13 @@ export function guruAccountOutcomes(post: SourceActivity, now: Date): GuruAccoun
     const account = card.accounts[index]!
     const [first, ...rest] = account.results
     const summary = rest.length > 0 ? `${first!.headline} and ${rest.length} more` : (first?.headline ?? "")
-    const orders = (d.orders ?? []).filter((o) => !isOwnerSale(o)).map((o) => orderOutcome(o))
+    const orders = shownOrders(d).filter((o) => !isOwnerSale(o)).map((o) => orderOutcome(o))
     let kind: OutcomeKind
     if (account.waits) kind = "waiting"
-    else if (orders.some((o) => o.kind === "filled" || o.kind === "partly")) kind = "traded"
+    // A stop resting at Alpaca is a trade made, as a filled order is.
+    else if (orders.some((o) => o.kind === "filled" || o.kind === "partly" || o.kind === "stop")) kind = "traded"
     else if (orders.some((o) => o.kind === "working" || o.kind === "review")) kind = "working"
-    else if (orders.length > 0 || d.instruction_outcomes.some((o) => !CARRIED_ON.includes(o)) || ["stale", "out_of_order", "ignored"].includes(d.status)) kind = "notTraded"
+    else if (orders.length > 0 || partOutcomes(d).some((o) => !CARRIED_ON.includes(o)) || ["stale", "out_of_order", "ignored"].includes(d.status)) kind = "notTraded"
     else kind = "settled"
     return { accountId: d.account_id, summary, kind }
   })
@@ -188,7 +189,7 @@ export function trendRows(series: GuruPerformance["series"], days: number | null
 
 /** The first stock a post named or traded, for its logo; none for chat. */
 export function postSymbol(post: SourceActivity): string | null {
-  return post.instructions[0]?.symbol ?? post.destinations.flatMap((d) => d.orders ?? [])[0]?.symbol ?? null
+  return post.instructions[0]?.symbol ?? post.stops?.[0]?.symbol ?? post.destinations.flatMap((d) => d.orders ?? [])[0]?.symbol ?? null
 }
 
 /** Win rate as a fraction; null with no closed trade, since 0 of 0 is not a rate. */

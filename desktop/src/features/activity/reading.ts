@@ -64,17 +64,25 @@ export function callHeadline(call: ReadCall): { title: string; detail: string | 
       case "not_given": return { title, detail: null }
     }
   }
+  if (call.action === "stop") {
+    const protects = call.protects.kind === "lot" ? `the ${call.stock.ticker} bought at ${dollars(call.protects.buy_price)}` : call.protects.kind === "alongside" ? "the buy in this post" : `every ${call.stock.ticker} share CopyTrading holds`
+    return { title: stopPhrase(call.stock.ticker, call.price.kind === "exact" ? call.price.value : null), detail: `Sells ${protects} if the price falls to it` }
+  }
   const from = call.sell_from.kind === "lot" ? ` of the ${call.stock.ticker} bought at ${dollars(call.sell_from.buy_price)}` : ` of ${call.stock.ticker}`
   return { title: `Sell ${share(call.share)}${from}`, detail: capitalize(price(call.price)) }
 }
 
+/** "Stop TQQQ at $50.95": a stop the guru posted, the way a post that sets one is named everywhere. */
+export const stopPhrase = (symbol: string, stopPrice: string | null): string => (stopPrice === null ? `Stop ${symbol}` : `Stop ${symbol} at ${dollars(stopPrice)}`)
+
 /** What a call's sentence leaves implicit: a buy with no size buys a full position, a sell naming no buy sells from every buy. */
 export function callNote(call: ReadCall): string | null {
+  if (call.action === "stop") return null
   if (call.action === "buy") return call.size.kind === "not_given" ? "no size given, so a full position" : null
   return call.sell_from.kind === "lot" ? null : "from every buy of it"
 }
 
-export const isRepost = (call: ReadCall) => Boolean(call.repeats)
+export const isRepost = (call: ReadCall) => call.action !== "stop" && Boolean(call.repeats)
 
 /** The sentence a post with no calls gets: the reader's own summary, or what kind of post it was. */
 export function noCallLine(reading: PostReading): string {
@@ -153,6 +161,8 @@ export function decisionTitle(post: SourceActivity): string {
 /** What the post asked for, in plain words: "Buy ABC at $12.34 and 1 more". */
 export function headline(post: SourceActivity): string {
   const first = post.instructions[0]
+  const stops = post.stops ?? []
+  if (!first && stops[0]) return stopPhrase(stops[0].symbol, stops[0].stop_price) + (stops.length > 1 ? ` and ${stops.length - 1} more` : "")
   if (!first) {
     if (enteredByOwner(post)) return "You entered the trade"
     if (post.reading?.kind === "chatter") return "Just chat, nothing to trade"
@@ -163,7 +173,8 @@ export function headline(post: SourceActivity): string {
       default: return post.capture_status === "historical" ? "Earlier message" : "Reading the message…"
     }
   }
-  const rest = post.instructions.length > 1 ? ` and ${post.instructions.length - 1} more` : ""
+  const more = post.instructions.length - 1 + stops.length
+  const rest = more > 0 ? ` and ${more} more` : ""
   return instructionPhrase(first) + rest
 }
 

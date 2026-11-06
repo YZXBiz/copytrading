@@ -38,6 +38,8 @@ const policy = {
   overnight: false,
   copy_exits: true,
   approve_orders: false,
+  // COPYTRADING_FIXTURE_SCENE=stops is an account that follows the guru's stops.
+  follow_stops: process.env.COPYTRADING_FIXTURE_SCENE === "stops",
   max_above_signal_pct: "0",
   max_below_signal_pct: "1",
   recovery_preference: "manual",
@@ -353,7 +355,46 @@ const busyDay: Draft[] =
       ]
     : []
 
-const sorted = (scene === "empty" ? [] : [...drafts, ...extraCalls, ...busyDay, crypto])
+// COPYTRADING_FIXTURE_SCENE=stops is an account that follows the guru's stops: one stop resting on its SOXL, one that filled.
+// stops-off is an account that does not (the default setting): the same TQQQ post, skipped.
+const stopOrder = (client_id: string, o: Partial<OrderActivity> & Pick<OrderActivity, "symbol" | "status" | "created_at">): OrderActivity =>
+  order(client_id, { side: "sell", order_type: "stop", ...o })
+const stopPost = (source_at: string, text: string, symbol: string, price: string, entry: string | null, outcome: string, orders: OrderActivity[]): Draft => ({
+  source_at,
+  text,
+  decision: "trade",
+  interpreted_by: "deepseek-flash",
+  reading: {
+    kind: "trade_made",
+    summary: `A stop on ${symbol} at $${price}`,
+    calls: [
+      {
+        action: "stop",
+        action_words: "跌破",
+        stock: { ticker: symbol, words: symbol.toLowerCase() },
+        price: exact(price, price),
+        protects: entry ? { kind: "lot", buy_price: entry, words: entry } : { kind: "not_said" },
+      },
+    ],
+  },
+  stops: [{ symbol, stop_price: price, entry_price: entry }],
+  destinations: [{ ...destination("done", [], orders), stop_outcomes: [outcome] }],
+})
+const stopDrafts: Draft[] =
+  scene === "stops"
+    ? [
+        stopPost("2026-11-03T19:05:12Z", "剩下的一点soxl做个跌破44.5全出的保护 或者不想博弈全出都可以 扛不住要休息下了", "SOXL", "44.5", null, "order_linked", [
+          stopOrder("stp-soxl-1", { symbol: "SOXL", status: "accepted", quantity: "6.679793", stop_price: "44.5", created_at: "2026-11-03T19:05:20Z" }),
+        ]),
+        stopPost("2026-11-03T18:20:41Z", "剩下一半49.5的tqqq 设置下 跌破50.95出剩下的保护", "TQQQ", "50.95", "49.5", "order_linked", [
+          stopOrder("stp-tqqq-1", { symbol: "TQQQ", status: "filled", quantity: "12.5", filled_quantity: "12.5", stop_price: "50.95", average_fill_price: "50.9", created_at: "2026-11-03T18:20:50Z" }),
+        ]),
+      ]
+    : scene === "stops-off"
+      ? [stopPost("2026-11-03T18:20:41Z", "剩下一半49.5的tqqq 设置下 跌破50.95出剩下的保护", "TQQQ", "50.95", "49.5", "follow_stops_off", [])]
+      : []
+
+const sorted = (scene === "empty" ? [] : [...drafts, ...extraCalls, ...busyDay, ...stopDrafts, crypto])
   .filter((draft) => scene !== "quiet" || !draft.destinations?.some((d) => d.status === "review_required"))
   .sort((a, b) => Date.parse(a.source_at) - Date.parse(b.source_at))
 

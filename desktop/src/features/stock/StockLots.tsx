@@ -4,6 +4,7 @@ import { Button } from "@/components/arc/button/button"
 import { EmptyState } from "@/components/arc/empty-state/empty-state"
 import SortableDataTable from "@/components/arc/sortable-data-table/sortable-data-table"
 import { parseDec } from "@/features/account/decimal"
+import { stopLine } from "@/features/account/stops"
 import { dateTime, shares, signedMoney, signedPercent } from "@/lib/format"
 import { usd } from "@/lib/quantity"
 import styles from "./stock.module.css"
@@ -78,7 +79,7 @@ export function StockLots({ symbol, position, price, onSell }: { symbol: string;
           <h2 id="lots-title" className={styles.panelTitle}>
             Your {symbol}
           </h2>
-          <p className={styles.panelMeta}>{rows.length === 0 ? "No shares held" : rows.length === 1 ? "1 buy held" : `${rows.length} buys held`}</p>
+          <p className={styles.panelMeta}>{[rows.length === 0 ? "No shares held" : rows.length === 1 ? "1 buy held" : `${rows.length} buys held`, position && stopLine(position)].filter(Boolean).join(" · ")}</p>
         </div>
       </header>
       {rows.length === 0 ? (
