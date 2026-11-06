@@ -1,6 +1,7 @@
 """Project committed source, parser and account evidence for the private UI."""
 
 import datetime as dt
+import functools
 import json
 import sqlite3
 from contextlib import closing
@@ -448,6 +449,14 @@ def historical_source_message(database: Path, source_id: str) -> RawMessage:
     return source
 
 
+@functools.lru_cache(maxsize=8)
+def _decoded_snapshot(raw: str) -> LedgerSnapshot:
+    """A ledger row decoded once per content: every screen reads the same few accounts every few
+    seconds, and decoding a busy account's row costs far more than reading it (the snapshot is
+    frozen, so sharing it is safe)."""
+    return decode_ledger_snapshot(raw)
+
+
 def _retained_snapshot(db: sqlite3.Connection) -> LedgerSnapshot:
     revision = db.execute(
         "SELECT revision FROM copytrading_engine_schema_revisions WHERE component='execution'"
@@ -460,7 +469,7 @@ def _retained_snapshot(db: sqlite3.Connection) -> LedgerSnapshot:
     row = db.execute("SELECT data FROM snapshot WHERE singleton=1").fetchone()
     if identity is None or row is None:
         raise RuntimeError("Retained account evidence is incomplete")
-    snapshot = decode_ledger_snapshot(row[0])
+    snapshot = _decoded_snapshot(row[0])
     if (snapshot.environment, snapshot.account_id) != identity:
         raise RuntimeError("Retained account identity mismatch")
     return snapshot
