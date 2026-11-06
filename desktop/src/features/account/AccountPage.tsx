@@ -1,5 +1,6 @@
 import { useRef, useState } from "react"
 import type { AccountOverview, Position } from "../../../shared/contract"
+import { CatchUpCard } from "@/features/activity/CatchUpCard"
 import { readClock } from "@/lib/clock"
 import { useResult } from "@/lib/use-result"
 import styles from "./account.module.css"
@@ -101,6 +102,7 @@ export function AccountPage({
       />
       <ControlNotes control={control} saved={limitsSaved} />
       <AccountNotices account={account} status={copyingStatus} onResolved={changed} />
+      <CatchUpCard posts={posts.status === "ready" ? posts.data.items : null} now={now} nameOf={(guru) => guru ?? ""} accountId={id} compact />
       <BalanceHero account={account} version={version} onRefresh={changed} />
       <Figures
         account={account}

@@ -129,13 +129,19 @@ function order(client_id: string, o: Partial<OrderActivity> & Pick<OrderActivity
   }
 }
 
-const destination = (status: string, instruction_outcomes: string[], orders: OrderActivity[] = []): DestinationActivity => ({
+const destination = (status: string, instruction_outcomes: string[], orders: OrderActivity[] = [], timeline?: DestinationActivity["timeline"]): DestinationActivity => ({
   account_id: ACCOUNT,
   environment: "paper",
   status,
   instruction_outcomes,
   orders,
+  ...(timeline && { timeline }),
 })
+
+type Step = NonNullable<DestinationActivity["timeline"]>[number]
+/** The account's steps as the engine writes them: each a name and the seconds after the post, with the order it belongs to. */
+const steps = (posted: string, rows: [step: string, seconds: number, extra?: Partial<Step>][]): Step[] =>
+  rows.map(([step, seconds, extra]) => ({ step, at: new Date(Date.parse(posted) + seconds * 1000).toISOString(), client_id: null, reason: null, quantity: null, price: null, ...extra }))
 
 type Draft = Omit<SourceActivity, "sequence" | "source_id" | "decision" | "guru_id" | "instructions" | "destinations"> &
   Partial<Pick<SourceActivity, "decision" | "guru_id" | "instructions" | "destinations">>
@@ -187,6 +193,13 @@ const drafts: Draft[] = [
             budget_usd: "100",
           }),
         ],
+        steps("2026-11-03T17:20:08Z", [
+          ["received", 4.2],
+          ["sized", 4.4, { client_id: "sig-soxl-1", quantity: "1.119", price: "89.37" }],
+          ["sent", 4.6, { client_id: "sig-soxl-1" }],
+          ["accepted", 5.1, { client_id: "sig-soxl-1" }],
+          ["filled", 6.3, { client_id: "sig-soxl-1", quantity: "1.119", price: "89.31" }],
+        ]),
       ),
     ],
   },
@@ -246,6 +259,14 @@ const drafts: Draft[] = [
             quote_ask: "40.62",
           }),
         ],
+        steps("2026-11-03T14:30:02Z", [
+          ["received", 4.2],
+          ["sized", 4.5, { client_id: "sig-soxs-1", quantity: "2.469", price: "40.45" }],
+          ["sent", 4.7, { client_id: "sig-soxs-1" }],
+          ["accepted", 5.1, { client_id: "sig-soxs-1" }],
+          ["cancel_requested", 65.1, { client_id: "sig-soxs-1", reason: "timeout" }],
+          ["cancelled", 65.8, { client_id: "sig-soxs-1" }],
+        ]),
       ),
     ],
   },
@@ -259,7 +280,7 @@ const drafts: Draft[] = [
       calls: [{ action: "sell", action_words: "出了", stock: { ticker: "AEHR", words: "aehr" }, price: exact("61.5", "61.5"), share: { kind: "all", words: "出了" }, sell_from: { kind: "not_said" } }],
     },
     instructions: [{ action: "close", symbol: "AEHR", price: "61.50" }],
-    destinations: [destination("delivered", ["no_open_lot"])],
+    destinations: [destination("delivered", ["no_open_lot"], [], steps("2026-11-02T21:13:43Z", [["received", 4.2], ["skipped", 4.4, { reason: "no_open_lot" }]]))],
   },
   { ...real(5), reading: { kind: "chatter" } },
 ]
@@ -285,7 +306,16 @@ const crypto: Draft = {
   destinations: [
     destination("delivered", ["order_linked"], [
       order("sig-sol-1", { symbol: "SOL/USD", side: "buy", status: "filled", quantity: "0.704", filled_quantity: "0.704", limit_price: "142", average_fill_price: "141.9", created_at: "2026-11-02T15:00:14Z", requested_usd: "100", budget_usd: "100" }),
-    ]),
+    ], steps("2026-11-02T15:00:12Z", [
+      ["received", 4.2],
+      ["held", 4.2, { reason: "waiting_for_resume" }],
+      ["resumed", 1325.4],
+      ["sized", 1325.7, { client_id: "sig-sol-1", quantity: "0.704", price: "142" }],
+      ["sent", 1325.9, { client_id: "sig-sol-1" }],
+      ["accepted", 1326.3, { client_id: "sig-sol-1" }],
+      ["partially_filled", 1327.1, { client_id: "sig-sol-1", quantity: "0.3", price: "141.9" }],
+      ["filled", 1329.8, { client_id: "sig-sol-1", quantity: "0.704", price: "141.9" }],
+    ])),
   ],
 }
 
@@ -414,8 +444,17 @@ const stopPost = (source_at: string, text: string, symbol: string, price: string
     ],
   },
   stops: [{ symbol, stop_price: price, entry_price: entry }],
-  destinations: [{ ...destination("done", [], orders), stop_outcomes: [outcome] }],
+  destinations: [{ ...destination("done", [], orders, orders.length > 0 ? stopSteps(source_at, orders[0]!) : steps(source_at, [["received", 4.2], ["skipped", 4.4, { reason: outcome }]])), stop_outcomes: [outcome] }],
 })
+/** A stop's steps: placed a few seconds after the post, and when it filled, hours later. */
+const stopSteps = (posted: string, o: OrderActivity): Step[] =>
+  steps(posted, [
+    ["received", 4.2],
+    ["sized", 4.6, { client_id: o.client_id, quantity: o.quantity, price: o.stop_price }],
+    ["sent", 4.8, { client_id: o.client_id }],
+    ["accepted", 9.2, { client_id: o.client_id }],
+    ...(o.status === "filled" ? ([["filled", 7_380, { client_id: o.client_id, quantity: o.filled_quantity, price: o.average_fill_price }]] as [string, number, Partial<Step>][]) : []),
+  ])
 const stopDrafts: Draft[] =
   scene === "stops"
     ? [
@@ -444,7 +483,7 @@ export const posts: SourceActivity[] = sorted
     sequence: index + 1,
     // The channel of the guru's route, as the engine writes it: Activity shows only the channels the setup follows.
     source_id: `discord:110000000000000000${(draft.guru_id ?? ZHAO) === CRYPTO ? 2 : 1}:${index + 1}`,
-    captured_at: new Date(Date.parse(draft.source_at) + 4000).toISOString(),
+    captured_at: new Date(Date.parse(draft.source_at) + 500).toISOString(),
     capture_status: "delivered",
     delivery_status: "delivered",
     read_started_at: new Date(Date.parse(draft.source_at) + 1000).toISOString(),

@@ -1,0 +1,144 @@
+/* Each row sets --c to its color; spans, connectors and the legend dot read it. The body sets --axis (the line's length in its own
+   units) and every position on the line is a percentage of --axis, so bars and connectors share one grid without measuring. */
+.root {
+  --tint: 24%;
+  position: relative;
+  container-type: inline-size;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  letter-spacing: var(--tracking-body);
+}
+:global([data-theme="dark"]) .root { --tint: 34%; }
+
+.inner {
+  --gutter: var(--space-4);
+  --label-w: 160px;
+  --plot-min: 180px;
+  display: grid;
+  min-width: 0;
+  gap: var(--space-4);
+  padding-block: var(--space-5);
+}
+
+/* Header: the title, then one line of what the run covers. */
+.header { display: grid; min-width: 0; gap: 2px; padding-inline: var(--gutter); }
+.title { margin: 0; color: var(--foreground); font-size: var(--text-base); font-weight: 500; line-height: var(--leading-body); letter-spacing: var(--tracking-body); }
+.status { min-width: 0; margin: 0; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.part { color: var(--foreground); }
+.sep { color: var(--text-muted); }
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* Body: a sticky label column and the plot. Below the plot's minimum width the body scrolls inside its own frame. */
+.scroller { min-width: 0; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+.body { display: grid; min-width: 0; grid-template-columns: var(--label-w) minmax(calc(var(--plot-min) + 12px + var(--gutter)), 1fr); }
+.labels { position: sticky; left: 0; z-index: 6; min-width: 0; padding: var(--pad) var(--space-3) var(--axis-h) var(--gutter); background: var(--surface); transition: box-shadow var(--duration-fast) var(--ease-standard); }
+.scroller[data-scrolled] .labels { box-shadow: 1px 0 0 var(--border); }
+.label { display: grid; height: var(--row); min-width: 0; grid-template-columns: 8px minmax(0, 1fr); grid-template-areas: "dot name" ". model"; align-content: center; align-items: center; column-gap: 10px; }
+.labelText { display: contents; }
+.dot { grid-area: dot; width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--c); }
+.name { grid-area: name; overflow: hidden; color: var(--foreground); font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.model { grid-area: model; display: flex; min-width: 0; align-items: center; gap: 5px; color: var(--text-muted); font-size: var(--text-xs); }
+.modelName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mark { display: inline-grid; width: 12px; height: 12px; flex: none; color: var(--text-secondary); }
+.mark > svg { width: 100%; height: 100%; }
+
+.track { min-width: 0; padding: 0 var(--gutter) 0 12px; }
+.plot { position: relative; height: calc(var(--rows-h) + var(--axis-h)); }
+.grid { position: absolute; inset: 0 0 var(--axis-h); pointer-events: none; }
+.gridline { position: absolute; top: 0; bottom: 0; width: 1px; margin-left: -.5px; background: var(--border-subtle); }
+
+/* Spans grow from their start with the clock: width follows --now, so a bar's leading edge moves every frame without React. */
+.row { position: absolute; left: 0; right: 0; z-index: 2; height: var(--row); pointer-events: none; }
+.span {
+  --fill: color-mix(in oklab, var(--c) var(--tint), var(--surface));
+  position: absolute;
+  top: calc((var(--row) - var(--bar)) / 2);
+  left: calc(var(--s) / var(--axis) * 100% + .75px);
+  display: grid;
+  width: max(0px, calc(clamp(0, var(--now) - var(--s), var(--d)) / var(--axis) * 100% - 1.5px));
+  height: var(--bar);
+  place-items: center;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: var(--fill);
+  color: var(--surface);
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard), border-radius var(--duration-fast) var(--ease-standard);
+}
+.span[data-kind="tool"] { --fill: var(--c); }
+.span[data-kind="waiting"] {
+  background: repeating-linear-gradient(-45deg, color-mix(in oklab, var(--c) 30%, transparent) 0 1px, transparent 1px 5px), color-mix(in oklab, var(--c) 5%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--c) 24%, transparent);
+}
+.span[data-failed] { background: color-mix(in oklab, var(--danger) 14%, var(--surface)); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--danger) 55%, transparent); color: var(--danger); }
+.span[data-dim] { opacity: .28; }
+.spanIcon { width: 11px; height: 11px; animation: appear var(--duration-fast) var(--ease-enter); }
+@media (hover: hover) and (pointer: fine) {
+  .span:hover { --fill: color-mix(in oklab, var(--c) calc(var(--tint) + 10%), var(--surface)); }
+  .span[data-kind="tool"]:hover { --fill: color-mix(in oklab, var(--c) 86%, var(--foreground)); }
+}
+
+/* Connectors: an elbow box with two borders and one rounded corner. They draw in from the side the handoff leaves. */
+.links, .ports { position: absolute; inset: 0; pointer-events: none; }
+.links { z-index: 1; }
+.ports { z-index: 3; }
+.link { position: absolute; box-sizing: border-box; border: 0 solid var(--c); transition: opacity var(--duration-fast) var(--ease-standard); }
+.link[data-shape="out"][data-dir="down"] { border-bottom-width: 1.5px; border-left-width: 1.5px; border-bottom-left-radius: 7px; }
+.link[data-shape="out"][data-dir="up"] { border-top-width: 1.5px; border-left-width: 1.5px; border-top-left-radius: 7px; }
+.link[data-shape="in"][data-dir="up"] { border-right-width: 1.5px; border-bottom-width: 1.5px; border-bottom-right-radius: 7px; }
+.link[data-shape="in"][data-dir="down"] { border-top-width: 1.5px; border-right-width: 1.5px; border-top-right-radius: 7px; }
+.link[data-shape="line"] { border-left-width: 1.5px; }
+.link[data-draw][data-dir="down"] { animation: draw-down 360ms var(--ease-standard) backwards; }
+.link[data-draw][data-dir="up"] { animation: draw-up 360ms var(--ease-standard) backwards; }
+.port { position: absolute; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 1.5px var(--surface); transition: opacity var(--duration-fast) var(--ease-standard); }
+.port[data-draw] { animation: port-in var(--duration-fast) var(--ease-enter) var(--delay) backwards; }
+.plot[data-path] .link:not([data-hot]), .plot[data-path] .port:not([data-hot]) { opacity: .16; }
+
+/* Footer: the legend. */
+.footer { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-4); padding-inline: var(--gutter); }
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin: 0; padding: 0; color: var(--text-secondary); font-size: var(--text-xs); list-style: none; }
+.legend li { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.swatch { --c: var(--text-secondary); width: 14px; height: 8px; border-radius: 3px; }
+.swatch[data-kind="thinking"] { background: color-mix(in oklab, var(--c) 28%, var(--surface)); }
+.swatch[data-kind="tool"] { background: var(--c); }
+.swatch[data-kind="waiting"] { background: repeating-linear-gradient(-45deg, color-mix(in oklab, var(--c) 40%, transparent) 0 1px, transparent 1px 4px); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--c) 30%, transparent); }
+.legendIcon, .legendFailed { width: 13px; height: 13px; }
+.legendIcon { color: var(--text-muted); }
+.legendFailed { color: var(--danger); }
+
+/* Span card: one floating layer that glides between spans. */
+.cardLayer { position: absolute; z-index: 20; top: 0; left: 0; width: min(280px, calc(100% - 16px)); pointer-events: none; }
+.card { position: relative; box-sizing: content-box; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--surface-raised); box-shadow: var(--shadow-floating); }
+.cardBody { display: grid; gap: 3px; padding: 12px 14px; }
+.cardHead { display: flex; min-width: 0; align-items: center; gap: 6px; margin: 0; font-size: var(--text-xs); }
+.cardAgent { flex: none; color: var(--foreground); font-weight: 500; }
+.cardModel { overflow: hidden; color: var(--text-muted); text-overflow: ellipsis; white-space: nowrap; }
+.cardLabel { margin: 0; color: var(--foreground); }
+.cardMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; margin: 2px 0 0; color: var(--text-secondary); font-size: var(--text-xs); }
+.cardTool { display: inline-flex; align-items: center; gap: 5px; }
+.cardFailed, .cardNote { display: flex; align-items: flex-start; gap: 6px; margin: 2px 0 0; color: var(--text-secondary); font-size: var(--text-xs); }
+.cardFailed { color: var(--danger); }
+.cardFailed svg, .cardNote svg { width: 13px; height: 13px; flex: none; margin-top: 1.5px; }
+
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+
+@container (max-width: 520px) {
+  .inner { --gutter: var(--space-4); --label-w: 160px; --plot-min: 180px; }
+  .label { grid-template-areas: "dot name"; }
+  .model { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .span, .link, .port { transition: none; }
+}

@@ -15,6 +15,8 @@ import { ActivityHeader } from "./ActivityHeader"
 import { ActivityMetrics } from "./ActivityMetrics"
 import { ActivitySkeleton } from "./ActivitySkeleton"
 import { ActivityPosts, type PostFilter } from "./ActivityTable"
+import { CatchUpCard } from "./CatchUpCard"
+import { LOOK_MS, markLooked } from "./last-looked"
 import { type Mix, MixChart } from "./MixChart"
 import { PostsChart } from "./PostsChart"
 import { RegionAlert } from "./RegionAlert"
@@ -63,6 +65,12 @@ export function ActivityScreen({ selectedSequence, accounts }: { selectedSequenc
   // including while one is in flight (`readBack` is false then, which made the charts flash between pages).
   const monthLoaded = !(posts.status === "ready" && posts.hasOlder && readAll && posts.items.length < MAX_POSTS)
 
+  // Looking at Activity for a few seconds is having looked: the next opening counts from here. The card on screen keeps its own start.
+  useEffect(() => {
+    const timer = window.setTimeout(() => document.visibilityState === "visible" && markLooked(readClock()), LOOK_MS)
+    return () => window.clearTimeout(timer)
+  }, [])
+
   const open = items?.find((p) => p.sequence === selectedSequence)
   const waiting = counts.total.waiting
   const status = waiting > 0 ? `${waiting} waiting for you` : "Nothing needs you"
@@ -88,6 +96,7 @@ export function ActivityScreen({ selectedSequence, accounts }: { selectedSequenc
 
   return (
     <section className={styles.page} aria-labelledby="activity-title">
+      <CatchUpCard posts={items!} now={now} nameOf={nameOf} />
       <ActivityHeader day={day} today={today} status={status} onDayChange={setDay} />
       <ActivityMetrics today={counts} before={before} />
       <div className={styles.charts}>

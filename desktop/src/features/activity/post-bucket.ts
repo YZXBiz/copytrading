@@ -119,17 +119,31 @@ export function guruMix(posts: SourceActivity[], now: Date, nameOf: (id: string 
   return [...byGuru.values()].sort((a, b) => b.total - a.total || a.guru.localeCompare(b.guru))
 }
 
+/** The flow of posts into the four outcomes, from the same per-guru counts the mix reads; an outcome nothing reached has no link. */
+export function outcomeFlow(rows: GuruMix[]): { nodes: { id: string; label: string }[]; links: { source: string; target: string; value: number }[] } {
+  return {
+    nodes: [{ id: "posts", label: "Posts" }, ...BUCKETS.map((bucket) => ({ id: bucket, label: BUCKET_LABEL[bucket] }))],
+    links: BUCKETS.map((bucket) => ({ source: "posts", target: bucket, value: rows.reduce((n, row) => n + row[bucket], 0) })).filter((link) => link.value > 0),
+  }
+}
+
+/** Why a skipped post was not copied, each reason once; `accountId` keeps one account's. "Not copied" when nothing says why. */
+export function skipReasonsOf(post: SourceActivity, accountId: string | null = null): string[] {
+  const reasons = new Set<string>()
+  for (const d of post.destinations) {
+    if (accountId !== null && d.account_id !== accountId) continue
+    for (const o of partOutcomes(d)) if (!CARRIED_ON.has(o) && !HELD_FOR_OWNER.has(o)) reasons.add(reasonText(o))
+    if (["stale", "out_of_order"].includes(d.status)) reasons.add(reasonText(d.status))
+  }
+  return reasons.size > 0 ? [...reasons] : ["Not copied"]
+}
+
 /** Why posts were skipped, each reason counted once per post, most common first. */
 export function skipReasons(posts: SourceActivity[], now: Date, top = 5): { reason: string; count: number }[] {
   const counts = new Map<string, number>()
   for (const post of posts) {
     if (bucketOf(post, now) !== "skipped") continue
-    const reasons = new Set<string>()
-    for (const d of post.destinations) {
-      for (const o of partOutcomes(d)) if (!CARRIED_ON.has(o) && !HELD_FOR_OWNER.has(o)) reasons.add(reasonText(o))
-      if (["stale", "out_of_order"].includes(d.status)) reasons.add(reasonText(d.status))
-    }
-    for (const reason of reasons.size > 0 ? reasons : new Set(["Not copied"])) counts.set(reason, (counts.get(reason) ?? 0) + 1)
+    for (const reason of skipReasonsOf(post)) counts.set(reason, (counts.get(reason) ?? 0) + 1)
   }
   return [...counts].map(([reason, count]) => ({ reason, count })).sort((a, b) => b.count - a.count || a.reason.localeCompare(b.reason)).slice(0, top)
 }

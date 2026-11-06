@@ -175,7 +175,7 @@ const CUT_BY: Record<string, string> = {
   total_exposure_cap: "the room left under your total limit",
 }
 
-function cancelReason(order: OrderActivity): string {
+export function cancelReason(order: OrderActivity): string {
   const buying = order.side !== "sell"
   switch (order.cancel_reason) {
     case "timeout": {
