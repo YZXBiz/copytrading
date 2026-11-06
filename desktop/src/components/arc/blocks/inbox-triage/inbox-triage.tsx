@@ -171,10 +171,10 @@ export function InboxTriage<T>({ items, getKey, row, answer, label, noun, empty,
       {items.some((item) => !gone.has(getKey(item))) && <footer className={styles.footer}>
         <p className={styles.hint}>
           <span><kbd className={styles.kbd}>J</kbd><kbd className={styles.kbd}>K</kbd>move</span>
-          <span><kbd className={styles.kbd}>C</kbd>answer</span>
+          <span><kbd className={styles.kbd}>C</kbd>copy</span>
           <span><kbd className={styles.kbd}>S</kbd>skip</span>
         </p>
-        <p className={styles.hintNarrow}>Open a call to answer or skip it</p>
+        <p className={styles.hintNarrow}>Open a call to copy or skip it</p>
       </footer>}
     </div>
   );

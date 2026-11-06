@@ -147,14 +147,16 @@ export function PostsTable({
           <h2 id="posts-title" className={styles.panelTitle}>
             Guru posts
           </h2>
-          <p className={styles.panelMeta}>{calls.length === 0 ? "Nothing is waiting for you" : calls.length === 1 ? "1 waiting for you" : `${calls.length} waiting for you`}</p>
+          <div className={styles.metaRow}>
+            <p className={styles.panelMeta}>{calls.length === 0 ? "Nothing is waiting for you" : calls.length === 1 ? "1 waiting for you" : `${calls.length} waiting for you`}</p>
+            {calls.length > 1 && (
+              <Button type="button" size="sm" variant="ghost" onClick={() => calls.forEach((call) => queue.current?.remove(sourceKey(call.source), "skip"))}>
+                Skip all
+              </Button>
+            )}
+          </div>
         </div>
         <div className={styles.tools}>
-          {calls.length > 1 && (
-            <Button type="button" size="sm" variant="ghost" onClick={() => calls.forEach((call) => queue.current?.remove(sourceKey(call.source), "skip"))}>
-              Skip all
-            </Button>
-          )}
           <SearchField
             label="Search posts"
             value={query}

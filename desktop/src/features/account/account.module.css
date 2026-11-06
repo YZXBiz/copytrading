@@ -117,3 +117,10 @@ button.figure { cursor: pointer; transition: background-color var(--duration-fas
 @media (prefers-reduced-motion: reduce) {
   .holding, button.figure { transition: none; }
 }
+
+/* The waiting count with Skip all beside it, so the action stays with what it acts on at every width. */
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
