@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { SourceActivity } from "../../../shared/contract"
-import { bucketOf, dayCounts, dayKey, dayRows, guruMix, shiftDay, skipReasons } from "./post-bucket"
+import { bucketOf, dayCounts, dayKey, dayRows, guruMix, outcomeFlow, shiftDay, skipReasons } from "./post-bucket"
 
 const NOW = new Date("2026-11-04T19:00:00Z")
 const ZONE = "America/New_York"
@@ -59,5 +59,20 @@ describe("mixes", () => {
       { reason: "The post gave no price", count: 2 },
       { reason: "Not copied", count: 1 },
     ])
+  })
+})
+
+describe("outcomeFlow", () => {
+  it("links every post to the outcome the mix counts it under, and drops outcomes nothing reached", () => {
+    const mix = guruMix([chat, filled, held, refused, cancelled], NOW, () => "g")
+    const flow = outcomeFlow(mix)
+    expect(flow.links).toEqual([
+      { source: "posts", target: "traded", value: 1 },
+      { source: "posts", target: "waiting", value: 1 },
+      { source: "posts", target: "skipped", value: 2 },
+      { source: "posts", target: "ignored", value: 1 },
+    ])
+    expect(flow.links.reduce((n, link) => n + link.value, 0)).toBe(mix.reduce((n, row) => n + row.total, 0))
+    expect(outcomeFlow(guruMix([chat], NOW, () => "g")).links.map((link) => link.target)).toEqual(["ignored"])
   })
 })

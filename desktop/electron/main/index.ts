@@ -281,9 +281,11 @@ function createWindow(): BrowserWindow {
   if (captureDir) window.webContents.on("dom-ready", () => void window.webContents.insertCSS("body { background: var(--window); }"))
   // Fixture mode pins the page's clock to when the data was captured: posts expire with their trading day.
   const now = fixtures ? "2026-11-03T21:00:00Z" : undefined
+  // And when the owner last looked at Activity: the pinned now (nothing is new) unless COPYTRADING_FIXTURE_LAST_LOOKED says earlier.
+  const lastLooked = fixtures ? (process.env.COPYTRADING_FIXTURE_LAST_LOOKED ?? now) : undefined
   const hash = process.env.COPYTRADING_CAPTURE_HASH ?? ""
-  if (devServer) void window.loadURL(`${devServer}${now ? `?now=${now}` : ""}${hash}`)
-  else void window.loadFile(join(__dirname, "../renderer/index.html"), { query: now ? { now } : undefined, hash })
+  if (devServer) void window.loadURL(`${devServer}${now ? `?now=${now}&lastLooked=${lastLooked}` : ""}${hash}`)
+  else void window.loadFile(join(__dirname, "../renderer/index.html"), { query: now ? { now, lastLooked: lastLooked! } : undefined, hash })
   if (captureDir) captureWindow(window, captureDir, process.env.COPYTRADING_CAPTURE_NAME ?? "window", process.env.COPYTRADING_CAPTURE_CLICK)
   return window
 }

@@ -12,8 +12,8 @@
 
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 16px; }
 
-.charts { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr); gap: 16px; }
-@media (max-width: 1040px) { .charts { grid-template-columns: minmax(0, 1fr); } }
+/* Two cards side by side only while the flow has room to read left to right (about 420px inside its padding); below that they stack. */
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 468px), 1fr)); gap: 16px; }
 .panel { display: grid; align-content: start; gap: 16px; min-width: 0; border: 1px solid var(--border); border-radius: var(--radius-surface); padding: 24px; background: var(--surface); }
 .panelHead { display: grid; gap: 4px; }
 .panelHead h2 { margin: 0; font-size: var(--text-base); font-weight: 500; line-height: 1.4; }

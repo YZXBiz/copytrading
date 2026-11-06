@@ -182,6 +182,53 @@ for (const [name, env] of [
   // The whole page, down to the table.
   ...["", "busy"].map((scene) => [`activity-full-${scene || "day"}`, { ...fixtures, COPYTRADING_FIXTURE_SCENE: scene, COPYTRADING_CAPTURE_SIZE: "1280x1500", COPYTRADING_CAPTURE_HASH: "#/activity" }]),
   ["activity-full-980", { ...fixtures, COPYTRADING_CAPTURE_SIZE: "980x1500", COPYTRADING_CAPTURE_HASH: "#/activity" }],
+  // The outcome flow card, scrolled into view (it sits below the first screen at the 980-wide minimum).
+  ...["", "busy"].flatMap((scene) =>
+    ["1280x860", "980x860"].map((size) => [
+      `outcome-flow-${scene || "day"}-${size}`,
+      {
+        ...fixtures,
+        COPYTRADING_FIXTURE_SCENE: scene,
+        COPYTRADING_CAPTURE_SIZE: size,
+        COPYTRADING_CAPTURE_HASH: "#/activity",
+        COPYTRADING_CAPTURE_SCRIPT: `(async () => { document.getElementById("outcome-flow").scrollIntoView({ block: "center" }); await new Promise((r) => setTimeout(r, 1500)) })()`,
+      },
+    ]),
+  ),
+  // A post's steps in order: 8 a fill, 5 a buy cancelled at the timeout, 3 a skipped sell with its reason, 2 a coin buy held until Start Copying that filled in two parts;
+  // the stops scene adds a stop resting at Alpaca (12) and one that filled hours later (9). "card" opens the card of a step: the pointer on the third step of an account.
+  ...["1280x860", "980x860"].flatMap((size) => {
+    const win = { ...fixtures, COPYTRADING_CAPTURE_SIZE: size }
+    const step = (name, post, extra = {}) => [`post-steps-${name}-${size}`, { ...win, COPYTRADING_CAPTURE_HASH: `#/activity/${post}`, ...extra }]
+    const hover = `(async () => { const bar = document.querySelectorAll("button[data-span-id]")[4]; bar.scrollIntoView({ block: "center" }); await new Promise((r) => setTimeout(r, 300)); bar.dispatchEvent(new PointerEvent("pointerover", { bubbles: true, pointerType: "mouse" })); bar.dispatchEvent(new PointerEvent("pointerenter", { pointerType: "mouse" })); await new Promise((r) => setTimeout(r, 700)) })()`
+    const scroll = `(async () => { document.querySelector("[aria-labelledby]")?.scrollIntoView(); const t = [...document.querySelectorAll("h3")].find((h) => h.textContent === "Step by step"); t.scrollIntoView({ block: "center" }); await new Promise((r) => setTimeout(r, 600)) })()`
+    return [
+      step("filled", 8, { COPYTRADING_CAPTURE_SCRIPT: scroll }),
+      step("timeout", 5, { COPYTRADING_CAPTURE_SCRIPT: scroll }),
+      step("skipped", 3, { COPYTRADING_CAPTURE_SCRIPT: scroll }),
+      step("held", 2, { COPYTRADING_CAPTURE_SCRIPT: scroll }),
+      step("stop-placed", 12, { COPYTRADING_FIXTURE_SCENE: "stops", COPYTRADING_CAPTURE_SCRIPT: scroll }),
+      step("stop-filled", 9, { COPYTRADING_FIXTURE_SCENE: "stops", COPYTRADING_CAPTURE_SCRIPT: scroll }),
+      step("card", 2, { COPYTRADING_CAPTURE_SCRIPT: hover }),
+    ]
+  }),
+  // The card of what came in since the owner last looked: they last looked at 2:00 PM on Nov 3 (the fixtures' clock is 9:00 PM), on Activity and, shorter, on the account page.
+  // "dismissed" presses Dismiss; "calls" has six calls waiting; "busy" a dozen fills; nothing new (no card) is every other Activity and account capture.
+  ...["1280x860", "980x860"].flatMap((size) => {
+    const since = { ...fixtures, COPYTRADING_FIXTURE_LAST_LOOKED: "2026-11-03T14:00:00Z", COPYTRADING_CAPTURE_SIZE: size }
+    const dismiss = `(async () => { await new Promise((r) => setTimeout(r, 600)); [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "Dismiss").click(); await new Promise((r) => setTimeout(r, 900)) })()`
+    return [
+      [`catch-up-activity-${size}`, { ...since, COPYTRADING_CAPTURE_HASH: "#/activity" }],
+      [`catch-up-activity-calls-${size}`, { ...since, COPYTRADING_FIXTURE_SCENE: "calls", COPYTRADING_CAPTURE_HASH: "#/activity" }],
+      [`catch-up-activity-busy-${size}`, { ...since, COPYTRADING_FIXTURE_SCENE: "busy", COPYTRADING_CAPTURE_HASH: "#/activity" }],
+      [`catch-up-activity-dismissed-${size}`, { ...since, COPYTRADING_CAPTURE_HASH: "#/activity", COPYTRADING_CAPTURE_SCRIPT: dismiss }],
+      // Each line's arrow opens its post in the drawer; the short card's "See all activity" goes to Activity.
+      [`catch-up-open-post-${size}`, { ...since, COPYTRADING_CAPTURE_HASH: "#/activity", COPYTRADING_CAPTURE_SCRIPT: `(async () => { await new Promise((r) => setTimeout(r, 600)); document.querySelector('button[aria-label^="Open the post"]').click(); await new Promise((r) => setTimeout(r, 1500)) })()` }],
+      [`catch-up-see-all-${size}`, { ...since, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2", COPYTRADING_CAPTURE_SCRIPT: `(async () => { await new Promise((r) => setTimeout(r, 600)); [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "See all activity").click(); await new Promise((r) => setTimeout(r, 1500)) })()` }],
+      [`catch-up-account-${size}`, { ...since, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2" }],
+      [`catch-up-account-dismissed-${size}`, { ...since, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2", COPYTRADING_CAPTURE_SCRIPT: dismiss }],
+    ]
+  }),
   ["activity-post-1280x860", { ...fixtures, COPYTRADING_CAPTURE_SIZE: "1280x860", COPYTRADING_CAPTURE_HASH: "#/activity/5" }],
   ["activity-post-980x860", { ...fixtures, COPYTRADING_CAPTURE_SIZE: "980x860", COPYTRADING_CAPTURE_HASH: "#/activity/5" }],
   ["guru-sheet-1280x860", { ...fixtures, COPYTRADING_CAPTURE_SIZE: "1280x860", COPYTRADING_CAPTURE_HASH: `#/gurus/${zhao}`, COPYTRADING_CAPTURE_CLICK: 'button[data-sequence="5"]' }],
