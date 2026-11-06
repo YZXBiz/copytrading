@@ -94,6 +94,32 @@ class Evidence(Instruction):
         return self
 
 
+class StopCall(BaseModel):
+    """A stop order the guru posted: sell the shares it protects if the price falls to
+    `stop_price`. It protects the buys at `entry_price`, the buy this post's `buy_part`-th
+    instruction makes, or, with neither, every share CopyTrading bought of the stock for this
+    guru. Each value carries the post's own words."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    symbol: str = Field(pattern=SYMBOL_PATTERN)
+    stop_price: Decimal = Field(gt=0, le=MAX_PRICE)
+    entry_price: Decimal | None = Field(default=None, gt=0, le=MAX_PRICE)
+    buy_part: int | None = Field(default=None, ge=0)
+    action_evidence: str = Field(min_length=1, max_length=100)
+    symbol_evidence: str = Field(min_length=1, max_length=30)
+    price_evidence: str = Field(min_length=1, max_length=30)
+    entry_evidence: str | None = Field(default=None, max_length=30)
+
+    @model_validator(mode="after")
+    def validate_protects(self) -> Self:
+        if self.entry_price is not None and self.buy_part is not None:
+            raise ValueError("A stop names a buy by its price or its place in the post, not both")
+        if (self.entry_price is None) != (self.entry_evidence is None):
+            raise ValueError("A named buy price needs its words, and only a named price has them")
+        return self
+
+
 class StockSignal(BaseModel):
     # Posts stored by a release that had the chat filter carry its `sorted_by` and
     # `sorted_confidence`; reading ignores them. A before-validator would drop them too, but it
@@ -121,6 +147,8 @@ class StockSignal(BaseModel):
     suggested: tuple[Instruction, ...] = Field(default=(), max_length=20)
     evidence: tuple[Evidence, ...] = Field(max_length=20)
     instructions: tuple[Instruction, ...] = Field(max_length=20)
+    # Stops the guru posted, placed only when the account follows the guru's stops.
+    stops: tuple[StopCall, ...] = Field(default=(), max_length=20)
 
     @property
     def guru(self) -> str | None:
@@ -133,8 +161,15 @@ class StockSignal(BaseModel):
     def validate_decision(self) -> Self:
         if (self.guru_id is None) != (self.profile_revision is None):
             raise ValueError("Guru identity and profile revision must be recorded together")
-        if (self.decision == "trade") != bool(self.instructions):
+        if (self.decision == "trade") != bool(self.instructions or self.stops):
             raise ValueError("Only validated trade decisions contain instructions")
+        for stop in self.stops:
+            if stop.buy_part is not None and not (
+                stop.buy_part < len(self.instructions)
+                and self.instructions[stop.buy_part].action == "buy"
+                and self.instructions[stop.buy_part].symbol == stop.symbol
+            ):
+                raise ValueError("A stop protects a buy of its own stock in the same post")
         if self.suggested and self.decision != "review":
             raise ValueError("Only a post that waits for the owner suggests calls to copy")
         if len(self.evidence) != len(self.instructions):

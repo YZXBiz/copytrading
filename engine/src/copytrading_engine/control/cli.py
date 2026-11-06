@@ -367,7 +367,7 @@ async def _wait(client: ControlClient, response: wire.Response, timeout: float) 
 # Text output
 
 
-_SWITCHES: Final = ("extended_hours", "overnight", "copy_exits", "approve_orders")
+_SWITCHES: Final = ("extended_hours", "overnight", "copy_exits", "approve_orders", "follow_stops")
 
 
 def _words(code: str | None) -> str:

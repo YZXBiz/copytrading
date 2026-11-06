@@ -181,6 +181,7 @@ def decision_notification(
             if instruction.action == "reduce":
                 line += f"; fraction of original lot: {instruction.fraction}"
         lines.append(line)
+    lines.extend(f"STOP {stop.symbol} at ${stop.stop_price}" for stop in result.stops)
     detail = "\n".join(lines)
     if len(detail) > 1800:
         detail = detail[:1800] + "… Full instructions are in the signal trace."

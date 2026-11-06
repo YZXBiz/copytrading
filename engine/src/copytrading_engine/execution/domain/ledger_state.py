@@ -42,6 +42,7 @@ from copytrading_engine.execution.domain.recovery import (
     ReleaseEvidence,
 )
 from copytrading_engine.execution.domain.sizing import DestinationTerms
+from copytrading_engine.execution.domain.stops import StopRule
 from copytrading_engine.execution.domain.values import BrokerAccountId, Identifier, Quantity, Value
 from copytrading_engine.shared.signals import StockSignal
 
@@ -85,16 +86,27 @@ class MessageRecord(StockSignal):
     parts: tuple[InstructionProgress, ...]
     status: MessageStatus
     cash_anchor: CashAnchor | None = None
+    # How each stop the guru posted went, beside its instructions' `parts`. The orders of a stop
+    # are numbered after the instructions' (`stop_order_index`).
+    stop_parts: tuple[InstructionProgress, ...] = ()
 
     @model_validator(mode="after")
     def valid_progress(self) -> Self:
         if len(self.parts) != len(self.instructions):
             raise ValueError("Every instruction requires a progress slot")
+        if len(self.stop_parts) != len(self.stops):
+            raise ValueError("Every stop requires a progress slot")
         if self.source_key != f"{self.source}:{self.channel_id}":
             raise ValueError("Message source identity mismatch")
-        if self.status == "done" and any(isinstance(part, Pending) for part in self.parts):
+        if self.status == "done" and any(
+            isinstance(part, Pending) for part in (*self.parts, *self.stop_parts)
+        ):
             raise ValueError("Completed message still has Pending instructions")
         return self
+
+    def stop_order_index(self, stop_index: int) -> int:
+        """The `instruction_index` of an order a stop places, which follows the instructions'."""
+        return len(self.instructions) + stop_index
 
     @property
     def key(self) -> str:
@@ -133,6 +145,8 @@ class LedgerSnapshot(Value):
     manual_commands: dict[str, ManualCommandRecord] = Field(default_factory=dict)
     lot_sale_previews: dict[str, LotSalePreview] = Field(default_factory=dict)
     lot_sales: dict[str, LotSaleRecord] = Field(default_factory=dict)
+    # The stops the account follows now, by key (domain/stops.py); an older ledger has none.
+    stops: dict[str, StopRule] = Field(default_factory=dict)
 
     @property
     def entry_halted(self) -> bool:
@@ -153,8 +167,11 @@ class LedgerSnapshot(Value):
     def has_outstanding_work(self) -> bool:
         """A call still to act on, or an order still open: work a clock decides, such as an
         order timeout or a call waiting for the market to open, so its account checks often."""
-        return any(message.status == "queued" for message in self.messages.values()) or any(
-            order.pending for order in self.orders.values()
+        return (
+            any(message.status == "queued" for message in self.messages.values())
+            or any(order.pending for order in self.orders.values())
+            # A stop is placed again at each open, so the account looks often enough to catch it.
+            or bool(self.stops)
         )
 
     @model_validator(mode="after")
@@ -242,6 +259,29 @@ class LedgerSnapshot(Value):
                         instruction_index,
                     ):
                         raise ValueError("Order link does not match its message instruction")
+            for stop_index, progress in enumerate(message.stop_parts):
+                if isinstance(progress, OrderLinked):
+                    order = self.orders.get(progress.client_id)
+                    if order is None or (order.message_id, order.instruction_index) != (
+                        message_key,
+                        message.stop_order_index(stop_index),
+                    ):
+                        raise ValueError("Order link does not match its message stop")
+        for key, rule in self.stops.items():
+            lot = self.lots.get(rule.lot_id)
+            if (
+                key != rule.key
+                or lot is None
+                or lot.symbol != rule.symbol
+                or any(entry not in lot.entry_remaining for entry in rule.entries)
+                or rule.message_id not in self.messages
+            ):
+                raise ValueError("A stop does not match the lot and post it protects")
+        for order in self.orders.values():
+            if order.stop_rule is not None and not (
+                order.side == "sell" and order.message_id in self.messages
+            ):
+                raise ValueError("A stop order is a sell placed for a post")
         correction_revisions: set[tuple[str, int]] = set()
         for key, correction in self.manual_corrections.items():
             message = self.messages.get(correction.source_id)
@@ -531,9 +571,12 @@ class LedgerSnapshot(Value):
                 and order.status == OrderStatus.ABORTED_BEFORE_SUBMIT
                 and key.startswith(copy_client_id(order.message_id, order.instruction_index))
             )
+            # A stop is placed again each session, so only its first order is its post's link
+            # (checked with the post's stop parts above).
             if (
                 not manual
                 and not sent_again
+                and order.stop_rule is None
                 and (
                     order.instruction_index >= len(message.parts)
                     or message.parts[order.instruction_index] != OrderLinked(client_id=key)
@@ -556,11 +599,18 @@ class LedgerSnapshot(Value):
                 # A sell of named buys carries their price, and every one is in its lot; any
                 # other sell carries the lot's own (ADR-0010).
                 named = order.from_entries
+                # A stop protects buys at their own prices, so it carries the lot's.
+                stop = order.stop_rule is not None
                 if (
                     lot is None
                     or (lot.symbol, lot.source_key) != (order.symbol, order.source_key)
                     or (not named and lot.entry_price != order.entry_price)
-                    or any(lot.entry_prices.get(entry) != order.entry_price for entry in named)
+                    or any(entry not in lot.entry_prices for entry in named)
+                    or (
+                        not stop
+                        and any(lot.entry_prices.get(entry) != order.entry_price for entry in named)
+                    )
+                    or (stop and lot.entry_price != order.entry_price)
                 ):
                     raise ValueError("Sell order references an unknown or different lot")
         for key, lot in self.lots.items():

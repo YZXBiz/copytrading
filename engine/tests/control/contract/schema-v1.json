@@ -118,7 +118,7 @@
             "items": {
               "$ref": "#/$defs/LimitChange"
             },
-            "maxItems": 14,
+            "maxItems": 15,
             "title": "Limits",
             "type": "array"
           },
@@ -793,6 +793,7 @@
           "overnight",
           "copy_exits",
           "approve_orders",
+          "follow_stops",
           "max_above_signal_pct",
           "max_below_signal_pct"
         ],
@@ -1305,7 +1306,7 @@
             "items": {
               "$ref": "#/$defs/LimitChange"
             },
-            "maxItems": 14,
+            "maxItems": 15,
             "minItems": 1,
             "title": "Changes",
             "type": "array"
@@ -2482,6 +2483,7 @@
           "overnight",
           "copy_exits",
           "approve_orders",
+          "follow_stops",
           "max_above_signal_pct",
           "max_below_signal_pct"
         ],
@@ -2804,7 +2806,8 @@
           "order_type": {
             "enum": [
               "limit",
-              "market"
+              "market",
+              "stop"
             ],
             "title": "Order Type",
             "type": "string"
@@ -2990,7 +2993,8 @@
           "type": {
             "enum": [
               "limit",
-              "market"
+              "market",
+              "stop"
             ],
             "title": "Type",
             "type": "string"

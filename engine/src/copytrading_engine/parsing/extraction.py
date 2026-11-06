@@ -13,6 +13,7 @@ from copytrading_engine.parsing.history import RecentCall
 from copytrading_engine.parsing.routes import Route
 from copytrading_engine.shared.reading import (
     All,
+    Alongside,
     AtMarket,
     Batch,
     Buy,
@@ -30,13 +31,14 @@ from copytrading_engine.shared.reading import (
     ReaderReading,
     Sell,
     Stock,
+    Stop,
     Suggestion,
     TradeMade,
 )
 from copytrading_engine.shared.signals import same_fraction
 from copytrading_engine.shared.symbols import crypto_pair, is_crypto
 
-PROMPT_VERSION = "stock-reading-v9"
+PROMPT_VERSION = "stock-reading-v10"
 
 # Chinese characters and ASCII letters both count as Unicode word characters.
 # Match complete numeric tokens and bound English words by ASCII letters so
@@ -407,12 +409,33 @@ def check_reading(reading: PostReading, text: str, route: Route) -> None:
         _words(reading.condition, text, "condition")
     for index, call in enumerate(reading.calls):
         _check_call(call, text, route, f"calls.{index}")
+        if isinstance(call, Stop):
+            _check_stop(call, reading.calls, text, f"calls.{index}")
+
+
+def _check_stop(stop: Stop, calls: tuple[Call, ...], text: str, path: str) -> None:
+    """A stop protects a buy the post names by its price, the buy the post itself makes, or no
+    buy at all; a buy price is a number of the post, and the buy this post makes is one of its
+    calls, of the same stock."""
+    protects = stop.protects
+    if isinstance(protects, Lot):
+        _number(protects.buy_price, protects.words, text, f"{path}.protects")
+    elif isinstance(protects, Alongside):
+        named = calls[protects.call] if protects.call < len(calls) else None
+        if not isinstance(named, Buy) or named.stock.ticker != stop.stock.ticker:
+            raise GroundingError(
+                "stop_buy_not_in_post",
+                f"{path}.protects",
+                "alongside must be the place of a buy of the same stock among the post's calls",
+            )
 
 
 def _check_call(call: Call, text: str, route: Route, path: str) -> None:
     _words(call.action_words, text, f"{path}.action_words")
     _check_stock(call.stock, text, route, f"{path}.stock")
     _check_price(call.price, text, f"{path}.price")
+    if isinstance(call, Stop):
+        return
     if isinstance(call, Buy):
         _check_size(call, text, route.playbook, f"{path}.size")
         return
@@ -585,7 +608,9 @@ def without_cross_side_repeats(reading: PostReading, recent: tuple[RecentCall, .
     by_ref = {call.ref: call for call in recent}
     calls = tuple(
         call.model_copy(update={"repeats": None})
-        if call.repeats in by_ref and not same_side(by_ref[call.repeats], call)
+        if not isinstance(call, Stop)
+        and call.repeats in by_ref
+        and not same_side(by_ref[call.repeats], call)
         else call
         for call in reading.calls
     )
@@ -602,7 +627,7 @@ def check_references(reading: PostReading, recent: tuple[RecentCall, ...]) -> st
         return None
     by_ref = {call.ref: call for call in recent}
     for index, call in enumerate(reading.calls):
-        if call.repeats is None:
+        if isinstance(call, Stop) or call.repeats is None:
             continue
         earlier = by_ref.get(call.repeats)
         if earlier is None:

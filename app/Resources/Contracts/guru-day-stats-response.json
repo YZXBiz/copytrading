@@ -39,6 +39,7 @@
                   "exit_basis": null
                 }
               ],
+              "stops": [],
               "suggested": [],
               "reading": null,
               "guru_id": "lee",
@@ -62,6 +63,7 @@
                   "environment": "paper",
                   "status": "review_required",
                   "instruction_outcomes": [],
+                  "stop_outcomes": [],
                   "limits_hit": [], "later_buys": [], "named_buys": [],
                   "orders": [],
                   "timeline": []

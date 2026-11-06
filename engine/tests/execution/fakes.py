@@ -44,6 +44,8 @@ class FakeBroker:
         self.calls = 0
         self.timeout_after_accept = False
         self.auto_fill = True
+        # Alpaca refuses a sell stop that is not under the market price: a 422.
+        self.refuse_stops = False
         # What Alpaca says an order is when it is sent; it can hold one as pending_new first.
         self.submitted_status = "new"
         self.market_fill_price = "24.50"
@@ -142,7 +144,7 @@ class FakeBroker:
         self.holdings[o["symbol"]] = self.holdings.get(o["symbol"], Decimal(0)) + side * received
         o.update(
             filled_qty=str(qty),
-            filled_avg_price=o.get("limit_price") or self.market_fill_price,
+            filled_avg_price=o.get("limit_price") or o.get("stop_price") or self.market_fill_price,
             status="filled" if Decimal(qty) == Decimal(o["qty"]) else "partially_filled",
         )
 
@@ -150,6 +152,8 @@ class FakeBroker:
         request = order.model_dump(mode="json", exclude_none=True)
         self.calls += 1
         cid = request["client_order_id"]
+        if self.refuse_stops and request["type"] == "stop":
+            raise BrokerError(422)
         self.orders[cid] = {
             **request,
             "id": f"broker-{self.calls}",
@@ -157,7 +161,8 @@ class FakeBroker:
             "status": self.submitted_status,
             "filled_avg_price": None,
         }
-        if self.auto_fill:
+        # A stop rests until the test says the price fell to it.
+        if self.auto_fill and request["type"] != "stop":
             self.fill(cid, request["qty"])
         if self.timeout_after_accept:
             raise BrokerError()

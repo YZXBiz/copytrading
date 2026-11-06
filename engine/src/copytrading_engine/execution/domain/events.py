@@ -29,8 +29,9 @@ from copytrading_engine.execution.domain.recovery import (
 )
 from copytrading_engine.execution.domain.sessions import Session
 from copytrading_engine.execution.domain.sizing import DestinationTerms
+from copytrading_engine.execution.domain.stops import StopRule
 from copytrading_engine.execution.domain.values import Identifier, Positive, Quantity, Side, Value
-from copytrading_engine.shared.signals import Instruction
+from copytrading_engine.shared.signals import Instruction, StopCall
 
 
 class EventPayloadValue(Value):
@@ -94,6 +95,7 @@ class Message(EventPayloadValue):
     parser_profile: str
     instructions: tuple[Instruction, ...]
     destination: DestinationTerms
+    stops: tuple[StopCall, ...] = ()
 
 
 class CashAnchorRecorded(EventPayloadValue):
@@ -108,6 +110,28 @@ class Skipped(EventPayloadValue):
     reason: Identifier
     exposure: tuple[Exposure, ...] | None
     bought_at: AwareDatetime | None = None
+    # The part is a stop of the post, not one of its instructions.
+    stop: bool = False
+
+
+class StopSet(EventPayloadValue):
+    """The account follows a stop the guru posted: its price and the buys it protects."""
+
+    kind: Literal["stop_set"] = "stop_set"
+    message_id: Identifier
+    rule: StopRule
+    # Stops this one replaced, for the same buys.
+    replaced: tuple[Identifier, ...] = ()
+
+
+class StopEnded(EventPayloadValue):
+    """The account no longer follows a stop: nothing is left of its buys, or a newer stop took
+    them all."""
+
+    kind: Literal["stop_ended"] = "stop_ended"
+    message_id: Identifier
+    rule_key: Identifier
+    reason: Literal["nothing_left", "replaced"]
 
 
 class SellWaiting(EventPayloadValue):
@@ -155,10 +179,11 @@ class OrderPrepared(EventPayloadValue):
     source_price: Positive
     entry_price: Positive
     qty: Positive
-    type: Literal["market", "limit"]
+    type: Literal["market", "limit", "stop"]
     limit_price: Positive | None
     entry_tolerance_pct: Quantity
     session: Session
+    stop_price: Positive | None = None
 
 
 class SubmitStarted(EventPayloadValue):
@@ -348,6 +373,8 @@ type EventPayload = Annotated[
     | Message
     | CashAnchorRecorded
     | Skipped
+    | StopSet
+    | StopEnded
     | SellWaiting
     | CryptoFeeCounted
     | ReadBackSummary

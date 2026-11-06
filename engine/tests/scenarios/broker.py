@@ -124,7 +124,18 @@ class SimulatedBroker:
                 self.refused.append(fields)
                 raise BrokerError(403)  # Alpaca: insufficient buying power
             held = self.holdings.get(fields["symbol"], Decimal(0))
-            if fields["side"] == "sell" and qty > held:
+            # Shares an open sell (a stop included) is waiting to sell are not available again.
+            reserved = sum(
+                (
+                    Decimal(open_order["qty"])
+                    for open_order in self.orders.values()
+                    if open_order["symbol"] == fields["symbol"]
+                    and open_order["side"] == "sell"
+                    and open_order["status"] == "new"
+                ),
+                Decimal(0),
+            )
+            if fields["side"] == "sell" and qty > held - reserved:
                 self.refused.append(fields)
                 raise BrokerError(403)  # Alpaca: insufficient qty available
             order = {
@@ -153,6 +164,9 @@ class SimulatedBroker:
 
     def _try_fill(self, order: dict) -> None:
         price = self.prices[order["symbol"]]
+        stop = order.get("stop_price")
+        if stop is not None and price > Decimal(stop):
+            return  # a sell stop waits until the price falls to it
         limit = order.get("limit_price")
         if limit is not None:
             if order["side"] == "buy" and price > Decimal(limit):
