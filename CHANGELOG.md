@@ -2,6 +2,20 @@
 
 User-visible changes for each release are recorded here. Every GitHub release's notes come from its section. See [releases](docs/releases.md) for how a release is cut and [validation](docs/validation.md) for what is and is not proven.
 
+## 0.1.0-beta.12 — developer preview
+
+Faster screens, waiting calls answered one at a time, and a summary of what came in while you were away.
+
+- **Faster everywhere.** Activity reads only the channels your setup follows (on one Mac, 2 pages instead of 19 to open the month), and each account's saved record is read once instead of on every screen refresh: accounts, guru pages and the account feed answer in tens of milliseconds instead of hundreds.
+- **Waiting calls, one at a time.** The calls waiting for you open as a queue on the account page: the post, what it means, why it waits and until when. Copy opens the same review as before; Skip takes it off the list with a 10-second Undo. Keys: J/K or arrows move, C copies, S skips. Skip all sits beside the count.
+- **Since you last looked.** Activity and the account page open with what came in since you last looked: calls waiting for you, trades copied and filled, skips and why. Each row opens its post; Dismiss clears it.
+- **How posts ended, as a flow.** Activity's outcome chart shows all posts flowing into Traded, Waiting, Skipped and Ignored, with each guru's share.
+- **A post's steps.** A post's details end with each step in order: the reader's decision, then the order at the broker, its fill, cancel, skip or stop.
+- **Agent requests in one card**, with who asked, what changes, when it expires, and Approve or Reject.
+- **Connections as status rows** for Discord, the reader and each broker account, with Connect shown as steps. Every Connect still checks its service before anything is saved.
+- **The Assistant docks beside the screen**, with suggested questions as cards; the page reflows beside it.
+- **Fixed:** the sidebar's selected item could paint over a label (the "Settings" text overlap).
+
 ## 0.1.0-beta.11 — developer preview
 
 Follow the guru's stops if you choose to, Activity totals you can trust, and a missed buy caught.
