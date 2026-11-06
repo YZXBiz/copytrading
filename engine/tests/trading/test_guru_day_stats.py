@@ -257,3 +257,41 @@ async def test_a_gurus_page_lists_their_posts_however_many_others_posted_since(t
     assert older.next_before_seq is None
     # A guru the setup no longer has has no page.
     assert (await service.guru_activity(LEE, None, 25)).items == ()
+
+
+async def test_activity_reads_only_the_channels_the_setup_follows(tmp_path):
+    database = tmp_path / "application.db"
+    source = await SQLiteSourceStore.open(database)
+    parser = await SQLiteExtractionStore.open(database)
+    morning = dt.datetime(2026, 10, 14, 13, tzinfo=dt.UTC)
+    zhao = [
+        await _post(source, parser, f"zhao-{n}", morning + dt.timedelta(minutes=n), "zhao")
+        for n in range(3)
+    ]
+    # Thirty newer posts in a channel the setup no longer follows: never read for Activity.
+    for n in range(30):
+        await _post(source, parser, f"lee-{n}", morning + dt.timedelta(hours=1, minutes=n), "lee")
+    await parser.close()
+    await source.close()
+    route = SimpleNamespace(source="discord", channel_id="2", author_id=None, connections=())
+
+    def service(configuration):
+        return OperatorQueryService(
+            AccountAccess(
+                tmp_path,
+                lambda: {},
+                configuration=lambda: configuration,
+                runtime_state=lambda: "running",
+                evidence=SQLiteOperatorEvidence(),
+            )
+        )
+
+    followed = await service(SimpleNamespace(routes=(route,), accounts=())).source_activity(
+        None, 25
+    )
+    assert [item.source_id for item in followed.items] == zhao[::-1]
+    assert followed.next_before_seq is None
+    nothing = await service(SimpleNamespace(routes=(), accounts=())).source_activity(None, 25)
+    assert nothing.items == ()
+    # Before a setup exists, every post shows.
+    assert len((await service(None).source_activity(None, 50)).items) == 33

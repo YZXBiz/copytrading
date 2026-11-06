@@ -38,6 +38,7 @@ class OperatorEvidence(Protocol):
         destinations: dict[str, tuple[DestinationView, ...]],
         source_ids: tuple[str, ...] | None = None,
         channel: tuple[str, str] | None = None,
+        channels: tuple[tuple[str, str], ...] | None = None,
     ) -> SourceActivityPage: ...
 
     def guru_posts(self, database: Path, *, since: dt.datetime) -> tuple[GuruPost, ...]: ...

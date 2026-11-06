@@ -387,6 +387,14 @@ class OperatorQueryService:
         )
 
     async def source_activity(self, before_seq: int | None, limit: int) -> SourceActivityPage:
+        """A page of the posts of the channels the setup follows, newest first; with no setup
+        yet, every post."""
+        configuration = self._access.configuration()
+        channels = (
+            None
+            if configuration is None
+            else tuple(dict.fromkeys((r.source, r.channel_id) for r in configuration.routes))
+        )
         page = await asyncio.wait_for(
             asyncio.to_thread(
                 self._access.evidence.source_page,
@@ -394,6 +402,7 @@ class OperatorQueryService:
                 before_seq=before_seq,
                 limit=limit,
                 destinations={},
+                channels=channels,
             ),
             timeout=2,
         )
