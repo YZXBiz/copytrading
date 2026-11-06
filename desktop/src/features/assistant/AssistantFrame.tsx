@@ -1,8 +1,6 @@
 import { type ReactNode, createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react"
-import { motion, useReducedMotion } from "motion/react"
 import type { TradingConfiguration } from "../../../shared/contract"
 import { ASSISTANT_EVENT } from "../../../shared/shortcuts"
-import { motionTokens } from "@/components/arc/lib/motion-tokens"
 import { navigate, useRoute } from "@/features/shell/route"
 import { useResult } from "@/lib/use-result"
 import { AssistantPanel } from "./AssistantPanel"
@@ -40,7 +38,6 @@ const dockWidth = (wide: boolean, viewport: number) => Math.round(Math.min(wide 
 export function AssistantFrame({ onOpen, children }: { onOpen: () => void; children: ReactNode }) {
   const [open, setOpenState] = useState(false)
   const [wide, setWide] = useState(false)
-  const reduce = useReducedMotion()
   const viewport = useSyncExternalStore(subscribeWidth, windowWidth, () => 1280)
   const width = dockWidth(wide, viewport)
   const setOpen = useCallback((next: boolean) => setOpenState(next), [])
@@ -50,7 +47,7 @@ export function AssistantFrame({ onOpen, children }: { onOpen: () => void; child
   return (
     <PanelContext.Provider value={state}>
       <div className={styles.frame}>
-        <AssistantBody onOpen={onOpen} wide={wide} onWide={setWide} width={width} reduce={!!reduce}>
+        <AssistantBody onOpen={onOpen} wide={wide} onWide={setWide} width={width}>
           {children}
         </AssistantBody>
       </div>
@@ -58,7 +55,7 @@ export function AssistantFrame({ onOpen, children }: { onOpen: () => void; child
   )
 }
 
-function AssistantBody({ onOpen, wide, onWide, width, reduce, children }: { onOpen: () => void; wide: boolean; onWide: (wide: boolean) => void; width: number; reduce: boolean; children: ReactNode }) {
+function AssistantBody({ onOpen, wide, onWide, width, children }: { onOpen: () => void; wide: boolean; onWide: (wide: boolean) => void; width: number; children: ReactNode }) {
   const { open, setOpen, toggle } = useAssistantPanel()
   const route = useRoute()
   const assistant = useAssistant()
@@ -104,34 +101,20 @@ function AssistantBody({ onOpen, wide, onWide, width, reduce, children }: { onOp
   return (
     <>
       <div className={styles.page}>{children}</div>
-      <motion.aside
-        className={styles.dock}
-        aria-label="Assistant"
-        aria-hidden={!open || undefined}
-        inert={!open || undefined}
-        initial={false}
-        animate={{ width: open ? width : 0 }}
-        transition={reduce ? { duration: 0 } : motionTokens.spring.smooth}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") setOpen(false)
-        }}
-      >
-        <div style={{ width, height: "100%" }}>
-          <AssistantPanel
-            model={model}
-            ready={ready}
-            provider={configuration?.provider ?? null}
-            suggestions={suggestions(route.screen, guru, configuration !== null)}
-            assistant={assistant}
-            open={open}
-            wide={wide}
-            onWide={onWide}
-            onHide={() => setOpen(false)}
-            onAsk={ask}
-            onOpenConnections={() => (setOpen(false), navigate("settings", "connections"))}
-          />
-        </div>
-      </motion.aside>
+      <AssistantPanel
+        model={model}
+        ready={ready}
+        provider={configuration?.provider ?? null}
+        suggestions={suggestions(route.screen, guru, configuration !== null)}
+        assistant={assistant}
+        open={open}
+        width={width}
+        wide={wide}
+        onWide={onWide}
+        onOpenChange={setOpen}
+        onAsk={ask}
+        onOpenConnections={() => (setOpen(false), navigate("settings", "connections"))}
+      />
     </>
   )
 }

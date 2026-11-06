@@ -1,14 +1,7 @@
 .frame { display: flex; min-height: 0; min-width: 0; flex: 1; }
 .page { display: flex; min-width: 0; flex: 1; flex-direction: column; }
 
-.dock { position: relative; flex: none; height: 100%; overflow: hidden; }
-.panel { display: flex; height: 100%; flex-direction: column; border-left: 1px solid var(--border); background: var(--surface); color: var(--foreground); font-family: var(--font-body); font-size: var(--text-sm); letter-spacing: var(--tracking-body); line-height: var(--leading-body); }
 
-.head { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 8px; min-height: 52px; padding: 8px 12px 8px 16px; border-bottom: 1px solid var(--border-subtle); }
-.identity { display: inline-flex; min-width: 0; align-items: center; gap: 8px; }
-.identity svg { flex: none; color: var(--accent); }
-.name { font-weight: 500; }
-.headActions { display: flex; flex: none; align-items: center; gap: 2px; }
 
 .thread { position: relative; display: flex; min-height: 0; flex: 1 1 auto; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
 .threadInner { display: flex; min-height: 100%; flex-direction: column; padding: 16px 16px 24px; }
@@ -17,9 +10,6 @@
 .empty { display: flex; margin: auto 0; flex-direction: column; gap: 6px; }
 .emptyTitle { margin: 0; font-weight: 500; }
 .emptyText { margin: 0 0 8px; color: var(--text-muted); font-size: var(--text-xs); }
-.suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.suggestion { display: inline-flex; min-height: 32px; align-items: center; padding: 4px 12px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--surface); color: var(--text-secondary); font: inherit; font-size: var(--text-xs); text-align: left; cursor: pointer; transition: background-color var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard); }
-@media (hover: hover) and (pointer: fine) { .suggestion:hover { background: var(--surface-muted); color: var(--foreground); } }
 
 .turns { display: flex; margin: 0; flex-direction: column; gap: 18px; list-style: none; }
 .turn { display: flex; min-width: 0; flex-direction: column; gap: 10px; }
@@ -61,9 +51,8 @@
 .meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-inline: 4px; color: var(--text-muted); font-size: var(--text-xs); }
 .model { display: inline-flex; min-width: 0; align-items: center; gap: 6px; }
 .model span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dot { width: 4px; height: 4px; flex: none; border-radius: 50%; background: var(--text-muted); opacity: .6; }
 .shortcuts { display: grid; gap: 8px; width: 15rem; }
 .shortcuts > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .shortcuts span:last-child { display: inline-flex; gap: 4px; }
 
-@media (prefers-reduced-motion: reduce) { .suggestion, .turnActions, .composer, .send { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .turnActions, .composer, .send { transition: none; } }

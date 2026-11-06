@@ -1,0 +1,16 @@
+/* Dock and panel: the dock clips while it grows, the panel inside holds one width. */
+.dock { position: relative; flex: none; height: 100%; overflow: hidden; }
+.dockInner { height: 100%; }
+.panel { display: flex; height: 100%; flex-direction: column; border-left: 1px solid var(--border); background: var(--surface); color: var(--foreground); font-family: var(--font-body); font-size: var(--text-sm); line-height: var(--leading-body); letter-spacing: var(--tracking-body); }
+.panel *, .panel *::before, .panel *::after { box-sizing: border-box; }
+
+.head { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 8px; min-height: 52px; padding: 8px 12px 8px 16px; border-bottom: 1px solid var(--border-subtle); }
+.identity { display: inline-flex; min-width: 0; align-items: center; gap: 8px; }
+.mark { flex: none; color: var(--accent); }
+.name { font-weight: 500; }
+.model { overflow: hidden; color: var(--text-muted); font-size: var(--text-xs); text-overflow: ellipsis; white-space: nowrap; }
+.headActions { display: flex; flex: none; align-items: center; gap: 2px; }
+.iconButton { display: inline-grid; width: 32px; height: 32px; flex: none; place-items: center; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--text-muted); cursor: pointer; transition: color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard); }
+@media (hover: hover) and (pointer: fine) { .iconButton:hover { background: var(--surface-muted); color: var(--foreground); } }
+
+@media (prefers-reduced-motion: reduce) { .iconButton { transition: none; } }
