@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import type { SourceActivity } from "../../../shared/contract"
-import { activityRows, matches } from "./activity-rows"
+import type { SourceActivity, TradingConfiguration } from "../../../shared/contract"
+import { activityRows, followedPosts, matches } from "./activity-rows"
 
 const NOW = new Date("2026-11-04T19:00:00Z")
 const post: SourceActivity = {
@@ -35,5 +35,18 @@ describe("activityRows", () => {
     expect(matches(row!, "paper-2")).toBe(true)
     expect(matches(row!, "tsla")).toBe(false)
     expect(matches(row!, "")).toBe(true)
+  })
+})
+
+describe("followedPosts", () => {
+  const from = (channel: string, sequence: number): SourceActivity => ({ ...post, sequence, source_id: `discord:${channel}:${sequence}` })
+  const config = { routes: [{ source: "discord", channel_id: "zhao" }] } as unknown as TradingConfiguration
+
+  it("keeps only the channels the setup follows", () => {
+    expect(followedPosts([from("zhao", 2), from("old-test", 1)], config).map((p) => p.sequence)).toEqual([2])
+  })
+
+  it("keeps every post when no setup is saved", () => {
+    expect(followedPosts([from("zhao", 2), from("old-test", 1)], null)).toHaveLength(2)
   })
 })

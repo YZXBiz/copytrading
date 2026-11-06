@@ -365,7 +365,8 @@ export const posts: SourceActivity[] = sorted
     destinations: [],
     ...draft,
     sequence: index + 1,
-    source_id: `src-${index + 1}`,
+    // The channel of the guru's route, as the engine writes it: Activity shows only the channels the setup follows.
+    source_id: `discord:110000000000000000${(draft.guru_id ?? ZHAO) === CRYPTO ? 2 : 1}:${index + 1}`,
     captured_at: new Date(Date.parse(draft.source_at) + 4000).toISOString(),
     capture_status: "delivered",
     delivery_status: "delivered",

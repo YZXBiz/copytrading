@@ -1,4 +1,4 @@
-import type { SourceActivity } from "../../../shared/contract"
+import type { SourceActivity, TradingConfiguration } from "../../../shared/contract"
 import { type GuruAccountOutcome, guruAccountOutcomes } from "@/features/gurus/model"
 import { type Bucket, bucketOf } from "./post-bucket"
 import { type Tone, cardOutcome } from "./outcome"
@@ -43,4 +43,15 @@ export function matches(row: ActivityRow, query: string): boolean {
   const needle = query.trim().toLowerCase()
   if (needle === "") return true
   return [row.guru, row.said, row.meaning, row.label, ...row.post.instructions.map((i) => i.symbol), ...row.accounts.flatMap((a) => [a.accountId, a.summary])].join(" ").toLowerCase().includes(needle)
+}
+
+/**
+ * The posts of the channels the saved setup follows. The engine keeps every post it ever captured, so posts
+ * from channels the setup no longer copies (old test runs) would otherwise count as this setup's activity.
+ * With no saved setup there is nothing to follow, and every post is shown.
+ */
+export function followedPosts(posts: SourceActivity[], config: TradingConfiguration | null): SourceActivity[] {
+  if (!config) return posts
+  const followed = new Set(config.routes.map((r) => `${r.source}:${r.channel_id}`))
+  return posts.filter((p) => followed.has(p.source_id?.split(":").slice(0, 2).join(":") ?? ""))
 }
