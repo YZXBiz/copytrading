@@ -206,7 +206,8 @@ export function SankeyFlow({ nodes, links, label, columns, unit = "", totalLabel
   const signature = JSON.stringify([nodes, links]);
   // The last column labels to its right, so every label has a gap of its own; the diagram leaves a gutter for them.
   const sinks = nodes.filter(node => links.some(link => link.target === node.id) && !links.some(link => link.source === node.id));
-  const gutter = clamp(Math.max(0, ...sinks.map(node => Math.max(node.label.length, formatValue(links.filter(link => link.target === node.id).reduce((sum, link) => sum + link.value, 0)).length + 1))) * 6.6 + 14, 48, 120);
+  // A thin node sets its value on the same line as its name, so the gutter fits both side by side.
+  const gutter = clamp(Math.max(0, ...sinks.map(node => node.label.length + formatValue(links.filter(link => link.target === node.id).reduce((sum, link) => sum + link.value, 0)).length + 1)) * 6.6 + 14, 48, 140);
   // Narrow containers turn the diagram upright: stages run top to bottom and every label gets the full width.
   const vertical = width > 0 && width < 420;
   const plotH = vertical ? Math.max(height, 480) : height;
