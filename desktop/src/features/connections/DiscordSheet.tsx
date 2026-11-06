@@ -1,9 +1,9 @@
+import { Message01Icon } from "@/components/icons/Message01Icon"
 import { Button } from "@/components/arc/button/button"
-import { CheckNotice } from "./CheckNotice"
+import { ConnectionCheck } from "./ConnectionCheck"
 import { EditorSheet } from "./EditorSheet"
 import { TextField } from "./TextField"
-import { connect, edit, keysOf, useSetup } from "./setup-store"
-import { resultFor } from "./state"
+import { edit, keysOf, useSetup } from "./setup-store"
 import styles from "./connections.module.css"
 
 /** The channels the gurus post in and the token CopyTrading reads them with. */
@@ -11,7 +11,6 @@ export function DiscordSheet({ onClose }: { onClose: () => void }) {
   const s = useSetup()
   const { draft } = s
   const saved = keysOf(s)?.discord
-  const result = resultFor(s.checks, draft, "discord")
   return (
     <EditorSheet
       title="Discord"
@@ -19,9 +18,6 @@ export function DiscordSheet({ onClose }: { onClose: () => void }) {
       onClose={onClose}
       footer={
         <div className={styles.footerEnd}>
-          <Button size="sm" type="button" variant="secondary" loading={result?.check === null} onClick={() => void connect("discord")}>
-            {result ? "Check again" : "Connect"}
-          </Button>
           <Button size="sm" type="button" onClick={onClose}>
             Done
           </Button>
@@ -54,7 +50,7 @@ export function DiscordSheet({ onClose }: { onClose: () => void }) {
           inputMode="numeric"
         />
       </div>
-      <CheckNotice subject="discord" result={result} notice={s.notices.discord} />
+      <ConnectionCheck subject="discord" name="Discord" icon={Message01Icon} description="Signs in with your token and reads the channels above." />
     </EditorSheet>
   )
 }

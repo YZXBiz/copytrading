@@ -7,10 +7,11 @@ import { canApprove, resultMessage } from "./proposals"
 import styles from "./settings.module.css"
 
 /**
- * Approve and Reject for one waiting request. Approving shows a native confirmation from main, which words it from what the
- * engine holds, so a Cancel there sends nothing. A request only the app can carry out (a setup change) can only be rejected.
+ * Approve and Reject for one waiting request in the assistant's thread. Approving shows a native confirmation from main, which
+ * words it from what the engine holds, so a Cancel there sends nothing. A request only the app can carry out (a setup change)
+ * can only be rejected.
  */
-export function ProposalActions({ proposal, onDecided, gate = false }: { proposal: AgentProposal; onDecided: (outcome: string | null) => void; gate?: boolean }) {
+export function ProposalActions({ proposal, onDecided }: { proposal: AgentProposal; onDecided: (outcome: string | null) => void }) {
   const [working, setWorking] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -29,16 +30,16 @@ export function ProposalActions({ proposal, onDecided, gate = false }: { proposa
   }
 
   return (
-    <div className={gate ? styles.gate : styles.proposalActions}>
-      {/* Approve is the only primary button; Reject sits beside it, equal width in the assistant's gate. */}
+    <div className={styles.gate}>
+      {/* Approve is the only primary button; Reject sits beside it, equal width. */}
       <div className={styles.proposalButtons}>
         <Button type="button" size="sm" variant="secondary" disabled={working} onClick={() => decide(false)}>
-          {gate && <Cancel01Icon width={16} height={16} aria-hidden="true" />}
+          <Cancel01Icon width={16} height={16} aria-hidden="true" />
           Reject
         </Button>
         {canApprove(proposal) && (
           <Button type="button" size="sm" loading={working} onClick={() => decide(true)}>
-            {gate && <Tick02Icon width={16} height={16} aria-hidden="true" />}
+            <Tick02Icon width={16} height={16} aria-hidden="true" />
             Approve
           </Button>
         )}

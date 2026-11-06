@@ -20,7 +20,8 @@
 .profile:has(.sentence) { align-items: flex-start; }
 .profile:has(.sentence) .marker { height: 18px; }
 
-.nav { display: flex; flex: 1; min-height: 0; flex-direction: column; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; padding: 4px 12px 8px; scrollbar-width: none; }
+/* The nav is the one stacking context, so the active highlight (which glides between rows) always sits under every row's label, whichever way it travels. */
+.nav { isolation: isolate; display: flex; flex: 1; min-height: 0; flex-direction: column; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; padding: 4px 12px 8px; scrollbar-width: none; }
 .nav::-webkit-scrollbar { display: none; }
 .section + .section { margin-top: 4px; }
 .heading { position: relative; overflow: hidden; }
@@ -31,7 +32,7 @@
 .note { padding: 0 12px 8px; color: var(--text-muted); font-size: var(--text-xs); line-height: var(--leading-body); }
 .note button { border: 0; padding: 0; background: none; color: var(--accent); font: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 
-.item { position: relative; isolation: isolate; display: flex; width: 100%; height: 32px; align-items: center; gap: 10px; border: 0; border-radius: 8px; padding: 0 10px 0 12px; background: transparent; color: var(--text-secondary); font: inherit; font-size: var(--text-sm); letter-spacing: var(--tracking-body); line-height: 1; text-align: left; text-decoration: none; white-space: nowrap; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard); }
+.item { position: relative; display: flex; width: 100%; height: 32px; align-items: center; gap: 10px; border: 0; border-radius: 8px; padding: 0 10px 0 12px; background: transparent; color: var(--text-secondary); font: inherit; font-size: var(--text-sm); letter-spacing: var(--tracking-body); line-height: 1; text-align: left; text-decoration: none; white-space: nowrap; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard); }
 .highlight { position: absolute; inset: 0; z-index: -1; background: var(--row-active); }
 .icon { flex: none; color: var(--text-muted); transition: color var(--duration-fast) var(--ease-standard); }
 .label { display: block; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: clip; }

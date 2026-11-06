@@ -1,12 +1,12 @@
+import { SparklesIcon } from "@/components/icons/SparklesIcon"
 import { Button } from "@/components/arc/button/button"
 import { PROVIDER_GROUPS, PROVIDER_TITLES, acceptsBaseUrl, baseUrlProblem, requiresApiKey } from "../../../shared/providers"
 import type { ProviderName } from "../../../shared/contract"
-import { CheckNotice } from "./CheckNotice"
+import { ConnectionCheck } from "./ConnectionCheck"
 import { EditorSheet } from "./EditorSheet"
 import { SelectField } from "./SelectField"
 import { TextField } from "./TextField"
-import { connect, edit, keysOf, pickProvider, useSetup } from "./setup-store"
-import { resultFor } from "./state"
+import { edit, keysOf, pickProvider, useSetup } from "./setup-store"
 import styles from "./connections.module.css"
 
 /** The AI model that reads each post: its service, model name, and key. */
@@ -14,7 +14,6 @@ export function InterpreterSheet({ onClose }: { onClose: () => void }) {
   const s = useSetup()
   const { draft } = s
   const keySaved = keysOf(s)?.providerKey
-  const result = resultFor(s.checks, draft, "interpreter")
   const address = draft.base_url ? baseUrlProblem(draft.provider, draft.base_url) : null
   return (
     <EditorSheet
@@ -23,9 +22,6 @@ export function InterpreterSheet({ onClose }: { onClose: () => void }) {
       onClose={onClose}
       footer={
         <div className={styles.footerEnd}>
-          <Button size="sm" type="button" variant="secondary" loading={result?.check === null} onClick={() => void connect("interpreter")}>
-            {result ? "Check again" : "Connect"}
-          </Button>
           <Button size="sm" type="button" onClick={onClose}>
             Done
           </Button>
@@ -61,7 +57,7 @@ export function InterpreterSheet({ onClose }: { onClose: () => void }) {
           />
         )}
       </div>
-      <CheckNotice subject="interpreter" result={result} notice={s.notices.interpreter} modelName={draft.model} useModel={(model) => edit((d) => ({ ...d, model }))} />
+      <ConnectionCheck subject="interpreter" name={draft.model.trim() ? PROVIDER_TITLES[draft.provider] : "Interpreter"} icon={SparklesIcon} description="Asks the model a short question to see that it answers." modelName={draft.model} useModel={(model) => edit((d) => ({ ...d, model }))} />
     </EditorSheet>
   )
 }

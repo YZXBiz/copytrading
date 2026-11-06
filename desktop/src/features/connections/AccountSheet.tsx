@@ -1,8 +1,9 @@
 import { useState } from "react"
+import { BankIcon } from "@/components/icons/BankIcon"
 import { Alert } from "@/components/arc/alert/alert"
 import { Button } from "@/components/arc/button/button"
 import type { AccountPolicy } from "../../../shared/contract"
-import { CheckNotice } from "./CheckNotice"
+import { ConnectionCheck } from "./ConnectionCheck"
 import { ChoiceField } from "./ChoiceField"
 import { EditorSheet } from "./EditorSheet"
 import { MoneyField } from "./MoneyField"
@@ -11,8 +12,8 @@ import { SwitchField } from "./SwitchField"
 import { TextField } from "./TextField"
 import { FOLLOW_STOPS_HINT, FOLLOW_STOPS_TITLE } from "@/features/account/limits"
 import { accountNameProblem } from "./draft"
-import { applyLimits, connect, editAccount, editPolicy, isCopying, keysOf, removeAccount, useSetup } from "./setup-store"
-import { accountSubject, resultFor, same } from "./state"
+import { applyLimits, editAccount, editPolicy, isCopying, keysOf, removeAccount, useSetup } from "./setup-store"
+import { accountSubject, same } from "./state"
 import styles from "./connections.module.css"
 
 type Text = { [K in keyof AccountPolicy]: AccountPolicy[K] extends string ? K : never }[keyof AccountPolicy]
@@ -45,7 +46,6 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
   const subject = accountSubject(name)
   const copying = isCopying(s)
   const savedKeys = Boolean(keysOf(s)?.brokers[name])
-  const result = resultFor(s.checks, s.draft, subject)
   const savedPolicy = s.load.status === "ready" ? s.load.data.saved?.configuration.accounts.find((a) => a.id === name)?.policy : undefined
   const nameProblem = name || account.name ? accountNameProblem(account.name) : null
 
@@ -71,9 +71,6 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
                 Apply limits now
               </Button>
             )}
-            <Button size="sm" type="button" variant="secondary" loading={result?.check === null} onClick={() => void connect(subject)}>
-              {result ? "Check again" : "Connect"}
-            </Button>
             <Button size="sm" type="button" onClick={onClose}>
               Done
             </Button>
@@ -132,8 +129,9 @@ export function AccountSheet({ uid, onClose }: { uid: string; onClose: () => voi
           placeholder={savedKeys ? "Saved" : "Required"}
         />
         <TextField label="API secret" value={account.secret} onChange={(secret) => editAccount(uid, (a) => ({ ...a, secret }))} type="password" placeholder={savedKeys ? "Saved" : "Required"} />
-        <CheckNotice subject={subject} result={result} notice={s.notices[subject]} />
       </fieldset>
+
+      <ConnectionCheck subject={subject} name={name || "Alpaca"} icon={BankIcon} description="Reads the account with these keys." />
 
       <fieldset className={styles.fieldset}>
         <legend>Position limits</legend>

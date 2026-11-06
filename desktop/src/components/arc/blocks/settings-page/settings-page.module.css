@@ -4,8 +4,9 @@
 
 /* Sidebar: a quiet tinted column. The selected section is the only raised thing in it. */
 .sidebar { display: flex; min-width: 0; min-height: 0; flex-direction: column; gap: 16px; border-right: 1px solid var(--border); padding: 16px 8px 8px; background: color-mix(in oklab, var(--surface-muted) 50%, var(--surface)); }
-.navList { display: flex; flex-direction: column; gap: 1px; margin: 0; padding: 0; list-style: none; }
-.navItem { position: relative; isolation: isolate; display: flex; width: 100%; min-height: 32px; align-items: center; gap: 10px; border: 0; border-radius: 8px; padding: 0 12px; background: transparent; color: var(--text-secondary); font: inherit; font-size: var(--text-sm); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard); }
+/* The list is the one stacking context, so the selected highlight always sits under every label while it glides. */
+.navList { isolation: isolate; display: flex; flex-direction: column; gap: 1px; margin: 0; padding: 0; list-style: none; }
+.navItem { position: relative; display: flex; width: 100%; min-height: 32px; align-items: center; gap: 10px; border: 0; border-radius: 8px; padding: 0 12px; background: transparent; color: var(--text-secondary); font: inherit; font-size: var(--text-sm); text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color var(--duration-fast) var(--ease-standard), background-color var(--duration-fast) var(--ease-standard); }
 .navItem > svg { flex: none; color: var(--text-muted); transition: color var(--duration-fast) var(--ease-standard); }
 .navItem[aria-current="page"], .navItem[aria-current="page"] > svg { color: var(--foreground); }
 @media (hover: hover) and (pointer: fine) {
