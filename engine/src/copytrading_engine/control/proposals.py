@@ -44,7 +44,7 @@ class ConfirmManualOrder:
     environment: Literal["paper", "live"]
     symbol: str
     side: Literal["buy", "sell"]
-    order_type: Literal["limit", "market"]
+    order_type: Literal["limit", "market", "stop"]
     quantity: Decimal
     limit_price: Decimal | None
 

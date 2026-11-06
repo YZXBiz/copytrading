@@ -150,7 +150,7 @@ def _order_item(
         amount: Decimal | None = filled * price
     else:
         kind = _ENDED.get(update.status, "rejected")
-        shares, price, amount = order.qty, order.limit_price, None
+        shares, price, amount = order.qty, order.limit_price or order.stop_price, None
     return AccountFeedItem(
         sequence=seq,
         at=event.at,

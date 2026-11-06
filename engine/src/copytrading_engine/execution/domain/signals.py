@@ -33,6 +33,9 @@ class AccountLimits(BaseModel):
     # Off by default. On, no order is sent by itself: a call that would have traded waits for
     # the owner, who approves it in the app (ADR-0008).
     approve_orders: StrictBool = False
+    # Off by default. On, a stop the guru posts is placed as a stop order at Alpaca for the shares
+    # CopyTrading bought; off, a stop post is skipped and nothing is invented (ADR-0015).
+    follow_stops: StrictBool = False
     # What the account does after CopyTrading restarts: "automatic" copies again once its checks
     # pass; "manual" waits for the owner's Start Copying. The setup holds it, never the account's
     # record, so the account sheet shows every choice that changes how it trades.

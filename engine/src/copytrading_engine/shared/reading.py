@@ -144,6 +144,19 @@ class NotSaid(_Part):
 type SellFrom = Annotated[Lot | NotSaid, Field(discriminator="kind")]
 
 
+class Alongside(_Part):
+    """The stop protects the buy this same post makes, as in 43.4加了3分之一常规仓soxl 止损放38.4.
+    `call` is that buy's place among the post's calls."""
+
+    kind: Literal["alongside"] = "alongside"
+    call: Annotated[int, Field(ge=0, le=19)]
+
+
+# Which shares a stop protects: the buys at a price the post names, the buy the post itself makes,
+# or (not said) every share CopyTrading bought of the stock for this guru.
+type Protects = Annotated[Lot | Alongside | NotSaid, Field(discriminator="kind")]
+
+
 class Stock(_Part):
     """The ticker, or a coin's US dollar pair (BTC/USD), and the post's words for it: the ticker
     itself, a coin's ticker or name (BTC, bitcoin, 比特币), or a name the playbook maps."""
@@ -181,7 +194,18 @@ class Sell(_Part):
     repeats: CallRef | None = None
 
 
-type Call = Annotated[Buy | Sell, Field(discriminator="action")]
+class Stop(_Part):
+    """A stop order the guru posts: sell the shares it protects when the price falls to `price`,
+    as in 跌破50.95出剩下的保护 or 止损放38.4. It is never a sell at that price now."""
+
+    action: Literal["stop"] = "stop"
+    action_words: Words
+    stock: Stock
+    price: Exact
+    protects: Protects
+
+
+type Call = Annotated[Buy | Sell | Stop, Field(discriminator="action")]
 
 Summary = Annotated[str, Field(min_length=1, max_length=300)]
 Calls = Annotated[tuple[Call, ...], Field(min_length=1, max_length=20)]

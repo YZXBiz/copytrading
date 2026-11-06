@@ -19,6 +19,7 @@ import { parseDec } from "./decimal"
 import { HOLDINGS_SORTS, type HoldingsSort, sortHoldings } from "./holdings-sort"
 import { heldPositions } from "./model"
 import { PositionSparkline } from "./PositionSparkline"
+import { stopLine } from "./stops"
 import { useBars } from "./use-bars"
 
 type Position = AccountOverview["positions"][number]
@@ -36,12 +37,14 @@ function Row({ accountId, position, livePrice, bars, onSell }: { accountId: stri
   const down = (row.gain ?? 0) < 0
   const lots = sellable(position)
   const value = row.value === null ? null : Number(row.value.toFixed(2))
+  const stop = stopLine(position)
   return (
     <li className={styles.holding}>
       <SymbolMark symbol={position.symbol} />
       <div className={styles.holdingName}>
         <TickerLink symbol={position.symbol} accountId={accountId} className={styles.holdingLink} />
         <span className={styles.holdingShares}>{`${shares(position.owned_qty)} shares`}</span>
+        {stop && <span className={styles.holdingShares}>{stop}</span>}
       </div>
       <PositionSparkline bars={bars} />
       <div className={styles.holdingValue}>

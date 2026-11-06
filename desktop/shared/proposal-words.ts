@@ -28,6 +28,7 @@ const LIMIT_TITLES: Record<string, string> = {
   overnight: "Trade overnight",
   copy_exits: "Copy exits",
   approve_orders: "Ask me before sending orders",
+  follow_stops: "Follow the guru's stops",
 }
 const DOLLAR_LIMITS = new Set(["max_order_usd", "max_symbol_usd", "max_total_usd", "daily_loss_cap_usd"])
 

@@ -100,6 +100,24 @@ for (const [name, env] of [
       COPYTRADING_CAPTURE_SCRIPT: `(async () => { const read = () => [...document.querySelectorAll("ul li")].find((e) => e.innerText.includes(" shares"))?.querySelector("[data-rolling] > [aria-label]")?.getAttribute("aria-label"); await new Promise((r) => setTimeout(r, 1500)); const before = read(); for (let i = 0; i < 400 && read() === before; i++) await new Promise((r) => setTimeout(r, 40)) })()`,
     },
   ],
+  // The guru's stops (docs/adr/0015): the switch off (the default) and on in the account's limits, a holding with a stop on the account page
+  // and the stock's page, and a stop post resting at Alpaca (12), filled (9), and skipped because the account does not follow stops ("stops-off").
+  ...["1280x860", "980x860"].flatMap((size) => {
+    const win = { ...fixtures, COPYTRADING_CAPTURE_SIZE: size }
+    const on = { ...win, COPYTRADING_FIXTURE_SCENE: "stops" }
+    const toSwitch = `(async () => { document.getElementById("behavior-follow_stops").scrollIntoView({ block: "center" }); await new Promise((r) => setTimeout(r, 400)) })()`
+    return [
+      [`stops-limits-off-${size}`, { ...win, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2?open=limits", COPYTRADING_CAPTURE_SCRIPT: toSwitch }],
+      [`stops-limits-on-${size}`, { ...on, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2?open=limits", COPYTRADING_CAPTURE_SCRIPT: toSwitch }],
+      // Holdings sit below the first screen, so the account page is also captured tall.
+      [`stops-account-${size.replace("860", "1500")}`, { ...on, COPYTRADING_CAPTURE_SIZE: size.replace("860", "1500"), COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2" }],
+      [`stops-stock-${size}`, { ...on, COPYTRADING_CAPTURE_HASH: "#/stock/SOXL?account=zhap-account-2" }],
+      [`stops-activity-${size}`, { ...on, COPYTRADING_CAPTURE_HASH: "#/activity" }],
+      [`stops-post-placed-${size}`, { ...on, COPYTRADING_CAPTURE_HASH: "#/activity/12" }],
+      [`stops-post-filled-${size}`, { ...on, COPYTRADING_CAPTURE_HASH: "#/activity/9" }],
+      [`stops-post-off-${size}`, { ...win, COPYTRADING_FIXTURE_SCENE: "stops-off", COPYTRADING_CAPTURE_HASH: "#/activity/9" }],
+    ]
+  }),
   ["account-review", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2?open=review" }],
   ["account-sale", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2?open=sale" }],
   ["account-limits", { ...fixtures, COPYTRADING_CAPTURE_HASH: "#/accounts/zhap-account-2?open=limits" }],

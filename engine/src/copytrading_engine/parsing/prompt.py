@@ -39,6 +39,17 @@ Each call is a buy or a sell, with the stock and the price:
 - A sell's sell_from is the lot it names by its buy price (出一半39.5的iren names 39.5), or
   not_said. Never reuse one number as both the current price and the buy price.
 - A buy-back (加回…卖出的那部分) is a buy; the sale price it mentions is context, not a lot.
+- A stop is a call of its own, action stop: the guru sets a protective exit that sells if the
+  price falls to a stated price (止损放38.4, 跌破50.95出剩下的保护, 跌破44.5全出的保护, stop loss at
+  38.4). Its price is exact, with the number's words only; action_words are the words that set it
+  (止损, 保护, stop). Never read a stop as a sell now, and never as conditional: its 跌破 is the
+  order's trigger, not a condition on the guru's trade, so a post with a stop is trade_made.
+  protects says which shares: lot with the buy price the post names (剩下一半49.5的tqqq names 49.5),
+  alongside with the place among the calls of the buy this same post makes (43.4加了…soxl
+  止损放38.4 is a buy call, then a stop call alongside call 0), or not_said when it names no buy
+  (it then protects every share bought of the stock). 或者…全出都可以 and other options the guru
+  floats beside a stop are not calls; chat about orders the reader may set in their own app
+  (在条件单 回落卖出 或者跌破止盈两个选项) is commentary, with no calls.
 
 Every stated value has words: its exact substring of the provided message. A number's words
 are only that number. A ticker's words are the ticker as written (lowercase and attached to

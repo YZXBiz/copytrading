@@ -531,6 +531,8 @@ class ExecutionResources:
                 return
             now = dt.datetime.now(dt.UTC)
             for order in self.engine.pending():
+                if order.type == "stop":
+                    continue  # a stop keeps guarding the shares at Alpaca while copying is off
                 try:
                     self.engine.cancel(order, now, "copying_stopped")
                 except BrokerError as exc:

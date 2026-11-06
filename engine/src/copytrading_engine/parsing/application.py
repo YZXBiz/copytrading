@@ -19,7 +19,13 @@ from copytrading_engine.parsing.extraction import (
 from copytrading_engine.parsing.history import RecentCall
 from copytrading_engine.parsing.routes import Route
 from copytrading_engine.shared import reading as r
-from copytrading_engine.shared.signals import Evidence, Instruction, StockSignal, same_fraction
+from copytrading_engine.shared.signals import (
+    Evidence,
+    Instruction,
+    StockSignal,
+    StopCall,
+    same_fraction,
+)
 
 
 def outcome(
@@ -30,6 +36,7 @@ def outcome(
     model: str,
     instructions: Sequence[Instruction] = (),
     evidence: Sequence[Evidence] = (),
+    stops: Sequence[StopCall] = (),
     guru_id: str | None = None,
     profile_revision: str | None = None,
     reading: r.PostReading | None = None,
@@ -52,6 +59,7 @@ def outcome(
         reason=reason,
         instructions=tuple(instructions),
         evidence=tuple(evidence),
+        stops=tuple(stops),
     )
 
 
@@ -90,6 +98,7 @@ async def transform(
             "evidence_validation_failed", retryable=False, issues=(exc.issue,)
         ) from None
     acted, repeat = _without_repeats(reading, route, recent, event.timestamp)
+    stops: tuple[StopCall, ...] = ()
     if repeat is not None:
         decision, reason, calls = (
             repeat,
@@ -97,7 +106,7 @@ async def transform(
             (),
         )
     else:
-        decision, reason, calls = _act_on(acted, route.playbook)
+        decision, reason, calls, stops = _act_on(acted, route.playbook)
     return outcome(
         event,
         decision,
@@ -105,6 +114,7 @@ async def transform(
         model=answer.model or model,
         instructions=tuple(call for call, _ in calls),
         evidence=tuple(evidence for _, evidence in calls),
+        stops=stops,
         guru_id=route.guru_id,
         profile_revision=route.profile_revision,
         reading=reading,
@@ -126,23 +136,43 @@ def _without_repeats(
     if window is None or not isinstance(reading, r.TradeMade | r.Instruction):
         return reading, None
     by_ref = {call.ref: call for call in recent}
-    kept = []
-    for call in reading.calls:
-        earlier = by_ref.get(call.repeats) if call.repeats is not None else None
+    kept: list[tuple[int, r.Call]] = []
+    for index, call in enumerate(reading.calls):
+        earlier = (
+            None if isinstance(call, r.Stop) or call.repeats is None else by_ref.get(call.repeats)
+        )
         # A sell is never a re-post of the buy it sells, whatever the reader says, and a call
         # after the guru traded the other side of that stock is a new call however it reads.
         if (
             earlier is None
+            or isinstance(call, r.Stop)
             or not same_side(earlier, call)
             or not _same_terms(earlier, call)
             or _traded_since(earlier, call, recent)
         ):
-            kept.append(call)
+            kept.append((index, call))
         elif (at - earlier.at).total_seconds() > window * 60:
             return reading, "review"
-    if not kept:
+    # A stop beside a buy that was a re-post goes with it; the others keep their buy's new place.
+    survivors = [
+        (old, call)
+        for old, call in kept
+        if not (
+            isinstance(call, r.Stop)
+            and isinstance(call.protects, r.Alongside)
+            and call.protects.call not in {index for index, _ in kept}
+        )
+    ]
+    place = {old: new for new, (old, _) in enumerate(survivors)}
+    calls = tuple(
+        call.model_copy(update={"protects": r.Alongside(call=place[call.protects.call])})
+        if isinstance(call, r.Stop) and isinstance(call.protects, r.Alongside)
+        else call
+        for _, call in survivors
+    )
+    if not calls:
         return reading, "ignore"
-    return reading.model_copy(update={"calls": tuple(kept)}), None
+    return reading.model_copy(update={"calls": calls}), None
 
 
 def _same_terms(earlier: RecentCall, call: r.Buy | r.Sell) -> bool:
@@ -195,28 +225,68 @@ class _Wait(Exception):
 
 def _act_on(
     reading: r.PostReading, playbook: str
-) -> tuple[Literal["trade", "ignore", "review"], str, tuple[tuple[Instruction, Evidence], ...]]:
+) -> tuple[
+    Literal["trade", "ignore", "review"],
+    str,
+    tuple[tuple[Instruction, Evidence], ...],
+    tuple[StopCall, ...],
+]:
     """Act or ask (ADR-0007): a trade made or an instruction with every call placeable trades;
     conditionals, suggestions, a range, a buy with no exact price, and a vague trim wait for the
-    owner; commentary and chatter are ignored."""
+    owner; commentary and chatter are ignored. A stop the guru posts rides with the trade."""
     match reading:
         case r.Commentary():
-            return "ignore", reading.summary, ()
+            return "ignore", reading.summary, (), ()
         case r.Chatter():
-            return "ignore", "chatter", ()
+            return "ignore", "chatter", (), ()
         case r.Unclear():
-            return "review", "unclear", ()
+            return "review", "unclear", (), ()
         case r.Conditional() | r.Suggestion():
-            return "review", reading.kind, ()
+            return "review", reading.kind, (), ()
         case r.TradeMade() | r.Instruction():
             try:
-                calls = tuple(_placeable(call, playbook) for call in reading.calls)
+                calls = tuple(
+                    _placeable(call, playbook)
+                    for call in reading.calls
+                    if not isinstance(call, r.Stop)
+                )
             except _Wait as wait:
-                return "review", wait.reason, ()
-            return "trade", reading.summary, calls
+                return "review", wait.reason, (), ()
+            return "trade", reading.summary, calls, _stops(reading.calls)
 
 
-def _placeable(call: r.Call, playbook: str) -> tuple[Instruction, Evidence]:
+def _stops(calls: tuple[r.Call, ...]) -> tuple[StopCall, ...]:
+    """The stops among a post's calls, each beside the instruction its buy becomes: the buys and
+    sells of a post become instructions in order, and the stops are kept apart from them."""
+    instruction_at = {
+        index: place
+        for place, index in enumerate(
+            index for index, call in enumerate(calls) if not isinstance(call, r.Stop)
+        )
+    }
+    stops = []
+    for call in calls:
+        if not isinstance(call, r.Stop):
+            continue
+        protects = call.protects
+        stops.append(
+            StopCall(
+                symbol=call.stock.ticker,
+                stop_price=call.price.value,
+                entry_price=protects.buy_price if isinstance(protects, r.Lot) else None,
+                buy_part=(
+                    instruction_at[protects.call] if isinstance(protects, r.Alongside) else None
+                ),
+                action_evidence=call.action_words,
+                symbol_evidence=call.stock.words,
+                price_evidence=call.price.words,
+                entry_evidence=protects.words if isinstance(protects, r.Lot) else None,
+            )
+        )
+    return tuple(stops)
+
+
+def _placeable(call: r.Buy | r.Sell, playbook: str) -> tuple[Instruction, Evidence]:
     """The engine's call for a stated one, with the post's words behind each field. Raises
     _Wait when it cannot be placed without the owner."""
     instruction = _instruction(call, playbook, owner=False)
@@ -255,6 +325,8 @@ def suggested(reading: r.PostReading | None, playbook: str) -> tuple[Instruction
         return ()
     calls = []
     for call in reading.calls:
+        if isinstance(call, r.Stop):
+            continue  # a stop is never copied by hand: it would sell at once (ADR-0015)
         try:
             calls.append(_instruction(call, playbook, owner=True))
         except _Wait:
@@ -262,7 +334,7 @@ def suggested(reading: r.PostReading | None, playbook: str) -> tuple[Instruction
     return tuple(calls)
 
 
-def _instruction(call: r.Call, playbook: str, *, owner: bool) -> Instruction:
+def _instruction(call: r.Buy | r.Sell, playbook: str, *, owner: bool) -> Instruction:
     """One call as the engine places it (ADR-0007, ADR-0010). On its own (`owner=False`) the
     engine waits for the owner on a range and on a sell that states no share; when the owner
     copies, a range buys at its top. A sell with no price, or one at the market, sells at the

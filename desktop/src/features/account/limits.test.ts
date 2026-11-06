@@ -15,10 +15,24 @@ const policy: AccountPolicy = {
   overnight: false,
   copy_exits: true,
   approve_orders: false,
+  follow_stops: false,
   max_above_signal_pct: "0",
   max_below_signal_pct: "1",
   recovery_preference: "manual",
 }
+
+describe("following the guru's stops", () => {
+  it("is off for a setup saved before the switch existed", () => {
+    const { follow_stops: _, ...saved } = policy
+    expect(draftFromPolicy(saved as AccountPolicy).follow_stops).toBe(false)
+  })
+
+  it("is saved through the same path as the other limits, and a change to it is a change", () => {
+    const draft = setFlag(draftFromPolicy(policy), "follow_stops", true)
+    expect(limitsChanged(draft, policy)).toBe(true)
+    expect(policyFromDraft(draft, policy)).toEqual({ ...policy, follow_stops: true })
+  })
+})
 
 describe("limits draft", () => {
   it("round-trips a policy unchanged, keeping types the engine takes", () => {

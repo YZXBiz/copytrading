@@ -59,7 +59,8 @@ from copytrading_engine.execution.domain.risk import (
 from copytrading_engine.execution.domain.sessions import Session, SessionSchedule, trade_date
 from copytrading_engine.execution.domain.signals import CopyConfig, SignalSourceNotAllowed
 from copytrading_engine.execution.domain.sizing import DestinationSignal
-from copytrading_engine.shared.signals import Instruction
+from copytrading_engine.execution.domain.stops import StopRule, stop_rule_key
+from copytrading_engine.shared.signals import Instruction, StopCall
 from copytrading_engine.shared.symbols import is_crypto
 
 ZERO = Decimal(0)
@@ -166,8 +167,14 @@ SELL_WAITS = frozenset(
         "overnight_halted",
         "session_changed",
         "stopping",
+        "stop_still_open",
     }
 )
+# After Alpaca refuses a stop, it is tried again this often, not every cycle.
+STOP_RETRY_SECONDS = 300
+# A copied order cancels the stock's stops and waits for Alpaca to confirm, polling this often.
+STOP_CLEAR_POLLS = 8
+STOP_CLEAR_POLL_SECONDS = 0.5
 # A waiting sell is planned again at most this often: each plan is five Alpaca requests, and the
 # app polls every 2 seconds, which for one sell would be most of Alpaca's 200 requests a minute.
 SELL_RETRY_SECONDS = 30
@@ -200,6 +207,9 @@ class CopyEngine:
         # Posts read back since the last summary, and when the latest came in.
         self._read_back: dict[str, None] = {}
         self._read_back_at: dt.datetime | None = None
+        # When a stop Alpaca refused may be placed again, and which stocks trade in fractions.
+        self._stop_retry_at: dict[str, dt.datetime] = {}
+        self._fractionable: dict[str, bool] = {}
 
     def bind(
         self,
@@ -395,8 +405,10 @@ class CopyEngine:
     def _crosses(self, symbol: str, side: Literal["buy", "sell"], limit_price: Decimal) -> bool:
         """An open order of the stock on the other side this one would trade with: a sell at or
         under this buy's limit, or a buy at or over this sell's."""
+        # A stop rests below the market and trades with nothing until it triggers.
         return any(
             order.side != side
+            and order.type != "stop"
             and (
                 order.limit_price is None
                 or (
@@ -409,12 +421,13 @@ class CopyEngine:
         )
 
     def _selling(self, symbol: str) -> Decimal:
-        """The shares of the stock the open sells have yet to sell."""
+        """The shares of the stock the open sells have yet to sell. A stop is not counted: it
+        gives its shares up to a sell, which cancels it before it goes out (ADR-0015)."""
         return sum(
             (
                 order.qty - order.filled_qty
                 for order in self.pending(symbol)
-                if order.side == "sell"
+                if order.side == "sell" and order.type != "stop"
             ),
             ZERO,
         )
@@ -433,7 +446,7 @@ class CopyEngine:
         working = [
             (order.qty - order.filled_qty, set(order.from_entries or lot.entries(lot_id)))
             for order in self.pending(lot.symbol)
-            if order.side == "sell" and order.lot_id == lot_id
+            if order.side == "sell" and order.type != "stop" and order.lot_id == lot_id
         ]
         held = lot.remaining_of(from_entries) if from_entries else lot.remaining_qty
         sharing = [(left, entries) for left, entries in working if entries & chosen]
@@ -518,7 +531,8 @@ class CopyEngine:
             return TradeDecision(None, "halted")
         if s.action != "buy" and not c.copy_exits and chosen_lot is None:
             return TradeDecision(None, "exits_disabled")
-        active = self.pending(s.symbol)
+        # A resting stop holds nothing back: a sell cancels it as it goes out (ADR-0015).
+        active = tuple(order for order in self.pending(s.symbol) if order.type != "stop")
         # An order the owner places by hand waits for every open order on the stock.
         if active and manual:
             return TradeDecision(None, "wait_pending_order")
@@ -772,7 +786,7 @@ class CopyEngine:
         activity_reason = self._activity_reason(final_open, s)
         if activity_reason is not None:
             return TradeDecision(None, activity_reason)
-        known = {order.client_id for order in active}
+        known = {order.client_id for order in self.pending(s.symbol)}
         if any(o.symbol == s.symbol and o.client_order_id not in known for o in final_open):
             return TradeDecision(None, "external_open_order")
         if s.action != "buy" and qty > owned - self._selling(s.symbol):
@@ -836,11 +850,245 @@ class CopyEngine:
                 if not isinstance(self.ledger.message(message.key).parts[index], Pending):
                     continue
                 self._process_instruction(message, index, instruction, controls)
-            if all(
-                not isinstance(part, Pending) for part in self.ledger.message(message.key).parts
-            ):
+            for index, stop in enumerate(message.stops):
+                if isinstance(self.ledger.message(message.key).stop_parts[index], Pending):
+                    self._process_stop(message, index, stop, controls)
+            settled = self.ledger.message(message.key)
+            if all(not isinstance(part, Pending) for part in (*settled.parts, *settled.stop_parts)):
                 self.ledger.complete(message.key, controls.now())
+        self._sync_stops(controls)
         self._summarize_read_back(controls.now())
+
+    def _lot_of(self, entry: str) -> str | None:
+        """The lot a buy's shares belong to."""
+        return next(
+            (key for key, lot in self.ledger.state.lots.items() if entry in lot.entries(key)), None
+        )
+
+    def _stop_target(
+        self, message: MessageRecord, stop: StopCall
+    ) -> tuple[str, tuple[str, ...]] | str | None:
+        """The lot and buys a guru's stop protects: the buy this post made, the buys at the price
+        it names, or, naming none, every buy of the stock for the guru, each posted no later than
+        the stop. A reason (str) when there is nothing to protect, None while a buy has to fill."""
+        if stop.buy_part is not None:
+            progress = message.parts[stop.buy_part]
+            if isinstance(progress, Pending):
+                return None
+            if not isinstance(progress, OrderLinked):
+                return "stop_buy_not_made"
+            buy = self.ledger.order(progress.client_id)
+            if buy.filled_qty <= 0:
+                return None if buy.pending else "stop_buy_not_filled"
+            lot_id = self._lot_of(buy.client_id)
+            return None if lot_id is None else (lot_id, (buy.client_id,))
+        lots = self.ledger.position_lots(message.source_key, stop.symbol)
+        entries: tuple[str, ...] = ()
+        lot_id = None
+        for key, lot in lots:
+            held = tuple(
+                entry
+                for entry in lot.entries(key)
+                if lot.entry_remaining.get(entry, ZERO) > 0
+                and (stop.entry_price is None or lot.entry_prices[entry] == stop.entry_price)
+                and self._posted_before(entry, message.key)
+            )
+            if held:
+                lot_id, entries = key, held
+        if lot_id is not None:
+            return lot_id, entries
+        filling = any(
+            order.side == "buy"
+            and order.symbol == stop.symbol
+            and order.source_key == message.source_key
+            and (stop.entry_price is None or order.entry_price == stop.entry_price)
+            and self._posted_before(order.client_id, message.key)
+            for order in self.pending()
+        )
+        return None if filling else "stop_buy_not_held"
+
+    def _process_stop(
+        self, message: MessageRecord, index: int, stop: StopCall, controls: _ProcessControls
+    ) -> None:
+        """Follow a stop the guru posted (ADR-0015). With the setting off it is skipped, never
+        held for a Copy that would sell at once. On, it is recorded against the buys it protects
+        and placed as a stop order, in the regular session only, for the shares those buys hold."""
+        key, now = message.key, controls.now()
+        retry = (key, message.stop_order_index(index))
+        rule_key = stop_rule_key(key, index)
+        if rule_key in self.ledger.state.stops or now < self._sell_retry_at.get(
+            retry, dt.datetime.min.replace(tzinfo=dt.UTC)
+        ):
+            return  # followed already, placed by the sync below; or asked a moment ago
+        if not self.config.follow_stops:
+            self.ledger.skip_stop(key, index, "follow_stops_off", now)
+            return
+        if is_crypto(stop.symbol):
+            self.ledger.skip_stop(key, index, "stop_not_for_coins", now)
+            return
+        waiting = (
+            controls.stopping()
+            or bool(self.ledger.unresolved_ownership(stop.symbol))
+            or self.market_session(now, stop.symbol) != Session.REGULAR
+        )
+        target = None if waiting else self._stop_target(message, stop)
+        if isinstance(target, str):
+            self.ledger.skip_stop(key, index, target, now)
+            return
+        if target is None:
+            self._sell_retry_at[retry] = now + dt.timedelta(seconds=SELL_RETRY_SECONDS)
+            return
+        lot_id, entries = target
+        if any(
+            rule.lot_id == lot_id
+            and set(entries) <= set(rule.entries)
+            and rule.stop_price == stop.stop_price
+            for rule in self.ledger.state.stops.values()
+        ):
+            self.ledger.skip_stop(key, index, "duplicate", now)
+            return
+        self._sell_retry_at.pop(retry, None)
+        self.ledger.set_stop(
+            StopRule(
+                key=rule_key,
+                symbol=stop.symbol,
+                lot_id=lot_id,
+                entries=entries,
+                stop_price=stop.stop_price,
+                message_id=key,
+                order_index=message.stop_order_index(index),
+                set_at=now,
+            ),
+            now,
+        )
+
+    def _order_in_flight(self, symbol: str) -> bool:
+        """A copied order of the stock is working or about to go out: a sell needs the shares a
+        stop would hold, and Alpaca refuses a stop beside a buy as a possible wash trade."""
+        return any(order.type != "stop" for order in self.pending(symbol)) or any(
+            message.status == "queued"
+            and any(
+                isinstance(part, Pending) and instruction.symbol == symbol
+                for instruction, part in zip(message.instructions, message.parts, strict=True)
+            )
+            for message in self.ledger.state.messages.values()
+        )
+
+    def _stop_qty(self, symbol: str, held: Decimal) -> Decimal:
+        """What a stop order covers of `held`: whole shares for a stock that trades only in them."""
+        if symbol not in self._fractionable:
+            self._fractionable[symbol] = self.broker.asset(symbol).fractionable
+        return (
+            held if self._fractionable[symbol] else held.quantize(Decimal(1), rounding=ROUND_DOWN)
+        )
+
+    def _sync_stops(self, controls: _ProcessControls) -> None:
+        """Keep each stop's order matched to what its buys hold: placed in the regular session,
+        placed again each session after Alpaca expires the day order, resized when a sell or a
+        fill changes the shares, and ended with them. Alpaca triggers a stop in the regular
+        session only, so there is no protection outside it (ADR-0015)."""
+        if controls.stopping():
+            return
+        now = controls.now()
+        state = self.ledger.state
+        live: dict[str, list[OrderRecord]] = {}
+        for order in self.pending():
+            if order.stop_rule is not None:
+                live.setdefault(order.stop_rule, []).append(order)
+        for rule_key, orders in live.items():
+            if rule_key not in state.stops:  # a newer stop took every buy it protected
+                for order in orders:
+                    self.cancel(order, now, "stop_resized")
+        for rule in tuple(state.stops.values()):
+            lot = state.lots.get(rule.lot_id)
+            held = lot.remaining_of(rule.entries) if lot is not None else ZERO
+            orders = live.get(rule.key, [])
+            if held <= 0:
+                for order in orders:
+                    self.cancel(order, now, "stop_resized")
+                self.ledger.end_stop(rule.key, "nothing_left", now)
+            elif orders:
+                working = sum((order.qty - order.filled_qty for order in orders), ZERO)
+                if len(orders) != 1 or working != self._stop_qty(rule.symbol, held):
+                    for order in orders:
+                        self.cancel(order, now, "stop_resized")
+                elif orders[0].stop_price != rule.stop_price:
+                    self.cancel(orders[0], now, "stop_resized")
+            else:
+                self._place_stop(rule, held, controls)
+
+    def _place_stop(self, rule: StopRule, held: Decimal, controls: _ProcessControls) -> None:
+        now = controls.now()
+        if (
+            now < self._stop_retry_at.get(rule.key, dt.datetime.min.replace(tzinfo=dt.UTC))
+            or self.market_session(now, rule.symbol) != Session.REGULAR
+            or self._order_in_flight(rule.symbol)
+            # An older stop order still holds some of these shares: wait for its cancel to confirm.
+            or any(
+                order.type == "stop"
+                and order.stop_rule != rule.key
+                and set(order.from_entries) & set(rule.entries)
+                for order in self.pending(rule.symbol)
+            )
+        ):
+            return
+        qty = self._stop_qty(rule.symbol, held)
+        lot = self.ledger.state.lots[rule.lot_id]
+        if qty <= 0:
+            return
+        plan = OrderPlan(
+            symbol=rule.symbol,
+            side="sell",
+            position_intent="sell_to_close",
+            qty=qty,
+            type="stop",
+            stop_price=rule.stop_price,
+            source_price=rule.stop_price,
+            entry_tolerance_pct=ZERO,
+            lot_id=rule.lot_id,
+            entry_price=lot.entry_price,
+            session=Session.REGULAR,
+            from_entries=rule.entries,
+        )
+        attempt = 1 + sum(order.stop_rule == rule.key for order in self.ledger.orders())
+        order = self.ledger.prepare_stop(plan, rule, attempt, now)
+        message = self.ledger.message(rule.message_id)
+        guard = _SubmissionGuard.begin(
+            message.timestamp,
+            buy=False,
+            max_age_seconds=self.config.max_signal_age_seconds,
+            controls=controls,
+            market_session=self.market_session,
+        )
+        self._submit_prepared_order(order.message_id, order, guard)
+        # Alpaca refuses a sell stop at or above the price (it would trigger at once): ask again
+        # later, not every cycle.
+        if self.ledger.order(order.client_id).status is OrderStatus.REJECTED:
+            self._stop_retry_at[rule.key] = now + dt.timedelta(seconds=STOP_RETRY_SECONDS)
+
+    def _still_held(self, order: OrderRecord) -> bool:
+        """The shares a sell takes are still held: a stop cancelled for it may have filled first."""
+        lot = self.ledger.state.lots.get(order.lot_id or "")
+        if lot is None:
+            return False
+        held = lot.remaining_of(order.from_entries) if order.from_entries else lot.remaining_qty
+        return order.qty <= held
+
+    def _clear_stops(self, symbol: str, now: dt.datetime) -> bool:
+        """Cancel the stock's stop orders, which a copied order cannot go out beside, and wait for
+        Alpaca to confirm. The sync places each again for what is left once the order is done."""
+        stops = [order for order in self.pending(symbol) if order.type == "stop"]
+        for order in stops:
+            self.cancel(order, now, "made_room_for_order")
+        for attempt in range(STOP_CLEAR_POLLS):
+            for order in stops:
+                if (update := self.broker.lookup(order.client_id)) is not None:
+                    self.ledger.apply_order(order.client_id, update, now)
+            if not any(self.ledger.order(order.client_id).pending for order in stops):
+                return True
+            if attempt + 1 < STOP_CLEAR_POLLS:
+                time.sleep(STOP_CLEAR_POLL_SECONDS)
+        return False
 
     def _summarize_read_back(self, now: dt.datetime) -> None:
         """Once posts stop coming back, tell the owner what came of them in one message."""
@@ -977,6 +1225,16 @@ class CopyEngine:
         try:
             with self.observer.span("order_submission", message_key):
                 blocked, current = guard.check(order)
+                if blocked is None and order.type != "stop":
+                    # Alpaca refuses a sell of the shares a stop holds, and a buy beside a resting
+                    # stop as a possible wash trade. The stop is cancelled first, and the sync
+                    # places it again for what is left once the order is done.
+                    blocked = (
+                        None
+                        if self._clear_stops(order.symbol, current)
+                        and (order.side == "buy" or self._still_held(order))
+                        else "stop_still_open"
+                    )
                 if blocked is not None:
                     self.ledger.abort_before_submit(order.client_id, blocked, current)
                     return

@@ -95,6 +95,7 @@ const LIMITS: Partial<Record<keyof AccountPolicy, [label: string, show: Show]>> 
   overnight: ["Overnight", FLAG],
   copy_exits: ["Copy sells", FLAG],
   approve_orders: ["Approve each order", FLAG],
+  follow_stops: ["Follow the guru's stops", FLAG],
   max_above_signal_pct: ["Buy above the guru's price by up to", PCT],
   max_below_signal_pct: ["Sell below the guru's price by up to", PCT],
   recovery_preference: ["After a restart", (v) => (v === "automatic" ? "resume by itself" : "wait for you")],

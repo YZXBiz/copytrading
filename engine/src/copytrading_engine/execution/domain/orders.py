@@ -22,8 +22,10 @@ from copytrading_engine.shared.symbols import is_crypto
 class OrderTerms(Value):
     side: Side
     position_intent: Literal["buy_to_open", "sell_to_close"]
-    type: Literal["limit", "market"]
+    type: Literal["limit", "market", "stop"]
     limit_price: Positive | None = None
+    # A stop sells at the market once the price falls to this (ADR-0015).
+    stop_price: Positive | None = None
 
     @model_validator(mode="after")
     def valid_terms(self) -> Self:
@@ -31,8 +33,12 @@ class OrderTerms(Value):
             raise ValueError("Broker position intent does not match the order side")
         if (self.type == "limit") != (self.limit_price is not None):
             raise ValueError("Only limit orders require a limit price")
+        if (self.type == "stop") != (self.stop_price is not None):
+            raise ValueError("Only stop orders carry a stop price")
         if self.type == "market" and self.side != "sell":
             raise ValueError("Only exits may use market orders")
+        if self.type == "stop" and self.side != "sell":
+            raise ValueError("Only exits may use stop orders")
         return self
 
 
@@ -55,6 +61,9 @@ class OrderRequest(OrderTerms):
             raise ValueError("Only a stock's order says whether it trades in extended hours")
         if self.type == "market" and self.extended_hours:
             raise ValueError("Market orders cannot execute in extended hours")
+        if self.type == "stop" and (crypto or self.extended_hours):
+            # Alpaca takes a stock's stop for the day, in the regular session only (ADR-0015).
+            raise ValueError("A stop is a stock's, for the regular session")
         return self
 
     @classmethod
@@ -71,6 +80,7 @@ class OrderRequest(OrderTerms):
             qty=plan.qty,
             type=plan.type,
             limit_price=plan.limit_price,
+            stop_price=plan.stop_price,
             client_order_id=client_order_id,
             time_in_force="gtc" if crypto else "day",
             extended_hours=None if crypto else extended_hours,
@@ -101,7 +111,12 @@ def copy_client_id(message_key: str, part: int, attempt: int = 1) -> str:
     return base if attempt == 1 else f"{base}-{attempt}"
 
 
-type CancelReason = Literal["timeout", "replaced_by_sell", "copying_stopped"]
+#
+# A stop order is cancelled to match its shares, as a later copied sell or a newer stop changes
+# what it protects, or to leave its shares to a sell that needs them (ADR-0015).
+type CancelReason = Literal[
+    "timeout", "replaced_by_sell", "copying_stopped", "stop_resized", "made_room_for_order"
+]
 # Statuses that say Alpaca has the order live on the market; an order's timeout runs from the first
 # of them, not from when it was sent, since Alpaca can hold an order before it goes out.
 LIVE_AT_BROKER = frozenset(
@@ -164,6 +179,8 @@ class OrderPlan(OrderTerms):
             Session.AROUND_THE_CLOCK,
         }:
             raise ValueError("Market exits require a regular session")
+        if self.type == "stop" and self.session != Session.REGULAR:
+            raise ValueError("A stop is placed in the regular session")
         if is_crypto(self.symbol) != (self.session == Session.AROUND_THE_CLOCK):
             raise ValueError("A coin trades around the clock, and only a coin does")
         if (self.side == "sell") != (self.lot_id is not None):
@@ -191,6 +208,8 @@ class OrderRecord(OrderPlan):
     # holding once `fee_settled_qty` of the fill had been booked (ADR-0014). Zero for a stock.
     fee_qty: Quantity = Decimal(0)
     fee_settled_qty: Quantity = Decimal(0)
+    # The stop this order is, one of the day orders the stop is placed as (domain/stops.py).
+    stop_rule: Identifier | None = None
 
     @property
     def received_qty(self) -> Decimal:
@@ -207,6 +226,8 @@ class OrderRecord(OrderPlan):
 
     @model_validator(mode="after")
     def valid_fill(self) -> Self:
+        if (self.type == "stop") != (self.stop_rule is not None):
+            raise ValueError("A stop order belongs to its stop, and only a stop order does")
         if self.filled_qty > self.qty or (self.status == "filled" and self.filled_qty != self.qty):
             raise ValueError("Inconsistent recorded fill quantity")
         if self.fee_qty or self.fee_settled_qty:

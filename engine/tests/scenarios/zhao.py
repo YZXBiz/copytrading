@@ -12,6 +12,7 @@ from copytrading_engine.shared.reading import (
     PostReading,
     Sell,
     Stock,
+    Stop,
 )
 from copytrading_engine.shared.route_keys import guru_for_channel
 
@@ -67,6 +68,19 @@ def sell_now(symbol: str, *, said: str, share: Fraction | All) -> Sell:
     )
 
 
+def stop(
+    symbol: str,
+    price: str,
+    *,
+    said: str = "止损",
+    bought_at: str | None = None,
+    alongside: int | None = None,
+) -> Stop:
+    return readings.stop(
+        symbol, price, said=said, ticker_said=symbol, bought_at=bought_at, alongside=alongside
+    )
+
+
 def close(symbol: str, price: str, *, bought_at: str, said: str = "清仓") -> Sell:
     return readings.sell(symbol, price, bought_at=bought_at, said=said, ticker_said=symbol)
 
@@ -78,7 +92,7 @@ class ZhaoReader:
         self.readings: dict[str, PostReading] = {}
         self.read: list[str] = []
 
-    def expect(self, text: str, *calls: Buy | Sell) -> None:
+    def expect(self, text: str, *calls: Buy | Sell | Stop) -> None:
         self.readings[text] = readings.trade(*calls) if calls else readings.commentary()
 
     async def answer(self, text, route, recent=()):

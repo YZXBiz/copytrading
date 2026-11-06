@@ -10,7 +10,7 @@ from copytrading_engine.execution.presentation.operator_views import (
     DestinationView,
 )
 from copytrading_engine.shared.reading import PostReading
-from copytrading_engine.shared.signals import Instruction
+from copytrading_engine.shared.signals import Instruction, StopCall
 
 
 class SourceEmbedField(Value):
@@ -85,6 +85,8 @@ class SourceActivity(Value):
     interpreted_by: str | None
     # The calls the post trades, as the engine places them, before any account sizing.
     instructions: tuple[Instruction, ...]
+    # The stops the post sets, placed only for an account that follows the guru's stops (ADR-0015).
+    stops: tuple[StopCall, ...] = ()
     # For a post that waits for the owner: what Copy places (ADR-0007).
     suggested: tuple[Instruction, ...] = ()
     # How the reader read the post, for Activity's "Read as".

@@ -36,6 +36,8 @@ from copytrading_engine.execution.domain.events import (
     OwnershipResolved,
     SellWaiting,
     SendAborted,
+    StopEnded,
+    StopSet,
     SubmissionAborted,
     SubmissionUncertain,
     SubmitError,
@@ -101,6 +103,7 @@ from copytrading_engine.execution.domain.recovery import (
 )
 from copytrading_engine.execution.domain.sessions import trade_date
 from copytrading_engine.execution.domain.sizing import DestinationSignal
+from copytrading_engine.execution.domain.stops import StopRule, stop_client_id
 from copytrading_engine.shared.signals import Instruction, StockSignal
 
 ZERO = Decimal(0)
@@ -178,6 +181,7 @@ class _SnapshotChanges(TypedDict, total=False):
     manual_commands: dict[str, ManualCommandRecord]
     lot_sale_previews: dict[str, LotSalePreview]
     lot_sales: dict[str, LotSaleRecord]
+    stops: dict[str, StopRule]
 
 
 # Why a late post's buy is skipped as soon as the post is received (ADR-0010).
@@ -187,6 +191,7 @@ LATE_SKIPS = frozenset({"stale", "out_of_order"})
 class _MessageChanges(TypedDict, total=False):
     status: MessageStatus
     parts: tuple[InstructionProgress, ...]
+    stop_parts: tuple[InstructionProgress, ...]
     cash_anchor: CashAnchor
 
 
@@ -930,7 +935,11 @@ class TradingLedger:
         # Only buys can be too old: a post of nothing but buys is stale; a late post's sells are
         # still copied, and its buys are skipped as stale (ADR-0010).
         too_old = age < -5 or age > max_age
-        if status == "queued" and too_old and all(i.action == "buy" for i in signal.instructions):
+        # A stop is like a sell: never too old. A post of a buy and its stop is stale with the buy.
+        buys_only = bool(signal.instructions) and all(
+            i.action == "buy" for i in signal.instructions
+        )
+        if status == "queued" and too_old and buys_only:
             status = "stale"
         previous = tuple(m for m in self._snapshot.messages.values() if m.source_key == source_key)
         # A post older than one already received is out of order. Its buys are not copied; its
@@ -941,7 +950,7 @@ class TradingLedger:
             and signal.timestamp < m.timestamp
             for m in previous
         )
-        if out_of_order and all(i.action == "buy" for i in signal.instructions):
+        if out_of_order and buys_only:
             status = "out_of_order"
         parts = tuple(
             Skipped(reason="stale")
@@ -957,11 +966,16 @@ class TradingLedger:
             else Pending()
             for instruction in signal.instructions
         )
+        # The stop of a post that was too late to buy is skipped with it; no buy is there to guard.
+        stop_parts = tuple(
+            Pending() if status == "queued" else Skipped(reason=status) for _ in signal.stops
+        )
         message = MessageRecord.model_validate(
             signal.model_dump()
             | {
                 "source_key": source_key,
                 "parts": parts,
+                "stop_parts": stop_parts,
                 "status": status,
                 "destination": destination,
             }
@@ -978,6 +992,7 @@ class TradingLedger:
                     parser_profile=signal.parser_profile,
                     instructions=signal.instructions,
                     destination=destination,
+                    stops=signal.stops,
                 ),
             ),
         )
@@ -1049,6 +1064,126 @@ class TradingLedger:
             ),
         )
 
+    def skip_stop(self, key: str, index: int, reason: str, now: dt.datetime) -> None:
+        """A stop the account does not place, and why (setting off, no buy to guard...)."""
+        message = self.message(key)
+        if message.status != "queued" or not isinstance(message.stop_parts[index], Pending):
+            raise RuntimeError("Stop was already processed")
+        parts = list(message.stop_parts)
+        parts[index] = Skipped(reason=reason)
+        self._commit(
+            self._message_state(key, stop_parts=tuple(parts)),
+            JournalEvent(
+                at=now,
+                payload=SkippedEvent(
+                    message_id=key, part=index, reason=reason, exposure=None, stop=True
+                ),
+            ),
+        )
+
+    def set_stop(self, rule: StopRule, now: dt.datetime) -> None:
+        """Follow a stop. A buy has one stop, so the buys it protects leave any older stop, which
+        ends when none are left; a stop posted again at the same price is left as it is."""
+        rules = dict(self._snapshot.stops)
+        replaced = []
+        for key, old in tuple(rules.items()):
+            kept = tuple(entry for entry in old.entries if entry not in rule.entries)
+            if kept == old.entries:
+                continue
+            replaced.append(key)
+            if kept:
+                rules[key] = old.model_copy(update={"entries": kept})
+            else:
+                del rules[key]
+        rules[rule.key] = rule
+        self._commit(
+            self._replace(stops=rules),
+            JournalEvent(
+                at=now,
+                payload=StopSet(message_id=rule.message_id, rule=rule, replaced=tuple(replaced)),
+            ),
+        )
+
+    def end_stop(
+        self, key: str, reason: Literal["nothing_left", "replaced"], now: dt.datetime
+    ) -> None:
+        """Stop following a stop. One whose first order was never placed is skipped."""
+        rule = self._snapshot.stops[key]
+        message = self.message(rule.message_id)
+        index = rule.order_index - len(message.instructions)
+        messages = self._snapshot.messages
+        if message.status == "queued" and isinstance(message.stop_parts[index], Pending):
+            parts = list(message.stop_parts)
+            parts[index] = Skipped(reason="stop_nothing_left")
+            messages = messages | {
+                rule.message_id: MessageRecord.model_validate(
+                    message.model_dump() | {"stop_parts": tuple(parts)}
+                )
+            }
+        self._commit(
+            self._replace(
+                stops={k: v for k, v in self._snapshot.stops.items() if k != key},
+                messages=messages,
+            ),
+            JournalEvent(
+                at=now,
+                payload=StopEnded(message_id=rule.message_id, rule_key=key, reason=reason),
+            ),
+        )
+
+    def prepare_stop(
+        self, plan: OrderPlan, rule: StopRule, attempt: int, now: dt.datetime
+    ) -> OrderRecord:
+        """Record the day order that places a stop. The stop's post links its first one."""
+        message = self.message(rule.message_id)
+        index = rule.order_index - len(message.instructions)
+        client_id = stop_client_id(rule.key, attempt)
+        if plan.type != "stop" or client_id in self._snapshot.orders:
+            raise RuntimeError("Stop order intent already exists")
+        order = OrderRecord(
+            **plan.model_dump(),
+            client_id=client_id,
+            message_id=rule.message_id,
+            instruction_index=rule.order_index,
+            source_key=message.source_key,
+            status=OrderStatus.PREPARED,
+            filled_qty=ZERO,
+            broker_id=None,
+            created_at=now,
+            day=trade_date(now),
+            stop_rule=rule.key,
+        )
+        updated = message
+        if isinstance(message.stop_parts[index], Pending):
+            parts = list(message.stop_parts)
+            parts[index] = OrderLinked(client_id=client_id)
+            updated = MessageRecord.model_validate(message.model_dump() | {"stop_parts": parts})
+        self._commit(
+            self._replace(
+                messages=self._snapshot.messages | {rule.message_id: updated},
+                orders=self._snapshot.orders | {client_id: order},
+            ),
+            JournalEvent(
+                at=now,
+                payload=OrderPrepared(
+                    client_id=client_id,
+                    message_id=rule.message_id,
+                    symbol=plan.symbol,
+                    side=plan.side,
+                    position_intent=plan.position_intent,
+                    source_price=plan.source_price,
+                    entry_price=plan.entry_price,
+                    qty=plan.qty,
+                    type=plan.type,
+                    limit_price=None,
+                    stop_price=plan.stop_price,
+                    entry_tolerance_pct=plan.entry_tolerance_pct,
+                    session=plan.session,
+                ),
+            ),
+        )
+        return order
+
     def sell_waiting(self, key: str, part: int, reason: SellWait, now: dt.datetime) -> None:
         """Note why a sell is still waiting to go out, once each time the reason changes."""
         message = self.message(key)
@@ -1097,8 +1232,14 @@ class TradingLedger:
         pending = self.pending(plan.symbol)
         if plan.side == "buy" and any(order.side == "buy" for order in pending):
             raise RuntimeError("An open buy already owns this symbol")
+        # A stop leaves its shares to a sell, which cancels it before it goes out (ADR-0015).
         if plan.side == "sell" and plan.qty > self.owned(plan.symbol) - sum(
-            (order.qty - order.filled_qty for order in pending if order.side == "sell"), ZERO
+            (
+                order.qty - order.filled_qty
+                for order in pending
+                if order.side == "sell" and order.type != "stop"
+            ),
+            ZERO,
         ):
             raise RuntimeError("A sell cannot take shares an open sell is selling")
         # A sell aborted before it was sent goes out again under the next attempt's ID.
@@ -1190,8 +1331,41 @@ class TradingLedger:
         validate_transition(order.status, OrderStatus.ABORTED_BEFORE_SUBMIT)
         message = self._snapshot.messages.get(order.message_id)
         part = order.instruction_index
+        stop_index = None if message is None else part - len(message.instructions)
+        if (
+            order.stop_rule is not None
+            and message is not None
+            and stop_index is not None
+            and message.status == "queued"
+            and message.stop_parts[stop_index] == OrderLinked(client_id=key)
+        ):
+            # A stop never placed waits again, and the account places it as it would any stop.
+            parts = list(message.stop_parts)
+            parts[stop_index] = Pending()
+            aborted = OrderRecord.model_validate(
+                order.model_dump() | {"status": OrderStatus.ABORTED_BEFORE_SUBMIT}
+            )
+            self._commit(
+                self._replace(
+                    orders=self._snapshot.orders | {key: aborted},
+                    messages=self._snapshot.messages
+                    | {
+                        order.message_id: MessageRecord.model_validate(
+                            message.model_dump() | {"stop_parts": tuple(parts)}
+                        )
+                    },
+                ),
+                JournalEvent(
+                    at=now,
+                    payload=SubmissionAborted(
+                        client_id=key, message_id=order.message_id, reason=reason
+                    ),
+                ),
+            )
+            return
         if (
             order.side == "sell"
+            and order.stop_rule is None
             and message is not None
             and message.status == "queued"
             and message.parts[part] == OrderLinked(client_id=key)

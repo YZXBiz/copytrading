@@ -209,6 +209,7 @@ LIMIT_FIELDS: Final = (
     "overnight",
     "copy_exits",
     "approve_orders",
+    "follow_stops",
     "max_above_signal_pct",
     "max_below_signal_pct",
 )
@@ -225,6 +226,7 @@ type LimitField = Literal[
     "overnight",
     "copy_exits",
     "approve_orders",
+    "follow_stops",
     "max_above_signal_pct",
     "max_below_signal_pct",
 ]
@@ -684,7 +686,7 @@ class InstructionView(Wire):
 
 class OrderPlanView(Wire):
     side: Literal["buy", "sell"]
-    type: Literal["limit", "market"]
+    type: Literal["limit", "market", "stop"]
     quantity: Decimal
     limit_price: Decimal | None
     session: str
@@ -729,7 +731,7 @@ class ManualOrderSubject(Wire):
     environment: Literal["paper", "live"]
     symbol: str
     side: Literal["buy", "sell"]
-    order_type: Literal["limit", "market"]
+    order_type: Literal["limit", "market", "stop"]
     quantity: Decimal
     limit_price: Decimal | None
 

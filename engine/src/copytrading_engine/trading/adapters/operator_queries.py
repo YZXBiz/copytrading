@@ -230,6 +230,7 @@ def source_page(
                 parser_profile=decision.parser_profile if decision else None,
                 interpreted_by=decision.model if decision else None,
                 instructions=decision.instructions if decision else (),
+                stops=decision.stops if decision else (),
                 suggested=decision.suggested if decision else (),
                 reading=decision.reading if decision else None,
                 guru_id=decision.guru if decision else None,

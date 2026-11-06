@@ -19,7 +19,7 @@ from copytrading_engine.control import wire
 # and the start.
 APPLY_TIMEOUT_SECONDS: Final = 300.0
 MAX_SECRET_FILE_BYTES: Final = 64 * 1024
-SWITCHES: Final = ("extended_hours", "overnight", "copy_exits", "approve_orders")
+SWITCHES: Final = ("extended_hours", "overnight", "copy_exits", "approve_orders", "follow_stops")
 # What an account does after a restart, in the account sheet's words, and the setup's value.
 AFTER_RESTART: Final[dict[str, wire.RecoveryPreference]] = {
     "wait-for-me": "manual",

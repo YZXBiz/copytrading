@@ -80,6 +80,16 @@ class LotView(Value):
     buys: tuple[LotBuyView, ...] = ()
 
 
+class StopView(Value):
+    """A stop guarding some of a stock's shares: the price the guru posted, how many shares it
+    covers, whether its order is open at Alpaca now, and the post that set it."""
+
+    stop_price: Positive
+    quantity: Quantity
+    working: bool
+    source_id: str
+
+
 class PositionView(Value):
     """One symbol: the shares CopyTrading bought, the owner's own, and the broker's valuation of
     the whole position. Prices are the broker's; missing when the broker was not read."""
@@ -89,6 +99,7 @@ class PositionView(Value):
     external_qty: Quantity
     broker_qty: str | None = None
     lots: tuple[LotView, ...] = ()
+    stops: tuple[StopView, ...] = ()
     avg_entry_price: Money | None = None
     current_price: Money | None = None
     market_value: Money | None = None
@@ -179,7 +190,9 @@ class OrderView(Value):
     created_at: AwareDatetime
     # How the order went out: its type and session, the guru's price, and how far above it a
     # buy was allowed to pay.
-    order_type: Literal["market", "limit"] | None = None
+    order_type: Literal["market", "limit", "stop"] | None = None
+    # A stop order's price: the order sells once the stock falls to it (ADR-0015).
+    stop_price: Positive | None = None
     session: str | None = None
     source_price: Positive | None = None
     entry_tolerance_pct: Quantity | None = None
@@ -262,6 +275,8 @@ class DestinationView(Value):
     environment: str
     status: str
     instruction_outcomes: tuple[str, ...]
+    # How each stop the post set went, as the instructions' outcomes do.
+    stop_outcomes: tuple[str, ...] = ()
     limits_hit: tuple[LimitHit, ...]
     later_buys: tuple[LaterBuy, ...] = ()
     named_buys: tuple[NamedBuy, ...] = ()
@@ -362,6 +377,28 @@ def excerpt(text: str) -> str | None:
     return words if len(words) <= EXCERPT_LENGTH else words[: EXCERPT_LENGTH - 1].rstrip() + "…"
 
 
+def _position_stops(snapshot: LedgerSnapshot, symbol: str) -> tuple[StopView, ...]:
+    """The stops guarding a stock's shares, lowest price first. A stop is `working` while a stop
+    order for it is open at Alpaca; between sessions it waits to be placed again (ADR-0015)."""
+    views = []
+    for rule in snapshot.stops.values():
+        lot = snapshot.lots.get(rule.lot_id)
+        if rule.symbol != symbol or lot is None:
+            continue
+        views.append(
+            StopView(
+                stop_price=rule.stop_price,
+                quantity=lot.remaining_of(rule.entries),
+                working=any(
+                    order.stop_rule == rule.key and order.pending
+                    for order in snapshot.orders.values()
+                ),
+                source_id=rule.message_id,
+            )
+        )
+    return tuple(sorted(views, key=lambda view: view.stop_price))
+
+
 def account_overview(
     snapshot: LedgerSnapshot,
     inspection: OwnershipInspection | None,
@@ -396,6 +433,7 @@ def account_overview(
             else Decimal(0),
             broker_qty=str(broker[symbol]) if symbol in broker else None,
             lots=tuple(sorted(lots.get(symbol, ()), key=_lot_order)),
+            stops=_position_stops(snapshot, symbol),
             **(held[symbol].model_dump(include=set(Position.VALUATION)) if symbol in held else {}),
         )
         for symbol in symbols
@@ -489,7 +527,7 @@ def _timeline(
                         at=at,
                         client_id=payload.client_id,
                         quantity=payload.qty,
-                        price=payload.limit_price,
+                        price=payload.limit_price or payload.stop_price,
                     )
                 )
             case SubmitStarted():
@@ -576,6 +614,7 @@ def _order_detail(order_events: tuple[JournalEvent, ...]) -> dict[str, object]:
             case OrderPrepared():
                 detail.update(
                     order_type=payload.type,
+                    stop_price=payload.stop_price,
                     session=payload.session.value,
                     source_price=payload.source_price,
                     entry_tolerance_pct=payload.entry_tolerance_pct,
@@ -642,6 +681,7 @@ def destination_views(
                 quantity=order.qty,
                 filled_quantity=order.filled_qty,
                 limit_price=order.limit_price,
+                stop_price=order.stop_price,
                 average_fill_price=order.filled_avg_price,
                 broker_id=order.broker_id,
                 created_at=order.created_at,
@@ -660,6 +700,7 @@ def destination_views(
             instruction_outcomes=tuple(
                 _outcome(part, approved=source_id in approved) for part in message.parts
             ),
+            stop_outcomes=tuple(_outcome(part, approved=False) for part in message.stop_parts),
             limits_hit=tuple(
                 LimitHit(part=index, **exposure.model_dump())
                 for index, part in enumerate(message.parts)
@@ -718,6 +759,7 @@ def _sent_again(order: OrderRecord, message: MessageRecord) -> bool:
     return (
         order.status is OrderStatus.ABORTED_BEFORE_SUBMIT
         and order.side == "sell"
+        and order.stop_rule is None
         and order.client_id.startswith(copy_client_id(message.key, order.instruction_index))
         and message.parts[order.instruction_index] != OrderLinked(client_id=order.client_id)
     )

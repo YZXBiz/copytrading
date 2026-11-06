@@ -40,6 +40,7 @@ environment = "paper"   # "paper" trades pretend money at real prices; "live" is
   extended_hours = true        # also copy before 9:30 and after 16:00 New York time
   copy_exits = true            # sell when the trader sells
   approve_orders = false       # true: no order is sent until you approve it in the app
+  follow_stops = false         # true: place a stop order when the trader posts one (regular hours)
 
 [[gurus]]
 name = "Zhao"

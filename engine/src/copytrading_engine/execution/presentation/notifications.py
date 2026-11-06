@@ -51,6 +51,12 @@ REASONS = {
     "external_open_order": "An external order already exists for this asset",
     "insufficient_owned_shares": "The copier does not own enough shares for this exit",
     "duplicate": "This instruction duplicates a recent signal",
+    "follow_stops_off": "Following the guru's stops is off",
+    "stop_buy_not_filled": "The buy this stop protects did not fill",
+    "stop_buy_not_held": "CopyTrading holds none of the buy this stop protects",
+    "stop_buy_not_made": "The buy this stop protects was not made",
+    "stop_not_for_coins": "Stops are not placed for coins",
+    "stop_nothing_left": "Nothing was left to protect",
     "approval_required": "This account asks you to approve every order, so it didn't send "
     "this one. Open Activity to approve or skip it; it expires when its trading day ends",
 }
@@ -85,10 +91,16 @@ def execution_notification(
         return None
     elif isinstance(payload, SkippedEvent):
         part = payload.part
-        instruction = message.instructions[part]
         reason = payload.reason
         waits = reason in HELD_FOR_OWNER
-        title = f"{instruction.symbol} — {'waiting for you' if waits else 'trade skipped'}"
+        if payload.stop:
+            title = f"{message.stops[part].symbol} — stop skipped"
+            key += ":stop"
+        else:
+            title = (
+                f"{message.instructions[part].symbol} — "
+                f"{'waiting for you' if waits else 'trade skipped'}"
+            )
         detail = REASONS.get(reason, reason.replace("_", " "))
         if reason == "crypto_paper_only":
             account = message.destination.connection.account_id
@@ -145,9 +157,11 @@ def execution_notification(
                 title = f"{side} {order.symbol} — {titles.get(state, state.replace('_', ' '))}"
                 if state in {"rejected", "canceled", "expired", "suspended", "stopped"}:
                     category = "warning"
-                pricing = (
-                    "Market order." if order.type == "market" else f"Limit: ${order.limit_price}."
-                )
+                pricing = {
+                    "market": "Market order.",
+                    "stop": f"Stop: ${order.stop_price}.",
+                    "limit": f"Limit: ${order.limit_price}.",
+                }[order.type]
                 detail = f"Filled: {order.filled_qty} of {order.qty} shares. {pricing}"
                 average = payload.filled_avg_price
                 if average is not None and order.filled_qty:

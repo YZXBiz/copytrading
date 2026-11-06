@@ -170,7 +170,13 @@ def _validated_limits(changes: tuple[wire.LimitChange, ...]) -> tuple[tuple[str,
     return tuple(sorted((field, _spelled(value)) for field, value in values.items()))
 
 
-_BOOLEAN_LIMITS: Final = {"extended_hours", "overnight", "copy_exits", "approve_orders"}
+_BOOLEAN_LIMITS: Final = {
+    "extended_hours",
+    "overnight",
+    "copy_exits",
+    "approve_orders",
+    "follow_stops",
+}
 _WHOLE_LIMITS: Final = {"max_entries_per_day", "max_signal_age_seconds", "order_timeout_seconds"}
 
 

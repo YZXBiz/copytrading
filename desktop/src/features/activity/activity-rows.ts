@@ -29,7 +29,7 @@ export function activityRows(posts: SourceActivity[], now: Date, nameOf: (id: st
       bucket: bucketOf(post, now),
       guru: nameOf(post.guru_id),
       said: quoteOf(post),
-      symbol: post.instructions[0]?.symbol ?? null,
+      symbol: post.instructions[0]?.symbol ?? post.stops?.[0]?.symbol ?? null,
       meaning: readAsLine(post),
       label: outcome.title,
       tone: outcome.tone,
@@ -42,7 +42,7 @@ export function activityRows(posts: SourceActivity[], now: Date, nameOf: (id: st
 export function matches(row: ActivityRow, query: string): boolean {
   const needle = query.trim().toLowerCase()
   if (needle === "") return true
-  return [row.guru, row.said, row.meaning, row.label, ...row.post.instructions.map((i) => i.symbol), ...row.accounts.flatMap((a) => [a.accountId, a.summary])].join(" ").toLowerCase().includes(needle)
+  return [row.guru, row.said, row.meaning, row.label, ...row.post.instructions.map((i) => i.symbol), ...(row.post.stops ?? []).map((s) => s.symbol),...row.accounts.flatMap((a) => [a.accountId, a.summary])].join(" ").toLowerCase().includes(needle)
 }
 
 /**

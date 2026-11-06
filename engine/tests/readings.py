@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from copytrading_engine.shared.reading import (
     All,
+    Alongside,
     Buy,
     Commentary,
     Exact,
@@ -13,6 +14,7 @@ from copytrading_engine.shared.reading import (
     NotSaid,
     Sell,
     Stock,
+    Stop,
     TradeMade,
 )
 
@@ -74,7 +76,32 @@ def sell(
     )
 
 
-def trade(*calls: Buy | Sell, summary: str = "A current call") -> TradeMade:
+def stop(
+    ticker: str,
+    price: str,
+    *,
+    said: str = "止损",
+    ticker_said: str | None = None,
+    price_said: str | None = None,
+    bought_at: str | None = None,
+    alongside: int | None = None,
+) -> Stop:
+    """A stop at an exact price, protecting the buy at `bought_at`, the buy at place `alongside`
+    among the post's calls, or, with neither, every share bought of the stock."""
+    protects: Lot | Alongside | NotSaid = NotSaid()
+    if bought_at is not None:
+        protects = Lot(buy_price=Decimal(bought_at), words=bought_at)
+    if alongside is not None:
+        protects = Alongside(call=alongside)
+    return Stop(
+        action_words=said,
+        stock=Stock(ticker=ticker, words=ticker_said or ticker.lower()),
+        price=Exact(value=Decimal(price), words=price_said or price),
+        protects=protects,
+    )
+
+
+def trade(*calls: Buy | Sell | Stop, summary: str = "A current call") -> TradeMade:
     return TradeMade(summary=summary, calls=calls)
 
 
