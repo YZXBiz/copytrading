@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Add01Icon } from "@/components/icons/Add01Icon"
 import { BankIcon } from "@/components/icons/BankIcon"
 import { Message01Icon } from "@/components/icons/Message01Icon"
@@ -7,17 +7,20 @@ import { UserGroupIcon } from "@/components/icons/UserGroupIcon"
 import { UserIcon } from "@/components/icons/UserIcon"
 import { Button } from "@/components/arc/button/button"
 import { EmptyState } from "@/components/arc/empty-state/empty-state"
+import { ProviderStatus, type ProviderStatusItem } from "@/components/arc/provider-status/provider-status"
 import { Skeleton } from "@/components/arc/skeleton/skeleton"
+import type { Icon } from "@/lib/icon"
 import { SectionError } from "@/features/settings/SectionError"
 import { providerShortTitle, requiresApiKey } from "../../../shared/providers"
 import { AccountSheet } from "./AccountSheet"
 import { CheckResults } from "./CheckResults"
-import { ConnectionRow } from "./ConnectionRow"
+import { ConnectionActions } from "./ConnectionActions"
 import { DiscordSheet } from "./DiscordSheet"
 import { GuruSheet } from "./GuruSheet"
 import { InterpreterSheet } from "./InterpreterSheet"
 import { derive } from "./derive"
 import { split } from "./draft"
+import { healthOf } from "./health"
 import { addAccount, addGuru, connect, refreshStatus, useSetup } from "./setup-store"
 import { type Status, type Subject, accountStatus, accountSubject, discordStatus, draftStatus, guruStatus, interpreterStatus, resultFor } from "./state"
 import { connectionProblem } from "./words"
@@ -78,98 +81,96 @@ export function ConnectionsScreen({ sheet }: { sheet: string | null }) {
     interpreterStatus(facts) ??
     (model ? draftStatus(!requiresApiKey(draft.provider) || Boolean(draft.provider_api_key) || facts.keys.providerKey, "Needs an API key") : { text: "Not set up", tone: "caution" })
 
+  /** One connection as a status row: its mark, name, state in words, the reason when it failed, and Connect and Edit. */
+  const row = (o: { id: string; icon: Icon; label: string; title: string; detail?: string; status: Status; onEdit: () => void; subject?: Subject }): ProviderStatusItem => {
+    const check = o.subject ? connectProps(o.subject) : null
+    const problem = check?.problem ?? null
+    const Mark = o.icon
+    return {
+      id: o.id,
+      name: o.title,
+      mark: <Mark width={16} height={16} />,
+      detail: o.detail,
+      problem,
+      status: healthOf(o.status, check?.connection, problem),
+      statusLabel: o.status.text,
+      actions: <ConnectionActions label={o.label} onEdit={o.onEdit} onConnect={check?.onConnect} connectLabel={check?.connectLabel} connection={check?.connection} />,
+    }
+  }
+  const add = (label: string, make: () => Open) => (
+    <Button type="button" size="sm" variant="secondary" onClick={() => setOpen(make())}>
+      <Add01Icon width={16} height={16} aria-hidden="true" />
+      {label}
+    </Button>
+  )
+
   return (
     <div className={styles.page}>
-      <Section id="services" title="Services" description="Where the calls come from, and the AI that reads them.">
-        <Rows>
-          <ConnectionRow
-            icon={Message01Icon}
-            label="Discord"
-            title="Discord"
-            detail={channels.length ? `${plural(channels.length, "channel")}, ${authors.length ? plural(authors.length, "author") : "anyone who posts"}` : undefined}
-            status={discord}
-            onEdit={() => setOpen({ kind: "discord" })}
-            {...connectProps("discord")}
-          />
-          <ConnectionRow
-            icon={SparklesIcon}
-            label="Interpreter"
-            title={model ? providerShortTitle(draft.provider) : "Interpreter"}
-            detail={model || undefined}
-            status={interpreter}
-            onEdit={() => setOpen({ kind: "interpreter" })}
-            {...connectProps("interpreter")}
-          />
-        </Rows>
-      </Section>
+      <ProviderStatus
+        title="Services"
+        description="Where the calls come from, and the AI that reads them."
+        providers={[
+          row({
+            id: "discord",
+            icon: Message01Icon,
+            label: "Discord",
+            title: "Discord",
+            detail: channels.length ? `${plural(channels.length, "channel")}, ${authors.length ? plural(authors.length, "author") : "anyone who posts"}` : undefined,
+            status: discord,
+            onEdit: () => setOpen({ kind: "discord" }),
+            subject: "discord",
+          }),
+          row({
+            id: "interpreter",
+            icon: SparklesIcon,
+            label: "Interpreter",
+            title: model ? providerShortTitle(draft.provider) : "Interpreter",
+            detail: model || undefined,
+            status: interpreter,
+            onEdit: () => setOpen({ kind: "interpreter" }),
+            subject: "interpreter",
+          }),
+        ]}
+      />
 
-      <Section
-        id="accounts"
+      <ProviderStatus
         title="Broker accounts"
         description="Where orders go."
-        action={
-          <Button type="button" size="sm" variant="secondary" onClick={() => setOpen({ kind: "account", uid: addAccount() })}>
-            <Add01Icon width={16} height={16} aria-hidden="true" />
-            Add account
-          </Button>
-        }
-      >
-        {draft.accounts.length ? (
-          <Rows>
-            {draft.accounts.map((account) => {
-              const name = account.name.trim()
-              const subject = accountSubject(name)
-              return (
-                <ConnectionRow
-                  key={account.uid}
-                  icon={BankIcon}
-                  label={name || "new account"}
-                  title={name || "New account"}
-                  detail={account.environment === "live" ? "Live" : "Paper"}
-                  status={accountStatus(facts, account)}
-                  onEdit={() => setOpen({ kind: "account", uid: account.uid })}
-                  {...connectProps(subject)}
-                />
-              )
-            })}
-          </Rows>
-        ) : (
-          <EmptyState title="No broker accounts yet" description="Add an Alpaca paper account to start." icon={<BankIcon width={24} height={24} aria-hidden="true" />} />
-        )}
-      </Section>
+        action={add("Add account", () => ({ kind: "account", uid: addAccount() }))}
+        empty={<EmptyState title="No broker accounts yet" description="Add an Alpaca paper account to start." icon={<BankIcon width={24} height={24} aria-hidden="true" />} />}
+        providers={draft.accounts.map((account) => {
+          const name = account.name.trim()
+          return row({
+            id: account.uid,
+            icon: BankIcon,
+            label: name || "new account",
+            title: name || "New account",
+            detail: account.environment === "live" ? "Live" : "Paper",
+            status: accountStatus(facts, account),
+            onEdit: () => setOpen({ kind: "account", uid: account.uid }),
+            subject: accountSubject(name),
+          })
+        })}
+      />
 
-      <Section
-        id="gurus"
+      <ProviderStatus
         title="Gurus"
         description="Each guru is one Discord channel."
-        action={
-          <Button type="button" size="sm" variant="secondary" onClick={() => setOpen({ kind: "guru", uid: addGuru() })}>
-            <Add01Icon width={16} height={16} aria-hidden="true" />
-            Add guru
-          </Button>
-        }
-      >
-        {draft.gurus.length ? (
-          <Rows>
-            {draft.gurus.map((guru) => {
-              const channel = guru.channel_id.trim() || channels[0] || ""
-              return (
-                <ConnectionRow
-                  key={guru.uid}
-                  icon={UserIcon}
-                  label={guru.display_name.trim() || "new guru"}
-                  title={guru.display_name.trim() || "New guru"}
-                  detail={channel && guru.account_id ? `Channel ${channel.length > 10 ? `${channel.slice(0, 4)}…${channel.slice(-4)}` : channel} into ${guru.account_id}` : "Needs a channel and an account"}
-                  status={guruStatus(facts, guru)}
-                  onEdit={() => setOpen({ kind: "guru", uid: guru.uid })}
-                />
-              )
-            })}
-          </Rows>
-        ) : (
-          <EmptyState title="No gurus yet" description="Add one to copy their calls." icon={<UserGroupIcon width={24} height={24} aria-hidden="true" />} />
-        )}
-      </Section>
+        action={add("Add guru", () => ({ kind: "guru", uid: addGuru() }))}
+        empty={<EmptyState title="No gurus yet" description="Add one to copy their calls." icon={<UserGroupIcon width={24} height={24} aria-hidden="true" />} />}
+        providers={draft.gurus.map((guru) => {
+          const channel = guru.channel_id.trim() || channels[0] || ""
+          return row({
+            id: guru.uid,
+            icon: UserIcon,
+            label: guru.display_name.trim() || "new guru",
+            title: guru.display_name.trim() || "New guru",
+            detail: channel && guru.account_id ? `Channel ${channel.length > 10 ? `${channel.slice(0, 4)}…${channel.slice(-4)}` : channel} into ${guru.account_id}` : "Needs a channel and an account",
+            status: guruStatus(facts, guru),
+            onEdit: () => setOpen({ kind: "guru", uid: guru.uid }),
+          })
+        })}
+      />
 
       {s.start.phase === "failed" && s.start.report && <CheckResults report={s.start.report} modelName={s.draft.model} />}
 
@@ -179,27 +180,6 @@ export function ConnectionsScreen({ sheet }: { sheet: string | null }) {
       {open?.kind === "guru" && <GuruSheet uid={open.uid} onClose={close} />}
     </div>
   )
-}
-
-/** A section's heading, with its Add button at the right when the section can grow. */
-function Section({ id, title, description, action, children }: { id: string; title: string; description: string; action?: ReactNode; children: ReactNode }) {
-  return (
-    <section aria-labelledby={id} className={styles.section}>
-      <div className={styles.sectionHead}>
-        <div>
-          <h3 id={id}>{title}</h3>
-          <p>{description}</p>
-        </div>
-        {action}
-      </div>
-      {children}
-    </section>
-  )
-}
-
-/** One section's connections as a divided list. */
-function Rows({ children }: { children: ReactNode }) {
-  return <ul className={styles.list}>{children}</ul>
 }
 
 /** Three sections in the real layout while the setup is read. */

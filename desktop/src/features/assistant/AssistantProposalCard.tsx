@@ -37,7 +37,7 @@ export function AssistantProposalCard({ proposalId }: { proposalId: string }) {
         {waiting && <p className={styles.proposalHint}>{statusLine(proposal)}</p>}
       </div>
       {waiting ? (
-        <ProposalActions proposal={proposal} gate onDecided={() => proposals.retry()} />
+        <ProposalActions proposal={proposal} onDecided={() => proposals.retry()} />
       ) : (
         <Badge tone={done ? "info" : failed ? "danger" : "neutral"} outline={!done && !failed} className={styles.proposalStatus} icon={done ? <Tick02Icon width={16} height={16} aria-hidden="true" /> : failed ? <AlertCircleIcon width={16} height={16} aria-hidden="true" /> : <MinusSignIcon width={16} height={16} aria-hidden="true" />}>
           {statusLine(proposal)}

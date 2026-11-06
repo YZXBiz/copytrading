@@ -44,19 +44,13 @@
 .payload { max-height: 384px; margin: 4px 0 0; overflow: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-panel); padding: 12px; font-family: var(--font-mono, ui-monospace, monospace); font-size: var(--text-xs); overflow-wrap: anywhere; white-space: pre-wrap; }
 .breakAll { max-width: 288px; overflow-wrap: anywhere; text-align: right; }
 
-.proposal { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: start; padding: 14px 0; }
-.proposal h4 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: var(--text-sm); font-weight: 500; }
-.proposalActions { display: grid; justify-items: end; gap: 6px; }
 .proposalButtons { display: flex; gap: 8px; }
-.proposalMessage { margin: 0; max-width: 256px; color: var(--text-muted); font-size: var(--text-xs); text-align: right; }
+.proposalMessage { margin: 0; color: var(--text-muted); font-size: var(--text-xs); }
 .gate { display: grid; gap: 6px; }
 .gate .proposalButtons > * { flex: 1; }
-.gate .proposalMessage { max-width: none; text-align: left; }
 
 @container (max-width: 640px) {
   .journal { grid-template-columns: minmax(0, 1fr); }
   .row { gap: 16px; }
-  .proposal { grid-template-columns: minmax(0, 1fr); }
-  .proposalActions { justify-items: start; }
 }
 @media (prefers-reduced-motion: reduce) { .journalItem { transition: none; } }

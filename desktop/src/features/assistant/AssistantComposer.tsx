@@ -95,11 +95,7 @@ export function AssistantComposer({ open, answering, enabled, provider, onSend, 
       <div className={styles.meta}>
         <span className={styles.model}>
           {provider ? (
-            <>
-              <span>{provider.name}</span>
-              <span aria-hidden="true" className={styles.dot} />
-              <span>{provider.model}</span>
-            </>
+            <span>{provider.name}</span>
           ) : (
             "No model chosen"
           )}

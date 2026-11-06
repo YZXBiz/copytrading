@@ -1,6 +1,6 @@
 import type { AccountOverview, Bar, DailyRange, EquityHistory, GuruPerformance, HistoryRange, Result } from "../../shared/contract"
 import type { Api } from "./api"
-import { setupReads } from "./fixtures-setup"
+import { setupActs, setupReads } from "./fixtures-setup"
 import account from "./fixtures/account.json"
 import bars from "./fixtures/bars.json"
 import { dailyBars } from "./fixtures/daily-bars"
@@ -185,7 +185,7 @@ const READS: Record<string, (params: Params) => Promise<Result<unknown>>> = {
   },
 }
 
-const ACTS: Record<string, (params: Params) => Promise<Result<unknown>>> = { ...settingsActs }
+const ACTS: Record<string, (params: Params) => Promise<Result<unknown>>> = { ...settingsActs, ...setupActs }
 
 const notCaptured = async (name: string): Promise<Result<never>> => ({ ok: false, error: `${name} is not in the captured fixtures.` })
 

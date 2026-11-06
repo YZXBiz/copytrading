@@ -34,7 +34,11 @@ export function captureWindow(window: BrowserWindow, dir: string, name: string, 
     const script = process.env.COPYTRADING_CAPTURE_SCRIPT
     if (script) {
       // A script that throws still gets its screenshot, and says why, instead of leaving the app open.
-      await window.webContents.executeJavaScript(script).catch((error: unknown) => console.error("capture script failed:", error))
+      // A script that returns a string has it printed, so a measurement (what sits on top of a label) can be read without a picture.
+      await window.webContents.executeJavaScript(script).then(
+        (value: unknown) => typeof value === "string" && value && console.log(value),
+        (error: unknown) => console.error("capture script failed:", error),
+      )
     }
     // COPYTRADING_CAPTURE_FRAMES=<n>: save n back-to-back frames right after the script and fills (light only), for a motion that has not finished.
     const frames = Number(process.env.COPYTRADING_CAPTURE_FRAMES)

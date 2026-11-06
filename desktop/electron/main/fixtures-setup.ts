@@ -1,4 +1,4 @@
-import type { Result, SecretStatus, SetupView, TradingConfiguration, TradingStatus } from "../../shared/contract"
+import type { CapabilityCheck, Result, SecretStatus, SetupView, TradingConfiguration, TradingStatus } from "../../shared/contract"
 
 // The setup the Connections and Getting Started screens read in fixture mode. The guru's id and profile revision are the
 // engine's own digests (guru-927e2da2 = sha256("discord:1100000000000000001")[:8]), so the form reads this setup as saved.
@@ -79,4 +79,33 @@ export const setupReads: Record<string, () => Promise<Result<unknown>>> = {
   ...(process.env.COPYTRADING_FIXTURE_SETUP ? { getSetup: () => ok(first ? null : saved) } : {}),
   getSecretStatus: () => ok(keys(!first)),
   getStatus: () => ok(trading()),
+}
+
+// A Connect in an editor sheet. COPYTRADING_FIXTURE_STATE=check-running never answers, check-failed refuses with the service's own
+// reason code, and anything else answers ready, so a capture can show each end of the check.
+const CHECKS: Record<"source" | "model" | "broker", Pick<CapabilityCheck, "name" | "adapter" | "identity" | "reason_code">> = {
+  source: { name: "source", adapter: "discord", identity: "owner", reason_code: "source_auth_or_channel_access" },
+  model: { name: "model", adapter: "deepseek", identity: "deepseek:deepseek-flash", reason_code: "model_key_rejected" },
+  broker: { name: "broker", adapter: "alpaca", identity: "zhap-account-2", reason_code: "broker_auth_failed" },
+}
+
+export const setupActs: Record<string, (params: Record<string, unknown> | undefined) => Promise<Result<unknown>>> = {
+  setSecrets: () => ok(keys(true)),
+  checkConnection: (params) => {
+    const state = process.env.COPYTRADING_FIXTURE_STATE
+    if (state === "check-running") return new Promise<never>((_, reject) => setTimeout(() => reject(new Error("never answered")), 10 * 60_000))
+    const kind = (params?.connection as { kind: "source" | "model" | "broker" }).kind
+    const base = CHECKS[kind]
+    const failed = state === "check-failed"
+    return ok<CapabilityCheck>({
+      ...base,
+      state: failed ? "failed" : "ready",
+      identity: failed ? null : base.identity,
+      reason_code: failed ? base.reason_code : null,
+      subject: kind === "broker" ? "zhap-account-2" : null,
+      environment: kind === "broker" ? "paper" : null,
+      suggestion: null,
+      symbols: [],
+    })
+  },
 }
