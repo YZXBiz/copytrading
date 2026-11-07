@@ -338,6 +338,27 @@ function buildAppMenu(checkForUpdates?: () => void): void {
   )
 }
 
+/**
+ * A native alert as a sheet on the window. With no window open it would be app-modal on macOS, which stops the main
+ * process (the agent socket, the menu bar, alerts) until someone clicks it; a notification asks instead, and clicking
+ * it opens the window and runs `again`. null when no window answered.
+ */
+async function sheet(options: Electron.MessageBoxOptions, again?: () => void): Promise<number | null> {
+  const parent = BrowserWindow.getFocusedWindow() ?? windows()[0]
+  if (parent) return (await dialog.showMessageBox(parent, options)).response
+  if (Notification.isSupported()) {
+    const notification = new Notification({ title: options.message, body: options.detail ?? "" })
+    shown.add(notification)
+    notification.on("click", () => {
+      openWindow()
+      again?.()
+    })
+    notification.on("close", () => shown.delete(notification))
+    notification.show()
+  }
+  return null
+}
+
 /** Looks for updates on GitHub Releases (app-update.yml in the bundle), as Sparkle did; offers them in a native dialog. */
 function startUpdates(marker: ResumeMarker): void {
   autoUpdater.autoDownload = false
@@ -349,11 +370,9 @@ function startUpdates(marker: ResumeMarker): void {
     {
       offer: async (version, note) => {
         const options: Electron.MessageBoxOptions = { type: "question", buttons: ["Later", "Install and Restart"], defaultId: 1, cancelId: 0, noLink: true, message: `CopyTrading ${version} is available.`, detail: note ?? undefined }
-        const parent = BrowserWindow.getFocusedWindow() ?? windows()[0]
-        const { response } = parent ? await dialog.showMessageBox(parent, options) : await dialog.showMessageBox(options)
-        return response === 1
+        return (await sheet(options, () => void updates.check(true))) === 1
       },
-      tell: (message) => void dialog.showMessageBox({ type: "info", message }),
+      tell: (message) => void sheet({ type: "info", message }),
     },
     copyingNow,
     (on) => (on ? marker.set() : void marker.take()),
@@ -373,7 +392,7 @@ async function resumeSaved(): Promise<string | null> {
 
 /** Tells the owner a request from the menu bar did not go through; declining its confirmation says nothing. */
 async function report(what: string, result: { ok: boolean; error?: string; cancelled?: true }): Promise<void> {
-  if (!result.ok && !result.cancelled) await dialog.showMessageBox({ type: "error", message: what, detail: result.error })
+  if (!result.ok && !result.cancelled) await sheet({ type: "error", message: what, detail: result.error })
 }
 
 /** The menu bar item. It asks through the same api, and so the same native confirmations, as the window's own buttons. */
