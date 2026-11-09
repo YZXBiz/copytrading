@@ -206,6 +206,8 @@ export function UndoToast<T>({
   const timerRef = useRef<AnimationPlaybackControls | null>(null);
   const hideRef = useRef<number | undefined>(undefined);
   const pausedRef = useRef(new Set<string>());
+  /* True while the toast moves focus to its own Undo button: only someone tabbing or clicking in pauses the countdown. */
+  const handingOffRef = useRef(false);
   const idRef = useRef(0);
   const restoreTokenRef = useRef(0);
   const props = { onItemsChange, getKey, actions, duration, onRemove, onUndo, onCommit, controlled, reduced };
@@ -317,7 +319,11 @@ export function UndoToast<T>({
       const controls = [...target.querySelectorAll<HTMLElement>(FOCUSABLE)];
       (controls[position] ?? controls[0])?.focus({ preventScroll: true });
     } else {
-      requestAnimationFrame(() => toastElRef.current?.querySelector<HTMLElement>("button")?.focus({ preventScroll: true }));
+      requestAnimationFrame(() => {
+        handingOffRef.current = true;
+        toastElRef.current?.querySelector<HTMLElement>("button")?.focus({ preventScroll: true });
+        handingOffRef.current = false;
+      });
     }
   }, []);
 
@@ -471,7 +477,7 @@ export function UndoToast<T>({
             aria-describedby={statusId}
             onPointerEnter={() => pauseOnHover && pause("hover")}
             onPointerLeave={() => resume("hover")}
-            onFocus={() => pauseOnHover && pause("focus")}
+            onFocus={() => pauseOnHover && !handingOffRef.current && pause("focus")}
             onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) resume("focus"); }}
             onKeyDown={onToastKeyDown}
           >
