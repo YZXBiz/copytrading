@@ -251,6 +251,19 @@ describe("AlertMonitor", () => {
     expect(r.notes.map((n) => n.body)).toEqual(["Start copying"])
   })
 
+  it("announces a call that starts waiting for the owner once, and none that waited before the app opened", async () => {
+    const held = (sequence: number, symbol: string) =>
+      post([], { sequence, source_id: `s-${sequence}`, instructions: [{ action: "sell", symbol, price: "56.10", fraction: "1" }], destinations: [{ account_id: "paper", status: "sent", instruction_outcomes: ["named_buy_not_held"], orders: [] }] } as never)
+    const r = rig({ posts: [held(1, "SOXL")] })
+    await r.monitor.tick()
+    r.state.posts = [held(2, "TQQQ"), held(1, "SOXL")]
+    await r.monitor.tick()
+    await r.monitor.tick()
+    expect(r.notes).toMatchObject([
+      { title: "Zhao's call is waiting for you", body: "Sell all TQQQ at $56.10 · Waiting for you: no buy at the guru's price", route: "#/accounts/paper" },
+    ])
+  })
+
   it("announces an account that stopped, even with the fills switch off", async () => {
     const r = rig({ fills: false, status: { accounts: [{ id: "paper", state: "running", error_code: null }] } })
     await r.monitor.tick()

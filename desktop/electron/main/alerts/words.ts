@@ -1,5 +1,6 @@
 import type { AgentProposal } from "../../../shared/contract"
 import { isAssistant, summary } from "../../../shared/proposal-words"
+import { type WaitingCall, meaningOf, whyWaits } from "@/features/account/waiting"
 import type { Fill } from "./watch"
 
 // The words of each macOS notification, as FillNotifications.swift, AgentRequestNotifications.swift,
@@ -88,3 +89,17 @@ export const accountStoppedNote = (accountId: string, unique: string): Note => (
   thread: "account-stopped",
   route: `#/accounts/${encodeURIComponent(accountId)}`,
 })
+
+/** A guru's call started waiting for the owner: what it asks for, and why it waits, in the account page's words. */
+export function waitingCallNote(call: WaitingCall, guruName: (id: string) => string | null): Note {
+  const name = call.source.guru_id ? guruName(call.source.guru_id) : null
+  const account = call.accountIds[0]
+  const why = whyWaits(call, account)?.headline ?? "Waiting for you"
+  return {
+    id: `waiting-${call.source.source_id ?? call.source.sequence}`,
+    title: name ? `${name}'s call is waiting for you` : "A call is waiting for you",
+    body: `${meaningOf(call)} · ${why}`,
+    thread: "waiting",
+    route: `#/accounts/${encodeURIComponent(account)}`,
+  }
+}
