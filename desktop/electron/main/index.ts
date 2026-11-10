@@ -219,8 +219,10 @@ async function startServices(): Promise<Api> {
       onGaveUp: (reason) => notify({ id: "engine-stopped", thread: "engine", title: "The engine stopped", body: `${redact(reason, store.values())}\n\nCopying is paused. Quit and reopen CopyTrading to try again.` }),
     })
     // Agents and notifications start with the engine, and the engine starts in the background so the window is not kept waiting.
+    const wasCopying = memory.wasOn
     void startRuntime()
       .then(() => agents?.start())
+      .then(() => resumeAtLaunch(wasCopying))
       .then(() => monitor?.start())
       .catch((error: unknown) => engine.fail(error instanceof Error ? error.message : String(error)))
     services = { engine, setup, secrets, confirm, diagnosticsDir: paths.logs, pick, agents, restore, prefs, readers, skipped: { set: (ids) => void (skippedCalls = new Set(ids)) } }
@@ -410,18 +412,28 @@ function createMenuBar(): MenuBar {
   })
 }
 
-/** After an update relaunch, starts copying again once the engine answers (update.resumesCopying). */
-function resumeAfterUpdate(marker: ResumeMarker): void {
-  const resume = () => {
-    if (!marker.take()) return
-    void resumeSaved().then((why) => why && console.error(`Copying did not resume after the update: ${why}`))
+/**
+ * Copying comes back by itself when it was on as the app last stopped (a reboot, a crash, a quit) or the owner agreed to an
+ * update; a pause the owner chose stays paused. It runs before the alerts start, so if it fails the alerts say copying is paused.
+ */
+async function resumeAtLaunch(wasCopying: boolean): Promise<void> {
+  if (!packaged) return
+  const updated = new ResumeMarker(join(app.getPath("userData"), "resume-copying")).take()
+  // A throwaway state root is a test run: only an agreed update resumes there.
+  if (!updated && !(wasCopying && !stateRoot)) return
+  const why = await resumeSaved()
+  if (why) console.error(`Copying did not resume: ${why}`)
+}
+
+/** Copying runs only while the app does, so it opens at login. Asked once: if the owner removes it from Login Items, it stays removed. */
+function openAtLogin(prefs: Prefs): void {
+  if (prefs.get("login_item_set")) return
+  try {
+    app.setLoginItemSettings({ openAtLogin: true })
+    prefs.set("login_item_set", true)
+  } catch (error) {
+    console.error(`CopyTrading could not add itself to Login Items: ${error instanceof Error ? error.message : String(error)}`)
   }
-  if (engine.state.state === "running") return resume()
-  const stop = engine.onState((state) => {
-    if (state.state === "starting") return
-    stop()
-    if (state.state === "running") resume()
-  })
 }
 
 /** COPYTRADING_SMOKE: the page loaded, its bridge is there, and the engine answered; says so and quits. */
@@ -459,7 +471,7 @@ app.whenReady().then(async () => {
   if (!captureDir) (menuBar = createMenuBar()).apply()
   if (!packaged) return
   const marker = new ResumeMarker(join(app.getPath("userData"), "resume-copying"))
-  resumeAfterUpdate(marker)
+  if (!stateRoot && services) openAtLogin(services.prefs)
   // A throwaway folder is a test run: it never offers an update.
   if (!stateRoot) startUpdates(marker)
 })

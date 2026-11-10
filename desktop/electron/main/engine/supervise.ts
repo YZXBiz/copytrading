@@ -1,8 +1,10 @@
 import type { EngineProcess } from "./launch"
 
-// ProcessSupervisor.swift: maximumRestarts 3, restartDelay 1 s. The count is for the life of the app, as there.
+// At most 3 restarts in any 10 minutes, 1 s apart: a crash loop stops and says so, but a crash days after the last one
+// is still restarted (a count for the life of the app left copying off for good after a third crash in a week).
 const MAX_RESTARTS = 3
 const RESTART_DELAY_MS = 1_000
+const RESTART_WINDOW_MS = 10 * 60_000
 
 export interface SuperviseOptions {
   /** Starts the engine again; throws if it does not come up. */
@@ -16,12 +18,14 @@ export interface SuperviseOptions {
   onGaveUp: (reason: string) => void
   maxRestarts?: number
   delayMs?: number
+  windowMs?: number
+  now?: () => number
 }
 
-/** Starts a crashed engine again, up to the limit, one second apart. Returns the way to stop watching. */
+/** Starts a crashed engine again, up to the limit in the window, one second apart. Returns the way to stop watching. */
 export function superviseEngine(engine: EngineProcess, options: SuperviseOptions): () => void {
-  const { maxRestarts = MAX_RESTARTS, delayMs = RESTART_DELAY_MS } = options
-  let used = 0
+  const { maxRestarts = MAX_RESTARTS, delayMs = RESTART_DELAY_MS, windowMs = RESTART_WINDOW_MS, now = Date.now } = options
+  let attempts: number[] = []
   let recovering = false
   return engine.onCrash(async (crash) => {
     // An attempt's own failed start is already being counted; a restore is its own owner.
@@ -30,8 +34,10 @@ export function superviseEngine(engine: EngineProcess, options: SuperviseOptions
     const copying = options.wasCopying()
     let reason = crash
     try {
-      while (used < maxRestarts) {
-        used += 1
+      for (;;) {
+        attempts = attempts.filter((at) => now() - at < windowMs)
+        if (attempts.length >= maxRestarts) break
+        attempts.push(now())
         await new Promise((done) => setTimeout(done, delayMs))
         // The app began quitting, or a restore took the engine, while this waited.
         if (options.busy()) return
