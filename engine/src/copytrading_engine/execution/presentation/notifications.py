@@ -204,7 +204,10 @@ def execution_notification(
             detail = "Broker reconciliation will determine the outcome. Do not submit a duplicate."
             if order.status == "rejected":
                 http_status = payload.http_status if isinstance(payload, SubmitError) else None
+                reason = payload.reason if isinstance(payload, SubmitError) else None
                 detail = f"Alpaca rejected submission (HTTP {http_status})."
+                if reason:
+                    detail = f"Alpaca rejected it: {reason} (HTTP {http_status})."
             key += f":{order.status}"
             category = "warning"
         elif isinstance(payload, SubmissionAborted):

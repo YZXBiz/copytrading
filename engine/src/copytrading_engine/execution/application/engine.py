@@ -1280,7 +1280,9 @@ class CopyEngine:
                         )
                     )
         except BrokerError as exc:
-            self.ledger.submission_failed(order.client_id, exc.status, guard.controls.now())
+            self.ledger.submission_failed(
+                order.client_id, exc.status, guard.controls.now(), exc.reason
+            )
 
     def submit_manual_prepared(
         self,

@@ -243,6 +243,8 @@ class SubmitError(EventPayloadValue):
     message_id: Identifier
     status: OrderStatus
     http_status: int | None
+    # Alpaca's own words for a refusal; absent in events recorded before it was kept.
+    reason: str | None = None
 
 
 class SubmissionQuote(EventPayloadValue):

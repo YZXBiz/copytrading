@@ -57,11 +57,14 @@ class EquityHistoryBroker(Protocol):
 
 
 class BrokerError(Exception):
-    """Sanitized broker failure; response bodies and credentials stay private."""
+    """Sanitized broker failure: the HTTP status and Alpaca's own one-line reason, never the
+    rest of the response body or any credential."""
 
-    def __init__(self, status: int | None = None) -> None:
+    def __init__(self, status: int | None = None, reason: str | None = None) -> None:
         self.status = status
-        super().__init__(f"Alpaca HTTP {status}" if status else "Alpaca network error")
+        self.reason = reason
+        text = f"Alpaca HTTP {status}" if status else "Alpaca network error"
+        super().__init__(f"{text}: {reason}" if reason else text)
 
     @property
     def transient(self) -> bool:

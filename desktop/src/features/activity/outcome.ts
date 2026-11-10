@@ -232,6 +232,7 @@ function orderResult(order: OrderActivity, postedAt: number): Result {
       break
     case "failed":
       headline = buying ? "Not bought: Alpaca rejected it" : "Not sold: Alpaca rejected it"
+      if (order.reject_reason) facts.push({ label: "Alpaca said", value: order.reject_reason })
       break
     case "review":
       headline = "Waiting for Alpaca to confirm"

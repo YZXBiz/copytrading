@@ -105,6 +105,13 @@ describe("cardOutcome", () => {
     expect(result.facts).toEqual(expect.arrayContaining([{ label: "Your limit", value: "$133.20" }, { label: "Market", value: "$134.10" }, { label: "Waited", value: "60 seconds" }]))
   })
 
+  it("says what Alpaca said when it refused an order", () => {
+    const refused = order({ status: "rejected", filled_quantity: "0", reject_reason: "insufficient buying power" })
+    const result = cardOutcome(post({ destinations: [dest("delivered", ["order_linked"], [refused])] }), NOW).accounts[0]!.results[0]!
+    expect(result.headline).toBe("Not bought: Alpaca rejected it")
+    expect(result.facts).toContainEqual({ label: "Alpaca said", value: "insufficient buying power" })
+  })
+
   it("words a skip with its sentence, never its code", () => {
     const sell = post({ instructions: [{ action: "close", symbol: "AEHR", price: "61.5" }], destinations: [dest("delivered", ["no_open_lot"])] })
     const card = cardOutcome(sell, NOW)

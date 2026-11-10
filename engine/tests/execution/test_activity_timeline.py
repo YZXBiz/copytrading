@@ -2,8 +2,10 @@
 and why an order ended unfilled."""
 
 import datetime as dt
+from decimal import Decimal
 
 from copytrading_engine.execution.application.engine import CopyEngine
+from copytrading_engine.execution.application.ports import BrokerError
 from copytrading_engine.execution.domain.events import AccountControlChanged, JournalEvent
 from copytrading_engine.execution.domain.lifecycle import (
     AccountControlCommand,
@@ -113,3 +115,36 @@ def test_an_older_cancel_without_a_reason_reads_as_the_timeout_when_it_came_late
     assert older_cancel_reason(sent, sent + dt.timedelta(seconds=63)) == "timeout"
     assert older_cancel_reason(sent, sent + dt.timedelta(seconds=5)) == "cancel_requested"
     assert older_cancel_reason(None, sent) == "cancel_requested"
+
+
+def test_a_refused_buy_keeps_alpacas_own_reason():
+    repository = MemoryRepository()
+    broker = FakeBroker()
+    broker.refuse_next = BrokerError(403, "insufficient buying power")
+    engine = CopyEngine(repository, broker, CopyConfig(sources=["discord:demo"]))
+    engine.bind(NOW)
+    receive(engine, StockSignal.model_validate(event()), NOW)
+    engine.process(NOW)
+
+    [order] = view(repository, engine).orders
+    assert order.status == "rejected"
+    assert order.reject_reason == "insufficient buying power"
+
+
+def test_a_buy_that_partly_fills_then_times_out_owns_only_what_filled():
+    repository, broker, engine = system(auto_fill=False)
+    engine.process(NOW)
+    [client_id] = broker.orders
+    asked = Decimal(broker.orders[client_id]["qty"])
+    broker.fill(client_id, str(asked / 2))
+    engine.reconcile(NOW + dt.timedelta(seconds=1))
+    later = NOW + dt.timedelta(seconds=engine.config.order_timeout_seconds + 1)
+    engine.reconcile(later)
+    engine.reconcile(later + dt.timedelta(seconds=1))
+
+    [order] = view(repository, engine).orders
+    assert order.status == "canceled"
+    assert order.cancel_reason == "timeout"
+    assert Decimal(order.filled_quantity) == asked / 2
+    [lot] = [lot for lot in engine.ledger.snapshot().lots.values() if lot.remaining_qty > 0]
+    assert lot.remaining_qty == asked / 2 == broker.holdings["ABC"]

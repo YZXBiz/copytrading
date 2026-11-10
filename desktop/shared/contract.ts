@@ -339,6 +339,8 @@ export interface OrderActivity {
   session?: string | null
   submitted_at?: string | null
   cancel_reason?: string | null
+  /** Alpaca's own words when it refused the order ("insufficient buying power"). */
+  reject_reason?: string | null
   ended_at?: string | null
   source_price?: Decimal | null
   entry_tolerance_pct?: Decimal | null

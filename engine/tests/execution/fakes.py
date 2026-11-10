@@ -46,6 +46,8 @@ class FakeBroker:
         self.auto_fill = True
         # Alpaca refuses a sell stop that is not under the market price: a 422.
         self.refuse_stops = False
+        # What Alpaca refuses the next order with: BrokerError(403, "insufficient buying power").
+        self.refuse_next: BrokerError | None = None
         # What Alpaca says an order is when it is sent; it can hold one as pending_new first.
         self.submitted_status = "new"
         self.market_fill_price = "24.50"
@@ -152,6 +154,9 @@ class FakeBroker:
         request = order.model_dump(mode="json", exclude_none=True)
         self.calls += 1
         cid = request["client_order_id"]
+        if self.refuse_next is not None:
+            refusal, self.refuse_next = self.refuse_next, None
+            raise refusal
         if self.refuse_stops and request["type"] == "stop":
             raise BrokerError(422)
         # Alpaca refuses a buy while a sell stop of the stock rests, as a possible wash trade.
