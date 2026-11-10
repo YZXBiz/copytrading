@@ -412,7 +412,6 @@ function createMenuBar(): MenuBar {
   })
 }
 
-/** After an update relaunch, starts copying again once the engine answers (update.resumesCopying). */
 /**
  * Copying comes back by itself when it was on as the app last stopped (a reboot, a crash, a quit) or the owner agreed to an
  * update; a pause the owner chose stays paused. It runs before the alerts start, so if it fails the alerts say copying is paused.
