@@ -88,3 +88,27 @@ def test_a_symbol_with_no_bars_has_none_and_a_refusal_is_a_broker_error():
             broker.bars("SOXL")
     finally:
         broker.close()
+
+
+def test_a_refusal_keeps_alpacas_one_line_reason_and_nothing_else():
+    cases = [
+        (
+            httpx.Response(403, json={"code": 40310000, "message": "insufficient buying power"}),
+            "insufficient buying power",
+        ),
+        (
+            httpx.Response(422, json={"message": "qty must be\n > 0\x00 " + "x" * 300}),
+            ("qty must be > 0 " + "x" * 300)[:200],
+        ),
+        (httpx.Response(500, text="<html>outage</html>"), None),
+        (httpx.Response(403, json={"code": 1}), None),
+    ]
+    for response, reason in cases:
+        broker = _broker(lambda request, response=response: response)
+        try:
+            with pytest.raises(BrokerError) as raised:
+                broker.bars("SOXL")
+        finally:
+            broker.close()
+        assert raised.value.status == response.status_code
+        assert raised.value.reason == reason

@@ -242,7 +242,7 @@ class AlpacaBroker:
         except httpx.HTTPError:
             raise BrokerError() from None
         if response.is_error or response.is_redirect:
-            raise BrokerError(response.status_code)
+            raise BrokerError(response.status_code, alpaca_reason(response))
         if response.status_code == 204:
             return None
         try:
@@ -554,3 +554,17 @@ class AlpacaBroker:
 
     def cancel(self, order_id: str) -> None:
         self.request("DELETE", f"/v2/orders/{order_id}")
+
+
+def alpaca_reason(response: httpx.Response) -> str | None:
+    """Alpaca's `message` for a refused request ("insufficient buying power"), printable and at
+    most 200 characters; None when the body is not Alpaca's error shape."""
+    try:
+        body = response.json()
+    except ValueError:
+        return None
+    message = body.get("message") if isinstance(body, dict) else None
+    if not isinstance(message, str):
+        return None
+    text = " ".join("".join(c for c in message if c.isprintable()).split())
+    return text[:200] or None

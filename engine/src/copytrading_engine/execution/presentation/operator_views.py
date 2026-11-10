@@ -203,6 +203,8 @@ class OrderView(Value):
     # Why it ended unfilled: CopyTrading's own cancel (timeout, replaced_by_sell,
     # copying_stopped), Alpaca's (cancelled_at_broker, expired), or rejected.
     cancel_reason: str | None = None
+    # Alpaca's own words when it refused the order ("insufficient buying power").
+    reject_reason: str | None = None
     ended_at: AwareDatetime | None = None
     # Which of the post's calls this order places, and for a buy what the call asked for, what
     # the account's limits allowed of it, and the limit that cut it (ADR-0010).
@@ -623,6 +625,8 @@ def _order_detail(order_events: tuple[JournalEvent, ...]) -> dict[str, object]:
                 detail["submitted_at"] = payload.submit_started_at
             case SubmissionQuote():
                 detail.update(quote_bid=payload.quote.bid, quote_ask=payload.quote.ask)
+            case SubmitError() if payload.reason:
+                detail["reject_reason"] = payload.reason
             case CancelRequested():
                 requested = payload.reason or older_cancel_reason(
                     detail.get("submitted_at"), event.at

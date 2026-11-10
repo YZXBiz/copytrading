@@ -1417,7 +1417,9 @@ class TradingLedger:
                 ),
             )
 
-    def submission_failed(self, key: str, http_status: int | None, now: dt.datetime) -> None:
+    def submission_failed(
+        self, key: str, http_status: int | None, now: dt.datetime, reason: str | None = None
+    ) -> None:
         status = (
             OrderStatus.REJECTED if http_status in {400, 401, 403, 422} else OrderStatus.UNCERTAIN
         )
@@ -1431,6 +1433,7 @@ class TradingLedger:
                     message_id=self.order(key).message_id,
                     status=status,
                     http_status=http_status,
+                    reason=reason,
                 ),
             ),
         )
