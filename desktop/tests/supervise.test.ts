@@ -8,7 +8,7 @@ const target = (mode: string) => ({ command: process.execPath, args: [FAKE, mode
 const engines: EngineProcess[] = []
 afterEach(() => Promise.all(engines.splice(0).map((e) => e.stop())))
 
-async function rig(modes: string[], over: { busy?: () => boolean; wasCopying?: boolean } = {}) {
+async function rig(modes: string[], over: { busy?: () => boolean; wasCopying?: boolean; now?: () => number } = {}) {
   const engine = new EngineProcess({ stopAskMs: 400, terminateGraceMs: 300 })
   engines.push(engine)
   await engine.start(target("serve"))
@@ -16,6 +16,7 @@ async function rig(modes: string[], over: { busy?: () => boolean; wasCopying?: b
   const outcome = new Promise<void>((done) => {
     superviseEngine(engine, {
       delayMs: 20,
+      now: over.now,
       busy: over.busy ?? (() => false),
       wasCopying: () => over.wasCopying ?? false,
       restart: async () => {
@@ -61,6 +62,49 @@ describe("superviseEngine", () => {
     await r.die()
     await r.outcome
     expect(r.log).toMatchObject({ restarts: 2, restarted: [false], gaveUp: [] })
+  })
+
+  it("restarts a crash that comes long after the last ones, but stops a loop of them", async () => {
+    let clock = 0
+    const engine = new EngineProcess({ stopAskMs: 400, terminateGraceMs: 300 })
+    engines.push(engine)
+    await engine.start(target("serve"))
+    const log = { restarts: 0, gaveUp: 0 }
+    let settled: () => void = () => {}
+    superviseEngine(engine, {
+      delayMs: 5,
+      now: () => clock,
+      busy: () => false,
+      wasCopying: () => false,
+      restart: async () => {
+        log.restarts += 1
+        await engine.start(target("serve"))
+      },
+      onRestarted: () => settled(),
+      onGaveUp: () => {
+        log.gaveUp += 1
+        settled()
+      },
+    })
+    const crash = async () => {
+      const done = new Promise<void>((resolve) => (settled = resolve))
+      await engine.request("die").catch(() => {})
+      await done
+    }
+    // Three crashes a minute apart use the window's three restarts; a fourth inside it gives up.
+    for (let i = 0; i < 3; i++) {
+      await crash()
+      clock += 60_000
+    }
+    expect(log).toEqual({ restarts: 3, gaveUp: 0 })
+    await crash()
+    expect(log).toEqual({ restarts: 3, gaveUp: 1 })
+    // Days later (the owner reopened it meanwhile), a crash is restarted again.
+    await engine.start(target("serve"))
+    clock += 3 * 24 * 3600_000
+    await crash()
+    expect(log).toEqual({ restarts: 4, gaveUp: 1 })
+    expect(engine.state).toEqual({ state: "running" })
   })
 
   it("does not start an engine the app asked to stop", async () => {

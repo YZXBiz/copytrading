@@ -11,6 +11,8 @@ interface Saved {
   theme: Theme
   /** Settings > General "Menu bar". Balance and dot unless the owner narrows or removes it. */
   menu_bar: MenuBarMode
+  /** CopyTrading added itself to Login Items once; it never adds itself again after the owner removes it. */
+  login_item_set: boolean
 }
 
 /** The few choices the app itself remembers, in the installation root next to `agent-access.json`. */
@@ -26,7 +28,7 @@ export class Prefs {
     } catch {
       // An unreadable file is the same as none: these are only alert choices, and the defaults are safe.
     }
-    this.saved = { fill_alerts: read.fill_alerts ?? true, copying_was_on: read.copying_was_on ?? false, theme: THEMES.find((t) => t === read.theme) ?? "dark", menu_bar: MENU_BAR_MODES.find((m) => m === read.menu_bar) ?? "balance" }
+    this.saved = { fill_alerts: read.fill_alerts ?? true, copying_was_on: read.copying_was_on ?? false, theme: THEMES.find((t) => t === read.theme) ?? "dark", menu_bar: MENU_BAR_MODES.find((m) => m === read.menu_bar) ?? "balance", login_item_set: read.login_item_set ?? false }
   }
 
   get<K extends keyof Saved>(key: K): Saved[K] {
