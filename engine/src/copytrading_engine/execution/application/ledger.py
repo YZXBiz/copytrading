@@ -952,11 +952,13 @@ class TradingLedger:
         )
         if out_of_order and buys_only:
             status = "out_of_order"
+        # A post wholly too late (stale, out of order) skips its buys too; none is left pending.
+        late = status in {"queued", *LATE_SKIPS}
         parts = tuple(
             Skipped(reason="stale")
-            if status == "queued" and too_old and instruction.action == "buy"
+            if late and too_old and instruction.action == "buy"
             else Skipped(reason="out_of_order")
-            if status == "queued" and out_of_order and instruction.action == "buy"
+            if late and out_of_order and instruction.action == "buy"
             else Skipped(reason="duplicate")
             if status == "queued"
             and any(

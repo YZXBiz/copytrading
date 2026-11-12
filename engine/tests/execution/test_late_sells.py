@@ -89,6 +89,8 @@ def test_a_late_post_of_only_buys_is_stale():
 
     message = engine.ledger.message("discord:demo:late-buy")
     assert message.status == "stale"
+    # Its buy is skipped, not left pending forever.
+    assert message.parts == (Skipped(reason="stale"),)
     assert not engine.ledger.orders()
 
 
