@@ -32,8 +32,8 @@ const entry = (minute: number, over: Partial<DiagnosticsEntry>): DiagnosticsEntr
 })
 
 const journal: DiagnosticsEntry[] = [
-  entry(52, { name: "execution.ledger_event", outcome: "order_update", fields: [{ name: "filled_qty", value: "2.052463" }, { name: "side", value: "sell" }, { name: "status", value: "filled" }, { name: "symbol", value: "SOXS" }] }),
-  entry(51, { name: "execution.order_submission", outcome: "returned", fields: [{ name: "limit_price", value: "40.45" }, { name: "qty", value: "2.052463" }, { name: "side", value: "sell" }, { name: "symbol", value: "SOXS" }] }),
+  entry(52, { name: "execution.ledger_event", outcome: "order_update", fields: [{ name: "filled_qty", value: "2.052463" }, { name: "side", value: "sell" }, { name: "status", value: "filled" }, { name: "symbol", value: "SOXS" }, { name: "workflow_id", value: "42ffb1d917ab4319aeb415c10fa2ee75" }, { name: "trace_id", value: "3686543366184597841b1d9f9468a5fb" }] }),
+  entry(51, { name: "execution.order_submission", outcome: "returned", fields: [{ name: "limit_price", value: "40.45" }, { name: "qty", value: "2.052463" }, { name: "side", value: "sell" }, { name: "symbol", value: "SOXS" }, { name: "workflow_id", value: "42ffb1d917ab4319aeb415c10fa2ee75" }, { name: "trace_id", value: "3686543366184597841b1d9f9468a5fb" }] }),
   entry(51, { name: "execution.risk_checks", outcome: "returned", fields: [{ name: "destination_id", value: "zhap-account-2" }] }),
   entry(50, { name: "model.parse", outcome: "returned", fields: [{ name: "provider", value: "deepseek" }, { name: "trace_id", value: "7c1e0a52b9" }] }),
   entry(50, { kind: "payload", name: "model_response", outcome: "complete", fields: [{ name: "payload_bytes", value: "412" }, { name: "redacted_fields", value: "0" }], payload_json: '{\n  "action": "close",\n  "price": "40.45",\n  "symbol": "SOXS"\n}' }),

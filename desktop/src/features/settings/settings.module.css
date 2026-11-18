@@ -7,10 +7,10 @@
 .rows { display: grid; }
 .rows > * + * { border-top: 1px solid var(--border-subtle); }
 
-.row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 24px; min-height: 52px; padding: 12px 0; }
+.row { display: grid; grid-template-columns: minmax(min-content, 1fr) auto; align-items: center; gap: 24px; min-height: 52px; padding: 12px 0; }
 .row[data-stacked] { grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: start; }
 .rowText { display: grid; min-width: 0; gap: 2px; }
-.rowTitle { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: var(--text-sm); font-weight: 500; line-height: 20px; }
+.rowTitle { display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); font-weight: 500; line-height: 20px; }
 .rowDescription { display: grid; gap: 2px; color: var(--text-muted); font-size: var(--text-xs); line-height: var(--leading-body); }
 .rowDescription[data-tone="caution"] { color: var(--warning); }
 .rowControl { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }
