@@ -691,6 +691,31 @@ def test_a_written_ticker_needs_no_playbook_but_must_be_a_whole_word():
     assert failure("25加了abc", trade(buy("AB", "25"))).issue.code == "partial_symbol"
 
 
+async def test_a_ticker_spelled_letter_by_letter_is_the_ticker():
+    # 赵哥's post of Nov 18, its letters apart with six-per-em spaces.
+    post = "54.65出一半52.9的t\u2006q\u2006q\u2006q"
+    call = sell(
+        "TQQQ",
+        "54.65",
+        bought_at="52.9",
+        said="出一半",
+        ticker_said="t q q q",
+        fraction="0.5",
+        fraction_said="一半",
+    )
+
+    result = await read(post, trade(call))
+
+    assert result.decision == "trade"
+    assert result.instructions[0].symbol == "TQQQ"
+
+
+def test_spaced_letters_are_not_a_ticker_with_other_letters():
+    reading = trade(buy("TQQQ", "25", ticker_said="t q q"))
+
+    assert failure("25加了t q q", reading).issue.code == "symbol_not_in_playbook"
+
+
 @pytest.mark.parametrize(
     ("text", "ticker", "grounded"),
     [

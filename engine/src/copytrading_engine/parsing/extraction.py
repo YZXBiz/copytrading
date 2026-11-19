@@ -460,7 +460,7 @@ def _check_stock(stock: Stock, text: str, route: Route, path: str) -> None:
     named = (
         crypto_pair(stock.words) != stock.ticker
         if is_crypto(stock.ticker)
-        else stock.words.lstrip("$").upper() != stock.ticker
+        else _as_written(stock.words).upper() != stock.ticker
     )
     if named and not playbook_maps(route.playbook, stock.words, stock.ticker):
         raise GroundingError(
@@ -475,6 +475,12 @@ def _check_stock(stock: Stock, text: str, route: Route, path: str) -> None:
         rf"(?<![{edge}])" + re.escape(stock.words) + rf"(?![{edge}])", text
     ):
         raise GroundingError("partial_symbol", path, "The ticker must be a whole word in the post")
+
+
+def _as_written(words: str) -> str:
+    """The ticker the words write, also letter by letter: "t q q q" is TQQQ."""
+    bare = words.lstrip("$")
+    return re.sub(r"\s+", "", bare) if re.fullmatch(r"[A-Za-z](?:\s+[A-Za-z])+", bare) else bare
 
 
 def _check_price(price: object, text: str, path: str) -> None:
